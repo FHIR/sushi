@@ -1,0 +1,26 @@
+{
+  "name": "sushi",
+  "version": "1.0.0",
+  "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
+  "scripts": {
+    "test": "jest --forceExit --coverage --verbose",
+    "watch-test": "npm run test -- --watchAll",
+    "build-ts": "tsc",
+    "watch-ts": "tsc -w",
+    "lint": "tsc && eslint \"**/*.{js,ts}\"",
+    "fix-lint": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix"
+  },
+  "author": "Chris Moesel <cmoesel@mitre.org>",
+  "license": "Apache 2.0",
+  "devDependencies": {
+    "@types/jest": "^24.0.18",
+    "@types/node": "^12.7.5",
+    "@typescript-eslint/eslint-plugin": "^2.3.1",
+    "@typescript-eslint/parser": "^2.3.1",
+    "eslint": "^6.4.0",
+    "jest": "^24.9.0",
+    "ts-jest": "^24.1.0",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.6.3"
+  }
+}
