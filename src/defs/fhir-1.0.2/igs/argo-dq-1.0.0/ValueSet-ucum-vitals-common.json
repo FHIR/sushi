@@ -1,0 +1,56 @@
+{
+  "resourceType": "ValueSet",
+  "id": "ucum-vitals-common",
+  "text": {
+    "status": "generated"
+  },
+  "url": "http://fhir.org/guides/argonaut/ValueSet/ucum-vitals-common",
+  "name": "Argonaut Vital Signs Units",
+  "status": "draft",
+  "publisher": "Argonaut Project",
+  "contact": [
+    {
+      "telecom": [
+        {
+          "system": "other",
+          "value": "http://argonautwiki.hl7.org",
+          "rank": 0
+        }
+      ]
+    }
+  ],
+  "date": "2016-05-26T00:00:00+10:00",
+  "description": "This value set includes most codes from the  http://hl7.org/fhir/ValueSet/daf-ucum-vitals-common valueset and adds inches, pounds, grams and degree Fahrenheit to support English units of measures.",
+  "immutable": false,
+  "requirements": "Codes that are needed for implementation of the Argonaut Vital Signs IG and MU2015 certification.",
+  "extensible": false,
+  "compose": {
+    "import": [
+      "http://hl7.org/fhir/ValueSet/daf-ucum-vitals-common"
+    ],
+    "include": [
+      null,
+      {
+        "system": "http://unitsofmeasure.org",
+        "concept": [
+          {
+            "code": "[in_i]",
+            "display": "inch (international)"
+          },
+          {
+            "code": "[lb_av]",
+            "display": "pound (US and British)"
+          },
+          {
+            "code": "[degF]",
+            "display": "degree Fahrenheit"
+          },
+          {
+            "code": "g",
+            "display": "gram"
+          }
+        ]
+      }
+    ]
+  }
+}

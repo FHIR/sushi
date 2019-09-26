@@ -1,0 +1,35 @@
+{
+  "resourceType": "ValueSet",
+  "id": "procedure-icd10pcs",
+  "text": {
+    "status": "generated"
+  },
+  "url": "http://fhir.org/guides/argonaut/ValueSet/procedure-icd10pcs",
+  "name": "Argonaut Procedure Type ICD-10-PCS Codes",
+  "status": "draft",
+  "experimental": true,
+  "publisher": "Argonaut Project",
+  "contact": [
+    {
+      "telecom": [
+        {
+          "system": "other",
+          "value": "http://argonautwiki.hl7.org",
+          "rank": 0
+        }
+      ]
+    }
+  ],
+  "date": "2016-08-10T00:00:00+10:00",
+  "description": "This value set defines a set of codes from ICD10-PCS that can be used to indicate a type of procedure performed",
+  "immutable": false,
+  "copyright": "The International Classification of Diseases, Tenth Revision, Procedure Coding System (ICD-10-PCS) was developed for the Centers for Medicare and Medicaid Services (CMS).  CMS is the U.S. governmental agency responsible for overseeing all changes and modifications to the ICD-10-PCS.",
+  "extensible": false,
+  "compose": {
+    "include": [
+      {
+        "system": "http://www.icd10data.com/icd10pcs"
+      }
+    ]
+  }
+}

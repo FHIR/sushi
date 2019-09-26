@@ -1,0 +1,1536 @@
+{
+  "resourceType": "ImplementationGuide",
+  "id": "ig",
+  "url": "http://fhir.org/guides/argonaut/ImplementationGuide/ig",
+  "name": "Implementation Guide Template",
+  "status": "draft",
+  "experimental": true,
+  "publisher": "FHIR Project",
+  "package": [
+    {
+      "name": "base",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-weight.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/weight"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-vitals-panel.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/vitals-panel"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-usg.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/usg"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urobilinogen.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urobilinogen"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-wbcs.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-wbcs"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-sediment.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-sediment"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-rbcs.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-rbcs"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-protein.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-protein"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-ph.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-ph"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-nitrite.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-nitrite"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-leukocyte-esterase.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-leukocyte-esterase"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-ketone.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-ketone"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-hemoglobin.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-hemoglobin"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-glucose.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-glucose"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-epi-cells.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-epi-cells"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-color.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-color"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-clarity.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-clarity"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-cells.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-cells"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-bilirubin.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-bilirubin"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-urine-bacteria.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/urine-bacteria"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "DiagnosticReport-urinalysis.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "DiagnosticReport/urinalysis"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Device-udi-1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Device/udi-1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-temperature.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/temperature"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-some-day-smoker.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/some-day-smoker"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-serum-total-bilirubin.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/serum-total-bilirubin"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-serum-sodium.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/serum-sodium"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-serum-potassium.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/serum-potassium"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-serum-creatinine.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/serum-creatinine"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-serum-co2.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/serum-co2"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-serum-chloride.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/serum-chloride"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-serum-calcium.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/serum-calcium"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-respiratory-rate.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/respiratory-rate"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Procedure-rehab.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Procedure/rehab"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Patient-peter-chalmers.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Patient/peter-chalmers"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-oxygen-saturation.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/oxygen-saturation"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-neutrophils.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/neutrophils"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "DiagnosticReport-metabolic-panel.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "DiagnosticReport/metabolic-panel"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-mchc.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/mchc"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Condition-liveborn-birth.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Condition/liveborn-birth"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-length.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/length"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Immunization-imm-1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Immunization/imm-1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-hemoglobin.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/hemoglobin"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-height.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/height"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-heart-rate.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/heart-rate"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-head-circumference.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/head-circumference"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Condition-hc1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Condition/hc1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Goal-goal-1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Goal/goal-1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-erythrocytes.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/erythrocytes"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "DocumentReference-episode-summary.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "DocumentReference/episode-summary"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "CarePlan-colonoscopy.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "CarePlan/colonoscopy"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "DiagnosticReport-cbc.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "DiagnosticReport/cbc"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "CarePlan-careteam-1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "CarePlan/careteam-1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-bun.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/bun"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-bp-data-absent.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/bp-data-absent"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-bmi.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/bmi"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-blood-pressure.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/blood-pressure"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Observation-blood-glucose.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Observation/blood-glucose"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Bundle-argo-ms3.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Bundle/argo-ms3"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "MedicationStatement-argo-ms2.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "MedicationStatement/argo-ms2"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "MedicationStatement-argo-ms1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "MedicationStatement/argo-ms1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Bundle-argo-mo3.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Bundle/argo-mo3"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "MedicationOrder-argo-mo2.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "MedicationOrder/argo-mo2"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "MedicationOrder-argo-mo1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "MedicationOrder/argo-mo1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Medication-argo-med2.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Medication/argo-med2"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Medication-argo-med1.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Medication/argo-med1"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Encounter-691.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Encounter/691"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Practitioner-1234.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Practitioner/1234"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "AllergyIntolerance-23.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "AllergyIntolerance/23"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Practitioner-5678.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Practitioner/5678"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-vacc-status.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/vacc-status"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-usrealm-birthsex.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/usrealm-birthsex"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-ucum.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/ucum"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-ucum-vitals-common.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/ucum-vitals-common"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-substance.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/substance"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-substance-sct.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/substance-sct"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-substance-rxnorm.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/substance-rxnorm"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-substance-ndfrt.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/substance-ndfrt"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-provider-role.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/provider-role"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-procedure-type.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/procedure-type"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-procedure-icd10pcs.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/procedure-icd10pcs"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-omb-race.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/omb-race"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-omb-ethnicity.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/omb-ethnicity"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-observation-value-codes.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/observation-value-codes"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-observation-ccdavitalsignresult.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/observation-ccdavitalsignresult"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-observation-ccdasmokingstatus.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/observation-ccdasmokingstatus"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-ndc-vaccine-codes.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/ndc-vaccine-codes"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-narrative-status.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/narrative-status"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-medication-codes.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/medication-codes"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-languages.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/languages"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-device-kind.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/device-kind"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-detailed-race.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/detailed-race"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-detailed-ethnicity.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/detailed-ethnicity"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-condition-category.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/condition-category"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ValueSet-argo-codesystem.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ValueSet/argo-codesystem"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-resource-documentation.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-resource-documentation"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-race.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-race"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-profile-link.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-profile-link"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-ethnicity.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-ethnicity"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-birthsex.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-birthsex"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "SearchParameter-race.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "SearchParameter/race"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "SearchParameter-ethnicity.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "SearchParameter/ethnicity"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "OperationDefinition-docref.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "OperationDefinition/docref"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Conformance-server.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Conformance/server"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "Conformance-client.html"
+            }
+          ],
+          "purpose": "example",
+          "sourceReference": {
+            "reference": "Conformance/client"
+          }
+        },
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "ConceptMap-ndc-cvx.html"
+            }
+          ],
+          "sourceReference": {
+            "reference": "ConceptMap/ndc-cvx"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\allergyintolerance-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-allergyintolerance.html"
+            }
+          ],
+          "name": "Argonaut AllergyIntolerance Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-allergyintolerance"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\careplan-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-careplan.html"
+            }
+          ],
+          "name": "Argonaut CarePlan Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-careplan"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\careteam-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-careteam.html"
+            }
+          ],
+          "name": "Argonaut CareTeam Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-careteam"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\condition-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-condition.html"
+            }
+          ],
+          "name": "Argonaut Condition Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-condition"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\device-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-device.html"
+            }
+          ],
+          "name": "Argonaut Device Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-device"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\diagnosticreport-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-diagnosticreport.html"
+            }
+          ],
+          "name": "Argonaut DiagnosticReport Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-diagnosticreport"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\documentreference-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-documentreference.html"
+            }
+          ],
+          "name": "Argonaut DocumentReference Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-documentreference"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\goal-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-goal.html"
+            }
+          ],
+          "name": "Argonaut Goal Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-goal"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\immunization-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-immunization.html"
+            }
+          ],
+          "name": "Argonaut Immunization Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-immunization"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\medication-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-medication.html"
+            }
+          ],
+          "name": "Argonaut Medication Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-medication"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\medicationorder-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-medicationorder.html"
+            }
+          ],
+          "name": "Argonaut MedicationOrder Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-medicationorder"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\medicationstatement-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-medicationstatement.html"
+            }
+          ],
+          "name": "Argonaut MedicationStatement Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-medicationstatement"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\observationresults-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-observationresults.html"
+            }
+          ],
+          "name": "Argonaut Observation Results Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-observationresults"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\patient-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-patient.html"
+            }
+          ],
+          "name": "Argonaut Patient Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-patient"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\procedure-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-procedure.html"
+            }
+          ],
+          "name": "Argonaut Procedure Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-procedure"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\smokingstatus-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-smokingstatus.html"
+            }
+          ],
+          "name": "Argonaut Smoking Status Observation Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-smokingstatus"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C:\\work\\org.hl7.fhir.us\\argonaut-r2\\resources\\vitalsigns-argonaut-profile-spreadsheet",
+      "resource": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/implementationguide-page",
+              "valueUri": "StructureDefinition-argo-vitalsigns.html"
+            }
+          ],
+          "name": "Argonaut Vital Signs Observation Profile",
+          "sourceReference": {
+            "reference": "StructureDefinition/argo-vitalsigns"
+          }
+        }
+      ]
+    }
+  ],
+  "page": {
+    "source": "index.html",
+    "name": "blah",
+    "kind": "page"
+  }
+}

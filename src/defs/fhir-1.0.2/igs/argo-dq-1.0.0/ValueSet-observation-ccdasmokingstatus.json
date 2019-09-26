@@ -1,0 +1,69 @@
+{
+  "resourceType": "ValueSet",
+  "id": "observation-ccdasmokingstatus",
+  "text": {
+    "status": "generated"
+  },
+  "url": "http://fhir.org/guides/argonaut/ValueSet/observation-ccdasmokingstatus",
+  "name": "Smoking Status",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Argonaut Project",
+  "contact": [
+    {
+      "telecom": [
+        {
+          "system": "other",
+          "value": "http://argonautwiki.hl7.org",
+          "rank": 0
+        }
+      ]
+    }
+  ],
+  "date": "2016-08-10T00:00:00+10:00",
+  "description": "This value set indicates the current smoking status of a patient.",
+  "immutable": false,
+  "copyright": "This value set includes content from SNOMED CT, which is copyright © 2002+ International Health Terminology Standards Development Organisation (IHTSDO), and distributed by agreement between IHTSDO and HL7. Implementer use of SNOMED CT is not covered by this agreement",
+  "extensible": false,
+  "compose": {
+    "include": [
+      {
+        "system": "http://snomed.info/sct",
+        "concept": [
+          {
+            "code": "449868002",
+            "display": "Current every day smoker"
+          },
+          {
+            "code": "428041000124106",
+            "display": "Current some day smoker"
+          },
+          {
+            "code": "8517006",
+            "display": "Former smoker"
+          },
+          {
+            "code": "266919005",
+            "display": "Never smoker"
+          },
+          {
+            "code": "77176002",
+            "display": "Smoker, current status unknown"
+          },
+          {
+            "code": "266927001",
+            "display": "Unknown if ever smoked"
+          },
+          {
+            "code": "428071000124103",
+            "display": "Current Heavy tobacco smoker"
+          },
+          {
+            "code": "428061000124105",
+            "display": "Current Light tobacco smoker"
+          }
+        ]
+      }
+    ]
+  }
+}

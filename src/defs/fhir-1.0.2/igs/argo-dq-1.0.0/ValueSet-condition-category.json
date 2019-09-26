@@ -1,0 +1,47 @@
+{
+  "resourceType": "ValueSet",
+  "id": "condition-category",
+  "text": {
+    "status": "generated"
+  },
+  "url": "http://fhir.org/guides/argonaut/ValueSet/condition-category",
+  "name": "Argonaut Condition Category Codes",
+  "status": "draft",
+  "publisher": "Argonaut Project",
+  "contact": [
+    {
+      "telecom": [
+        {
+          "system": "other",
+          "value": "http://argonautwiki.hl7.org",
+          "rank": 0
+        }
+      ]
+    }
+  ],
+  "date": "2016-10-18T00:00:00+11:00",
+  "description": "This value set includes codes from the  http://hl7.org/fhir/condition-category code system and  the  Argonaut Project extension codes  'problems' and 'health-concerns'.",
+  "immutable": false,
+  "requirements": "Codes that are needed for implementation of the Argonaut Project Problem and Health Concern IGs.",
+  "extensible": false,
+  "compose": {
+    "include": [
+      {
+        "system": "http://hl7.org/fhir/condition-category"
+      },
+      {
+        "system": "http://argonaut.hl7.org",
+        "concept": [
+          {
+            "code": "problem",
+            "display": "Problem"
+          },
+          {
+            "code": "health-concern",
+            "display": "Health Concern"
+          }
+        ]
+      }
+    ]
+  }
+}
