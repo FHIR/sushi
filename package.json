@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc -w",
     "test": "jest --coverage",
-    "watch-test": "npm run test -- --watchAll",
-    "build-ts": "tsc",
-    "watch-ts": "tsc -w",
+    "test:watch": "npm run test -- --watchAll",
     "lint": "tsc && eslint \"**/*.{js,ts}\"",
-    "fix-lint": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
-    "prettier": "prettier --write \"**/*.{js,ts}\"",
-    "check-prettier": "prettier --check \"**/*.{js,ts}\""
+    "lint:fix": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
+    "prettier": "prettier --check \"**/*.{js,ts}\"",
+    "prettier:fix": "prettier --write \"**/*.{js,ts}\"",
+    "ci": "npm run test && npm run lint && npm run prettier"
   },
   "author": "Chris Moesel <cmoesel@mitre.org>",
   "license": "Apache 2.0",
