@@ -1,6 +1,9 @@
 {
   "parser": "@typescript-eslint/parser",
-  "extends": ["plugin:@typescript-eslint/recommended"],
+  "extends": [
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
   "parserOptions": {
     "ecmaVersion": 2018,
     "sourceType": "module"
@@ -8,7 +11,10 @@
   "rules": {
     "semi": ["error", "always"],
     "quotes": ["error", "single"],
+    "no-use-before-define": ["error", { "functions": false, "variables": false }],
+    "@typescript-eslint/ban-ts-ignore": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
-    "@typescript-eslint/no-explicit-any": "off"
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-use-before-define": ["error", { "functions": false, "variables": false, "typedefs": false }]
   }
 }
