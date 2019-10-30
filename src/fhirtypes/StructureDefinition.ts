@@ -2,7 +2,7 @@ import capitalize from 'lodash/capitalize';
 import cloneDeep from 'lodash/cloneDeep';
 import { CodeableConcept } from './CodeableConcept';
 import { Coding } from './Coding';
-import { ElementDefinition } from './ElementDefinition';
+import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -112,31 +112,84 @@ export class StructureDefinition {
 
   /**
    * Finds an element by a FSH-compatible path
-   * TODO: Finish implementation. Currently doesn't support slices, reference selections, etc.
-   * @param {string} path
-   * @returns {ElementDefinition} the found element (or undefined if it is not found)
+   * @param {string} path - The FSH path
+   * @param {resolve} ResolveFn - a function that can resolve a type to a StructureDefinition instance
+   * @returns {ElementDefinition} - The found element (or undefined if it is not found)
    */
-  findElementByPath(path: string): ElementDefinition {
-    if (!path) {
-      return;
+  findElementByPath(path: string, resolve: ResolveFn = () => undefined): ElementDefinition {
+    // If the path already exists, get it and return the match
+    // If !path just return the base parent element
+    const fullPath = path ? `${this.type}.${path}` : this.type;
+    const match = this.elements.find(e => e.path === fullPath);
+    if (match != null) {
+      return match;
     }
-    let match = this.elements.find(e => {
-      if (e.path === `${this.type}.${path}`) {
-        return true;
+
+    // Parse the FSH Path into a form we can work with
+    const parsedPath = this.parseFSHPath(path);
+
+    let fhirPathString = this.type;
+    let matchingElements = this.elements;
+    let newMatchingElements: ElementDefinition[] = [];
+    // Iterate over the path, filtering out elements that do not match
+    for (const pathPart of parsedPath) {
+      // Add the next part to the path, and see if we have matches on it
+      fhirPathString += `.${pathPart.base}`;
+      newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
+
+      if (newMatchingElements.length === 0) {
+        // If we fail to find any matches, first try to find the appropriate [x] element
+        // Ex: valueString -> value[x]
+        const newSlice = this.sliceMatchingValueX(fhirPathString, matchingElements);
+        if (newSlice) {
+          newMatchingElements.push(newSlice);
+          fhirPathString = newSlice.path;
+        }
       }
-    });
-    if (match == null && /[a-z0-9]+[A-Z].*/.test(path)) {
-      match = this.elements.find(e => {
-        if (e.path.endsWith('[x]')) {
-          for (const t of e.type) {
-            if (`${e.path.slice(0, -3)}${capitalize(t.code)}` === `${this.type}.${path}`) {
-              return true;
-            }
+
+      // TODO: If path is A.B.C, and we unfold B, but C is invalid, the unfolded
+      // elements are still on the structDef. We may want to change this to remove the elements
+      // upon error
+      if (newMatchingElements.length === 0 && matchingElements.length === 1) {
+        // If we did not find an [x] element, and there was previously only one match,
+        // We want to unfold that match and dig deeper into it
+        const newElements = matchingElements[0].unfold(resolve);
+        if (newElements.length > 0) {
+          // Only get the children that match our path
+          newMatchingElements = newElements.filter(e => e.path.startsWith(fhirPathString));
+        }
+      }
+
+      if (newMatchingElements.length > 0) {
+        // We succeeded in finding some matches, set them and keep going
+        matchingElements = newMatchingElements;
+      } else {
+        // We got to a point where we couldn't find any matches, just return
+        return;
+      }
+
+      // After getting matches based on the 'base' part, we now filter according to 'brackets'
+      if (pathPart.brackets) {
+        const sliceElement = this.findMatchingSlice(pathPart, matchingElements);
+        if (sliceElement) {
+          matchingElements = [sliceElement, ...sliceElement.children()];
+        } else {
+          // If we didn't find a matching sliceElement, there must be a reference
+          const matchingRefElement = this.findMatchingRef(pathPart, matchingElements);
+          if (matchingRefElement) {
+            matchingElements = [matchingRefElement, ...matchingRefElement.children()];
+          } else {
+            // The bracket parts couldn't be resolved to a slice or a ref, so we failed to find an element
+            return;
           }
         }
-      });
+      }
     }
-    return match;
+
+    // We could still have child elements that are matching, if so filter them out now
+    matchingElements = matchingElements.filter(e => e.path === fhirPathString);
+    // If we have one and only one match, return it, else return undefined
+    return matchingElements.length === 1 ? matchingElements[0] : undefined;
   }
 
   /**
@@ -200,6 +253,95 @@ export class StructureDefinition {
     }
     return sd;
   }
+
+  /**
+   * Parses a FSH Path into a more easily usable form
+   * @param {string} fshPath - A syntactically valid path in FSH
+   * @returns {PathPart[]} an array of PathParts that is easier to work with
+   */
+  private parseFSHPath(fshPath: string): PathPart[] {
+    const pathParts: PathPart[] = [];
+    const splitPath = fshPath.split('.');
+    for (const pathPart of splitPath) {
+      const splitPathPart = pathPart.split('[');
+      if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {
+        // There are no brackets, or the brackets are for a choice, so just push on the name
+        pathParts.push({ base: pathPart });
+      } else {
+        // We have brackets, let's  save the bracket info
+        const fhirPathBase = splitPathPart[0];
+        // Get the bracket elements and slice off the trailing ']'
+        const brackets = splitPathPart.slice(1).map(s => s.slice(0, -1));
+        pathParts.push({ base: fhirPathBase, brackets: brackets });
+      }
+    }
+    return pathParts;
+  }
+
+  /**
+   * Looks for a matching choice element and if found slices it, adds the slices to the structdef
+   * and then returns the newly created slice.
+   * @param {string} fhirPath - The path in FHIR to match with
+   * @param {ElementDefinition[]} elements - The set of elements to search through
+   * @returns {ElementDefinition} - The new slice element if found, else undefined
+   */
+  private sliceMatchingValueX(fhirPath: string, elements: ElementDefinition[]): ElementDefinition {
+    let matchingType: ElementDefinitionType;
+    const matchingXElement = elements.find(e => {
+      if (e.path.endsWith('[x]')) {
+        for (const t of e.type) {
+          if (`${e.path.slice(0, -3)}${capitalize(t.code)}` === fhirPath) {
+            matchingType = t;
+            return true;
+          }
+        }
+      }
+    });
+    if (matchingXElement) {
+      // If we find a matching [x] element, we need to slice it to create the child element
+      matchingXElement.sliceIt('type', '$this', false, 'open');
+      // Get the sliceName for the new element
+      const sliceName = fhirPath.slice(fhirPath.lastIndexOf('.') + 1);
+      const newSlice = matchingXElement.addSlice(sliceName, matchingType);
+      return newSlice;
+    }
+    return;
+  }
+
+  /**
+   * Looks for a slice within the set of elements that matches the fhirPath
+   * @param {PathPart} pathPart - The path to match sliceName against
+   * @param {ElementDefinition[]} elements - The set of elements to search through
+   * @returns {ElementDefinition} - The sliceElement if found, else undefined
+   */
+  private findMatchingSlice(pathPart: PathPart, elements: ElementDefinition[]): ElementDefinition {
+    return elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+  }
+
+  /**
+   * Looks for a Reference type element within the set of elements that matches the fhirPath
+   * @param {PathPart} pathPart - The path to match the Reference type elements against
+   * @param {ElementDefinition[]} elements - The set of elements to search through
+   * @returns {ElementDefinition} - The Reference type element if found, else undefined
+   */
+  private findMatchingRef(pathPart: PathPart, elements: ElementDefinition[]): ElementDefinition {
+    const matchingRefElement = elements.find(e => {
+      // If we have foo[a][b][c], and c is the ref, we need to find an element with sliceName = a/b
+      if (
+        pathPart.brackets.length === 1 ||
+        e.sliceName === pathPart.brackets.slice(0, -1).join('/')
+      ) {
+        for (const t of e.type) {
+          return (
+            t.code === 'Reference' &&
+            t.targetProfile &&
+            t.targetProfile.find(tp => tp.endsWith(pathPart.brackets[0]))
+          );
+        }
+      }
+    });
+    return matchingRefElement;
+  }
 }
 
 export type StructureDefinitionMapping = {
@@ -212,6 +354,11 @@ export type StructureDefinitionMapping = {
 export type StructureDefinitionContext = {
   type: string;
   expression: string;
+};
+
+type PathPart = {
+  base: string;
+  brackets?: string[];
 };
 
 /**
