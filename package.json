@@ -5,8 +5,10 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc -w",
+    "build:grammar": "./antlr/gradlew -p ./antlr generateGrammarSource",
     "test": "jest --coverage",
     "test:watch": "npm run test -- --watchAll",
+    "coverage": "opener coverage/lcov-report/index.html",
     "lint": "tsc && eslint \"**/*.{js,ts}\"",
     "lint:fix": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
     "prettier": "prettier --check \"**/*.{js,ts}\"",
@@ -16,6 +18,7 @@
   "author": "Chris Moesel <cmoesel@mitre.org>",
   "license": "Apache 2.0",
   "devDependencies": {
+    "@types/antlr4": "^4.7.0",
     "@types/jest": "^24.0.18",
     "@types/lodash": "^4.14.139",
     "@types/node": "^12.7.5",
@@ -25,12 +28,14 @@
     "eslint-config-prettier": "^6.4.0",
     "jest": "^24.9.0",
     "jest-extended": "^0.11.2",
+    "opener": "^1.5.1",
     "prettier": "1.18.2",
     "ts-jest": "^24.1.0",
     "ts-node": "^8.4.1",
     "typescript": "^3.6.3"
   },
   "dependencies": {
+    "antlr4": "^4.7.2",
     "lodash": "^4.17.15"
   }
 }

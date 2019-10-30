@@ -1,18 +1,19 @@
 import isEqual from 'lodash/isEqual';
-import capitalize from 'lodash/capitalize';
 import cloneDeep from 'lodash/cloneDeep';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept } from './CodeableConcept';
 import { Coding } from './Coding';
 import { Quantity } from './Quantity';
-import { Code } from '../fshtypes/Code';
-import { BindingStrengthError } from '../errors/BindingStrengthError';
-import { CodedTypeNotFoundError } from '../errors/CodedTypeNotFoundError';
-import { CodeAlreadyFixedError } from '../errors/CodeAlreadyFixedError';
-import { InvalidCardinalityError } from '../errors/InvalidCardinalityError';
-import { SlicingDefinitionError } from '../errors/SlicingDefinitionError';
-import { SlicingNotDefinedError } from '../errors/SlicingNotDefinedError';
-import { WideningCardinalityError } from '../errors/WideningCardinalityError';
+import { Code } from '../fshtypes';
+import {
+  BindingStrengthError,
+  CodedTypeNotFoundError,
+  CodeAlreadyFixedError,
+  InvalidCardinalityError,
+  SlicingDefinitionError,
+  SlicingNotDefinedError,
+  WideningCardinalityError
+} from '../errors';
 
 /**
  * A class representing a FHIR R4 ElementDefinition.  For the most part, each allowable property in an ElementDefinition

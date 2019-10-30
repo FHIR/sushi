@@ -1,5 +1,5 @@
 // TODO: Is this really an Interface
 export interface Rule {
-  ruleType: string;
+  readonly ruleType: string;
   path: string;
 }
