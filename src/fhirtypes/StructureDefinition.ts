@@ -3,6 +3,12 @@ import cloneDeep from 'lodash/cloneDeep';
 import { CodeableConcept } from './CodeableConcept';
 import { Coding } from './Coding';
 import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
+import { UsageContext } from './UsageContext';
+import { Identifier } from './Identifier';
+import { ContactDetail } from './ContactDetail';
+import { Meta } from './Meta';
+import { Resource } from './Resource';
+import { Extension } from './Extension';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -16,15 +22,15 @@ import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDe
  */
 export class StructureDefinition {
   id: string;
-  meta: any;
+  meta: Meta;
   implicitRules: string;
   language: string;
-  text: any;
-  contained: any[];
-  extension: any[];
-  modifierExtension: any[];
+  text: Narrative;
+  contained: Resource[];
+  extension: Extension[];
+  modifierExtension: Extension[];
   url: string;
-  identifier: any[];
+  identifier: Identifier[];
   version: string;
   name: string;
   title: string;
@@ -32,9 +38,9 @@ export class StructureDefinition {
   experimental: boolean;
   date: string;
   publisher: string;
-  contact: any[];
+  contact: ContactDetail[];
   description: string;
-  useContext: any[];
+  useContext: UsageContext[];
   jurisdiction: CodeableConcept[];
   purpose: string;
   copyright: string;
@@ -374,6 +380,11 @@ export type StructureDefinitionContext = {
 type PathPart = {
   base: string;
   brackets?: string[];
+};
+
+export type Narrative = {
+  status: string;
+  div: string;
 };
 
 /**
