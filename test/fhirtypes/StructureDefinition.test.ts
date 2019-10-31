@@ -89,7 +89,6 @@ describe('StructureDefinition', () => {
     });
   });
 
-  // Should get top level for '' element
   describe('#findElementByPath', () => {
     let jsonRespRate: any;
     let respRate: StructureDefinition;
@@ -125,7 +124,7 @@ describe('StructureDefinition', () => {
       expect(refRangeLow.id).toBe('Observation.referenceRange.low');
     });
 
-    it('should find the base element by a null path', () => {
+    it('should find the base element by an empty path', () => {
       const observationElement = observation.findElementByPath('', getResolver(defs));
       expect(observationElement).toBeDefined();
       expect(observationElement.id).toBe('Observation');
@@ -187,7 +186,10 @@ describe('StructureDefinition', () => {
       const valueQuantity = observation.findElementByPath('valueQuantity', getResolver(defs));
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantity.sliceName).toBe('valueQuantity');
+      expect(valueQuantity.path).toBe('Observation.value[x]');
       expect(valueX.slicing).toBeDefined();
+      expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
       expect(observation.elements.length).toBe(originalLength + 1);
     });
 
@@ -195,13 +197,15 @@ describe('StructureDefinition', () => {
       const originalLength = observation.elements.length;
       const valueX = observation.findElementByPath('value[x]');
       expect(valueX.slicing).toBeUndefined();
-      const valueQuantity = observation.findElementByPath(
+      const valueQuantitySystem = observation.findElementByPath(
         'valueQuantity.system',
         getResolver(defs)
       );
-      expect(valueQuantity).toBeDefined();
-      expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity.system');
+      expect(valueQuantitySystem).toBeDefined();
+      expect(valueQuantitySystem.id).toBe('Observation.value[x]:valueQuantity.system');
+      expect(valueQuantitySystem.path).toBe('Observation.value[x].system');
       expect(valueX.slicing).toBeDefined();
+      expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
       expect(observation.elements.length).toBe(originalLength + 8);
     });
 

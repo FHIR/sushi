@@ -335,7 +335,7 @@ export class StructureDefinition {
           return (
             t.code === 'Reference' &&
             t.targetProfile &&
-            t.targetProfile.find(tp => tp.endsWith(pathPart.brackets[0]))
+            t.targetProfile.find(tp => tp.endsWith(`/${pathPart.brackets[0]}`))
           );
         }
       }
