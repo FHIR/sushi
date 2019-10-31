@@ -342,7 +342,15 @@ export class StructureDefinition {
           return (
             t.code === 'Reference' &&
             t.targetProfile &&
-            t.targetProfile.find(tp => tp.endsWith(`/${pathPart.brackets[0]}`))
+            t.targetProfile.find(tp => {
+              const refName = pathPart.brackets.slice(-1)[0];
+              // Slice to get last part of url
+              // http://hl7.org/fhir/us/core/StructureDefinition/profile|3.0.0 -> profile|3.0.0
+              let tpRefName = tp.split('/').slice(-1)[0];
+              // Slice to get rid of version, profile|3.0.0 -> profile
+              tpRefName = tpRefName.split('|')[0];
+              return tpRefName === refName;
+            })
           );
         }
       }
