@@ -299,6 +299,9 @@ export class StructureDefinition {
     });
     if (matchingXElement) {
       // If we find a matching [x] element, we need to slice it to create the child element
+      // NOTE: The spec is somewhat incosistent on handling choice slicing, we decided on this
+      // approach per consistency with 4.0.1 observation-vitalsigns profiles and per this post
+      // https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/.
       matchingXElement.sliceIt('type', '$this', false, 'open');
       // Get the sliceName for the new element
       const sliceName = fhirPath.slice(fhirPath.lastIndexOf('.') + 1);
@@ -315,6 +318,10 @@ export class StructureDefinition {
    * @returns {ElementDefinition} - The sliceElement if found, else undefined
    */
   private findMatchingSlice(pathPart: PathPart, elements: ElementDefinition[]): ElementDefinition {
+    // NOTE: This function will assume the 'brackets' field contains information about slices. Even
+    // if you search for foo[sliceName][refName], this will try to find a re-slice
+    // sliceName/refName. To find the matching element for foo[sliceName][refName], you must
+    // use the findMatchingRef function. Be aware of this ambiguity in the bracket path syntax.
     return elements.find(e => e.sliceName === pathPart.brackets.join('/'));
   }
 

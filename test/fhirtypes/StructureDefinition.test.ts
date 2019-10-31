@@ -188,6 +188,7 @@ describe('StructureDefinition', () => {
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantity.sliceName).toBe('valueQuantity');
       expect(valueQuantity.path).toBe('Observation.value[x]');
+      expect(valueQuantity.min).toBe(0);
       expect(valueX.slicing).toBeDefined();
       expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
       expect(observation.elements.length).toBe(originalLength + 1);

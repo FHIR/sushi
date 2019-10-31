@@ -598,6 +598,11 @@ export class ElementDefinition {
     const slice = this.clone(true);
     slice.id = `${this.id}:${name}`;
     slice.sliceName = name;
+    // When a choice is sliced, we do not inherit min cardinality, but rather make it 0
+    // According to https://chat.fhir.org/#narrow/stream/179239-tooling/topic/Slicing.201.2E.2E.3F.20element
+    if (this.id.endsWith('[x]')) {
+      slice.min = 0;
+    }
     if (type) {
       slice.type = [type];
     } else {
