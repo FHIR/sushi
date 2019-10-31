@@ -95,18 +95,21 @@ export class ElementDefinition {
     this.path = this._id
       .split('.')
       .map(s => {
-        // Usually the path part is just the name without the slice. The one exception is parts representing
+        // Usually the path part is just the name without the slice.
+        const [name] = s.split(':', 2);
+        // The spec is unclear on if there is an exception in parts representing
         // a specific choice type, in which case, the path is the slice name (e.g., ) if the id is
-        // Observation.value[x]:valueQuantity, then path is Observation.valueQuantity
-        const [name, slice] = s.split(':', 2);
-        if (
-          slice &&
-          name.endsWith('[x]') &&
-          this.type &&
-          this.type.some(t => slice === `${name.slice(0, -3)}${capitalize(t.code)}`)
-        ) {
-          return slice;
-        }
+        // Observation.value[x]:valueQuantity, then path is Observation.valueQuantity.
+        // The code to make the exception is commented below, and will remain until we can clarify
+        // const [name, slice] = s.split(':', 2);
+        // if (
+        //   slice &&
+        //   name.endsWith('[x]') &&
+        //   this.type &&
+        //   this.type.some(t => slice === `${name.slice(0, -3)}${capitalize(t.code)}`)
+        // ) {
+        //   return slice;
+        // }
         return name;
       })
       .join('.');
@@ -595,6 +598,11 @@ export class ElementDefinition {
     const slice = this.clone(true);
     slice.id = `${this.id}:${name}`;
     slice.sliceName = name;
+    // When a choice is sliced, we do not inherit min cardinality, but rather make it 0
+    // According to https://chat.fhir.org/#narrow/stream/179239-tooling/topic/Slicing.201.2E.2E.3F.20element
+    if (this.id.endsWith('[x]')) {
+      slice.min = 0;
+    }
     if (type) {
       slice.type = [type];
     } else {

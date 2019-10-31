@@ -269,13 +269,13 @@ describe('ElementDefinition', () => {
       const quantity = valueX.addSlice('valueQuantity', { code: 'Quantity' });
       const integer = valueX.addSlice('valueInteger', { code: 'integer' });
       expect(quantity.id).toBe('Observation.value[x]:valueQuantity');
-      expect(quantity.path).toBe('Observation.valueQuantity');
+      expect(quantity.path).toBe('Observation.value[x]');
       expect(quantity.sliceName).toBe('valueQuantity');
       expect(quantity.min).toBe(0);
       expect(quantity.max).toBe('1');
       expect(quantity.type).toEqual([{ code: 'Quantity' }]);
       expect(integer.id).toBe('Observation.value[x]:valueInteger');
-      expect(integer.path).toBe('Observation.valueInteger');
+      expect(integer.path).toBe('Observation.value[x]');
       expect(integer.sliceName).toBe('valueInteger');
       expect(integer.min).toBe(0);
       expect(integer.max).toBe('1');
