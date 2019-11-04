@@ -222,9 +222,15 @@ export class FSHImporter extends FSHVisitor {
 
   private parseFlags(flagRule: FlagRule, flagContext: pc.FlagContext[]): void {
     const flags = flagContext.map(f => this.visitFlag(f));
-    flagRule.mustSupport = flags.includes(Flag.MustSupport);
-    flagRule.summary = flags.includes(Flag.Summary);
-    flagRule.modifier = flags.includes(Flag.Modifier);
+    if (flags.includes(Flag.MustSupport)) {
+      flagRule.mustSupport = true;
+    }
+    if (flags.includes(Flag.Summary)) {
+      flagRule.summary = true;
+    }
+    if (flags.includes(Flag.Modifier)) {
+      flagRule.modifier = true;
+    }
   }
 
   visitFlag(ctx: pc.FlagContext): Flag {

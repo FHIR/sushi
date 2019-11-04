@@ -72,7 +72,7 @@ describe('FSHImporter', () => {
         expect(extension.rules).toHaveLength(3);
         assertCardRule(extension.rules[0], 'extension', 0, 0);
         assertCardRule(extension.rules[1], 'value[x]', 1, 1);
-        assertFlagRule(extension.rules[2], 'value[x]', true, false, false);
+        assertFlagRule(extension.rules[2], 'value[x]', true, undefined, undefined);
       });
     });
 
@@ -87,7 +87,7 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertFlagRule(extension.rules[0], 'extension', true, false, false);
+        assertFlagRule(extension.rules[0], 'extension', true, undefined, undefined);
       });
     });
 
