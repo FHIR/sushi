@@ -1,4 +1,3 @@
-import { Code, Quantity, Ratio } from '../../src/fshtypes';
 import {
   Rule,
   CardRule,
