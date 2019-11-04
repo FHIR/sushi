@@ -218,12 +218,12 @@ FSHListener.prototype.exitObeysRule = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#carrotValueRule.
-FSHListener.prototype.enterCarrotValueRule = function(ctx) {
+// Enter a parse tree produced by FSHParser#caretValueRule.
+FSHListener.prototype.enterCaretValueRule = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#carrotValueRule.
-FSHListener.prototype.exitCarrotValueRule = function(ctx) {
+// Exit a parse tree produced by FSHParser#caretValueRule.
+FSHListener.prototype.exitCaretValueRule = function(ctx) {
 };
 
 
@@ -245,12 +245,12 @@ FSHListener.prototype.exitPaths = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#carrotPath.
-FSHListener.prototype.enterCarrotPath = function(ctx) {
+// Enter a parse tree produced by FSHParser#caretPath.
+FSHListener.prototype.enterCaretPath = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#carrotPath.
-FSHListener.prototype.exitCarrotPath = function(ctx) {
+// Exit a parse tree produced by FSHParser#caretPath.
+FSHListener.prototype.exitCaretPath = function(ctx) {
 };
 
 

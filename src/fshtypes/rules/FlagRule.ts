@@ -1,14 +1,11 @@
 import { Rule } from './Rule';
 
-export const FLAG_RULE_TYPE = 'flag';
-
-export class FlagRule implements Rule {
-  readonly ruleType: string;
+export class FlagRule extends Rule {
   mustSupport: boolean;
   summary: boolean;
   modifier: boolean;
 
-  constructor(public path: string) {
-    this.ruleType = FLAG_RULE_TYPE;
+  constructor(path: string) {
+    super(path);
   }
 }

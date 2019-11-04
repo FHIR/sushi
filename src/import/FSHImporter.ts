@@ -8,6 +8,7 @@ import {
   FlagRule,
   ValueSetRule,
   FixedValueRule,
+  FixedValueType,
   OnlyRule
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
@@ -261,7 +262,7 @@ export class FSHImporter extends FSHVisitor {
     return fixedValueRule;
   }
 
-  visitValue(ctx: pc.ValueContext): boolean | number | string | Code | Quantity | Ratio {
+  visitValue(ctx: pc.ValueContext): FixedValueType {
     if (ctx.STRING()) {
       return this.extractString(ctx.STRING());
     }

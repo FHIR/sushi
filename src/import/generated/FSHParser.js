@@ -211,15 +211,15 @@ var symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INVARI
                       "KW_ONLY", "KW_OR", "KW_OBEYS", "KW_TRUE", "KW_FALSE", 
                       "EQUAL", "STAR", "COLON", "COMMA", "STRING", "MULTILINE_STRING", 
                       "NUMBER", "UNIT", "CODE", "DATETIME", "TIME", "CARD", 
-                      "CARROT_SEQUENCE", "COMMA_DELIMITED_SEQUENCES", "SEQUENCE", 
+                      "CARET_SEQUENCE", "COMMA_DELIMITED_SEQUENCES", "SEQUENCE", 
                       "WHITESPACE", "BLOCK_COMMENT", "LINE_COMMENT" ];
 
 var ruleNames =  [ "doc", "entity", "alias", "profile", "extension", "sdMetadata", 
                    "sdRule", "invariant", "invariantMetadata", "parent", 
                    "id", "title", "description", "expression", "xpath", 
                    "severity", "cardRule", "flagRule", "valueSetRule", "fixedValueRule", 
-                   "containsRule", "onlyRule", "obeysRule", "carrotValueRule", 
-                   "path", "paths", "carrotPath", "flag", "strength", "value", 
+                   "containsRule", "onlyRule", "obeysRule", "caretValueRule", 
+                   "path", "paths", "caretPath", "flag", "strength", "value", 
                    "item", "code", "quantity", "ratio", "ratioPart", "bool" ];
 
 function FSHParser (input) {
@@ -279,7 +279,7 @@ FSHParser.CODE = 35;
 FSHParser.DATETIME = 36;
 FSHParser.TIME = 37;
 FSHParser.CARD = 38;
-FSHParser.CARROT_SEQUENCE = 39;
+FSHParser.CARET_SEQUENCE = 39;
 FSHParser.COMMA_DELIMITED_SEQUENCES = 40;
 FSHParser.SEQUENCE = 41;
 FSHParser.WHITESPACE = 42;
@@ -309,10 +309,10 @@ FSHParser.RULE_fixedValueRule = 19;
 FSHParser.RULE_containsRule = 20;
 FSHParser.RULE_onlyRule = 21;
 FSHParser.RULE_obeysRule = 22;
-FSHParser.RULE_carrotValueRule = 23;
+FSHParser.RULE_caretValueRule = 23;
 FSHParser.RULE_path = 24;
 FSHParser.RULE_paths = 25;
-FSHParser.RULE_carrotPath = 26;
+FSHParser.RULE_caretPath = 26;
 FSHParser.RULE_flag = 27;
 FSHParser.RULE_strength = 28;
 FSHParser.RULE_value = 29;
@@ -982,8 +982,8 @@ SdRuleContext.prototype.obeysRule = function() {
     return this.getTypedRuleContext(ObeysRuleContext,0);
 };
 
-SdRuleContext.prototype.carrotValueRule = function() {
-    return this.getTypedRuleContext(CarrotValueRuleContext,0);
+SdRuleContext.prototype.caretValueRule = function() {
+    return this.getTypedRuleContext(CaretValueRuleContext,0);
 };
 
 SdRuleContext.prototype.enterRule = function(listener) {
@@ -1065,7 +1065,7 @@ FSHParser.prototype.sdRule = function() {
         case 8:
             this.enterOuterAlt(localctx, 8);
             this.state = 129;
-            this.carrotValueRule();
+            this.caretValueRule();
             break;
 
         }
@@ -2574,7 +2574,7 @@ FSHParser.prototype.obeysRule = function() {
 };
 
 
-function CarrotValueRuleContext(parser, parent, invokingState) {
+function CaretValueRuleContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
 	}
@@ -2583,48 +2583,48 @@ function CarrotValueRuleContext(parser, parent, invokingState) {
 	}
 	antlr4.ParserRuleContext.call(this, parent, invokingState);
     this.parser = parser;
-    this.ruleIndex = FSHParser.RULE_carrotValueRule;
+    this.ruleIndex = FSHParser.RULE_caretValueRule;
     return this;
 }
 
-CarrotValueRuleContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
-CarrotValueRuleContext.prototype.constructor = CarrotValueRuleContext;
+CaretValueRuleContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+CaretValueRuleContext.prototype.constructor = CaretValueRuleContext;
 
-CarrotValueRuleContext.prototype.STAR = function() {
+CaretValueRuleContext.prototype.STAR = function() {
     return this.getToken(FSHParser.STAR, 0);
 };
 
-CarrotValueRuleContext.prototype.carrotPath = function() {
-    return this.getTypedRuleContext(CarrotPathContext,0);
+CaretValueRuleContext.prototype.caretPath = function() {
+    return this.getTypedRuleContext(CaretPathContext,0);
 };
 
-CarrotValueRuleContext.prototype.EQUAL = function() {
+CaretValueRuleContext.prototype.EQUAL = function() {
     return this.getToken(FSHParser.EQUAL, 0);
 };
 
-CarrotValueRuleContext.prototype.value = function() {
+CaretValueRuleContext.prototype.value = function() {
     return this.getTypedRuleContext(ValueContext,0);
 };
 
-CarrotValueRuleContext.prototype.path = function() {
+CaretValueRuleContext.prototype.path = function() {
     return this.getTypedRuleContext(PathContext,0);
 };
 
-CarrotValueRuleContext.prototype.enterRule = function(listener) {
+CaretValueRuleContext.prototype.enterRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.enterCarrotValueRule(this);
+        listener.enterCaretValueRule(this);
 	}
 };
 
-CarrotValueRuleContext.prototype.exitRule = function(listener) {
+CaretValueRuleContext.prototype.exitRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.exitCarrotValueRule(this);
+        listener.exitCaretValueRule(this);
 	}
 };
 
-CarrotValueRuleContext.prototype.accept = function(visitor) {
+CaretValueRuleContext.prototype.accept = function(visitor) {
     if ( visitor instanceof FSHVisitor ) {
-        return visitor.visitCarrotValueRule(this);
+        return visitor.visitCaretValueRule(this);
     } else {
         return visitor.visitChildren(this);
     }
@@ -2633,12 +2633,12 @@ CarrotValueRuleContext.prototype.accept = function(visitor) {
 
 
 
-FSHParser.CarrotValueRuleContext = CarrotValueRuleContext;
+FSHParser.CaretValueRuleContext = CaretValueRuleContext;
 
-FSHParser.prototype.carrotValueRule = function() {
+FSHParser.prototype.caretValueRule = function() {
 
-    var localctx = new CarrotValueRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 46, FSHParser.RULE_carrotValueRule);
+    var localctx = new CaretValueRuleContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 46, FSHParser.RULE_caretValueRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
@@ -2653,7 +2653,7 @@ FSHParser.prototype.carrotValueRule = function() {
         }
 
         this.state = 236;
-        this.carrotPath();
+        this.caretPath();
         this.state = 237;
         this.match(FSHParser.EQUAL);
         this.state = 238;
@@ -2809,7 +2809,7 @@ FSHParser.prototype.paths = function() {
 };
 
 
-function CarrotPathContext(parser, parent, invokingState) {
+function CaretPathContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
 	}
@@ -2818,32 +2818,32 @@ function CarrotPathContext(parser, parent, invokingState) {
 	}
 	antlr4.ParserRuleContext.call(this, parent, invokingState);
     this.parser = parser;
-    this.ruleIndex = FSHParser.RULE_carrotPath;
+    this.ruleIndex = FSHParser.RULE_caretPath;
     return this;
 }
 
-CarrotPathContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
-CarrotPathContext.prototype.constructor = CarrotPathContext;
+CaretPathContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+CaretPathContext.prototype.constructor = CaretPathContext;
 
-CarrotPathContext.prototype.CARROT_SEQUENCE = function() {
-    return this.getToken(FSHParser.CARROT_SEQUENCE, 0);
+CaretPathContext.prototype.CARET_SEQUENCE = function() {
+    return this.getToken(FSHParser.CARET_SEQUENCE, 0);
 };
 
-CarrotPathContext.prototype.enterRule = function(listener) {
+CaretPathContext.prototype.enterRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.enterCarrotPath(this);
+        listener.enterCaretPath(this);
 	}
 };
 
-CarrotPathContext.prototype.exitRule = function(listener) {
+CaretPathContext.prototype.exitRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.exitCarrotPath(this);
+        listener.exitCaretPath(this);
 	}
 };
 
-CarrotPathContext.prototype.accept = function(visitor) {
+CaretPathContext.prototype.accept = function(visitor) {
     if ( visitor instanceof FSHVisitor ) {
-        return visitor.visitCarrotPath(this);
+        return visitor.visitCaretPath(this);
     } else {
         return visitor.visitChildren(this);
     }
@@ -2852,16 +2852,16 @@ CarrotPathContext.prototype.accept = function(visitor) {
 
 
 
-FSHParser.CarrotPathContext = CarrotPathContext;
+FSHParser.CaretPathContext = CaretPathContext;
 
-FSHParser.prototype.carrotPath = function() {
+FSHParser.prototype.caretPath = function() {
 
-    var localctx = new CarrotPathContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 52, FSHParser.RULE_carrotPath);
+    var localctx = new CaretPathContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 52, FSHParser.RULE_caretPath);
     try {
         this.enterOuterAlt(localctx, 1);
         this.state = 244;
-        this.match(FSHParser.CARROT_SEQUENCE);
+        this.match(FSHParser.CARET_SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
 	        localctx.exception = re;

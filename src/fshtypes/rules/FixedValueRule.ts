@@ -1,13 +1,12 @@
 import { Rule } from './Rule';
 import { Code, Quantity, Ratio } from '../index';
 
-export const FIXED_VALUE_RULE_TYPE = 'fixedvalue';
+export type FixedValueType = boolean | number | string | Code | Quantity | Ratio;
 
-export class FixedValueRule implements Rule {
-  readonly ruleType: string;
-  fixedValue: boolean | number | string | Code | Quantity | Ratio;
+export class FixedValueRule extends Rule {
+  fixedValue: FixedValueType;
 
-  constructor(public path: string) {
-    this.ruleType = FIXED_VALUE_RULE_TYPE;
+  constructor(path: string) {
+    super(path);
   }
 }

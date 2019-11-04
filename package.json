@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc -w",
-    "build:grammar": "./antlr/gradlew -p ./antlr generateGrammarSource",
+    "build:grammar": "bash ./antlr/gradlew -p ./antlr generateGrammarSource",
     "test": "jest --coverage",
     "test:watch": "npm run test -- --watchAll",
     "coverage": "opener coverage/lcov-report/index.html",

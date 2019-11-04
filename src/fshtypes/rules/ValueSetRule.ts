@@ -1,13 +1,10 @@
 import { Rule } from './Rule';
 
-export const VALUE_SET_RULE_TYPE = 'valueset';
-
-export class ValueSetRule implements Rule {
-  readonly ruleType: string;
+export class ValueSetRule extends Rule {
   valueSet: string;
   strength: string;
 
-  constructor(public path: string) {
-    this.ruleType = VALUE_SET_RULE_TYPE;
+  constructor(path: string) {
+    super(path);
   }
 }

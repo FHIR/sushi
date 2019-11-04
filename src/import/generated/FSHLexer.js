@@ -461,7 +461,7 @@ FSHLexer.CODE = 35;
 FSHLexer.DATETIME = 36;
 FSHLexer.TIME = 37;
 FSHLexer.CARD = 38;
-FSHLexer.CARROT_SEQUENCE = 39;
+FSHLexer.CARET_SEQUENCE = 39;
 FSHLexer.COMMA_DELIMITED_SEQUENCES = 40;
 FSHLexer.SEQUENCE = 41;
 FSHLexer.WHITESPACE = 42;
@@ -490,7 +490,7 @@ FSHLexer.prototype.symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSI
                                      "EQUAL", "STAR", "COLON", "COMMA", 
                                      "STRING", "MULTILINE_STRING", "NUMBER", 
                                      "UNIT", "CODE", "DATETIME", "TIME", 
-                                     "CARD", "CARROT_SEQUENCE", "COMMA_DELIMITED_SEQUENCES", 
+                                     "CARD", "CARET_SEQUENCE", "COMMA_DELIMITED_SEQUENCES", 
                                      "SEQUENCE", "WHITESPACE", "BLOCK_COMMENT", 
                                      "LINE_COMMENT" ];
 
@@ -504,7 +504,7 @@ FSHLexer.prototype.ruleNames = [ "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION",
                                  "KW_TRUE", "KW_FALSE", "EQUAL", "STAR", 
                                  "COLON", "COMMA", "STRING", "MULTILINE_STRING", 
                                  "NUMBER", "UNIT", "CODE", "DATETIME", "TIME", 
-                                 "CARD", "CARROT_SEQUENCE", "COMMA_DELIMITED_SEQUENCES", 
+                                 "CARD", "CARET_SEQUENCE", "COMMA_DELIMITED_SEQUENCES", 
                                  "SEQUENCE", "WS", "WHITESPACE", "BLOCK_COMMENT", 
                                  "LINE_COMMENT" ];
 

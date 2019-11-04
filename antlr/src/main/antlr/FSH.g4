@@ -8,7 +8,7 @@ alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 profile:            KW_PROFILE SEQUENCE sdMetadata+ sdRule*;
 extension:          KW_EXTENSION SEQUENCE sdMetadata* sdRule*;
 sdMetadata:         parent | id | title | description;
-sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | carrotValueRule;
+sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule;
 
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
@@ -31,12 +31,12 @@ fixedValueRule:     STAR path EQUAL value;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY SEQUENCE (KW_OR SEQUENCE)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
-carrotValueRule:    STAR path? carrotPath EQUAL value;
+caretValueRule:     STAR path? caretPath EQUAL value;
 
 // MISC
 path:               SEQUENCE;
 paths:              COMMA_DELIMITED_SEQUENCES;
-carrotPath:         CARROT_SEQUENCE;
+caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | code | quantity | ratio | bool ;
@@ -115,7 +115,7 @@ TIME:               [0-9][0-9](':'[0-9][0-9](':'[0-9][0-9]('.'[0-9]+)?)?)?('Z' |
 CARD:               [0-9]+ '..' ([0-9]+ | '*');
 
                  //  ^  NON-WHITESPACE
-CARROT_SEQUENCE:    '^' ~[ \t\r\n\f]+;
+CARET_SEQUENCE:    '^' ~[ \t\r\n\f]+;
 
                         // (NON-WS     ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE COMMA WS+)+ SEQUENCE;

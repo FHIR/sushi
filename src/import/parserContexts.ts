@@ -59,7 +59,7 @@ export interface SdRuleContext extends ParserRuleContext {
   // containsRule(): ContainsRuleContext;
   onlyRule(): OnlyRuleContext;
   // obeysRule(): ObeysRuleContext;
-  // carrotValueRule(): CarrotValueRuleContext;
+  // caretValueRule(): CaretValueRuleContext;
 }
 
 export interface PathContext extends ParserRuleContext {

@@ -85,7 +85,7 @@ CODE
 DATETIME
 TIME
 CARD
-CARROT_SEQUENCE
+CARET_SEQUENCE
 COMMA_DELIMITED_SEQUENCES
 SEQUENCE
 WHITESPACE
@@ -116,10 +116,10 @@ fixedValueRule
 containsRule
 onlyRule
 obeysRule
-carrotValueRule
+caretValueRule
 path
 paths
-carrotPath
+caretPath
 flag
 strength
 value

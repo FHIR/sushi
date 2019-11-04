@@ -150,8 +150,8 @@ FSHVisitor.prototype.visitObeysRule = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#carrotValueRule.
-FSHVisitor.prototype.visitCarrotValueRule = function(ctx) {
+// Visit a parse tree produced by FSHParser#caretValueRule.
+FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
   return this.visitChildren(ctx);
 };
 
@@ -168,8 +168,8 @@ FSHVisitor.prototype.visitPaths = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#carrotPath.
-FSHVisitor.prototype.visitCarrotPath = function(ctx) {
+// Visit a parse tree produced by FSHParser#caretPath.
+FSHVisitor.prototype.visitCaretPath = function(ctx) {
   return this.visitChildren(ctx);
 };
 

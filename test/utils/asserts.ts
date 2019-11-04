@@ -5,6 +5,7 @@ import {
   FlagRule,
   ValueSetRule,
   FixedValueRule,
+  FixedValueType,
   OnlyRule
 } from '../../src/fshtypes/rules';
 
@@ -44,11 +45,7 @@ export function assertValueSetRule(
   expect(valueSetRule.strength).toBe(strength);
 }
 
-export function assertFixedValueRule(
-  rule: Rule,
-  path: string,
-  value: boolean | number | string | Code | Quantity | Ratio
-): void {
+export function assertFixedValueRule(rule: Rule, path: string, value: FixedValueType): void {
   expect(rule).toBeInstanceOf(FixedValueRule);
   const fixedValueRule = rule as FixedValueRule;
   expect(fixedValueRule.path).toBe(path);

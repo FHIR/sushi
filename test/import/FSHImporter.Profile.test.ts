@@ -45,6 +45,45 @@ describe('FSHImporter', () => {
         expect(profile.description).toBe('A profile on Observation');
       });
 
+      it('should properly parse a multi-string description', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Description:
+          """
+          This is a multi-string description
+          with a couple of paragraphs.
+
+          This is the second paragraph.  It has bullet points w/ indentation:
+
+          * Bullet 1
+            * Bullet A
+            * Bullet B
+              * Bullet i
+            * Bullet C
+          * Bullet 2
+          """
+        `;
+
+        const result = importText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        const expectedDescriptionLines = [
+          'This is a multi-string description',
+          'with a couple of paragraphs.',
+          '',
+          'This is the second paragraph.  It has bullet points w/ indentation:',
+          '',
+          '* Bullet 1',
+          '  * Bullet A',
+          '  * Bullet B',
+          '    * Bullet i',
+          '  * Bullet C',
+          '* Bullet 2'
+        ];
+        expect(profile.description).toBe(expectedDescriptionLines.join('\n'));
+      });
+
       it('should accept and translate an alias for the parent', () => {
         const input = `
         Alias: OBS = http://hl7.org/fhir/StructureDefinition/Observation
@@ -470,6 +509,60 @@ describe('FSHImporter', () => {
             new Quantity(130, new Code('mg', 'http://unitsofmeasure.org')),
             new Quantity(1, new Code('dL', 'http://unitsofmeasure.org'))
           )
+        );
+      });
+
+      it('should parse fixed value Ratio rule w/ numeric numerator', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueRatio = 130 : 1 'dL'
+        `;
+
+        const result = importText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertFixedValueRule(
+          profile.rules[0],
+          'valueRatio',
+          new Ratio(new Quantity(130), new Quantity(1, new Code('dL', 'http://unitsofmeasure.org')))
+        );
+      });
+
+      it('should parse fixed value Ratio rule w/ numeric denominator', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueRatio = 130 'mg' : 1
+        `;
+
+        const result = importText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertFixedValueRule(
+          profile.rules[0],
+          'valueRatio',
+          new Ratio(new Quantity(130, new Code('mg', 'http://unitsofmeasure.org')), new Quantity(1))
+        );
+      });
+
+      it('should parse fixed value Ratio rule w/ numeric numerator and denominator', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueRatio = 130 : 1
+        `;
+
+        const result = importText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertFixedValueRule(
+          profile.rules[0],
+          'valueRatio',
+          new Ratio(new Quantity(130), new Quantity(1))
         );
       });
     });
