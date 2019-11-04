@@ -1,13 +1,10 @@
 import { Rule } from './Rule';
 
-export const CARD_RULE_TYPE = 'card';
-
-export class CardRule implements Rule {
-  ruleType: string;
+export class CardRule extends Rule {
   min: number;
   max: string;
 
-  constructor(public path: string) {
-    this.ruleType = CARD_RULE_TYPE;
+  constructor(path: string) {
+    super(path);
   }
 }

@@ -7,7 +7,7 @@ describe('Extension', () => {
       const p = new Extension('MyExtension');
       expect(p.name).toBe('MyExtension');
       expect(p.id).toBe('MyExtension');
-      expect(p.parent).toBeUndefined();
+      expect(p.parent).toBe('Extension');
       expect(p.rules).toBeEmpty();
     });
   });

@@ -1,0 +1,11 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+# Ignore files created by VS Code plugins
+.project
+.classpath
+.settings
+/bin
+/src/main/antlr/.antlr
+
+# Ignore Gradle build output directory
+build

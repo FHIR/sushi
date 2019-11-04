@@ -1,0 +1,16 @@
+plugins {
+    id 'antlr'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:4.7.2"
+}
+
+generateGrammarSource {
+    outputDirectory = file("../src/import/generated")
+    arguments += ["-visitor", '-Dlanguage=JavaScript']
+}

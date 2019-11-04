@@ -26,6 +26,7 @@ The following NPM tasks are useful in development:
 | ---- | ----------- |
 | **build** | compiles `src/**/*.ts` files to `dist/**/*.js` files using the TypeScript compiler (tsc) |
 | **build:watch** | similar to _build_ but automatically builds when changes are detected in src files |
+| **build:grammar** | builds the ANTLR grammar from 'antlr/src/main/antlr' to 'src/import/generated' |
 | **test** | runs all unit tests using Jest |
 | **test:watch** | similar to _test_, but automatically runs affected tests when changes are detected in src files |
 | **lint** | checks all src files to ensure they follow project code styles and rules |
@@ -43,7 +44,6 @@ $ npm run ci
 # Recommended Development Environment
 
 For the best experience, developers should use [Visual Studio Code](https://code.visualstudio.com/) with the following plugins:
-
 
 * [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
 * [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
