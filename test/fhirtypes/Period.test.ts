@@ -2,20 +2,12 @@ import { InvalidPeriodError } from '../../src/errors';
 import { Period, validatePeriod } from '../../src/fhirtypes';
 
 describe('Period', () => {
-  let yearOnly: string;
-  let yearMonth: string;
   let dateOnly: string;
   let hasTimeZone: string;
-  let zTime: string;
-  let zMilliseconds: string;
 
   beforeAll(() => {
-    yearOnly = '1964';
-    yearMonth = '1975-05';
     dateOnly = '2006-03-29';
     hasTimeZone = '2010-02-07T13:28:17+03:00';
-    zTime = '2025-11-04T11:51:22Z';
-    zMilliseconds = '2025-11-04T11:51:22.131Z';
   });
 
   describe('#validatePeriod', () => {
