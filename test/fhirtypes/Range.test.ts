@@ -1,8 +1,10 @@
 import cloneDeep from 'lodash/cloneDeep';
 import { Range, validateRange, Quantity } from '../../src/fhirtypes/dataTypes';
-import { InvalidRangeValueError } from '../../src/errors/InvalidRangeValueError';
-import { UnitMismatchError } from '../../src/errors/UnitMismatchError';
-import { CodeAndSystemMismatchError } from '../../src/errors/CodeAndSystemMismatchError';
+import {
+  InvalidRangeValueError,
+  UnitMismatchError,
+  CodeAndSystemMismatchError
+} from '../../src/errors';
 
 describe('Range', () => {
   let small: Quantity;

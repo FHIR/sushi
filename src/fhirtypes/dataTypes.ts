@@ -1,8 +1,10 @@
-import { InvalidRangeValueError } from '../errors/InvalidRangeValueError';
-import { UnitMismatchError } from '../errors/UnitMismatchError';
-import { CodeAndSystemMismatchError } from '../errors/CodeAndSystemMismatchError';
-import { InvalidPeriodError } from '../errors/InvalidPeriodError';
-import { FHIRdateTime, validateFHIRdateTime } from './primitiveTypes';
+import {
+  InvalidRangeValueError,
+  UnitMismatchError,
+  CodeAndSystemMismatchError,
+  InvalidPeriodError
+} from '../errors';
+import { FHIRDateTime, validateFHIRDateTime } from './primitiveTypes';
 
 export type CodeableConcept = {
   coding?: Coding[];
@@ -54,11 +56,9 @@ export type Identifier = {
  * @see {@link http://hl7.org/fhir/R4/datatypes.html#Period}
  */
 export type Period = {
-  start?: FHIRdateTime;
-  end?: FHIRdateTime;
+  start?: FHIRDateTime;
+  end?: FHIRDateTime;
 };
-
-// http://hl7.org/fhir/R4/datatypes.html#dateTime
 
 /**
  * Throws an error if either start or end are not valid dateTime strings,
@@ -67,15 +67,14 @@ export type Period = {
  * @returns {void}
  * @throws {InvalidPeriodError} when the start comes before the end.
  */
-
 export function validatePeriod(period: Period): void {
   let start: Date, end: Date;
   if (period.start) {
-    validateFHIRdateTime(period.start);
+    validateFHIRDateTime(period.start);
     start = new Date(period.start);
   }
   if (period.end) {
-    validateFHIRdateTime(period.end);
+    validateFHIRDateTime(period.end);
     end = new Date(period.end);
   }
   if (start && end && start > end) {

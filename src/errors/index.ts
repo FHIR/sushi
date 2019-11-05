@@ -6,6 +6,7 @@ export * from './CodedTypeNotFoundError';
 export * from './InvalidCardinalityError';
 export * from './InvalidDateTimeError';
 export * from './InvalidPeriodError';
+export * from './InvalidRangeValueError';
 export * from './SlicingDefinitionError';
 export * from './SlicingNotDefinedError';
 export * from './UnitMismatchError';

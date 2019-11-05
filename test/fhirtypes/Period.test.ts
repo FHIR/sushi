@@ -1,43 +1,47 @@
 import { InvalidPeriodError } from '../../src/errors';
-import { Period, validatePeriod } from '../../src/fhirtypes';
+import { Period, validatePeriod, FHIRDateTime } from '../../src/fhirtypes';
 
 describe('Period', () => {
-  let dateOnly: string;
-  let hasTimeZone: string;
+  let earlier: FHIRDateTime;
+  let later: FHIRDateTime;
 
   beforeAll(() => {
-    dateOnly = '2006-03-29';
-    hasTimeZone = '2010-02-07T13:28:17+03:00';
+    earlier = '2001-11-23';
+    later = '2002-01-07';
   });
 
   describe('#validatePeriod', () => {
     it('should be valid when start and/or end are undefined', () => {
       const onlyStart: Period = {
-        start: dateOnly
+        start: '2006-03-29'
       };
       const onlyEnd: Period = {
-        end: hasTimeZone
+        end: '2010-02-07T13:28:17+03:00'
       };
       const timeless: Period = {};
       validatePeriod(onlyStart);
       validatePeriod(onlyEnd);
       validatePeriod(timeless);
     });
-    it('should require start to be less than or equal to end', () => {
+
+    it('should be valid when start is less than or equal to end', () => {
       const inOrder: Period = {
-        start: dateOnly,
-        end: hasTimeZone
+        start: earlier,
+        end: later
       };
       const sameTime: Period = {
-        start: dateOnly,
-        end: dateOnly
-      };
-      const wrongOrder: Period = {
-        start: hasTimeZone,
-        end: dateOnly
+        start: earlier,
+        end: earlier
       };
       validatePeriod(inOrder);
       validatePeriod(sameTime);
+    });
+
+    it('should throw an error when start is greater than end', () => {
+      const wrongOrder: Period = {
+        start: later,
+        end: earlier
+      };
       expect(() => {
         validatePeriod(wrongOrder);
       }).toThrow(InvalidPeriodError);

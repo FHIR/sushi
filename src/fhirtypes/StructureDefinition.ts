@@ -1,12 +1,6 @@
 import capitalize from 'lodash/capitalize';
 import cloneDeep from 'lodash/cloneDeep';
-// import { CodeableConcept } from './CodeableConcept';
-// import { Coding } from './Coding';
 import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
-// import { UsageContext } from './UsageContext';
-// import { Identifier } from './Identifier';
-// import { ContactDetail } from './ContactDetail';
-// import { Meta } from './Meta';
 import { Resource } from './Resource';
 import { Extension } from './Extension';
 import { Meta } from './specialTypes';
