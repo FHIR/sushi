@@ -1,14 +1,17 @@
 import capitalize from 'lodash/capitalize';
 import cloneDeep from 'lodash/cloneDeep';
-import { CodeableConcept } from './CodeableConcept';
-import { Coding } from './Coding';
+// import { CodeableConcept } from './CodeableConcept';
+// import { Coding } from './Coding';
 import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
-import { UsageContext } from './UsageContext';
-import { Identifier } from './Identifier';
-import { ContactDetail } from './ContactDetail';
-import { Meta } from './Meta';
+// import { UsageContext } from './UsageContext';
+// import { Identifier } from './Identifier';
+// import { ContactDetail } from './ContactDetail';
+// import { Meta } from './Meta';
 import { Resource } from './Resource';
 import { Extension } from './Extension';
+import { Meta } from './specialTypes';
+import { Identifier, CodeableConcept, Coding } from './dataTypes';
+import { ContactDetail, UsageContext } from './metaDataTypes';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition

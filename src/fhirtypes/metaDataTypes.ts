@@ -1,12 +1,18 @@
-import { Coding } from './Coding';
-import { CodeableConcept } from './CodeableConcept';
-import { Quantity } from './Quantity';
-import { Range } from './Range';
+import { ContactPoint, CodeableConcept, Quantity, Coding } from './dataTypes';
+
+/**
+ * Represents the FHIR R4 metadata type ContactDetail.
+ *
+ * @see {@link http://hl7.org/fhir/R4/metadatatypes.html#ContactDetail}
+ */
+export type ContactDetail = {
+  name?: string;
+  telecom?: ContactPoint[];
+};
 
 /**
  * Represents the FHIR R4 metadata type UsageContext.
- * The FHIR type's `value[x]` field can have many names and types,
- * not all of which are defined in this type.
+ * The FHIR type's `value[x]` field can have many names and types.
  * valueCodeableConcept: CodeableConcept
  * valueQuantity: Quantity
  * valueRange: Range
@@ -19,4 +25,5 @@ export type UsageContext = {
   valueCodeableConcept?: CodeableConcept;
   valueQuantity?: Quantity;
   valueRange?: Range;
+  valueReference?: any;
 };

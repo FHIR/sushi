@@ -1,5 +1,5 @@
 import { Annotated } from './Annotated';
-import { Quantity } from '..//fhirtypes/Quantity';
+import { Quantity } from '../fhirtypes';
 
 export class CodeAndSystemMismatchError extends Error implements Annotated {
   specReferences = ['http://hl7.org/fhir/R4/datatypes.html#Range'];

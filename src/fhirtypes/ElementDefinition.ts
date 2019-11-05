@@ -1,9 +1,7 @@
 import isEqual from 'lodash/isEqual';
 import cloneDeep from 'lodash/cloneDeep';
 import { StructureDefinition } from './StructureDefinition';
-import { CodeableConcept } from './CodeableConcept';
-import { Coding } from './Coding';
-import { Quantity } from './Quantity';
+import { CodeableConcept, Coding, Quantity } from './';
 import { Code } from '../fshtypes';
 import {
   BindingStrengthError,

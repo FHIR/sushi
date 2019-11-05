@@ -1,4 +1,4 @@
-import { Coding } from './Coding';
+import { Coding } from './dataTypes';
 
 /**
  * Type to represent FHIR R4 resource metadata.
