@@ -1,5 +1,3 @@
-// TODO: Is this really an Interface
-export interface Rule {
-  ruleType: string;
-  path: string;
+export class Rule {
+  constructor(public path: string) {}
 }
