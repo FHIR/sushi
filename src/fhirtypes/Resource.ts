@@ -1,4 +1,4 @@
-import { Meta } from './Meta';
+import { Meta } from './specialTypes';
 
 /**
  * Represents the FHIR R4 Resource element.
