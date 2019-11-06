@@ -8,7 +8,7 @@ describe('ElementDefinition', () => {
   let jsonObservation: any;
   let observation: StructureDefinition;
   beforeAll(() => {
-    defs = load('4.0.0');
+    defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
   });
   beforeEach(() => {
