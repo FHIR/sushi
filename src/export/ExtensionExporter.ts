@@ -7,6 +7,7 @@ export class ExtensionExporter extends StructureDefinitionExporter {
     super();
   }
 
+  // eslint-disable-next-line
   export(tank: FSHTank): StructureDefinition[] {
     // TODO: Make meaningful export of StructureDefinitions from contents of tank
     return [];
