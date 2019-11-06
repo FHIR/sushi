@@ -16,10 +16,13 @@ export class ExtensionExporter extends StructureDefinitionExporter {
   export(tank: FSHTank): StructureDefinition[] {
     const structDefs: StructureDefinition[] = [];
     for (const doc of tank.docs) {
-      for (const [, extension] of doc.extensions) {
-        // TODO: catch errors and log them once logging is in place
-        const structDef = this.exportStructDef(extension, tank);
-        structDefs.push(structDef);
+      for (const extension of doc.extensions.values()) {
+        try {
+          const structDef = this.exportStructDef(extension, tank);
+          structDefs.push(structDef);
+        } catch (e) {
+          console.error(e.stack);
+        }
       }
     }
     return structDefs;

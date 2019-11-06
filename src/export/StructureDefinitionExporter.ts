@@ -18,7 +18,11 @@ export class StructureDefinitionExporter {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    * @param {FSHTank} tank - The FSH tank we are exporting
    */
-  setMetadata(structDef: StructureDefinition, fshDefinition: Profile | Extension, tank: FSHTank) {
+  private setMetadata(
+    structDef: StructureDefinition,
+    fshDefinition: Profile | Extension,
+    tank: FSHTank
+  ) {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
     structDef.url = `${tank.packageJSON.canonical}/StructureDefinition/${structDef.id}`;
@@ -33,11 +37,8 @@ export class StructureDefinitionExporter {
    * @returns {StructureDefinition}
    */
   exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): StructureDefinition {
-    const parentName = fshDefinition.parent ? fshDefinition.parent : 'Resource';
-    const jsonParent =
-      fshDefinition instanceof Profile
-        ? this.FHIRDefs.findResource(parentName)
-        : this.FHIRDefs.findType(parentName);
+    const parentName = fshDefinition.parent || 'Resource';
+    const jsonParent = this.FHIRDefs.find(parentName);
     let structDef: StructureDefinition;
     if (jsonParent) {
       structDef = StructureDefinition.fromJSON(jsonParent);

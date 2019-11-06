@@ -16,10 +16,13 @@ export class ProfileExporter extends StructureDefinitionExporter {
   export(tank: FSHTank): StructureDefinition[] {
     const structDefs: StructureDefinition[] = [];
     for (const doc of tank.docs) {
-      for (const [, profile] of doc.profiles) {
-        // TODO: catch errors and log them once logging is in place
-        const structDef = this.exportStructDef(profile, tank);
-        structDefs.push(structDef);
+      for (const profile of doc.profiles.values()) {
+        try {
+          const structDef = this.exportStructDef(profile, tank);
+          structDefs.push(structDef);
+        } catch (e) {
+          console.error(e.stack);
+        }
       }
     }
     return structDefs;
