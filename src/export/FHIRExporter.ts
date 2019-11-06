@@ -1,10 +1,12 @@
 import { FSHTank } from '../import/FSHTank';
-import { StructureDefinition } from '../fhirtypes';
-import { ProfileExporter, ExtensionExporter } from '.';
+import { Package } from './Package';
+import { ProfileExporter } from './ProfileExporter';
+import { ExtensionExporter } from './ExtensionExporter';
+
 /**
  * FHIRExporter handles the processing of FSH documents, storing the FSH types within them as FHIR types.
- * FHIRExporter references several takes the Profiles and Extensions within the FSHDocuments of a FSHTank
- * and returns them as StructureDefinitions.
+ * FHIRExporter takes the Profiles and Extensions within the FSHDocuments of a FSHTank and returns them
+ * as a structured Package.
  */
 export class FHIRExporter {
   private readonly profileExporter: ProfileExporter;
@@ -15,9 +17,9 @@ export class FHIRExporter {
     this.extensionExporter = new ExtensionExporter();
   }
 
-  export(tank: FSHTank): StructureDefinition[] {
+  export(tank: FSHTank): Package {
     const profileDefs = this.profileExporter.export(tank);
     const extensionDefs = this.extensionExporter.export(tank);
-    return [...profileDefs, ...extensionDefs];
+    return new Package(profileDefs, extensionDefs, tank.packageJSON);
   }
 }

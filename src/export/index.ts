@@ -3,3 +3,4 @@ export * from './StructureDefinitionExporter';
 export * from './ProfileExporter';
 export * from './ExtensionExporter';
 export * from './exportFHIR';
+export * from './Package';
