@@ -1,7 +1,7 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { FSHVisitor } from './generated/FSHVisitor';
-import { Profile, Extension, Code, Quantity, Ratio } from '../../src/fshtypes';
+import { Profile, Extension, Code, Quantity, Ratio } from '../fshtypes';
 import {
   Rule,
   CardRule,
@@ -29,7 +29,7 @@ enum Flag {
 }
 
 /**
- * FHSImporter handles the parsing of FSH documents, constructing the data into FSH types.
+ * FSHImporter handles the parsing of FSH documents, constructing the data into FSH types.
  * FSHImporter uses a visitor pattern approach with some accomodations due to the ANTLR4
  * implementation and TypeScript requirements.  For example, the `accept` functions that
  * each `ctx` has cannot be used because their signatures return `void` by default. Instead,

@@ -11,7 +11,7 @@ describe('ElementDefinition', () => {
   let observation: StructureDefinition;
   let valueX: ElementDefinition;
   beforeAll(() => {
-    defs = load('4.0.0');
+    defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
     jsonValueX = jsonObservation.snapshot.element[21];
   });

@@ -11,7 +11,7 @@ describe('StructureDefinition', () => {
   let jsonObservation: any;
   let observation: StructureDefinition;
   beforeAll(() => {
-    defs = load('4.0.0');
+    defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
   });
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe('StructureDefinition', () => {
     it('should load a resource properly', () => {
       // Don't test everything, but get a sample anyway
       expect(observation.id).toBe('Observation');
-      expect(observation.meta.lastUpdated).toBe('2018-12-27T22:37:54.724+11:00');
+      expect(observation.meta.lastUpdated).toBe('2019-11-01T09:29:23.356+11:00');
       expect(observation.extension).toHaveLength(6);
       expect(observation.extension[0]).toEqual({
         url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',

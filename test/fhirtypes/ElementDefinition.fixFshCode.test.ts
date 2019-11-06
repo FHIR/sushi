@@ -12,7 +12,7 @@ describe('ElementDefinition', () => {
   let fooBarCode: Code;
   let barFooCode: Code;
   beforeAll(() => {
-    defs = load('4.0.0');
+    defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
   });
   beforeEach(() => {
