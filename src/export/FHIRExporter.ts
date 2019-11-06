@@ -13,7 +13,7 @@ export class FHIRExporter {
   private readonly extensionExporter: ExtensionExporter;
 
   constructor() {
-    const FHIRDefs = load('4.0.0');
+    const FHIRDefs = load('4.0.1');
     this.profileExporter = new ProfileExporter(FHIRDefs);
     this.extensionExporter = new ExtensionExporter(FHIRDefs);
   }

@@ -10,7 +10,7 @@ describe('ExtensionsExporter', () => {
   let exporter: ExtensionExporter;
 
   beforeAll(() => {
-    defs = load('4.0.0');
+    defs = load('4.0.1');
   });
 
   beforeEach(() => {

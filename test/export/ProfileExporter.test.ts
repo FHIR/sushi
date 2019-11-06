@@ -10,7 +10,7 @@ describe('ProfileExporter', () => {
   let exporter: ProfileExporter;
 
   beforeAll(() => {
-    defs = load('4.0.0');
+    defs = load('4.0.1');
   });
 
   beforeEach(() => {
