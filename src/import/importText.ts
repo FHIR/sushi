@@ -8,7 +8,7 @@ import { FSHDocument } from './FSHDocument';
 /**
  * Parses a text string as a FSHDocument.
  * @param {string} text - the FSH text to parse
- * @paran {string} file - the file name to record as the text source
+ * @param {string} file - the file name to record as the text source
  * @returns {FSHDocument} - the FSH document representing the parsed text
  */
 export function importText(text: string, file?: string): FSHDocument {
