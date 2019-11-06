@@ -1,10 +1,8 @@
 import capitalize from 'lodash/capitalize';
 import cloneDeep from 'lodash/cloneDeep';
 import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
-import { Resource } from './Resource';
-import { Extension } from './Extension';
 import { Meta } from './specialTypes';
-import { Identifier, CodeableConcept, Coding } from './dataTypes';
+import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 
 /**
@@ -377,11 +375,6 @@ export type StructureDefinitionContext = {
 type PathPart = {
   base: string;
   brackets?: string[];
-};
-
-export type Narrative = {
-  status: string;
-  div: string;
 };
 
 /**

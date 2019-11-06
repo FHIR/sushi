@@ -5,12 +5,23 @@ import {
   InvalidPeriodError
 } from '../errors';
 import { FHIRDateTime, validateFHIRDateTime } from './primitiveTypes';
+import { Meta } from './specialTypes';
 
+/**
+ * Represents the FHIR R4 data type CodeableConcept.
+ *
+ * @see {@link http://hl7.org/fhir/R4/datatypes.html#CodeableConcept}
+ */
 export type CodeableConcept = {
   coding?: Coding[];
   text?: string;
 };
 
+/**
+ * Represents the FHIR R4 data type Coding.
+ *
+ * @see {@link http://hl7.org/fhir/R4/datatypes.html#Coding}
+ */
 export type Coding = {
   system?: string;
   version?: string;
@@ -33,6 +44,17 @@ export type ContactPoint = {
 };
 
 /**
+ * Represents the FHIR R4 data type Extension.
+ * The FHIR type's `value[x]` field can have many names and types,
+ * as listed on the accompanying page describing the FHIR type.
+ *
+ * @see {@link http://hl7.org/fhir/R4/extensibility.html#Extension}
+ */
+export type Extension = {
+  url: string;
+};
+
+/**
  * Represents the FHIR R4 data type Identifier.
  * Instances of this type are used to uniquely identify
  * some other entity within a system.
@@ -45,7 +67,17 @@ export type Identifier = {
   system?: string;
   value?: string;
   period?: Period;
-  assigner?: any;
+  assigner?: Reference;
+};
+
+/**
+ * Represents the FHIR R4 data type Narrative.
+ *
+ * @see {@link http://hl7.org/fhir/R4/narrative.html#Narrative}
+ */
+export type Narrative = {
+  status: string;
+  div: string;
 };
 
 /**
@@ -82,6 +114,11 @@ export function validatePeriod(period: Period): void {
   }
 }
 
+/**
+ * Represents the FHIR R4 data type Quantity.
+ *
+ * @see {@link http://hl7.org/fhir/R4/datatypes.html#Quantity}
+ */
 export type Quantity = {
   value?: number;
   comparator?: string;
@@ -91,7 +128,7 @@ export type Quantity = {
 };
 
 /**
- * Represents a FHIR R4 Range.
+ * Represents the FHIR R4 data type Range.
  * The FHIR type definition includes constraints,
  * which are enforced in the following validateRange method.
  *
@@ -123,3 +160,27 @@ export function validateRange(range: Range): void {
     }
   }
 }
+
+/**
+ * Represents the FHIR R4 data type Reference.
+ *
+ * @see {@link http://hl7.org/fhir/R4/references.html#Reference}
+ */
+export type Reference = {
+  reference?: string;
+  type?: string;
+  identifier?: Identifier;
+  display?: string;
+};
+
+/**
+ * Represents the FHIR R4 data type Resource.
+ *
+ * @see {@link http://hl7.org/fhir/R4/resource.html#Resource}
+ */
+export type Resource = {
+  id?: string;
+  meta?: Meta;
+  implicitRules?: string;
+  language?: string;
+};
