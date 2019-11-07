@@ -86,7 +86,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitProfile(ctx: pc.ProfileContext) {
-    const profile = new Profile(ctx.SEQUENCE().getText());
+    const profile = new Profile(
+      ctx.SEQUENCE().getText(),
+      ctx.start.line,
+      ctx.start.start,
+      ctx.stop.line,
+      ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
+    );
     this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
     this.doc.profiles.set(profile.name, profile);
   }

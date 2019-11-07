@@ -24,6 +24,10 @@ describe('FSHImporter', () => {
         expect(profile.parent).toBe('Observation');
         // if no id is explicitly set, should default to name
         expect(profile.id).toBe('ObservationProfile');
+        expect(profile.startLine).toBe(2);
+        expect(profile.startColumn).toBe(9);
+        expect(profile.endLine).toBe(3);
+        expect(profile.endColumn).toBe(27);
       });
 
       it('should parse profile with additional metadata properties', () => {
@@ -43,6 +47,10 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
+        expect(profile.startLine).toBe(2);
+        expect(profile.startColumn).toBe(9);
+        expect(profile.endLine).toBe(6);
+        expect(profile.endColumn).toBe(47);
       });
 
       it('should properly parse a multi-string description', () => {
