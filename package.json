@@ -13,26 +13,31 @@
     "lint:fix": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
     "prettier": "prettier --check \"**/*.{js,ts}\"",
     "prettier:fix": "prettier --write \"**/*.{js,ts}\"",
-    "ci": "npm run test && npm run lint && npm run prettier"
+    "check": "npm run test && npm run lint && npm run prettier"
   },
   "author": "Chris Moesel <cmoesel@mitre.org>",
-  "license": "Apache 2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/standardhealth/sushi.git"
+  },
+  "license": "Apache-2.0",
   "devDependencies": {
     "@types/antlr4": "^4.7.0",
-    "@types/jest": "^24.0.18",
-    "@types/lodash": "^4.14.139",
-    "@types/node": "^12.7.5",
-    "@typescript-eslint/eslint-plugin": "^2.3.1",
-    "@typescript-eslint/parser": "^2.3.1",
-    "eslint": "^6.4.0",
-    "eslint-config-prettier": "^6.4.0",
+    "@types/jest": "^24.0.22",
+    "@types/lodash": "^4.14.145",
+    "@types/node": "^12.12.6",
+    "@typescript-eslint/eslint-plugin": "^2.6.1",
+    "@typescript-eslint/parser": "^2.6.1",
+    "acorn": "^7.1.0",
+    "eslint": "^6.6.0",
+    "eslint-config-prettier": "^6.5.0",
     "jest": "^24.9.0",
     "jest-extended": "^0.11.2",
     "opener": "^1.5.1",
     "prettier": "1.18.2",
     "ts-jest": "^24.1.0",
     "ts-node": "^8.4.1",
-    "typescript": "^3.6.3"
+    "typescript": "^3.7.2"
   },
   "dependencies": {
     "antlr4": "^4.7.2",

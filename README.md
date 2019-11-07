@@ -33,12 +33,12 @@ The following NPM tasks are useful in development:
 | **lint:fix** | fixes lint errors when automatic fixes are available for them |
 | **prettier** | checks all src files to ensure they follow project formatting conventions |
 | **prettier:fix** | fixes prettier errors by rewriting files using project formatting conventions |
-| **ci** | runs all the checks performed as part of ci (test, lint, prettier) |
+| **check** | runs all the checks performed as part of ci (test, lint, prettier) |
 
 To run any of these tasks, use `npm run`.  For example:
 
 ```sh
-$ npm run ci
+$ npm run check
 ```
 
 # Recommended Development Environment
