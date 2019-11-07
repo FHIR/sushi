@@ -23,7 +23,7 @@ export class StructureDefinitionExporter {
     structDef: StructureDefinition,
     fshDefinition: Profile | Extension,
     tank: FSHTank
-  ) {
+  ): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
     structDef.url = `${tank.packageJSON.canonical}/StructureDefinition/${structDef.id}`;
@@ -36,7 +36,7 @@ export class StructureDefinitionExporter {
    * @param {StructureDefinition} structDef - The StructureDefinition to set rules on
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
-  private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension) {
+  private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
     for (const rule of fshDefinition.rules) {
       const element = structDef.findElementByPath(rule.path);
       if (element) {

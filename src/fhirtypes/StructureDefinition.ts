@@ -59,7 +59,7 @@ export class StructureDefinition {
   /**
    * A base clone of the Structure Definition from before any rules were applied
    */
-  _baseStructureDefinition: StructureDefinition;
+  private _baseStructureDefinition: StructureDefinition;
 
   /**
    * Constructs a StructureDefinition with a root element.
