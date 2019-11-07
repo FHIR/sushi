@@ -86,25 +86,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitProfile(ctx: pc.ProfileContext) {
-    const profile = new Profile(
-      ctx.SEQUENCE().getText(),
-      ctx.start.line,
-      ctx.start.start,
-      ctx.stop.line,
-      ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
-    );
+    const profile = new Profile(ctx.SEQUENCE().getText(), ...this.extractStartStop(ctx));
     this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
     this.doc.profiles.set(profile.name, profile);
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
-    const extension = new Extension(
-      ctx.SEQUENCE().getText(),
-      ctx.start.line,
-      ctx.start.start,
-      ctx.stop.line,
-      ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
-    );
+    const extension = new Extension(ctx.SEQUENCE().getText(), ...this.extractStartStop(ctx));
     this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
     this.doc.extensions.set(extension.name, extension);
   }
@@ -419,5 +407,14 @@ export class FSHImporter extends FSHVisitor {
 
     // consistently remove the common leading spaces and join the lines back together
     return lines.map(l => (l.length >= minSpaces ? l.slice(minSpaces) : l)).join('\n');
+  }
+
+  private extractStartStop(ctx: ParserRuleContext): [number, number, number, number] {
+    return [
+      ctx.start.line,
+      ctx.start.start,
+      ctx.stop.line,
+      ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
+    ];
   }
 }
