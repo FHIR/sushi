@@ -7,7 +7,13 @@ export class Extension {
   description?: string;
   rules: Rule[];
 
-  constructor(public name: string) {
+  constructor(
+    public name: string,
+    public startLine?: number,
+    public startColumn?: number,
+    public endLine?: number,
+    public endColumn?: number
+  ) {
     // Init id to be same as name.  This can be overridden using FSH syntax (Id: keyword)
     this.id = name;
     // Init the parent to 'Extension', as this is what 99% of extensions do.

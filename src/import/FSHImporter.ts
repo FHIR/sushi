@@ -98,7 +98,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
-    const extension = new Extension(ctx.SEQUENCE().getText());
+    const extension = new Extension(
+      ctx.SEQUENCE().getText(),
+      ctx.start.line,
+      ctx.start.start,
+      ctx.stop.line,
+      ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
+    );
     this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
     this.doc.extensions.set(extension.name, extension);
   }
