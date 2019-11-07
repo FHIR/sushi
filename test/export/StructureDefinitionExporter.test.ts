@@ -112,21 +112,20 @@ describe('StructureDefinitionExporter', () => {
 
   // Card Rule
   it('should apply a correct card rule', () => {
-    const baseProfile = new Profile('Foo');
-    baseProfile.parent = 'Observation';
-    const changedProfile = new Profile('Foo');
-    changedProfile.parent = 'Observation';
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
 
     const rule = new CardRule('subject');
     rule.min = 1;
     rule.max = '1';
-    changedProfile.rules.push(rule);
+    profile.rules.push(rule);
 
-    const baseStructDef = exporter.exportStructDef(baseProfile, input);
-    const changedStructDef = exporter.exportStructDef(changedProfile, input);
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseCard = baseStructDef.findElement('Observation.subject');
-    const changedCard = changedStructDef.findElement('Observation.subject');
+    const changedCard = sd.findElement('Observation.subject');
+
     expect(baseCard.min).toBe(0);
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
@@ -135,21 +134,20 @@ describe('StructureDefinitionExporter', () => {
 
   it('should not apply an incorrect card rule', () => {
     // TODO: this should check for emitting an error once logging is setup
-    const baseProfile = new Profile('Foo');
-    baseProfile.parent = 'Observation';
-    const changedProfile = new Profile('Foo');
-    changedProfile.parent = 'Observation';
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
 
     const rule = new CardRule('status');
     rule.min = 0;
     rule.max = '1';
-    changedProfile.rules.push(rule);
+    profile.rules.push(rule);
 
-    const baseStructDef = exporter.exportStructDef(baseProfile, input);
-    const changedStructDef = exporter.exportStructDef(changedProfile, input);
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseCard = baseStructDef.findElement('Observation.status');
-    const changedCard = changedStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
     expect(baseCard.min).toBe(1);
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);

@@ -57,6 +57,11 @@ export class StructureDefinition {
   elements: ElementDefinition[];
 
   /**
+   * A base clone of the Structure Definition from before any rules were applied
+   */
+  _baseStructureDefinition: StructureDefinition;
+
+  /**
    * Constructs a StructureDefinition with a root element.
    */
   constructor() {
@@ -69,6 +74,13 @@ export class StructureDefinition {
     root.isModifier = false;
     root.isSummary = false;
     this.elements = [root];
+  }
+
+  /**
+   * Get the base Structure Definition before any rules were applied
+   */
+  getBaseStructureDefinition() {
+    return this._baseStructureDefinition;
   }
 
   /**
@@ -252,6 +264,8 @@ export class StructureDefinition {
         sd.elements.push(ed);
       }
     }
+    // Keep a clone of the base structure definition for comparison once rules are applied
+    sd._baseStructureDefinition = cloneDeep(sd);
     return sd;
   }
 
