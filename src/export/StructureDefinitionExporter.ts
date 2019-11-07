@@ -3,6 +3,7 @@ import { StructureDefinition } from '../fhirtypes';
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
+import { CardRule } from '../fshtypes/rules';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -22,12 +23,36 @@ export class StructureDefinitionExporter {
     structDef: StructureDefinition,
     fshDefinition: Profile | Extension,
     tank: FSHTank
-  ) {
+  ): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
     structDef.url = `${tank.packageJSON.canonical}/StructureDefinition/${structDef.id}`;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
+  }
+
+  /**
+   * Sets the rules for the StructureDefinition
+   * @param {StructureDefinition} structDef - The StructureDefinition to set rules on
+   * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
+   */
+  private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
+    for (const rule of fshDefinition.rules) {
+      const element = structDef.findElementByPath(rule.path);
+      if (element) {
+        try {
+          if (rule instanceof CardRule) {
+            element.constrainCardinality(rule.min, rule.max);
+          }
+        } catch (e) {
+          console.error(e.stack);
+        }
+      } else {
+        console.error(
+          `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`
+        );
+      }
+    }
   }
 
   /**
@@ -46,6 +71,7 @@ export class StructureDefinitionExporter {
       throw new ParentNotDefinedError(fshDefinition.name, parentName);
     }
     this.setMetadata(structDef, fshDefinition, tank);
+    this.setRules(structDef, fshDefinition);
     // Set the rules
     return structDef;
   }

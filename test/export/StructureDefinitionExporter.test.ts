@@ -2,6 +2,7 @@ import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile, Extension } from '../../src/fshtypes';
+import { CardRule } from '../../src/fshtypes/rules';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -94,5 +95,62 @@ describe('StructureDefinitionExporter', () => {
     expect(() => {
       exporter.exportStructDef(extension, input);
     }).toThrow('Parent Bar not found for Foo');
+  });
+
+  // Rules
+  it('should emit an error and continue when the path is not found', () => {
+    // TODO: This should check for emitting an error once we have logging
+    const profile = new Profile('Foo');
+    const rule = new CardRule('fakePath');
+    rule.min = 0;
+    rule.max = '1';
+    profile.rules.push(rule);
+    const structDef = exporter.exportStructDef(profile, input);
+    expect(structDef).toBeDefined();
+    expect(structDef.type).toBe('Resource');
+  });
+
+  // Card Rule
+  it('should apply a correct card rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('subject');
+    rule.min = 1;
+    rule.max = '1';
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseCard = baseStructDef.findElement('Observation.subject');
+    const changedCard = sd.findElement('Observation.subject');
+
+    expect(baseCard.min).toBe(0);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1');
+  });
+
+  it('should not apply an incorrect card rule', () => {
+    // TODO: this should check for emitting an error once logging is setup
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('status');
+    rule.min = 0;
+    rule.max = '1';
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseCard = baseStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
+    expect(baseCard.min).toBe(1);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1');
   });
 });
