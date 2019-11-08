@@ -4,4 +4,4 @@ node_js:
     - "10"
     - "12"
 script:
-    - npm run ci
+    - npm run check
