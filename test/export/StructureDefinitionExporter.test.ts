@@ -2,7 +2,7 @@ import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile, Extension } from '../../src/fshtypes';
-import { CardRule } from '../../src/fshtypes/rules';
+import { CardRule, ValueSetRule } from '../../src/fshtypes/rules';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -152,5 +152,43 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
+  });
+
+  // Value Set Rule
+  it('should apply a correct value set rule to an unbound string', () => {
+    const profile = new Profile('Junk');
+    profile.parent = 'Appointment';
+
+    const vsRule = new ValueSetRule('description');
+    vsRule.valueSet = 'SomeVS';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Appointment.description');
+    const changedElement = sd.findElement('Appointment.description');
+    expect(baseElement.binding).toBeUndefined();
+    expect(changedElement.binding.valueSet).toBe('SomeVS');
+    expect(changedElement.binding.strength).toBe('extensible');
+  });
+
+  it('should apply a correct value set rule that overrides a previous binding', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const vsRule = new ValueSetRule('category');
+    vsRule.valueSet = 'SomeVS';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Observation.category');
+    const changedElement = sd.findElement('Observation.category');
+    expect(baseElement.binding.valueSet).toBe('http://hl7.org/fhir/ValueSet/observation-category');
+    expect(baseElement.binding.strength).toBe('preferred');
+    expect(changedElement.binding.valueSet).toBe('SomeVS');
+    expect(changedElement.binding.strength).toBe('extensible');
   });
 });
