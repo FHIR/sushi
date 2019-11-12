@@ -39,7 +39,7 @@
     "jest": "^24.9.0",
     "jest-extended": "^0.11.2",
     "opener": "^1.5.1",
-    "prettier": "1.18.2",
+    "prettier": "1.19.1",
     "ts-jest": "^24.1.0",
     "ts-node": "^8.4.1",
     "typescript": "^3.7.2"
