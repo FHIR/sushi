@@ -9,8 +9,7 @@ import {
   ValueSetRule,
   FixedValueRule,
   FixedValueType,
-  OnlyRule,
-  OnlyRuleType
+  OnlyRule
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
 
