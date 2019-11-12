@@ -9,7 +9,8 @@ import {
   ValueSetRule,
   FixedValueRule,
   FixedValueType,
-  OnlyRule
+  OnlyRule,
+  OnlyRuleType
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
 
@@ -351,7 +352,17 @@ export class FSHImporter extends FSHVisitor {
 
   visitOnlyRule(ctx: pc.OnlyRuleContext): OnlyRule {
     const onlyRule = new OnlyRule(this.visitPath(ctx.path()));
-    onlyRule.types = ctx.SEQUENCE().map(s => this.aliasAwareValue(s.getText()));
+    ctx.targetType().forEach(t => {
+      if (t.REFERENCE()) {
+        const text = t.REFERENCE().getText();
+        const references = text.slice(text.indexOf('(') + 1, text.length - 1).split(/\s*\|\s*/);
+        references.forEach(r =>
+          onlyRule.types.push({ type: this.aliasAwareValue(r), isReference: true })
+        );
+      } else {
+        onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE().getText()) });
+      }
+    });
     return onlyRule;
   }
 

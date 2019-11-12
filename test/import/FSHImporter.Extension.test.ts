@@ -123,7 +123,7 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertOnlyRule(extension.rules[0], 'value[x]', 'Quantity');
+        assertOnlyRule(extension.rules[0], 'value[x]', { type: 'Quantity' });
       });
     });
   });

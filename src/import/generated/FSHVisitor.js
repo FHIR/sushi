@@ -228,5 +228,11 @@ FSHVisitor.prototype.visitBool = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#targetType.
+FSHVisitor.prototype.visitTargetType = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 
 exports.FSHVisitor = FSHVisitor;
