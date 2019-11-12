@@ -220,4 +220,26 @@ describe('StructureDefinition', () => {
       expect(observation.elements.length).toBe(originalLength + 4);
     });
   });
+
+  describe('#getReferenceName', () => {
+    let basedOn: ElementDefinition;
+    beforeEach(() => {
+      basedOn = observation.findElement('Observation.basedOn');
+    });
+
+    it('should find the target when it exists', () => {
+      const refTarget = observation.getReferenceName('basedOn[MedicationRequest]', basedOn);
+      expect(refTarget).toBe('MedicationRequest');
+    });
+
+    it('should not find the target when it does not exist', () => {
+      const refTarget = observation.getReferenceName('basedOn[foo]', basedOn);
+      expect(refTarget).toBeUndefined();
+    });
+
+    it('should not find the target when there are no brackets', () => {
+      const refTarget = observation.getReferenceName('basedOn', basedOn);
+      expect(refTarget).toBeUndefined();
+    });
+  });
 });
