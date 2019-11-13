@@ -372,6 +372,24 @@ export class StructureDefinition {
     });
     return matchingRefElement;
   }
+
+  /**
+   * Gets the specific reference being referred to by a path with brackets
+   * @param {string} path - The path
+   * @param {ElementDefinition} element - The element that may contain the reference
+   * @returns {string} - The name of the reference if it exists, else undefined
+   */
+  getReferenceName(path: string, element: ElementDefinition): string {
+    const parsedPath = this.parseFSHPath(path);
+    const pathEnd = parsedPath.slice(-1)[0];
+    if (pathEnd.brackets) {
+      const refElement = this.findMatchingRef(pathEnd, [element]);
+      if (refElement) {
+        return pathEnd.brackets.slice(-1)[0];
+      }
+    }
+    return;
+  }
 }
 
 export type StructureDefinitionMapping = {
