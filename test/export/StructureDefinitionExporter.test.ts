@@ -191,4 +191,42 @@ describe('StructureDefinitionExporter', () => {
     expect(changedElement.binding.valueSet).toBe('SomeVS');
     expect(changedElement.binding.strength).toBe('extensible');
   });
+
+  it('should not apply a value set rule on an element that cannot support it', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const vsRule = new ValueSetRule('note');
+    vsRule.valueSet = 'SomeVS';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Observation.note');
+    const changedElement = sd.findElement('Observation.note');
+    expect(baseElement.binding).toBeUndefined();
+    expect(changedElement.binding).toBeUndefined();
+  });
+
+  it('should not override a binding with a less strict binding', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const vsRule = new ValueSetRule('category');
+    vsRule.valueSet = 'SomeVS';
+    vsRule.strength = 'example';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Observation.category');
+    const changedElement = sd.findElement('Observation.category');
+    expect(baseElement.binding.valueSet).toBe('http://hl7.org/fhir/ValueSet/observation-category');
+    expect(baseElement.binding.strength).toBe('preferred');
+    expect(changedElement.binding.valueSet).toBe(
+      'http://hl7.org/fhir/ValueSet/observation-category'
+    );
+    expect(changedElement.binding.strength).toBe('preferred');
+  });
 });
