@@ -335,5 +335,14 @@ FSHListener.prototype.exitBool = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#targetType.
+FSHListener.prototype.enterTargetType = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#targetType.
+FSHListener.prototype.exitTargetType = function(ctx) {
+};
+
+
 
 exports.FSHListener = FSHListener;

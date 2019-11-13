@@ -1,5 +1,4 @@
-import isEqual from 'lodash/isEqual';
-import cloneDeep from 'lodash/cloneDeep';
+import { isEmpty, isEqual, cloneDeep } from 'lodash';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity } from './dataTypes';
 import { Code } from '../fshtypes';
@@ -8,8 +7,10 @@ import {
   CodedTypeNotFoundError,
   CodeAlreadyFixedError,
   InvalidCardinalityError,
+  InvalidTypeError,
   SlicingDefinitionError,
   SlicingNotDefinedError,
+  TypeNotFoundError,
   WideningCardinalityError
 } from '../errors';
 
@@ -209,6 +210,7 @@ export class ElementDefinition {
    * Constrains the cardinality of this element.  Cardinality constraints can only narrow
    * cardinality.  Attempts to constrain to a wider cardinality will throw.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#cardinality}
+   * @see {@link http://hl7.org/fhir/R4/conformance-rules.html#cardinality}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.min}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.max}
    * @param {number} min - the minimum cardinality
@@ -216,7 +218,7 @@ export class ElementDefinition {
    * @throws {InvalidCardinalityError} when min > max
    * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
    */
-  constrainCardinality(min: number, max: string) {
+  constrainCardinality(min: number, max: string): void {
     const isUnbounded = max === '*';
     const maxInt = !isUnbounded ? parseInt(max) : null;
 
@@ -239,6 +241,290 @@ export class ElementDefinition {
   }
 
   /**
+   * Constrains the type of this element to the requested type(s).  When this element's type is a
+   * choice, this function will reduce the choice to only those types provided -- unless a
+   * targetType is provided, in which case, only that type will be affected and other options in
+   * the choice will be left unchanged.  This function should allow the following scenarios:
+   * - constrain a choice of types to a smaller subset of types (including a single type)
+   * - constrain a type to one or more profiles on that type
+   * - constrain a supertype (e.g., Resource) to one or more subtypes (e.g., Condition)
+   * - constrain a reference of multiple types to a reference of a smaller subset of types
+   * - constrain a reference of a type or profile to one or more profiles of that type/profile
+   * - constrain a reference of a supertype to one or more references of subtypes
+   * - any combinaton of the above
+   * This function will throw when:
+   * - attempting to add a base type (e.g., `type.code`) that wasn't already a choice in the type
+   * - attempting to add a profile that doesn't match any of the existing types
+   * - attempting to add a base reference that wasn't already a reference
+   * - attempting to add a reference to a profile that doesn't match any of the existing references
+   * - specifying a target that does not match any of the existing type choices
+   * - specifying types or a target whose definition cannot be found
+   * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.type}
+   * @param {{ type: string; isReference?: boolean }[]} types - the set of constrained types,
+   *   identified by id/type/url strings and an optional reference flag (defaults false)
+   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @param {string} [target] - a specific target type to constrain.  If supplied, will attempt to
+   *   constrain only that type without affecting other types (in a choice or reference to a choice).
+   * @throws {TypeNotFoundError} when a passed in type's definition cannot be found
+   * @throws {InvalidTypeError} when a passed in type or the targetType doesn't match any existing
+   *   types
+   */
+  constrainType(
+    types: { type: string; isReference?: boolean }[],
+    resolve: ResolveFn,
+    target?: string
+  ): void {
+    // Establish the target types (if applicable)
+    const targetType = this.getTargetType(target, resolve);
+    const targetTypes: ElementDefinitionType[] = targetType ? [targetType] : this.type;
+
+    // Setup a map to store how each existing element type maps to the input types
+    const typeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
+    targetTypes.forEach(t => typeMatches.set(t.code, []));
+
+    // Loop through the input types and associate them to the element types in the map
+    for (const type of types) {
+      const typeMatch = this.findTypeMatch(type, targetTypes, resolve);
+      typeMatches.get(typeMatch.code).push(typeMatch);
+    }
+
+    // Loop through the existing element types building the new set of element types w/ constraints
+    const newTypes: ElementDefinitionType[] = [];
+    for (const type of this.type) {
+      // If the typeMatches map doesn't have the type code at all, this means that a target was
+      // specified, and this element type wasn't the target.  In this case, we want to keep it.
+      if (!typeMatches.has(type.code)) {
+        newTypes.push(cloneDeep(type));
+        continue;
+      }
+
+      // Get the associated input type matches.  If no input types matched against it, then this
+      // element type should be filtered out of the results, so just skip to the next one.
+      const matches = typeMatches.get(type.code);
+      if (isEmpty(matches)) {
+        continue;
+      }
+
+      // In the case of an element type whose code is a supertype (e.g., 'Resource'), we need to
+      // break that up into a new set of element types corresponding to the subtypes.  For example,
+      // if a 'Resource' type is constrained to 'Condition' and 'Procedure', then in the resulting
+      // StructureDefinition, there should be element types with codes 'Condition' and 'Procedure',
+      // and no element type with the code 'Resource` any longer.  So... we create a special
+      // map to store the current subtypes (or if not applicable, just store the original type).
+      const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
+      for (const match of matches) {
+        // If the original element type is a Reference, keep it a reference, otherwise take on the
+        // input type's official type code (as represented in its StructureDefinition.type).
+        const typeString = match.code === 'Reference' ? 'Reference' : match.structDef.type;
+        if (!currentTypeMatches.has(typeString)) {
+          currentTypeMatches.set(typeString, []);
+        }
+        currentTypeMatches.get(typeString).push(match);
+      }
+
+      // Iterate the elements of the current type matches, creating the new type (based on the
+      // existing type) but with the constraints applied to it.
+      for (const [typeCode, currentMatches] of currentTypeMatches) {
+        const newType = cloneDeep(type);
+        newType.code = typeCode;
+        this.applyProfiles(newType, targetType, currentMatches);
+        newTypes.push(newType);
+      }
+    }
+
+    // Finally, reset this element's types to the new types
+    this.type = newTypes;
+  }
+
+  /**
+   * Given a string representing a type or profile, will return this element's matching type, if
+   * found -- with all other profiles or targetProfiles (e.g. references) removed from the type.
+   * @param {string} target - the target to find a matching type for
+   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @returns {ElementDefinitionType} the element's type that matches the target
+   * @throws {TypeNotFoundError} when the target's definition cannot be found
+   * @throws {InvalidTypeError} when the target doesn't match any existing types
+   */
+  private getTargetType(target: string, resolve: ResolveFn): ElementDefinitionType {
+    let targetType: ElementDefinitionType;
+    if (target) {
+      const targetSD = resolve(target);
+      if (targetSD == null) {
+        throw new TypeNotFoundError(target);
+      }
+      // Try to match on types by an exact match on the code (applies to resources),
+      // the profiles (applies to profiles), or targetProfiles (applies to references).
+      // Clone it since we will filter out the non-target profiles/targetProfiles.
+      targetType = cloneDeep(
+        this.type.find(
+          t =>
+            t.code === targetSD.id ||
+            t.profile?.includes(targetSD.url) ||
+            t.targetProfile?.includes(targetSD.url)
+        )
+      );
+
+      if (!targetType) {
+        throw new InvalidTypeError(target, this.type);
+      }
+
+      // Re-assign the targetProfiles/profiles as appopriate to remove non-targets
+      if (targetType.profile?.includes(targetSD.url)) {
+        targetType.profile = [targetSD.url];
+      } else if (targetType.targetProfile?.includes(targetSD.url)) {
+        targetType.targetProfile = [targetSD.url];
+      }
+    }
+    return targetType;
+  }
+
+  /**
+   * Given an input type (the constraint) and a set of target types (the things to potentially
+   * constrain), find the match and return information about it.
+   * @param {{ type: string; isReference?: boolean }} type - the constrained types, identified by
+   *   id/type/url string and an optional reference flag (defaults false)
+   * @param {ElementDefinitionType[]} targetTypes - the element types that the constrained type
+   *   can be potentially applied to
+   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @param {string} [target] - a specific target type to constrain.  If supplied, will attempt to
+   *   constrain only that type without affecting other types (in a choice or reference to a choice).
+   * @returns {ElementTypeMatchInfo} the information about the match
+   * @throws {TypeNotFoundError} when the type's definition cannot be found
+   * @throws {InvalidTypeError} when the type doesn't match any of the targetTypes
+   */
+  private findTypeMatch(
+    type: { type: string; isReference?: boolean },
+    targetTypes: ElementDefinitionType[],
+    resolve: ResolveFn
+  ): ElementTypeMatchInfo {
+    let matchedType: ElementDefinitionType;
+
+    // Get the lineage (type hierarchy) so we can walk up it when attempting to match
+    const lineage = this.getTypeLineage(type.type, resolve);
+    if (isEmpty(lineage)) {
+      throw new TypeNotFoundError(type.type);
+    }
+
+    // Walk up the lineage, one StructureDefinition at a time.  We can potentially match on the
+    // type itself or any of its parents.  For example, a BloodPressure profile could match on
+    // an Observation already having a BP profile, an Observation type w/ no profiles, a
+    // DomainResource type w/ no profiles, or a Resource type w/ no profiles.
+    for (const sd of lineage) {
+      if (type.isReference) {
+        // References always have a code 'Reference' w/ the referenced type's defining URL set as
+        // one of the targetProfiles
+        matchedType = targetTypes.find(
+          t2 => t2.code === 'Reference' && t2.targetProfile?.includes(sd.url)
+        );
+      } else {
+        // Look for exact match on the code (w/ no profile) or a match on the same base type with
+        // a matching profile
+        matchedType = targetTypes.find(t2 => {
+          const matchesUnprofiledResource = t2.code === sd.id && isEmpty(t2.profile);
+          const matchesProfile = t2.code === sd.type && t2.profile?.includes(sd.url);
+          return matchesUnprofiledResource || matchesProfile;
+        });
+      }
+
+      if (matchedType) {
+        break;
+      }
+    }
+
+    if (!matchedType) {
+      throw new InvalidTypeError(
+        type.isReference ? `Reference(${type.type})` : type.type,
+        targetTypes
+      );
+    }
+
+    return {
+      structDef: lineage[0],
+      code: matchedType.code
+    };
+  }
+
+  /**
+   * Gets the full lineage of the type, w/ the item at index 0 being the type's own StructureDefinition,
+   * the item at index 1 being its parent's, 2 being its grandparent's, etc.  If a definition can't be
+   * found, it stops and returns as much lineage as its found thus far.
+   * @param {string} type - the type to get the lineage for
+   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @returns {StructureDefinition[]} representing the lineage of the type
+   */
+  private getTypeLineage(type: string, resolve: ResolveFn): StructureDefinition[] {
+    const results: StructureDefinition[] = [];
+
+    // Start with the current type and walk up the base definitions.
+    // Stop when we can't find a definition or the base definition is blank.
+    let currentType = type;
+    while (currentType != null) {
+      const result = resolve(currentType);
+      if (result) {
+        results.push(result);
+      }
+      currentType = result?.baseDefinition;
+    }
+
+    return results;
+  }
+
+  /**
+   * Given a new ElementTypeDefinition (based on the existing one), will apply the matching
+   * profiles and targetProfiles as appropriate.  If a targetType was specified, will filter out
+   * the other profiles or targetProfiles.
+   * @param {ElementDefinitionType} newType - the new type to apply the profiles/targetProfiles to
+   * @param {ElementDefinitionType} [targetType] - the (potentially null) target type for the
+   *   type constraint
+   * @param {ElementTypeMatchInfo[]} matches - the information about how type constraints map
+   *   to element types
+   */
+  private applyProfiles(
+    newType: ElementDefinitionType,
+    targetType: ElementDefinitionType,
+    matches: ElementTypeMatchInfo[]
+  ): void {
+    const matchedProfiles: string[] = [];
+    const matchedTargetProfiles: string[] = [];
+    for (const match of matches) {
+      if (match.structDef.id === newType.code) {
+        continue;
+      } else if (match.code === 'Reference') {
+        matchedTargetProfiles.push(match.structDef.url);
+      } else {
+        matchedProfiles.push(match.structDef.url);
+      }
+    }
+    if (targetType) {
+      if (!isEmpty(matchedTargetProfiles)) {
+        const targetIdx = newType.targetProfile?.indexOf(targetType.targetProfile[0]);
+        if (targetIdx != null && targetIdx > -1) {
+          newType.targetProfile.splice(targetIdx, 1, ...matchedTargetProfiles);
+        } else {
+          newType.targetProfile = newType.profile ?? [];
+          newType.targetProfile.push(...matchedTargetProfiles);
+        }
+      }
+      if (!isEmpty(matchedProfiles)) {
+        const targetIdx = newType.profile?.indexOf(targetType.profile[0]);
+        if (targetIdx != null && targetIdx > -1) {
+          newType.profile.splice(targetIdx, 1, ...matchedProfiles);
+        } else {
+          newType.profile = newType.profile ?? [];
+          newType.profile.push(...matchedProfiles);
+        }
+      }
+    } else {
+      if (!isEmpty(matchedTargetProfiles)) {
+        newType.targetProfile = matchedTargetProfiles;
+      }
+      if (!isEmpty(matchedProfiles)) {
+        newType.profile = matchedProfiles;
+      }
+    }
+  }
+
+  /**
    * Binds a value set with a specific strength to this element.  The type must be coded (code, Coding,
    * CodeableConcept, Quantity), or the data types (string, uri).  The strength must be the same or
    * stricter than the current strength (if a binding already exists).
@@ -251,7 +537,7 @@ export class ElementDefinition {
    * @throws {BindingStrengthError} when the binding can't be applied because it is looser than the existing binding
    * @throws {CodedTypeNotFoundError} - when the binding can't be applied because the element is the wrong type
    */
-  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength) {
+  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength): void {
     // Check if this is a valid type to be bound against
     const validTypes = this.findTypesByCode(
       'code',
@@ -261,7 +547,7 @@ export class ElementDefinition {
       'string',
       'uri'
     );
-    if (validTypes.length === 0) {
+    if (isEmpty(validTypes)) {
       throw new CodedTypeNotFoundError(this.type ? this.type.map(t => t.code) : []);
     }
 
@@ -296,7 +582,7 @@ export class ElementDefinition {
    * @throws {CodedTypeNotFoundError} when there is no coded type on this element
    * @throws {CodeAlreadyFixedError} where the code is already fixed to a different code
    */
-  fixFshCode(code: Code) {
+  fixFshCode(code: Code): void {
     // This is the element to fix it to
     const types = this.type || [];
     if (types.some(t => t.code === 'CodeableConcept')) {
@@ -324,7 +610,7 @@ export class ElementDefinition {
    * @param {Code} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToCodeableConcept(code: Code) {
+  private fixFshCodeToCodeableConcept(code: Code): void {
     // Check if this is already fixed to something else
     if (this.patternCodeableConcept) {
       const fixedToSame =
@@ -360,7 +646,7 @@ export class ElementDefinition {
    * @param {Code} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToCoding(code: Code) {
+  private fixFshCodeToCoding(code: Code): void {
     // Check if this is already fixed to something else
     if (this.patternCoding) {
       if (this.patternCoding.code != code.code || this.patternCoding.system != code.system) {
@@ -388,7 +674,7 @@ export class ElementDefinition {
    * @param {Code} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToQuantityUnitCode(code: Code) {
+  private fixFshCodeToQuantityUnitCode(code: Code): void {
     // Check if this is already fixed to something else
     if (this.patternQuantity) {
       if (this.patternQuantity.code != code.code || this.patternQuantity.system != code.system) {
@@ -415,7 +701,7 @@ export class ElementDefinition {
    * @param {Code} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToCode(code: Code) {
+  private fixFshCodeToCode(code: Code): void {
     // Check if this is already fixed to something else
     if (this.fixedCode) {
       if (this.fixedCode != code.code) {
@@ -435,7 +721,7 @@ export class ElementDefinition {
    * @param {Code} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToString(code: Code) {
+  private fixFshCodeToString(code: Code): void {
     // Check if this is already fixed to something else
     if (this.fixedString) {
       if (this.fixedString != code.code) {
@@ -455,7 +741,7 @@ export class ElementDefinition {
    * @param {Code} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToUri(code: Code) {
+  private fixFshCodeToUri(code: Code): void {
     // Check if this is already fixed to something else
     if (this.fixedUri) {
       if (this.fixedUri != code.code) {
@@ -498,8 +784,13 @@ export class ElementDefinition {
    *   be resolved.
    */
   unfold(resolve: ResolveFn = () => undefined): ElementDefinition[] {
-    if (this.type.length === 1) {
-      const def = resolve(this.type[0]);
+    if (
+      this.type.length === 1 &&
+      (this.type[0].profile == null || this.type[0].profile.length <= 1)
+    ) {
+      // If it has a profile, use that, otherwise use the code
+      const type = this.type[0].profile?.[0] ?? this.type[0].code;
+      const def = resolve(type);
       if (def) {
         const newElements = def.elements.slice(1).map(e => {
           const eClone = e.clone();
@@ -823,6 +1114,8 @@ export type ElementDefinitionMapping = {
   comment?: string;
 };
 
+export type ResolveFn = (type: string) => StructureDefinition | undefined;
+
 /**
  * A barebones and lenient definition of ElementDefinition JSON
  */
@@ -832,7 +1125,10 @@ interface LooseElementDefJSON {
   // [key: string]: any;
 }
 
-export type ResolveFn = (type: ElementDefinitionType) => StructureDefinition | undefined;
+interface ElementTypeMatchInfo {
+  code: string;
+  structDef: StructureDefinition;
+}
 
 /**
  * The list of ElementDefinition properties used when importing/exporting FHIR JSON.

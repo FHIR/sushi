@@ -578,10 +578,10 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(profile.rules[0], 'value[x]', 'Quantity');
+        assertOnlyRule(profile.rules[0], 'value[x]', { type: 'Quantity' });
       });
 
-      it('should parse an only rule with multiple type', () => {
+      it('should parse an only rule with multiple types', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -591,7 +591,44 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(profile.rules[0], 'value[x]', 'Quantity', 'CodeableConcept', 'string');
+        assertOnlyRule(
+          profile.rules[0],
+          'value[x]',
+          { type: 'Quantity' },
+          { type: 'CodeableConcept' },
+          { type: 'string' }
+        );
+      });
+
+      it('should parse an only rule with a reference to one type', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only Reference(Practitioner)
+        `;
+
+        const result = importText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'performer', { type: 'Practitioner', isReference: true });
+      });
+
+      it('should parse an only rule with a reference to multiple types', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only Reference(Organization | CareTeam)
+        `;
+
+        const result = importText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isReference: true },
+          { type: 'CareTeam', isReference: true }
+        );
       });
 
       it('should allow and translate aliases for only types', () => {
@@ -610,10 +647,10 @@ describe('FSHImporter', () => {
         assertOnlyRule(
           profile.rules[0],
           'value[x]',
-          'CodeableConcept',
-          'http://hl7.org/fhir/StructureDefinition/Coding',
-          'string',
-          'http://hl7.org/fhir/StructureDefinition/Quantity'
+          { type: 'CodeableConcept' },
+          { type: 'http://hl7.org/fhir/StructureDefinition/Coding' },
+          { type: 'string' },
+          { type: 'http://hl7.org/fhir/StructureDefinition/Quantity' }
         );
       });
     });
