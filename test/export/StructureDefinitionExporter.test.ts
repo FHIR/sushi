@@ -155,7 +155,7 @@ describe('StructureDefinitionExporter', () => {
   });
 
   // Flag Rule
-  it('should apply a flag rule', () => {
+  it('should apply a valid flag rule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'DiagnosticReport';
 
@@ -172,8 +172,32 @@ describe('StructureDefinitionExporter', () => {
     expect(baseElement.isModifier).toBeFalsy();
     expect(baseElement.mustSupport).toBeFalsy();
     expect(baseElement.isSummary).toBeFalsy();
-    expect(changedElement.isModifier).toBeFalsy();
-    expect(changedElement.mustSupport).toBeTruthy();
+    expect(changedElement.isModifier).toBe(false);
+    expect(changedElement.mustSupport).toBe(true);
     expect(baseElement.isSummary).toBeFalsy();
+  });
+
+  it('should not apply a flag rule that disables isModifier', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'DiagnosticReport';
+
+    const rule = new FlagRule('status');
+    rule.modifier = false;
+    rule.mustSupport = true;
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseElement = baseStructDef.findElement('DiagnosticReport.status');
+    const changedElement = sd.findElement('DiagnosticReport.status');
+    expect(baseElement.isModifier).toBe(true);
+    expect(baseElement.mustSupport).toBeFalsy();
+    expect(changedElement.isModifier).toBe(true);
+    expect(changedElement.mustSupport).toBeFalsy();
+  });
+
+  it.skip('should not apply a flag rule that disables mustSupport', () => {
+    // nothing in the FHIR spec has the mustSupport flag set
   });
 });

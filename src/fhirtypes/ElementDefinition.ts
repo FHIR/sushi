@@ -6,6 +6,7 @@ import {
   BindingStrengthError,
   CodedTypeNotFoundError,
   CodeAlreadyFixedError,
+  DisableFlagError,
   InvalidCardinalityError,
   InvalidTypeError,
   SlicingDefinitionError,
@@ -526,7 +527,7 @@ export class ElementDefinition {
 
   /**
    * Sets flags on this element as specified in a profile or extension.
-   * @todo Add enforcement of rules regarding when these flags can change.
+   * @todo Add more complete enforcement of rules regarding when these flags can change.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isSummary}
@@ -534,8 +535,19 @@ export class ElementDefinition {
    * @param mustSupport - whether to make this element a Must Support element
    * @param summary - whether to include this element when querying for a summary
    * @param modifier - whether this element acts as a modifier on the resource
+   * @throws {DisableFlagError} when attempting to disable a flag that cannot be disabled
    */
   applyFlags(mustSupport: boolean, summary: boolean, modifier: boolean): void {
+    const disabledFlags = [];
+    if (this.mustSupport && !mustSupport) {
+      disabledFlags.push('Must Support');
+    }
+    if (this.isModifier && !modifier) {
+      disabledFlags.push('Is Modifier');
+    }
+    if (disabledFlags.length) {
+      throw new DisableFlagError(disabledFlags);
+    }
     this.mustSupport = mustSupport;
     this.isSummary = summary;
     this.isModifier = modifier;

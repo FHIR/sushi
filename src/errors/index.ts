@@ -3,6 +3,7 @@ export * from './BindingStrengthError';
 export * from './CodeAlreadyFixedError';
 export * from './CodeAndSystemMismatchError';
 export * from './CodedTypeNotFoundError';
+export * from './DisableFlagError';
 export * from './InvalidCardinalityError';
 export * from './InvalidDateTimeError';
 export * from './InvalidPeriodError';
