@@ -13,7 +13,6 @@ program
   .name('sushi')
   .usage('<path-to-fsh-defs> [options]')
   .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'out'))
-  .option('-c, --config <config>', 'the name of the config file', 'config.json')
   .arguments('<path-to-fsh-defs>')
   .action(function(pathToFshDefs) {
     input = pathToFshDefs;
@@ -26,20 +25,53 @@ if (!input) {
   program.help();
 }
 
-mkdirp.sync(program.out);
+let files: string[];
+try {
+  files = fs.readdirSync(input, 'utf8');
+} catch {
+  console.error('Invalid path to FSH definition folder');
+}
 
-const files: string[] = fs.readdirSync(input, 'utf8');
 const docs: FSHDocument[] = [];
-for (const file of files) {
-  if (file.endsWith('.fsh')) {
-    const fileContent: string = fs.readFileSync(path.join(input, file), 'utf8');
-    const doc: FSHDocument = importText(fileContent, file);
-    if (doc) docs.push(doc);
+if (files?.length === 0) {
+  for (const file of files) {
+    if (file.endsWith('.fsh')) {
+      const fileContent: string = fs.readFileSync(path.join(input, file), 'utf8');
+      const doc: FSHDocument = importText(fileContent, file);
+      if (doc) docs.push(doc);
+    }
   }
 }
 
-const config = JSON.parse(fs.readFileSync(path.join(input, program.config)).toString());
+let config: any;
+try {
+  config = JSON.parse(fs.readFileSync(path.join(input, 'package.json'), 'utf8').toString());
+} catch {
+  console.error('No package.json in FSH definition folder');
+}
+
 const tank: FSHTank = new FSHTank(docs, config);
 const outPackage: Package = exportFHIR(tank);
 
-console.log(outPackage);
+mkdirp.sync(program.out);
+
+for (const profile of outPackage.profiles) {
+  fs.writeFileSync(
+    path.join(program.out, `StructureDefinition-${profile.id}.json`),
+    JSON.stringify(profile.toJSON(), null, 2),
+    'utf8'
+  );
+}
+for (const extension of outPackage.extensions) {
+  fs.writeFileSync(
+    path.join(program.out, `StructureDefinition-${extension.id}.json`),
+    JSON.stringify(extension.toJSON(), null, 2),
+    'utf8'
+  );
+}
+
+fs.writeFileSync(
+  path.join(program.out, 'package.json'),
+  JSON.stringify(outPackage.config, null, 2),
+  'utf8'
+);

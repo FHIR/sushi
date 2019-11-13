@@ -26,7 +26,7 @@ export class StructureDefinitionExporter {
   ): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
-    structDef.url = `${tank.packageJSON.canonical}/StructureDefinition/${structDef.id}`;
+    structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
   }
