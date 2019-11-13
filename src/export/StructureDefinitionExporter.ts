@@ -38,7 +38,14 @@ export class StructureDefinitionExporter {
    */
   private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
     for (const rule of fshDefinition.rules) {
-      const element = structDef.findElementByPath(rule.path);
+      const element = structDef.findElementByPath(rule.path, (type: string):
+        | StructureDefinition
+        | undefined => {
+        const json = this.FHIRDefs.find(type);
+        if (json) {
+          return StructureDefinition.fromJSON(json);
+        }
+      });
       if (element) {
         try {
           if (rule instanceof CardRule) {
