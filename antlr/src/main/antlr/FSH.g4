@@ -29,7 +29,7 @@ flagRule:           STAR (path | paths) flag+;
 valueSetRule:       STAR path KW_FROM SEQUENCE strength?;
 fixedValueRule:     STAR path EQUAL value;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
-onlyRule:           STAR path KW_ONLY SEQUENCE (KW_OR SEQUENCE)*;
+onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 
@@ -46,6 +46,7 @@ quantity:           NUMBER UNIT;
 ratio:              ratioPart COLON ratioPart;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
+targetType:         SEQUENCE | REFERENCE;
 
 // KEYWORDS
 KW_ALIAS:           'Alias' WS* ':';
@@ -95,15 +96,8 @@ NUMBER:             [+\-]? [0-9]+('.' [0-9]+)?;
                  //   '  UCUM UNIT   '
 UNIT:               '\'' (~[\\'])* '\'';
 
-                 // NUMBER   '  UCUM UNIT   '
-//QUANTITY:           NUMBER '\'' (~[\\'])* '\'';
-
                  // SYSTEM     #  SYSTEM   "DISPLAY"
 CODE:               SEQUENCE? '#' SEQUENCE STRING?;
-
-//                   #  NON-WHITESPACE
-//CODE:               '#' ~[, \r\t\n]+;
-
 
                  //        YEAR         ( -   MONTH   ( -    DAY    ( T TIME )?)?)?
 DATETIME:           [0-9][0-9][0-9][0-9]('-'[0-9][0-9]('-'[0-9][0-9]('T' TIME)?)?)?;
@@ -114,8 +108,11 @@ TIME:               [0-9][0-9](':'[0-9][0-9](':'[0-9][0-9]('.'[0-9]+)?)?)?('Z' |
                  // DIGITS  ..  (DIGITS |  * )
 CARD:               [0-9]+ '..' ([0-9]+ | '*');
 
+                 //  Reference       (        ITEM         |         ITEM         )
+REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
+
                  //  ^  NON-WHITESPACE
-CARET_SEQUENCE:    '^' ~[ \t\r\n\f]+;
+CARET_SEQUENCE:     '^' ~[ \t\r\n\f]+;
 
                         // (NON-WS     ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE COMMA WS+)+ SEQUENCE;

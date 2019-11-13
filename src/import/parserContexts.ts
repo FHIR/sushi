@@ -144,5 +144,10 @@ export interface BoolContext extends ParserRuleContext {
 
 export interface OnlyRuleContext extends ParserRuleContext {
   path(): PathContext;
-  SEQUENCE(): ParserRuleContext[];
+  targetType(): TargetTypeContext[];
+}
+
+export interface TargetTypeContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  REFERENCE(): ParserRuleContext;
 }
