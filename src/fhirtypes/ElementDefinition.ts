@@ -525,6 +525,23 @@ export class ElementDefinition {
   }
 
   /**
+   * Sets flags on this element as specified in a profile or extension.
+   * @todo Add enforcement of rules regarding when these flags can change.
+   * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
+   * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}
+   * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isSummary}
+   * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isModifier}
+   * @param mustSupport - whether to make this element a Must Support element
+   * @param summary - whether to include this element when querying for a summary
+   * @param modifier - whether this element acts as a modifier on the resource
+   */
+  applyFlags(mustSupport: boolean, summary: boolean, modifier: boolean): void {
+    this.mustSupport = mustSupport;
+    this.isSummary = summary;
+    this.isModifier = modifier;
+  }
+
+  /**
    * Binds a value set with a specific strength to this element.  The type must be coded (code, Coding,
    * CodeableConcept, Quantity), or the data types (string, uri).  The strength must be the same or
    * stricter than the current strength (if a binding already exists).

@@ -2,7 +2,7 @@ import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile, Extension } from '../../src/fshtypes';
-import { CardRule } from '../../src/fshtypes/rules';
+import { CardRule, FlagRule } from '../../src/fshtypes/rules';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -152,5 +152,28 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
+  });
+
+  // Flag Rule
+  it('should apply a flag rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'DiagnosticReport';
+
+    const rule = new FlagRule('conclusion');
+    rule.modifier = false;
+    rule.mustSupport = true;
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseElement = baseStructDef.findElement('DiagnosticReport.conclusion');
+    const changedElement = sd.findElement('DiagnosticReport.conclusion');
+    expect(baseElement.isModifier).toBeFalsy();
+    expect(baseElement.mustSupport).toBeFalsy();
+    expect(baseElement.isSummary).toBeFalsy();
+    expect(changedElement.isModifier).toBeFalsy();
+    expect(changedElement.mustSupport).toBeTruthy();
+    expect(baseElement.isSummary).toBeFalsy();
   });
 });

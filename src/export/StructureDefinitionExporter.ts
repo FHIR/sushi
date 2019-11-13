@@ -3,7 +3,7 @@ import { StructureDefinition } from '../fhirtypes';
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
-import { CardRule } from '../fshtypes/rules';
+import { CardRule, FlagRule } from '../fshtypes/rules';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -43,6 +43,8 @@ export class StructureDefinitionExporter {
         try {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
+          } else if (rule instanceof FlagRule) {
+            element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
           }
         } catch (e) {
           console.error(e.stack);
