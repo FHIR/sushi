@@ -229,7 +229,7 @@ describe('StructureDefinitionExporter', () => {
     );
     expect(changedElement.binding.strength).toBe('preferred');
   });
-  
+
   // toJSON
   it('should correctly generate a diff containing only changed elements', () => {
     // We already have separate tests for the differentials, so this just ensures that the
