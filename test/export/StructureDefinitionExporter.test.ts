@@ -2,7 +2,7 @@ import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile, Extension } from '../../src/fshtypes';
-import { CardRule, FlagRule, ValueSetRule } from '../../src/fshtypes/rules';
+import { CardRule, FlagRule, OnlyRule, ValueSetRule } from '../../src/fshtypes/rules';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -294,6 +294,128 @@ describe('StructureDefinitionExporter', () => {
       'http://hl7.org/fhir/ValueSet/observation-category'
     );
     expect(changedElement.binding.strength).toBe('preferred');
+  });
+
+  // Only Rule
+  it('should apply a correct OnlyRule on a non-reference choice', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new OnlyRule('value[x]');
+    rule.types = [{ type: 'string' }];
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseValue = baseStructDef.findElement('Observation.value[x]');
+    const constrainedValue = sd.findElement('Observation.value[x]');
+
+    expect(baseValue.type).toHaveLength(11);
+    expect(baseValue.type[0]).toEqual({ code: 'Quantity' });
+    expect(baseValue.type[1]).toEqual({ code: 'CodeableConcept' });
+    expect(baseValue.type[2]).toEqual({ code: 'string' });
+
+    expect(constrainedValue.type).toHaveLength(1);
+    expect(constrainedValue.type[0]).toEqual({ code: 'string' });
+  });
+
+  it('should apply a correct OnlyRule on a reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new OnlyRule('subject');
+    rule.types = [{ type: 'Device', isReference: true }];
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseSubject = baseStructDef.findElement('Observation.subject');
+    const constrainedSubject = sd.findElement('Observation.subject');
+
+    expect(baseSubject.type).toHaveLength(1);
+    expect(baseSubject.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: [
+          'http://hl7.org/fhir/StructureDefinition/Patient',
+          'http://hl7.org/fhir/StructureDefinition/Group',
+          'http://hl7.org/fhir/StructureDefinition/Device',
+          'http://hl7.org/fhir/StructureDefinition/Location'
+        ]
+      }
+    ]);
+
+    expect(constrainedSubject.type).toHaveLength(1);
+    expect(constrainedSubject.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: ['http://hl7.org/fhir/StructureDefinition/Device']
+      }
+    ]);
+  });
+
+  it('should apply a correct OnlyRule with a specific target constrained', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new OnlyRule('hasMember[Observation]');
+    rule.types = [
+      { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
+      { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true }
+    ];
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseHasMember = baseStructDef.findElement('Observation.hasMember');
+    const constrainedHasMember = sd.findElement('Observation.hasMember');
+
+    expect(baseHasMember.type).toHaveLength(1);
+    expect(baseHasMember.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: [
+          'http://hl7.org/fhir/StructureDefinition/Observation',
+          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+        ]
+      }
+    ]);
+
+    expect(constrainedHasMember.type).toHaveLength(1);
+    expect(constrainedHasMember.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: [
+          'http://hl7.org/fhir/StructureDefinition/bodyheight',
+          'http://hl7.org/fhir/StructureDefinition/bodyweight',
+          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+        ]
+      }
+    ]);
+  });
+
+  it('should not apply an incorrect OnlyRule', () => {
+    // TODO: this should check for emitting an error once logging is set up
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new OnlyRule('value[x]');
+    rule.types = [{ type: 'instant' }];
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseValue = baseStructDef.findElement('Observation.value[x]');
+    const constrainedValue = sd.findElement('Observation.value[x]');
+
+    expect(baseValue.type).toHaveLength(11);
+    expect(constrainedValue.type).toHaveLength(11);
   });
 
   // toJSON
