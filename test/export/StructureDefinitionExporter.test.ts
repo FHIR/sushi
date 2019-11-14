@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
@@ -200,32 +198,20 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should not apply a flag rule that disables mustSupport', () => {
-    const jsonMustSupport = JSON.parse(
-      fs.readFileSync(
-        path.join(__dirname, '../fhirdefs/testdefs/patient-photo-must-support.json'),
-        'utf-8'
-      )
-    );
-    const mustSupportDefs: FHIRDefinitions = new FHIRDefinitions('4.0.1');
-    mustSupportDefs.add(jsonMustSupport);
-    const mustSupportExporter: StructureDefinitionExporter = new StructureDefinitionExporter(
-      mustSupportDefs
-    );
-
     const profile = new Profile('Foo');
-    profile.parent = 'http://example.com/fhir/SD/patient-must-support';
+    profile.parent = 'http://hl7.org/fhir/StructureDefinition/vitalsigns';
 
-    const rule = new FlagRule('photo');
+    const rule = new FlagRule('code');
     rule.modifier = true;
     rule.summary = false;
     rule.mustSupport = false;
     profile.rules.push(rule);
 
-    const sd = mustSupportExporter.exportStructDef(profile, input);
+    const sd = exporter.exportStructDef(profile, input);
     const baseStructDef = sd.getBaseStructureDefinition();
 
-    const baseElement = baseStructDef.findElementByPath('photo');
-    const changedElement = sd.findElementByPath('photo');
+    const baseElement = baseStructDef.findElement('Observation.code');
+    const changedElement = sd.findElement('Observation.code');
     expect(baseElement.isModifier).toBeFalsy();
     expect(baseElement.isSummary).toBe(true);
     expect(baseElement.mustSupport).toBe(true);

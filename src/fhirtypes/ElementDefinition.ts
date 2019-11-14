@@ -1,4 +1,4 @@
-import { isEmpty, isEqual, cloneDeep } from 'lodash';
+import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity } from './dataTypes';
 import { Code } from '../fshtypes';
@@ -527,6 +527,7 @@ export class ElementDefinition {
 
   /**
    * Sets flags on this element as specified in a profile or extension.
+   * Don't change a flag when the incoming argument is undefined.
    * @todo Add more complete enforcement of rules regarding when these flags can change.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}
@@ -539,18 +540,24 @@ export class ElementDefinition {
    */
   applyFlags(mustSupport: boolean, summary: boolean, modifier: boolean): void {
     const disabledFlags = [];
-    if (this.mustSupport && !mustSupport) {
+    if (this.mustSupport && mustSupport === false) {
       disabledFlags.push('Must Support');
     }
-    if (this.isModifier && !modifier) {
+    if (this.isModifier && modifier === false) {
       disabledFlags.push('Is Modifier');
     }
     if (disabledFlags.length) {
       throw new DisableFlagError(disabledFlags);
     }
-    this.mustSupport = mustSupport;
-    this.isSummary = summary;
-    this.isModifier = modifier;
+    if (isBoolean(mustSupport)) {
+      this.mustSupport = mustSupport;
+    }
+    if (isBoolean(summary)) {
+      this.isSummary = summary;
+    }
+    if (isBoolean(modifier)) {
+      this.isModifier = modifier;
+    }
   }
 
   /**
