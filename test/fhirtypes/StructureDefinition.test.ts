@@ -207,6 +207,7 @@ describe('StructureDefinition', () => {
       const valueQuantity = observation.findElementByPath('valueQuantity', getResolver(defs));
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantity.slicing).toBeUndefined();
       expect(valueQuantity.sliceName).toBe('valueQuantity');
       expect(valueQuantity.path).toBe('Observation.value[x]');
       expect(valueQuantity.min).toBe(0);
