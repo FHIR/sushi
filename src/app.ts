@@ -41,7 +41,6 @@ for (const file of files) {
   }
 }
 
-
 let config: any;
 try {
   config = JSON.parse(fs.readFileSync(path.join(input, 'package.json'), 'utf8').toString());
@@ -76,4 +75,6 @@ fs.writeFileSync(
   'utf8'
 );
 
-console.info(`Exported ${outPackage.profiles.length} profile(s) and ${outPackage.extensions.length} extension(s).`);
+console.info(
+  `Exported ${outPackage.profiles.length} profile(s) and ${outPackage.extensions.length} extension(s).`
+);
