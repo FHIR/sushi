@@ -26,7 +26,7 @@ export class StructureDefinitionExporter {
   ): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
-    structDef.url = `${tank.packageJSON.canonical}/StructureDefinition/${structDef.id}`;
+    structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
   }
@@ -38,7 +38,7 @@ export class StructureDefinitionExporter {
    */
   private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
     for (const rule of fshDefinition.rules) {
-      const element = structDef.findElementByPath(rule.path);
+      const element = structDef.findElementByPath(rule.path, this.resolve.bind(this));
       if (element) {
         try {
           if (rule instanceof CardRule) {
@@ -52,6 +52,18 @@ export class StructureDefinitionExporter {
           `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`
         );
       }
+    }
+  }
+
+  /**
+   * Looks through FHIR definitions to find the definition of the passed-in type
+   * @param {string} type - The type to search for the FHIR definition of
+   * @returns {StructureDefinition | undefined}
+   */
+  private resolve(type: string): StructureDefinition | undefined {
+    const json = this.FHIRDefs.find(type);
+    if (json) {
+      return StructureDefinition.fromJSON(json);
     }
   }
 

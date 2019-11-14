@@ -1,4 +1,4 @@
-import capitalize from 'lodash/capitalize';
+import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
 import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
 import { Meta } from './specialTypes';
@@ -322,7 +322,7 @@ export class StructureDefinition {
     const matchingXElement = elements.find(e => {
       if (e.path.endsWith('[x]')) {
         for (const t of e.type) {
-          if (`${e.path.slice(0, -3)}${capitalize(t.code)}` === fhirPath) {
+          if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
             matchingType = t;
             return true;
           }
