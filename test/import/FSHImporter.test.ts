@@ -1,4 +1,5 @@
 import { importText, FSHImporter, FSHDocument } from '../../src/import';
+import { Logger, createLogger, format, transports } from 'winston';
 
 describe('FSHImporter', () => {
   it('should default filename to blank string', () => {
@@ -22,7 +23,16 @@ describe('FSHImporter', () => {
   });
 
   it('should not allow the same visitor instance to be invoked twice', () => {
-    const visitor = new FSHImporter();
+    const { combine, colorize, printf } = format;
+    const file = 'myFile';
+    const logger: Logger = createLogger({
+      format: combine(
+        colorize({ all: true }),
+        printf(info => `From ImportText of ${file ?? 'unknown'}: \n${info.message}`)
+      ),
+      transports: [new transports.Console()]
+    });
+    const visitor = new FSHImporter(file, logger);
     // First time should work (ts-ignore is to get around typing of DocContext for now)
     // @ts-ignore
     const result = visitor.visitDoc({ entity: () => [] });

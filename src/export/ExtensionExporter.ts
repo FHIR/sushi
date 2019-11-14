@@ -2,10 +2,11 @@ import { StructureDefinitionExporter } from './StructureDefinitionExporter';
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition } from '../fhirtypes';
 import { FHIRDefinitions } from '../fhirdefs';
+import { Logger } from 'winston';
 
 export class ExtensionExporter extends StructureDefinitionExporter {
-  constructor(FHIRDefs: FHIRDefinitions) {
-    super(FHIRDefs);
+  constructor(FHIRDefs: FHIRDefinitions, logger: Logger) {
+    super(FHIRDefs, logger);
   }
 
   /**
@@ -21,7 +22,7 @@ export class ExtensionExporter extends StructureDefinitionExporter {
           const structDef = this.exportStructDef(extension, tank);
           structDefs.push(structDef);
         } catch (e) {
-          console.error(e.stack);
+          this.logger.error(e.stack);
         }
       }
     }

@@ -2,21 +2,31 @@ import { ExtensionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Extension } from '../../src/fshtypes';
+import { Logger, createLogger, format, transports } from 'winston';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
+  let logger: Logger;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ExtensionExporter;
 
   beforeAll(() => {
     defs = load('4.0.1');
+    const { combine, colorize, printf } = format;
+    logger = createLogger({
+      format: combine(
+        colorize({ all: true }),
+        printf(info => `From ${info.label ?? 'StructureDefinitionExporter'}: \n${info.message}`)
+      ),
+      transports: [new transports.Console()]
+    });
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { canonical: 'http://example.com' });
-    exporter = new ExtensionExporter(defs);
+    exporter = new ExtensionExporter(defs, logger.child({ label: 'ExtensionExporter' }));
   });
 
   it('should output empty results with empty input', () => {
