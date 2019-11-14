@@ -1,4 +1,4 @@
-import capitalize from 'lodash/capitalize';
+import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
 import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
 import { Meta } from './specialTypes';
@@ -217,6 +217,23 @@ export class StructureDefinition {
   }
 
   /**
+   * Each ElementDefinition is capable of producing its own differential, based on differences
+   * from a stored "original".  This function captures the current state of each element as the
+   * "original", so any further changes made would be captured in the generated differentials.
+   */
+  captureOriginalElements(): void {
+    this.elements.forEach(e => e.captureOriginal());
+  }
+
+  /**
+   * Clears the stored "original" state for each ElementDefnition, resulting in every property
+   * being considered new, and reflected in the generated differentials.
+   */
+  clearOriginalElements(): void {
+    this.elements.forEach(e => e.clearOriginal());
+  }
+
+  /**
    * Exports the StructureDefinition to a properly formatted FHIR JSON representation.
    * @returns {any} the FHIR JSON representation of the StructureDefinition
    */
@@ -305,7 +322,7 @@ export class StructureDefinition {
     const matchingXElement = elements.find(e => {
       if (e.path.endsWith('[x]')) {
         for (const t of e.type) {
-          if (`${e.path.slice(0, -3)}${capitalize(t.code)}` === fhirPath) {
+          if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
             matchingType = t;
             return true;
           }

@@ -4,6 +4,7 @@ import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
 import { CardRule, ValueSetRule } from '../fshtypes/rules';
+import { logger } from '../utils/FSHLogger';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -26,7 +27,7 @@ export class StructureDefinitionExporter {
   ): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
-    structDef.url = `${tank.packageJSON.canonical}/StructureDefinition/${structDef.id}`;
+    structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
   }
@@ -38,7 +39,7 @@ export class StructureDefinitionExporter {
    */
   private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
     for (const rule of fshDefinition.rules) {
-      const element = structDef.findElementByPath(rule.path);
+      const element = structDef.findElementByPath(rule.path, this.resolve.bind(this));
       if (element) {
         try {
           if (rule instanceof CardRule) {
@@ -47,13 +48,25 @@ export class StructureDefinitionExporter {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           }
         } catch (e) {
-          console.error(e.stack);
+          logger.error(e.message);
         }
       } else {
-        console.error(
+        logger.error(
           `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`
         );
       }
+    }
+  }
+
+  /**
+   * Looks through FHIR definitions to find the definition of the passed-in type
+   * @param {string} type - The type to search for the FHIR definition of
+   * @returns {StructureDefinition | undefined}
+   */
+  private resolve(type: string): StructureDefinition | undefined {
+    const json = this.FHIRDefs.find(type);
+    if (json) {
+      return StructureDefinition.fromJSON(json);
     }
   }
 
@@ -72,6 +85,8 @@ export class StructureDefinitionExporter {
     } else {
       throw new ParentNotDefinedError(fshDefinition.name, parentName);
     }
+    // Capture the orginal elements so that any further changes are reflected in the differential
+    structDef.captureOriginalElements();
     this.setMetadata(structDef, fshDefinition, tank);
     this.setRules(structDef, fshDefinition);
     // Set the rules

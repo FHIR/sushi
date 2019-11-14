@@ -4,6 +4,6 @@ export class Package {
   constructor(
     public readonly profiles: StructureDefinition[],
     public readonly extensions: StructureDefinition[],
-    public readonly packageJSON: any
+    public readonly config: any
   ) {}
 }

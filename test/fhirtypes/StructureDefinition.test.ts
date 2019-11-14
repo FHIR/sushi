@@ -56,6 +56,27 @@ describe('StructureDefinition', () => {
       const newJSON = observation.toJSON();
       expect(newJSON).toEqual(jsonObservation);
     });
+
+    it('should reflect differentials for elements that changed after capturing originals', () => {
+      observation.captureOriginalElements();
+      const code = observation.elements.find(e => e.id === 'Observation.code');
+      code.short = 'Special observation code';
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.min = 1;
+
+      const json = observation.toJSON();
+      expect(json.differential.element).toHaveLength(2);
+      expect(json.differential.element[0]).toEqual({
+        id: 'Observation.code',
+        path: 'Observation.code',
+        short: 'Special observation code'
+      });
+      expect(json.differential.element[1]).toEqual({
+        id: 'Observation.value[x]',
+        path: 'Observation.value[x]',
+        min: 1
+      });
+    });
   });
 
   describe('#newElement', () => {
@@ -186,6 +207,7 @@ describe('StructureDefinition', () => {
       const valueQuantity = observation.findElementByPath('valueQuantity', getResolver(defs));
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantity.slicing).toBeUndefined();
       expect(valueQuantity.sliceName).toBe('valueQuantity');
       expect(valueQuantity.path).toBe('Observation.value[x]');
       expect(valueQuantity.min).toBe(0);
@@ -218,6 +240,30 @@ describe('StructureDefinition', () => {
       expect(codeText.id).toBe('Observation.code.text');
       expect(codeText.short).toBe('Plain text representation of the concept');
       expect(observation.elements.length).toBe(originalLength + 4);
+    });
+  });
+
+  describe('#captureOriginalElements()', () => {
+    it('should create a new starting point for diffs', () => {
+      // Note: this is not as true a unit test as it should be since it is intertwined
+      // with hasDiff(), but there isn't an easy way around this since _original is private.
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      observation.captureOriginalElements();
+      expect(valueX.hasDiff()).toBeFalsy();
+      valueX.min = 1;
+      expect(valueX.hasDiff()).toBeTruthy();
+    });
+  });
+
+  describe('#clearOriginalElements()', () => {
+    it('should remove the starting point for diffs, making everything diff', () => {
+      // Note: this is not as true a unit test as it should be since it is intertwined
+      // with hasDiff(), but there isn't an easy way around this since _original is private.
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      observation.captureOriginalElements();
+      expect(valueX.hasDiff()).toBeFalsy();
+      valueX.clearOriginal();
+      expect(valueX.hasDiff()).toBeTruthy();
     });
   });
 
