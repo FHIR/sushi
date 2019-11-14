@@ -21,7 +21,7 @@ export class FHIRExporter {
     this.logger = createLogger({
       format: combine(
         colorize({ all: true }),
-        printf(info => `From ${info.label ?? 'StructureDefinitionExporter123'}: \n${info.message}`)
+        printf(info => `From ${info.label ?? 'StructureDefinitionExporter'}: \n${info.message}`)
       ),
       transports: [new transports.Console()]
     });

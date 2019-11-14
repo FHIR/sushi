@@ -167,7 +167,7 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.onlyRule()) {
       return [this.visitOnlyRule(ctx.onlyRule())];
     }
-    this.logger.info(`Unsupported rule: ${ctx.getText()}`);
+    this.logger.warn(`Unsupported rule: ${ctx.getText()}`);
     return [];
   }
 

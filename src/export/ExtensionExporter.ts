@@ -22,7 +22,7 @@ export class ExtensionExporter extends StructureDefinitionExporter {
           const structDef = this.exportStructDef(extension, tank);
           structDefs.push(structDef);
         } catch (e) {
-          this.logger.error(e.stack);
+          this.logger.error(e.message);
         }
       }
     }

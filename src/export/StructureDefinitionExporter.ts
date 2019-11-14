@@ -48,7 +48,7 @@ export class StructureDefinitionExporter {
             element.constrainCardinality(rule.min, rule.max);
           }
         } catch (e) {
-          this.logger.error(e.stack);
+          this.logger.error(e.message);
         }
       } else {
         this.logger.error(
