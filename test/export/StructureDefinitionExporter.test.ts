@@ -160,7 +160,7 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Appointment';
 
     const vsRule = new ValueSetRule('description');
-    vsRule.valueSet = 'SomeVS';
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
 
@@ -169,7 +169,7 @@ describe('StructureDefinitionExporter', () => {
     const baseElement = baseStructDef.findElement('Appointment.description');
     const changedElement = sd.findElement('Appointment.description');
     expect(baseElement.binding).toBeUndefined();
-    expect(changedElement.binding.valueSet).toBe('SomeVS');
+    expect(changedElement.binding.valueSet).toBe('http://example.org/fhir/ValueSet/some-valueset');
     expect(changedElement.binding.strength).toBe('extensible');
   });
 
@@ -178,7 +178,7 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Observation';
 
     const vsRule = new ValueSetRule('category');
-    vsRule.valueSet = 'SomeVS';
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
 
@@ -188,7 +188,7 @@ describe('StructureDefinitionExporter', () => {
     const changedElement = sd.findElement('Observation.category');
     expect(baseElement.binding.valueSet).toBe('http://hl7.org/fhir/ValueSet/observation-category');
     expect(baseElement.binding.strength).toBe('preferred');
-    expect(changedElement.binding.valueSet).toBe('SomeVS');
+    expect(changedElement.binding.valueSet).toBe('http://example.org/fhir/ValueSet/some-valueset');
     expect(changedElement.binding.strength).toBe('extensible');
   });
 
@@ -197,7 +197,7 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Observation';
 
     const vsRule = new ValueSetRule('note');
-    vsRule.valueSet = 'SomeVS';
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
 
@@ -214,7 +214,7 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Observation';
 
     const vsRule = new ValueSetRule('category');
-    vsRule.valueSet = 'SomeVS';
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'example';
     profile.rules.push(vsRule);
 
