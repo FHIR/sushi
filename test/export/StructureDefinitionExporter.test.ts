@@ -2,7 +2,7 @@ import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile, Extension } from '../../src/fshtypes';
-import { CardRule, ValueSetRule } from '../../src/fshtypes/rules';
+import { CardRule, FlagRule, ValueSetRule } from '../../src/fshtypes/rules';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -152,6 +152,72 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
+  });
+
+  // Flag Rule
+  it('should apply a valid flag rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'DiagnosticReport';
+
+    const rule = new FlagRule('conclusion');
+    rule.modifier = false;
+    rule.mustSupport = true;
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseElement = baseStructDef.findElement('DiagnosticReport.conclusion');
+    const changedElement = sd.findElement('DiagnosticReport.conclusion');
+    expect(baseElement.isModifier).toBeFalsy();
+    expect(baseElement.mustSupport).toBeFalsy();
+    expect(baseElement.isSummary).toBeFalsy();
+    expect(changedElement.isModifier).toBe(false);
+    expect(changedElement.mustSupport).toBe(true);
+    expect(baseElement.isSummary).toBeFalsy();
+  });
+
+  it('should not apply a flag rule that disables isModifier', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'DiagnosticReport';
+
+    const rule = new FlagRule('status');
+    rule.modifier = false;
+    rule.mustSupport = true;
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseElement = baseStructDef.findElement('DiagnosticReport.status');
+    const changedElement = sd.findElement('DiagnosticReport.status');
+    expect(baseElement.isModifier).toBe(true);
+    expect(baseElement.mustSupport).toBeFalsy();
+    expect(changedElement.isModifier).toBe(true);
+    expect(changedElement.mustSupport).toBeFalsy();
+  });
+
+  it('should not apply a flag rule that disables mustSupport', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'http://hl7.org/fhir/StructureDefinition/vitalsigns';
+
+    const rule = new FlagRule('code');
+    rule.modifier = true;
+    rule.summary = false;
+    rule.mustSupport = false;
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseElement = baseStructDef.findElement('Observation.code');
+    const changedElement = sd.findElement('Observation.code');
+    expect(baseElement.isModifier).toBeFalsy();
+    expect(baseElement.isSummary).toBe(true);
+    expect(baseElement.mustSupport).toBe(true);
+    expect(changedElement.isModifier).toBeFalsy();
+    expect(changedElement.isSummary).toBe(true);
+    expect(changedElement.mustSupport).toBe(true);
   });
 
   // Value Set Rule
