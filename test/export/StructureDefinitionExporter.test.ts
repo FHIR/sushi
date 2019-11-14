@@ -153,4 +153,27 @@ describe('StructureDefinitionExporter', () => {
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
   });
+
+  // toJSON
+  it('should correctly generate a diff containing only changed elements', () => {
+    // We already have separate tests for the differentials, so this just ensures that the
+    // StructureDefinition is setup correctly to produce accurate differential elements.
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('subject');
+    rule.min = 1;
+    rule.max = '1';
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const json = sd.toJSON();
+
+    expect(json.differential.element).toHaveLength(1);
+    expect(json.differential.element[0]).toEqual({
+      id: 'Observation.subject',
+      path: 'Observation.subject',
+      min: 1
+    });
+  });
 });

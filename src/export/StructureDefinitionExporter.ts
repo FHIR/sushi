@@ -70,6 +70,8 @@ export class StructureDefinitionExporter {
     } else {
       throw new ParentNotDefinedError(fshDefinition.name, parentName);
     }
+    // Capture the orginal elements so that any further changes are reflected in the differential
+    structDef.captureOriginalElements();
     this.setMetadata(structDef, fshDefinition, tank);
     this.setRules(structDef, fshDefinition);
     // Set the rules
