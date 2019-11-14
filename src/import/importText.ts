@@ -4,7 +4,6 @@ import { FSHParser } from '../../src/import/generated/FSHParser';
 import { DocContext } from '../../src/import/parserContexts';
 import { FSHImporter } from './FSHImporter';
 import { FSHDocument } from './FSHDocument';
-import { Logger, createLogger, format, transports } from 'winston';
 
 /**
  * Parses a text string as a FSHDocument.
@@ -13,16 +12,7 @@ import { Logger, createLogger, format, transports } from 'winston';
  * @returns {FSHDocument} - the FSH document representing the parsed text
  */
 export function importText(text: string, file?: string): FSHDocument {
-  const { combine, colorize, printf } = format;
-  const logger: Logger = createLogger({
-    format: combine(
-      colorize({ all: true }),
-      printf(info => `From ImportText of ${file ?? 'unknown'}: \n${info.message}`)
-    ),
-    transports: [new transports.Console()]
-  });
-
-  const importer = new FSHImporter(file, logger);
+  const importer = new FSHImporter(file);
   return importer.visitDoc(parseDoc(text));
 }
 

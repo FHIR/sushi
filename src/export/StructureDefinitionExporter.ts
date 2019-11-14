@@ -4,7 +4,7 @@ import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
 import { CardRule } from '../fshtypes/rules';
-import { Logger } from 'winston';
+import { logger } from '../utils/FSHLogger';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -12,9 +12,7 @@ import { Logger } from 'winston';
  * between the two should be included in this class.
  */
 export class StructureDefinitionExporter {
-  constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly logger: Logger) {
-    this.logger = logger;
-  }
+  constructor(public readonly FHIRDefs: FHIRDefinitions) {}
 
   /**
    * Sets the metadata for the StructureDefinition
@@ -48,10 +46,10 @@ export class StructureDefinitionExporter {
             element.constrainCardinality(rule.min, rule.max);
           }
         } catch (e) {
-          this.logger.error(e.message);
+          logger.error(e.message);
         }
       } else {
-        this.logger.error(
+        logger.error(
           `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`
         );
       }

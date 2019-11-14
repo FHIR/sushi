@@ -12,7 +12,7 @@ import {
   OnlyRule
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
-import { Logger } from 'winston';
+import { logger } from '../utils/FSHLogger';
 
 enum SdMetadataKey {
   Id,
@@ -40,15 +40,14 @@ export class FSHImporter extends FSHVisitor {
   private used = false;
   private readonly doc: FSHDocument;
 
-  constructor(public readonly file: string = '', private readonly logger: Logger) {
+  constructor(public readonly file: string = '') {
     super();
     this.doc = new FSHDocument(file);
-    this.logger = logger;
   }
 
   visitDoc(ctx: pc.DocContext): FSHDocument {
     if (this.used) {
-      this.logger.error('FSHImporter cannot be re-used. Construct a new instance.');
+      logger.error('FSHImporter cannot be re-used. Construct a new instance.');
       return;
     }
     this.used = true;
@@ -167,7 +166,7 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.onlyRule()) {
       return [this.visitOnlyRule(ctx.onlyRule())];
     }
-    this.logger.warn(`Unsupported rule: ${ctx.getText()}`);
+    logger.warn(`Unsupported rule: ${ctx.getText()}`);
     return [];
   }
 
