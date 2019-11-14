@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 import program from 'commander';
 import { importText, FSHDocument, FSHTank } from './import';
 import { exportFHIR } from './export';
+import { logger } from './utils/FSHLogger';
 
 let input: string;
 
@@ -20,7 +21,7 @@ program
 
 // Check that input folder is specified
 if (!input) {
-  console.error('Missing path to FSH definition folder.');
+  logger.error('Missing path to FSH definition folder.');
   program.help();
 }
 
@@ -28,7 +29,7 @@ let files: string[];
 try {
   files = fs.readdirSync(input, 'utf8');
 } catch {
-  console.error('Invalid path to FSH definition folder.');
+  logger.error('Invalid path to FSH definition folder.');
   program.help();
 }
 
@@ -45,7 +46,7 @@ let config: any;
 try {
   config = JSON.parse(fs.readFileSync(path.join(input, 'package.json'), 'utf8').toString());
 } catch {
-  console.error('No package.json in FSH definition folder.');
+  logger.error('No package.json in FSH definition folder.');
   program.help();
 }
 
@@ -75,6 +76,6 @@ fs.writeFileSync(
   'utf8'
 );
 
-console.info(
+logger.info(
   `Exported ${outPackage.profiles.length} profile(s) and ${outPackage.extensions.length} extension(s).`
 );

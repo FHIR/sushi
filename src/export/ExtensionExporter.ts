@@ -2,6 +2,7 @@ import { StructureDefinitionExporter } from './StructureDefinitionExporter';
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition } from '../fhirtypes';
 import { FHIRDefinitions } from '../fhirdefs';
+import { logger } from '../utils/FSHLogger';
 
 export class ExtensionExporter extends StructureDefinitionExporter {
   constructor(FHIRDefs: FHIRDefinitions) {
@@ -21,7 +22,7 @@ export class ExtensionExporter extends StructureDefinitionExporter {
           const structDef = this.exportStructDef(extension, tank);
           structDefs.push(structDef);
         } catch (e) {
-          console.error(e.stack);
+          logger.error(e.message);
         }
       }
     }

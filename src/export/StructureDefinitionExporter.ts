@@ -4,6 +4,7 @@ import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
 import { CardRule } from '../fshtypes/rules';
+import { logger } from '../utils/FSHLogger';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -45,10 +46,10 @@ export class StructureDefinitionExporter {
             element.constrainCardinality(rule.min, rule.max);
           }
         } catch (e) {
-          console.error(e.stack);
+          logger.error(e.message);
         }
       } else {
-        console.error(
+        logger.error(
           `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`
         );
       }
