@@ -1,8 +1,8 @@
-import { Logger, createLogger, format, transports } from 'winston';
+import { createLogger, format, transports } from 'winston';
 
 const { combine, colorize, simple } = format;
 
-export const logger: Logger = createLogger({
+export const logger = createLogger({
   format: combine(colorize({ all: true }), simple()),
   transports: [new transports.Console()]
 });
