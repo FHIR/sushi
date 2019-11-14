@@ -922,6 +922,7 @@ export class ElementDefinition {
       throw new SlicingNotDefinedError(this.id, name);
     }
     const slice = this.clone(true);
+    delete slice.slicing;
     slice.id = `${this.id}:${name}`;
     slice.sliceName = name;
     // When a choice is sliced, we do not inherit min cardinality, but rather make it 0

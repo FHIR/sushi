@@ -2,7 +2,7 @@ import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile, Extension } from '../../src/fshtypes';
-import { CardRule, FlagRule } from '../../src/fshtypes/rules';
+import { CardRule, FlagRule, ValueSetRule } from '../../src/fshtypes/rules';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -218,5 +218,103 @@ describe('StructureDefinitionExporter', () => {
     expect(changedElement.isModifier).toBeFalsy();
     expect(changedElement.isSummary).toBe(true);
     expect(changedElement.mustSupport).toBe(true);
+
+  // Value Set Rule
+  it('should apply a correct value set rule to an unbound string', () => {
+    const profile = new Profile('Junk');
+    profile.parent = 'Appointment';
+
+    const vsRule = new ValueSetRule('description');
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Appointment.description');
+    const changedElement = sd.findElement('Appointment.description');
+    expect(baseElement.binding).toBeUndefined();
+    expect(changedElement.binding.valueSet).toBe('http://example.org/fhir/ValueSet/some-valueset');
+    expect(changedElement.binding.strength).toBe('extensible');
+  });
+
+  it('should apply a correct value set rule that overrides a previous binding', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const vsRule = new ValueSetRule('category');
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Observation.category');
+    const changedElement = sd.findElement('Observation.category');
+    expect(baseElement.binding.valueSet).toBe('http://hl7.org/fhir/ValueSet/observation-category');
+    expect(baseElement.binding.strength).toBe('preferred');
+    expect(changedElement.binding.valueSet).toBe('http://example.org/fhir/ValueSet/some-valueset');
+    expect(changedElement.binding.strength).toBe('extensible');
+  });
+
+  it('should not apply a value set rule on an element that cannot support it', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const vsRule = new ValueSetRule('note');
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Observation.note');
+    const changedElement = sd.findElement('Observation.note');
+    expect(baseElement.binding).toBeUndefined();
+    expect(changedElement.binding).toBeUndefined();
+  });
+
+  it('should not override a binding with a less strict binding', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const vsRule = new ValueSetRule('category');
+    vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
+    vsRule.strength = 'example';
+    profile.rules.push(vsRule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseElement = baseStructDef.findElement('Observation.category');
+    const changedElement = sd.findElement('Observation.category');
+    expect(baseElement.binding.valueSet).toBe('http://hl7.org/fhir/ValueSet/observation-category');
+    expect(baseElement.binding.strength).toBe('preferred');
+    expect(changedElement.binding.valueSet).toBe(
+      'http://hl7.org/fhir/ValueSet/observation-category'
+    );
+    expect(changedElement.binding.strength).toBe('preferred');
+  });
+
+  // toJSON
+  it('should correctly generate a diff containing only changed elements', () => {
+    // We already have separate tests for the differentials, so this just ensures that the
+    // StructureDefinition is setup correctly to produce accurate differential elements.
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('subject');
+    rule.min = 1;
+    rule.max = '1';
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const json = sd.toJSON();
+
+    expect(json.differential.element).toHaveLength(1);
+    expect(json.differential.element[0]).toEqual({
+      id: 'Observation.subject',
+      path: 'Observation.subject',
+      min: 1
+    });
   });
 });

@@ -21,6 +21,6 @@ export class FHIRExporter {
   export(tank: FSHTank): Package {
     const profileDefs = this.profileExporter.export(tank);
     const extensionDefs = this.extensionExporter.export(tank);
-    return new Package(profileDefs, extensionDefs, tank.packageJSON);
+    return new Package(profileDefs, extensionDefs, tank.config);
   }
 }
