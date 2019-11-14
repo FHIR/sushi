@@ -218,6 +218,7 @@ describe('StructureDefinitionExporter', () => {
     expect(changedElement.isModifier).toBeFalsy();
     expect(changedElement.isSummary).toBe(true);
     expect(changedElement.mustSupport).toBe(true);
+  });
 
   // Value Set Rule
   it('should apply a correct value set rule to an unbound string', () => {
