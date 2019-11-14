@@ -2,10 +2,9 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import mkdirp from 'mkdirp';
 import program from 'commander';
 import { importText, FSHDocument, FSHTank } from './import';
-import { exportFHIR, Package } from './export';
+import { exportFHIR } from './export';
 
 let input: string;
 
@@ -21,7 +20,7 @@ program
 
 // Check that input folder is specified
 if (!input) {
-  console.error('Missing path to FSH definition folder');
+  console.error('Missing path to FSH definition folder.');
   program.help();
 }
 
@@ -29,31 +28,32 @@ let files: string[];
 try {
   files = fs.readdirSync(input, 'utf8');
 } catch {
-  console.error('Invalid path to FSH definition folder');
+  console.error('Invalid path to FSH definition folder.');
+  program.help();
 }
 
 const docs: FSHDocument[] = [];
-if (files?.length === 0) {
-  for (const file of files) {
-    if (file.endsWith('.fsh')) {
-      const fileContent: string = fs.readFileSync(path.join(input, file), 'utf8');
-      const doc: FSHDocument = importText(fileContent, file);
-      if (doc) docs.push(doc);
-    }
+for (const file of files) {
+  if (file.endsWith('.fsh')) {
+    const fileContent = fs.readFileSync(path.join(input, file), 'utf8');
+    const doc = importText(fileContent, file);
+    if (doc) docs.push(doc);
   }
 }
+
 
 let config: any;
 try {
   config = JSON.parse(fs.readFileSync(path.join(input, 'package.json'), 'utf8').toString());
 } catch {
-  console.error('No package.json in FSH definition folder');
+  console.error('No package.json in FSH definition folder.');
+  program.help();
 }
 
-const tank: FSHTank = new FSHTank(docs, config);
-const outPackage: Package = exportFHIR(tank);
+const tank = new FSHTank(docs, config);
+const outPackage = exportFHIR(tank);
 
-mkdirp.sync(program.out);
+fs.ensureDirSync(program.out);
 
 for (const profile of outPackage.profiles) {
   fs.writeFileSync(
@@ -75,3 +75,5 @@ fs.writeFileSync(
   JSON.stringify(outPackage.config, null, 2),
   'utf8'
 );
+
+console.info(`Exported ${outPackage.profiles.length} profile(s) and ${outPackage.extensions.length} extension(s).`);

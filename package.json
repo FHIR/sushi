@@ -16,6 +16,7 @@
     "check": "npm run test && npm run lint && npm run prettier"
   },
   "contributors": [
+    "Julia Afeltra <jafeltra@mitre.org>",
     "Nick Freiter <nfreiter@mitre.org>",
     "Dylan Mahalingam <kmahalingam@mitre.org>",
     "Chris Moesel <cmoesel@mitre.org>",
@@ -53,10 +54,7 @@
     "@types/mkdirp": "^0.5.2",
     "antlr4": "^4.7.2",
     "commander": "^4.0.1",
-    "fs": "0.0.1-security",
     "fs-extra": "^8.1.0",
-    "lodash": "^4.17.15",
-    "mkdirp": "^0.5.1",
-    "path": "^0.12.7"
+    "lodash": "^4.17.15"
   }
 }
