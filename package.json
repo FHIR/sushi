@@ -1,11 +1,11 @@
 {
-  "name": "sushi",
+  "name": "fsh-sushi",
   "version": "0.1.0",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
     "build": "rm -rf dist && tsc && cp -r src/fhirdefs/fhir-4.0.1 dist/fhirdefs/fhir-4.0.1",
     "build:watch": "tsc -w",
-    "build:grammar": "bash ./antlr/gradlew -p ./antlr generateGrammarSource",
+    "build:grammar": "bash antlr/gradlew -p antlr generateGrammarSource",
     "test": "jest --coverage",
     "test:watch": "npm run test -- --watchAll",
     "coverage": "opener coverage/lcov-report/index.html",
@@ -13,7 +13,9 @@
     "lint:fix": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
     "prettier": "prettier --check \"**/*.{js,ts}\"",
     "prettier:fix": "prettier --write \"**/*.{js,ts}\"",
-    "check": "npm run test && npm run lint && npm run prettier"
+    "check": "npm run test && npm run lint && npm run prettier",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run check"
   },
   "contributors": [
     "Julia Afeltra <jafeltra@mitre.org>",
@@ -26,10 +28,15 @@
     "type": "git",
     "url": "https://github.com/standardhealth/sushi.git"
   },
-  "main": "./dist/app.js",
+  "main": "dist/app.js",
   "bin": {
-    "sushi": "./dist/app.js"
+    "sushi": "dist/app.js"
   },
+  "types": "dist/app.d.ts",
+  "files": [
+    "dist/**/*.{js,json,d.ts}",
+    "antlr/**/*.g4"
+  ],
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/antlr4": "^4.7.0",
