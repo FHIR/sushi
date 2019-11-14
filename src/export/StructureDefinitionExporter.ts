@@ -1,9 +1,9 @@
 import { FHIRDefinitions } from '../fhirdefs';
-import { StructureDefinition } from '../fhirtypes';
+import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirtypes';
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
-import { CardRule } from '../fshtypes/rules';
+import { CardRule, ValueSetRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 
 /**
@@ -44,6 +44,8 @@ export class StructureDefinitionExporter {
         try {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
+          } else if (rule instanceof ValueSetRule) {
+            element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           }
         } catch (e) {
           logger.error(e.message);
