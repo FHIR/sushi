@@ -1,7 +1,7 @@
 import { InputStream, CommonTokenStream } from 'antlr4/index';
-import { FSHLexer } from '../../src/import/generated/FSHLexer';
-import { FSHParser } from '../../src/import/generated/FSHParser';
-import { DocContext } from '../../src/import/parserContexts';
+import { FSHLexer } from './generated/FSHLexer';
+import { FSHParser } from './generated/FSHParser';
+import { DocContext } from './parserContexts';
 import { FSHImporter } from './FSHImporter';
 import { FSHDocument } from './FSHDocument';
 
