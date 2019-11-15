@@ -1,7 +1,7 @@
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { FshQuantity, Code, FshRatio } from '../../src/fshtypes';
+import { FshQuantity, FshCode, FshRatio } from '../../src/fshtypes';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -21,8 +21,8 @@ describe('ElementDefinition', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
       amount.fixFshRatio(
         new FshRatio(
-          new FshQuantity(1.2, new Code('mm', 'http://unitsofmeasure.org')),
-          new FshQuantity(3.4, new Code('cm', 'http://unitsofmeasure.org'))
+          new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
+          new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
         )
       );
       expect(amount.patternRatio).toEqual({

@@ -1,5 +1,5 @@
-import { Code } from './Code';
+import { FshCode } from './FshCode';
 
 export class FshQuantity {
-  constructor(public value: number, public unit?: Code) {}
+  constructor(public value: number, public unit?: FshCode) {}
 }

@@ -6,7 +6,7 @@ import {
   assertValueSetRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
-import { Code, FshQuantity, FshRatio } from '../../src/fshtypes';
+import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
   describe('Profile', () => {
@@ -451,7 +451,7 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'status', new Code('final'));
+        assertFixedValueRule(profile.rules[0], 'status', new FshCode('final'));
       });
 
       it('should parse fixed value CodeableConcept rule', () => {
@@ -469,7 +469,7 @@ describe('FSHImporter', () => {
         assertFixedValueRule(
           profile.rules[0],
           'valueCodeableConcept',
-          new Code('718-7', 'http://loinc.org', 'Hemoglobin [Mass/volume] in Blood')
+          new FshCode('718-7', 'http://loinc.org', 'Hemoglobin [Mass/volume] in Blood')
         );
       });
 
@@ -487,7 +487,7 @@ describe('FSHImporter', () => {
         assertFixedValueRule(
           profile.rules[0],
           'valueQuantity',
-          new FshQuantity(1.5, new Code('mm', 'http://unitsofmeasure.org'))
+          new FshQuantity(1.5, new FshCode('mm', 'http://unitsofmeasure.org'))
         );
       });
 
@@ -506,8 +506,8 @@ describe('FSHImporter', () => {
           profile.rules[0],
           'valueRatio',
           new FshRatio(
-            new FshQuantity(130, new Code('mg', 'http://unitsofmeasure.org')),
-            new FshQuantity(1, new Code('dL', 'http://unitsofmeasure.org'))
+            new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
+            new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
           )
         );
       });
@@ -528,7 +528,7 @@ describe('FSHImporter', () => {
           'valueRatio',
           new FshRatio(
             new FshQuantity(130),
-            new FshQuantity(1, new Code('dL', 'http://unitsofmeasure.org'))
+            new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
           )
         );
       });
@@ -548,7 +548,7 @@ describe('FSHImporter', () => {
           profile.rules[0],
           'valueRatio',
           new FshRatio(
-            new FshQuantity(130, new Code('mg', 'http://unitsofmeasure.org')),
+            new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
             new FshQuantity(1)
           )
         );

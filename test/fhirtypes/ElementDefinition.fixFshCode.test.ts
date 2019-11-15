@@ -3,14 +3,14 @@ import { getResolver } from '../utils/getResolver';
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { Code } from '../../src/fshtypes/Code';
+import { FshCode } from '../../src/fshtypes/FshCode';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let observation: StructureDefinition;
-  let fooBarCode: Code;
-  let barFooCode: Code;
+  let fooBarCode: FshCode;
+  let barFooCode: FshCode;
   beforeAll(() => {
     defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');

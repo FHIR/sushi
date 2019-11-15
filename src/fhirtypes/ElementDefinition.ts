@@ -1,7 +1,7 @@
 import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio } from './dataTypes';
-import { Code, FshRatio, FshQuantity } from '../fshtypes';
+import { FshCode, FshRatio, FshQuantity } from '../fshtypes';
 import { FixedValueType } from '../fshtypes/rules';
 import {
   BindingStrengthError,
@@ -622,7 +622,7 @@ export class ElementDefinition {
       this.fixNumber(value);
     } else if (typeof value === 'string') {
       this.fixString(value);
-    } else if (value instanceof Code) {
+    } else if (value instanceof FshCode) {
       this.fixFshCode(value);
     } else if (value instanceof FshQuantity) {
       this.fixFshQuantity(value);
@@ -631,7 +631,7 @@ export class ElementDefinition {
     }
   }
 
-  private checkIfFixed(
+  private checkIfFixable(
     value: boolean | string | number,
     currentElementValue: boolean | string | number,
     elementType: string
@@ -640,10 +640,6 @@ export class ElementDefinition {
       throw new PrimitiveValueAlreadyFixedError(value, elementType, currentElementValue);
     }
     return true;
-  }
-
-  private matchesRegex(value: string, regex: RegExp) {
-    return regex.test(value);
   }
 
   /**
@@ -660,7 +656,7 @@ export class ElementDefinition {
     }
     const type = this.type[0].code;
     if (type === 'boolean') {
-      this.checkIfFixed(value, this.fixedBoolean, type);
+      this.checkIfFixable(value, this.fixedBoolean, type);
       this.fixedBoolean = value;
     } else {
       throw new MismatchedTypeError('boolean', value, type);
@@ -680,10 +676,10 @@ export class ElementDefinition {
       throw new NoSingleTypeError(typeof value);
     }
     const type = this.type[0].code;
-    if (type === 'decimal' && this.checkIfFixed(value, this.fixedDecimal, type)) {
+    if (type === 'decimal' && this.checkIfFixable(value, this.fixedDecimal, type)) {
       this.fixedDecimal = value;
     } else if (type === 'integer' && Number.isInteger(value)) {
-      this.checkIfFixed(value, this.fixedInteger, type);
+      this.checkIfFixable(value, this.fixedInteger, type);
       this.fixedInteger = value;
     } else {
       throw new MismatchedTypeError('number', value, type);
@@ -695,45 +691,42 @@ export class ElementDefinition {
       throw new NoSingleTypeError(typeof value);
     }
     const type = this.type[0].code;
-    if (type === 'string' && this.checkIfFixed(value, this.fixedString, type)) {
+    if (type === 'string' && this.checkIfFixable(value, this.fixedString, type)) {
       this.fixedString = value;
     } else if (
       type === 'uri' &&
-      this.matchesRegex(value, /^\S*$/) &&
-      this.checkIfFixed(value, this.fixedUri, type)
+      /^\S*$/.test(value) &&
+      this.checkIfFixable(value, this.fixedUri, type)
     ) {
       this.fixedUri = value;
     } else if (
       type === 'instant' &&
-      this.matchesRegex(
-        value,
-        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/
+      /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
+        value
       ) &&
-      this.checkIfFixed(value, this.fixedInstant, type)
+      this.checkIfFixable(value, this.fixedInstant, type)
     ) {
       this.fixedInstant = value;
     } else if (
       type === 'date' &&
-      this.matchesRegex(
-        value,
-        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/
+      /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/.test(
+        value
       ) &&
-      this.checkIfFixed(value, this.fixedDate, type)
+      this.checkIfFixable(value, this.fixedDate, type)
     ) {
       this.fixedDate = value;
     } else if (
       type === 'dateTime' &&
-      this.matchesRegex(
-        value,
-        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/
+      /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/.test(
+        value
       ) &&
-      this.checkIfFixed(value, this.fixedDateTime, type)
+      this.checkIfFixable(value, this.fixedDateTime, type)
     ) {
       this.fixedDateTime = value;
     } else if (
       type === 'time' &&
-      this.matchesRegex(value, /^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$/) &&
-      this.checkIfFixed(value, this.fixedTime, type)
+      /^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$/.test(value) &&
+      this.checkIfFixable(value, this.fixedTime, type)
     ) {
       this.fixedTime = value;
     } else {
@@ -813,11 +806,11 @@ export class ElementDefinition {
    * TODO: Determine if it is valid to fix the code on a choice element (e.g., value[x]).
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.fixed_x_}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.pattern_x_}
-   * @param {Code} code - the code to fix
+   * @param {FshCode} code - the code to fix
    * @throws {CodedTypeNotFoundError} when there is no coded type on this element
    * @throws {CodeAlreadyFixedError} where the code is already fixed to a different code
    */
-  fixFshCode(code: Code): void {
+  fixFshCode(code: FshCode): void {
     // This is the element to fix it to
     const types = this.type || [];
     if (types.some(t => t.code === 'CodeableConcept')) {
@@ -842,10 +835,10 @@ export class ElementDefinition {
    * If a different code is already fixed, it will throw.
    * TODO: Implement more robust approach to detecting existing fixed codes.
    * @see {@link fixFshCode}
-   * @param {Code} code - the code to fix
+   * @param {FshCode} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToCodeableConcept(code: Code): void {
+  private fixFshCodeToCodeableConcept(code: FshCode): void {
     // Check if this is already fixed to something else
     if (this.patternCodeableConcept) {
       const fixedToSame =
@@ -878,10 +871,10 @@ export class ElementDefinition {
    * If a different code is already fixed, it will throw.
    * TODO: Implement more robust approach to detecting existing fixed codes.
    * @see {@link fixFshCode}
-   * @param {Code} code - the code to fix
+   * @param {FshCode} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToCoding(code: Code): void {
+  private fixFshCodeToCoding(code: FshCode): void {
     // Check if this is already fixed to something else
     if (this.patternCoding) {
       if (this.patternCoding.code != code.code || this.patternCoding.system != code.system) {
@@ -906,10 +899,10 @@ export class ElementDefinition {
    * If a different code is already fixed, it will throw.
    * TODO: Implement more robust approach to detecting existing fixed codes.
    * @see {@link fixFshCode}
-   * @param {Code} code - the code to fix
+   * @param {FshCode} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToQuantityUnitCode(code: Code): void {
+  private fixFshCodeToQuantityUnitCode(code: FshCode): void {
     // Check if this is already fixed to something else
     if (this.patternQuantity) {
       if (this.patternQuantity.code != code.code || this.patternQuantity.system != code.system) {
@@ -933,10 +926,10 @@ export class ElementDefinition {
    * Fixes a code to this element using fixedCode.
    * If a different code is already fixed, it will throw.
    * @see {@link fixFshCode}
-   * @param {Code} code - the code to fix
+   * @param {FshCode} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToCode(code: Code): void {
+  private fixFshCodeToCode(code: FshCode): void {
     // Check if this is already fixed to something else
     if (this.fixedCode) {
       if (this.fixedCode != code.code) {
@@ -953,10 +946,10 @@ export class ElementDefinition {
    * Fixes a code to this element using fixedString.
    * If a different code is already fixed, it will throw.
    * @see {@link fixFshCode}
-   * @param {Code} code - the code to fix
+   * @param {FshCode} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToString(code: Code): void {
+  private fixFshCodeToString(code: FshCode): void {
     // Check if this is already fixed to something else
     if (this.fixedString) {
       if (this.fixedString != code.code) {
@@ -973,10 +966,10 @@ export class ElementDefinition {
    * Fixes a code to this element using fixedUri.
    * If a different code is already fixed, it will throw.
    * @see {@link fixFshCode}
-   * @param {Code} code - the code to fix
+   * @param {FshCode} code - the code to fix
    * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
    */
-  private fixFshCodeToUri(code: Code): void {
+  private fixFshCodeToUri(code: FshCode): void {
     // Check if this is already fixed to something else
     if (this.fixedUri) {
       if (this.fixedUri != code.code) {

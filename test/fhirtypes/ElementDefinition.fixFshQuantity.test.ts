@@ -1,7 +1,7 @@
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { FshQuantity, Code } from '../../src/fshtypes';
+import { FshQuantity, FshCode } from '../../src/fshtypes';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -22,7 +22,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Observation.referenceRange.low'
       );
       referenceRangeLow.fixFshQuantity(
-        new FshQuantity(1.23, new Code('mm', 'http://unitsofmeasure.org'))
+        new FshQuantity(1.23, new FshCode('mm', 'http://unitsofmeasure.org'))
       );
       expect(referenceRangeLow.patternQuantity).toEqual({
         value: 1.23,
@@ -34,18 +34,20 @@ describe('ElementDefinition', () => {
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixFshQuantity(new FshQuantity(1.23, new Code('mm', 'http://unitsofmeasure.org')));
+        valueX.fixFshQuantity(
+          new FshQuantity(1.23, new FshCode('mm', 'http://unitsofmeasure.org'))
+        );
       }).toThrow(
         'Cannot fix Quantity value on this element since this element does not have a single type'
       );
     });
 
-    it('should throw QuantityAlreadFixed when the value is fixed to a different value', () => {
+    it('should throw QuantityAlreadyFixedError when the value is fixed to a different value', () => {
       const referenceRangeLow = observation.elements.find(
         e => e.id === 'Observation.referenceRange.low'
       );
       referenceRangeLow.fixFshQuantity(
-        new FshQuantity(1.23, new Code('mm', 'http://unitsofmeasure.org'))
+        new FshQuantity(1.23, new FshCode('mm', 'http://unitsofmeasure.org'))
       );
       expect(referenceRangeLow.patternQuantity).toEqual({
         value: 1.23,
@@ -54,7 +56,7 @@ describe('ElementDefinition', () => {
       });
       expect(() => {
         referenceRangeLow.fixFshQuantity(
-          new FshQuantity(1.24, new Code('mm', 'http://unitsofmeasure.org'))
+          new FshQuantity(1.24, new FshCode('mm', 'http://unitsofmeasure.org'))
         );
       }).toThrow(
         'Cannot fix 1.24 mm to this element; a different Quantity is already fixed: 1.23 mm.'
@@ -64,7 +66,9 @@ describe('ElementDefinition', () => {
     it('should throw MismatchedTypeError when the value is fixed to a non-Quantity', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(() => {
-        status.fixFshQuantity(new FshQuantity(1.24, new Code('mm', 'http://unitsofmeasure.org')));
+        status.fixFshQuantity(
+          new FshQuantity(1.24, new FshCode('mm', 'http://unitsofmeasure.org'))
+        );
       }).toThrow('Cannot fix Quantity value 1.24 mm on element of type code; types do not match.');
     });
   });
