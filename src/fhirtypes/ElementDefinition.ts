@@ -56,6 +56,7 @@ export class ElementDefinition {
   fixedCode: string;
   fixedString: string;
   fixedUri: string;
+  fixedUrl: string;
   fixedCanonical: string;
   fixedInstant: string;
   fixedDate: string;
@@ -700,6 +701,12 @@ export class ElementDefinition {
       this.checkIfFixable(value, this.fixedUri, type)
     ) {
       this.fixedUri = value;
+    } else if (
+      type === 'url' &&
+      /^\S*$/.test(value) &&
+      this.checkIfFixable(value, this.fixedUrl, type)
+    ) {
+      this.fixedUrl = value;
     } else if (
       type === 'canonical' &&
       /^\S*$/.test(value) &&

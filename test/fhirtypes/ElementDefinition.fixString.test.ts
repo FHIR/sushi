@@ -78,15 +78,50 @@ describe('ElementDefinition', () => {
       }).toThrow('Cannot fix string value   on element of type uri; types do not match');
     });
 
+    // Fixing a URL
+    it('should fix a string to a url', () => {
+      const url = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.implementation.url'
+      );
+      url.fixString('http://example.org');
+      expect(url.fixedUrl).toBe('http://example.org');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed URL', () => {
+      const url = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.implementation.url'
+      );
+      url.fixString('http://example.org');
+      expect(url.fixedUrl).toBe('http://example.org');
+      expect(() => {
+        url.fixString('http://newexample.com');
+      }).toThrow(
+        'Cannot fix http://newexample.com to this element; a different url is already fixed: http://example.org'
+      );
+    });
+
+    it('should throw MismatchedTypeError when fixing a uri to an incorrect value', () => {
+      const url = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.implementation.url'
+      );
+      expect(() => {
+        url.fixString(' ');
+      }).toThrow('Cannot fix string value   on element of type url; types do not match');
+    });
+
     // Fixing a canonical
     it('should fix a string to a canonical', () => {
-      const instantiates = capabilityStatement.elements.find(e => e.id === 'CapabilityStatement.instantiates');
+      const instantiates = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.instantiates'
+      );
       instantiates.fixString('http://example.org');
       expect(instantiates.fixedCanonical).toBe('http://example.org');
     });
 
     it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed canonical', () => {
-      const instantiates = capabilityStatement.elements.find(e => e.id === 'CapabilityStatement.instantiates');
+      const instantiates = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.instantiates'
+      );
       instantiates.fixString('http://example.org');
       expect(instantiates.fixedCanonical).toBe('http://example.org');
       expect(() => {
@@ -97,7 +132,9 @@ describe('ElementDefinition', () => {
     });
 
     it('should throw MismatchedTypeError when fixing a canonical to an incorrect value', () => {
-      const instantiates = capabilityStatement.elements.find(e => e.id === 'CapabilityStatement.instantiates');
+      const instantiates = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.instantiates'
+      );
       expect(() => {
         instantiates.fixString(' ');
       }).toThrow('Cannot fix string value   on element of type canonical; types do not match.');
