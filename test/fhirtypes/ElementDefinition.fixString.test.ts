@@ -266,6 +266,7 @@ describe('ElementDefinition', () => {
       expect(valueX.fixedString).toBeUndefined();
     });
 
+    // Fixing an id
     it('should fix a string to an id', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       uid.fixString('uniqueId123');
@@ -288,6 +289,28 @@ describe('ElementDefinition', () => {
       expect(() => {
         uid.fixString('invalid id');
       }).toThrow('Cannot fix string value invalid id on element of type id; types do not match');
+    });
+
+    // Fixing markdown
+    it('should fix a string to a markdown', () => {
+      const description = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.description'
+      );
+      description.fixString('`This is code`');
+      expect(description.fixedMarkdown).toBe('`This is code`');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed markdown', () => {
+      const description = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.description'
+      );
+      description.fixString('some text');
+      expect(description.fixedMarkdown).toBe('some text');
+      expect(() => {
+        description.fixString('other text');
+      }).toThrow(
+        'Cannot fix other text to this element; a different markdown is already fixed: some text'
+      );
     });
   });
 });

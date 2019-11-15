@@ -64,6 +64,7 @@ export class ElementDefinition {
   fixedDateTime: string;
   fixedTime: string;
   fixedId: string;
+  fixedMarkdown: string;
   fixedBoolean: boolean;
   fixedDecimal: number;
   fixedInteger: number;
@@ -753,6 +754,12 @@ export class ElementDefinition {
       this.checkIfFixable(value, this.fixedId, type)
     ) {
       this.fixedId = value;
+    } else if (
+      type === 'markdown' &&
+      /^\s*(\S|\s)*$/.test(value) &&
+      this.checkIfFixable(value, this.fixedMarkdown, type)
+    ) {
+      this.fixedMarkdown = value;
     } else {
       throw new MismatchedTypeError('string', value, type);
     }
