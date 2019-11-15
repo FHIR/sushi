@@ -1,12 +1,17 @@
 import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
 import { StructureDefinition } from './StructureDefinition';
-import { CodeableConcept, Coding, Quantity } from './dataTypes';
-import { Code } from '../fshtypes';
+import { CodeableConcept, Coding, Quantity, Ratio } from './dataTypes';
+import { Code, FshRatio, FshQuantity } from '../fshtypes';
+import { FixedValueType } from '../fshtypes/rules';
 import {
   BindingStrengthError,
   CodedTypeNotFoundError,
   CodeAlreadyFixedError,
   DisableFlagError,
+  PrimitiveValueAlreadyFixedError,
+  QuantityAlreadyFixedError,
+  NoSingleTypeError,
+  MismatchedTypeError,
   InvalidCardinalityError,
   InvalidTypeError,
   SlicingDefinitionError,
@@ -51,11 +56,19 @@ export class ElementDefinition {
   fixedCode: string;
   fixedString: string;
   fixedUri: string;
+  fixedInstant: string;
+  fixedDate: string;
+  fixedDateTime: string;
+  fixedTime: string;
+  fixedBoolean: boolean;
+  fixedDecimal: number;
+  fixedInteger: number;
   // pattern[x] can be literally almost any field name (e.g., patternCode, patternFoo, etc.).
   // We'll define the ones we are using, but leave the others as unspecified properties.  For now.
   patternCodeableConcept: CodeableConcept;
   patternCoding: Coding;
   patternQuantity: Quantity;
+  patternRatio: Ratio;
   example: ElementDefinitionExample[];
   // minValue[x] can be many different field names (e.g., minValueDate, minValueQuantity, etc.),
   // so we can't easily use a getter/setter.  It will be just an unspecified property.  For now.
@@ -602,6 +615,192 @@ export class ElementDefinition {
     };
   }
 
+  fixValue(value: FixedValueType): void {
+    if (typeof value === 'boolean') {
+      this.fixBoolean(value);
+    } else if (typeof value === 'number') {
+      this.fixNumber(value);
+    } else if (typeof value === 'string') {
+      this.fixString(value);
+    } else if (value instanceof Code) {
+      this.fixFshCode(value);
+    } else if (value instanceof FshQuantity) {
+      this.fixFshQuantity(value);
+    } else if (value instanceof FshRatio) {
+      this.fixFshRatio(value);
+    }
+  }
+
+  private checkIfFixed(
+    value: boolean | string | number,
+    currentElementValue: boolean | string | number,
+    elementType: string
+  ): boolean {
+    if (currentElementValue != null && currentElementValue !== value) {
+      throw new PrimitiveValueAlreadyFixedError(value, elementType, currentElementValue);
+    }
+    return true;
+  }
+
+  private matchesRegex(value: string, regex: RegExp) {
+    return regex.test(value);
+  }
+
+  /**
+   * Fixes a boolean to this element.
+   * @see {@link fixValue}
+   * @param {boolean} value - the boolean value to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {PrimitiveValueAlreadyFixedError} when the code is already fixed to a different code
+   * @throws {TypeNotFoundError} when the type of the ElementDefinition is not boolean
+   */
+  fixBoolean(value: boolean): void {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError(typeof value);
+    }
+    const type = this.type[0].code;
+    if (type === 'boolean') {
+      this.checkIfFixed(value, this.fixedBoolean, type);
+      this.fixedBoolean = value;
+    } else {
+      throw new MismatchedTypeError('boolean', value, type);
+    }
+  }
+
+  /**
+   * Fixes a number to this element.
+   * @see {@link fixValue}
+   * @param {boolean} value - the number value to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {PrimitiveValueAlreadyFixedError} when the code is already fixed to a different code
+   * @throws {TypeNotFoundError} when the type of the ElementDefinition is not integer or decimal
+   */
+  fixNumber(value: number): void {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError(typeof value);
+    }
+    const type = this.type[0].code;
+    if (type === 'decimal' && this.checkIfFixed(value, this.fixedDecimal, type)) {
+      this.fixedDecimal = value;
+    } else if (type === 'integer' && Number.isInteger(value)) {
+      this.checkIfFixed(value, this.fixedInteger, type);
+      this.fixedInteger = value;
+    } else {
+      throw new MismatchedTypeError('number', value, type);
+    }
+  }
+
+  fixString(value: string): void {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError(typeof value);
+    }
+    const type = this.type[0].code;
+    if (type === 'string' && this.checkIfFixed(value, this.fixedString, type)) {
+      this.fixedString = value;
+    } else if (
+      type === 'uri' &&
+      this.matchesRegex(value, /^\S*$/) &&
+      this.checkIfFixed(value, this.fixedUri, type)
+    ) {
+      this.fixedUri = value;
+    } else if (
+      type === 'instant' &&
+      this.matchesRegex(
+        value,
+        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/
+      ) &&
+      this.checkIfFixed(value, this.fixedInstant, type)
+    ) {
+      this.fixedInstant = value;
+    } else if (
+      type === 'date' &&
+      this.matchesRegex(
+        value,
+        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/
+      ) &&
+      this.checkIfFixed(value, this.fixedDate, type)
+    ) {
+      this.fixedDate = value;
+    } else if (
+      type === 'dateTime' &&
+      this.matchesRegex(
+        value,
+        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/
+      ) &&
+      this.checkIfFixed(value, this.fixedDateTime, type)
+    ) {
+      this.fixedDateTime = value;
+    } else if (
+      type === 'time' &&
+      this.matchesRegex(value, /^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$/) &&
+      this.checkIfFixed(value, this.fixedTime, type)
+    ) {
+      this.fixedTime = value;
+    } else {
+      throw new MismatchedTypeError('string', value, type);
+    }
+  }
+
+  fixFshQuantity(value: FshQuantity): void {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError('Quantity');
+    }
+    const type = this.type[0].code;
+    if (type === 'Quantity') {
+      if (this.patternQuantity) {
+        const fixedToSame =
+          this.patternQuantity.value === value.value &&
+          this.patternQuantity.code === value.unit.code &&
+          this.patternQuantity.system === value.unit.system;
+        if (!fixedToSame) {
+          const found = this.patternQuantity;
+          throw new QuantityAlreadyFixedError(
+            { value: found.value, unit: { code: found.code, system: found.system } },
+            value
+          );
+        }
+        return;
+      }
+      this.fixFshCode(value.unit);
+      this.patternQuantity.value = value.value;
+    } else {
+      const quantityString = `${value.value} ${value.unit?.code ?? ''}`;
+      throw new MismatchedTypeError('Quantity', quantityString, type);
+    }
+  }
+
+  fixFshRatio(value: FshRatio): void {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError(typeof value);
+    }
+    const type = this.type[0];
+    if (type.code === 'Ratio') {
+      if (this.patternRatio) {
+        // figure out how to throw an error here
+      }
+      this.patternRatio = {};
+      if (value.numerator && value.denominator) {
+        this.patternRatio.numerator = {};
+        this.patternRatio.denominator = {};
+        this.patternRatio.numerator.value = value.numerator.value;
+        this.patternRatio.denominator.value = value.denominator.value;
+        if (value.numerator.unit) {
+          this.patternRatio.numerator.code = value.numerator.unit.code;
+          if (value.numerator.unit.system) {
+            this.patternRatio.numerator.system = value.numerator.unit.system;
+          }
+        }
+        if (value.denominator.unit) {
+          this.patternRatio.denominator.code = value.denominator.unit.code;
+          if (value.denominator.unit.system) {
+            this.patternRatio.denominator.system = value.denominator.unit.system;
+          }
+        }
+      }
+    }
+    // throw
+  }
+
   /**
    * Fixes a code to this element using the appropriate methodology based on the element type.
    * - CodeableConcept: patternCodeableConcept using code and system properties
@@ -788,6 +987,11 @@ export class ElementDefinition {
     }
 
     this.fixedUri = code.code;
+  }
+
+  private hasSingleType() {
+    const types = this.type ?? [];
+    return types.length === 1;
   }
 
   /**

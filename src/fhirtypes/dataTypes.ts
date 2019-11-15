@@ -128,6 +128,16 @@ export type Quantity = {
 };
 
 /**
+ * Represents the FHIR R4 data type Ratio.
+ *
+ * @see {@link http://hl7.org/fhir/R4/datatypes.html#Ratio}
+ */
+export type Ratio = {
+  numerator?: Quantity;
+  denominator?: Quantity;
+};
+
+/**
  * Represents the FHIR R4 data type Range.
  * The FHIR type definition includes constraints,
  * which are enforced in the following validateRange method.

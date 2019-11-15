@@ -1,5 +1,5 @@
 import { Code } from './Code';
 
-export class Quantity {
+export class FshQuantity {
   constructor(public value: number, public unit?: Code) {}
 }

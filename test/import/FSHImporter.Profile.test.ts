@@ -6,7 +6,7 @@ import {
   assertValueSetRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
-import { Code, Quantity, Ratio } from '../../src/fshtypes';
+import { Code, FshQuantity, FshRatio } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
   describe('Profile', () => {
@@ -487,7 +487,7 @@ describe('FSHImporter', () => {
         assertFixedValueRule(
           profile.rules[0],
           'valueQuantity',
-          new Quantity(1.5, new Code('mm', 'http://unitsofmeasure.org'))
+          new FshQuantity(1.5, new Code('mm', 'http://unitsofmeasure.org'))
         );
       });
 
@@ -505,9 +505,9 @@ describe('FSHImporter', () => {
         assertFixedValueRule(
           profile.rules[0],
           'valueRatio',
-          new Ratio(
-            new Quantity(130, new Code('mg', 'http://unitsofmeasure.org')),
-            new Quantity(1, new Code('dL', 'http://unitsofmeasure.org'))
+          new FshRatio(
+            new FshQuantity(130, new Code('mg', 'http://unitsofmeasure.org')),
+            new FshQuantity(1, new Code('dL', 'http://unitsofmeasure.org'))
           )
         );
       });
@@ -526,7 +526,10 @@ describe('FSHImporter', () => {
         assertFixedValueRule(
           profile.rules[0],
           'valueRatio',
-          new Ratio(new Quantity(130), new Quantity(1, new Code('dL', 'http://unitsofmeasure.org')))
+          new FshRatio(
+            new FshQuantity(130),
+            new FshQuantity(1, new Code('dL', 'http://unitsofmeasure.org'))
+          )
         );
       });
 
@@ -544,7 +547,10 @@ describe('FSHImporter', () => {
         assertFixedValueRule(
           profile.rules[0],
           'valueRatio',
-          new Ratio(new Quantity(130, new Code('mg', 'http://unitsofmeasure.org')), new Quantity(1))
+          new FshRatio(
+            new FshQuantity(130, new Code('mg', 'http://unitsofmeasure.org')),
+            new FshQuantity(1)
+          )
         );
       });
 
@@ -562,7 +568,7 @@ describe('FSHImporter', () => {
         assertFixedValueRule(
           profile.rules[0],
           'valueRatio',
-          new Ratio(new Quantity(130), new Quantity(1))
+          new FshRatio(new FshQuantity(130), new FshQuantity(1))
         );
       });
     });
