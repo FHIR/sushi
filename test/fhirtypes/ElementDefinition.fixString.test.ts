@@ -10,12 +10,14 @@ describe('ElementDefinition', () => {
   let jsonRiskEvidenceSynthesis: any;
   let jsonLocation: any;
   let jsonCapabilityStatement: any;
+  let jsonImagingStudy: any;
   let observation: StructureDefinition;
   let medication: StructureDefinition;
   let patient: StructureDefinition;
   let riskEvidenceSynthesis: StructureDefinition;
   let location: StructureDefinition;
   let capabilityStatement: StructureDefinition;
+  let imagingStudy: StructureDefinition;
 
   beforeAll(() => {
     defs = load('4.0.1');
@@ -25,6 +27,7 @@ describe('ElementDefinition', () => {
     jsonRiskEvidenceSynthesis = defs.findResource('RiskEvidenceSynthesis');
     jsonLocation = defs.findResource('Location');
     jsonCapabilityStatement = defs.findResource('CapabilityStatement');
+    jsonImagingStudy = defs.findResource('ImagingStudy');
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
@@ -33,6 +36,7 @@ describe('ElementDefinition', () => {
     riskEvidenceSynthesis = StructureDefinition.fromJSON(jsonRiskEvidenceSynthesis);
     location = StructureDefinition.fromJSON(jsonLocation);
     capabilityStatement = StructureDefinition.fromJSON(jsonCapabilityStatement);
+    imagingStudy = StructureDefinition.fromJSON(jsonImagingStudy);
   });
   describe('#fixString', () => {
     // Fixing a string
@@ -260,6 +264,30 @@ describe('ElementDefinition', () => {
         'Cannot fix string value on this element since this element does not have a single type'
       );
       expect(valueX.fixedString).toBeUndefined();
+    });
+
+    it('should fix a string to an id', () => {
+      const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
+      uid.fixString('uniqueId123');
+      expect(uid.fixedId).toBe('uniqueId123');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed id', () => {
+      const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
+      uid.fixString('uniqueId123');
+      expect(uid.fixedId).toBe('uniqueId123');
+      expect(() => {
+        uid.fixString('anotherUniqueId321');
+      }).toThrow(
+        'Cannot fix anotherUniqueId321 to this element; a different id is already fixed: uniqueId123'
+      );
+    });
+
+    it('should throw MismatchedTypeError when fixing an id to an incorrect value', () => {
+      const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
+      expect(() => {
+        uid.fixString('invalid id');
+      }).toThrow('Cannot fix string value invalid id on element of type id; types do not match');
     });
   });
 });
