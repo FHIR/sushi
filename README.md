@@ -2,13 +2,32 @@
 
 SUSHI (aka "SUSHI Unshortens Short Hand Inputs") is a reference implementation command-line interpreter/compiler for FHIR Shorthand (FSH).
 
-FHIR Shorthand (FSH) is a specially-designed language for defining the content of FHIR Implementation Guides (IG). It is simple and compact, with tools to produce Fast Healthcare Interoperability Resources (FHIR) profiles, extensions and implementation guides (IG). Because it is a language, written in text statements, FHIR Shorthand encourages distributed, team-based development using conventional source code control tools such as Github. FHIR Shorthand provides tooling that enables you to define a model once, and publish that model to multiple versions of FHIR.
+FHIR Shorthand (FSH) is a specially-designed language for defining the content of FHIR Implementation Guides (IG). It is simple and compact, with tools to produce Fast Healthcare Interoperability Resources (FHIR) profiles, extensions and implementation guides (IG). Because it is a language, written in text statements, FHIR Shorthand encourages distributed, team-based development using conventional source code control tools such as Github.
 
 For more information about the evolving FSH syntax see the [FSH Wiki](https://github.com/HL7/fhir-shorthand/wiki).
 
-**SUSHI development has just started, so it does not yet work with FSH files.**
+# Installation for SUSHI Users
 
-# Installation
+SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system.  Users should install Node.js 12 (LTS), although earlier LTS versions (8, 10) are also expected to work.
+
+Once Node.js is installed, run the following command to install or update SUSHI:
+
+```sh
+$ npm install -g fsh-sushi
+```
+
+After installation, the `sushi` commandline will be available on your path:
+
+```sh
+$ sushi --help
+Usage: sushi <path-to-fsh-defs> [options]
+
+Options:
+  -o, --out <out>  the path to the output folder (default: "out")
+  -h, --help       output usage information
+```
+
+# Installation for Developers
 
 SUSHI is a [TypeScript](https://www.typescriptlang.org/) project.  At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI.  Developers should install Node.js 12 (LTS), although earlier LTS versions (8, 10) are also expected to work.
 
