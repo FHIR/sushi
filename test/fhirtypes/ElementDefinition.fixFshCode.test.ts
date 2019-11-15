@@ -138,5 +138,14 @@ describe('ElementDefinition', () => {
       }).toThrow(/instant/);
       expect(clone).toEqual(instant);
     });
+
+    it('should throw NoSingleTypeError when element has multiple types', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      expect(() => {
+        valueX.fixFshCode(fooBarCode);
+      }).toThrow(
+        'Cannot fix Code value on this element since this element does not have a single type'
+      );
+    });
   });
 });

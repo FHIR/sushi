@@ -10,6 +10,7 @@ import {
   DisableFlagError,
   PrimitiveValueAlreadyFixedError,
   QuantityAlreadyFixedError,
+  RatioAlreadyFixedError,
   NoSingleTypeError,
   MismatchedTypeError,
   InvalidCardinalityError,
@@ -657,8 +658,7 @@ export class ElementDefinition {
       throw new NoSingleTypeError(typeof value);
     }
     const type = this.type[0].code;
-    if (type === 'boolean') {
-      this.checkIfFixable(value, this.fixedBoolean, type);
+    if (type === 'boolean' && this.checkIfFixable(value, this.fixedBoolean, type)) {
       this.fixedBoolean = value;
     } else {
       throw new MismatchedTypeError('boolean', value, type);
@@ -680,8 +680,11 @@ export class ElementDefinition {
     const type = this.type[0].code;
     if (type === 'decimal' && this.checkIfFixable(value, this.fixedDecimal, type)) {
       this.fixedDecimal = value;
-    } else if (type === 'integer' && Number.isInteger(value)) {
-      this.checkIfFixable(value, this.fixedInteger, type);
+    } else if (
+      type === 'integer' &&
+      Number.isInteger(value) &&
+      this.checkIfFixable(value, this.fixedInteger, type)
+    ) {
       this.fixedInteger = value;
     } else {
       throw new MismatchedTypeError('number', value, type);
@@ -757,8 +760,8 @@ export class ElementDefinition {
       if (this.patternQuantity) {
         const fixedToSame =
           this.patternQuantity.value === value.value &&
-          this.patternQuantity.code === value.unit.code &&
-          this.patternQuantity.system === value.unit.system;
+          this.patternQuantity.code === value.unit?.code &&
+          this.patternQuantity.system === value.unit?.system;
         if (!fixedToSame) {
           const found = this.patternQuantity;
           throw new QuantityAlreadyFixedError(
@@ -778,34 +781,55 @@ export class ElementDefinition {
 
   fixFshRatio(value: FshRatio): void {
     if (!this.hasSingleType()) {
-      throw new NoSingleTypeError(typeof value);
+      throw new NoSingleTypeError('Ratio');
     }
-    const type = this.type[0];
-    if (type.code === 'Ratio') {
+    const type = this.type[0].code;
+    if (type === 'Ratio') {
       if (this.patternRatio) {
-        // figure out how to throw an error here
+        const fixedToSame =
+          this.patternRatio.numerator?.value === value.numerator.value &&
+          this.patternRatio.numerator?.code === value.numerator.unit?.code &&
+          this.patternRatio.numerator?.system === value.numerator.unit?.system &&
+          this.patternRatio.numerator?.value === value.numerator.value &&
+          this.patternRatio.numerator?.code === value.numerator.unit?.code &&
+          this.patternRatio.numerator?.system === value.numerator.unit?.system;
+        if (!fixedToSame) {
+          const found = this.patternRatio;
+          const foundRatioNumerator = {
+            value: found.numerator?.value,
+            unit: { code: found.numerator?.code, system: found.numerator?.system }
+          };
+          const foundRatioDenominator = {
+            value: found.denominator?.value,
+            unit: { code: found.denominator?.code, system: found.denominator?.system }
+          };
+          const foundRatio = new FshRatio(foundRatioNumerator, foundRatioDenominator);
+          throw new RatioAlreadyFixedError(foundRatio, value);
+        }
       }
       this.patternRatio = {};
-      if (value.numerator && value.denominator) {
-        this.patternRatio.numerator = {};
-        this.patternRatio.denominator = {};
-        this.patternRatio.numerator.value = value.numerator.value;
-        this.patternRatio.denominator.value = value.denominator.value;
-        if (value.numerator.unit) {
-          this.patternRatio.numerator.code = value.numerator.unit.code;
-          if (value.numerator.unit.system) {
-            this.patternRatio.numerator.system = value.numerator.unit.system;
-          }
-        }
-        if (value.denominator.unit) {
-          this.patternRatio.denominator.code = value.denominator.unit.code;
-          if (value.denominator.unit.system) {
-            this.patternRatio.denominator.system = value.denominator.unit.system;
-          }
+      this.patternRatio.numerator = {};
+      this.patternRatio.denominator = {};
+      this.patternRatio.numerator.value = value.numerator.value;
+      this.patternRatio.denominator.value = value.denominator.value;
+      this.patternRatio;
+      if (value.numerator.unit) {
+        this.patternRatio.numerator.code = value.numerator.unit.code;
+        if (value.numerator.unit.system) {
+          this.patternRatio.numerator.system = value.numerator.unit.system;
         }
       }
+      if (value.denominator.unit) {
+        this.patternRatio.denominator.code = value.denominator.unit.code;
+        if (value.denominator.unit.system) {
+          this.patternRatio.denominator.system = value.denominator.unit.system;
+        }
+      }
+    } else {
+      const ratioString = `${value.numerator?.value ?? ''} ${value.numerator?.unit?.code ??
+        ''} : ${value.denominator?.value ?? ''} ${value.denominator?.unit?.code ?? ''}`;
+      throw new MismatchedTypeError('Ratio', ratioString, type);
     }
-    // throw
   }
 
   /**
@@ -826,21 +850,24 @@ export class ElementDefinition {
    */
   fixFshCode(code: FshCode): void {
     // This is the element to fix it to
-    const types = this.type || [];
-    if (types.some(t => t.code === 'CodeableConcept')) {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError('Code');
+    }
+    const type = this.type[0].code;
+    if (type === 'CodeableConcept') {
       this.fixFshCodeToCodeableConcept(code);
-    } else if (types.some(t => t.code === 'Coding')) {
+    } else if (type === 'Coding') {
       this.fixFshCodeToCoding(code);
-    } else if (types.some(t => t.code === 'Quantity')) {
+    } else if (type === 'Quantity') {
       this.fixFshCodeToQuantityUnitCode(code);
-    } else if (types.some(t => t.code === 'code')) {
+    } else if (type === 'code') {
       this.fixFshCodeToCode(code);
-    } else if (types.some(t => t.code === 'string')) {
+    } else if (type === 'string') {
       this.fixFshCodeToString(code);
-    } else if (types.some(t => t.code === 'uri')) {
+    } else if (type === 'uri') {
       this.fixFshCodeToUri(code);
     } else {
-      throw new CodedTypeNotFoundError(types.map(t => t.code));
+      throw new CodedTypeNotFoundError([type]);
     }
   }
 

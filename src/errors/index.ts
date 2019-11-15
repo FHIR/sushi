@@ -3,6 +3,7 @@ export * from './BindingStrengthError';
 export * from './CodeAlreadyFixedError';
 export * from './PrimitiveValueAlreadyFixedError';
 export * from './QuantityAlreadyFixedError';
+export * from './RatioAlreadyFixedError';
 export * from './NoSingleTypeError';
 export * from './MismatchedTypeError';
 export * from './CodeAndSystemMismatchError';
