@@ -256,16 +256,6 @@ describe('ElementDefinition', () => {
       }).toThrow('Cannot fix string value hello there on element of type time; types do not match');
     });
 
-    it('should throw NoSingleTypeError when element has multiple types', () => {
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      expect(() => {
-        valueX.fixString('hello');
-      }).toThrow(
-        'Cannot fix string value on this element since this element does not have a single type'
-      );
-      expect(valueX.fixedString).toBeUndefined();
-    });
-
     // Fixing an id
     it('should fix a string to an id', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
@@ -311,6 +301,16 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot fix other text to this element; a different markdown is already fixed: some text'
       );
+    });
+
+    it('should throw NoSingleTypeError when element has multiple types', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      expect(() => {
+        valueX.fixString('hello');
+      }).toThrow(
+        'Cannot fix string value on this element since this element does not have a single type'
+      );
+      expect(valueX.fixedString).toBeUndefined();
     });
   });
 });

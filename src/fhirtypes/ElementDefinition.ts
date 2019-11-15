@@ -68,6 +68,8 @@ export class ElementDefinition {
   fixedBoolean: boolean;
   fixedDecimal: number;
   fixedInteger: number;
+  fixedUnsignedInt: number;
+  fixedPositiveInt: number;
   // pattern[x] can be literally almost any field name (e.g., patternCode, patternFoo, etc.).
   // We'll define the ones we are using, but leave the others as unspecified properties.  For now.
   patternCodeableConcept: CodeableConcept;
@@ -688,6 +690,20 @@ export class ElementDefinition {
       this.checkIfFixable(value, this.fixedInteger, type)
     ) {
       this.fixedInteger = value;
+    } else if (
+      type === 'unsignedInt' &&
+      Number.isInteger(value) &&
+      value >= 0 &&
+      this.checkIfFixable(value, this.fixedUnsignedInt, type)
+    ) {
+      this.fixedUnsignedInt = value;
+    } else if (
+      type === 'positiveInt' &&
+      Number.isInteger(value) &&
+      value > 0 &&
+      this.checkIfFixable(value, this.fixedPositiveInt, type)
+    ) {
+      this.fixedPositiveInt = value;
     } else {
       throw new MismatchedTypeError('number', value, type);
     }

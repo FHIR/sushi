@@ -6,17 +6,25 @@ describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let jsonRiskEvidenceSynthesis: any;
+  let jsonCapabilityStatement: any;
+  let jsonAppointment: any;
   let observation: StructureDefinition;
   let riskEvidenceSynthesis: StructureDefinition;
+  let capabilityStatement: StructureDefinition;
+  let appointment: StructureDefinition;
 
   beforeAll(() => {
     defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
     jsonRiskEvidenceSynthesis = defs.findResource('RiskEvidenceSynthesis');
+    jsonCapabilityStatement = defs.findResource('CapabilityStatement');
+    jsonAppointment = defs.findResource('Appointment');
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
     riskEvidenceSynthesis = StructureDefinition.fromJSON(jsonRiskEvidenceSynthesis);
+    capabilityStatement = StructureDefinition.fromJSON(jsonCapabilityStatement);
+    appointment = StructureDefinition.fromJSON(jsonAppointment);
   });
 
   describe('#fixNumber', () => {
@@ -42,6 +50,22 @@ describe('ElementDefinition', () => {
       );
       riskEstimateValueNumeratorCount.fixNumber(123);
       expect(riskEstimateValueNumeratorCount.fixedInteger).toBe(123);
+    });
+
+    it('should fix zero to an unsigned integer', () => {
+      const reliableCache = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.messaging.reliableCache'
+      );
+      reliableCache.fixNumber(0);
+      expect(reliableCache.fixedUnsignedInt).toBe(0);
+    });
+
+    it('should fix a positive integer to positiveInt', () => {
+      const minutesDuration = appointment.elements.find(
+        e => e.id === 'Appointment.minutesDuration'
+      );
+      minutesDuration.fixNumber(12);
+      expect(minutesDuration.fixedPositiveInt).toBe(12);
     });
 
     it('should throw MismatchedTypeError when fixing a decimal to an integer value', () => {
@@ -90,6 +114,73 @@ describe('ElementDefinition', () => {
         'Cannot fix boolean value on this element since this element does not have a single type'
       );
       expect(valueX.fixedBoolean).toBeUndefined();
+    });
+
+    it('should throw MismatchedTypeError when fixing a decimal to an unsignedInt', () => {
+      const reliableCache = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.messaging.reliableCache'
+      );
+      expect(() => {
+        reliableCache.fixNumber(2.4);
+      }).toThrow('Cannot fix number value 2.4 on element of type unsignedInt; types do not match');
+    });
+
+    it('should throw MismatchedTypeError when fixing a negative integer to an unsignedInt', () => {
+      const reliableCache = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.messaging.reliableCache'
+      );
+      expect(() => {
+        reliableCache.fixNumber(-24);
+      }).toThrow('Cannot fix number value -24 on element of type unsignedInt; types do not match');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed unsignedInt', () => {
+      const reliableCache = capabilityStatement.elements.find(
+        e => e.id === 'CapabilityStatement.messaging.reliableCache'
+      );
+      reliableCache.fixNumber(12);
+      expect(reliableCache.fixedUnsignedInt).toBe(12);
+      expect(() => {
+        reliableCache.fixNumber(34);
+      }).toThrow('Cannot fix 34 to this element; a different unsignedInt is already fixed: 12.');
+    });
+
+    it('should throw MismatchedTypeError when fixing a decimal to a positiveInt', () => {
+      const minutesDuration = appointment.elements.find(
+        e => e.id === 'Appointment.minutesDuration'
+      );
+      expect(() => {
+        minutesDuration.fixNumber(1.2);
+      }).toThrow('Cannot fix number value 1.2 on element of type positiveInt; types do not match');
+    });
+
+    it('should throw MismatchedTypeError when fixing zero to a positiveInt', () => {
+      const minutesDuration = appointment.elements.find(
+        e => e.id === 'Appointment.minutesDuration'
+      );
+      expect(() => {
+        minutesDuration.fixNumber(0);
+      }).toThrow('Cannot fix number value 0 on element of type positiveInt; types do not match');
+    });
+
+    it('should throw MismatchedTypeError when fixing a negative to a positiveInt', () => {
+      const minutesDuration = appointment.elements.find(
+        e => e.id === 'Appointment.minutesDuration'
+      );
+      expect(() => {
+        minutesDuration.fixNumber(-12);
+      }).toThrow('Cannot fix number value -12 on element of type positiveInt; types do not match');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed positiveInt', () => {
+      const minutesDuration = appointment.elements.find(
+        e => e.id === 'Appointment.minutesDuration'
+      );
+      minutesDuration.fixNumber(12);
+      expect(minutesDuration.fixedPositiveInt).toEqual(12);
+      expect(() => {
+        minutesDuration.fixNumber(34);
+      }).toThrow('Cannot fix 34 to this element; a different positiveInt is already fixed: 12.');
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
