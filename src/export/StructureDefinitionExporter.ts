@@ -3,7 +3,7 @@ import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirty
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
-import { CardRule, FlagRule, ValueSetRule } from '../fshtypes/rules';
+import { CardRule, FlagRule, OnlyRule, ValueSetRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 
 /**
@@ -46,6 +46,9 @@ export class StructureDefinitionExporter {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
+          } else if (rule instanceof OnlyRule) {
+            const target = structDef.getReferenceName(rule.path, element);
+            element.constrainType(rule.types, this.resolve.bind(this), target);
           } else if (rule instanceof ValueSetRule) {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           }
