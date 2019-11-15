@@ -56,6 +56,7 @@ export class ElementDefinition {
   fixedCode: string;
   fixedString: string;
   fixedUri: string;
+  fixedCanonical: string;
   fixedInstant: string;
   fixedDate: string;
   fixedDateTime: string;
@@ -699,6 +700,12 @@ export class ElementDefinition {
       this.checkIfFixable(value, this.fixedUri, type)
     ) {
       this.fixedUri = value;
+    } else if (
+      type === 'canonical' &&
+      /^\S*$/.test(value) &&
+      this.checkIfFixable(value, this.fixedCanonical, type)
+    ) {
+      this.fixedCanonical = value;
     } else if (
       type === 'instant' &&
       /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
