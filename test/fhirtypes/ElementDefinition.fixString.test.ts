@@ -11,6 +11,8 @@ describe('ElementDefinition', () => {
   let jsonLocation: any;
   let jsonCapabilityStatement: any;
   let jsonImagingStudy: any;
+  let jsonDevice: any;
+  let jsonTask: any;
   let observation: StructureDefinition;
   let medication: StructureDefinition;
   let patient: StructureDefinition;
@@ -18,6 +20,8 @@ describe('ElementDefinition', () => {
   let location: StructureDefinition;
   let capabilityStatement: StructureDefinition;
   let imagingStudy: StructureDefinition;
+  let device: StructureDefinition;
+  let task: StructureDefinition;
 
   beforeAll(() => {
     defs = load('4.0.1');
@@ -28,6 +32,8 @@ describe('ElementDefinition', () => {
     jsonLocation = defs.findResource('Location');
     jsonCapabilityStatement = defs.findResource('CapabilityStatement');
     jsonImagingStudy = defs.findResource('ImagingStudy');
+    jsonDevice = defs.findResource('Device');
+    jsonTask = defs.findResource('Task');
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
@@ -37,6 +43,8 @@ describe('ElementDefinition', () => {
     location = StructureDefinition.fromJSON(jsonLocation);
     capabilityStatement = StructureDefinition.fromJSON(jsonCapabilityStatement);
     imagingStudy = StructureDefinition.fromJSON(jsonImagingStudy);
+    device = StructureDefinition.fromJSON(jsonDevice);
+    task = StructureDefinition.fromJSON(jsonTask);
   });
   describe('#fixString', () => {
     // Fixing a string
@@ -142,6 +150,39 @@ describe('ElementDefinition', () => {
       expect(() => {
         instantiates.fixString(' ');
       }).toThrow('Cannot fix string value   on element of type canonical; types do not match.');
+    });
+
+    // Fixing a base64Binary
+    it('should fix a string to a base64Binary', () => {
+      const udiCarrierCarrierAIDC = device.elements.find(
+        e => e.id === 'Device.udiCarrier.carrierAIDC'
+      );
+      udiCarrierCarrierAIDC.fixString('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed base64Binary', () => {
+      const udiCarrierCarrierAIDC = device.elements.find(
+        e => e.id === 'Device.udiCarrier.carrierAIDC'
+      );
+      udiCarrierCarrierAIDC.fixString('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      expect(() => {
+        udiCarrierCarrierAIDC.fixString('dGhpcyB0b28=');
+      }).toThrow(
+        'Cannot fix dGhpcyB0b28= to this element; a different base64Binary is already fixed: d293IHNvbWVvbmUgZGVjb2RlZA=='
+      );
+    });
+
+    it('should throw MismatchedTypeError when fixing an instant to an incorrect value', () => {
+      const udiCarrierCarrierAIDC = device.elements.find(
+        e => e.id === 'Device.udiCarrier.carrierAIDC'
+      );
+      expect(() => {
+        udiCarrierCarrierAIDC.fixString('Not valid');
+      }).toThrow(
+        'Cannot fix string value Not valid on element of type base64Binary; types do not match'
+      );
     });
 
     // Fixing an instant
@@ -256,6 +297,31 @@ describe('ElementDefinition', () => {
       }).toThrow('Cannot fix string value hello there on element of type time; types do not match');
     });
 
+    // Fixing an oid
+    it('should fix a string to an oid', () => {
+      const inputValueOid = task.findElementByPath('input.valueOid');
+      inputValueOid.fixString('urn:oid:1.2.3.4.5');
+      expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed oid', () => {
+      const inputValueOid = task.findElementByPath('input.valueOid');
+      inputValueOid.fixString('urn:oid:1.2.3.4.5');
+      expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
+      expect(() => {
+        inputValueOid.fixString('urn:oid:1.4.3.2.1');
+      }).toThrow(
+        'Cannot fix urn:oid:1.4.3.2.1 to this element; a different oid is already fixed: urn:oid:1.2.3.4.5'
+      );
+    });
+
+    it('should throw MismatchedTypeError when fixing an oid to an incorrect value', () => {
+      const inputValueOid = task.findElementByPath('input.valueOid');
+      expect(() => {
+        inputValueOid.fixString('invalid oid');
+      }).toThrow('Cannot fix string value invalid oid on element of type oid; types do not match');
+    });
+
     // Fixing an id
     it('should fix a string to an id', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
@@ -300,6 +366,24 @@ describe('ElementDefinition', () => {
         description.fixString('other text');
       }).toThrow(
         'Cannot fix other text to this element; a different markdown is already fixed: some text'
+      );
+    });
+
+    // Fixing uuid
+    it('should fix a string to a uuid', () => {
+      const inputValueUuid = task.findElementByPath('input.valueUuid');
+      inputValueUuid.fixString('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+      expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+    });
+
+    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed uuid', () => {
+      const inputValueUuid = task.findElementByPath('input.valueUuid');
+      inputValueUuid.fixString('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+      expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+      expect(() => {
+        inputValueUuid.fixString('urn:uuid:c123456d-ec9a-4326-a141-556f43239520');
+      }).toThrow(
+        'Cannot fix urn:uuid:c123456d-ec9a-4326-a141-556f43239520 to this element; a different uuid is already fixed: urn:uuid:c757873d-ec9a-4326-a141-556f43239520'
       );
     });
 

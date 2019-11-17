@@ -60,11 +60,14 @@ export class ElementDefinition {
   fixedUrl: string;
   fixedCanonical: string;
   fixedInstant: string;
+  fixedBase64Binary: string;
   fixedDate: string;
   fixedDateTime: string;
   fixedTime: string;
+  fixedOid: string;
   fixedId: string;
   fixedMarkdown: string;
+  fixedUuid: string;
   fixedBoolean: boolean;
   fixedDecimal: number;
   fixedInteger: number;
@@ -735,6 +738,12 @@ export class ElementDefinition {
     ) {
       this.fixedCanonical = value;
     } else if (
+      type === 'base64Binary' &&
+      /^(\s*([0-9a-zA-Z\+\=]){4}\s*)+$/.test(value) &&
+      this.checkIfFixable(value, this.fixedBase64Binary, type)
+    ) {
+      this.fixedBase64Binary = value;
+    } else if (
       type === 'instant' &&
       /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
         value
@@ -765,6 +774,12 @@ export class ElementDefinition {
     ) {
       this.fixedTime = value;
     } else if (
+      type === 'oid' &&
+      /^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$/.test(value) &&
+      this.checkIfFixable(value, this.fixedOid, type)
+    ) {
+      this.fixedOid = value;
+    } else if (
       type === 'id' &&
       /^[A-Za-z0-9\-\.]{1,64}$/.test(value) &&
       this.checkIfFixable(value, this.fixedId, type)
@@ -776,6 +791,8 @@ export class ElementDefinition {
       this.checkIfFixable(value, this.fixedMarkdown, type)
     ) {
       this.fixedMarkdown = value;
+    } else if (type === 'uuid' && this.checkIfFixable(value, this.fixedUuid, type)) {
+      this.fixedUuid = value;
     } else {
       throw new MismatchedTypeError('string', value, type);
     }
