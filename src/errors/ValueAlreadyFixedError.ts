@@ -1,6 +1,6 @@
 import { Annotated } from './Annotated';
 
-export class PrimitiveValueAlreadyFixedError extends Error implements Annotated {
+export class ValueAlreadyFixedError extends Error implements Annotated {
   specReferences = [
     'http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.fixed_x_',
     'http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.pattern_x_'

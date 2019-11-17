@@ -8,9 +8,7 @@ import {
   CodedTypeNotFoundError,
   CodeAlreadyFixedError,
   DisableFlagError,
-  PrimitiveValueAlreadyFixedError,
-  QuantityAlreadyFixedError,
-  RatioAlreadyFixedError,
+  ValueAlreadyFixedError,
   NoSingleTypeError,
   MismatchedTypeError,
   InvalidCardinalityError,
@@ -647,7 +645,7 @@ export class ElementDefinition {
     elementType: string
   ): boolean {
     if (currentElementValue != null && currentElementValue !== value) {
-      throw new PrimitiveValueAlreadyFixedError(value, elementType, currentElementValue);
+      throw new ValueAlreadyFixedError(value, elementType, currentElementValue);
     }
     return true;
   }
@@ -657,7 +655,7 @@ export class ElementDefinition {
    * @see {@link fixValue}
    * @param {boolean} value - the boolean value to fix
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {PrimitiveValueAlreadyFixedError} when the code is already fixed to a different code
+   * @throws {ValueAlreadyFixedError} when the code is already fixed to a different code
    * @throws {TypeNotFoundError} when the type of the ElementDefinition is not boolean
    */
   fixBoolean(value: boolean): void {
@@ -677,7 +675,7 @@ export class ElementDefinition {
    * @see {@link fixValue}
    * @param {boolean} value - the number value to fix
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {PrimitiveValueAlreadyFixedError} when the code is already fixed to a different code
+   * @throws {ValueAlreadyFixedError} when the code is already fixed to a different code
    * @throws {TypeNotFoundError} when the type of the ElementDefinition is not integer or decimal
    */
   fixNumber(value: number): void {
@@ -805,15 +803,16 @@ export class ElementDefinition {
     const type = this.type[0].code;
     if (type === 'Quantity') {
       if (this.patternQuantity) {
-        const fixedToSame =
-          this.patternQuantity.value === value.value &&
-          this.patternQuantity.code === value.unit?.code &&
-          this.patternQuantity.system === value.unit?.system;
-        if (!fixedToSame) {
-          const found = this.patternQuantity;
-          throw new QuantityAlreadyFixedError(
-            { value: found.value, unit: { code: found.code, system: found.system } },
-            value
+        const found = this.patternQuantity;
+        const foundFshQuantity = new FshQuantity(
+          found.value,
+          new FshCode(found.code, found.system)
+        );
+        if (!value.equals(foundFshQuantity)) {
+          throw new ValueAlreadyFixedError(
+            value.toString(),
+            'Quantity',
+            foundFshQuantity.toString()
           );
         }
         return;
@@ -821,8 +820,7 @@ export class ElementDefinition {
       this.fixFshCode(value.unit);
       this.patternQuantity.value = value.value;
     } else {
-      const quantityString = `${value.value} ${value.unit?.code ?? ''}`;
-      throw new MismatchedTypeError('Quantity', quantityString, type);
+      throw new MismatchedTypeError('Quantity', value.toString(), type);
     }
   }
 
@@ -833,25 +831,18 @@ export class ElementDefinition {
     const type = this.type[0].code;
     if (type === 'Ratio') {
       if (this.patternRatio) {
-        const fixedToSame =
-          this.patternRatio.numerator?.value === value.numerator.value &&
-          this.patternRatio.numerator?.code === value.numerator.unit?.code &&
-          this.patternRatio.numerator?.system === value.numerator.unit?.system &&
-          this.patternRatio.numerator?.value === value.numerator.value &&
-          this.patternRatio.numerator?.code === value.numerator.unit?.code &&
-          this.patternRatio.numerator?.system === value.numerator.unit?.system;
-        if (!fixedToSame) {
-          const found = this.patternRatio;
-          const foundRatioNumerator = {
-            value: found.numerator?.value,
-            unit: { code: found.numerator?.code, system: found.numerator?.system }
-          };
-          const foundRatioDenominator = {
-            value: found.denominator?.value,
-            unit: { code: found.denominator?.code, system: found.denominator?.system }
-          };
-          const foundRatio = new FshRatio(foundRatioNumerator, foundRatioDenominator);
-          throw new RatioAlreadyFixedError(foundRatio, value);
+        const found = this.patternRatio;
+        const foundNumerator = new FshQuantity(
+          found.numerator?.value,
+          new FshCode(found.numerator?.code, found.numerator?.system)
+        );
+        const foundDenominator = new FshQuantity(
+          found.denominator?.value,
+          new FshCode(found.denominator?.code, found.denominator?.system)
+        );
+        const foundRatio = new FshRatio(foundNumerator, foundDenominator);
+        if (!value.equals(foundRatio)) {
+          throw new ValueAlreadyFixedError(value.toString(), 'Ratio', foundRatio.toString());
         }
       }
       this.patternRatio = {};
@@ -859,7 +850,6 @@ export class ElementDefinition {
       this.patternRatio.denominator = {};
       this.patternRatio.numerator.value = value.numerator.value;
       this.patternRatio.denominator.value = value.denominator.value;
-      this.patternRatio;
       if (value.numerator.unit) {
         this.patternRatio.numerator.code = value.numerator.unit.code;
         if (value.numerator.unit.system) {
@@ -873,9 +863,7 @@ export class ElementDefinition {
         }
       }
     } else {
-      const ratioString = `${value.numerator?.value ?? ''} ${value.numerator?.unit?.code ??
-        ''} : ${value.denominator?.value ?? ''} ${value.denominator?.unit?.code ?? ''}`;
-      throw new MismatchedTypeError('Ratio', ratioString, type);
+      throw new MismatchedTypeError('Ratio', value.toString(), type);
     }
   }
 

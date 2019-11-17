@@ -9,7 +9,9 @@ describe('ElementDefinition', () => {
   let jsonObservation: any;
   let medication: StructureDefinition;
   let observation: StructureDefinition;
-
+  let fshRatio: FshRatio;
+  let fshRatioNoUnits: FshRatio;
+  let differentFshRatio: FshRatio;
   beforeAll(() => {
     defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
@@ -18,17 +20,21 @@ describe('ElementDefinition', () => {
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
     medication = StructureDefinition.fromJSON(jsonMedication);
+    fshRatio = new FshRatio(
+      new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
+      new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
+    );
+    fshRatioNoUnits = new FshRatio(new FshQuantity(1.2), new FshQuantity(3.4));
+    differentFshRatio = new FshRatio(
+      new FshQuantity(1.3, new FshCode('mm', 'http://unitsofmeasure.org')),
+      new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
+    );
   });
 
   describe('#fixFshRatio', () => {
     it('should fix a FshRatio to a Ratio', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixFshRatio(
-        new FshRatio(
-          new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
-          new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-        )
-      );
+      amount.fixFshRatio(fshRatio);
       expect(amount.patternRatio).toEqual({
         numerator: {
           value: 1.2,
@@ -45,7 +51,7 @@ describe('ElementDefinition', () => {
 
     it('should fix a FshRatio without units to a Ratio', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixFshRatio(new FshRatio(new FshQuantity(1.2), new FshQuantity(3.4)));
+      amount.fixFshRatio(fshRatioNoUnits);
       expect(amount.patternRatio).toEqual({
         numerator: {
           value: 1.2
@@ -59,12 +65,7 @@ describe('ElementDefinition', () => {
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixFshRatio(
-          new FshRatio(
-            new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
-            new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-          )
-        );
+        valueX.fixFshRatio(fshRatio);
       }).toThrow(
         'Cannot fix Ratio value on this element since this element does not have a single type'
       );
@@ -72,19 +73,9 @@ describe('ElementDefinition', () => {
 
     it('should throw RatioAlreadyFixedError when the value is fixed to a different value', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixFshRatio(
-        new FshRatio(
-          new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
-          new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-        )
-      );
-      // should be able to fix a Quantity twice in the same way without issue
-      amount.fixFshRatio(
-        new FshRatio(
-          new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
-          new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-        )
-      );
+      amount.fixFshRatio(fshRatio);
+      // should be able to fix a Ratio twice in the same way without issue
+      amount.fixFshRatio(fshRatio);
       expect(amount.patternRatio).toEqual({
         numerator: {
           value: 1.2,
@@ -99,12 +90,7 @@ describe('ElementDefinition', () => {
       });
       // different value
       expect(() => {
-        amount.fixFshRatio(
-          new FshRatio(
-            new FshQuantity(1.3, new FshCode('mm', 'http://unitsofmeasure.org')),
-            new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-          )
-        );
+        amount.fixFshRatio(differentFshRatio);
       }).toThrow(
         'Cannot fix 1.3 mm : 3.4 cm to this element; a different Ratio is already fixed: 1.2 mm : 3.4 cm.'
       );
@@ -112,21 +98,16 @@ describe('ElementDefinition', () => {
 
     it('should throw MismatchedTypeError when the value is fixed to a non-Ratio', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      const ratioUnits = new FshRatio(
-        new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
-        new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-      );
-      const ratioNoUnits = new FshRatio(new FshQuantity(1.2), new FshQuantity(3.4));
       // with units
       expect(() => {
-        status.fixFshRatio(ratioUnits);
+        status.fixFshRatio(fshRatio);
       }).toThrow(
-        'Cannot fix Ratio value 1.2 mm : 3.4 cm on element of type code; types do not match.'
+        'Cannot fix Ratio value: 1.2 mm : 3.4 cm. Value does not match element type: code'
       );
       // without units
       expect(() => {
-        status.fixFshRatio(ratioNoUnits);
-      }).toThrow('Cannot fix Ratio value 1.2  : 3.4  on element of type code; types do not match.');
+        status.fixFshRatio(fshRatioNoUnits);
+      }).toThrow('Cannot fix Ratio value: 1.2 : 3.4. Value does not match element type: code');
     });
   });
 });

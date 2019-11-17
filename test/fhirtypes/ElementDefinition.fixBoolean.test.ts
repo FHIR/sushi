@@ -38,7 +38,7 @@ describe('ElementDefinition', () => {
       expect(valueX.fixedBoolean).toBeUndefined();
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when the value is fixed to a different value', () => {
+    it('should throw ValueAlreadyFixedError when the value is fixed to a different value', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
@@ -55,7 +55,7 @@ describe('ElementDefinition', () => {
       const status = location.elements.find(e => e.id === 'Location.status');
       expect(() => {
         status.fixBoolean(true);
-      }).toThrow('Cannot fix boolean value true on element of type code; types do not match.');
+      }).toThrow('Cannot fix boolean value: true. Value does not match element type: code');
     });
   });
 });

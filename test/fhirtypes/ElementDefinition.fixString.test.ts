@@ -54,7 +54,7 @@ describe('ElementDefinition', () => {
       expect(batchLotNumber.fixedString).toBe('foo bar');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed string', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed string', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
       batchLotNumber.fixString('foo bar');
       expect(batchLotNumber.fixedString).toBe('foo bar');
@@ -72,7 +72,7 @@ describe('ElementDefinition', () => {
       expect(url.fixedUri).toBe('http://example.org');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed uri', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed uri', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
       url.fixString('http://example.org');
       expect(url.fixedUri).toBe('http://example.org');
@@ -87,7 +87,7 @@ describe('ElementDefinition', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
       expect(() => {
         url.fixString(' ');
-      }).toThrow('Cannot fix string value   on element of type uri; types do not match');
+      }).toThrow('Cannot fix string value:  . Value does not match element type: uri');
     });
 
     // Fixing a URL
@@ -99,7 +99,7 @@ describe('ElementDefinition', () => {
       expect(url.fixedUrl).toBe('http://example.org');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed URL', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed URL', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
@@ -112,13 +112,13 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a uri to an incorrect value', () => {
+    it('should throw MismatchedTypeError when fixing a url to an incorrect value', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
       expect(() => {
         url.fixString(' ');
-      }).toThrow('Cannot fix string value   on element of type url; types do not match');
+      }).toThrow('Cannot fix string value:  . Value does not match element type: url');
     });
 
     // Fixing a canonical
@@ -130,7 +130,7 @@ describe('ElementDefinition', () => {
       expect(instantiates.fixedCanonical).toBe('http://example.org');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed canonical', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed canonical', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
@@ -149,7 +149,7 @@ describe('ElementDefinition', () => {
       );
       expect(() => {
         instantiates.fixString(' ');
-      }).toThrow('Cannot fix string value   on element of type canonical; types do not match.');
+      }).toThrow('Cannot fix string value:  . Value does not match element type: canonical');
     });
 
     // Fixing a base64Binary
@@ -161,7 +161,7 @@ describe('ElementDefinition', () => {
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed base64Binary', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed base64Binary', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
@@ -174,14 +174,14 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw MismatchedTypeError when fixing an instant to an incorrect value', () => {
+    it('should throw MismatchedTypeError when fixing a base64Binary to an incorrect value', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
       expect(() => {
         udiCarrierCarrierAIDC.fixString('Not valid');
       }).toThrow(
-        'Cannot fix string value Not valid on element of type base64Binary; types do not match'
+        'Cannot fix string value: Not valid. Value does not match element type: base64Binary'
       );
     });
 
@@ -192,7 +192,7 @@ describe('ElementDefinition', () => {
       expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed instant', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed instant', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
       issued.fixString('2015-02-07T13:28:17.239+02:00');
       expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
@@ -207,9 +207,7 @@ describe('ElementDefinition', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
       expect(() => {
         issued.fixString('2015-02-07');
-      }).toThrow(
-        'Cannot fix string value 2015-02-07 on element of type instant; types do not match'
-      );
+      }).toThrow('Cannot fix string value: 2015-02-07. Value does not match element type: instant');
     });
 
     // Fixing a date
@@ -219,7 +217,7 @@ describe('ElementDefinition', () => {
       expect(birthDate.fixedDate).toBe('1905-08-23');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed date', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed date', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
       birthDate.fixString('1905-08-23');
       expect(birthDate.fixedDate).toBe('1905-08-23');
@@ -235,7 +233,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         birthDate.fixString('2016-02-07T13:28:17.239+02:00');
       }).toThrow(
-        'Cannot fix string value 2016-02-07T13:28:17.239+02:00 on element of type date; types do not match'
+        'Cannot fix string value: 2016-02-07T13:28:17.239+02:00. Value does not match element type: date'
       );
     });
 
@@ -246,7 +244,7 @@ describe('ElementDefinition', () => {
       expect(date.fixedDateTime).toBe('2015-02-07T13:28:17-05:00');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed dateTime', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed dateTime', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
       date.fixString('1905-08-23');
       expect(date.fixedDateTime).toBe('1905-08-23');
@@ -262,7 +260,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         date.fixString('hello there');
       }).toThrow(
-        'Cannot fix string value hello there on element of type dateTime; types do not match'
+        'Cannot fix string value: hello there. Value does not match element type: dateTime'
       );
     });
 
@@ -275,7 +273,7 @@ describe('ElementDefinition', () => {
       expect(hoursOfOperationClosingTime.fixedTime).toBe('12:34:56');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed time', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed time', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
@@ -294,7 +292,7 @@ describe('ElementDefinition', () => {
       );
       expect(() => {
         hoursOfOperationClosingTime.fixString('hello there');
-      }).toThrow('Cannot fix string value hello there on element of type time; types do not match');
+      }).toThrow('Cannot fix string value: hello there. Value does not match element type: time');
     });
 
     // Fixing an oid
@@ -304,7 +302,7 @@ describe('ElementDefinition', () => {
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed oid', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed oid', () => {
       const inputValueOid = task.findElementByPath('input.valueOid');
       inputValueOid.fixString('urn:oid:1.2.3.4.5');
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
@@ -319,7 +317,7 @@ describe('ElementDefinition', () => {
       const inputValueOid = task.findElementByPath('input.valueOid');
       expect(() => {
         inputValueOid.fixString('invalid oid');
-      }).toThrow('Cannot fix string value invalid oid on element of type oid; types do not match');
+      }).toThrow('Cannot fix string value: invalid oid. Value does not match element type: oid');
     });
 
     // Fixing an id
@@ -329,7 +327,7 @@ describe('ElementDefinition', () => {
       expect(uid.fixedId).toBe('uniqueId123');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed id', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed id', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       uid.fixString('uniqueId123');
       expect(uid.fixedId).toBe('uniqueId123');
@@ -344,7 +342,7 @@ describe('ElementDefinition', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       expect(() => {
         uid.fixString('invalid id');
-      }).toThrow('Cannot fix string value invalid id on element of type id; types do not match');
+      }).toThrow('Cannot fix string value: invalid id. Value does not match element type: id');
     });
 
     // Fixing markdown
@@ -356,7 +354,7 @@ describe('ElementDefinition', () => {
       expect(description.fixedMarkdown).toBe('`This is code`');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed markdown', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed markdown', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
@@ -376,7 +374,7 @@ describe('ElementDefinition', () => {
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
     });
 
-    it('should throw PrimitiveValueAlreadyFixedError when fixing an already fixed uuid', () => {
+    it('should throw ValueAlreadyFixedError when fixing an already fixed uuid', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid');
       inputValueUuid.fixString('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');

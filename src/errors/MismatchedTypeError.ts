@@ -8,7 +8,7 @@ export class MismatchedTypeError extends Error implements Annotated {
   ];
   constructor(public valueType: string, public value: FixedValueType, public elementType: string) {
     super(
-      `Cannot fix ${valueType} value ${value.toString()} on element of type ${elementType}; types do not match.`
+      `Cannot fix ${valueType} value: ${value.toString()}. Value does not match element type: ${elementType}`
     );
   }
 }
