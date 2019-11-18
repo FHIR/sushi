@@ -48,7 +48,6 @@ export class StructureDefinition {
   contextInvariant: string[];
   type: string;
   baseDefinition: string;
-  derivation: string;
 
   /**
    * The StructureDefinition's elements.  The returned array should not be pushed to directly.  Instead, use
@@ -247,6 +246,10 @@ export class StructureDefinition {
         j[prop] = cloneDeep(this[prop]);
       }
     }
+
+    // Now handle derivation
+    j.derivation = 'constraint';
+
     // Now handle snapshot and differential
     j.snapshot = { element: this.elements.map(e => e.toJSON()) };
     j.differential = {
@@ -444,6 +447,7 @@ type PathPart = {
  */
 interface LooseStructDefJSON {
   resourceType: string;
+  derivation?: string;
   snapshot?: { element: any[] };
   differential?: { element: any[] };
   // [key: string]: any;
@@ -484,6 +488,5 @@ const PROPS = [
   'context',
   'contextInvariant',
   'type',
-  'baseDefinition',
-  'derivation'
+  'baseDefinition'
 ];
