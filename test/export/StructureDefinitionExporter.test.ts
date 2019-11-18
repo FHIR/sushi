@@ -424,8 +424,8 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedValue.type).toHaveLength(11);
   });
 
-  // FixValue rule
-  it('should apply a correct FixValueRule', () => {
+  // Fixed Value Rule
+  it('should apply a correct FixedValueRule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
@@ -446,7 +446,7 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
-  it('should not apply an incorrect FixValueRule', () => {
+  it('should not apply an incorrect FixedValueRule', () => {
     // TODO: this should check for emitting an error once logging is set up
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
