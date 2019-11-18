@@ -658,7 +658,7 @@ export class ElementDefinition {
     value: boolean | string | number,
     currentElementValue: boolean | string | number,
     elementType: string
-  ): boolean {
+  ): boolean | undefined {
     if (currentElementValue != null && currentElementValue !== value) {
       throw new ValueAlreadyFixedError(value, elementType, currentElementValue);
     }
@@ -668,6 +668,7 @@ export class ElementDefinition {
   /**
    * Fixes a boolean to this element.
    * @see {@link fixValue}
+   * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
    * @param {boolean} value - the boolean value to fix
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
@@ -688,6 +689,7 @@ export class ElementDefinition {
   /**
    * Fixes a number to this element.
    * @see {@link fixValue}
+   * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
    * @param {number} value - the number value to fix
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
@@ -728,6 +730,7 @@ export class ElementDefinition {
   /**
    * Fixes a string to this element.
    * @see {@link fixValue}
+   * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
    * @param {string} value - the string value to fix
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
@@ -851,6 +854,7 @@ export class ElementDefinition {
         return;
       }
       if (value.unit) {
+        // A FshCode has special support allowing it to be fixed to a Quantity
         this.fixFshCode(value.unit);
       } else {
         this.patternQuantity = {};
@@ -894,11 +898,10 @@ export class ElementDefinition {
         return;
       }
       // There is no existing patternRatio, so create it
-      this.patternRatio = {};
-      this.patternRatio.numerator = {};
-      this.patternRatio.denominator = {};
-      this.patternRatio.numerator.value = value.numerator.value;
-      this.patternRatio.denominator.value = value.denominator.value;
+      this.patternRatio = {
+        numerator: { value: value.numerator.value },
+        denominator: { value: value.denominator.value }
+      };
       // Unit is optional, so we need to check it
       if (value.numerator.unit) {
         this.patternRatio.numerator.code = value.numerator.unit.code;
