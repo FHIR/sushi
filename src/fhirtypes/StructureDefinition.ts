@@ -93,7 +93,7 @@ export class StructureDefinition {
     let lastMatchId = '';
     for (; i < this.elements.length; i++) {
       const currentId = this.elements[i].id;
-      if (element.id.startsWith(currentId)) {
+      if (element.id.startsWith(`${currentId}.`) || element.id.startsWith(`${currentId}:`)) {
         lastMatchId = currentId;
       } else if (!currentId.startsWith(lastMatchId)) {
         break;
