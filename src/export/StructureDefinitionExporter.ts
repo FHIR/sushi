@@ -3,7 +3,7 @@ import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirty
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
-import { CardRule, FlagRule, OnlyRule, ValueSetRule } from '../fshtypes/rules';
+import { CardRule, FixedValueRule, FlagRule, OnlyRule, ValueSetRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 
 /**
@@ -44,6 +44,8 @@ export class StructureDefinitionExporter {
         try {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
+          } else if (rule instanceof FixedValueRule) {
+            element.fixValue(rule.fixedValue);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
           } else if (rule instanceof OnlyRule) {

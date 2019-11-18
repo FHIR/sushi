@@ -1,8 +1,14 @@
 import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
-import { Profile, Extension } from '../../src/fshtypes';
-import { CardRule, FlagRule, OnlyRule, ValueSetRule } from '../../src/fshtypes/rules';
+import { Profile, Extension, FshCode } from '../../src/fshtypes';
+import {
+  CardRule,
+  FlagRule,
+  OnlyRule,
+  ValueSetRule,
+  FixedValueRule
+} from '../../src/fshtypes/rules';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -416,6 +422,47 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseValue.type).toHaveLength(11);
     expect(constrainedValue.type).toHaveLength(11);
+  });
+
+  // Fixed Value Rule
+  it('should apply a correct FixedValueRule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new FixedValueRule('code');
+    const fixedFshCode = new FshCode('foo', 'http://foo.com');
+    rule.fixedValue = fixedFshCode;
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseCode = baseStructDef.findElement('Observation.code');
+    const fixedCode = sd.findElement('Observation.code');
+
+    expect(baseCode.patternCodeableConcept).toBeUndefined();
+    expect(fixedCode.patternCodeableConcept).toEqual({
+      coding: [{ code: 'foo', system: 'http://foo.com' }]
+    });
+  });
+
+  it('should not apply an incorrect FixedValueRule', () => {
+    // TODO: this should check for emitting an error once logging is set up
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new FixedValueRule('code');
+    rule.fixedValue = true; // Incorrect boolean
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseCode = baseStructDef.findElement('Observation.code');
+    const fixedCode = sd.findElement('Observation.code');
+
+    expect(baseCode.patternCodeableConcept).toBeUndefined();
+    expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
   });
 
   // toJSON
