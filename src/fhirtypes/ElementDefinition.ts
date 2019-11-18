@@ -652,13 +652,13 @@ export class ElementDefinition {
    * @param {boolean | string | number} currentElementValue - The current value of the element
    * @param {string} elementType - The type of the element as a string
    * @throws {ValueAlreadyFixedError} when the currentElementValue exists and is different than the new value
-   * @returns {boolean} true if no value exists or the new value matches the old
+   * @returns {true | undefined} true if no value exists or the new value matches the old
    */
   private checkIfFixable(
     value: boolean | string | number,
     currentElementValue: boolean | string | number,
     elementType: string
-  ): boolean | undefined {
+  ): true | undefined {
     if (currentElementValue != null && currentElementValue !== value) {
       throw new ValueAlreadyFixedError(value, elementType, currentElementValue);
     }
@@ -1112,6 +1112,10 @@ export class ElementDefinition {
     this.fixedUri = code.code;
   }
 
+  /**
+   * Checks if a the ElementDefinition has exactly one type
+   * @returns {boolean} - true if there is exactly one type
+   */
   private hasSingleType() {
     const types = this.type ?? [];
     return types.length === 1;
