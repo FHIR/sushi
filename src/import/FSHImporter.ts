@@ -1,7 +1,7 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { FSHVisitor } from './generated/FSHVisitor';
-import { Profile, Extension, Code, Quantity, Ratio } from '../fshtypes';
+import { Profile, Extension, FshCode, FshQuantity, FshRatio } from '../fshtypes';
 import {
   Rule,
   CardRule,
@@ -309,12 +309,12 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitCode(ctx: pc.CodeContext): Code {
+  visitCode(ctx: pc.CodeContext): FshCode {
     const [system, code] = ctx
       .CODE()
       .getText()
       .split('#', 2);
-    const concept = new Code(code);
+    const concept = new FshCode(code);
     if (system && system.length > 0) {
       concept.system = this.aliasAwareValue(system);
     }
@@ -324,24 +324,24 @@ export class FSHImporter extends FSHVisitor {
     return concept;
   }
 
-  visitQuantity(ctx: pc.QuantityContext): Quantity {
+  visitQuantity(ctx: pc.QuantityContext): FshQuantity {
     const value = parseFloat(ctx.NUMBER().getText());
     const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
     // the literal version of quantity always assumes UCUM code system
-    const unit = new Code(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org');
-    return new Quantity(value, unit);
+    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org');
+    return new FshQuantity(value, unit);
   }
 
-  visitRatio(ctx: pc.RatioContext): Ratio {
-    return new Ratio(
+  visitRatio(ctx: pc.RatioContext): FshRatio {
+    return new FshRatio(
       this.visitRatioPart(ctx.ratioPart()[0]),
       this.visitRatioPart(ctx.ratioPart()[1])
     );
   }
 
-  visitRatioPart(ctx: pc.RatioPartContext): Quantity {
+  visitRatioPart(ctx: pc.RatioPartContext): FshQuantity {
     if (ctx.NUMBER()) {
-      return new Quantity(parseFloat(ctx.NUMBER().getText()));
+      return new FshQuantity(parseFloat(ctx.NUMBER().getText()));
     }
     return this.visitQuantity(ctx.quantity());
   }

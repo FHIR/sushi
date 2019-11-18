@@ -3,14 +3,14 @@ import { getResolver } from '../utils/getResolver';
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { Code } from '../../src/fshtypes/Code';
+import { FshCode } from '../../src/fshtypes/FshCode';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let observation: StructureDefinition;
-  let fooBarCode: Code;
-  let barFooCode: Code;
+  let fooBarCode: FshCode;
+  let barFooCode: FshCode;
   beforeAll(() => {
     defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
@@ -137,6 +137,15 @@ describe('ElementDefinition', () => {
         clone.fixFshCode(fooBarCode);
       }).toThrow(/instant/);
       expect(clone).toEqual(instant);
+    });
+
+    it('should throw NoSingleTypeError when element has multiple types', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      expect(() => {
+        valueX.fixFshCode(fooBarCode);
+      }).toThrow(
+        'Cannot fix Code value on this element since this element does not have a single type'
+      );
     });
   });
 });

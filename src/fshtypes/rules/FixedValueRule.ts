@@ -1,7 +1,7 @@
 import { Rule } from './Rule';
-import { Code, Quantity, Ratio } from '../index';
+import { FshCode, FshQuantity, FshRatio } from '../index';
 
-export type FixedValueType = boolean | number | string | Code | Quantity | Ratio;
+export type FixedValueType = boolean | number | string | FshCode | FshQuantity | FshRatio;
 
 export class FixedValueRule extends Rule {
   fixedValue: FixedValueType;
