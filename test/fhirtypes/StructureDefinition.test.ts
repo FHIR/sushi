@@ -232,6 +232,22 @@ describe('StructureDefinition', () => {
       expect(observation.elements.length).toBe(originalLength + 8);
     });
 
+    it('should find an already existing explicit choice element with slicing syntax', () => {
+      const originalLength = respRate.elements.length;
+      const valueQuantity = respRate.findElementByPath('value[x][valueQuantity]');
+      expect(valueQuantity).toBeDefined();
+      expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(respRate.elements.length).toBe(originalLength);
+    });
+
+    it('should find an already existing explicit choice element with name replacement syntax', () => {
+      const originalLength = respRate.elements.length;
+      const valueQuantity = respRate.findElementByPath('valueQuantity');
+      expect(valueQuantity).toBeDefined();
+      expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(respRate.elements.length).toBe(originalLength);
+    });
+
     // Unfolding
     it('should find an element that must be unfolded by path', () => {
       const originalLength = observation.elements.length;

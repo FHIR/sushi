@@ -153,10 +153,10 @@ export class StructureDefinition {
       if (newMatchingElements.length === 0) {
         // If we fail to find any matches, first try to find the appropriate [x] element
         // Ex: valueString -> value[x]
-        const newSlice = this.sliceMatchingValueX(fhirPathString, matchingElements);
-        if (newSlice) {
-          newMatchingElements.push(newSlice);
-          fhirPathString = newSlice.path;
+        const matchingSlice = this.sliceMatchingValueX(fhirPathString, matchingElements);
+        if (matchingSlice) {
+          newMatchingElements.push(matchingSlice, ...matchingSlice.children());
+          fhirPathString = matchingSlice.path;
         }
       }
 
@@ -301,9 +301,14 @@ export class StructureDefinition {
         pathParts.push({ base: pathPart });
       } else {
         // We have brackets, let's  save the bracket info
-        const fhirPathBase = splitPathPart[0];
+        let fhirPathBase = splitPathPart[0];
         // Get the bracket elements and slice off the trailing ']'
-        const brackets = splitPathPart.slice(1).map(s => s.slice(0, -1));
+        let brackets = splitPathPart.slice(1).map(s => s.slice(0, -1));
+        // Get rid of any remaining [x] elements in the brackets
+        if (brackets[0] === 'x') {
+          fhirPathBase += '[x]';
+          brackets = brackets.slice(1);
+        }
         pathParts.push({ base: fhirPathBase, brackets: brackets });
       }
     }
@@ -311,15 +316,15 @@ export class StructureDefinition {
   }
 
   /**
-   * Looks for a matching choice element and if found slices it, adds the slices to the structdef
-   * and then returns the newly created slice.
+   * Looks for a matching choice element. If the choice has no existing slice, we slice it and
+   * add to the existing StructureDefinition. If the choice has an existing slice, we return that.
    * @param {string} fhirPath - The path in FHIR to match with
    * @param {ElementDefinition[]} elements - The set of elements to search through
    * @returns {ElementDefinition} - The new slice element if found, else undefined
    */
   private sliceMatchingValueX(fhirPath: string, elements: ElementDefinition[]): ElementDefinition {
     let matchingType: ElementDefinitionType;
-    const matchingXElement = elements.find(e => {
+    const matchingXElements = elements.filter(e => {
       if (e.path.endsWith('[x]')) {
         for (const t of e.type) {
           if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
@@ -329,16 +334,24 @@ export class StructureDefinition {
         }
       }
     });
-    if (matchingXElement) {
-      // If we find a matching [x] element, we need to slice it to create the child element
-      // NOTE: The spec is somewhat incosistent on handling choice slicing, we decided on this
-      // approach per consistency with 4.0.1 observation-vitalsigns profiles and per this post
-      // https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/.
-      matchingXElement.sliceIt('type', '$this', false, 'open');
-      // Get the sliceName for the new element
+    if (matchingXElements.length > 0) {
       const sliceName = fhirPath.slice(fhirPath.lastIndexOf('.') + 1);
-      const newSlice = matchingXElement.addSlice(sliceName, matchingType);
-      return newSlice;
+      const matchingSlice = matchingXElements.find(c => c.sliceName === sliceName);
+      // if we have already have a matching slice, we want to return it
+      if (matchingSlice) {
+        return matchingSlice;
+      } else {
+        // if we do not have a matching slice, we want to slice the first match
+        const matchingXElement = matchingXElements[0];
+        // If we find a matching [x] element, we need to slice it to create the child element
+        // NOTE: The spec is somewhat incosistent on handling choice slicing, we decided on this
+        // approach per consistency with 4.0.1 observation-vitalsigns profiles and per this post
+        // https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/.
+        matchingXElement.sliceIt('type', '$this', false, 'open');
+        // Get the sliceName for the new element
+        const newSlice = matchingXElement.addSlice(sliceName, matchingType);
+        return newSlice;
+      }
     }
     return;
   }
