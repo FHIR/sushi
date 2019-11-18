@@ -92,7 +92,15 @@ describe('ElementDefinition', () => {
       expect(() => {
         amount.fixFshRatio(differentFshRatio);
       }).toThrow(
-        'Cannot fix 1.3 mm : 3.4 cm to this element; a different Ratio is already fixed: 1.2 mm : 3.4 cm.'
+        // eslint-disable-next-line
+        "Cannot fix 1.3 'mm' : 3.4 'cm' to this element; a different Ratio is already fixed: 1.2 'mm' : 3.4 'cm'."
+      );
+      // different units
+      expect(() => {
+        amount.fixFshRatio(fshRatioNoUnits);
+      }).toThrow(
+        // eslint-disable-next-line
+        "Cannot fix 1.2 : 3.4 to this element; a different Ratio is already fixed: 1.2 'mm' : 3.4 'cm'."
       );
     });
 
@@ -102,11 +110,13 @@ describe('ElementDefinition', () => {
       expect(() => {
         status.fixFshRatio(fshRatio);
       }).toThrow(
-        'Cannot fix Ratio value: 1.2 mm : 3.4 cm. Value does not match element type: code'
+        // eslint-disable-next-line
+        "Cannot fix Ratio value: 1.2 'mm' : 3.4 'cm'. Value does not match element type: code"
       );
       // without units
       expect(() => {
         status.fixFshRatio(fshRatioNoUnits);
+        // eslint-disable-next-line
       }).toThrow('Cannot fix Ratio value: 1.2 : 3.4. Value does not match element type: code');
     });
   });

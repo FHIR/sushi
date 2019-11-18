@@ -58,13 +58,27 @@ describe('ElementDefinition', () => {
       expect(() => {
         referenceRangeLow.fixFshQuantity(fshQuantity2);
       }).toThrow(
-        'Cannot fix 1.24 mm to this element; a different Quantity is already fixed: 1.23 mm.'
+        // eslint-disable-next-line
+        "Cannot fix 1.24 'mm' to this element; a different Quantity is already fixed: 1.23 'mm'."
       );
-      // different units
+    });
+
+    it('should throw ValueAlreadyFixedError when the value is fixed to a different value, no units', () => {
+      const referenceRangeLow = observation.elements.find(
+        e => e.id === 'Observation.referenceRange.low'
+      );
+      referenceRangeLow.fixFshQuantity(new FshQuantity(1.23));
+      // should be able to fix a Quantity twice in the same way without issue
+      referenceRangeLow.fixFshQuantity(new FshQuantity(1.23));
+      expect(referenceRangeLow.patternQuantity).toEqual({
+        value: 1.23
+      });
+      // different value
       expect(() => {
-        referenceRangeLow.fixFshQuantity(new FshQuantity(1.23));
+        referenceRangeLow.fixFshQuantity(new FshQuantity(3.21));
       }).toThrow(
-        'Cannot fix 1.23 to this element; a different Quantity is already fixed: 1.23 mm.'
+        // eslint-disable-next-line
+        'Cannot fix 3.21 to this element; a different Quantity is already fixed: 1.23.'
       );
     });
 
@@ -73,7 +87,8 @@ describe('ElementDefinition', () => {
       // with units
       expect(() => {
         status.fixFshQuantity(fshQuantity2);
-      }).toThrow('Cannot fix Quantity value: 1.24 mm. Value does not match element type: code');
+        // eslint-disable-next-line
+      }).toThrow("Cannot fix Quantity value: 1.24 'mm'. Value does not match element type: code");
       // without units
       expect(() => {
         status.fixFshQuantity(new FshQuantity(1.24));

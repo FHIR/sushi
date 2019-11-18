@@ -47,13 +47,13 @@ describe('ElementDefinition', () => {
       expect(name.fixedString).toBe('foo');
     });
 
-    it('should fix a code', () => {
+    it('should fix a FshCode', () => {
       const status = medicationRequest.elements.find(e => e.id === 'MedicationRequest.status');
       status.fixValue(new FshCode('foo'));
       expect(status.fixedCode).toBe('foo');
     });
 
-    it('should fix a Quantity', () => {
+    it('should fix a FshQuantity', () => {
       const dispenseRequestQuantity = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.dispenseRequest.quantity'
       );
@@ -67,7 +67,7 @@ describe('ElementDefinition', () => {
       });
     });
 
-    it('should fix a FshRatio to a Ratio', () => {
+    it('should fix a FshRatio', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
       amount.fixValue(
         new FshRatio(

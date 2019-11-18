@@ -5,7 +5,7 @@ export class FshQuantity {
 
   toString() {
     let str = this.value.toString();
-    if (this.unit?.code != null) str += ` ${this.unit.code}`;
+    if (this.unit?.code != null) str += ` '${this.unit.code}'`;
     return str;
   }
 

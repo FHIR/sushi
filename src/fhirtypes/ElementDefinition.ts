@@ -623,6 +623,13 @@ export class ElementDefinition {
     };
   }
 
+  /**
+   * Fixes a value to an ElementDefinition
+   * @param {FixedValueType} value - The value to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
+   */
   fixValue(value: FixedValueType): void {
     if (typeof value === 'boolean') {
       this.fixBoolean(value);
@@ -639,6 +646,14 @@ export class ElementDefinition {
     }
   }
 
+  /**
+   * Checks if a primitive value can be fixed
+   * @param {boolean | string | number} value - The value to fix
+   * @param {boolean | string | number} currentElementValue - The current value of the element
+   * @param {string} elementType - The type of the element as a string
+   * @throws {ValueAlreadyFixedError} when the currentElementValue exists and is different than the new value
+   * @returns {boolean} true if no value exists or the new value matches the old
+   */
   private checkIfFixable(
     value: boolean | string | number,
     currentElementValue: boolean | string | number,
@@ -655,8 +670,8 @@ export class ElementDefinition {
    * @see {@link fixValue}
    * @param {boolean} value - the boolean value to fix
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the code is already fixed to a different code
-   * @throws {TypeNotFoundError} when the type of the ElementDefinition is not boolean
+   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {MismatchedTypeError} when the type of the ElementDefinition is not boolean
    */
   fixBoolean(value: boolean): void {
     if (!this.hasSingleType()) {
@@ -673,10 +688,10 @@ export class ElementDefinition {
   /**
    * Fixes a number to this element.
    * @see {@link fixValue}
-   * @param {boolean} value - the number value to fix
+   * @param {number} value - the number value to fix
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the code is already fixed to a different code
-   * @throws {TypeNotFoundError} when the type of the ElementDefinition is not integer or decimal
+   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
   fixNumber(value: number): void {
     if (!this.hasSingleType()) {
@@ -710,6 +725,14 @@ export class ElementDefinition {
     }
   }
 
+  /**
+   * Fixes a string to this element.
+   * @see {@link fixValue}
+   * @param {string} value - the string value to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
+   */
   fixString(value: string): void {
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError(typeof value);
@@ -796,6 +819,14 @@ export class ElementDefinition {
     }
   }
 
+  /**
+   * Fixes a Quantity to this element.
+   * @see {@link fixValue}
+   * @param {FshQuantity} value - the Quantity value to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
+   */
   fixFshQuantity(value: FshQuantity): void {
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError('Quantity');
@@ -808,6 +839,7 @@ export class ElementDefinition {
           found.value,
           new FshCode(found.code, found.system)
         );
+        // Check if the new quantity matches the current
         if (!value.equals(foundFshQuantity)) {
           throw new ValueAlreadyFixedError(
             value.toString(),
@@ -815,15 +847,28 @@ export class ElementDefinition {
             foundFshQuantity.toString()
           );
         }
+        // if they do match, there is nothing to do, so return
         return;
       }
-      this.fixFshCode(value.unit);
+      if (value.unit) {
+        this.fixFshCode(value.unit);
+      } else {
+        this.patternQuantity = {};
+      }
       this.patternQuantity.value = value.value;
     } else {
       throw new MismatchedTypeError('Quantity', value.toString(), type);
     }
   }
 
+  /**
+   * Fixes a Ratio to this element.
+   * @see {@link fixValue}
+   * @param {FshRatio} value - the Ratio value to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
+   */
   fixFshRatio(value: FshRatio): void {
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError('Ratio');
@@ -841,17 +886,23 @@ export class ElementDefinition {
           new FshCode(found.denominator?.code, found.denominator?.system)
         );
         const foundRatio = new FshRatio(foundNumerator, foundDenominator);
+        // Check if the new ratio matches the old
         if (!value.equals(foundRatio)) {
           throw new ValueAlreadyFixedError(value.toString(), 'Ratio', foundRatio.toString());
         }
+        // If they do match, there is nothing more to do, so return
+        return;
       }
+      // There is no existing patternRatio, so create it
       this.patternRatio = {};
       this.patternRatio.numerator = {};
       this.patternRatio.denominator = {};
       this.patternRatio.numerator.value = value.numerator.value;
       this.patternRatio.denominator.value = value.denominator.value;
+      // Unit is optional, so we need to check it
       if (value.numerator.unit) {
         this.patternRatio.numerator.code = value.numerator.unit.code;
+        // System is optional on unit, so we need to check it
         if (value.numerator.unit.system) {
           this.patternRatio.numerator.system = value.numerator.unit.system;
         }
