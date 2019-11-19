@@ -24,10 +24,10 @@ describe('FSHImporter', () => {
         expect(profile.parent).toBe('Observation');
         // if no id is explicitly set, should default to name
         expect(profile.id).toBe('ObservationProfile');
-        expect(profile.startLine).toBe(2);
-        expect(profile.startColumn).toBe(9);
-        expect(profile.endLine).toBe(3);
-        expect(profile.endColumn).toBe(27);
+        expect(profile.location.startLine).toBe(2);
+        expect(profile.location.startColumn).toBe(9);
+        expect(profile.location.endLine).toBe(3);
+        expect(profile.location.endColumn).toBe(27);
       });
 
       it('should parse profile with additional metadata properties', () => {
@@ -47,10 +47,10 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.startLine).toBe(2);
-        expect(profile.startColumn).toBe(9);
-        expect(profile.endLine).toBe(6);
-        expect(profile.endColumn).toBe(47);
+        expect(profile.location.startLine).toBe(2);
+        expect(profile.location.startColumn).toBe(9);
+        expect(profile.location.endLine).toBe(6);
+        expect(profile.location.endColumn).toBe(47);
       });
 
       it('should properly parse a multi-string description', () => {
@@ -459,7 +459,14 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'status', new FshCode('final'));
+        const expectedCode = new FshCode('final');
+        expectedCode.location = {
+          startLine: 6,
+          startColumn: 20,
+          endLine: 6,
+          endColumn: 25
+        };
+        assertFixedValueRule(profile.rules[0], 'status', expectedCode);
       });
 
       it('should parse fixed value CodeableConcept rule', () => {
@@ -474,11 +481,18 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueCodeableConcept',
-          new FshCode('718-7', 'http://loinc.org', 'Hemoglobin [Mass/volume] in Blood')
+        const expectedCode = new FshCode(
+          '718-7',
+          'http://loinc.org',
+          'Hemoglobin [Mass/volume] in Blood'
         );
+        expectedCode.location = {
+          startLine: 6,
+          startColumn: 34,
+          endLine: 6,
+          endColumn: 80
+        };
+        assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
       });
 
       it('should parse fixed value Quantity rule', () => {
@@ -492,11 +506,23 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueQuantity',
-          new FshQuantity(1.5, new FshCode('mm', 'http://unitsofmeasure.org'))
+        const expectedQuantity = new FshQuantity(
+          1.5,
+          new FshCode('mm', 'http://unitsofmeasure.org')
         );
+        expectedQuantity.location = {
+          startLine: 5,
+          startColumn: 27,
+          endLine: 5,
+          endColumn: 34
+        };
+        expectedQuantity.unit.location = {
+          startLine: 5,
+          startColumn: 31,
+          endLine: 5,
+          endColumn: 34
+        };
+        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
       it('should parse fixed value Ratio rule', () => {
@@ -510,14 +536,41 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(
-            new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
-            new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
-          )
+        const expectedRatio = new FshRatio(
+          new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
+          new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
         );
+        expectedRatio.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 40
+        };
+        expectedRatio.numerator.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 31
+        };
+        expectedRatio.numerator.unit.location = {
+          startLine: 5,
+          startColumn: 28,
+          endLine: 5,
+          endColumn: 31
+        };
+        expectedRatio.denominator.location = {
+          startLine: 5,
+          startColumn: 35,
+          endLine: 5,
+          endColumn: 40
+        };
+        expectedRatio.denominator.unit.location = {
+          startLine: 5,
+          startColumn: 37,
+          endLine: 5,
+          endColumn: 40
+        };
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse fixed value Ratio rule w/ numeric numerator', () => {
@@ -531,14 +584,35 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(
-            new FshQuantity(130),
-            new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
-          )
+        const expectedRatio = new FshRatio(
+          new FshQuantity(130),
+          new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
         );
+        expectedRatio.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 35
+        };
+        expectedRatio.numerator.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 26
+        };
+        expectedRatio.denominator.location = {
+          startLine: 5,
+          startColumn: 30,
+          endLine: 5,
+          endColumn: 35
+        };
+        expectedRatio.denominator.unit.location = {
+          startLine: 5,
+          startColumn: 32,
+          endLine: 5,
+          endColumn: 35
+        };
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse fixed value Ratio rule w/ numeric denominator', () => {
@@ -552,14 +626,35 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(
-            new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
-            new FshQuantity(1)
-          )
+        const expectedRatio = new FshRatio(
+          new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
+          new FshQuantity(1)
         );
+        expectedRatio.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 35
+        };
+        expectedRatio.numerator.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 31
+        };
+        expectedRatio.numerator.unit.location = {
+          startLine: 5,
+          startColumn: 28,
+          endLine: 5,
+          endColumn: 31
+        };
+        expectedRatio.denominator.location = {
+          startLine: 5,
+          startColumn: 35,
+          endLine: 5,
+          endColumn: 35
+        };
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse fixed value Ratio rule w/ numeric numerator and denominator', () => {
@@ -573,11 +668,26 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(new FshQuantity(130), new FshQuantity(1))
-        );
+        const expectedRatio = new FshRatio(new FshQuantity(130), new FshQuantity(1));
+        expectedRatio.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 30
+        };
+        expectedRatio.numerator.location = {
+          startLine: 5,
+          startColumn: 24,
+          endLine: 5,
+          endColumn: 26
+        };
+        expectedRatio.denominator.location = {
+          startLine: 5,
+          startColumn: 30,
+          endLine: 5,
+          endColumn: 30
+        };
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
     });
 

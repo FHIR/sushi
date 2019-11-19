@@ -1,19 +1,15 @@
 import { Rule } from './rules/Rule';
+import { FshEntity } from './FshEntity';
 
-export class Profile {
+export class Profile extends FshEntity {
   id: string;
   parent?: string;
   title?: string;
   description?: string;
   rules: Rule[];
 
-  constructor(
-    public name: string,
-    public startLine?: number,
-    public startColumn?: number,
-    public endLine?: number,
-    public endColumn?: number
-  ) {
+  constructor(public name: string) {
+    super();
     this.id = name; // init same as name
     this.rules = [];
   }

@@ -1,7 +1,7 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { FSHVisitor } from './generated/FSHVisitor';
-import { Profile, Extension, FshCode, FshQuantity, FshRatio } from '../fshtypes';
+import { Profile, Extension, FshCode, FshQuantity, FshRatio, TextLocation } from '../fshtypes';
 import {
   Rule,
   CardRule,
@@ -13,6 +13,7 @@ import {
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
+import { TerminalNode } from 'antlr4/tree/Tree';
 
 enum SdMetadataKey {
   Id,
@@ -86,13 +87,15 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitProfile(ctx: pc.ProfileContext) {
-    const profile = new Profile(ctx.SEQUENCE().getText(), ...this.extractStartStop(ctx));
+    const profile = new Profile(ctx.SEQUENCE().getText());
+    profile.location = this.extractStartStop(ctx);
     this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
     this.doc.profiles.set(profile.name, profile);
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
-    const extension = new Extension(ctx.SEQUENCE().getText(), ...this.extractStartStop(ctx));
+    const extension = new Extension(ctx.SEQUENCE().getText());
+    extension.location = this.extractStartStop(ctx);
     this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
     this.doc.extensions.set(extension.name, extension);
   }
@@ -185,6 +188,7 @@ export class FSHImporter extends FSHVisitor {
     const rules: (CardRule | FlagRule)[] = [];
 
     const cardRule = new CardRule(this.visitPath(ctx.path()));
+    cardRule.location = this.extractStartStop(ctx);
     const card = this.parseCard(ctx.CARD().getText());
     cardRule.min = card.min;
     cardRule.max = card.max;
@@ -192,6 +196,7 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.flag() && ctx.flag().length > 0) {
       const flagRule = new FlagRule(cardRule.path);
+      flagRule.location = this.extractStartStop(ctx);
       this.parseFlags(flagRule, ctx.flag());
       rules.push(flagRule);
     }
@@ -216,6 +221,7 @@ export class FSHImporter extends FSHVisitor {
 
     return paths.map(path => {
       const flagRule = new FlagRule(path);
+      flagRule.location = this.extractStartStop(ctx);
       this.parseFlags(flagRule, ctx.flag());
       return flagRule;
     });
@@ -247,6 +253,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitValueSetRule(ctx: pc.ValueSetRuleContext): ValueSetRule {
     const vsRule = new ValueSetRule(this.visitPath(ctx.path()));
+    vsRule.location = this.extractStartStop(ctx);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE().getText());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     return vsRule;
@@ -265,6 +272,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitFixedValueRule(ctx: pc.FixedValueRuleContext): FixedValueRule {
     const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()));
+    fixedValueRule.location = this.extractStartStop(ctx);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
     return fixedValueRule;
   }
@@ -315,6 +323,7 @@ export class FSHImporter extends FSHVisitor {
       .getText()
       .split('#', 2);
     const concept = new FshCode(code);
+    concept.location = this.extractStartStop(ctx);
     if (system && system.length > 0) {
       concept.system = this.aliasAwareValue(system);
     }
@@ -329,19 +338,26 @@ export class FSHImporter extends FSHVisitor {
     const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
     // the literal version of quantity always assumes UCUM code system
     const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org');
-    return new FshQuantity(value, unit);
+    unit.location = this.extractStartStop(ctx.UNIT());
+    const quantity = new FshQuantity(value, unit);
+    quantity.location = this.extractStartStop(ctx);
+    return quantity;
   }
 
   visitRatio(ctx: pc.RatioContext): FshRatio {
-    return new FshRatio(
+    const ratio = new FshRatio(
       this.visitRatioPart(ctx.ratioPart()[0]),
       this.visitRatioPart(ctx.ratioPart()[1])
     );
+    ratio.location = this.extractStartStop(ctx);
+    return ratio;
   }
 
   visitRatioPart(ctx: pc.RatioPartContext): FshQuantity {
     if (ctx.NUMBER()) {
-      return new FshQuantity(parseFloat(ctx.NUMBER().getText()));
+      const quantity = new FshQuantity(parseFloat(ctx.NUMBER().getText()));
+      quantity.location = this.extractStartStop(ctx.NUMBER());
+      return quantity;
     }
     return this.visitQuantity(ctx.quantity());
   }
@@ -363,6 +379,7 @@ export class FSHImporter extends FSHVisitor {
         onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE().getText()) });
       }
     });
+    onlyRule.location = this.extractStartStop(ctx);
     return onlyRule;
   }
 
@@ -409,12 +426,21 @@ export class FSHImporter extends FSHVisitor {
     return lines.map(l => (l.length >= minSpaces ? l.slice(minSpaces) : l)).join('\n');
   }
 
-  private extractStartStop(ctx: ParserRuleContext): [number, number, number, number] {
-    return [
-      ctx.start.line,
-      ctx.start.start,
-      ctx.stop.line,
-      ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
-    ];
+  private extractStartStop(ctx: ParserRuleContext): TextLocation {
+    if (ctx instanceof TerminalNode) {
+      return {
+        startLine: ctx.symbol.line,
+        startColumn: ctx.symbol.column + 1,
+        endLine: ctx.symbol.line,
+        endColumn: ctx.symbol.stop - ctx.symbol.start + ctx.symbol.column + 1
+      };
+    } else {
+      return {
+        startLine: ctx.start.line,
+        startColumn: ctx.start.column + 1,
+        endLine: ctx.stop.line,
+        endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
+      };
+    }
   }
 }
