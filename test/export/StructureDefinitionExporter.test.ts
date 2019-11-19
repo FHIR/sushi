@@ -41,6 +41,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
     expect(exported.type).toBe('Observation');
+    expect(exported.derivation).toBe('constraint');
   });
 
   it('should not overwrite metadata that is not given for a profile', () => {
@@ -53,6 +54,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.description).toBe('This is the base resource type for everything.');
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
     expect(exported.type).toBe('Resource');
+    expect(exported.derivation).toBe('constraint');
   });
 
   it('should throw ParentNotDefinedError when parent resource is not found', () => {
@@ -78,6 +80,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
     expect(exported.type).toBe('Extension');
+    expect(exported.derivation).toBe('constraint');
   });
 
   it('should not overwrite metadata that is not given for an extension', () => {
@@ -92,6 +95,7 @@ describe('StructureDefinitionExporter', () => {
     );
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
     expect(exported.type).toBe('Extension');
+    expect(exported.derivation).toBe('constraint');
   });
 
   it('should throw ParentNotDefinedError when parent extension is not found', () => {

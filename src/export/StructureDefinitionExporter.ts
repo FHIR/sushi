@@ -30,6 +30,9 @@ export class StructureDefinitionExporter {
     structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
+    if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
+      structDef.derivation = 'constraint';
+    }
   }
 
   /**

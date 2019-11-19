@@ -48,6 +48,7 @@ export class StructureDefinition {
   contextInvariant: string[];
   type: string;
   baseDefinition: string;
+  derivation: 'specialization' | 'constraint';
 
   /**
    * The StructureDefinition's elements.  The returned array should not be pushed to directly.  Instead, use
@@ -246,9 +247,6 @@ export class StructureDefinition {
         j[prop] = cloneDeep(this[prop]);
       }
     }
-
-    // Now handle derivation
-    j.derivation = 'constraint';
 
     // Now handle snapshot and differential
     j.snapshot = { element: this.elements.map(e => e.toJSON()) };
@@ -488,5 +486,6 @@ const PROPS = [
   'context',
   'contextInvariant',
   'type',
-  'baseDefinition'
+  'baseDefinition',
+  'derivation'
 ];
