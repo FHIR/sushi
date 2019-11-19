@@ -41,6 +41,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
     expect(exported.type).toBe('Observation');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
     expect(exported.derivation).toBe('constraint');
   });
 
@@ -54,6 +55,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.description).toBe('This is the base resource type for everything.');
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
     expect(exported.type).toBe('Resource');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
     expect(exported.derivation).toBe('constraint');
   });
 
@@ -80,6 +82,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
     expect(exported.type).toBe('Extension');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
     expect(exported.derivation).toBe('constraint');
   });
 
@@ -95,6 +98,7 @@ describe('StructureDefinitionExporter', () => {
     );
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
     expect(exported.type).toBe('Extension');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
     expect(exported.derivation).toBe('constraint');
   });
 
