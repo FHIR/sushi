@@ -81,6 +81,14 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.title).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
+    // NOTE: For now, we always set context to everything, but this will be user-specified in
+    // the future
+    expect(exported.context).toEqual([
+      {
+        type: 'element',
+        expression: 'Element'
+      }
+    ]);
     expect(exported.type).toBe('Extension');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
     expect(exported.derivation).toBe('constraint');
@@ -97,9 +105,34 @@ describe('StructureDefinitionExporter', () => {
       'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.'
     );
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
+    // NOTE: For now, we always set context to everything, but this will be user-specified in
+    // the future
+    expect(exported.context).toEqual([
+      {
+        type: 'element',
+        expression: 'Element'
+      }
+    ]);
     expect(exported.type).toBe('Extension');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
     expect(exported.derivation).toBe('constraint');
+  });
+
+  it('should not hardcode in the default context if parent already had a context', () => {
+    // NOTE: This is a temporary test to ensure that we don't overwrite a valid context with our
+    // "default" context.  In the (near) future, however, we should do away with our default
+    // context and make context user-specified, in which case it should override the parent's
+    // context.
+    const extension = new Extension('Foo');
+    extension.parent = 'http://hl7.org/fhir/StructureDefinition/patient-animal';
+    doc.extensions.set(extension.name, extension);
+    const exported = exporter.exportStructDef(extension, input);
+    expect(exported.context).toEqual([
+      {
+        type: 'element',
+        expression: 'Patient'
+      }
+    ]);
   });
 
   it('should throw ParentNotDefinedError when parent extension is not found', () => {

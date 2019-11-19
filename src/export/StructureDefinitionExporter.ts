@@ -35,8 +35,20 @@ export class StructureDefinitionExporter {
     // Now re-assign the URL based on canonical and id
     structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
     // Set the derivation as appropriate
-    if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
+    if (fshDefinition instanceof Profile) {
       structDef.derivation = 'constraint';
+    } else if (fshDefinition instanceof Extension) {
+      structDef.derivation = 'constraint';
+      if (structDef.context == null) {
+        // NOTE: For now, we always set context to everything, but this will be user-specified
+        // in the future
+        structDef.context = [
+          {
+            type: 'element',
+            expression: 'Element'
+          }
+        ];
+      }
     }
   }
 
