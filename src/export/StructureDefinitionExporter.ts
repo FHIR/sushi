@@ -27,9 +27,29 @@ export class StructureDefinitionExporter {
   ): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
-    structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
+    // Assuming the starting StructureDefinition was a clone of the parent,
+    // set the baseDefinition to the parent url before re-assiging the url
+    structDef.baseDefinition = structDef.url;
+    // Now re-assign the URL based on canonical and id
+    structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
+    // Set the derivation as appropriate
+    if (fshDefinition instanceof Profile) {
+      structDef.derivation = 'constraint';
+    } else if (fshDefinition instanceof Extension) {
+      structDef.derivation = 'constraint';
+      if (structDef.context == null) {
+        // NOTE: For now, we always set context to everything, but this will be user-specified
+        // in the future
+        structDef.context = [
+          {
+            type: 'element',
+            expression: 'Element'
+          }
+        ];
+      }
+    }
   }
 
   /**
