@@ -87,15 +87,17 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitProfile(ctx: pc.ProfileContext) {
-    const profile = new Profile(ctx.SEQUENCE().getText());
-    profile.location = this.extractStartStop(ctx);
+    const profile = new Profile(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
     this.doc.profiles.set(profile.name, profile);
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
-    const extension = new Extension(ctx.SEQUENCE().getText());
-    extension.location = this.extractStartStop(ctx);
+    const extension = new Extension(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
     this.doc.extensions.set(extension.name, extension);
   }
@@ -187,16 +189,18 @@ export class FSHImporter extends FSHVisitor {
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
     const rules: (CardRule | FlagRule)[] = [];
 
-    const cardRule = new CardRule(this.visitPath(ctx.path()));
-    cardRule.location = this.extractStartStop(ctx);
+    const cardRule = new CardRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     const card = this.parseCard(ctx.CARD().getText());
     cardRule.min = card.min;
     cardRule.max = card.max;
     rules.push(cardRule);
 
     if (ctx.flag() && ctx.flag().length > 0) {
-      const flagRule = new FlagRule(cardRule.path);
-      flagRule.location = this.extractStartStop(ctx);
+      const flagRule = new FlagRule(cardRule.path)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.file);
       this.parseFlags(flagRule, ctx.flag());
       rules.push(flagRule);
     }
@@ -220,8 +224,9 @@ export class FSHImporter extends FSHVisitor {
     }
 
     return paths.map(path => {
-      const flagRule = new FlagRule(path);
-      flagRule.location = this.extractStartStop(ctx);
+      const flagRule = new FlagRule(path)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.file);
       this.parseFlags(flagRule, ctx.flag());
       return flagRule;
     });
@@ -252,8 +257,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSetRule(ctx: pc.ValueSetRuleContext): ValueSetRule {
-    const vsRule = new ValueSetRule(this.visitPath(ctx.path()));
-    vsRule.location = this.extractStartStop(ctx);
+    const vsRule = new ValueSetRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE().getText());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     return vsRule;
@@ -271,8 +277,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFixedValueRule(ctx: pc.FixedValueRuleContext): FixedValueRule {
-    const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()));
-    fixedValueRule.location = this.extractStartStop(ctx);
+    const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
     return fixedValueRule;
   }
@@ -322,8 +329,7 @@ export class FSHImporter extends FSHVisitor {
       .CODE()
       .getText()
       .split('#', 2);
-    const concept = new FshCode(code);
-    concept.location = this.extractStartStop(ctx);
+    const concept = new FshCode(code).withLocation(this.extractStartStop(ctx)).withFile(this.file);
     if (system && system.length > 0) {
       concept.system = this.aliasAwareValue(system);
     }
@@ -337,10 +343,12 @@ export class FSHImporter extends FSHVisitor {
     const value = parseFloat(ctx.NUMBER().getText());
     const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
     // the literal version of quantity always assumes UCUM code system
-    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org');
-    unit.location = this.extractStartStop(ctx.UNIT());
-    const quantity = new FshQuantity(value, unit);
-    quantity.location = this.extractStartStop(ctx);
+    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org')
+      .withLocation(this.extractStartStop(ctx.UNIT()))
+      .withFile(this.file);
+    const quantity = new FshQuantity(value, unit)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     return quantity;
   }
 
@@ -348,15 +356,17 @@ export class FSHImporter extends FSHVisitor {
     const ratio = new FshRatio(
       this.visitRatioPart(ctx.ratioPart()[0]),
       this.visitRatioPart(ctx.ratioPart()[1])
-    );
-    ratio.location = this.extractStartStop(ctx);
+    )
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     return ratio;
   }
 
   visitRatioPart(ctx: pc.RatioPartContext): FshQuantity {
     if (ctx.NUMBER()) {
-      const quantity = new FshQuantity(parseFloat(ctx.NUMBER().getText()));
-      quantity.location = this.extractStartStop(ctx.NUMBER());
+      const quantity = new FshQuantity(parseFloat(ctx.NUMBER().getText()))
+        .withLocation(this.extractStartStop(ctx.NUMBER()))
+        .withFile(this.file);
       return quantity;
     }
     return this.visitQuantity(ctx.quantity());
@@ -367,7 +377,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitOnlyRule(ctx: pc.OnlyRuleContext): OnlyRule {
-    const onlyRule = new OnlyRule(this.visitPath(ctx.path()));
+    const onlyRule = new OnlyRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     ctx.targetType().forEach(t => {
       if (t.REFERENCE()) {
         const text = t.REFERENCE().getText();
@@ -379,7 +391,6 @@ export class FSHImporter extends FSHVisitor {
         onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE().getText()) });
       }
     });
-    onlyRule.location = this.extractStartStop(ctx);
     return onlyRule;
   }
 

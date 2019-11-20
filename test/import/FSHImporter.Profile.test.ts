@@ -17,17 +17,20 @@ describe('FSHImporter', () => {
         Parent: Observation
         `;
 
-        const result = importText(input);
+        const result = importText(input, 'Simple.fsh');
         expect(result.profiles.size).toBe(1);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.name).toBe('ObservationProfile');
         expect(profile.parent).toBe('Observation');
         // if no id is explicitly set, should default to name
         expect(profile.id).toBe('ObservationProfile');
-        expect(profile.location.startLine).toBe(2);
-        expect(profile.location.startColumn).toBe(9);
-        expect(profile.location.endLine).toBe(3);
-        expect(profile.location.endColumn).toBe(27);
+        expect(profile.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 27
+        });
+        expect(profile.sourceInfo.file).toBe('Simple.fsh');
       });
 
       it('should parse profile with additional metadata properties', () => {
@@ -47,10 +50,12 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.location.startLine).toBe(2);
-        expect(profile.location.startColumn).toBe(9);
-        expect(profile.location.endLine).toBe(6);
-        expect(profile.location.endColumn).toBe(47);
+        expect(profile.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 6,
+          endColumn: 47
+        });
       });
 
       it('should properly parse a multi-string description', () => {
@@ -459,13 +464,7 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        const expectedCode = new FshCode('final');
-        expectedCode.location = {
-          startLine: 6,
-          startColumn: 20,
-          endLine: 6,
-          endColumn: 25
-        };
+        const expectedCode = new FshCode('final').withLocation([6, 20, 6, 25]).withFile('');
         assertFixedValueRule(profile.rules[0], 'status', expectedCode);
       });
 
@@ -485,13 +484,9 @@ describe('FSHImporter', () => {
           '718-7',
           'http://loinc.org',
           'Hemoglobin [Mass/volume] in Blood'
-        );
-        expectedCode.location = {
-          startLine: 6,
-          startColumn: 34,
-          endLine: 6,
-          endColumn: 80
-        };
+        )
+          .withLocation([6, 34, 6, 80])
+          .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
       });
 
@@ -508,20 +503,10 @@ describe('FSHImporter', () => {
         expect(profile.rules).toHaveLength(1);
         const expectedQuantity = new FshQuantity(
           1.5,
-          new FshCode('mm', 'http://unitsofmeasure.org')
-        );
-        expectedQuantity.location = {
-          startLine: 5,
-          startColumn: 27,
-          endLine: 5,
-          endColumn: 34
-        };
-        expectedQuantity.unit.location = {
-          startLine: 5,
-          startColumn: 31,
-          endLine: 5,
-          endColumn: 34
-        };
+          new FshCode('mm', 'http://unitsofmeasure.org').withLocation([5, 31, 5, 34]).withFile('')
+        )
+          .withLocation([5, 27, 5, 34])
+          .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
@@ -537,39 +522,21 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedRatio = new FshRatio(
-          new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
-          new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
-        );
-        expectedRatio.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 40
-        };
-        expectedRatio.numerator.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 31
-        };
-        expectedRatio.numerator.unit.location = {
-          startLine: 5,
-          startColumn: 28,
-          endLine: 5,
-          endColumn: 31
-        };
-        expectedRatio.denominator.location = {
-          startLine: 5,
-          startColumn: 35,
-          endLine: 5,
-          endColumn: 40
-        };
-        expectedRatio.denominator.unit.location = {
-          startLine: 5,
-          startColumn: 37,
-          endLine: 5,
-          endColumn: 40
-        };
+          new FshQuantity(
+            130,
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 28, 5, 31]).withFile('')
+          )
+            .withLocation([5, 24, 5, 31])
+            .withFile(''),
+          new FshQuantity(
+            1,
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 37, 5, 40]).withFile('')
+          )
+            .withLocation([5, 35, 5, 40])
+            .withFile('')
+        )
+          .withLocation([5, 24, 5, 40])
+          .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
@@ -585,33 +552,16 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedRatio = new FshRatio(
-          new FshQuantity(130),
-          new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
-        );
-        expectedRatio.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 35
-        };
-        expectedRatio.numerator.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 26
-        };
-        expectedRatio.denominator.location = {
-          startLine: 5,
-          startColumn: 30,
-          endLine: 5,
-          endColumn: 35
-        };
-        expectedRatio.denominator.unit.location = {
-          startLine: 5,
-          startColumn: 32,
-          endLine: 5,
-          endColumn: 35
-        };
+          new FshQuantity(130).withLocation([5, 24, 5, 26]).withFile(''),
+          new FshQuantity(
+            1,
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 32, 5, 35]).withFile('')
+          )
+            .withLocation([5, 30, 5, 35])
+            .withFile('')
+        )
+          .withLocation([5, 24, 5, 35])
+          .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
@@ -627,33 +577,16 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedRatio = new FshRatio(
-          new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
-          new FshQuantity(1)
-        );
-        expectedRatio.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 35
-        };
-        expectedRatio.numerator.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 31
-        };
-        expectedRatio.numerator.unit.location = {
-          startLine: 5,
-          startColumn: 28,
-          endLine: 5,
-          endColumn: 31
-        };
-        expectedRatio.denominator.location = {
-          startLine: 5,
-          startColumn: 35,
-          endLine: 5,
-          endColumn: 35
-        };
+          new FshQuantity(
+            130,
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 28, 5, 31]).withFile('')
+          )
+            .withLocation([5, 24, 5, 31])
+            .withFile(''),
+          new FshQuantity(1).withLocation([5, 35, 5, 35]).withFile('')
+        )
+          .withLocation([5, 24, 5, 35])
+          .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
@@ -668,25 +601,12 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        const expectedRatio = new FshRatio(new FshQuantity(130), new FshQuantity(1));
-        expectedRatio.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 30
-        };
-        expectedRatio.numerator.location = {
-          startLine: 5,
-          startColumn: 24,
-          endLine: 5,
-          endColumn: 26
-        };
-        expectedRatio.denominator.location = {
-          startLine: 5,
-          startColumn: 30,
-          endLine: 5,
-          endColumn: 30
-        };
+        const expectedRatio = new FshRatio(
+          new FshQuantity(130).withLocation([5, 24, 5, 26]).withFile(''),
+          new FshQuantity(1).withLocation([5, 30, 5, 30]).withFile('')
+        )
+          .withLocation([5, 24, 5, 30])
+          .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
     });
