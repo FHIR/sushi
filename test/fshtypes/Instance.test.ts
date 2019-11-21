@@ -8,6 +8,7 @@ describe('Instance', () => {
       expect(p.name).toBe('MyInstance');
       expect(p.id).toBe('MyInstance');
       expect(p.instanceOf).toBeUndefined();
+      expect(p.title).toBeUndefined();
       expect(p.rules).toBeEmpty();
     });
   });
