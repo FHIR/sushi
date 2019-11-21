@@ -6,7 +6,8 @@ import {
   FixedValueRule,
   FixedValueType,
   OnlyRule,
-  OnlyRuleType
+  OnlyRuleType,
+  ContainsRule
 } from '../../src/fshtypes/rules';
 
 export function assertCardRule(rule: Rule, path: string, min: number, max: number | string): void {
@@ -57,4 +58,12 @@ export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[
   const onlyRule = rule as OnlyRule;
   expect(onlyRule.path).toBe(path);
   expect(onlyRule.types).toEqual(types);
+}
+
+export function assertContainsRule(rule: Rule, path: string, ...sliceNames: string[]): void {
+  expect(rule).toBeInstanceOf(ContainsRule);
+  const containsRule = rule as ContainsRule;
+  expect(containsRule.path).toBe(path);
+
+  expect(containsRule.sliceNames).toEqual(sliceNames);
 }

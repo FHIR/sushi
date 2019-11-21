@@ -9,7 +9,8 @@ import {
   ValueSetRule,
   FixedValueRule,
   FixedValueType,
-  OnlyRule
+  OnlyRule,
+  ContainsRule
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -170,6 +171,8 @@ export class FSHImporter extends FSHVisitor {
       return [this.visitFixedValueRule(ctx.fixedValueRule())];
     } else if (ctx.onlyRule()) {
       return [this.visitOnlyRule(ctx.onlyRule())];
+    } else if (ctx.containsRule()) {
+      return this.visitContainsRule(ctx.containsRule());
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`);
     return [];
@@ -392,6 +395,30 @@ export class FSHImporter extends FSHVisitor {
       }
     });
     return onlyRule;
+  }
+
+  visitContainsRule(ctx: pc.ContainsRuleContext): (ContainsRule | CardRule | FlagRule)[] {
+    const rules: (ContainsRule | CardRule | FlagRule)[] = [];
+    const containsRule = new ContainsRule(this.visitPath(ctx.path()));
+
+    rules.push(containsRule);
+    ctx.item().forEach(i => {
+      const sliceName = i.SEQUENCE().getText();
+      containsRule.sliceNames.push(sliceName);
+
+      const cardRule = new CardRule(`${containsRule.path}[${sliceName}]`);
+      const card = this.parseCard(i.CARD().getText());
+      cardRule.min = card.min;
+      cardRule.max = card.max;
+      rules.push(cardRule);
+
+      if (i.flag() && i.flag().length > 0) {
+        const flagRule = new FlagRule(`${containsRule.path}[${sliceName}]`);
+        this.parseFlags(flagRule, i.flag());
+        rules.push(flagRule);
+      }
+    });
+    return rules;
   }
 
   private aliasAwareValue(value: string): string {
