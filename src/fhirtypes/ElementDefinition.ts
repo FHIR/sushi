@@ -978,7 +978,7 @@ export class ElementDefinition {
         });
       if (!fixedToSame) {
         const found = this.patternCodeableConcept.coding[0];
-        throw new CodeAlreadyFixedError({ code: found.code, system: found.system }, code);
+        throw new CodeAlreadyFixedError(new FshCode(found.code, found.system), code);
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1009,7 +1009,7 @@ export class ElementDefinition {
     if (this.patternCoding) {
       if (this.patternCoding.code != code.code || this.patternCoding.system != code.system) {
         const found = this.patternCoding;
-        throw new CodeAlreadyFixedError({ code: found.code, system: found.system }, code);
+        throw new CodeAlreadyFixedError(new FshCode(found.code, found.system), code);
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1037,7 +1037,7 @@ export class ElementDefinition {
     if (this.patternQuantity) {
       if (this.patternQuantity.code != code.code || this.patternQuantity.system != code.system) {
         const found = this.patternQuantity;
-        throw new CodeAlreadyFixedError({ code: found.code, system: found.system }, code);
+        throw new CodeAlreadyFixedError(new FshCode(found.code, found.system), code);
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1063,7 +1063,7 @@ export class ElementDefinition {
     // Check if this is already fixed to something else
     if (this.fixedCode) {
       if (this.fixedCode != code.code) {
-        throw new CodeAlreadyFixedError({ code: this.fixedCode }, code);
+        throw new CodeAlreadyFixedError(new FshCode(this.fixedCode), code);
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1083,7 +1083,7 @@ export class ElementDefinition {
     // Check if this is already fixed to something else
     if (this.fixedString) {
       if (this.fixedString != code.code) {
-        throw new CodeAlreadyFixedError({ code: this.fixedString }, code);
+        throw new CodeAlreadyFixedError(new FshCode(this.fixedString), code);
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1103,7 +1103,7 @@ export class ElementDefinition {
     // Check if this is already fixed to something else
     if (this.fixedUri) {
       if (this.fixedUri != code.code) {
-        throw new CodeAlreadyFixedError({ code: this.fixedUri }, code);
+        throw new CodeAlreadyFixedError(new FshCode(this.fixedUri), code);
       }
       // It's already fixed, so there is nothing to do
       return;

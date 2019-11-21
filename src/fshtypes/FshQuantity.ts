@@ -1,7 +1,10 @@
 import { FshCode } from './FshCode';
+import { FshEntity } from './FshEntity';
 
-export class FshQuantity {
-  constructor(public value: number, public unit?: FshCode) {}
+export class FshQuantity extends FshEntity {
+  constructor(public value: number, public unit?: FshCode) {
+    super();
+  }
 
   toString() {
     let str = this.value.toString();

@@ -17,13 +17,20 @@ describe('FSHImporter', () => {
         Parent: Observation
         `;
 
-        const result = importText(input);
+        const result = importText(input, 'Simple.fsh');
         expect(result.profiles.size).toBe(1);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.name).toBe('ObservationProfile');
         expect(profile.parent).toBe('Observation');
         // if no id is explicitly set, should default to name
         expect(profile.id).toBe('ObservationProfile');
+        expect(profile.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 27
+        });
+        expect(profile.sourceInfo.file).toBe('Simple.fsh');
       });
 
       it('should parse profile with additional metadata properties', () => {
@@ -43,6 +50,12 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
+        expect(profile.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 6,
+          endColumn: 47
+        });
       });
 
       it('should properly parse a multi-string description', () => {
@@ -451,7 +464,8 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'status', new FshCode('final'));
+        const expectedCode = new FshCode('final').withLocation([6, 20, 6, 25]).withFile('');
+        assertFixedValueRule(profile.rules[0], 'status', expectedCode);
       });
 
       it('should parse fixed value CodeableConcept rule', () => {
@@ -466,11 +480,14 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueCodeableConcept',
-          new FshCode('718-7', 'http://loinc.org', 'Hemoglobin [Mass/volume] in Blood')
-        );
+        const expectedCode = new FshCode(
+          '718-7',
+          'http://loinc.org',
+          'Hemoglobin [Mass/volume] in Blood'
+        )
+          .withLocation([6, 34, 6, 80])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
       });
 
       it('should parse fixed value Quantity rule', () => {
@@ -484,11 +501,13 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueQuantity',
-          new FshQuantity(1.5, new FshCode('mm', 'http://unitsofmeasure.org'))
-        );
+        const expectedQuantity = new FshQuantity(
+          1.5,
+          new FshCode('mm', 'http://unitsofmeasure.org').withLocation([5, 31, 5, 34]).withFile('')
+        )
+          .withLocation([5, 27, 5, 34])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
       it('should parse fixed value Ratio rule', () => {
@@ -502,14 +521,23 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(
-            new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
-            new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
+        const expectedRatio = new FshRatio(
+          new FshQuantity(
+            130,
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 28, 5, 31]).withFile('')
           )
-        );
+            .withLocation([5, 24, 5, 31])
+            .withFile(''),
+          new FshQuantity(
+            1,
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 37, 5, 40]).withFile('')
+          )
+            .withLocation([5, 35, 5, 40])
+            .withFile('')
+        )
+          .withLocation([5, 24, 5, 40])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse fixed value Ratio rule w/ numeric numerator', () => {
@@ -523,14 +551,18 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(
-            new FshQuantity(130),
-            new FshQuantity(1, new FshCode('dL', 'http://unitsofmeasure.org'))
+        const expectedRatio = new FshRatio(
+          new FshQuantity(130).withLocation([5, 24, 5, 26]).withFile(''),
+          new FshQuantity(
+            1,
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 32, 5, 35]).withFile('')
           )
-        );
+            .withLocation([5, 30, 5, 35])
+            .withFile('')
+        )
+          .withLocation([5, 24, 5, 35])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse fixed value Ratio rule w/ numeric denominator', () => {
@@ -544,14 +576,18 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(
-            new FshQuantity(130, new FshCode('mg', 'http://unitsofmeasure.org')),
-            new FshQuantity(1)
+        const expectedRatio = new FshRatio(
+          new FshQuantity(
+            130,
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 28, 5, 31]).withFile('')
           )
-        );
+            .withLocation([5, 24, 5, 31])
+            .withFile(''),
+          new FshQuantity(1).withLocation([5, 35, 5, 35]).withFile('')
+        )
+          .withLocation([5, 24, 5, 35])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse fixed value Ratio rule w/ numeric numerator and denominator', () => {
@@ -565,11 +601,13 @@ describe('FSHImporter', () => {
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(
-          profile.rules[0],
-          'valueRatio',
-          new FshRatio(new FshQuantity(130), new FshQuantity(1))
-        );
+        const expectedRatio = new FshRatio(
+          new FshQuantity(130).withLocation([5, 24, 5, 26]).withFile(''),
+          new FshQuantity(1).withLocation([5, 30, 5, 30]).withFile('')
+        )
+          .withLocation([5, 24, 5, 30])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
     });
 

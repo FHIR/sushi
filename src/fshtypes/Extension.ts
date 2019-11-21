@@ -1,6 +1,7 @@
 import { Rule } from './rules/Rule';
+import { FshEntity } from './FshEntity';
 
-export class Extension {
+export class Extension extends FshEntity {
   id: string;
   parent: string;
   title?: string;
@@ -8,6 +9,7 @@ export class Extension {
   rules: Rule[];
 
   constructor(public name: string) {
+    super();
     // Init id to be same as name.  This can be overridden using FSH syntax (Id: keyword)
     this.id = name;
     // Init the parent to 'Extension', as this is what 99% of extensions do.

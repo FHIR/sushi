@@ -22,6 +22,12 @@ describe('FSHImporter', () => {
         expect(extension.parent).toBe('Extension');
         // if no id is explicitly set, should default to name
         expect(extension.id).toBe('SomeExtension');
+        expect(extension.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 2,
+          endColumn: 32
+        });
       });
 
       it('should parse profile with additional metadata properties', () => {
@@ -41,6 +47,12 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
+        expect(extension.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 6,
+          endColumn: 48
+        });
       });
     });
 

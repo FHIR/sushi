@@ -1,7 +1,7 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { FSHVisitor } from './generated/FSHVisitor';
-import { Profile, Extension, FshCode, FshQuantity, FshRatio } from '../fshtypes';
+import { Profile, Extension, FshCode, FshQuantity, FshRatio, TextLocation } from '../fshtypes';
 import {
   Rule,
   CardRule,
@@ -13,6 +13,7 @@ import {
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
+import { TerminalNode } from 'antlr4/tree/Tree';
 
 enum SdMetadataKey {
   Id,
@@ -86,13 +87,17 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitProfile(ctx: pc.ProfileContext) {
-    const profile = new Profile(ctx.SEQUENCE().getText());
+    const profile = new Profile(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
     this.doc.profiles.set(profile.name, profile);
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
-    const extension = new Extension(ctx.SEQUENCE().getText());
+    const extension = new Extension(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
     this.doc.extensions.set(extension.name, extension);
   }
@@ -184,14 +189,18 @@ export class FSHImporter extends FSHVisitor {
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
     const rules: (CardRule | FlagRule)[] = [];
 
-    const cardRule = new CardRule(this.visitPath(ctx.path()));
+    const cardRule = new CardRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     const card = this.parseCard(ctx.CARD().getText());
     cardRule.min = card.min;
     cardRule.max = card.max;
     rules.push(cardRule);
 
     if (ctx.flag() && ctx.flag().length > 0) {
-      const flagRule = new FlagRule(cardRule.path);
+      const flagRule = new FlagRule(cardRule.path)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.file);
       this.parseFlags(flagRule, ctx.flag());
       rules.push(flagRule);
     }
@@ -215,7 +224,9 @@ export class FSHImporter extends FSHVisitor {
     }
 
     return paths.map(path => {
-      const flagRule = new FlagRule(path);
+      const flagRule = new FlagRule(path)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.file);
       this.parseFlags(flagRule, ctx.flag());
       return flagRule;
     });
@@ -246,7 +257,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSetRule(ctx: pc.ValueSetRuleContext): ValueSetRule {
-    const vsRule = new ValueSetRule(this.visitPath(ctx.path()));
+    const vsRule = new ValueSetRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE().getText());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     return vsRule;
@@ -264,7 +277,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFixedValueRule(ctx: pc.FixedValueRuleContext): FixedValueRule {
-    const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()));
+    const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
     return fixedValueRule;
   }
@@ -314,7 +329,7 @@ export class FSHImporter extends FSHVisitor {
       .CODE()
       .getText()
       .split('#', 2);
-    const concept = new FshCode(code);
+    const concept = new FshCode(code).withLocation(this.extractStartStop(ctx)).withFile(this.file);
     if (system && system.length > 0) {
       concept.system = this.aliasAwareValue(system);
     }
@@ -328,20 +343,31 @@ export class FSHImporter extends FSHVisitor {
     const value = parseFloat(ctx.NUMBER().getText());
     const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
     // the literal version of quantity always assumes UCUM code system
-    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org');
-    return new FshQuantity(value, unit);
+    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org')
+      .withLocation(this.extractStartStop(ctx.UNIT()))
+      .withFile(this.file);
+    const quantity = new FshQuantity(value, unit)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
+    return quantity;
   }
 
   visitRatio(ctx: pc.RatioContext): FshRatio {
-    return new FshRatio(
+    const ratio = new FshRatio(
       this.visitRatioPart(ctx.ratioPart()[0]),
       this.visitRatioPart(ctx.ratioPart()[1])
-    );
+    )
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
+    return ratio;
   }
 
   visitRatioPart(ctx: pc.RatioPartContext): FshQuantity {
     if (ctx.NUMBER()) {
-      return new FshQuantity(parseFloat(ctx.NUMBER().getText()));
+      const quantity = new FshQuantity(parseFloat(ctx.NUMBER().getText()))
+        .withLocation(this.extractStartStop(ctx.NUMBER()))
+        .withFile(this.file);
+      return quantity;
     }
     return this.visitQuantity(ctx.quantity());
   }
@@ -351,7 +377,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitOnlyRule(ctx: pc.OnlyRuleContext): OnlyRule {
-    const onlyRule = new OnlyRule(this.visitPath(ctx.path()));
+    const onlyRule = new OnlyRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
     ctx.targetType().forEach(t => {
       if (t.REFERENCE()) {
         const text = t.REFERENCE().getText();
@@ -407,5 +435,23 @@ export class FSHImporter extends FSHVisitor {
 
     // consistently remove the common leading spaces and join the lines back together
     return lines.map(l => (l.length >= minSpaces ? l.slice(minSpaces) : l)).join('\n');
+  }
+
+  private extractStartStop(ctx: ParserRuleContext): TextLocation {
+    if (ctx instanceof TerminalNode) {
+      return {
+        startLine: ctx.symbol.line,
+        startColumn: ctx.symbol.column + 1,
+        endLine: ctx.symbol.line,
+        endColumn: ctx.symbol.stop - ctx.symbol.start + ctx.symbol.column + 1
+      };
+    } else {
+      return {
+        startLine: ctx.start.line,
+        startColumn: ctx.start.column + 1,
+        endLine: ctx.stop.line,
+        endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
+      };
+    }
   }
 }

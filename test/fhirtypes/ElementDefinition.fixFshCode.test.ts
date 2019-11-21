@@ -17,8 +17,8 @@ describe('ElementDefinition', () => {
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
-    fooBarCode = { code: 'bar', system: 'http://foo.com' };
-    barFooCode = { code: 'foo', system: 'http://bar.com' };
+    fooBarCode = new FshCode('bar', 'http://foo.com');
+    barFooCode = new FshCode('foo', 'http://bar.com');
   });
 
   describe('#fixFshCode()', () => {
