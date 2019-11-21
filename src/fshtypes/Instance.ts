@@ -1,10 +1,11 @@
-import { Rule } from './rules/Rule';
+import { FixedValueRule } from './rules';
 import { FshEntity } from './FshEntity';
 
 export class Instance extends FshEntity {
   id: string;
+  title?: string;
   instanceOf: string;
-  rules: Rule[];
+  rules: FixedValueRule[];
 
   constructor(public name: string) {
     super();
