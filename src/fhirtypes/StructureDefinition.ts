@@ -4,6 +4,7 @@ import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDe
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
+import { FixedValueType } from '..//fshtypes/rules';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -126,7 +127,7 @@ export class StructureDefinition {
   /**
    * Finds an element by a FSH-compatible path
    * @param {string} path - The FSH path
-   * @param {resolve} ResolveFn - a function that can resolve a type to a StructureDefinition instance
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    * @returns {ElementDefinition} - The found element (or undefined if it is not found)
    */
   findElementByPath(path: string, resolve: ResolveFn = () => undefined): ElementDefinition {
@@ -285,6 +286,53 @@ export class StructureDefinition {
     // Keep a clone of the base structure definition for comparison once rules are applied
     sd._baseStructureDefinition = cloneDeep(sd);
     return sd;
+  }
+
+  /**
+   * This function tests if it is possible to fix value to path, but does not actually fix it
+   * @param {string} path - The path to the ElementDefinition to fix
+   * @param {FixedValueType} value - The value to fix
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @returns {boolean} - True if the value can be fixed without error
+   */
+  canFixValue(path: string, value: FixedValueType, resolve: ResolveFn = () => undefined): boolean {
+    const pathParts = this.parseFSHPath(path);
+    let currentPath = '';
+    let currentElement: ElementDefinition;
+    for (const pathPart of pathParts) {
+      // construct the path up to this point
+      currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
+      // we can (maybe?) assume that if we are indexing with a number, it is the last []
+      let arrayIndex: number;
+      const lastBracket = pathPart.brackets?.slice(-1)[0];
+      if (/[0]|[-+]?[1-9][0-9]*/.test(lastBracket)) {
+        // If it is a number, add all bracket info besides it back to path
+        pathPart.brackets.slice(0, -1).forEach(p => (currentPath += `[${p}]`));
+        arrayIndex = parseInt(lastBracket);
+      } else {
+        // If it is not a number, then add all bracket info back to path
+        pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
+      }
+      // we want to ignore numerical indexing, but retain slicing information in brackets
+      currentElement = this.findElementByPath(currentPath, resolve);
+      if (
+        !currentElement ||
+        currentElement.max === '0' ||
+        (arrayIndex != null && currentElement.max !== '*')
+      ) {
+        // no current element, using brackets wrong, or incorrectly indexing
+        return false;
+      }
+    }
+    try {
+      // see if we can fix the value on a clone
+      // Maybe we want to return the value here so canFixValue can return value?
+      currentElement.clone().fixValue(value);
+      return true;
+    } catch (e) {
+      // uhoh this means we failed to fix the value I guess
+      return false;
+    }
   }
 
   /**

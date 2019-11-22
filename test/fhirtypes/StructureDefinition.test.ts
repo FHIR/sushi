@@ -259,6 +259,69 @@ describe('StructureDefinition', () => {
     });
   });
 
+  describe('#canFixValue', () => {
+    let jsonStructureDefinition: any;
+    let jsonRespRate: any;
+    let jsonCSSPC: any;
+    let structureDefinition: StructureDefinition;
+    let respRate: StructureDefinition;
+    let CSSPC: StructureDefinition;
+    beforeAll(() => {
+      jsonStructureDefinition = defs.findResource('StructureDefinition');
+      jsonRespRate = defs.findResource('resprate');
+      jsonCSSPC = defs.findExtension('capabilitystatement-search-parameter-combination');
+    });
+    beforeEach(() => {
+      structureDefinition = StructureDefinition.fromJSON(jsonStructureDefinition);
+      respRate = StructureDefinition.fromJSON(jsonRespRate);
+      CSSPC = StructureDefinition.fromJSON(jsonCSSPC);
+    });
+
+    it('should allow fixing an instance value', () => {
+      expect(structureDefinition.canFixValue('version', '4.0.2')).toBe(true);
+    });
+
+    it('should not allow fixing an instance value with an incorrect path', () => {
+      expect(structureDefinition.canFixValue('Version', '4.0.2')).toBe(false);
+    });
+
+    it('should not allow fixing an instance value with an incorrect value', () => {
+      expect(structureDefinition.canFixValue('version', true)).toBe(false);
+    });
+
+    it('should not allow fixing an instance value with a 0 cardinality', () => {
+      const version = structureDefinition.elements.find(
+        e => e.id === 'StructureDefinition.version'
+      );
+      version.max = '0';
+      expect(structureDefinition.canFixValue('version', '4.0.2')).toBe(false);
+    });
+
+    it('should allow fixing an instance value to an element in an array', () => {
+      expect(structureDefinition.canFixValue('identifier[0].value', 'foo', getResolver(defs))).toBe(
+        true
+      );
+    });
+
+    it('should not allow using array brackets when an element is not an array', () => {
+      const identifier = structureDefinition.elements.find(
+        e => e.id === 'StructureDefinition.identifier'
+      );
+      identifier.max = '0';
+      expect(structureDefinition.canFixValue('identifier[0].value', 'foo', getResolver(defs))).toBe(
+        false
+      );
+    });
+
+    it('should allow fixing an instance value on a slice', () => {
+      expect(respRate.canFixValue('category[VSCat].coding.version', 'foo')).toBe(true);
+    });
+
+    it('should allow fixing an instance value on a slice array', () => {
+      expect(CSSPC.canFixValue('extension[required][3].value[x]', 'foo')).toBe(true);
+    });
+  });
+
   describe('#captureOriginalElements()', () => {
     it('should create a new starting point for diffs', () => {
       // Note: this is not as true a unit test as it should be since it is intertwined
