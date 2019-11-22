@@ -1,12 +1,13 @@
 grammar FSH;
 
 doc:                entity*;
-entity:             alias | profile | extension | invariant;
+entity:             alias | profile | extension | invariant | instance;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
 profile:            KW_PROFILE SEQUENCE sdMetadata+ sdRule*;
 extension:          KW_EXTENSION SEQUENCE sdMetadata* sdRule*;
+instance:           KW_INSTANCE SEQUENCE KW_INSTANCEOF SEQUENCE title? fixedValueRule*;
 sdMetadata:         parent | id | title | description;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule;
 
@@ -52,6 +53,8 @@ targetType:         SEQUENCE | REFERENCE;
 KW_ALIAS:           'Alias' WS* ':';
 KW_PROFILE:         'Profile' WS* ':';
 KW_EXTENSION:       'Extension' WS* ':';
+KW_INSTANCE:        'Instance' WS* ':';
+KW_INSTANCEOF:      'InstanceOf' WS* ':';
 KW_INVARIANT:       'Invariant' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';

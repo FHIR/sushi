@@ -56,6 +56,15 @@ FSHListener.prototype.exitExtension = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#instance.
+FSHListener.prototype.enterInstance = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#instance.
+FSHListener.prototype.exitInstance = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#sdMetadata.
 FSHListener.prototype.enterSdMetadata = function(ctx) {
 };

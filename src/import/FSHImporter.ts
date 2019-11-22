@@ -1,7 +1,15 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { FSHVisitor } from './generated/FSHVisitor';
-import { Profile, Extension, FshCode, FshQuantity, FshRatio, TextLocation } from '../fshtypes';
+import {
+  Profile,
+  Extension,
+  FshCode,
+  FshQuantity,
+  FshRatio,
+  TextLocation,
+  Instance
+} from '../fshtypes';
 import {
   Rule,
   CardRule,
@@ -80,6 +88,10 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.extension()) {
       this.visitExtension(ctx.extension());
     }
+
+    if (ctx.instance()) {
+      this.visitInstance(ctx.instance());
+    }
   }
 
   visitAlias(ctx: pc.AliasContext): void {
@@ -123,6 +135,16 @@ export class FSHImporter extends FSHVisitor {
     ruleCtx.forEach(sdRule => {
       def.rules.push(...this.visitSdRule(sdRule));
     });
+  }
+
+  visitInstance(ctx: pc.InstanceContext) {
+    const instance = new Instance(ctx.SEQUENCE()[0].getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
+    instance.instanceOf = ctx.SEQUENCE()[1].getText();
+    instance.title = ctx.title() ? this.visitTitle(ctx.title()) : undefined;
+
+    this.doc.instances.set(instance.name, instance);
   }
 
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {

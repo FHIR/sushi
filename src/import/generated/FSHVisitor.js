@@ -42,6 +42,12 @@ FSHVisitor.prototype.visitExtension = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#instance.
+FSHVisitor.prototype.visitInstance = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#sdMetadata.
 FSHVisitor.prototype.visitSdMetadata = function(ctx) {
   return this.visitChildren(ctx);

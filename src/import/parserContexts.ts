@@ -8,6 +8,7 @@ export interface EntityContext extends ParserRuleContext {
   alias(): AliasContext;
   profile(): ProfileContext;
   extension(): ExtensionContext;
+  instance(): InstanceContext;
   //invariant(): InvariantContext;
 }
 
@@ -25,6 +26,12 @@ export interface ExtensionContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   sdMetadata(): SdMetadataContext[];
   sdRule(): SdRuleContext[];
+}
+
+export interface InstanceContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext[];
+  title(): TitleContext;
+  fixedValueRule(): FixedValueRuleContext[];
 }
 
 export interface SdMetadataContext extends ParserRuleContext {
