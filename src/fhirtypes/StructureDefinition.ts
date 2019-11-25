@@ -5,6 +5,7 @@ import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { FixedValueType } from '..//fshtypes/rules';
+import { CannotResolvePathError } from '../errors';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -61,11 +62,12 @@ export class StructureDefinition {
    * A base clone of the Structure Definition from before any rules were applied
    */
   private _baseStructureDefinition: StructureDefinition;
+  private _structureDefinitionStructureDefinition: StructureDefinition;
 
   /**
    * Constructs a StructureDefinition with a root element.
    */
-  constructor() {
+  constructor(structureDefinitionStructureDefinition: StructureDefinition) {
     // Every structure definition needs a root element
     const root = new ElementDefinition('');
     root.structDef = this;
@@ -75,6 +77,7 @@ export class StructureDefinition {
     root.isModifier = false;
     root.isSummary = false;
     this.elements = [root];
+    this._structureDefinitionStructureDefinition = structureDefinitionStructureDefinition;
   }
 
   /**
@@ -82,6 +85,13 @@ export class StructureDefinition {
    */
   getBaseStructureDefinition() {
     return this._baseStructureDefinition;
+  }
+
+  /**
+   * Get the Structure Definition for Structure Definition
+   */
+  getStructureDefinitionStructureDefinition() {
+    return this._structureDefinitionStructureDefinition;
   }
 
   /**
@@ -207,6 +217,65 @@ export class StructureDefinition {
   }
 
   /**
+   * This function sets an instance property of an SD if possible
+   * @param {string} path - The path to the ElementDefinition to fix
+   * @param {FixedValueType} value - The value to fix
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   */
+  setInstancePropertyByPath(
+    path: string,
+    value: FixedValueType,
+    resolve: ResolveFn = () => undefined
+  ): void {
+    // The StructureDefinition of the StructureDefinition resource is stored on our StructureDefinition class
+    const structureDefinitionStructureDefinition = this.getStructureDefinitionStructureDefinition();
+    const fixedValue = structureDefinitionStructureDefinition.canFixValue(path, value, resolve);
+    if (fixedValue != null) {
+      // If we can fix the value on the StructureDefinition StructureDefinition, then we can set the
+      // instance property here
+      const pathParts = this.parseFSHPath(path);
+      // eslint-disable-next-line
+      let current: any = this;
+      for (const [i, pathPart] of pathParts.entries()) {
+        const key = pathPart.base;
+        // If this part of the path indexes into an array, the index will be the last bracket
+        const index = this.getArrayIndex(pathPart);
+        if (index != null) {
+          // If the array doesn't exist, create it
+          if (current[key] == null) current[key] = [];
+          // If the index doesn't exist in the array, add it and lesser indices
+          for (let i = current[key].length; i <= index; i++) {
+            current[key].push({});
+          }
+          current = current[key][index];
+        } else {
+          if (current[key] == null && i < pathParts.length - 1) {
+            current[key] = {};
+            current = current[key];
+          }
+        }
+      }
+      const pathEnd = pathParts.slice(-1)[0];
+      const index = this.getArrayIndex(pathEnd);
+      if (index != null) {
+        Object.assign(current, fixedValue);
+      } else {
+        current[pathParts.slice(-1)[0].base] = fixedValue;
+      }
+    }
+  }
+
+  private getArrayIndex(pathPart: PathPart) {
+    const lastBracket = pathPart.brackets?.slice(-1)[0];
+    let arrayIndex: number;
+    if (/[0]|[-+]?[1-9][0-9]*/.test(lastBracket)) {
+      arrayIndex = parseInt(lastBracket);
+      if (arrayIndex < 0) return;
+    }
+    return arrayIndex;
+  }
+
+  /**
    * Creates a new element and adds it to the StructureDefinition elements.
    * @param {string} name - the name of the element to create (which will be appended to the element ID)
    * @returns {ElementDefinition} the new ElementDefinition
@@ -264,8 +333,11 @@ export class StructureDefinition {
    * @param {any} json - the FHIR 3.0.1 JSON representation of a StructureDefinition to construct
    * @returns {StructureDefinition} a new StructureDefinition instance representing the passed in JSON
    */
-  static fromJSON(json: LooseStructDefJSON): StructureDefinition {
-    const sd = new StructureDefinition();
+  static fromJSON(
+    json: LooseStructDefJSON,
+    structureDefinitionStructureDefinition: StructureDefinition = null
+  ): StructureDefinition {
+    const sd = new StructureDefinition(structureDefinitionStructureDefinition);
     // First handle properties that are just straight translations from JSON
     for (const prop of PROPS) {
       // @ts-ignore
@@ -289,20 +361,21 @@ export class StructureDefinition {
   }
 
   /**
-   * This function tests if it is possible to fix value to path, but does not actually fix it
+   * This function tests if it is possible to fix value to a path, but does not actually fix it
    * @param {string} path - The path to the ElementDefinition to fix
    * @param {FixedValueType} value - The value to fix
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
-   * @returns {boolean} - True if the value can be fixed without error
+   * @throws {CannotResolvePathError} when the path cannot be resolved to an element
+   * @returns {any} - The object or value to fix
    */
-  canFixValue(path: string, value: FixedValueType, resolve: ResolveFn = () => undefined): boolean {
+  canFixValue(path: string, value: FixedValueType, resolve: ResolveFn = () => undefined): any {
     const pathParts = this.parseFSHPath(path);
     let currentPath = '';
     let currentElement: ElementDefinition;
     for (const pathPart of pathParts) {
-      // construct the path up to this point
+      // Construct the path up to this point
       currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
-      // we can (maybe?) assume that if we are indexing with a number, it is the last []
+      // If we are indexing into an array, the last bracket should be numeric
       let arrayIndex: number;
       const lastBracket = pathPart.brackets?.slice(-1)[0];
       if (/[0]|[-+]?[1-9][0-9]*/.test(lastBracket)) {
@@ -313,26 +386,25 @@ export class StructureDefinition {
         // If it is not a number, then add all bracket info back to path
         pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
       }
-      // we want to ignore numerical indexing, but retain slicing information in brackets
       currentElement = this.findElementByPath(currentPath, resolve);
       if (
         !currentElement ||
         currentElement.max === '0' ||
         (arrayIndex != null && currentElement.max !== '*')
       ) {
-        // no current element, using brackets wrong, or incorrectly indexing
-        return false;
+        // We throw an error if the currentElement doesn't exist, has been zeroed out,
+        // or is being incorrectly accessed as an array
+        throw new CannotResolvePathError(path);
       }
     }
-    try {
-      // see if we can fix the value on a clone
-      // Maybe we want to return the value here so canFixValue can return value?
-      currentElement.clone().fixValue(value);
-      return true;
-    } catch (e) {
-      // uhoh this means we failed to fix the value I guess
-      return false;
-    }
+    const clone = currentElement.clone();
+    // fixValue will throw if it fails
+    clone.fixValue(value);
+    // If there is a fixedValue or patternValue, find it and return it
+    const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
+    let fixedValue;
+    if (key != null) fixedValue = clone[key as keyof ElementDefinition];
+    return fixedValue;
   }
 
   /**
