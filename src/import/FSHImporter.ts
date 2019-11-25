@@ -143,7 +143,9 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.file);
     instance.instanceOf = ctx.SEQUENCE()[1].getText();
     instance.title = ctx.title() ? this.visitTitle(ctx.title()) : undefined;
-
+    ctx.fixedValueRule().forEach(fvRule => {
+      instance.rules.push(this.visitFixedValueRule(fvRule));
+    });
     this.doc.instances.set(instance.name, instance);
   }
 
