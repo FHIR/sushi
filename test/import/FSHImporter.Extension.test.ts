@@ -5,6 +5,7 @@ import {
   assertValueSetRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
+import { DuplicateMetadataError } from '../../src/errors';
 
 describe('FSHImporter', () => {
   describe('Extension', () => {
@@ -53,6 +54,66 @@ describe('FSHImporter', () => {
           endLine: 6,
           endColumn: 48
         });
+      });
+
+      it('should throw an error when parent is declared more than once', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        Id: some-extension
+        Title: "Some Extension"
+        Description: "An extension on something"
+        Parent: ParentExtension
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
+      });
+
+      it('should throw an error when id is declared more than once', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        Id: some-extension
+        Title: "Some Extension"
+        Description: "An extension on something"
+        Id: this-extension
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
+      });
+
+      it('should throw an error when title is declared more than once', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        Id: some-extension
+        Title: "Some Extension"
+        Description: "An extension on something"
+        Title: "Some Extension"
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
+      });
+
+      it('should throw an error when description is declared more than once', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        Id: some-extension
+        Title: "Some Extension"
+        Description: "An extension on something"
+        Description: "This is the extension"
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
       });
     });
 

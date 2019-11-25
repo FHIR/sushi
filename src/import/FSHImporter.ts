@@ -127,16 +127,32 @@ export class FSHImporter extends FSHVisitor {
     metaCtx: pc.SdMetadataContext[] = [],
     ruleCtx: pc.SdRuleContext[] = []
   ): void {
+    let declaredId = false,
+      declaredParent = false;
     metaCtx
       .map(sdMeta => this.visitSdMetadata(sdMeta))
       .forEach(pair => {
         if (pair.key === SdMetadataKey.Id) {
+          if (declaredId) {
+            throw new DuplicateMetadataError('Id', def.id);
+          }
           def.id = pair.value;
+          declaredId = true;
         } else if (pair.key === SdMetadataKey.Parent) {
+          if (declaredParent) {
+            throw new DuplicateMetadataError('Parent', def.parent);
+          }
           def.parent = pair.value;
+          declaredParent = true;
         } else if (pair.key === SdMetadataKey.Title) {
+          if (def.title) {
+            throw new DuplicateMetadataError('Title', def.title);
+          }
           def.title = pair.value;
         } else if (pair.key === SdMetadataKey.Description) {
+          if (def.description) {
+            throw new DuplicateMetadataError('Description', def.description);
+          }
           def.description = pair.value;
         }
       });
@@ -164,15 +180,13 @@ export class FSHImporter extends FSHVisitor {
         if (pair.key === InMetadataKey.InstanceOf) {
           if (instance.instanceOf) {
             throw new DuplicateMetadataError('InstanceOf', instance.instanceOf);
-          } else {
-            instance.instanceOf = pair.value;
           }
+          instance.instanceOf = pair.value;
         } else if (pair.key === InMetadataKey.Title) {
           if (instance.title) {
             throw new DuplicateMetadataError('Title', instance.title);
-          } else {
-            instance.title = pair.value;
           }
+          instance.title = pair.value;
         }
       });
     if (!instance.instanceOf) {

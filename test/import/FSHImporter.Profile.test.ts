@@ -8,6 +8,7 @@ import {
 } from '../utils/asserts';
 import { importText } from '../../src/import';
 import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
+import { DuplicateMetadataError } from '../../src/errors';
 
 describe('FSHImporter', () => {
   describe('Profile', () => {
@@ -111,6 +112,66 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.name).toBe('ObservationProfile');
         expect(profile.parent).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
+      });
+
+      it('should throw an error when id is declared more than once', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Id: observation-profile
+        Title: "An Observation Profile"
+        Description: "A profile on Observation"
+        Id: observation-profile
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
+      });
+
+      it('should throw an error when parent is declared more than once', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Id: observation-profile
+        Title: "An Observation Profile"
+        Description: "A profile on Observation"
+        Parent: Observation
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
+      });
+
+      it('should throw an error when title is declared more than once', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Id: observation-profile
+        Title: "An Observation Profile"
+        Description: "A profile on Observation"
+        Title: "Observation Profile"
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
+      });
+
+      it('should throw an error when description is declared more than once', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Id: observation-profile
+        Title: "An Observation Profile"
+        Description: "A profile on Observation"
+        Description: "The profile on Observation"
+        `;
+
+        expect(() => {
+          importText(input);
+        }).toThrow(DuplicateMetadataError);
       });
     });
 
