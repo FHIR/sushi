@@ -15,17 +15,16 @@ export class ProfileExporter extends StructureDefinitionExporter {
    * @returns {StructureDefinition[]}
    */
   export(tank: FSHTank): StructureDefinition[] {
-    const structDefs: StructureDefinition[] = [];
     for (const doc of tank.docs) {
       for (const profile of doc.profiles.values()) {
         try {
           const structDef = this.exportStructDef(profile, tank);
-          structDefs.push(structDef);
+          this.structDefs.push(structDef);
         } catch (e) {
           logger.error(e.message);
         }
       }
     }
-    return structDefs;
+    return this.structDefs;
   }
 }

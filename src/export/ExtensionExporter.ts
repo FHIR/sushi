@@ -15,17 +15,16 @@ export class ExtensionExporter extends StructureDefinitionExporter {
    * @returns {StructureDefinition[]}
    */
   export(tank: FSHTank): StructureDefinition[] {
-    const structDefs: StructureDefinition[] = [];
     for (const doc of tank.docs) {
       for (const extension of doc.extensions.values()) {
         try {
           const structDef = this.exportStructDef(extension, tank);
-          structDefs.push(structDef);
+          this.structDefs.push(structDef);
         } catch (e) {
           logger.error(e.message);
         }
       }
     }
-    return structDefs;
+    return this.structDefs;
   }
 }

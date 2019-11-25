@@ -12,6 +12,8 @@ import { logger } from '../utils/FSHLogger';
  * between the two should be included in this class.
  */
 export class StructureDefinitionExporter {
+  public readonly structDefs: StructureDefinition[] = [];
+
   constructor(public readonly FHIRDefs: FHIRDefinitions) {}
 
   /**
@@ -105,11 +107,8 @@ export class StructureDefinitionExporter {
    */
   exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): StructureDefinition {
     const parentName = fshDefinition.parent || 'Resource';
-    const jsonParent = this.FHIRDefs.find(parentName);
-    let structDef: StructureDefinition;
-    if (jsonParent) {
-      structDef = StructureDefinition.fromJSON(jsonParent);
-    } else {
+    const structDef = this.resolve(parentName);
+    if (!structDef) {
       throw new ParentNotDefinedError(fshDefinition.name, parentName);
     }
     // Capture the orginal elements so that any further changes are reflected in the differential
