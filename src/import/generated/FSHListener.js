@@ -56,15 +56,6 @@ FSHListener.prototype.exitExtension = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#instance.
-FSHListener.prototype.enterInstance = function(ctx) {
-};
-
-// Exit a parse tree produced by FSHParser#instance.
-FSHListener.prototype.exitInstance = function(ctx) {
-};
-
-
 // Enter a parse tree produced by FSHParser#sdMetadata.
 FSHListener.prototype.enterSdMetadata = function(ctx) {
 };
@@ -80,6 +71,24 @@ FSHListener.prototype.enterSdRule = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#sdRule.
 FSHListener.prototype.exitSdRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#instance.
+FSHListener.prototype.enterInstance = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#instance.
+FSHListener.prototype.exitInstance = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#instanceMetadata.
+FSHListener.prototype.enterInstanceMetadata = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#instanceMetadata.
+FSHListener.prototype.exitInstanceMetadata = function(ctx) {
 };
 
 
@@ -161,6 +170,15 @@ FSHListener.prototype.enterSeverity = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#severity.
 FSHListener.prototype.exitSeverity = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#instanceOf.
+FSHListener.prototype.enterInstanceOf = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#instanceOf.
+FSHListener.prototype.exitInstanceOf = function(ctx) {
 };
 
 

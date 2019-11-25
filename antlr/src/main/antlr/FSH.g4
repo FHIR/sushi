@@ -7,9 +7,11 @@ alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
 profile:            KW_PROFILE SEQUENCE sdMetadata+ sdRule*;
 extension:          KW_EXTENSION SEQUENCE sdMetadata* sdRule*;
-instance:           KW_INSTANCE SEQUENCE KW_INSTANCEOF SEQUENCE title? fixedValueRule*;
 sdMetadata:         parent | id | title | description;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule;
+
+instance:           KW_INSTANCE SEQUENCE instanceMetadata* fixedValueRule*;
+instanceMetadata:   instanceOf | title;
 
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
@@ -22,6 +24,7 @@ description:        KW_DESCRIPTION (STRING | MULTILINE_STRING);
 expression:         KW_EXPRESSION STRING;
 xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
+instanceOf:         KW_INSTANCEOF SEQUENCE;
 
 
 // RULES

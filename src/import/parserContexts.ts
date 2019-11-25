@@ -28,17 +28,22 @@ export interface ExtensionContext extends ParserRuleContext {
   sdRule(): SdRuleContext[];
 }
 
-export interface InstanceContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext[];
-  title(): TitleContext;
-  fixedValueRule(): FixedValueRuleContext[];
-}
-
 export interface SdMetadataContext extends ParserRuleContext {
   parent(): ParentContext;
   id(): IdContext;
   title(): TitleContext;
   description(): DescriptionContext;
+}
+
+export interface InstanceContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  instanceMetadata(): InMetadataContext[];
+  fixedValueRule(): FixedValueRuleContext[];
+}
+
+export interface InMetadataContext extends ParserRuleContext {
+  instanceOf(): InstanceOfContext;
+  title(): TitleContext;
 }
 
 export interface ParentContext extends ParserRuleContext {
@@ -56,6 +61,10 @@ export interface TitleContext extends ParserRuleContext {
 export interface DescriptionContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
+}
+
+export interface InstanceOfContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
 }
 
 export interface SdRuleContext extends ParserRuleContext {

@@ -8,7 +8,7 @@ var grammarFileName = "FSH.g4";
 
 
 var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
-    "\u00031\u0135\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004\t",
+    "\u00031\u0141\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004\t",
     "\u0004\u0004\u0005\t\u0005\u0004\u0006\t\u0006\u0004\u0007\t\u0007\u0004",
     "\b\t\b\u0004\t\t\t\u0004\n\t\n\u0004\u000b\t\u000b\u0004\f\t\f\u0004",
     "\r\t\r\u0004\u000e\t\u000e\u0004\u000f\t\u000f\u0004\u0010\t\u0010\u0004",
@@ -17,191 +17,197 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u0018\t\u0018\u0004\u0019\t\u0019\u0004\u001a\t\u001a\u0004\u001b\t",
     "\u001b\u0004\u001c\t\u001c\u0004\u001d\t\u001d\u0004\u001e\t\u001e\u0004",
     "\u001f\t\u001f\u0004 \t \u0004!\t!\u0004\"\t\"\u0004#\t#\u0004$\t$\u0004",
-    "%\t%\u0004&\t&\u0004\'\t\'\u0003\u0002\u0007\u0002P\n\u0002\f\u0002",
-    "\u000e\u0002S\u000b\u0002\u0003\u0003\u0003\u0003\u0003\u0003\u0003",
-    "\u0003\u0003\u0003\u0005\u0003Z\n\u0003\u0003\u0004\u0003\u0004\u0003",
-    "\u0004\u0003\u0004\u0003\u0004\u0003\u0005\u0003\u0005\u0003\u0005\u0006",
-    "\u0005d\n\u0005\r\u0005\u000e\u0005e\u0003\u0005\u0007\u0005i\n\u0005",
-    "\f\u0005\u000e\u0005l\u000b\u0005\u0003\u0006\u0003\u0006\u0003\u0006",
-    "\u0007\u0006q\n\u0006\f\u0006\u000e\u0006t\u000b\u0006\u0003\u0006\u0007",
-    "\u0006w\n\u0006\f\u0006\u000e\u0006z\u000b\u0006\u0003\u0007\u0003\u0007",
-    "\u0003\u0007\u0003\u0007\u0003\u0007\u0005\u0007\u0081\n\u0007\u0003",
-    "\u0007\u0007\u0007\u0084\n\u0007\f\u0007\u000e\u0007\u0087\u000b\u0007",
-    "\u0003\b\u0003\b\u0003\b\u0003\b\u0005\b\u008d\n\b\u0003\t\u0003\t\u0003",
-    "\t\u0003\t\u0003\t\u0003\t\u0003\t\u0003\t\u0005\t\u0097\n\t\u0003\n",
-    "\u0003\n\u0003\n\u0006\n\u009c\n\n\r\n\u000e\n\u009d\u0003\u000b\u0003",
-    "\u000b\u0003\u000b\u0003\u000b\u0005\u000b\u00a4\n\u000b\u0003\f\u0003",
-    "\f\u0003\f\u0003\r\u0003\r\u0003\r\u0003\u000e\u0003\u000e\u0003\u000e",
+    "%\t%\u0004&\t&\u0004\'\t\'\u0004(\t(\u0004)\t)\u0003\u0002\u0007\u0002",
+    "T\n\u0002\f\u0002\u000e\u0002W\u000b\u0002\u0003\u0003\u0003\u0003\u0003",
+    "\u0003\u0003\u0003\u0003\u0003\u0005\u0003^\n\u0003\u0003\u0004\u0003",
+    "\u0004\u0003\u0004\u0003\u0004\u0003\u0004\u0003\u0005\u0003\u0005\u0003",
+    "\u0005\u0006\u0005h\n\u0005\r\u0005\u000e\u0005i\u0003\u0005\u0007\u0005",
+    "m\n\u0005\f\u0005\u000e\u0005p\u000b\u0005\u0003\u0006\u0003\u0006\u0003",
+    "\u0006\u0007\u0006u\n\u0006\f\u0006\u000e\u0006x\u000b\u0006\u0003\u0006",
+    "\u0007\u0006{\n\u0006\f\u0006\u000e\u0006~\u000b\u0006\u0003\u0007\u0003",
+    "\u0007\u0003\u0007\u0003\u0007\u0005\u0007\u0084\n\u0007\u0003\b\u0003",
+    "\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0005\b\u008e\n\b",
+    "\u0003\t\u0003\t\u0003\t\u0007\t\u0093\n\t\f\t\u000e\t\u0096\u000b\t",
+    "\u0003\t\u0007\t\u0099\n\t\f\t\u000e\t\u009c\u000b\t\u0003\n\u0003\n",
+    "\u0005\n\u00a0\n\n\u0003\u000b\u0003\u000b\u0003\u000b\u0006\u000b\u00a5",
+    "\n\u000b\r\u000b\u000e\u000b\u00a6\u0003\f\u0003\f\u0003\f\u0003\f\u0005",
+    "\f\u00ad\n\f\u0003\r\u0003\r\u0003\r\u0003\u000e\u0003\u000e\u0003\u000e",
     "\u0003\u000f\u0003\u000f\u0003\u000f\u0003\u0010\u0003\u0010\u0003\u0010",
     "\u0003\u0011\u0003\u0011\u0003\u0011\u0003\u0012\u0003\u0012\u0003\u0012",
-    "\u0003\u0013\u0003\u0013\u0003\u0013\u0003\u0013\u0007\u0013\u00bf\n",
-    "\u0013\f\u0013\u000e\u0013\u00c2\u000b\u0013\u0003\u0014\u0003\u0014",
-    "\u0003\u0014\u0005\u0014\u00c7\n\u0014\u0003\u0014\u0006\u0014\u00ca",
-    "\n\u0014\r\u0014\u000e\u0014\u00cb\u0003\u0015\u0003\u0015\u0003\u0015",
-    "\u0003\u0015\u0003\u0015\u0005\u0015\u00d3\n\u0015\u0003\u0016\u0003",
-    "\u0016\u0003\u0016\u0003\u0016\u0003\u0016\u0003\u0017\u0003\u0017\u0003",
-    "\u0017\u0003\u0017\u0003\u0017\u0003\u0017\u0007\u0017\u00e0\n\u0017",
-    "\f\u0017\u000e\u0017\u00e3\u000b\u0017\u0003\u0018\u0003\u0018\u0003",
-    "\u0018\u0003\u0018\u0003\u0018\u0003\u0018\u0007\u0018\u00eb\n\u0018",
-    "\f\u0018\u000e\u0018\u00ee\u000b\u0018\u0003\u0019\u0003\u0019\u0005",
-    "\u0019\u00f2\n\u0019\u0003\u0019\u0003\u0019\u0003\u0019\u0003\u0019",
-    "\u0007\u0019\u00f8\n\u0019\f\u0019\u000e\u0019\u00fb\u000b\u0019\u0003",
-    "\u001a\u0003\u001a\u0005\u001a\u00ff\n\u001a\u0003\u001a\u0003\u001a",
-    "\u0003\u001a\u0003\u001a\u0003\u001b\u0003\u001b\u0003\u001c\u0003\u001c",
-    "\u0003\u001d\u0003\u001d\u0003\u001e\u0003\u001e\u0003\u001f\u0003\u001f",
-    "\u0003 \u0003 \u0003 \u0003 \u0003 \u0003 \u0003 \u0003 \u0003 \u0005",
-    " \u0118\n \u0003!\u0003!\u0003!\u0007!\u011d\n!\f!\u000e!\u0120\u000b",
-    "!\u0003\"\u0003\"\u0005\"\u0124\n\"\u0003#\u0003#\u0003#\u0003$\u0003",
-    "$\u0003$\u0003$\u0003%\u0003%\u0005%\u012f\n%\u0003&\u0003&\u0003\'",
-    "\u0003\'\u0003\'\u0002\u0002(\u0002\u0004\u0006\b\n\f\u000e\u0010\u0012",
-    "\u0014\u0016\u0018\u001a\u001c\u001e \"$&(*,.02468:<>@BDFHJL\u0002\u0007",
-    "\u0003\u0002#$\u0003\u0002\u0010\u0012\u0003\u0002\u0014\u0017\u0003",
-    "\u0002\u001d\u001e\u0004\u0002++..\u0002\u013b\u0002Q\u0003\u0002\u0002",
-    "\u0002\u0004Y\u0003\u0002\u0002\u0002\u0006[\u0003\u0002\u0002\u0002",
-    "\b`\u0003\u0002\u0002\u0002\nm\u0003\u0002\u0002\u0002\f{\u0003\u0002",
-    "\u0002\u0002\u000e\u008c\u0003\u0002\u0002\u0002\u0010\u0096\u0003\u0002",
-    "\u0002\u0002\u0012\u0098\u0003\u0002\u0002\u0002\u0014\u00a3\u0003\u0002",
-    "\u0002\u0002\u0016\u00a5\u0003\u0002\u0002\u0002\u0018\u00a8\u0003\u0002",
-    "\u0002\u0002\u001a\u00ab\u0003\u0002\u0002\u0002\u001c\u00ae\u0003\u0002",
-    "\u0002\u0002\u001e\u00b1\u0003\u0002\u0002\u0002 \u00b4\u0003\u0002",
-    "\u0002\u0002\"\u00b7\u0003\u0002\u0002\u0002$\u00ba\u0003\u0002\u0002",
-    "\u0002&\u00c3\u0003\u0002\u0002\u0002(\u00cd\u0003\u0002\u0002\u0002",
-    "*\u00d4\u0003\u0002\u0002\u0002,\u00d9\u0003\u0002\u0002\u0002.\u00e4",
-    "\u0003\u0002\u0002\u00020\u00ef\u0003\u0002\u0002\u00022\u00fc\u0003",
-    "\u0002\u0002\u00024\u0104\u0003\u0002\u0002\u00026\u0106\u0003\u0002",
-    "\u0002\u00028\u0108\u0003\u0002\u0002\u0002:\u010a\u0003\u0002\u0002",
-    "\u0002<\u010c\u0003\u0002\u0002\u0002>\u0117\u0003\u0002\u0002\u0002",
-    "@\u0119\u0003\u0002\u0002\u0002B\u0121\u0003\u0002\u0002\u0002D\u0125",
-    "\u0003\u0002\u0002\u0002F\u0128\u0003\u0002\u0002\u0002H\u012e\u0003",
-    "\u0002\u0002\u0002J\u0130\u0003\u0002\u0002\u0002L\u0132\u0003\u0002",
-    "\u0002\u0002NP\u0005\u0004\u0003\u0002ON\u0003\u0002\u0002\u0002PS\u0003",
-    "\u0002\u0002\u0002QO\u0003\u0002\u0002\u0002QR\u0003\u0002\u0002\u0002",
-    "R\u0003\u0003\u0002\u0002\u0002SQ\u0003\u0002\u0002\u0002TZ\u0005\u0006",
-    "\u0004\u0002UZ\u0005\b\u0005\u0002VZ\u0005\n\u0006\u0002WZ\u0005\u0012",
-    "\n\u0002XZ\u0005\f\u0007\u0002YT\u0003\u0002\u0002\u0002YU\u0003\u0002",
-    "\u0002\u0002YV\u0003\u0002\u0002\u0002YW\u0003\u0002\u0002\u0002YX\u0003",
-    "\u0002\u0002\u0002Z\u0005\u0003\u0002\u0002\u0002[\\\u0007\u0003\u0002",
-    "\u0002\\]\u0007.\u0002\u0002]^\u0007\u001f\u0002\u0002^_\u0007.\u0002",
-    "\u0002_\u0007\u0003\u0002\u0002\u0002`a\u0007\u0004\u0002\u0002ac\u0007",
-    ".\u0002\u0002bd\u0005\u000e\b\u0002cb\u0003\u0002\u0002\u0002de\u0003",
-    "\u0002\u0002\u0002ec\u0003\u0002\u0002\u0002ef\u0003\u0002\u0002\u0002",
-    "fj\u0003\u0002\u0002\u0002gi\u0005\u0010\t\u0002hg\u0003\u0002\u0002",
-    "\u0002il\u0003\u0002\u0002\u0002jh\u0003\u0002\u0002\u0002jk\u0003\u0002",
-    "\u0002\u0002k\t\u0003\u0002\u0002\u0002lj\u0003\u0002\u0002\u0002mn",
-    "\u0007\u0005\u0002\u0002nr\u0007.\u0002\u0002oq\u0005\u000e\b\u0002",
-    "po\u0003\u0002\u0002\u0002qt\u0003\u0002\u0002\u0002rp\u0003\u0002\u0002",
-    "\u0002rs\u0003\u0002\u0002\u0002sx\u0003\u0002\u0002\u0002tr\u0003\u0002",
-    "\u0002\u0002uw\u0005\u0010\t\u0002vu\u0003\u0002\u0002\u0002wz\u0003",
-    "\u0002\u0002\u0002xv\u0003\u0002\u0002\u0002xy\u0003\u0002\u0002\u0002",
-    "y\u000b\u0003\u0002\u0002\u0002zx\u0003\u0002\u0002\u0002{|\u0007\u0006",
-    "\u0002\u0002|}\u0007.\u0002\u0002}~\u0007\u0007\u0002\u0002~\u0080\u0007",
-    ".\u0002\u0002\u007f\u0081\u0005\u001a\u000e\u0002\u0080\u007f\u0003",
-    "\u0002\u0002\u0002\u0080\u0081\u0003\u0002\u0002\u0002\u0081\u0085\u0003",
-    "\u0002\u0002\u0002\u0082\u0084\u0005*\u0016\u0002\u0083\u0082\u0003",
-    "\u0002\u0002\u0002\u0084\u0087\u0003\u0002\u0002\u0002\u0085\u0083\u0003",
-    "\u0002\u0002\u0002\u0085\u0086\u0003\u0002\u0002\u0002\u0086\r\u0003",
-    "\u0002\u0002\u0002\u0087\u0085\u0003\u0002\u0002\u0002\u0088\u008d\u0005",
-    "\u0016\f\u0002\u0089\u008d\u0005\u0018\r\u0002\u008a\u008d\u0005\u001a",
-    "\u000e\u0002\u008b\u008d\u0005\u001c\u000f\u0002\u008c\u0088\u0003\u0002",
-    "\u0002\u0002\u008c\u0089\u0003\u0002\u0002\u0002\u008c\u008a\u0003\u0002",
-    "\u0002\u0002\u008c\u008b\u0003\u0002\u0002\u0002\u008d\u000f\u0003\u0002",
-    "\u0002\u0002\u008e\u0097\u0005$\u0013\u0002\u008f\u0097\u0005&\u0014",
-    "\u0002\u0090\u0097\u0005(\u0015\u0002\u0091\u0097\u0005*\u0016\u0002",
-    "\u0092\u0097\u0005,\u0017\u0002\u0093\u0097\u0005.\u0018\u0002\u0094",
-    "\u0097\u00050\u0019\u0002\u0095\u0097\u00052\u001a\u0002\u0096\u008e",
-    "\u0003\u0002\u0002\u0002\u0096\u008f\u0003\u0002\u0002\u0002\u0096\u0090",
-    "\u0003\u0002\u0002\u0002\u0096\u0091\u0003\u0002\u0002\u0002\u0096\u0092",
-    "\u0003\u0002\u0002\u0002\u0096\u0093\u0003\u0002\u0002\u0002\u0096\u0094",
-    "\u0003\u0002\u0002\u0002\u0096\u0095\u0003\u0002\u0002\u0002\u0097\u0011",
-    "\u0003\u0002\u0002\u0002\u0098\u0099\u0007\b\u0002\u0002\u0099\u009b",
-    "\u0007.\u0002\u0002\u009a\u009c\u0005\u0014\u000b\u0002\u009b\u009a",
-    "\u0003\u0002\u0002\u0002\u009c\u009d\u0003\u0002\u0002\u0002\u009d\u009b",
-    "\u0003\u0002\u0002\u0002\u009d\u009e\u0003\u0002\u0002\u0002\u009e\u0013",
-    "\u0003\u0002\u0002\u0002\u009f\u00a4\u0005\u001c\u000f\u0002\u00a0\u00a4",
-    "\u0005\u001e\u0010\u0002\u00a1\u00a4\u0005 \u0011\u0002\u00a2\u00a4",
-    "\u0005\"\u0012\u0002\u00a3\u009f\u0003\u0002\u0002\u0002\u00a3\u00a0",
-    "\u0003\u0002\u0002\u0002\u00a3\u00a1\u0003\u0002\u0002\u0002\u00a3\u00a2",
-    "\u0003\u0002\u0002\u0002\u00a4\u0015\u0003\u0002\u0002\u0002\u00a5\u00a6",
-    "\u0007\t\u0002\u0002\u00a6\u00a7\u0007.\u0002\u0002\u00a7\u0017\u0003",
-    "\u0002\u0002\u0002\u00a8\u00a9\u0007\n\u0002\u0002\u00a9\u00aa\u0007",
-    ".\u0002\u0002\u00aa\u0019\u0003\u0002\u0002\u0002\u00ab\u00ac\u0007",
-    "\u000b\u0002\u0002\u00ac\u00ad\u0007#\u0002\u0002\u00ad\u001b\u0003",
-    "\u0002\u0002\u0002\u00ae\u00af\u0007\f\u0002\u0002\u00af\u00b0\t\u0002",
-    "\u0002\u0002\u00b0\u001d\u0003\u0002\u0002\u0002\u00b1\u00b2\u0007\r",
-    "\u0002\u0002\u00b2\u00b3\u0007#\u0002\u0002\u00b3\u001f\u0003\u0002",
-    "\u0002\u0002\u00b4\u00b5\u0007\u000e\u0002\u0002\u00b5\u00b6\u0007#",
-    "\u0002\u0002\u00b6!\u0003\u0002\u0002\u0002\u00b7\u00b8\u0007\u000f",
-    "\u0002\u0002\u00b8\u00b9\u0007\'\u0002\u0002\u00b9#\u0003\u0002\u0002",
-    "\u0002\u00ba\u00bb\u0007 \u0002\u0002\u00bb\u00bc\u00054\u001b\u0002",
-    "\u00bc\u00c0\u0007*\u0002\u0002\u00bd\u00bf\u0005:\u001e\u0002\u00be",
-    "\u00bd\u0003\u0002\u0002\u0002\u00bf\u00c2\u0003\u0002\u0002\u0002\u00c0",
-    "\u00be\u0003\u0002\u0002\u0002\u00c0\u00c1\u0003\u0002\u0002\u0002\u00c1",
-    "%\u0003\u0002\u0002\u0002\u00c2\u00c0\u0003\u0002\u0002\u0002\u00c3",
-    "\u00c6\u0007 \u0002\u0002\u00c4\u00c7\u00054\u001b\u0002\u00c5\u00c7",
-    "\u00056\u001c\u0002\u00c6\u00c4\u0003\u0002\u0002\u0002\u00c6\u00c5",
-    "\u0003\u0002\u0002\u0002\u00c7\u00c9\u0003\u0002\u0002\u0002\u00c8\u00ca",
-    "\u0005:\u001e\u0002\u00c9\u00c8\u0003\u0002\u0002\u0002\u00ca\u00cb",
-    "\u0003\u0002\u0002\u0002\u00cb\u00c9\u0003\u0002\u0002\u0002\u00cb\u00cc",
-    "\u0003\u0002\u0002\u0002\u00cc\'\u0003\u0002\u0002\u0002\u00cd\u00ce",
-    "\u0007 \u0002\u0002\u00ce\u00cf\u00054\u001b\u0002\u00cf\u00d0\u0007",
-    "\u0013\u0002\u0002\u00d0\u00d2\u0007.\u0002\u0002\u00d1\u00d3\u0005",
-    "<\u001f\u0002\u00d2\u00d1\u0003\u0002\u0002\u0002\u00d2\u00d3\u0003",
-    "\u0002\u0002\u0002\u00d3)\u0003\u0002\u0002\u0002\u00d4\u00d5\u0007",
-    " \u0002\u0002\u00d5\u00d6\u00054\u001b\u0002\u00d6\u00d7\u0007\u001f",
-    "\u0002\u0002\u00d7\u00d8\u0005> \u0002\u00d8+\u0003\u0002\u0002\u0002",
-    "\u00d9\u00da\u0007 \u0002\u0002\u00da\u00db\u00054\u001b\u0002\u00db",
-    "\u00dc\u0007\u0018\u0002\u0002\u00dc\u00e1\u0005@!\u0002\u00dd\u00de",
-    "\u0007\u0019\u0002\u0002\u00de\u00e0\u0005@!\u0002\u00df\u00dd\u0003",
-    "\u0002\u0002\u0002\u00e0\u00e3\u0003\u0002\u0002\u0002\u00e1\u00df\u0003",
-    "\u0002\u0002\u0002\u00e1\u00e2\u0003\u0002\u0002\u0002\u00e2-\u0003",
-    "\u0002\u0002\u0002\u00e3\u00e1\u0003\u0002\u0002\u0002\u00e4\u00e5\u0007",
-    " \u0002\u0002\u00e5\u00e6\u00054\u001b\u0002\u00e6\u00e7\u0007\u001a",
-    "\u0002\u0002\u00e7\u00ec\u0005L\'\u0002\u00e8\u00e9\u0007\u001b\u0002",
-    "\u0002\u00e9\u00eb\u0005L\'\u0002\u00ea\u00e8\u0003\u0002\u0002\u0002",
-    "\u00eb\u00ee\u0003\u0002\u0002\u0002\u00ec\u00ea\u0003\u0002\u0002\u0002",
-    "\u00ec\u00ed\u0003\u0002\u0002\u0002\u00ed/\u0003\u0002\u0002\u0002",
-    "\u00ee\u00ec\u0003\u0002\u0002\u0002\u00ef\u00f1\u0007 \u0002\u0002",
-    "\u00f0\u00f2\u00054\u001b\u0002\u00f1\u00f0\u0003\u0002\u0002\u0002",
-    "\u00f1\u00f2\u0003\u0002\u0002\u0002\u00f2\u00f3\u0003\u0002\u0002\u0002",
-    "\u00f3\u00f4\u0007\u001c\u0002\u0002\u00f4\u00f9\u0007.\u0002\u0002",
-    "\u00f5\u00f6\u0007\u0019\u0002\u0002\u00f6\u00f8\u0007.\u0002\u0002",
-    "\u00f7\u00f5\u0003\u0002\u0002\u0002\u00f8\u00fb\u0003\u0002\u0002\u0002",
-    "\u00f9\u00f7\u0003\u0002\u0002\u0002\u00f9\u00fa\u0003\u0002\u0002\u0002",
-    "\u00fa1\u0003\u0002\u0002\u0002\u00fb\u00f9\u0003\u0002\u0002\u0002",
-    "\u00fc\u00fe\u0007 \u0002\u0002\u00fd\u00ff\u00054\u001b\u0002\u00fe",
-    "\u00fd\u0003\u0002\u0002\u0002\u00fe\u00ff\u0003\u0002\u0002\u0002\u00ff",
-    "\u0100\u0003\u0002\u0002\u0002\u0100\u0101\u00058\u001d\u0002\u0101",
-    "\u0102\u0007\u001f\u0002\u0002\u0102\u0103\u0005> \u0002\u01033\u0003",
-    "\u0002\u0002\u0002\u0104\u0105\u0007.\u0002\u0002\u01055\u0003\u0002",
-    "\u0002\u0002\u0106\u0107\u0007-\u0002\u0002\u01077\u0003\u0002\u0002",
-    "\u0002\u0108\u0109\u0007,\u0002\u0002\u01099\u0003\u0002\u0002\u0002",
-    "\u010a\u010b\t\u0003\u0002\u0002\u010b;\u0003\u0002\u0002\u0002\u010c",
-    "\u010d\t\u0004\u0002\u0002\u010d=\u0003\u0002\u0002\u0002\u010e\u0118",
-    "\u0007#\u0002\u0002\u010f\u0118\u0007$\u0002\u0002\u0110\u0118\u0007",
-    "%\u0002\u0002\u0111\u0118\u0007(\u0002\u0002\u0112\u0118\u0007)\u0002",
-    "\u0002\u0113\u0118\u0005B\"\u0002\u0114\u0118\u0005D#\u0002\u0115\u0118",
-    "\u0005F$\u0002\u0116\u0118\u0005J&\u0002\u0117\u010e\u0003\u0002\u0002",
-    "\u0002\u0117\u010f\u0003\u0002\u0002\u0002\u0117\u0110\u0003\u0002\u0002",
-    "\u0002\u0117\u0111\u0003\u0002\u0002\u0002\u0117\u0112\u0003\u0002\u0002",
-    "\u0002\u0117\u0113\u0003\u0002\u0002\u0002\u0117\u0114\u0003\u0002\u0002",
-    "\u0002\u0117\u0115\u0003\u0002\u0002\u0002\u0117\u0116\u0003\u0002\u0002",
-    "\u0002\u0118?\u0003\u0002\u0002\u0002\u0119\u011a\u0007.\u0002\u0002",
-    "\u011a\u011e\u0007*\u0002\u0002\u011b\u011d\u0005:\u001e\u0002\u011c",
-    "\u011b\u0003\u0002\u0002\u0002\u011d\u0120\u0003\u0002\u0002\u0002\u011e",
-    "\u011c\u0003\u0002\u0002\u0002\u011e\u011f\u0003\u0002\u0002\u0002\u011f",
-    "A\u0003\u0002\u0002\u0002\u0120\u011e\u0003\u0002\u0002\u0002\u0121",
-    "\u0123\u0007\'\u0002\u0002\u0122\u0124\u0007#\u0002\u0002\u0123\u0122",
-    "\u0003\u0002\u0002\u0002\u0123\u0124\u0003\u0002\u0002\u0002\u0124C",
-    "\u0003\u0002\u0002\u0002\u0125\u0126\u0007%\u0002\u0002\u0126\u0127",
-    "\u0007&\u0002\u0002\u0127E\u0003\u0002\u0002\u0002\u0128\u0129\u0005",
-    "H%\u0002\u0129\u012a\u0007!\u0002\u0002\u012a\u012b\u0005H%\u0002\u012b",
-    "G\u0003\u0002\u0002\u0002\u012c\u012f\u0007%\u0002\u0002\u012d\u012f",
-    "\u0005D#\u0002\u012e\u012c\u0003\u0002\u0002\u0002\u012e\u012d\u0003",
-    "\u0002\u0002\u0002\u012fI\u0003\u0002\u0002\u0002\u0130\u0131\t\u0005",
-    "\u0002\u0002\u0131K\u0003\u0002\u0002\u0002\u0132\u0133\t\u0006\u0002",
-    "\u0002\u0133M\u0003\u0002\u0002\u0002\u001bQYejrx\u0080\u0085\u008c",
-    "\u0096\u009d\u00a3\u00c0\u00c6\u00cb\u00d2\u00e1\u00ec\u00f1\u00f9\u00fe",
-    "\u0117\u011e\u0123\u012e"].join("");
+    "\u0003\u0013\u0003\u0013\u0003\u0013\u0003\u0014\u0003\u0014\u0003\u0014",
+    "\u0003\u0015\u0003\u0015\u0003\u0015\u0003\u0015\u0007\u0015\u00cb\n",
+    "\u0015\f\u0015\u000e\u0015\u00ce\u000b\u0015\u0003\u0016\u0003\u0016",
+    "\u0003\u0016\u0005\u0016\u00d3\n\u0016\u0003\u0016\u0006\u0016\u00d6",
+    "\n\u0016\r\u0016\u000e\u0016\u00d7\u0003\u0017\u0003\u0017\u0003\u0017",
+    "\u0003\u0017\u0003\u0017\u0005\u0017\u00df\n\u0017\u0003\u0018\u0003",
+    "\u0018\u0003\u0018\u0003\u0018\u0003\u0018\u0003\u0019\u0003\u0019\u0003",
+    "\u0019\u0003\u0019\u0003\u0019\u0003\u0019\u0007\u0019\u00ec\n\u0019",
+    "\f\u0019\u000e\u0019\u00ef\u000b\u0019\u0003\u001a\u0003\u001a\u0003",
+    "\u001a\u0003\u001a\u0003\u001a\u0003\u001a\u0007\u001a\u00f7\n\u001a",
+    "\f\u001a\u000e\u001a\u00fa\u000b\u001a\u0003\u001b\u0003\u001b\u0005",
+    "\u001b\u00fe\n\u001b\u0003\u001b\u0003\u001b\u0003\u001b\u0003\u001b",
+    "\u0007\u001b\u0104\n\u001b\f\u001b\u000e\u001b\u0107\u000b\u001b\u0003",
+    "\u001c\u0003\u001c\u0005\u001c\u010b\n\u001c\u0003\u001c\u0003\u001c",
+    "\u0003\u001c\u0003\u001c\u0003\u001d\u0003\u001d\u0003\u001e\u0003\u001e",
+    "\u0003\u001f\u0003\u001f\u0003 \u0003 \u0003!\u0003!\u0003\"\u0003\"",
+    "\u0003\"\u0003\"\u0003\"\u0003\"\u0003\"\u0003\"\u0003\"\u0005\"\u0124",
+    "\n\"\u0003#\u0003#\u0003#\u0007#\u0129\n#\f#\u000e#\u012c\u000b#\u0003",
+    "$\u0003$\u0005$\u0130\n$\u0003%\u0003%\u0003%\u0003&\u0003&\u0003&\u0003",
+    "&\u0003\'\u0003\'\u0005\'\u013b\n\'\u0003(\u0003(\u0003)\u0003)\u0003",
+    ")\u0002\u0002*\u0002\u0004\u0006\b\n\f\u000e\u0010\u0012\u0014\u0016",
+    "\u0018\u001a\u001c\u001e \"$&(*,.02468:<>@BDFHJLNP\u0002\u0007\u0003",
+    "\u0002#$\u0003\u0002\u0010\u0012\u0003\u0002\u0014\u0017\u0003\u0002",
+    "\u001d\u001e\u0004\u0002++..\u0002\u0146\u0002U\u0003\u0002\u0002\u0002",
+    "\u0004]\u0003\u0002\u0002\u0002\u0006_\u0003\u0002\u0002\u0002\bd\u0003",
+    "\u0002\u0002\u0002\nq\u0003\u0002\u0002\u0002\f\u0083\u0003\u0002\u0002",
+    "\u0002\u000e\u008d\u0003\u0002\u0002\u0002\u0010\u008f\u0003\u0002\u0002",
+    "\u0002\u0012\u009f\u0003\u0002\u0002\u0002\u0014\u00a1\u0003\u0002\u0002",
+    "\u0002\u0016\u00ac\u0003\u0002\u0002\u0002\u0018\u00ae\u0003\u0002\u0002",
+    "\u0002\u001a\u00b1\u0003\u0002\u0002\u0002\u001c\u00b4\u0003\u0002\u0002",
+    "\u0002\u001e\u00b7\u0003\u0002\u0002\u0002 \u00ba\u0003\u0002\u0002",
+    "\u0002\"\u00bd\u0003\u0002\u0002\u0002$\u00c0\u0003\u0002\u0002\u0002",
+    "&\u00c3\u0003\u0002\u0002\u0002(\u00c6\u0003\u0002\u0002\u0002*\u00cf",
+    "\u0003\u0002\u0002\u0002,\u00d9\u0003\u0002\u0002\u0002.\u00e0\u0003",
+    "\u0002\u0002\u00020\u00e5\u0003\u0002\u0002\u00022\u00f0\u0003\u0002",
+    "\u0002\u00024\u00fb\u0003\u0002\u0002\u00026\u0108\u0003\u0002\u0002",
+    "\u00028\u0110\u0003\u0002\u0002\u0002:\u0112\u0003\u0002\u0002\u0002",
+    "<\u0114\u0003\u0002\u0002\u0002>\u0116\u0003\u0002\u0002\u0002@\u0118",
+    "\u0003\u0002\u0002\u0002B\u0123\u0003\u0002\u0002\u0002D\u0125\u0003",
+    "\u0002\u0002\u0002F\u012d\u0003\u0002\u0002\u0002H\u0131\u0003\u0002",
+    "\u0002\u0002J\u0134\u0003\u0002\u0002\u0002L\u013a\u0003\u0002\u0002",
+    "\u0002N\u013c\u0003\u0002\u0002\u0002P\u013e\u0003\u0002\u0002\u0002",
+    "RT\u0005\u0004\u0003\u0002SR\u0003\u0002\u0002\u0002TW\u0003\u0002\u0002",
+    "\u0002US\u0003\u0002\u0002\u0002UV\u0003\u0002\u0002\u0002V\u0003\u0003",
+    "\u0002\u0002\u0002WU\u0003\u0002\u0002\u0002X^\u0005\u0006\u0004\u0002",
+    "Y^\u0005\b\u0005\u0002Z^\u0005\n\u0006\u0002[^\u0005\u0014\u000b\u0002",
+    "\\^\u0005\u0010\t\u0002]X\u0003\u0002\u0002\u0002]Y\u0003\u0002\u0002",
+    "\u0002]Z\u0003\u0002\u0002\u0002][\u0003\u0002\u0002\u0002]\\\u0003",
+    "\u0002\u0002\u0002^\u0005\u0003\u0002\u0002\u0002_`\u0007\u0003\u0002",
+    "\u0002`a\u0007.\u0002\u0002ab\u0007\u001f\u0002\u0002bc\u0007.\u0002",
+    "\u0002c\u0007\u0003\u0002\u0002\u0002de\u0007\u0004\u0002\u0002eg\u0007",
+    ".\u0002\u0002fh\u0005\f\u0007\u0002gf\u0003\u0002\u0002\u0002hi\u0003",
+    "\u0002\u0002\u0002ig\u0003\u0002\u0002\u0002ij\u0003\u0002\u0002\u0002",
+    "jn\u0003\u0002\u0002\u0002km\u0005\u000e\b\u0002lk\u0003\u0002\u0002",
+    "\u0002mp\u0003\u0002\u0002\u0002nl\u0003\u0002\u0002\u0002no\u0003\u0002",
+    "\u0002\u0002o\t\u0003\u0002\u0002\u0002pn\u0003\u0002\u0002\u0002qr",
+    "\u0007\u0005\u0002\u0002rv\u0007.\u0002\u0002su\u0005\f\u0007\u0002",
+    "ts\u0003\u0002\u0002\u0002ux\u0003\u0002\u0002\u0002vt\u0003\u0002\u0002",
+    "\u0002vw\u0003\u0002\u0002\u0002w|\u0003\u0002\u0002\u0002xv\u0003\u0002",
+    "\u0002\u0002y{\u0005\u000e\b\u0002zy\u0003\u0002\u0002\u0002{~\u0003",
+    "\u0002\u0002\u0002|z\u0003\u0002\u0002\u0002|}\u0003\u0002\u0002\u0002",
+    "}\u000b\u0003\u0002\u0002\u0002~|\u0003\u0002\u0002\u0002\u007f\u0084",
+    "\u0005\u0018\r\u0002\u0080\u0084\u0005\u001a\u000e\u0002\u0081\u0084",
+    "\u0005\u001c\u000f\u0002\u0082\u0084\u0005\u001e\u0010\u0002\u0083\u007f",
+    "\u0003\u0002\u0002\u0002\u0083\u0080\u0003\u0002\u0002\u0002\u0083\u0081",
+    "\u0003\u0002\u0002\u0002\u0083\u0082\u0003\u0002\u0002\u0002\u0084\r",
+    "\u0003\u0002\u0002\u0002\u0085\u008e\u0005(\u0015\u0002\u0086\u008e",
+    "\u0005*\u0016\u0002\u0087\u008e\u0005,\u0017\u0002\u0088\u008e\u0005",
+    ".\u0018\u0002\u0089\u008e\u00050\u0019\u0002\u008a\u008e\u00052\u001a",
+    "\u0002\u008b\u008e\u00054\u001b\u0002\u008c\u008e\u00056\u001c\u0002",
+    "\u008d\u0085\u0003\u0002\u0002\u0002\u008d\u0086\u0003\u0002\u0002\u0002",
+    "\u008d\u0087\u0003\u0002\u0002\u0002\u008d\u0088\u0003\u0002\u0002\u0002",
+    "\u008d\u0089\u0003\u0002\u0002\u0002\u008d\u008a\u0003\u0002\u0002\u0002",
+    "\u008d\u008b\u0003\u0002\u0002\u0002\u008d\u008c\u0003\u0002\u0002\u0002",
+    "\u008e\u000f\u0003\u0002\u0002\u0002\u008f\u0090\u0007\u0006\u0002\u0002",
+    "\u0090\u0094\u0007.\u0002\u0002\u0091\u0093\u0005\u0012\n\u0002\u0092",
+    "\u0091\u0003\u0002\u0002\u0002\u0093\u0096\u0003\u0002\u0002\u0002\u0094",
+    "\u0092\u0003\u0002\u0002\u0002\u0094\u0095\u0003\u0002\u0002\u0002\u0095",
+    "\u009a\u0003\u0002\u0002\u0002\u0096\u0094\u0003\u0002\u0002\u0002\u0097",
+    "\u0099\u0005.\u0018\u0002\u0098\u0097\u0003\u0002\u0002\u0002\u0099",
+    "\u009c\u0003\u0002\u0002\u0002\u009a\u0098\u0003\u0002\u0002\u0002\u009a",
+    "\u009b\u0003\u0002\u0002\u0002\u009b\u0011\u0003\u0002\u0002\u0002\u009c",
+    "\u009a\u0003\u0002\u0002\u0002\u009d\u00a0\u0005&\u0014\u0002\u009e",
+    "\u00a0\u0005\u001c\u000f\u0002\u009f\u009d\u0003\u0002\u0002\u0002\u009f",
+    "\u009e\u0003\u0002\u0002\u0002\u00a0\u0013\u0003\u0002\u0002\u0002\u00a1",
+    "\u00a2\u0007\b\u0002\u0002\u00a2\u00a4\u0007.\u0002\u0002\u00a3\u00a5",
+    "\u0005\u0016\f\u0002\u00a4\u00a3\u0003\u0002\u0002\u0002\u00a5\u00a6",
+    "\u0003\u0002\u0002\u0002\u00a6\u00a4\u0003\u0002\u0002\u0002\u00a6\u00a7",
+    "\u0003\u0002\u0002\u0002\u00a7\u0015\u0003\u0002\u0002\u0002\u00a8\u00ad",
+    "\u0005\u001e\u0010\u0002\u00a9\u00ad\u0005 \u0011\u0002\u00aa\u00ad",
+    "\u0005\"\u0012\u0002\u00ab\u00ad\u0005$\u0013\u0002\u00ac\u00a8\u0003",
+    "\u0002\u0002\u0002\u00ac\u00a9\u0003\u0002\u0002\u0002\u00ac\u00aa\u0003",
+    "\u0002\u0002\u0002\u00ac\u00ab\u0003\u0002\u0002\u0002\u00ad\u0017\u0003",
+    "\u0002\u0002\u0002\u00ae\u00af\u0007\t\u0002\u0002\u00af\u00b0\u0007",
+    ".\u0002\u0002\u00b0\u0019\u0003\u0002\u0002\u0002\u00b1\u00b2\u0007",
+    "\n\u0002\u0002\u00b2\u00b3\u0007.\u0002\u0002\u00b3\u001b\u0003\u0002",
+    "\u0002\u0002\u00b4\u00b5\u0007\u000b\u0002\u0002\u00b5\u00b6\u0007#",
+    "\u0002\u0002\u00b6\u001d\u0003\u0002\u0002\u0002\u00b7\u00b8\u0007\f",
+    "\u0002\u0002\u00b8\u00b9\t\u0002\u0002\u0002\u00b9\u001f\u0003\u0002",
+    "\u0002\u0002\u00ba\u00bb\u0007\r\u0002\u0002\u00bb\u00bc\u0007#\u0002",
+    "\u0002\u00bc!\u0003\u0002\u0002\u0002\u00bd\u00be\u0007\u000e\u0002",
+    "\u0002\u00be\u00bf\u0007#\u0002\u0002\u00bf#\u0003\u0002\u0002\u0002",
+    "\u00c0\u00c1\u0007\u000f\u0002\u0002\u00c1\u00c2\u0007\'\u0002\u0002",
+    "\u00c2%\u0003\u0002\u0002\u0002\u00c3\u00c4\u0007\u0007\u0002\u0002",
+    "\u00c4\u00c5\u0007.\u0002\u0002\u00c5\'\u0003\u0002\u0002\u0002\u00c6",
+    "\u00c7\u0007 \u0002\u0002\u00c7\u00c8\u00058\u001d\u0002\u00c8\u00cc",
+    "\u0007*\u0002\u0002\u00c9\u00cb\u0005> \u0002\u00ca\u00c9\u0003\u0002",
+    "\u0002\u0002\u00cb\u00ce\u0003\u0002\u0002\u0002\u00cc\u00ca\u0003\u0002",
+    "\u0002\u0002\u00cc\u00cd\u0003\u0002\u0002\u0002\u00cd)\u0003\u0002",
+    "\u0002\u0002\u00ce\u00cc\u0003\u0002\u0002\u0002\u00cf\u00d2\u0007 ",
+    "\u0002\u0002\u00d0\u00d3\u00058\u001d\u0002\u00d1\u00d3\u0005:\u001e",
+    "\u0002\u00d2\u00d0\u0003\u0002\u0002\u0002\u00d2\u00d1\u0003\u0002\u0002",
+    "\u0002\u00d3\u00d5\u0003\u0002\u0002\u0002\u00d4\u00d6\u0005> \u0002",
+    "\u00d5\u00d4\u0003\u0002\u0002\u0002\u00d6\u00d7\u0003\u0002\u0002\u0002",
+    "\u00d7\u00d5\u0003\u0002\u0002\u0002\u00d7\u00d8\u0003\u0002\u0002\u0002",
+    "\u00d8+\u0003\u0002\u0002\u0002\u00d9\u00da\u0007 \u0002\u0002\u00da",
+    "\u00db\u00058\u001d\u0002\u00db\u00dc\u0007\u0013\u0002\u0002\u00dc",
+    "\u00de\u0007.\u0002\u0002\u00dd\u00df\u0005@!\u0002\u00de\u00dd\u0003",
+    "\u0002\u0002\u0002\u00de\u00df\u0003\u0002\u0002\u0002\u00df-\u0003",
+    "\u0002\u0002\u0002\u00e0\u00e1\u0007 \u0002\u0002\u00e1\u00e2\u0005",
+    "8\u001d\u0002\u00e2\u00e3\u0007\u001f\u0002\u0002\u00e3\u00e4\u0005",
+    "B\"\u0002\u00e4/\u0003\u0002\u0002\u0002\u00e5\u00e6\u0007 \u0002\u0002",
+    "\u00e6\u00e7\u00058\u001d\u0002\u00e7\u00e8\u0007\u0018\u0002\u0002",
+    "\u00e8\u00ed\u0005D#\u0002\u00e9\u00ea\u0007\u0019\u0002\u0002\u00ea",
+    "\u00ec\u0005D#\u0002\u00eb\u00e9\u0003\u0002\u0002\u0002\u00ec\u00ef",
+    "\u0003\u0002\u0002\u0002\u00ed\u00eb\u0003\u0002\u0002\u0002\u00ed\u00ee",
+    "\u0003\u0002\u0002\u0002\u00ee1\u0003\u0002\u0002\u0002\u00ef\u00ed",
+    "\u0003\u0002\u0002\u0002\u00f0\u00f1\u0007 \u0002\u0002\u00f1\u00f2",
+    "\u00058\u001d\u0002\u00f2\u00f3\u0007\u001a\u0002\u0002\u00f3\u00f8",
+    "\u0005P)\u0002\u00f4\u00f5\u0007\u001b\u0002\u0002\u00f5\u00f7\u0005",
+    "P)\u0002\u00f6\u00f4\u0003\u0002\u0002\u0002\u00f7\u00fa\u0003\u0002",
+    "\u0002\u0002\u00f8\u00f6\u0003\u0002\u0002\u0002\u00f8\u00f9\u0003\u0002",
+    "\u0002\u0002\u00f93\u0003\u0002\u0002\u0002\u00fa\u00f8\u0003\u0002",
+    "\u0002\u0002\u00fb\u00fd\u0007 \u0002\u0002\u00fc\u00fe\u00058\u001d",
+    "\u0002\u00fd\u00fc\u0003\u0002\u0002\u0002\u00fd\u00fe\u0003\u0002\u0002",
+    "\u0002\u00fe\u00ff\u0003\u0002\u0002\u0002\u00ff\u0100\u0007\u001c\u0002",
+    "\u0002\u0100\u0105\u0007.\u0002\u0002\u0101\u0102\u0007\u0019\u0002",
+    "\u0002\u0102\u0104\u0007.\u0002\u0002\u0103\u0101\u0003\u0002\u0002",
+    "\u0002\u0104\u0107\u0003\u0002\u0002\u0002\u0105\u0103\u0003\u0002\u0002",
+    "\u0002\u0105\u0106\u0003\u0002\u0002\u0002\u01065\u0003\u0002\u0002",
+    "\u0002\u0107\u0105\u0003\u0002\u0002\u0002\u0108\u010a\u0007 \u0002",
+    "\u0002\u0109\u010b\u00058\u001d\u0002\u010a\u0109\u0003\u0002\u0002",
+    "\u0002\u010a\u010b\u0003\u0002\u0002\u0002\u010b\u010c\u0003\u0002\u0002",
+    "\u0002\u010c\u010d\u0005<\u001f\u0002\u010d\u010e\u0007\u001f\u0002",
+    "\u0002\u010e\u010f\u0005B\"\u0002\u010f7\u0003\u0002\u0002\u0002\u0110",
+    "\u0111\u0007.\u0002\u0002\u01119\u0003\u0002\u0002\u0002\u0112\u0113",
+    "\u0007-\u0002\u0002\u0113;\u0003\u0002\u0002\u0002\u0114\u0115\u0007",
+    ",\u0002\u0002\u0115=\u0003\u0002\u0002\u0002\u0116\u0117\t\u0003\u0002",
+    "\u0002\u0117?\u0003\u0002\u0002\u0002\u0118\u0119\t\u0004\u0002\u0002",
+    "\u0119A\u0003\u0002\u0002\u0002\u011a\u0124\u0007#\u0002\u0002\u011b",
+    "\u0124\u0007$\u0002\u0002\u011c\u0124\u0007%\u0002\u0002\u011d\u0124",
+    "\u0007(\u0002\u0002\u011e\u0124\u0007)\u0002\u0002\u011f\u0124\u0005",
+    "F$\u0002\u0120\u0124\u0005H%\u0002\u0121\u0124\u0005J&\u0002\u0122\u0124",
+    "\u0005N(\u0002\u0123\u011a\u0003\u0002\u0002\u0002\u0123\u011b\u0003",
+    "\u0002\u0002\u0002\u0123\u011c\u0003\u0002\u0002\u0002\u0123\u011d\u0003",
+    "\u0002\u0002\u0002\u0123\u011e\u0003\u0002\u0002\u0002\u0123\u011f\u0003",
+    "\u0002\u0002\u0002\u0123\u0120\u0003\u0002\u0002\u0002\u0123\u0121\u0003",
+    "\u0002\u0002\u0002\u0123\u0122\u0003\u0002\u0002\u0002\u0124C\u0003",
+    "\u0002\u0002\u0002\u0125\u0126\u0007.\u0002\u0002\u0126\u012a\u0007",
+    "*\u0002\u0002\u0127\u0129\u0005> \u0002\u0128\u0127\u0003\u0002\u0002",
+    "\u0002\u0129\u012c\u0003\u0002\u0002\u0002\u012a\u0128\u0003\u0002\u0002",
+    "\u0002\u012a\u012b\u0003\u0002\u0002\u0002\u012bE\u0003\u0002\u0002",
+    "\u0002\u012c\u012a\u0003\u0002\u0002\u0002\u012d\u012f\u0007\'\u0002",
+    "\u0002\u012e\u0130\u0007#\u0002\u0002\u012f\u012e\u0003\u0002\u0002",
+    "\u0002\u012f\u0130\u0003\u0002\u0002\u0002\u0130G\u0003\u0002\u0002",
+    "\u0002\u0131\u0132\u0007%\u0002\u0002\u0132\u0133\u0007&\u0002\u0002",
+    "\u0133I\u0003\u0002\u0002\u0002\u0134\u0135\u0005L\'\u0002\u0135\u0136",
+    "\u0007!\u0002\u0002\u0136\u0137\u0005L\'\u0002\u0137K\u0003\u0002\u0002",
+    "\u0002\u0138\u013b\u0007%\u0002\u0002\u0139\u013b\u0005H%\u0002\u013a",
+    "\u0138\u0003\u0002\u0002\u0002\u013a\u0139\u0003\u0002\u0002\u0002\u013b",
+    "M\u0003\u0002\u0002\u0002\u013c\u013d\t\u0005\u0002\u0002\u013dO\u0003",
+    "\u0002\u0002\u0002\u013e\u013f\t\u0006\u0002\u0002\u013fQ\u0003\u0002",
+    "\u0002\u0002\u001cU]inv|\u0083\u008d\u0094\u009a\u009f\u00a6\u00ac\u00cc",
+    "\u00d2\u00d7\u00de\u00ed\u00f8\u00fd\u0105\u010a\u0123\u012a\u012f\u013a"].join("");
 
 
 var atn = new antlr4.atn.ATNDeserializer().deserialize(serializedATN);
@@ -228,14 +234,14 @@ var symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTAN
                       "COMMA_DELIMITED_SEQUENCES", "SEQUENCE", "WHITESPACE", 
                       "BLOCK_COMMENT", "LINE_COMMENT" ];
 
-var ruleNames =  [ "doc", "entity", "alias", "profile", "extension", "instance", 
-                   "sdMetadata", "sdRule", "invariant", "invariantMetadata", 
-                   "parent", "id", "title", "description", "expression", 
-                   "xpath", "severity", "cardRule", "flagRule", "valueSetRule", 
-                   "fixedValueRule", "containsRule", "onlyRule", "obeysRule", 
-                   "caretValueRule", "path", "paths", "caretPath", "flag", 
-                   "strength", "value", "item", "code", "quantity", "ratio", 
-                   "ratioPart", "bool", "targetType" ];
+var ruleNames =  [ "doc", "entity", "alias", "profile", "extension", "sdMetadata", 
+                   "sdRule", "instance", "instanceMetadata", "invariant", 
+                   "invariantMetadata", "parent", "id", "title", "description", 
+                   "expression", "xpath", "severity", "instanceOf", "cardRule", 
+                   "flagRule", "valueSetRule", "fixedValueRule", "containsRule", 
+                   "onlyRule", "obeysRule", "caretValueRule", "path", "paths", 
+                   "caretPath", "flag", "strength", "value", "item", "code", 
+                   "quantity", "ratio", "ratioPart", "bool", "targetType" ];
 
 function FSHParser (input) {
 	antlr4.Parser.call(this, input);
@@ -309,39 +315,41 @@ FSHParser.RULE_entity = 1;
 FSHParser.RULE_alias = 2;
 FSHParser.RULE_profile = 3;
 FSHParser.RULE_extension = 4;
-FSHParser.RULE_instance = 5;
-FSHParser.RULE_sdMetadata = 6;
-FSHParser.RULE_sdRule = 7;
-FSHParser.RULE_invariant = 8;
-FSHParser.RULE_invariantMetadata = 9;
-FSHParser.RULE_parent = 10;
-FSHParser.RULE_id = 11;
-FSHParser.RULE_title = 12;
-FSHParser.RULE_description = 13;
-FSHParser.RULE_expression = 14;
-FSHParser.RULE_xpath = 15;
-FSHParser.RULE_severity = 16;
-FSHParser.RULE_cardRule = 17;
-FSHParser.RULE_flagRule = 18;
-FSHParser.RULE_valueSetRule = 19;
-FSHParser.RULE_fixedValueRule = 20;
-FSHParser.RULE_containsRule = 21;
-FSHParser.RULE_onlyRule = 22;
-FSHParser.RULE_obeysRule = 23;
-FSHParser.RULE_caretValueRule = 24;
-FSHParser.RULE_path = 25;
-FSHParser.RULE_paths = 26;
-FSHParser.RULE_caretPath = 27;
-FSHParser.RULE_flag = 28;
-FSHParser.RULE_strength = 29;
-FSHParser.RULE_value = 30;
-FSHParser.RULE_item = 31;
-FSHParser.RULE_code = 32;
-FSHParser.RULE_quantity = 33;
-FSHParser.RULE_ratio = 34;
-FSHParser.RULE_ratioPart = 35;
-FSHParser.RULE_bool = 36;
-FSHParser.RULE_targetType = 37;
+FSHParser.RULE_sdMetadata = 5;
+FSHParser.RULE_sdRule = 6;
+FSHParser.RULE_instance = 7;
+FSHParser.RULE_instanceMetadata = 8;
+FSHParser.RULE_invariant = 9;
+FSHParser.RULE_invariantMetadata = 10;
+FSHParser.RULE_parent = 11;
+FSHParser.RULE_id = 12;
+FSHParser.RULE_title = 13;
+FSHParser.RULE_description = 14;
+FSHParser.RULE_expression = 15;
+FSHParser.RULE_xpath = 16;
+FSHParser.RULE_severity = 17;
+FSHParser.RULE_instanceOf = 18;
+FSHParser.RULE_cardRule = 19;
+FSHParser.RULE_flagRule = 20;
+FSHParser.RULE_valueSetRule = 21;
+FSHParser.RULE_fixedValueRule = 22;
+FSHParser.RULE_containsRule = 23;
+FSHParser.RULE_onlyRule = 24;
+FSHParser.RULE_obeysRule = 25;
+FSHParser.RULE_caretValueRule = 26;
+FSHParser.RULE_path = 27;
+FSHParser.RULE_paths = 28;
+FSHParser.RULE_caretPath = 29;
+FSHParser.RULE_flag = 30;
+FSHParser.RULE_strength = 31;
+FSHParser.RULE_value = 32;
+FSHParser.RULE_item = 33;
+FSHParser.RULE_code = 34;
+FSHParser.RULE_quantity = 35;
+FSHParser.RULE_ratio = 36;
+FSHParser.RULE_ratioPart = 37;
+FSHParser.RULE_bool = 38;
+FSHParser.RULE_targetType = 39;
 
 
 function DocContext(parser, parent, invokingState) {
@@ -403,13 +411,13 @@ FSHParser.prototype.doc = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 79;
+        this.state = 83;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_ALIAS) | (1 << FSHParser.KW_PROFILE) | (1 << FSHParser.KW_EXTENSION) | (1 << FSHParser.KW_INSTANCE) | (1 << FSHParser.KW_INVARIANT))) !== 0)) {
-            this.state = 76;
+            this.state = 80;
             this.entity();
-            this.state = 81;
+            this.state = 85;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -494,32 +502,32 @@ FSHParser.prototype.entity = function() {
     var localctx = new EntityContext(this, this._ctx, this.state);
     this.enterRule(localctx, 2, FSHParser.RULE_entity);
     try {
-        this.state = 87;
+        this.state = 91;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_ALIAS:
             this.enterOuterAlt(localctx, 1);
-            this.state = 82;
+            this.state = 86;
             this.alias();
             break;
         case FSHParser.KW_PROFILE:
             this.enterOuterAlt(localctx, 2);
-            this.state = 83;
+            this.state = 87;
             this.profile();
             break;
         case FSHParser.KW_EXTENSION:
             this.enterOuterAlt(localctx, 3);
-            this.state = 84;
+            this.state = 88;
             this.extension();
             break;
         case FSHParser.KW_INVARIANT:
             this.enterOuterAlt(localctx, 4);
-            this.state = 85;
+            this.state = 89;
             this.invariant();
             break;
         case FSHParser.KW_INSTANCE:
             this.enterOuterAlt(localctx, 5);
-            this.state = 86;
+            this.state = 90;
             this.instance();
             break;
         default:
@@ -607,13 +615,13 @@ FSHParser.prototype.alias = function() {
     this.enterRule(localctx, 4, FSHParser.RULE_alias);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 89;
+        this.state = 93;
         this.match(FSHParser.KW_ALIAS);
-        this.state = 90;
+        this.state = 94;
         this.match(FSHParser.SEQUENCE);
-        this.state = 91;
+        this.state = 95;
         this.match(FSHParser.EQUAL);
-        this.state = 92;
+        this.state = 96;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -708,27 +716,27 @@ FSHParser.prototype.profile = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 94;
+        this.state = 98;
         this.match(FSHParser.KW_PROFILE);
-        this.state = 95;
+        this.state = 99;
         this.match(FSHParser.SEQUENCE);
-        this.state = 97; 
+        this.state = 101; 
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         do {
-            this.state = 96;
+            this.state = 100;
             this.sdMetadata();
-            this.state = 99; 
+            this.state = 103; 
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         } while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_PARENT) | (1 << FSHParser.KW_ID) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION))) !== 0));
-        this.state = 104;
+        this.state = 108;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.STAR) {
-            this.state = 101;
+            this.state = 105;
             this.sdRule();
-            this.state = 106;
+            this.state = 110;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -825,151 +833,27 @@ FSHParser.prototype.extension = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 107;
+        this.state = 111;
         this.match(FSHParser.KW_EXTENSION);
-        this.state = 108;
-        this.match(FSHParser.SEQUENCE);
         this.state = 112;
+        this.match(FSHParser.SEQUENCE);
+        this.state = 116;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_PARENT) | (1 << FSHParser.KW_ID) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION))) !== 0)) {
-            this.state = 109;
+            this.state = 113;
             this.sdMetadata();
-            this.state = 114;
+            this.state = 118;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
-        this.state = 118;
-        this._errHandler.sync(this);
-        _la = this._input.LA(1);
-        while(_la===FSHParser.STAR) {
-            this.state = 115;
-            this.sdRule();
-            this.state = 120;
-            this._errHandler.sync(this);
-            _la = this._input.LA(1);
-        }
-    } catch (re) {
-    	if(re instanceof antlr4.error.RecognitionException) {
-	        localctx.exception = re;
-	        this._errHandler.reportError(this, re);
-	        this._errHandler.recover(this, re);
-	    } else {
-	    	throw re;
-	    }
-    } finally {
-        this.exitRule();
-    }
-    return localctx;
-};
-
-
-function InstanceContext(parser, parent, invokingState) {
-	if(parent===undefined) {
-	    parent = null;
-	}
-	if(invokingState===undefined || invokingState===null) {
-		invokingState = -1;
-	}
-	antlr4.ParserRuleContext.call(this, parent, invokingState);
-    this.parser = parser;
-    this.ruleIndex = FSHParser.RULE_instance;
-    return this;
-}
-
-InstanceContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
-InstanceContext.prototype.constructor = InstanceContext;
-
-InstanceContext.prototype.KW_INSTANCE = function() {
-    return this.getToken(FSHParser.KW_INSTANCE, 0);
-};
-
-InstanceContext.prototype.SEQUENCE = function(i) {
-	if(i===undefined) {
-		i = null;
-	}
-    if(i===null) {
-        return this.getTokens(FSHParser.SEQUENCE);
-    } else {
-        return this.getToken(FSHParser.SEQUENCE, i);
-    }
-};
-
-
-InstanceContext.prototype.KW_INSTANCEOF = function() {
-    return this.getToken(FSHParser.KW_INSTANCEOF, 0);
-};
-
-InstanceContext.prototype.title = function() {
-    return this.getTypedRuleContext(TitleContext,0);
-};
-
-InstanceContext.prototype.fixedValueRule = function(i) {
-    if(i===undefined) {
-        i = null;
-    }
-    if(i===null) {
-        return this.getTypedRuleContexts(FixedValueRuleContext);
-    } else {
-        return this.getTypedRuleContext(FixedValueRuleContext,i);
-    }
-};
-
-InstanceContext.prototype.enterRule = function(listener) {
-    if(listener instanceof FSHListener ) {
-        listener.enterInstance(this);
-	}
-};
-
-InstanceContext.prototype.exitRule = function(listener) {
-    if(listener instanceof FSHListener ) {
-        listener.exitInstance(this);
-	}
-};
-
-InstanceContext.prototype.accept = function(visitor) {
-    if ( visitor instanceof FSHVisitor ) {
-        return visitor.visitInstance(this);
-    } else {
-        return visitor.visitChildren(this);
-    }
-};
-
-
-
-
-FSHParser.InstanceContext = InstanceContext;
-
-FSHParser.prototype.instance = function() {
-
-    var localctx = new InstanceContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 10, FSHParser.RULE_instance);
-    var _la = 0; // Token type
-    try {
-        this.enterOuterAlt(localctx, 1);
-        this.state = 121;
-        this.match(FSHParser.KW_INSTANCE);
         this.state = 122;
-        this.match(FSHParser.SEQUENCE);
-        this.state = 123;
-        this.match(FSHParser.KW_INSTANCEOF);
-        this.state = 124;
-        this.match(FSHParser.SEQUENCE);
-        this.state = 126;
-        this._errHandler.sync(this);
-        _la = this._input.LA(1);
-        if(_la===FSHParser.KW_TITLE) {
-            this.state = 125;
-            this.title();
-        }
-
-        this.state = 131;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.STAR) {
-            this.state = 128;
-            this.fixedValueRule();
-            this.state = 133;
+            this.state = 119;
+            this.sdRule();
+            this.state = 124;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -1048,29 +932,29 @@ FSHParser.SdMetadataContext = SdMetadataContext;
 FSHParser.prototype.sdMetadata = function() {
 
     var localctx = new SdMetadataContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 12, FSHParser.RULE_sdMetadata);
+    this.enterRule(localctx, 10, FSHParser.RULE_sdMetadata);
     try {
-        this.state = 138;
+        this.state = 129;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_PARENT:
             this.enterOuterAlt(localctx, 1);
-            this.state = 134;
+            this.state = 125;
             this.parent();
             break;
         case FSHParser.KW_ID:
             this.enterOuterAlt(localctx, 2);
-            this.state = 135;
+            this.state = 126;
             this.id();
             break;
         case FSHParser.KW_TITLE:
             this.enterOuterAlt(localctx, 3);
-            this.state = 136;
+            this.state = 127;
             this.title();
             break;
         case FSHParser.KW_DESCRIPTION:
             this.enterOuterAlt(localctx, 4);
-            this.state = 137;
+            this.state = 128;
             this.description();
             break;
         default:
@@ -1167,60 +1051,262 @@ FSHParser.SdRuleContext = SdRuleContext;
 FSHParser.prototype.sdRule = function() {
 
     var localctx = new SdRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 14, FSHParser.RULE_sdRule);
+    this.enterRule(localctx, 12, FSHParser.RULE_sdRule);
     try {
-        this.state = 148;
+        this.state = 139;
         this._errHandler.sync(this);
-        var la_ = this._interp.adaptivePredict(this._input,9,this._ctx);
+        var la_ = this._interp.adaptivePredict(this._input,7,this._ctx);
         switch(la_) {
         case 1:
             this.enterOuterAlt(localctx, 1);
-            this.state = 140;
+            this.state = 131;
             this.cardRule();
             break;
 
         case 2:
             this.enterOuterAlt(localctx, 2);
-            this.state = 141;
+            this.state = 132;
             this.flagRule();
             break;
 
         case 3:
             this.enterOuterAlt(localctx, 3);
-            this.state = 142;
+            this.state = 133;
             this.valueSetRule();
             break;
 
         case 4:
             this.enterOuterAlt(localctx, 4);
-            this.state = 143;
+            this.state = 134;
             this.fixedValueRule();
             break;
 
         case 5:
             this.enterOuterAlt(localctx, 5);
-            this.state = 144;
+            this.state = 135;
             this.containsRule();
             break;
 
         case 6:
             this.enterOuterAlt(localctx, 6);
-            this.state = 145;
+            this.state = 136;
             this.onlyRule();
             break;
 
         case 7:
             this.enterOuterAlt(localctx, 7);
-            this.state = 146;
+            this.state = 137;
             this.obeysRule();
             break;
 
         case 8:
             this.enterOuterAlt(localctx, 8);
-            this.state = 147;
+            this.state = 138;
             this.caretValueRule();
             break;
 
+        }
+    } catch (re) {
+    	if(re instanceof antlr4.error.RecognitionException) {
+	        localctx.exception = re;
+	        this._errHandler.reportError(this, re);
+	        this._errHandler.recover(this, re);
+	    } else {
+	    	throw re;
+	    }
+    } finally {
+        this.exitRule();
+    }
+    return localctx;
+};
+
+
+function InstanceContext(parser, parent, invokingState) {
+	if(parent===undefined) {
+	    parent = null;
+	}
+	if(invokingState===undefined || invokingState===null) {
+		invokingState = -1;
+	}
+	antlr4.ParserRuleContext.call(this, parent, invokingState);
+    this.parser = parser;
+    this.ruleIndex = FSHParser.RULE_instance;
+    return this;
+}
+
+InstanceContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+InstanceContext.prototype.constructor = InstanceContext;
+
+InstanceContext.prototype.KW_INSTANCE = function() {
+    return this.getToken(FSHParser.KW_INSTANCE, 0);
+};
+
+InstanceContext.prototype.SEQUENCE = function() {
+    return this.getToken(FSHParser.SEQUENCE, 0);
+};
+
+InstanceContext.prototype.instanceMetadata = function(i) {
+    if(i===undefined) {
+        i = null;
+    }
+    if(i===null) {
+        return this.getTypedRuleContexts(InstanceMetadataContext);
+    } else {
+        return this.getTypedRuleContext(InstanceMetadataContext,i);
+    }
+};
+
+InstanceContext.prototype.fixedValueRule = function(i) {
+    if(i===undefined) {
+        i = null;
+    }
+    if(i===null) {
+        return this.getTypedRuleContexts(FixedValueRuleContext);
+    } else {
+        return this.getTypedRuleContext(FixedValueRuleContext,i);
+    }
+};
+
+InstanceContext.prototype.enterRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.enterInstance(this);
+	}
+};
+
+InstanceContext.prototype.exitRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.exitInstance(this);
+	}
+};
+
+InstanceContext.prototype.accept = function(visitor) {
+    if ( visitor instanceof FSHVisitor ) {
+        return visitor.visitInstance(this);
+    } else {
+        return visitor.visitChildren(this);
+    }
+};
+
+
+
+
+FSHParser.InstanceContext = InstanceContext;
+
+FSHParser.prototype.instance = function() {
+
+    var localctx = new InstanceContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 14, FSHParser.RULE_instance);
+    var _la = 0; // Token type
+    try {
+        this.enterOuterAlt(localctx, 1);
+        this.state = 141;
+        this.match(FSHParser.KW_INSTANCE);
+        this.state = 142;
+        this.match(FSHParser.SEQUENCE);
+        this.state = 146;
+        this._errHandler.sync(this);
+        _la = this._input.LA(1);
+        while(_la===FSHParser.KW_INSTANCEOF || _la===FSHParser.KW_TITLE) {
+            this.state = 143;
+            this.instanceMetadata();
+            this.state = 148;
+            this._errHandler.sync(this);
+            _la = this._input.LA(1);
+        }
+        this.state = 152;
+        this._errHandler.sync(this);
+        _la = this._input.LA(1);
+        while(_la===FSHParser.STAR) {
+            this.state = 149;
+            this.fixedValueRule();
+            this.state = 154;
+            this._errHandler.sync(this);
+            _la = this._input.LA(1);
+        }
+    } catch (re) {
+    	if(re instanceof antlr4.error.RecognitionException) {
+	        localctx.exception = re;
+	        this._errHandler.reportError(this, re);
+	        this._errHandler.recover(this, re);
+	    } else {
+	    	throw re;
+	    }
+    } finally {
+        this.exitRule();
+    }
+    return localctx;
+};
+
+
+function InstanceMetadataContext(parser, parent, invokingState) {
+	if(parent===undefined) {
+	    parent = null;
+	}
+	if(invokingState===undefined || invokingState===null) {
+		invokingState = -1;
+	}
+	antlr4.ParserRuleContext.call(this, parent, invokingState);
+    this.parser = parser;
+    this.ruleIndex = FSHParser.RULE_instanceMetadata;
+    return this;
+}
+
+InstanceMetadataContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+InstanceMetadataContext.prototype.constructor = InstanceMetadataContext;
+
+InstanceMetadataContext.prototype.instanceOf = function() {
+    return this.getTypedRuleContext(InstanceOfContext,0);
+};
+
+InstanceMetadataContext.prototype.title = function() {
+    return this.getTypedRuleContext(TitleContext,0);
+};
+
+InstanceMetadataContext.prototype.enterRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.enterInstanceMetadata(this);
+	}
+};
+
+InstanceMetadataContext.prototype.exitRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.exitInstanceMetadata(this);
+	}
+};
+
+InstanceMetadataContext.prototype.accept = function(visitor) {
+    if ( visitor instanceof FSHVisitor ) {
+        return visitor.visitInstanceMetadata(this);
+    } else {
+        return visitor.visitChildren(this);
+    }
+};
+
+
+
+
+FSHParser.InstanceMetadataContext = InstanceMetadataContext;
+
+FSHParser.prototype.instanceMetadata = function() {
+
+    var localctx = new InstanceMetadataContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 16, FSHParser.RULE_instanceMetadata);
+    try {
+        this.state = 157;
+        this._errHandler.sync(this);
+        switch(this._input.LA(1)) {
+        case FSHParser.KW_INSTANCEOF:
+            this.enterOuterAlt(localctx, 1);
+            this.state = 155;
+            this.instanceOf();
+            break;
+        case FSHParser.KW_TITLE:
+            this.enterOuterAlt(localctx, 2);
+            this.state = 156;
+            this.title();
+            break;
+        default:
+            throw new antlr4.error.NoViableAltException(this);
         }
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -1300,21 +1386,21 @@ FSHParser.InvariantContext = InvariantContext;
 FSHParser.prototype.invariant = function() {
 
     var localctx = new InvariantContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 16, FSHParser.RULE_invariant);
+    this.enterRule(localctx, 18, FSHParser.RULE_invariant);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 150;
+        this.state = 159;
         this.match(FSHParser.KW_INVARIANT);
-        this.state = 151;
+        this.state = 160;
         this.match(FSHParser.SEQUENCE);
-        this.state = 153; 
+        this.state = 162; 
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         do {
-            this.state = 152;
+            this.state = 161;
             this.invariantMetadata();
-            this.state = 155; 
+            this.state = 164; 
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         } while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_DESCRIPTION) | (1 << FSHParser.KW_EXPRESSION) | (1 << FSHParser.KW_XPATH) | (1 << FSHParser.KW_SEVERITY))) !== 0));
@@ -1393,29 +1479,29 @@ FSHParser.InvariantMetadataContext = InvariantMetadataContext;
 FSHParser.prototype.invariantMetadata = function() {
 
     var localctx = new InvariantMetadataContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 18, FSHParser.RULE_invariantMetadata);
+    this.enterRule(localctx, 20, FSHParser.RULE_invariantMetadata);
     try {
-        this.state = 161;
+        this.state = 170;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_DESCRIPTION:
             this.enterOuterAlt(localctx, 1);
-            this.state = 157;
+            this.state = 166;
             this.description();
             break;
         case FSHParser.KW_EXPRESSION:
             this.enterOuterAlt(localctx, 2);
-            this.state = 158;
+            this.state = 167;
             this.expression();
             break;
         case FSHParser.KW_XPATH:
             this.enterOuterAlt(localctx, 3);
-            this.state = 159;
+            this.state = 168;
             this.xpath();
             break;
         case FSHParser.KW_SEVERITY:
             this.enterOuterAlt(localctx, 4);
-            this.state = 160;
+            this.state = 169;
             this.severity();
             break;
         default:
@@ -1488,12 +1574,12 @@ FSHParser.ParentContext = ParentContext;
 FSHParser.prototype.parent = function() {
 
     var localctx = new ParentContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 20, FSHParser.RULE_parent);
+    this.enterRule(localctx, 22, FSHParser.RULE_parent);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 163;
+        this.state = 172;
         this.match(FSHParser.KW_PARENT);
-        this.state = 164;
+        this.state = 173;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -1562,12 +1648,12 @@ FSHParser.IdContext = IdContext;
 FSHParser.prototype.id = function() {
 
     var localctx = new IdContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 22, FSHParser.RULE_id);
+    this.enterRule(localctx, 24, FSHParser.RULE_id);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 166;
+        this.state = 175;
         this.match(FSHParser.KW_ID);
-        this.state = 167;
+        this.state = 176;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -1636,12 +1722,12 @@ FSHParser.TitleContext = TitleContext;
 FSHParser.prototype.title = function() {
 
     var localctx = new TitleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 24, FSHParser.RULE_title);
+    this.enterRule(localctx, 26, FSHParser.RULE_title);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 169;
+        this.state = 178;
         this.match(FSHParser.KW_TITLE);
-        this.state = 170;
+        this.state = 179;
         this.match(FSHParser.STRING);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -1714,13 +1800,13 @@ FSHParser.DescriptionContext = DescriptionContext;
 FSHParser.prototype.description = function() {
 
     var localctx = new DescriptionContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 26, FSHParser.RULE_description);
+    this.enterRule(localctx, 28, FSHParser.RULE_description);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 172;
+        this.state = 181;
         this.match(FSHParser.KW_DESCRIPTION);
-        this.state = 173;
+        this.state = 182;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.STRING || _la===FSHParser.MULTILINE_STRING)) {
         this._errHandler.recoverInline(this);
@@ -1796,12 +1882,12 @@ FSHParser.ExpressionContext = ExpressionContext;
 FSHParser.prototype.expression = function() {
 
     var localctx = new ExpressionContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 28, FSHParser.RULE_expression);
+    this.enterRule(localctx, 30, FSHParser.RULE_expression);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 175;
+        this.state = 184;
         this.match(FSHParser.KW_EXPRESSION);
-        this.state = 176;
+        this.state = 185;
         this.match(FSHParser.STRING);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -1870,12 +1956,12 @@ FSHParser.XpathContext = XpathContext;
 FSHParser.prototype.xpath = function() {
 
     var localctx = new XpathContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 30, FSHParser.RULE_xpath);
+    this.enterRule(localctx, 32, FSHParser.RULE_xpath);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 178;
+        this.state = 187;
         this.match(FSHParser.KW_XPATH);
-        this.state = 179;
+        this.state = 188;
         this.match(FSHParser.STRING);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -1944,13 +2030,87 @@ FSHParser.SeverityContext = SeverityContext;
 FSHParser.prototype.severity = function() {
 
     var localctx = new SeverityContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 32, FSHParser.RULE_severity);
+    this.enterRule(localctx, 34, FSHParser.RULE_severity);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 181;
+        this.state = 190;
         this.match(FSHParser.KW_SEVERITY);
-        this.state = 182;
+        this.state = 191;
         this.match(FSHParser.CODE);
+    } catch (re) {
+    	if(re instanceof antlr4.error.RecognitionException) {
+	        localctx.exception = re;
+	        this._errHandler.reportError(this, re);
+	        this._errHandler.recover(this, re);
+	    } else {
+	    	throw re;
+	    }
+    } finally {
+        this.exitRule();
+    }
+    return localctx;
+};
+
+
+function InstanceOfContext(parser, parent, invokingState) {
+	if(parent===undefined) {
+	    parent = null;
+	}
+	if(invokingState===undefined || invokingState===null) {
+		invokingState = -1;
+	}
+	antlr4.ParserRuleContext.call(this, parent, invokingState);
+    this.parser = parser;
+    this.ruleIndex = FSHParser.RULE_instanceOf;
+    return this;
+}
+
+InstanceOfContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+InstanceOfContext.prototype.constructor = InstanceOfContext;
+
+InstanceOfContext.prototype.KW_INSTANCEOF = function() {
+    return this.getToken(FSHParser.KW_INSTANCEOF, 0);
+};
+
+InstanceOfContext.prototype.SEQUENCE = function() {
+    return this.getToken(FSHParser.SEQUENCE, 0);
+};
+
+InstanceOfContext.prototype.enterRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.enterInstanceOf(this);
+	}
+};
+
+InstanceOfContext.prototype.exitRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.exitInstanceOf(this);
+	}
+};
+
+InstanceOfContext.prototype.accept = function(visitor) {
+    if ( visitor instanceof FSHVisitor ) {
+        return visitor.visitInstanceOf(this);
+    } else {
+        return visitor.visitChildren(this);
+    }
+};
+
+
+
+
+FSHParser.InstanceOfContext = InstanceOfContext;
+
+FSHParser.prototype.instanceOf = function() {
+
+    var localctx = new InstanceOfContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 36, FSHParser.RULE_instanceOf);
+    try {
+        this.enterOuterAlt(localctx, 1);
+        this.state = 193;
+        this.match(FSHParser.KW_INSTANCEOF);
+        this.state = 194;
+        this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
 	        localctx.exception = re;
@@ -2033,23 +2193,23 @@ FSHParser.CardRuleContext = CardRuleContext;
 FSHParser.prototype.cardRule = function() {
 
     var localctx = new CardRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 34, FSHParser.RULE_cardRule);
+    this.enterRule(localctx, 38, FSHParser.RULE_cardRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 184;
+        this.state = 196;
         this.match(FSHParser.STAR);
-        this.state = 185;
+        this.state = 197;
         this.path();
-        this.state = 186;
+        this.state = 198;
         this.match(FSHParser.CARD);
-        this.state = 190;
+        this.state = 202;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU))) !== 0)) {
-            this.state = 187;
+            this.state = 199;
             this.flag();
-            this.state = 192;
+            this.state = 204;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -2135,33 +2295,33 @@ FSHParser.FlagRuleContext = FlagRuleContext;
 FSHParser.prototype.flagRule = function() {
 
     var localctx = new FlagRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 36, FSHParser.RULE_flagRule);
+    this.enterRule(localctx, 40, FSHParser.RULE_flagRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 193;
+        this.state = 205;
         this.match(FSHParser.STAR);
-        this.state = 196;
+        this.state = 208;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.SEQUENCE:
-            this.state = 194;
+            this.state = 206;
             this.path();
             break;
         case FSHParser.COMMA_DELIMITED_SEQUENCES:
-            this.state = 195;
+            this.state = 207;
             this.paths();
             break;
         default:
             throw new antlr4.error.NoViableAltException(this);
         }
-        this.state = 199; 
+        this.state = 211; 
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         do {
-            this.state = 198;
+            this.state = 210;
             this.flag();
-            this.state = 201; 
+            this.state = 213; 
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         } while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU))) !== 0));
@@ -2244,23 +2404,23 @@ FSHParser.ValueSetRuleContext = ValueSetRuleContext;
 FSHParser.prototype.valueSetRule = function() {
 
     var localctx = new ValueSetRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 38, FSHParser.RULE_valueSetRule);
+    this.enterRule(localctx, 42, FSHParser.RULE_valueSetRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 203;
+        this.state = 215;
         this.match(FSHParser.STAR);
-        this.state = 204;
+        this.state = 216;
         this.path();
-        this.state = 205;
+        this.state = 217;
         this.match(FSHParser.KW_FROM);
-        this.state = 206;
+        this.state = 218;
         this.match(FSHParser.SEQUENCE);
-        this.state = 208;
+        this.state = 220;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_EXAMPLE) | (1 << FSHParser.KW_PREFERRED) | (1 << FSHParser.KW_EXTENSIBLE) | (1 << FSHParser.KW_REQUIRED))) !== 0)) {
-            this.state = 207;
+            this.state = 219;
             this.strength();
         }
 
@@ -2339,16 +2499,16 @@ FSHParser.FixedValueRuleContext = FixedValueRuleContext;
 FSHParser.prototype.fixedValueRule = function() {
 
     var localctx = new FixedValueRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 40, FSHParser.RULE_fixedValueRule);
+    this.enterRule(localctx, 44, FSHParser.RULE_fixedValueRule);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 210;
+        this.state = 222;
         this.match(FSHParser.STAR);
-        this.state = 211;
+        this.state = 223;
         this.path();
-        this.state = 212;
+        this.state = 224;
         this.match(FSHParser.EQUAL);
-        this.state = 213;
+        this.state = 225;
         this.value();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2444,27 +2604,27 @@ FSHParser.ContainsRuleContext = ContainsRuleContext;
 FSHParser.prototype.containsRule = function() {
 
     var localctx = new ContainsRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 42, FSHParser.RULE_containsRule);
+    this.enterRule(localctx, 46, FSHParser.RULE_containsRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 215;
+        this.state = 227;
         this.match(FSHParser.STAR);
-        this.state = 216;
+        this.state = 228;
         this.path();
-        this.state = 217;
+        this.state = 229;
         this.match(FSHParser.KW_CONTAINS);
-        this.state = 218;
+        this.state = 230;
         this.item();
-        this.state = 223;
+        this.state = 235;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.KW_AND) {
-            this.state = 219;
+            this.state = 231;
             this.match(FSHParser.KW_AND);
-            this.state = 220;
+            this.state = 232;
             this.item();
-            this.state = 225;
+            this.state = 237;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -2562,27 +2722,27 @@ FSHParser.OnlyRuleContext = OnlyRuleContext;
 FSHParser.prototype.onlyRule = function() {
 
     var localctx = new OnlyRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 44, FSHParser.RULE_onlyRule);
+    this.enterRule(localctx, 48, FSHParser.RULE_onlyRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 226;
+        this.state = 238;
         this.match(FSHParser.STAR);
-        this.state = 227;
+        this.state = 239;
         this.path();
-        this.state = 228;
+        this.state = 240;
         this.match(FSHParser.KW_ONLY);
-        this.state = 229;
+        this.state = 241;
         this.targetType();
-        this.state = 234;
+        this.state = 246;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.KW_OR) {
-            this.state = 230;
+            this.state = 242;
             this.match(FSHParser.KW_OR);
-            this.state = 231;
+            this.state = 243;
             this.targetType();
-            this.state = 236;
+            this.state = 248;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -2681,33 +2841,33 @@ FSHParser.ObeysRuleContext = ObeysRuleContext;
 FSHParser.prototype.obeysRule = function() {
 
     var localctx = new ObeysRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 46, FSHParser.RULE_obeysRule);
+    this.enterRule(localctx, 50, FSHParser.RULE_obeysRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 237;
+        this.state = 249;
         this.match(FSHParser.STAR);
-        this.state = 239;
+        this.state = 251;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(_la===FSHParser.SEQUENCE) {
-            this.state = 238;
+            this.state = 250;
             this.path();
         }
 
-        this.state = 241;
+        this.state = 253;
         this.match(FSHParser.KW_OBEYS);
-        this.state = 242;
+        this.state = 254;
         this.match(FSHParser.SEQUENCE);
-        this.state = 247;
+        this.state = 259;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.KW_AND) {
-            this.state = 243;
+            this.state = 255;
             this.match(FSHParser.KW_AND);
-            this.state = 244;
+            this.state = 256;
             this.match(FSHParser.SEQUENCE);
-            this.state = 249;
+            this.state = 261;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -2790,25 +2950,25 @@ FSHParser.CaretValueRuleContext = CaretValueRuleContext;
 FSHParser.prototype.caretValueRule = function() {
 
     var localctx = new CaretValueRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 48, FSHParser.RULE_caretValueRule);
+    this.enterRule(localctx, 52, FSHParser.RULE_caretValueRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 250;
+        this.state = 262;
         this.match(FSHParser.STAR);
-        this.state = 252;
+        this.state = 264;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(_la===FSHParser.SEQUENCE) {
-            this.state = 251;
+            this.state = 263;
             this.path();
         }
 
-        this.state = 254;
+        this.state = 266;
         this.caretPath();
-        this.state = 255;
+        this.state = 267;
         this.match(FSHParser.EQUAL);
-        this.state = 256;
+        this.state = 268;
         this.value();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2873,10 +3033,10 @@ FSHParser.PathContext = PathContext;
 FSHParser.prototype.path = function() {
 
     var localctx = new PathContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 50, FSHParser.RULE_path);
+    this.enterRule(localctx, 54, FSHParser.RULE_path);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 258;
+        this.state = 270;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2941,10 +3101,10 @@ FSHParser.PathsContext = PathsContext;
 FSHParser.prototype.paths = function() {
 
     var localctx = new PathsContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 52, FSHParser.RULE_paths);
+    this.enterRule(localctx, 56, FSHParser.RULE_paths);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 260;
+        this.state = 272;
         this.match(FSHParser.COMMA_DELIMITED_SEQUENCES);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -3009,10 +3169,10 @@ FSHParser.CaretPathContext = CaretPathContext;
 FSHParser.prototype.caretPath = function() {
 
     var localctx = new CaretPathContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 54, FSHParser.RULE_caretPath);
+    this.enterRule(localctx, 58, FSHParser.RULE_caretPath);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 262;
+        this.state = 274;
         this.match(FSHParser.CARET_SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -3085,11 +3245,11 @@ FSHParser.FlagContext = FlagContext;
 FSHParser.prototype.flag = function() {
 
     var localctx = new FlagContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 56, FSHParser.RULE_flag);
+    this.enterRule(localctx, 60, FSHParser.RULE_flag);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 264;
+        this.state = 276;
         _la = this._input.LA(1);
         if(!((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU))) !== 0))) {
         this._errHandler.recoverInline(this);
@@ -3173,11 +3333,11 @@ FSHParser.StrengthContext = StrengthContext;
 FSHParser.prototype.strength = function() {
 
     var localctx = new StrengthContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 58, FSHParser.RULE_strength);
+    this.enterRule(localctx, 62, FSHParser.RULE_strength);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 266;
+        this.state = 278;
         _la = this._input.LA(1);
         if(!((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_EXAMPLE) | (1 << FSHParser.KW_PREFERRED) | (1 << FSHParser.KW_EXTENSIBLE) | (1 << FSHParser.KW_REQUIRED))) !== 0))) {
         this._errHandler.recoverInline(this);
@@ -3281,63 +3441,63 @@ FSHParser.ValueContext = ValueContext;
 FSHParser.prototype.value = function() {
 
     var localctx = new ValueContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 60, FSHParser.RULE_value);
+    this.enterRule(localctx, 64, FSHParser.RULE_value);
     try {
-        this.state = 277;
+        this.state = 289;
         this._errHandler.sync(this);
-        var la_ = this._interp.adaptivePredict(this._input,21,this._ctx);
+        var la_ = this._interp.adaptivePredict(this._input,22,this._ctx);
         switch(la_) {
         case 1:
             this.enterOuterAlt(localctx, 1);
-            this.state = 268;
+            this.state = 280;
             this.match(FSHParser.STRING);
             break;
 
         case 2:
             this.enterOuterAlt(localctx, 2);
-            this.state = 269;
+            this.state = 281;
             this.match(FSHParser.MULTILINE_STRING);
             break;
 
         case 3:
             this.enterOuterAlt(localctx, 3);
-            this.state = 270;
+            this.state = 282;
             this.match(FSHParser.NUMBER);
             break;
 
         case 4:
             this.enterOuterAlt(localctx, 4);
-            this.state = 271;
+            this.state = 283;
             this.match(FSHParser.DATETIME);
             break;
 
         case 5:
             this.enterOuterAlt(localctx, 5);
-            this.state = 272;
+            this.state = 284;
             this.match(FSHParser.TIME);
             break;
 
         case 6:
             this.enterOuterAlt(localctx, 6);
-            this.state = 273;
+            this.state = 285;
             this.code();
             break;
 
         case 7:
             this.enterOuterAlt(localctx, 7);
-            this.state = 274;
+            this.state = 286;
             this.quantity();
             break;
 
         case 8:
             this.enterOuterAlt(localctx, 8);
-            this.state = 275;
+            this.state = 287;
             this.ratio();
             break;
 
         case 9:
             this.enterOuterAlt(localctx, 9);
-            this.state = 276;
+            this.state = 288;
             this.bool();
             break;
 
@@ -3420,21 +3580,21 @@ FSHParser.ItemContext = ItemContext;
 FSHParser.prototype.item = function() {
 
     var localctx = new ItemContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 62, FSHParser.RULE_item);
+    this.enterRule(localctx, 66, FSHParser.RULE_item);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 279;
+        this.state = 291;
         this.match(FSHParser.SEQUENCE);
-        this.state = 280;
+        this.state = 292;
         this.match(FSHParser.CARD);
-        this.state = 284;
+        this.state = 296;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU))) !== 0)) {
-            this.state = 281;
+            this.state = 293;
             this.flag();
-            this.state = 286;
+            this.state = 298;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -3505,17 +3665,17 @@ FSHParser.CodeContext = CodeContext;
 FSHParser.prototype.code = function() {
 
     var localctx = new CodeContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 64, FSHParser.RULE_code);
+    this.enterRule(localctx, 68, FSHParser.RULE_code);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 287;
+        this.state = 299;
         this.match(FSHParser.CODE);
-        this.state = 289;
+        this.state = 301;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(_la===FSHParser.STRING) {
-            this.state = 288;
+            this.state = 300;
             this.match(FSHParser.STRING);
         }
 
@@ -3586,12 +3746,12 @@ FSHParser.QuantityContext = QuantityContext;
 FSHParser.prototype.quantity = function() {
 
     var localctx = new QuantityContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 66, FSHParser.RULE_quantity);
+    this.enterRule(localctx, 70, FSHParser.RULE_quantity);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 291;
+        this.state = 303;
         this.match(FSHParser.NUMBER);
-        this.state = 292;
+        this.state = 304;
         this.match(FSHParser.UNIT);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -3667,14 +3827,14 @@ FSHParser.RatioContext = RatioContext;
 FSHParser.prototype.ratio = function() {
 
     var localctx = new RatioContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 68, FSHParser.RULE_ratio);
+    this.enterRule(localctx, 72, FSHParser.RULE_ratio);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 294;
+        this.state = 306;
         this.ratioPart();
-        this.state = 295;
+        this.state = 307;
         this.match(FSHParser.COLON);
-        this.state = 296;
+        this.state = 308;
         this.ratioPart();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -3743,21 +3903,21 @@ FSHParser.RatioPartContext = RatioPartContext;
 FSHParser.prototype.ratioPart = function() {
 
     var localctx = new RatioPartContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 70, FSHParser.RULE_ratioPart);
+    this.enterRule(localctx, 74, FSHParser.RULE_ratioPart);
     try {
-        this.state = 300;
+        this.state = 312;
         this._errHandler.sync(this);
-        var la_ = this._interp.adaptivePredict(this._input,24,this._ctx);
+        var la_ = this._interp.adaptivePredict(this._input,25,this._ctx);
         switch(la_) {
         case 1:
             this.enterOuterAlt(localctx, 1);
-            this.state = 298;
+            this.state = 310;
             this.match(FSHParser.NUMBER);
             break;
 
         case 2:
             this.enterOuterAlt(localctx, 2);
-            this.state = 299;
+            this.state = 311;
             this.quantity();
             break;
 
@@ -3829,11 +3989,11 @@ FSHParser.BoolContext = BoolContext;
 FSHParser.prototype.bool = function() {
 
     var localctx = new BoolContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 72, FSHParser.RULE_bool);
+    this.enterRule(localctx, 76, FSHParser.RULE_bool);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 302;
+        this.state = 314;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.KW_TRUE || _la===FSHParser.KW_FALSE)) {
         this._errHandler.recoverInline(this);
@@ -3909,11 +4069,11 @@ FSHParser.TargetTypeContext = TargetTypeContext;
 FSHParser.prototype.targetType = function() {
 
     var localctx = new TargetTypeContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 74, FSHParser.RULE_targetType);
+    this.enterRule(localctx, 78, FSHParser.RULE_targetType);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 304;
+        this.state = 316;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.REFERENCE || _la===FSHParser.SEQUENCE)) {
         this._errHandler.recoverInline(this);

@@ -23,12 +23,19 @@ import {
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
+import { DuplicateMetadataError, RequiredMetadataError } from '../errors';
 
 enum SdMetadataKey {
   Id,
   Parent,
   Title,
   Description,
+  Unknown
+}
+
+enum InMetadataKey {
+  InstanceOf,
+  Title,
   Unknown
 }
 
@@ -139,15 +146,41 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInstance(ctx: pc.InstanceContext) {
-    const instance = new Instance(ctx.SEQUENCE()[0].getText())
+    const instance = new Instance(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.file);
-    instance.instanceOf = ctx.SEQUENCE()[1].getText();
-    instance.title = ctx.title() ? this.visitTitle(ctx.title()) : undefined;
-    ctx.fixedValueRule().forEach(fvRule => {
+    this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
+    this.doc.instances.set(instance.name, instance);
+  }
+
+  private parseInstance(
+    instance: Instance,
+    metaCtx: pc.InMetadataContext[] = [],
+    ruleCtx: pc.FixedValueRuleContext[] = []
+  ): void {
+    metaCtx
+      .map(inMetadata => this.visitInstanceMetadata(inMetadata))
+      .forEach(pair => {
+        if (pair.key === InMetadataKey.InstanceOf) {
+          if (instance.instanceOf) {
+            throw new DuplicateMetadataError('InstanceOf', instance.instanceOf);
+          } else {
+            instance.instanceOf = pair.value;
+          }
+        } else if (pair.key === InMetadataKey.Title) {
+          if (instance.title) {
+            throw new DuplicateMetadataError('Title', instance.title);
+          } else {
+            instance.title = pair.value;
+          }
+        }
+      });
+    if (!instance.instanceOf) {
+      throw new RequiredMetadataError('InstanceOf', 'Instance');
+    }
+    ruleCtx.forEach(fvRule => {
       instance.rules.push(this.visitFixedValueRule(fvRule));
     });
-    this.doc.instances.set(instance.name, instance);
   }
 
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
@@ -161,6 +194,15 @@ export class FSHImporter extends FSHVisitor {
       return { key: SdMetadataKey.Description, value: this.visitDescription(ctx.description()) };
     }
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
+  }
+
+  visitInstanceMetadata(ctx: pc.InMetadataContext): { key: InMetadataKey; value: string } {
+    if (ctx.instanceOf()) {
+      return { key: InMetadataKey.InstanceOf, value: this.visitInstanceOf(ctx.instanceOf()) };
+    } else if (ctx.title()) {
+      return { key: InMetadataKey.Title, value: this.visitTitle(ctx.title()) };
+    }
+    return { key: InMetadataKey.Unknown, value: ctx.getText() };
   }
 
   visitId(ctx: pc.IdContext): string {
@@ -182,6 +224,10 @@ export class FSHImporter extends FSHVisitor {
 
     // it must be a multiline string
     return this.extractMultilineString(ctx.MULTILINE_STRING());
+  }
+
+  visitInstanceOf(ctx: pc.InstanceOfContext): string {
+    return this.aliasAwareValue(ctx.SEQUENCE().getText());
   }
 
   visitSdRule(ctx: pc.SdRuleContext): Rule[] {
