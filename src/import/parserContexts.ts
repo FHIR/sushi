@@ -63,7 +63,7 @@ export interface SdRuleContext extends ParserRuleContext {
   flagRule(): FlagRuleContext;
   valueSetRule(): ValueSetRuleContext;
   fixedValueRule(): FixedValueRuleContext;
-  // containsRule(): ContainsRuleContext;
+  containsRule(): ContainsRuleContext;
   onlyRule(): OnlyRuleContext;
   // obeysRule(): ObeysRuleContext;
   // caretValueRule(): CaretValueRuleContext;
@@ -147,6 +147,17 @@ export interface RatioPartContext extends ParserRuleContext {
 export interface BoolContext extends ParserRuleContext {
   KW_TRUE(): ParserRuleContext;
   KW_FALSE(): ParserRuleContext;
+}
+
+export interface ContainsRuleContext extends ParserRuleContext {
+  path(): PathContext;
+  item(): ItemContext[];
+}
+
+export interface ItemContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  CARD(): ParserRuleContext;
+  flag(): FlagContext[];
 }
 
 export interface OnlyRuleContext extends ParserRuleContext {

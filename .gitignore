@@ -12,7 +12,7 @@ pids
 logs
 results
 tmp
-out
+/out*
 
 # Build
 public/css/main.css

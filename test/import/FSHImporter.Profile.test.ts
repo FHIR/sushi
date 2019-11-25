@@ -3,7 +3,8 @@ import {
   assertFixedValueRule,
   assertFlagRule,
   assertOnlyRule,
-  assertValueSetRule
+  assertValueSetRule,
+  assertContainsRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
 import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
@@ -697,6 +698,69 @@ describe('FSHImporter', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/Quantity' }
         );
       });
+    });
+  });
+
+  describe('#containsRule', () => {
+    it('should parse contains rule with one type', () => {
+      const input = `
+      Profile: ObservationProfile
+      Parent: Observation
+      * component contains SystolicBP 1..1
+      `;
+
+      const result = importText(input);
+      const profile = result.profiles.get('ObservationProfile');
+      expect(profile.rules).toHaveLength(2);
+      assertContainsRule(profile.rules[0], 'component', 'SystolicBP');
+      assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
+    });
+
+    it('should parse contains rule with an alias', () => {
+      const input = `
+      Alias: FooBar = http://example.com
+      Profile: ObservationProfile
+      Parent: Observation
+      * component contains FooBar 1..1
+      `;
+
+      const result = importText(input);
+      const profile = result.profiles.get('ObservationProfile');
+      expect(profile.rules).toHaveLength(2);
+      assertContainsRule(profile.rules[0], 'component', 'http://example.com');
+      assertCardRule(profile.rules[1], 'component[http://example.com]', 1, 1);
+    });
+
+    it('should parse contains rules with multiple types', () => {
+      const input = `
+      Profile: ObservationProfile
+      Parent: Observation
+      * component contains SystolicBP 1..1 and DiastolicBP 2..*
+      `;
+
+      const result = importText(input);
+      const profile = result.profiles.get('ObservationProfile');
+      expect(profile.rules).toHaveLength(3);
+      assertContainsRule(profile.rules[0], 'component', 'SystolicBP', 'DiastolicBP');
+      assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
+      assertCardRule(profile.rules[2], 'component[DiastolicBP]', 2, '*');
+    });
+
+    it('should parse contains rules with flags', () => {
+      const input = `
+      Profile: ObservationProfile
+      Parent: Observation
+      * component contains SystolicBP 1..1 MS and DiastolicBP 2..* MS SU
+      `;
+
+      const result = importText(input);
+      const profile = result.profiles.get('ObservationProfile');
+      expect(profile.rules).toHaveLength(5);
+      assertContainsRule(profile.rules[0], 'component', 'SystolicBP', 'DiastolicBP');
+      assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
+      assertFlagRule(profile.rules[2], 'component[SystolicBP]', true, undefined, undefined);
+      assertCardRule(profile.rules[3], 'component[DiastolicBP]', 2, '*');
+      assertFlagRule(profile.rules[4], 'component[DiastolicBP]', true, true, undefined);
     });
   });
 });
