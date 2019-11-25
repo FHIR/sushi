@@ -60,10 +60,10 @@ export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[
   expect(onlyRule.types).toEqual(types);
 }
 
-export function assertContainsRule(rule: Rule, path: string, ...sliceNames: string[]): void {
+export function assertContainsRule(rule: Rule, path: string, ...items: string[]): void {
   expect(rule).toBeInstanceOf(ContainsRule);
   const containsRule = rule as ContainsRule;
   expect(containsRule.path).toBe(path);
 
-  expect(containsRule.sliceNames).toEqual(sliceNames);
+  expect(containsRule.items).toEqual(items);
 }

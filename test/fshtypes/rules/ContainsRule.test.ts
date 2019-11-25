@@ -6,7 +6,7 @@ describe('ContainsRule', () => {
     it('should set the properties correctly', () => {
       const c = new ContainsRule('component.code');
       expect(c.path).toBe('component.code');
-      expect(c.sliceNames.length).toBe(0);
+      expect(c.items.length).toBe(0);
     });
   });
 });

@@ -403,17 +403,17 @@ export class FSHImporter extends FSHVisitor {
 
     rules.push(containsRule);
     ctx.item().forEach(i => {
-      const sliceName = i.SEQUENCE().getText();
-      containsRule.sliceNames.push(sliceName);
+      const item = this.aliasAwareValue(i.SEQUENCE().getText());
+      containsRule.items.push(item);
 
-      const cardRule = new CardRule(`${containsRule.path}[${sliceName}]`);
+      const cardRule = new CardRule(`${containsRule.path}[${item}]`);
       const card = this.parseCard(i.CARD().getText());
       cardRule.min = card.min;
       cardRule.max = card.max;
       rules.push(cardRule);
 
       if (i.flag() && i.flag().length > 0) {
-        const flagRule = new FlagRule(`${containsRule.path}[${sliceName}]`);
+        const flagRule = new FlagRule(`${containsRule.path}[${item}]`);
         this.parseFlags(flagRule, i.flag());
         rules.push(flagRule);
       }
