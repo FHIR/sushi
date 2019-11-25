@@ -75,7 +75,7 @@ export class StructureDefinitionExporter {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           }
         } catch (e) {
-          logger.error(e.message);
+          logger.error(e.message, rule.sourceInfo);
         }
       } else {
         logger.error(
@@ -110,7 +110,7 @@ export class StructureDefinitionExporter {
     if (jsonParent) {
       structDef = StructureDefinition.fromJSON(jsonParent);
     } else {
-      throw new ParentNotDefinedError(fshDefinition.name, parentName);
+      throw new ParentNotDefinedError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
     }
     // Capture the orginal elements so that any further changes are reflected in the differential
     structDef.captureOriginalElements();

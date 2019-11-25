@@ -22,7 +22,7 @@ export class ProfileExporter extends StructureDefinitionExporter {
           const structDef = this.exportStructDef(profile, tank);
           structDefs.push(structDef);
         } catch (e) {
-          logger.error(e.message);
+          logger.error(e.message, e.sourceInfo);
         }
       }
     }
