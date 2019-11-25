@@ -50,4 +50,14 @@ describe('ExtensionExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Bar');
   });
+
+  it('should export extensions with other extensions as parents', () => {
+    const extensionFoo = new Extension('Foo');
+    const extensionBar = new Extension('Bar');
+    extensionBar.parent = 'Foo';
+    doc.extensions.set(extensionFoo.name, extensionFoo);
+    doc.extensions.set(extensionBar.name, extensionBar);
+    const exported = exporter.export(input);
+    expect(exported.length).toBe(2);
+  });
 });

@@ -96,6 +96,11 @@ export class StructureDefinitionExporter {
     const json = this.FHIRDefs.find(type);
     if (json) {
       return StructureDefinition.fromJSON(json);
+    } else {
+      const structDef = this.structDefs.find(sd => sd.name === type);
+      if (structDef) {
+        return structDef;
+      }
     }
   }
 
