@@ -51,10 +51,20 @@ describe('ProfileExporter', () => {
     expect(exported[0].name).toBe('Bar');
   });
 
-  it('should export profiles with other profiles as parents', () => {
+  it('should export profiles with other profiles as parents in order', () => {
     const profileFoo = new Profile('Foo');
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
+    doc.profiles.set(profileFoo.name, profileFoo);
+    doc.profiles.set(profileBar.name, profileBar);
+    const exported = exporter.export(input);
+    expect(exported.length).toBe(2);
+  });
+
+  it('should export profiles with other profiles as parents out of order', () => {
+    const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Bar';
+    const profileBar = new Profile('Bar');
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     const exported = exporter.export(input);
