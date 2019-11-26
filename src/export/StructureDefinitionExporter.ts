@@ -94,10 +94,17 @@ export class StructureDefinitionExporter {
       return StructureDefinition.fromJSON(json);
       // Maybe it's a FSH-defined definition and not a FHIR one
     } else {
-      const structDef = cloneDeep(this.structDefs.find(sd => sd.name === type));
-      if (structDef) {
-        return structDef;
+      let structDef = cloneDeep(this.structDefs.find(sd => sd.name === type));
+      if (!structDef) {
+        // If we find a parent, then we can export and resolve for its type again
+        const parentDefinition =
+          this.tank.findProfileByName(type) ?? this.tank.findExtensionByName(type);
+        if (parentDefinition) {
+          this.exportStructDef(parentDefinition);
+          structDef = this.resolve(type);
+        }
       }
+      return structDef;
     }
   }
 
@@ -108,24 +115,7 @@ export class StructureDefinitionExporter {
    */
   exportStructDef(fshDefinition: Profile | Extension): void {
     const parentName = fshDefinition.parent || 'Resource';
-    let structDef = this.resolve(parentName);
-
-    // If we don't have a resolution yet, maybe it hasn't been exported
-    if (!structDef) {
-      let parentDefinition: Profile | Extension;
-      // Our parent will be of the same type as the current definition
-      if (fshDefinition instanceof Profile) {
-        parentDefinition = this.tank.findProfileByName(parentName);
-      } else if (fshDefinition instanceof Extension) {
-        parentDefinition = this.tank.findExtensionByName(parentName);
-      }
-
-      // If we found a parent, then we can export and resolve for its type again
-      if (parentDefinition) {
-        this.exportStructDef(parentDefinition);
-        structDef = this.resolve(parentName);
-      }
-    }
+    const structDef = this.resolve(parentName);
 
     // If we still don't have a resolution, then it's not defined
     if (!structDef) {
