@@ -5,6 +5,7 @@ import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
 import { CardRule, FixedValueRule, FlagRule, OnlyRule, ValueSetRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
+import { cloneDeep, flatMap } from 'lodash';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -96,8 +97,9 @@ export class StructureDefinitionExporter {
     const json = this.FHIRDefs.find(type);
     if (json) {
       return StructureDefinition.fromJSON(json);
+    // Maybe it's a FSH-defined definition and not a FHIR one
     } else {
-      const structDef = this.structDefs.find(sd => sd.name === type);
+      const structDef = cloneDeep(this.structDefs.find(sd => sd.name === type));
       if (structDef) {
         return structDef;
       }
@@ -112,15 +114,41 @@ export class StructureDefinitionExporter {
    */
   exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): StructureDefinition {
     const parentName = fshDefinition.parent || 'Resource';
-    const structDef = this.resolve(parentName);
+    let structDef = this.resolve(parentName);
+
+    // If we don't have a resolution yet, maybe it hasn't been exported
+    if (!structDef) {
+      let parentDefinition: Profile | Extension;
+      // Our parent will be of the same type as the current definition
+      if (fshDefinition instanceof Profile) {
+        const profiles = flatMap(tank.docs, doc => Array.from(doc.profiles.values()));
+        parentDefinition = profiles.find(profile => profile.name === parentName);
+      } else if (fshDefinition instanceof Extension) {
+        const extensions = flatMap(tank.docs, doc => Array.from(doc.extensions.values()));
+        parentDefinition = extensions.find(extension => extension.name === parentName);
+      }
+
+      // If we found a parent, then we can export and resolve for its type again
+      if (parentDefinition) {
+        this.exportStructDef(parentDefinition, tank);
+        structDef = this.resolve(parentName);
+      }
+    }
+
+    // If we still don't have a resolution, then it's not defined
     if (!structDef) {
       throw new ParentNotDefinedError(fshDefinition.name, parentName);
     }
+
     // Capture the orginal elements so that any further changes are reflected in the differential
     structDef.captureOriginalElements();
     this.setMetadata(structDef, fshDefinition, tank);
     this.setRules(structDef, fshDefinition);
-    // Set the rules
+
+    // Push the structure definition to the exporter's array of them, and return as well
+    if (!this.structDefs.some(sd => sd.name === structDef.name)) {
+      this.structDefs.push(structDef);
+    }
     return structDef;
   }
 }

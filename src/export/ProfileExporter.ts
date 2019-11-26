@@ -18,8 +18,7 @@ export class ProfileExporter extends StructureDefinitionExporter {
     for (const doc of tank.docs) {
       for (const profile of doc.profiles.values()) {
         try {
-          const structDef = this.exportStructDef(profile, tank);
-          this.structDefs.push(structDef);
+          this.exportStructDef(profile, tank);
         } catch (e) {
           logger.error(e.message);
         }

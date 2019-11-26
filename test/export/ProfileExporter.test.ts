@@ -51,7 +51,7 @@ describe('ProfileExporter', () => {
     expect(exported[0].name).toBe('Bar');
   });
 
-  it('should export profiles with other profiles as parents in order', () => {
+  it('should export profiles with FSHy parents', () => {
     const profileFoo = new Profile('Foo');
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
@@ -59,15 +59,55 @@ describe('ProfileExporter', () => {
     doc.profiles.set(profileBar.name, profileBar);
     const exported = exporter.export(input);
     expect(exported.length).toBe(2);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[1].name).toBe('Bar');
   });
 
-  it('should export profiles with other profiles as parents out of order', () => {
+  it('should export profiles with the same FSHy parents', () => {
+    const profileFoo = new Profile('Foo');
+    const profileBar = new Profile('Bar');
+    profileBar.parent = 'Foo';
+    const profileBaz = new Profile('Baz');
+    profileBaz.parent = 'Foo';
+    doc.profiles.set(profileFoo.name, profileFoo);
+    doc.profiles.set(profileBar.name, profileBar);
+    doc.profiles.set(profileBaz.name, profileBaz);
+    const exported = exporter.export(input);
+    expect(exported.length).toBe(3);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[1].name).toBe('Bar');
+    expect(exported[2].name).toBe('Baz');
+  });
+
+  it('should export profiles with deep FSHy parents', () => {
+    const profileFoo = new Profile('Foo');
+    const profileBar = new Profile('Bar');
+    profileBar.parent = 'Foo';
+    const profileBaz = new Profile('Baz');
+    profileBaz.parent = 'Bar';
+    doc.profiles.set(profileFoo.name, profileFoo);
+    doc.profiles.set(profileBar.name, profileBar);
+    doc.profiles.set(profileBaz.name, profileBaz);
+    const exported = exporter.export(input);
+    expect(exported.length).toBe(3);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[1].name).toBe('Bar');
+    expect(exported[2].name).toBe('Baz');
+  });
+
+  it('should export profiles with out-of-order FSHy parents', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Bar';
     const profileBar = new Profile('Bar');
+    profileBar.parent = 'Baz';
+    const profileBaz = new Profile('Baz');
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
+    doc.profiles.set(profileBaz.name, profileBaz);
     const exported = exporter.export(input);
-    expect(exported.length).toBe(2);
+    expect(exported.length).toBe(3);
+    expect(exported[0].name).toBe('Baz');
+    expect(exported[1].name).toBe('Bar');
+    expect(exported[2].name).toBe('Foo');
   });
 });
