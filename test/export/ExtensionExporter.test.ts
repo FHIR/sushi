@@ -61,6 +61,7 @@ describe('ExtensionExporter', () => {
     expect(exported.length).toBe(2);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
+    expect(exported[1].baseDefinition === exported[0].url);
   });
 
   it('should export extensions with the same FSHy parents', () => {
@@ -77,6 +78,8 @@ describe('ExtensionExporter', () => {
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
     expect(exported[2].name).toBe('Baz');
+    expect(exported[1].baseDefinition === exported[0].url);
+    expect(exported[2].baseDefinition === exported[0].url);
   });
 
   it('should export extensions with deep FSHy parents', () => {
@@ -93,6 +96,8 @@ describe('ExtensionExporter', () => {
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
     expect(exported[2].name).toBe('Baz');
+    expect(exported[1].baseDefinition === exported[0].url);
+    expect(exported[2].baseDefinition === exported[1].url);
   });
 
   it('should export extensions with out-of-order FSHy parents', () => {
@@ -109,5 +114,7 @@ describe('ExtensionExporter', () => {
     expect(exported[0].name).toBe('Baz');
     expect(exported[1].name).toBe('Bar');
     expect(exported[2].name).toBe('Foo');
+    expect(exported[1].baseDefinition === exported[0].url);
+    expect(exported[2].baseDefinition === exported[1].url);
   });
 });
