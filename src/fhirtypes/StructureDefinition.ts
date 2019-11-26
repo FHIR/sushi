@@ -4,7 +4,7 @@ import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDe
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { FixedValueType } from '..//fshtypes/rules';
+import { FixedValueType } from '../fshtypes/rules';
 import { CannotResolvePathError } from '../errors';
 
 /**
@@ -66,8 +66,9 @@ export class StructureDefinition {
 
   /**
    * Constructs a StructureDefinition with a root element.
+   * @param {StructureDefinition} structureDefinitionStructureDefinition - The StructureDefinition of StructureDefinition
    */
-  constructor(structureDefinitionStructureDefinition: StructureDefinition) {
+  constructor(structureDefinitionStructureDefinition: StructureDefinition = null) {
     // Every structure definition needs a root element
     const root = new ElementDefinition('');
     root.structDef = this;
@@ -248,31 +249,22 @@ export class StructureDefinition {
             current[key].push({});
           }
           current = current[key][index];
-        } else {
-          if (current[key] == null && i < pathParts.length - 1) {
-            current[key] = {};
-            current = current[key];
-          }
+        } else if (current[key] == null && i < pathParts.length - 1) {
+          // If we aren't yet at the end of the path, create a new empty object
+          current[key] = {};
+          current = current[key];
         }
       }
       const pathEnd = pathParts.slice(-1)[0];
       const index = this.getArrayIndex(pathEnd);
       if (index != null) {
+        // If we are ending on an array, an empty {} should exist to copy values into
         Object.assign(current, fixedValue);
       } else {
+        // If we are not ending on an array, we set the key-value pair
         current[pathParts.slice(-1)[0].base] = fixedValue;
       }
     }
-  }
-
-  private getArrayIndex(pathPart: PathPart) {
-    const lastBracket = pathPart.brackets?.slice(-1)[0];
-    let arrayIndex: number;
-    if (/[0]|[-+]?[1-9][0-9]*/.test(lastBracket)) {
-      arrayIndex = parseInt(lastBracket);
-      if (arrayIndex < 0) return;
-    }
-    return arrayIndex;
   }
 
   /**
@@ -376,12 +368,10 @@ export class StructureDefinition {
       // Construct the path up to this point
       currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
       // If we are indexing into an array, the last bracket should be numeric
-      let arrayIndex: number;
-      const lastBracket = pathPart.brackets?.slice(-1)[0];
-      if (/[0]|[-+]?[1-9][0-9]*/.test(lastBracket)) {
+      const arrayIndex = this.getArrayIndex(pathPart);
+      if (arrayIndex != null) {
         // If it is a number, add all bracket info besides it back to path
         pathPart.brackets.slice(0, -1).forEach(p => (currentPath += `[${p}]`));
-        arrayIndex = parseInt(lastBracket);
       } else {
         // If it is not a number, then add all bracket info back to path
         pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
@@ -434,6 +424,21 @@ export class StructureDefinition {
       }
     }
     return pathParts;
+  }
+
+  /**
+   * Tests to see if the last bracket in a PathPart is a positive int, and if so returns it
+   * @param {PathPart} pathPart - The part of the path to test
+   * @returns {number} The index if it exists and is positive, otherwise undefined
+   *
+   */
+  private getArrayIndex(pathPart: PathPart): number {
+    const lastBracket = pathPart.brackets?.slice(-1)[0];
+    let arrayIndex: number;
+    if (/[0]|[-+]?[1-9][0-9]*/.test(lastBracket)) {
+      arrayIndex = parseInt(lastBracket);
+    }
+    return arrayIndex >= 0 ? arrayIndex : null;
   }
 
   /**
