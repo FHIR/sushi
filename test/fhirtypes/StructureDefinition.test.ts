@@ -283,7 +283,7 @@ describe('StructureDefinition', () => {
 
     it('should set an instance property which must be created', () => {
       observation.setInstancePropertyByPath('contextInvariant', 'foo', getResolver(defs));
-      expect(observation.contextInvariant).toBe('foo');
+      expect(observation.contextInvariant[0]).toBe('foo');
     });
 
     it('should not set an instance property which is being fixed incorrectly', () => {
@@ -358,6 +358,14 @@ describe('StructureDefinition', () => {
       });
     });
 
+    it('should set a complex instance property on a newly created array, with implied 0 index', () => {
+      observation.setInstancePropertyByPath('jurisdiction', fooCode);
+      expect(observation.jurisdiction.length).toBe(1);
+      expect(observation.jurisdiction[0]).toEqual({
+        coding: [{ code: 'foo', system: 'http://example.com' }]
+      });
+    });
+
     it('should set a complex instance property over a value that already exists', () => {
       observation.setInstancePropertyByPath('jurisdiction[0]', fooCode);
       observation.setInstancePropertyByPath('jurisdiction[0]', barCode);
@@ -394,7 +402,7 @@ describe('StructureDefinition', () => {
     });
   });
 
-  describe('#canFixValue', () => {
+  describe('#validateValueAtPath', () => {
     let jsonStructureDefinition: any;
     let jsonRespRate: any;
     let jsonCSSPC: any;
@@ -414,19 +422,22 @@ describe('StructureDefinition', () => {
 
     // Simple value
     it('should allow fixing an instance value', () => {
-      expect(structureDefinition.canFixValue('version', '4.0.2')).toBe('4.0.2');
+      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath('version', '4.0.2');
+      expect(fixedValue).toBe('4.0.2');
+      expect(pathParts.length).toBe(1);
+      expect(pathParts[0]).toEqual({ base: 'version' });
     });
 
     // Invalid paths
     it('should not allow fixing an instance value with an incorrect path', () => {
       expect(() => {
-        structureDefinition.canFixValue('Version', '4.0.2');
+        structureDefinition.validateValueAtPath('Version', '4.0.2');
       }).toThrow('Cannot resolve element from path: Version');
     });
 
     it('should not allow fixing an instance value with an incorrect value', () => {
       expect(() => {
-        structureDefinition.canFixValue('version', true);
+        structureDefinition.validateValueAtPath('version', true);
       }).toThrow('Cannot fix boolean value: true. Value does not match element type: string');
     });
 
@@ -436,34 +447,65 @@ describe('StructureDefinition', () => {
       );
       version.max = '0';
       expect(() => {
-        structureDefinition.canFixValue('version', '4.0.2');
+        structureDefinition.validateValueAtPath('version', '4.0.2');
       }).toThrow('Cannot resolve element from path: version');
     });
 
     // Arrays
     it('should allow fixing an instance value to an element in an array', () => {
-      expect(structureDefinition.canFixValue('identifier[0].value', 'foo', getResolver(defs))).toBe(
-        'foo'
+      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
+        'identifier[0].value',
+        'foo',
+        getResolver(defs)
       );
+      expect(fixedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
+      expect(pathParts[1]).toEqual({ base: 'value' });
+    });
+
+    it('should allow fixing an instance value to an element in an array, with implied 0 index', () => {
+      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
+        'identifier.value',
+        'foo',
+        getResolver(defs)
+      );
+      expect(fixedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
+      expect(pathParts[1]).toEqual({ base: 'value' });
     });
 
     it('should not allow using array brackets when an element is not an array', () => {
       expect(() => {
-        structureDefinition.canFixValue('version[0]', 'foo', getResolver(defs));
+        structureDefinition.validateValueAtPath('version[0]', 'foo', getResolver(defs));
       }).toThrow('Cannot resolve element from path: version[0]');
     });
 
     // Slices
     it('should allow fixing an instance value on a slice', () => {
-      expect(respRate.canFixValue('category[VSCat].coding.version', 'foo', getResolver(defs))).toBe(
-        'foo'
+      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        'category[VSCat].coding[0].version',
+        'foo',
+        getResolver(defs)
       );
+      expect(fixedValue).toBe('foo');
+      expect(pathParts.length).toBe(3);
+      expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat'] });
+      expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['0'] });
+      expect(pathParts[2]).toEqual({ base: 'version' });
     });
 
     it('should allow fixing an instance value on a slice array', () => {
-      expect(CSSPC.canFixValue('extension[required][3].value[x]', 'foo', getResolver(defs))).toBe(
-        'foo'
+      const { fixedValue, pathParts } = CSSPC.validateValueAtPath(
+        'extension[required][3].value[x]',
+        'foo',
+        getResolver(defs)
       );
+      expect(fixedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['required', '3'] });
+      expect(pathParts[1]).toEqual({ base: 'value[x]' });
     });
   });
 

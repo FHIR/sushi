@@ -230,11 +230,14 @@ export class StructureDefinition {
   ): void {
     // The StructureDefinition of the StructureDefinition resource is stored on our StructureDefinition class
     const structureDefinitionStructureDefinition = this.getStructureDefinitionStructureDefinition();
-    const fixedValue = structureDefinitionStructureDefinition.canFixValue(path, value, resolve);
+    const { fixedValue, pathParts } = structureDefinitionStructureDefinition.validateValueAtPath(
+      path,
+      value,
+      resolve
+    );
     if (fixedValue != null) {
       // If we can fix the value on the StructureDefinition StructureDefinition, then we can set the
       // instance property here
-      const pathParts = this.parseFSHPath(path);
       // eslint-disable-next-line
       let current: any = this;
       for (const [i, pathPart] of pathParts.entries()) {
@@ -248,21 +251,21 @@ export class StructureDefinition {
           for (let i = current[key].length; i <= index; i++) {
             current[key].push({});
           }
-          current = current[key][index];
-        } else if (current[key] == null && i < pathParts.length - 1) {
-          // If we aren't yet at the end of the path, create a new empty object
-          current[key] = {};
-          current = current[key];
+          // If it isn't the last element, move on, if it is, set the value
+          if (i < pathParts.length - 1) {
+            current = current[key][index];
+          } else {
+            current[key][index] = fixedValue;
+          }
+        } else {
+          // If it isn't the last element, move on, if it is, set the value
+          if (i < pathParts.length - 1) {
+            if (current[key] == null) current[key] = {};
+            current = current[key];
+          } else {
+            current[key] = fixedValue;
+          }
         }
-      }
-      const pathEnd = pathParts.slice(-1)[0];
-      const index = this.getArrayIndex(pathEnd);
-      if (index != null) {
-        // If we are ending on an array, an empty {} should exist to copy values into
-        Object.assign(current, fixedValue);
-      } else {
-        // If we are not ending on an array, we set the key-value pair
-        current[pathParts.slice(-1)[0].base] = fixedValue;
       }
     }
   }
@@ -360,7 +363,11 @@ export class StructureDefinition {
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @returns {any} - The object or value to fix
    */
-  canFixValue(path: string, value: FixedValueType, resolve: ResolveFn = () => undefined): any {
+  validateValueAtPath(
+    path: string,
+    value: FixedValueType,
+    resolve: ResolveFn = () => undefined
+  ): { fixedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
     let currentPath = '';
     let currentElement: ElementDefinition;
@@ -385,6 +392,10 @@ export class StructureDefinition {
         // We throw an error if the currentElement doesn't exist, has been zeroed out,
         // or is being incorrectly accessed as an array
         throw new CannotResolvePathError(path);
+      } else if (currentElement.max === '*' && arrayIndex == null) {
+        // Modify the path to have 0 indices
+        if (!pathPart.brackets) pathPart.brackets = [];
+        pathPart.brackets.push('0');
       }
     }
     const clone = currentElement.clone();
@@ -394,7 +405,7 @@ export class StructureDefinition {
     const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
     let fixedValue;
     if (key != null) fixedValue = clone[key as keyof ElementDefinition];
-    return fixedValue;
+    return { fixedValue, pathParts };
   }
 
   /**
