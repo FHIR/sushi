@@ -5,20 +5,19 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { logger } from '../utils/FSHLogger';
 
 export class ExtensionExporter extends StructureDefinitionExporter {
-  constructor(FHIRDefs: FHIRDefinitions) {
-    super(FHIRDefs);
+  constructor(FHIRDefs: FHIRDefinitions, tank: FSHTank) {
+    super(FHIRDefs, tank);
   }
 
   /**
    * Exports Extensions to StructureDefinitions
-   * @param {FSHTank} tank - The FSH tank we are exporting
    * @returns {StructureDefinition[]}
    */
-  export(tank: FSHTank): StructureDefinition[] {
-    for (const doc of tank.docs) {
+  export(): StructureDefinition[] {
+    for (const doc of this.tank.docs) {
       for (const extension of doc.extensions.values()) {
         try {
-          this.exportStructDef(extension, tank);
+          this.exportStructDef(extension);
         } catch (e) {
           logger.error(e.message);
         }

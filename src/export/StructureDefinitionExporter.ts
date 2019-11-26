@@ -15,19 +15,14 @@ import { cloneDeep, flatMap } from 'lodash';
 export class StructureDefinitionExporter {
   public readonly structDefs: StructureDefinition[] = [];
 
-  constructor(public readonly FHIRDefs: FHIRDefinitions) {}
+  constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
 
   /**
    * Sets the metadata for the StructureDefinition
    * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
-   * @param {FSHTank} tank - The FSH tank we are exporting
    */
-  private setMetadata(
-    structDef: StructureDefinition,
-    fshDefinition: Profile | Extension,
-    tank: FSHTank
-  ): void {
+  private setMetadata(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
@@ -36,7 +31,7 @@ export class StructureDefinitionExporter {
     // set the baseDefinition to the parent url before re-assiging the url
     structDef.baseDefinition = structDef.url;
     // Now re-assign the URL based on canonical and id
-    structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
+    structDef.url = `${this.tank.config.canonical}/StructureDefinition/${structDef.id}`;
     // Set the derivation as appropriate
     if (fshDefinition instanceof Profile) {
       structDef.derivation = 'constraint';
@@ -109,10 +104,9 @@ export class StructureDefinitionExporter {
   /**
    * Exports Profile or Extension to StructureDefinition
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
-   * @param {FSHTank} tank - The FSH tank we are exporting
    * @returns {StructureDefinition}
    */
-  exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): void {
+  exportStructDef(fshDefinition: Profile | Extension): void {
     const parentName = fshDefinition.parent || 'Resource';
     let structDef = this.resolve(parentName);
 
@@ -121,16 +115,16 @@ export class StructureDefinitionExporter {
       let parentDefinition: Profile | Extension;
       // Our parent will be of the same type as the current definition
       if (fshDefinition instanceof Profile) {
-        const profiles = flatMap(tank.docs, doc => Array.from(doc.profiles.values()));
+        const profiles = flatMap(this.tank.docs, doc => Array.from(doc.profiles.values()));
         parentDefinition = profiles.find(profile => profile.name === parentName);
       } else if (fshDefinition instanceof Extension) {
-        const extensions = flatMap(tank.docs, doc => Array.from(doc.extensions.values()));
+        const extensions = flatMap(this.tank.docs, doc => Array.from(doc.extensions.values()));
         parentDefinition = extensions.find(extension => extension.name === parentName);
       }
 
       // If we found a parent, then we can export and resolve for its type again
       if (parentDefinition) {
-        this.exportStructDef(parentDefinition, tank);
+        this.exportStructDef(parentDefinition);
         structDef = this.resolve(parentName);
       }
     }
@@ -142,7 +136,7 @@ export class StructureDefinitionExporter {
 
     // Capture the orginal elements so that any further changes are reflected in the differential
     structDef.captureOriginalElements();
-    this.setMetadata(structDef, fshDefinition, tank);
+    this.setMetadata(structDef, fshDefinition);
     this.setRules(structDef, fshDefinition);
 
     if (!this.structDefs.some(sd => sd.name === structDef.name)) {
