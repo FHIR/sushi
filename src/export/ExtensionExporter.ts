@@ -18,7 +18,7 @@ export class ExtensionExporter extends StructureDefinitionExporter {
     for (const doc of tank.docs) {
       for (const extension of doc.extensions.values()) {
         try {
-          const structDef = this.exportStructDef(extension, tank);
+          this.exportStructDef(extension, tank);
         } catch (e) {
           logger.error(e.message);
         }

@@ -97,7 +97,7 @@ export class StructureDefinitionExporter {
     const json = this.FHIRDefs.find(type);
     if (json) {
       return StructureDefinition.fromJSON(json);
-    // Maybe it's a FSH-defined definition and not a FHIR one
+      // Maybe it's a FSH-defined definition and not a FHIR one
     } else {
       const structDef = cloneDeep(this.structDefs.find(sd => sd.name === type));
       if (structDef) {
@@ -112,7 +112,7 @@ export class StructureDefinitionExporter {
    * @param {FSHTank} tank - The FSH tank we are exporting
    * @returns {StructureDefinition}
    */
-  exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): StructureDefinition {
+  exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): void {
     const parentName = fshDefinition.parent || 'Resource';
     let structDef = this.resolve(parentName);
 
@@ -145,10 +145,8 @@ export class StructureDefinitionExporter {
     this.setMetadata(structDef, fshDefinition, tank);
     this.setRules(structDef, fshDefinition);
 
-    // Push the structure definition to the exporter's array of them, and return as well
     if (!this.structDefs.some(sd => sd.name === structDef.name)) {
       this.structDefs.push(structDef);
     }
-    return structDef;
   }
 }
