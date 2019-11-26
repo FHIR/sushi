@@ -37,11 +37,11 @@ export interface SdMetadataContext extends ParserRuleContext {
 
 export interface InstanceContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
-  instanceMetadata(): InMetadataContext[];
+  instanceMetadata(): InstanceMetadataContext[];
   fixedValueRule(): FixedValueRuleContext[];
 }
 
-export interface InMetadataContext extends ParserRuleContext {
+export interface InstanceMetadataContext extends ParserRuleContext {
   instanceOf(): InstanceOfContext;
   title(): TitleContext;
 }

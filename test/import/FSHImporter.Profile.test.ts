@@ -8,7 +8,6 @@ import {
 } from '../utils/asserts';
 import { importText } from '../../src/import';
 import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
-import { DuplicateMetadataError } from '../../src/errors';
 
 describe('FSHImporter', () => {
   describe('Profile', () => {
@@ -114,64 +113,26 @@ describe('FSHImporter', () => {
         expect(profile.parent).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
       });
 
-      it('should throw an error when id is declared more than once', () => {
+      it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Id: observation-profile
+        Parent: DuplicateObservation
+        Id: duplicate-observation-profile
+        Title: "Duplicate Observation Profile"
+        Description: "A duplicated profile on Observation"
         `;
 
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
-      });
-
-      it('should throw an error when parent is declared more than once', () => {
-        const input = `
-        Profile: ObservationProfile
-        Parent: Observation
-        Id: observation-profile
-        Title: "An Observation Profile"
-        Description: "A profile on Observation"
-        Parent: Observation
-        `;
-
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
-      });
-
-      it('should throw an error when title is declared more than once', () => {
-        const input = `
-        Profile: ObservationProfile
-        Parent: Observation
-        Id: observation-profile
-        Title: "An Observation Profile"
-        Description: "A profile on Observation"
-        Title: "Observation Profile"
-        `;
-
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
-      });
-
-      it('should throw an error when description is declared more than once', () => {
-        const input = `
-        Profile: ObservationProfile
-        Parent: Observation
-        Id: observation-profile
-        Title: "An Observation Profile"
-        Description: "A profile on Observation"
-        Description: "The profile on Observation"
-        `;
-
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
+        const result = importText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.name).toBe('ObservationProfile');
+        expect(profile.id).toBe('observation-profile');
+        expect(profile.title).toBe('An Observation Profile');
+        expect(profile.description).toBe('A profile on Observation');
       });
     });
 

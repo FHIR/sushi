@@ -7,7 +7,6 @@ export * from './MismatchedTypeError';
 export * from './CodeAndSystemMismatchError';
 export * from './CodedTypeNotFoundError';
 export * from './DisableFlagError';
-export * from './DuplicateMetadataError';
 export * from './InvalidCardinalityError';
 export * from './InvalidDateTimeError';
 export * from './InvalidPeriodError';

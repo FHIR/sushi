@@ -5,7 +5,6 @@ import {
   assertValueSetRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
-import { DuplicateMetadataError } from '../../src/errors';
 
 describe('FSHImporter', () => {
   describe('Extension', () => {
@@ -56,64 +55,27 @@ describe('FSHImporter', () => {
         });
       });
 
-      it('should throw an error when parent is declared more than once', () => {
+      it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Extension: SomeExtension
         Parent: ParentExtension
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
-        Parent: ParentExtension
+        Parent: DuplicateParentExtension
+        Id: some-duplicate-extension
+        Title: "Some Duplicate Extension"
+        Description: "A duplicated extension on something"
         `;
 
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
-      });
-
-      it('should throw an error when id is declared more than once', () => {
-        const input = `
-        Extension: SomeExtension
-        Parent: ParentExtension
-        Id: some-extension
-        Title: "Some Extension"
-        Description: "An extension on something"
-        Id: this-extension
-        `;
-
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
-      });
-
-      it('should throw an error when title is declared more than once', () => {
-        const input = `
-        Extension: SomeExtension
-        Parent: ParentExtension
-        Id: some-extension
-        Title: "Some Extension"
-        Description: "An extension on something"
-        Title: "Some Extension"
-        `;
-
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
-      });
-
-      it('should throw an error when description is declared more than once', () => {
-        const input = `
-        Extension: SomeExtension
-        Parent: ParentExtension
-        Id: some-extension
-        Title: "Some Extension"
-        Description: "An extension on something"
-        Description: "This is the extension"
-        `;
-
-        expect(() => {
-          importText(input);
-        }).toThrow(DuplicateMetadataError);
+        const result = importText(input);
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.name).toBe('SomeExtension');
+        expect(extension.parent).toBe('ParentExtension');
+        expect(extension.id).toBe('some-extension');
+        expect(extension.title).toBe('Some Extension');
+        expect(extension.description).toBe('An extension on something');
       });
     });
 
