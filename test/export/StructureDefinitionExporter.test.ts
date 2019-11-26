@@ -7,7 +7,8 @@ import {
   FlagRule,
   OnlyRule,
   ValueSetRule,
-  FixedValueRule
+  FixedValueRule,
+  ContainsRule
 } from '../../src/fshtypes/rules';
 import { logger } from '../../src/utils/FSHLogger';
 
@@ -548,6 +549,42 @@ describe('StructureDefinitionExporter', () => {
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
       /File: Fixed\.fsh.*Line 4\D.*Column 18\D.*Line 4\D.*Column 28\D/s
     );
+  });
+
+  // Contains Rule
+  it('should apply a ContainsRule on an element with defined slicing', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const rule = new ContainsRule('code.coding');
+    rule.items = ['barSlice'];
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 1);
+    expect(barSlice).toBeDefined();
+  });
+
+  it('should not apply a ContainsRule on an element without defined slicing', () => {
+    // TODO: Should check for emitting an error
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const rule = new ContainsRule('identifier');
+    rule.items = ['barSlice'];
+    profile.rules.push(rule);
+
+    const sd = exporter.exportStructDef(profile, input);
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const barSlice = sd.elements.find(e => e.id === 'Observation.identifier:barSlice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length);
+    expect(barSlice).toBeUndefined();
   });
 
   // toJSON
