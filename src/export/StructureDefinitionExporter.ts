@@ -5,7 +5,7 @@ import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
 import { CardRule, FixedValueRule, FlagRule, OnlyRule, ValueSetRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
-import { cloneDeep, flatMap } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -115,11 +115,9 @@ export class StructureDefinitionExporter {
       let parentDefinition: Profile | Extension;
       // Our parent will be of the same type as the current definition
       if (fshDefinition instanceof Profile) {
-        const profiles = flatMap(this.tank.docs, doc => Array.from(doc.profiles.values()));
-        parentDefinition = profiles.find(profile => profile.name === parentName);
+        parentDefinition = this.tank.findProfileByName(parentName);
       } else if (fshDefinition instanceof Extension) {
-        const extensions = flatMap(this.tank.docs, doc => Array.from(doc.extensions.values()));
-        parentDefinition = extensions.find(extension => extension.name === parentName);
+        parentDefinition = this.tank.findExtensionByName(parentName);
       }
 
       // If we found a parent, then we can export and resolve for its type again

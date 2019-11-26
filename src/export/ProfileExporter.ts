@@ -14,13 +14,11 @@ export class ProfileExporter extends StructureDefinitionExporter {
    * @returns {StructureDefinition[]}
    */
   export(): StructureDefinition[] {
-    for (const doc of this.tank.docs) {
-      for (const profile of doc.profiles.values()) {
-        try {
-          this.exportStructDef(profile);
-        } catch (e) {
-          logger.error(e.message);
-        }
+    for (const profile of this.tank.getAllProfiles()) {
+      try {
+        this.exportStructDef(profile);
+      } catch (e) {
+        logger.error(e.message);
       }
     }
     return this.structDefs;
