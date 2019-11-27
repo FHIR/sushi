@@ -2,6 +2,7 @@ import { ProfileExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile } from '../../src/fshtypes';
+import { logger } from '../../src/utils/FSHLogger';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -49,5 +50,17 @@ describe('ProfileExporter', () => {
     const exported = exporter.export(input);
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Bar');
+  });
+
+  it('should log a message with source information when the parent is not found', () => {
+    const profile = new Profile('Bogus').withFile('Bogus.fsh').withLocation([2, 9, 4, 23]);
+    profile.parent = 'BogusParent';
+    doc.profiles.set(profile.name, profile);
+
+    const mockWriter = jest.spyOn(logger.transports[0], 'write');
+    exporter.export(input);
+    expect(mockWriter.mock.calls[0][0].message).toMatch(
+      /Parent BogusParent not found for Bogus.*File: Bogus\.fsh.*Line 2\D.*Column 9\D.*Line 4\D.*Column 23\D/s
+    );
   });
 });
