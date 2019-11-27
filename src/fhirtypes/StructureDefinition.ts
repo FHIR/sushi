@@ -4,8 +4,7 @@ import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDe
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { FixedValueType } from '../fshtypes/rules';
-import { CannotResolvePathError } from '../errors';
+import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -62,13 +61,12 @@ export class StructureDefinition {
    * A base clone of the Structure Definition from before any rules were applied
    */
   private _baseStructureDefinition: StructureDefinition;
-  private _structureDefinitionStructureDefinition: StructureDefinition;
+  private _sdStructureDefinition: StructureDefinition;
 
   /**
    * Constructs a StructureDefinition with a root element.
-   * @param {StructureDefinition} structureDefinitionStructureDefinition - The StructureDefinition of StructureDefinition
    */
-  constructor(structureDefinitionStructureDefinition: StructureDefinition = null) {
+  constructor() {
     // Every structure definition needs a root element
     const root = new ElementDefinition('');
     root.structDef = this;
@@ -78,7 +76,6 @@ export class StructureDefinition {
     root.isModifier = false;
     root.isSummary = false;
     this.elements = [root];
-    this._structureDefinitionStructureDefinition = structureDefinitionStructureDefinition;
   }
 
   /**
@@ -90,9 +87,13 @@ export class StructureDefinition {
 
   /**
    * Get the Structure Definition for Structure Definition
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    */
-  getStructureDefinitionStructureDefinition() {
-    return this._structureDefinitionStructureDefinition;
+  private getSdStructureDefinition(resolve: ResolveFn = () => undefined) {
+    if (this._sdStructureDefinition == null) {
+      this._sdStructureDefinition = resolve('StructureDefinition');
+    }
+    return this._sdStructureDefinition;
   }
 
   /**
@@ -220,16 +221,15 @@ export class StructureDefinition {
   /**
    * This function sets an instance property of an SD if possible
    * @param {string} path - The path to the ElementDefinition to fix
-   * @param {FixedValueType} value - The value to fix
+   * @param {any} value - The value to fix
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    */
-  setInstancePropertyByPath(
-    path: string,
-    value: FixedValueType,
-    resolve: ResolveFn = () => undefined
-  ): void {
+  setInstancePropertyByPath(path: string, value: any, resolve: ResolveFn = () => undefined): void {
+    if (path.startsWith('snapshot') || path.startsWith('differential')) {
+      throw new InvalidElementAccessError(path);
+    }
     // The StructureDefinition of the StructureDefinition resource is stored on our StructureDefinition class
-    const structureDefinitionStructureDefinition = this.getStructureDefinitionStructureDefinition();
+    const structureDefinitionStructureDefinition = this.getSdStructureDefinition(resolve);
     const { fixedValue, pathParts } = structureDefinitionStructureDefinition.validateValueAtPath(
       path,
       value,
@@ -248,7 +248,11 @@ export class StructureDefinition {
           // If the array doesn't exist, create it
           if (current[key] == null) current[key] = [];
           // If the index doesn't exist in the array, add it and lesser indices
-          for (let i = current[key].length; i <= index; i++) {
+          let j = current[key].length;
+          for (; j < index; j++) {
+            current[key].push(undefined);
+          }
+          if (j === index) {
             current[key].push({});
           }
           // If it isn't the last element, move on, if it is, set the value
@@ -328,11 +332,8 @@ export class StructureDefinition {
    * @param {any} json - the FHIR 3.0.1 JSON representation of a StructureDefinition to construct
    * @returns {StructureDefinition} a new StructureDefinition instance representing the passed in JSON
    */
-  static fromJSON(
-    json: LooseStructDefJSON,
-    structureDefinitionStructureDefinition: StructureDefinition = null
-  ): StructureDefinition {
-    const sd = new StructureDefinition(structureDefinitionStructureDefinition);
+  static fromJSON(json: LooseStructDefJSON): StructureDefinition {
+    const sd = new StructureDefinition();
     // First handle properties that are just straight translations from JSON
     for (const prop of PROPS) {
       // @ts-ignore
@@ -358,14 +359,14 @@ export class StructureDefinition {
   /**
    * This function tests if it is possible to fix value to a path, but does not actually fix it
    * @param {string} path - The path to the ElementDefinition to fix
-   * @param {FixedValueType} value - The value to fix
+   * @param {any} value - The value to fix
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @returns {any} - The object or value to fix
    */
   validateValueAtPath(
     path: string,
-    value: FixedValueType,
+    value: any,
     resolve: ResolveFn = () => undefined
   ): { fixedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
@@ -387,12 +388,19 @@ export class StructureDefinition {
       if (
         !currentElement ||
         currentElement.max === '0' ||
-        (arrayIndex != null && currentElement.max !== '*')
+        (arrayIndex != null &&
+          currentElement.max !== '*' &&
+          (arrayIndex >= parseInt(currentElement.max) || currentElement.max === '1'))
       ) {
         // We throw an error if the currentElement doesn't exist, has been zeroed out,
         // or is being incorrectly accessed as an array
         throw new CannotResolvePathError(path);
-      } else if (currentElement.max === '*' && arrayIndex == null) {
+      } else if (
+        arrayIndex == null &&
+        currentElement.max != null &&
+        currentElement.max !== '0' &&
+        currentElement.max !== '1'
+      ) {
         // Modify the path to have 0 indices
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
@@ -438,15 +446,15 @@ export class StructureDefinition {
   }
 
   /**
-   * Tests to see if the last bracket in a PathPart is a positive int, and if so returns it
+   * Tests to see if the last bracket in a PathPart is a non-negative int, and if so returns it
    * @param {PathPart} pathPart - The part of the path to test
-   * @returns {number} The index if it exists and is positive, otherwise undefined
+   * @returns {number} The index if it exists and is non-negative, otherwise undefined
    *
    */
   private getArrayIndex(pathPart: PathPart): number {
     const lastBracket = pathPart.brackets?.slice(-1)[0];
     let arrayIndex: number;
-    if (/[0]|[-+]?[1-9][0-9]*/.test(lastBracket)) {
+    if (/^[-+]?\d+$/.test(lastBracket)) {
       arrayIndex = parseInt(lastBracket);
     }
     return arrayIndex >= 0 ? arrayIndex : null;

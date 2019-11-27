@@ -261,16 +261,9 @@ describe('StructureDefinition', () => {
   });
 
   describe('#setInstancePropertyByPath', () => {
-    let jsonStructureDefinition: any;
-    let structureDefinition: StructureDefinition;
     let fooCode: FshCode;
     let barCode: FshCode;
-    beforeAll(() => {
-      jsonStructureDefinition = defs.findResource('StructureDefinition');
-    });
     beforeEach(() => {
-      structureDefinition = StructureDefinition.fromJSON(jsonStructureDefinition);
-      observation = StructureDefinition.fromJSON(jsonObservation, structureDefinition);
       fooCode = new FshCode('foo', 'http://example.com');
       barCode = new FshCode('bar', 'http://example.com');
     });
@@ -282,8 +275,8 @@ describe('StructureDefinition', () => {
     });
 
     it('should set an instance property which must be created', () => {
-      observation.setInstancePropertyByPath('contextInvariant', 'foo', getResolver(defs));
-      expect(observation.contextInvariant[0]).toBe('foo');
+      observation.setInstancePropertyByPath('title', 'foo', getResolver(defs));
+      expect(observation.title).toBe('foo');
     });
 
     it('should not set an instance property which is being fixed incorrectly', () => {
@@ -312,8 +305,8 @@ describe('StructureDefinition', () => {
       );
       expect(observation.contact.length).toBe(5);
       expect(observation.contact[4]).toEqual({ telecom: [{ value: 'foo' }] });
-      expect(observation.contact[3]).toEqual({});
-      expect(observation.contact[2]).toEqual({});
+      expect(observation.contact[3]).toBeUndefined();
+      expect(observation.contact[2]).toBeUndefined();
     });
 
     it('should change an instance property in an array', () => {
@@ -338,20 +331,9 @@ describe('StructureDefinition', () => {
       });
     });
 
-    it('should not add an instance property in an array with invalid index', () => {
-      expect(() => {
-        observation.setInstancePropertyByPath(
-          'contact[-1].telecom[0].value',
-          'foo',
-          getResolver(defs)
-        );
-      }).toThrow('Cannot resolve element from path: contact[-1].telecom[0].value');
-      expect(observation.contact.length).toBe(2);
-    });
-
     // Complex values
     it('should set a complex instance property on a newly created array', () => {
-      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode);
+      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, getResolver(defs));
       expect(observation.jurisdiction.length).toBe(1);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'foo', system: 'http://example.com' }]
@@ -359,7 +341,7 @@ describe('StructureDefinition', () => {
     });
 
     it('should set a complex instance property on a newly created array, with implied 0 index', () => {
-      observation.setInstancePropertyByPath('jurisdiction', fooCode);
+      observation.setInstancePropertyByPath('jurisdiction', fooCode, getResolver(defs));
       expect(observation.jurisdiction.length).toBe(1);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'foo', system: 'http://example.com' }]
@@ -367,8 +349,8 @@ describe('StructureDefinition', () => {
     });
 
     it('should set a complex instance property over a value that already exists', () => {
-      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode);
-      observation.setInstancePropertyByPath('jurisdiction[0]', barCode);
+      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, getResolver(defs));
+      observation.setInstancePropertyByPath('jurisdiction[0]', barCode, getResolver(defs));
       expect(observation.jurisdiction.length).toBe(1);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'bar', system: 'http://example.com' }]
@@ -376,8 +358,8 @@ describe('StructureDefinition', () => {
     });
 
     it('should set a complex instance property on an existing array', () => {
-      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode);
-      observation.setInstancePropertyByPath('jurisdiction[1]', barCode);
+      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, getResolver(defs));
+      observation.setInstancePropertyByPath('jurisdiction[1]', barCode, getResolver(defs));
       expect(observation.jurisdiction.length).toBe(2);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'foo', system: 'http://example.com' }]
@@ -387,18 +369,19 @@ describe('StructureDefinition', () => {
       });
     });
 
-    it('should set a complex instance property to a non-array element', () => {
-      const jurisdiction = structureDefinition.elements.find(
-        e => e.id === 'StructureDefinition.jurisdiction'
+    // Invalid access
+    it('should throw an InvalidElementAccessError when trying to access the snapshot', () => {
+      expect(() => {
+        observation.setInstancePropertyByPath('snapshot.element[0]', 'foo', getResolver(defs));
+      }).toThrow('Cannot directly access differential or snapshot with path: snapshot.element[0]');
+    });
+
+    it('should throw an InvalidElementAccessError when trying to access the differential', () => {
+      expect(() => {
+        observation.setInstancePropertyByPath('differential.element[0]', 'foo', getResolver(defs));
+      }).toThrow(
+        'Cannot directly access differential or snapshot with path: differential.element[0]'
       );
-      jurisdiction.max = '1';
-      observation.setInstancePropertyByPath(
-        'jurisdiction',
-        new FshCode('foo', 'http://example.com')
-      );
-      expect(observation.jurisdiction).toEqual({
-        coding: [{ code: 'foo', system: 'http://example.com' }]
-      });
     });
   });
 
@@ -480,6 +463,30 @@ describe('StructureDefinition', () => {
       expect(() => {
         structureDefinition.validateValueAtPath('version[0]', 'foo', getResolver(defs));
       }).toThrow('Cannot resolve element from path: version[0]');
+    });
+
+    it('should not add an instance property in an array with negative index', () => {
+      expect(() => {
+        structureDefinition.validateValueAtPath(
+          'contact[-1].telecom[0].value',
+          'foo',
+          getResolver(defs)
+        );
+      }).toThrow('Cannot resolve element from path: contact[-1].telecom[0].value');
+    });
+
+    it('should not add an instance property in an array with too large an index', () => {
+      const contact = structureDefinition.elements.find(
+        e => e.id === 'StructureDefinition.contact'
+      );
+      contact.max = '3';
+      expect(() => {
+        structureDefinition.validateValueAtPath(
+          'contact[4].telecom[0].value',
+          'foo',
+          getResolver(defs)
+        );
+      }).toThrow('Cannot resolve element from path: contact[4].telecom[0].value');
     });
 
     // Slices
