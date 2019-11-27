@@ -114,6 +114,10 @@ export class StructureDefinitionExporter {
    * @returns {StructureDefinition}
    */
   exportStructDef(fshDefinition: Profile | Extension): void {
+    if (this.structDefs.some(sd => sd.name === fshDefinition.name)) {
+      return;
+    }
+
     const parentName = fshDefinition.parent || 'Resource';
     const structDef = this.resolve(parentName);
 
@@ -127,8 +131,6 @@ export class StructureDefinitionExporter {
     this.setMetadata(structDef, fshDefinition);
     this.setRules(structDef, fshDefinition);
 
-    if (!this.structDefs.some(sd => sd.name === structDef.name)) {
-      this.structDefs.push(structDef);
-    }
+    this.structDefs.push(structDef);
   }
 }
