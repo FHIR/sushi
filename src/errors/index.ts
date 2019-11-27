@@ -17,3 +17,5 @@ export * from './SlicingNotDefinedError';
 export * from './TypeNotFoundError';
 export * from './UnitMismatchError';
 export * from './WideningCardinalityError';
+export * from './CannotResolvePathError';
+export * from './InvalidElementAccessError';
