@@ -8,8 +8,15 @@ import {
 } from '../utils/asserts';
 import { importText } from '../../src/import';
 import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
+import { logger } from '../../src/utils/FSHLogger';
 
 describe('FSHImporter', () => {
+  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
+
+  beforeAll(() => {
+    mockWriter = jest.spyOn(logger.transports[0], 'write');
+  });
+
   describe('Profile', () => {
     describe('#sdMetadata', () => {
       it('should parse the simplest possible profile', () => {
@@ -761,6 +768,24 @@ describe('FSHImporter', () => {
       assertFlagRule(profile.rules[2], 'component[SystolicBP]', true, undefined, undefined);
       assertCardRule(profile.rules[3], 'component[DiastolicBP]', 2, '*');
       assertFlagRule(profile.rules[4], 'component[DiastolicBP]', true, true, undefined);
+    });
+  });
+
+  describe('#obeysRule', () => {
+    // the current importer does not support obeys rule.
+    // this test should be removed once obeys rules are supported.
+    it('should issue a message when parsing an obeys rule', () => {
+      const input = `
+      Profile: ObservationProfile
+      Parent: Observation
+      * category obeys SomeInvariant
+      `;
+      const result = importText(input, 'Obeys.fsh');
+      const profile = result.profiles.get('ObservationProfile');
+      expect(profile.rules).toHaveLength(0);
+      expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+        /File: Obeys\.fsh.*Line 4\D.*Column 7\D.*Line 4\D.*Column 36\D/s
+      );
     });
   });
 });

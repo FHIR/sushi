@@ -2,7 +2,7 @@ import { createLogger, format, transports } from 'winston';
 
 const { combine, colorize, simple } = format;
 
-const withLocation = format((info, opts) => {
+const withLocation = format(info => {
   if (info.file) {
     info.message += `\nFile: ${info.file}`;
     delete info.file;
