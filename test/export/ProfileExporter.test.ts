@@ -60,7 +60,7 @@ describe('ProfileExporter', () => {
     const mockWriter = jest.spyOn(logger.transports[0], 'write');
     exporter.export(input);
     expect(mockWriter.mock.calls[0][0].message).toMatch(
-      /Parent BogusParent not found for Bogus.*File: Bogus\.fsh.*Line 2\D.*Column 9\D.*Line 4\D.*Column 23\D/s
+      /File: Bogus\.fsh.*Line 2\D.*Column 9\D.*Line 4\D.*Column 23\D/s
     );
   });
 });

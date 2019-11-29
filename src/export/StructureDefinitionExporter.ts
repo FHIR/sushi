@@ -79,7 +79,8 @@ export class StructureDefinitionExporter {
         }
       } else {
         logger.error(
-          `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`
+          `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`,
+          rule.sourceInfo
         );
       }
     }
@@ -102,6 +103,7 @@ export class StructureDefinitionExporter {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    * @param {FSHTank} tank - The FSH tank we are exporting
    * @returns {StructureDefinition}
+   * @throws {ParentNotDefinedError} when the Profile or Extension's parent is not found
    */
   exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): StructureDefinition {
     const parentName = fshDefinition.parent || 'Resource';
