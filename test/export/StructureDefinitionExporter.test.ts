@@ -560,7 +560,8 @@ describe('StructureDefinitionExporter', () => {
     rule.items = ['barSlice'];
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
@@ -570,21 +571,24 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should not apply a ContainsRule on an element without defined slicing', () => {
-    // TODO: Should check for emitting an error
     const profile = new Profile('Foo');
     profile.parent = 'resprate';
 
-    const rule = new ContainsRule('identifier');
+    const rule = new ContainsRule('identifier').withFile('NoSlice.fsh').withLocation([6, 3, 6, 12]);
     rule.items = ['barSlice'];
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.identifier:barSlice');
 
     expect(sd.elements.length).toBe(baseStructDef.elements.length);
     expect(barSlice).toBeUndefined();
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: NoSlice\.fsh.*Line 6\D.*Column 3\D.*Line 6\D.*Column 12\D/s
+    );
   });
 
   // toJSON
