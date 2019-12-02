@@ -9,9 +9,11 @@ describe('ProfileExporter', () => {
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ProfileExporter;
+  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
 
   beforeAll(() => {
     defs = load('4.0.1');
+    mockWriter = jest.spyOn(logger.transports[0], 'write');
   });
 
   beforeEach(() => {
@@ -56,10 +58,8 @@ describe('ProfileExporter', () => {
     const profile = new Profile('Bogus').withFile('Bogus.fsh').withLocation([2, 9, 4, 23]);
     profile.parent = 'BogusParent';
     doc.profiles.set(profile.name, profile);
-
-    const mockWriter = jest.spyOn(logger.transports[0], 'write');
     exporter.export();
-    expect(mockWriter.mock.calls[0][0].message).toMatch(
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
       /File: Bogus\.fsh.*Line 2\D.*Column 9\D.*Line 4\D.*Column 23\D/s
     );
   });

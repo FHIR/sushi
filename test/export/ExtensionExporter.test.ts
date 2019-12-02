@@ -2,15 +2,18 @@ import { ExtensionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Extension } from '../../src/fshtypes';
+import { logger } from '../../src/utils/FSHLogger';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ExtensionExporter;
+  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
 
   beforeAll(() => {
     defs = load('4.0.1');
+    mockWriter = jest.spyOn(logger.transports[0], 'write');
   });
 
   beforeEach(() => {
@@ -49,6 +52,16 @@ describe('ExtensionExporter', () => {
     const exported = exporter.export();
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Bar');
+  });
+
+  it('should log a message with source information when the parent is not found', () => {
+    const extension = new Extension('Wrong').withFile('Wrong.fsh').withLocation([14, 8, 24, 17]);
+    extension.parent = 'DoesNotExist';
+    doc.extensions.set(extension.name, extension);
+    exporter.export();
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Wrong\.fsh.*Line 14\D.*Column 8\D.*Line 24\D.*Column 17\D/s
+    );
   });
 
   it('should export extensions with FSHy parents', () => {
