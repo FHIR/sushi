@@ -570,6 +570,29 @@ describe('StructureDefinitionExporter', () => {
     expect(barSlice).toBeDefined();
   });
 
+  it('should apply multiple ContainsRule on an element with defined slicing', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const rule1 = new ContainsRule('code.coding');
+    const rule2 = new ContainsRule('code.coding');
+    rule1.items = ['barSlice'];
+    rule2.items = ['fooSlice'];
+    profile.rules.push(rule1);
+    profile.rules.push(rule2);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
+    const fooSlice = sd.elements.find(e => e.id === 'Observation.code.coding:fooSlice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 2);
+    expect(barSlice).toBeDefined();
+    expect(fooSlice).toBeDefined();
+  });
+
   it('should not apply a ContainsRule on an element without defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';
