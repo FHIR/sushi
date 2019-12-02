@@ -5,27 +5,22 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { logger } from '../utils/FSHLogger';
 
 export class ProfileExporter extends StructureDefinitionExporter {
-  constructor(FHIRDefs: FHIRDefinitions) {
-    super(FHIRDefs);
+  constructor(FHIRDefs: FHIRDefinitions, tank: FSHTank) {
+    super(FHIRDefs, tank);
   }
 
   /**
    * Exports Profiles to StructureDefinitions
-   * @param {FSHTank} tank - The FSH tank we are exporting
    * @returns {StructureDefinition[]}
    */
-  export(tank: FSHTank): StructureDefinition[] {
-    const structDefs: StructureDefinition[] = [];
-    for (const doc of tank.docs) {
-      for (const profile of doc.profiles.values()) {
-        try {
-          const structDef = this.exportStructDef(profile, tank);
-          structDefs.push(structDef);
-        } catch (e) {
-          logger.error(e.message);
-        }
+  export(): StructureDefinition[] {
+    for (const profile of this.tank.getAllProfiles()) {
+      try {
+        this.exportStructDef(profile);
+      } catch (e) {
+        logger.error(e.message);
       }
     }
-    return structDefs;
+    return this.structDefs;
   }
 }

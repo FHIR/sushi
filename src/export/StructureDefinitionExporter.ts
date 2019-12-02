@@ -5,6 +5,7 @@ import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
 import { CardRule, FixedValueRule, FlagRule, OnlyRule, ValueSetRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
+import cloneDeep from 'lodash/cloneDeep';
 
 /**
  * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
@@ -12,19 +13,16 @@ import { logger } from '../utils/FSHLogger';
  * between the two should be included in this class.
  */
 export class StructureDefinitionExporter {
-  constructor(public readonly FHIRDefs: FHIRDefinitions) {}
+  public readonly structDefs: StructureDefinition[] = [];
+
+  constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
 
   /**
    * Sets the metadata for the StructureDefinition
    * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
-   * @param {FSHTank} tank - The FSH tank we are exporting
    */
-  private setMetadata(
-    structDef: StructureDefinition,
-    fshDefinition: Profile | Extension,
-    tank: FSHTank
-  ): void {
+  private setMetadata(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
     structDef.name = fshDefinition.name;
     structDef.id = fshDefinition.id;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
@@ -33,7 +31,7 @@ export class StructureDefinitionExporter {
     // set the baseDefinition to the parent url before re-assiging the url
     structDef.baseDefinition = structDef.url;
     // Now re-assign the URL based on canonical and id
-    structDef.url = `${tank.config.canonical}/StructureDefinition/${structDef.id}`;
+    structDef.url = `${this.tank.config.canonical}/StructureDefinition/${structDef.id}`;
     // Set the derivation as appropriate
     if (fshDefinition instanceof Profile) {
       structDef.derivation = 'constraint';
@@ -94,29 +92,45 @@ export class StructureDefinitionExporter {
     const json = this.FHIRDefs.find(type);
     if (json) {
       return StructureDefinition.fromJSON(json);
+      // Maybe it's a FSH-defined definition and not a FHIR one
+    } else {
+      let structDef = cloneDeep(this.structDefs.find(sd => sd.name === type));
+      if (!structDef) {
+        // If we find a parent, then we can export and resolve for its type again
+        const parentDefinition =
+          this.tank.findProfileByName(type) ?? this.tank.findExtensionByName(type);
+        if (parentDefinition) {
+          this.exportStructDef(parentDefinition);
+          structDef = this.resolve(type);
+        }
+      }
+      return structDef;
     }
   }
 
   /**
    * Exports Profile or Extension to StructureDefinition
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
-   * @param {FSHTank} tank - The FSH tank we are exporting
    * @returns {StructureDefinition}
    */
-  exportStructDef(fshDefinition: Profile | Extension, tank: FSHTank): StructureDefinition {
+  exportStructDef(fshDefinition: Profile | Extension): void {
+    if (this.structDefs.some(sd => sd.name === fshDefinition.name)) {
+      return;
+    }
+
     const parentName = fshDefinition.parent || 'Resource';
-    const jsonParent = this.FHIRDefs.find(parentName);
-    let structDef: StructureDefinition;
-    if (jsonParent) {
-      structDef = StructureDefinition.fromJSON(jsonParent);
-    } else {
+    const structDef = this.resolve(parentName);
+
+    // If we still don't have a resolution, then it's not defined
+    if (!structDef) {
       throw new ParentNotDefinedError(fshDefinition.name, parentName);
     }
+
     // Capture the orginal elements so that any further changes are reflected in the differential
     structDef.captureOriginalElements();
-    this.setMetadata(structDef, fshDefinition, tank);
+    this.setMetadata(structDef, fshDefinition);
     this.setRules(structDef, fshDefinition);
-    // Set the rules
-    return structDef;
+
+    this.structDefs.push(structDef);
   }
 }
