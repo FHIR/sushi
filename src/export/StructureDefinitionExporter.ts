@@ -73,11 +73,12 @@ export class StructureDefinitionExporter {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           }
         } catch (e) {
-          logger.error(e.message);
+          logger.error(e.message, rule.sourceInfo);
         }
       } else {
         logger.error(
-          `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`
+          `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`,
+          rule.sourceInfo
         );
       }
     }
@@ -112,6 +113,7 @@ export class StructureDefinitionExporter {
    * Exports Profile or Extension to StructureDefinition
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    * @returns {StructureDefinition}
+   * @throws {ParentNotDefinedError} when the Profile or Extension's parent is not found
    */
   exportStructDef(fshDefinition: Profile | Extension): void {
     if (this.structDefs.some(sd => sd.name === fshDefinition.name)) {
@@ -123,7 +125,7 @@ export class StructureDefinitionExporter {
 
     // If we still don't have a resolution, then it's not defined
     if (!structDef) {
-      throw new ParentNotDefinedError(fshDefinition.name, parentName);
+      throw new ParentNotDefinedError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
     }
 
     // Capture the orginal elements so that any further changes are reflected in the differential

@@ -18,7 +18,7 @@ export class ProfileExporter extends StructureDefinitionExporter {
       try {
         this.exportStructDef(profile);
       } catch (e) {
-        logger.error(e.message);
+        logger.error(e.message, e.sourceInfo);
       }
     }
     return this.structDefs;

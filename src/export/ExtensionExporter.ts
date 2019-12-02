@@ -18,7 +18,7 @@ export class ExtensionExporter extends StructureDefinitionExporter {
       try {
         this.exportStructDef(extension);
       } catch (e) {
-        logger.error(e.message);
+        logger.error(e.message, e.sourceInfo);
       }
     }
     return this.structDefs;
