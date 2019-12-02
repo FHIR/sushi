@@ -402,21 +402,27 @@ export class FSHImporter extends FSHVisitor {
 
   visitContainsRule(ctx: pc.ContainsRuleContext): (ContainsRule | CardRule | FlagRule)[] {
     const rules: (ContainsRule | CardRule | FlagRule)[] = [];
-    const containsRule = new ContainsRule(this.visitPath(ctx.path()));
+    const containsRule = new ContainsRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
 
     rules.push(containsRule);
     ctx.item().forEach(i => {
       const item = this.aliasAwareValue(i.SEQUENCE().getText());
       containsRule.items.push(item);
 
-      const cardRule = new CardRule(`${containsRule.path}[${item}]`);
+      const cardRule = new CardRule(`${containsRule.path}[${item}]`)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.file);
       const card = this.parseCard(i.CARD().getText());
       cardRule.min = card.min;
       cardRule.max = card.max;
       rules.push(cardRule);
 
       if (i.flag() && i.flag().length > 0) {
-        const flagRule = new FlagRule(`${containsRule.path}[${item}]`);
+        const flagRule = new FlagRule(`${containsRule.path}[${item}]`)
+          .withLocation(this.extractStartStop(ctx))
+          .withFile(this.file);
         this.parseFlags(flagRule, i.flag());
         rules.push(flagRule);
       }
