@@ -225,6 +225,16 @@ export class ElementDefinition {
         diff[prop] = cloneDeep(this[prop]);
       }
     }
+    // If the id is a choice slice, we change the id/path in the differential to use a shortcut syntax
+    // described here https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/.
+    // Path gets set automatically when setting id
+    diff.id = diff.id
+      .split('.')
+      .map(p => {
+        const i = p.indexOf('[x]:');
+        return i > -1 ? p.slice(i + 4) : p;
+      })
+      .join('.');
     return diff;
   }
 

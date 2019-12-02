@@ -176,6 +176,17 @@ describe('ElementDefinition', () => {
       expect(diff.fixedInteger).toBe(2);
       expect(Object.keys(diff.toJSON())).toHaveLength(3);
     });
+
+    it('should calculate diff id using shortcut syntax for a choice slice', () => {
+      valueX.sliceIt('type', '$this', false, 'open');
+      const valueString = valueX.addSlice('valueString', { code: 'string' });
+      const diff = valueString.calculateDiff();
+      expect(valueString.id).toBe('Observation.value[x]:valueString');
+      expect(valueString.path).toBe('Observation.value[x]');
+      expect(diff.id).toBe('Observation.valueString');
+      expect(diff.path).toBe('Observation.valueString');
+      expect(Object.keys(diff.toJSON()).length).toBe(Object.keys(valueString.toJSON()).length);
+    });
   });
 
   describe('#parent', () => {
