@@ -19,3 +19,5 @@ export * from './UnitMismatchError';
 export * from './WideningCardinalityError';
 export * from './CannotResolvePathError';
 export * from './InvalidElementAccessError';
+export * from './InvalidSumOfSliceMinsError';
+export * from './InvalidMaxOfSliceError';

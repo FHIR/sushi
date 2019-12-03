@@ -3,7 +3,14 @@ import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirty
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
-import { CardRule, FixedValueRule, FlagRule, OnlyRule, ValueSetRule } from '../fshtypes/rules';
+import {
+  CardRule,
+  FixedValueRule,
+  FlagRule,
+  OnlyRule,
+  ValueSetRule,
+  ContainsRule
+} from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import cloneDeep from 'lodash/cloneDeep';
 
@@ -71,6 +78,8 @@ export class StructureDefinitionExporter {
             element.constrainType(rule.types, this.resolve.bind(this), target);
           } else if (rule instanceof ValueSetRule) {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
+          } else if (rule instanceof ContainsRule) {
+            rule.items.forEach(item => element.addSlice(item));
           }
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
