@@ -412,7 +412,7 @@ export class FSHImporter extends FSHVisitor {
       containsRule.items.push(item);
 
       const cardRule = new CardRule(`${containsRule.path}[${item}]`)
-        .withLocation(this.extractStartStop(ctx))
+        .withLocation(this.extractStartStop(i))
         .withFile(this.file);
       const card = this.parseCard(i.CARD().getText());
       cardRule.min = card.min;
@@ -421,7 +421,7 @@ export class FSHImporter extends FSHVisitor {
 
       if (i.flag() && i.flag().length > 0) {
         const flagRule = new FlagRule(`${containsRule.path}[${item}]`)
-          .withLocation(this.extractStartStop(ctx))
+          .withLocation(this.extractStartStop(i))
           .withFile(this.file);
         this.parseFlags(flagRule, i.flag());
         rules.push(flagRule);
