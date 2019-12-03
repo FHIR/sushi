@@ -121,7 +121,7 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(category);
       expect(() => {
         category.constrainCardinality(1, '1');
-      }).toThrow(/2 > max 1 of Observation.category\./);
+      }).toThrow(/\(2\) > max \(1\) of Observation.category\./);
       expect(clone).toEqual(category);
     });
 
@@ -132,7 +132,7 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(category);
       expect(() => {
         category.constrainCardinality(1, '1');
-      }).toThrow(/max 2 of slice FooSlice > max of sliced element 1\./);
+      }).toThrow(/max of slice FooSlice \(2\) > max of sliced element \(1\)\./);
       expect(clone).toEqual(category);
     });
 
@@ -143,7 +143,7 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(fooSlice);
       expect(() => {
         fooSlice.constrainCardinality(2, '2');
-      }).toThrow(/3 > max 2 of Observation.category\./);
+      }).toThrow(/\(3\) > max \(2\) of Observation.category\./);
       expect(clone).toEqual(fooSlice);
     });
   });

@@ -251,6 +251,8 @@ export class ElementDefinition {
    * @param {number|string} max - the maximum cardinality
    * @throws {InvalidCardinalityError} when min > max
    * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
+   * @throws {InvalidSumOfSliceMinsError} when the mins of slice elements > max of sliced element
+   * @throws {InvalidMaxOfSliceError} when a sliced element's max is < an individual slice's max
    */
   constrainCardinality(min: number, max: string): void {
     const isUnbounded = max === '*';
@@ -275,13 +277,10 @@ export class ElementDefinition {
     // http://www.hl7.org/fhiR/profiling.html#slice-cardinality
     // If element is slice definition
     if (this.slicing) {
-      const slices = this.structDef.elements.filter(e => e.id !== this.id && e.path === this.path);
-      const sumOfMins = slices.reduce((prev, curr) => (prev += curr.min), 0);
       // Check that new max >= sum of mins of children
-      if (!isUnbounded && sumOfMins > maxInt) {
-        throw new InvalidSumOfSliceMinsError(sumOfMins, max, this.id);
-      }
+      this.checkSumOfSliceMins(max);
       // Check that new max >= every individual child max
+      const slices = this.structDef.elements.filter(e => e.id !== this.id && e.path === this.path);
       const overMaxChild = slices.find(child => child.max === '*' || parseInt(child.max) > maxInt);
       if (!isUnbounded && overMaxChild) {
         throw new InvalidMaxOfSliceError(overMaxChild.max, overMaxChild.sliceName, max);
@@ -289,23 +288,39 @@ export class ElementDefinition {
     }
 
     // If element is a slice
-    const slicedElement = this.structDef.elements.find(e => e.path === this.path && e.slicing);
-    if (slicedElement) {
-      const slices = this.structDef.elements.filter(
-        e => e.id !== this.id && e.path === this.path && !e.slicing
-      );
-      const sumOfMins = min + slices.reduce((prev, curr) => (prev += curr.min), 0);
-      // Check that slicedElement max >= new sum of mins
-      if (slicedElement.max !== '*' && sumOfMins > parseInt(slicedElement.max)) {
-        throw new InvalidSumOfSliceMinsError(sumOfMins, slicedElement.max, slicedElement.id);
-      }
-      // If new sum of mins > slicedElement min, increase slicedElement min
-      if (sumOfMins > slicedElement.min) {
-        slicedElement.min = sumOfMins;
+    if (this.sliceName) {
+      const slicedElement = this.structDef.elements.find(e => e.path === this.path && e.slicing);
+      if (slicedElement) {
+        // Check that slicedElement max >= new sum of mins
+        const sumOfMins = slicedElement.checkSumOfSliceMins(slicedElement.max, min - this.min);
+        // If new sum of mins > slicedElement min, increase slicedElement min
+        if (sumOfMins > slicedElement.min) {
+          slicedElement.min = sumOfMins;
+        }
       }
     }
 
     [this.min, this.max] = [min, max];
+  }
+
+  /**
+   * Checks if the sum of slice mins exceeds the max of sliced element, and returns
+   * the sum if so.
+   * @param {string} slicedElementMax - The max of the sliced element
+   * @param {number} newSliceMin - An optional new minimum if the minimum of this is being constrained
+   * @returns {number} the sum of the mins of the slices, or 0 if the sum is less than the sliced max
+   * @throws {InvalidSumOfSliceMinsError} when the sum of mins of the slices exceeds max of sliced element
+   */
+  private checkSumOfSliceMins(newSlicedElementMax: string, sliceMinIncrease = 0) {
+    const slices = this.structDef.elements.filter(
+      e => e.id !== this.id && e.path === this.path && !e.slicing
+    );
+    const sumOfMins = sliceMinIncrease + slices.reduce((prev, curr) => (prev += curr.min), 0);
+    if (newSlicedElementMax !== '*' && sumOfMins > parseInt(newSlicedElementMax)) {
+      throw new InvalidSumOfSliceMinsError(sumOfMins, newSlicedElementMax, this.id);
+    } else {
+      return sumOfMins;
+    }
   }
 
   /**
@@ -1302,7 +1317,9 @@ export class ElementDefinition {
     delete slice.slicing;
     slice.id = `${this.id}:${name}`;
     slice.sliceName = name;
-    // When a we slice, we do not inherit min cardinality, but rather make it 0
+    // When we slice, we do not inherit min cardinality, but rather make it 0
+    // Allows multiple slices to be defined without violating cardinality of sliced element
+    // Cardinality can be later narrowed by card constraints, which check validity of narrowing
     // According to https://chat.fhir.org/#narrow/stream/179239-tooling/topic/Slicing.201.2E.2E.3F.20element
     slice.min = 0;
     if (type) {
