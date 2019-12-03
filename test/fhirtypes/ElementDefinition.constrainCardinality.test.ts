@@ -6,13 +6,17 @@ import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
+  let jsonRespRate: any;
   let observation: StructureDefinition;
+  let respRate: StructureDefinition;
   beforeAll(() => {
     defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
+    jsonRespRate = defs.findResource('resprate');
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    respRate = StructureDefinition.fromJSON(jsonRespRate);
   });
 
   describe('#constrainCardinality()', () => {
@@ -98,6 +102,49 @@ describe('ElementDefinition', () => {
         clone.constrainCardinality(0, '2');
       }).toThrow(/0..2 is wider than 1..1\./);
       expect(clone).toEqual(status);
+    });
+
+    // Slice Handling
+    it('should update sliced element min when sum of slice mins is constrainted greater than it', () => {
+      const category = respRate.elements.find(e => e.id === 'Observation.category');
+      const fooSlice = category.addSlice('FooSlice');
+      fooSlice.constrainCardinality(2, '2');
+      expect(fooSlice.min).toBe(2);
+      expect(fooSlice.max).toBe('2');
+      expect(category.min).toBe(3);
+    });
+
+    it('should throw InvalidSumOfSliceMinsError when sliced element max is constrained less than sum of slice mins', () => {
+      const category = respRate.elements.find(e => e.id === 'Observation.category');
+      const fooSlice = category.addSlice('FooSlice');
+      fooSlice.min = 1;
+      const clone = cloneDeep(category);
+      expect(() => {
+        category.constrainCardinality(1, '1');
+      }).toThrow(/2 is > max 1\./);
+      expect(clone).toEqual(category);
+    });
+
+    it('should throw InvalidMaxOfSliceError when sliced element max is constrained less than any individual slice max', () => {
+      const category = respRate.elements.find(e => e.id === 'Observation.category');
+      const fooSlice = category.addSlice('FooSlice');
+      fooSlice.max = '2';
+      const clone = cloneDeep(category);
+      expect(() => {
+        category.constrainCardinality(1, '1');
+      }).toThrow(/2 is > max of sliced element 1\./);
+      expect(clone).toEqual(category);
+    });
+
+    it('should throw InvalidSumOfSliceMinsError when sum of slice mins is constrained greater than sliced element max', () => {
+      const category = respRate.elements.find(e => e.id === 'Observation.category');
+      const fooSlice = category.addSlice('FooSlice');
+      category.max = '2';
+      const clone = cloneDeep(fooSlice);
+      expect(() => {
+        fooSlice.constrainCardinality(2, '2');
+      }).toThrow(/3 is > max 2\./);
+      expect(clone).toEqual(fooSlice);
     });
   });
 });

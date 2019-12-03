@@ -16,7 +16,9 @@ import {
   SlicingDefinitionError,
   SlicingNotDefinedError,
   TypeNotFoundError,
-  WideningCardinalityError
+  WideningCardinalityError,
+  InvalidSumOfSliceMinsError,
+  InvalidMaxOfSliceError
 } from '../errors';
 
 /**
@@ -267,6 +269,40 @@ export class ElementDefinition {
     // Check to ensure max <= existing max
     if (this.max != null && this.max !== '*' && maxInt > parseInt(this.max)) {
       throw new WideningCardinalityError(this.min, this.max, min, max);
+    }
+
+    // Sliced elements and slices have special card rules described here:
+    // http://www.hl7.org/fhiR/profiling.html#slice-cardinality
+    // If element is slice definition
+    if (this.slicing) {
+      const slices = this.structDef.elements.filter(e => e.id !== this.id && e.path === this.path);
+      const sumOfMins = slices.reduce((prev, curr) => (prev += curr.min), 0);
+      // Check that new max >= sum of mins of children
+      if (!isUnbounded && sumOfMins > maxInt) {
+        throw new InvalidSumOfSliceMinsError(sumOfMins, max);
+      }
+      // Check that new max >= every individual child max
+      const overMaxChild = slices.find(child => child.max === '*' || parseInt(child.max) > maxInt);
+      if (!isUnbounded && overMaxChild) {
+        throw new InvalidMaxOfSliceError(overMaxChild.max, max);
+      }
+    }
+
+    // If element is a slice
+    const slicedElement = this.structDef.elements.find(e => e.path === this.path && e.slicing);
+    if (slicedElement) {
+      const slices = this.structDef.elements.filter(
+        e => e.id !== this.id && e.path === this.path && !e.slicing
+      );
+      const sumOfMins = min + slices.reduce((prev, curr) => (prev += curr.min), 0);
+      // Check that slicedElement max >= new sum of mins
+      if (slicedElement.max !== '*' && sumOfMins > parseInt(slicedElement.max)) {
+        throw new InvalidSumOfSliceMinsError(sumOfMins, slicedElement.max);
+      }
+      // If new sum of mins > slicedElement min, increase slicedElement min
+      if (sumOfMins > slicedElement.min) {
+        slicedElement.min = sumOfMins;
+      }
     }
 
     [this.min, this.max] = [min, max];
@@ -1266,11 +1302,9 @@ export class ElementDefinition {
     delete slice.slicing;
     slice.id = `${this.id}:${name}`;
     slice.sliceName = name;
-    // When a choice is sliced, we do not inherit min cardinality, but rather make it 0
+    // When a we slice, we do not inherit min cardinality, but rather make it 0
     // According to https://chat.fhir.org/#narrow/stream/179239-tooling/topic/Slicing.201.2E.2E.3F.20element
-    if (this.id.endsWith('[x]')) {
-      slice.min = 0;
-    }
+    slice.min = 0;
     if (type) {
       slice.type = [type];
     } else {
