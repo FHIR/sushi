@@ -5,3 +5,4 @@ export * from './OnlyRule';
 export * from './Rule';
 export * from './ValueSetRule';
 export * from './ContainsRule';
+export * from './CaretValueRule';
