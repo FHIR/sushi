@@ -4,6 +4,7 @@ import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDe
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
+import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -60,6 +61,7 @@ export class StructureDefinition {
    * A base clone of the Structure Definition from before any rules were applied
    */
   private _baseStructureDefinition: StructureDefinition;
+  private _sdStructureDefinition: StructureDefinition;
 
   /**
    * Constructs a StructureDefinition with a root element.
@@ -81,6 +83,17 @@ export class StructureDefinition {
    */
   getBaseStructureDefinition() {
     return this._baseStructureDefinition;
+  }
+
+  /**
+   * Get the Structure Definition for Structure Definition
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   */
+  private getSdStructureDefinition(resolve: ResolveFn = () => undefined) {
+    if (this._sdStructureDefinition == null) {
+      this._sdStructureDefinition = resolve('StructureDefinition');
+    }
+    return this._sdStructureDefinition;
   }
 
   /**
@@ -126,7 +139,7 @@ export class StructureDefinition {
   /**
    * Finds an element by a FSH-compatible path
    * @param {string} path - The FSH path
-   * @param {resolve} ResolveFn - a function that can resolve a type to a StructureDefinition instance
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    * @returns {ElementDefinition} - The found element (or undefined if it is not found)
    */
   findElementByPath(path: string, resolve: ResolveFn = () => undefined): ElementDefinition {
@@ -203,6 +216,62 @@ export class StructureDefinition {
     matchingElements = matchingElements.filter(e => e.path === fhirPathString);
     // If we have one and only one match, return it, else return undefined
     return matchingElements.length === 1 ? matchingElements[0] : undefined;
+  }
+
+  /**
+   * This function sets an instance property of an SD if possible
+   * @param {string} path - The path to the ElementDefinition to fix
+   * @param {any} value - The value to fix
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   */
+  setInstancePropertyByPath(path: string, value: any, resolve: ResolveFn = () => undefined): void {
+    if (path.startsWith('snapshot') || path.startsWith('differential')) {
+      throw new InvalidElementAccessError(path);
+    }
+    // The StructureDefinition of the StructureDefinition resource is stored on our StructureDefinition class
+    const structureDefinitionStructureDefinition = this.getSdStructureDefinition(resolve);
+    const { fixedValue, pathParts } = structureDefinitionStructureDefinition.validateValueAtPath(
+      path,
+      value,
+      resolve
+    );
+    if (fixedValue != null) {
+      // If we can fix the value on the StructureDefinition StructureDefinition, then we can set the
+      // instance property here
+      // eslint-disable-next-line
+      let current: any = this;
+      for (const [i, pathPart] of pathParts.entries()) {
+        const key = pathPart.base;
+        // If this part of the path indexes into an array, the index will be the last bracket
+        const index = this.getArrayIndex(pathPart);
+        if (index != null) {
+          // If the array doesn't exist, create it
+          if (current[key] == null) current[key] = [];
+          // If the index doesn't exist in the array, add it and lesser indices
+          let j = current[key].length;
+          for (; j < index; j++) {
+            current[key].push(undefined);
+          }
+          if (j === index) {
+            current[key].push({});
+          }
+          // If it isn't the last element, move on, if it is, set the value
+          if (i < pathParts.length - 1) {
+            current = current[key][index];
+          } else {
+            current[key][index] = fixedValue;
+          }
+        } else {
+          // If it isn't the last element, move on, if it is, set the value
+          if (i < pathParts.length - 1) {
+            if (current[key] == null) current[key] = {};
+            current = current[key];
+          } else {
+            current[key] = fixedValue;
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -288,6 +357,66 @@ export class StructureDefinition {
   }
 
   /**
+   * This function tests if it is possible to fix value to a path, but does not actually fix it
+   * @param {string} path - The path to the ElementDefinition to fix
+   * @param {any} value - The value to fix
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @throws {CannotResolvePathError} when the path cannot be resolved to an element
+   * @returns {any} - The object or value to fix
+   */
+  validateValueAtPath(
+    path: string,
+    value: any,
+    resolve: ResolveFn = () => undefined
+  ): { fixedValue: any; pathParts: PathPart[] } {
+    const pathParts = this.parseFSHPath(path);
+    let currentPath = '';
+    let currentElement: ElementDefinition;
+    for (const pathPart of pathParts) {
+      // Construct the path up to this point
+      currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
+      // If we are indexing into an array, the last bracket should be numeric
+      const arrayIndex = this.getArrayIndex(pathPart);
+      if (arrayIndex != null) {
+        // If it is a number, add all bracket info besides it back to path
+        pathPart.brackets.slice(0, -1).forEach(p => (currentPath += `[${p}]`));
+      } else {
+        // If it is not a number, then add all bracket info back to path
+        pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
+      }
+      currentElement = this.findElementByPath(currentPath, resolve);
+      if (
+        !currentElement ||
+        currentElement.max === '0' ||
+        (arrayIndex != null &&
+          currentElement.max !== '*' &&
+          (arrayIndex >= parseInt(currentElement.max) || currentElement.max === '1'))
+      ) {
+        // We throw an error if the currentElement doesn't exist, has been zeroed out,
+        // or is being incorrectly accessed as an array
+        throw new CannotResolvePathError(path);
+      } else if (
+        arrayIndex == null &&
+        currentElement.max != null &&
+        currentElement.max !== '0' &&
+        currentElement.max !== '1'
+      ) {
+        // Modify the path to have 0 indices
+        if (!pathPart.brackets) pathPart.brackets = [];
+        pathPart.brackets.push('0');
+      }
+    }
+    const clone = currentElement.clone();
+    // fixValue will throw if it fails
+    clone.fixValue(value);
+    // If there is a fixedValue or patternValue, find it and return it
+    const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
+    let fixedValue;
+    if (key != null) fixedValue = clone[key as keyof ElementDefinition];
+    return { fixedValue, pathParts };
+  }
+
+  /**
    * Parses a FSH Path into a more easily usable form
    * @param {string} fshPath - A syntactically valid path in FSH
    * @returns {PathPart[]} an array of PathParts that is easier to work with
@@ -314,6 +443,21 @@ export class StructureDefinition {
       }
     }
     return pathParts;
+  }
+
+  /**
+   * Tests to see if the last bracket in a PathPart is a non-negative int, and if so returns it
+   * @param {PathPart} pathPart - The part of the path to test
+   * @returns {number} The index if it exists and is non-negative, otherwise undefined
+   *
+   */
+  private getArrayIndex(pathPart: PathPart): number {
+    const lastBracket = pathPart.brackets?.slice(-1)[0];
+    let arrayIndex: number;
+    if (/^[-+]?\d+$/.test(lastBracket)) {
+      arrayIndex = parseInt(lastBracket);
+    }
+    return arrayIndex >= 0 ? arrayIndex : null;
   }
 
   /**

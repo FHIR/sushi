@@ -9,21 +9,24 @@ import {
   ValueSetRule,
   FixedValueRule
 } from '../../src/fshtypes/rules';
+import { logger } from '../../src/utils/FSHLogger';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: StructureDefinitionExporter;
+  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
 
   beforeAll(() => {
     defs = load('4.0.1');
+    mockWriter = jest.spyOn(logger.transports[0], 'write');
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { canonical: 'http://example.com' });
-    exporter = new StructureDefinitionExporter(defs);
+    exporter = new StructureDefinitionExporter(defs, input);
   });
 
   // Profile
@@ -34,7 +37,8 @@ describe('StructureDefinitionExporter', () => {
     profile.title = 'Foo Profile';
     profile.description = 'foo bar foobar';
     doc.profiles.set(profile.name, profile);
-    const exported = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const exported = exporter.structDefs[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('foo');
     expect(exported.title).toBe('Foo Profile');
@@ -48,7 +52,8 @@ describe('StructureDefinitionExporter', () => {
   it('should not overwrite metadata that is not given for a profile', () => {
     const profile = new Profile('Foo');
     doc.profiles.set(profile.name, profile);
-    const exported = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const exported = exporter.structDefs[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
@@ -64,7 +69,7 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Bar';
     doc.profiles.set(profile.name, profile);
     expect(() => {
-      exporter.exportStructDef(profile, input);
+      exporter.exportStructDef(profile);
     }).toThrow('Parent Bar not found for Foo');
   });
 
@@ -75,7 +80,8 @@ describe('StructureDefinitionExporter', () => {
     extension.title = 'Foo Profile';
     extension.description = 'foo bar foobar';
     doc.extensions.set(extension.name, extension);
-    const exported = exporter.exportStructDef(extension, input);
+    exporter.exportStructDef(extension);
+    const exported = exporter.structDefs[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('foo');
     expect(exported.title).toBe('Foo Profile');
@@ -97,7 +103,8 @@ describe('StructureDefinitionExporter', () => {
   it('should not overwrite metadata that is not given for an extension', () => {
     const extension = new Extension('Foo');
     doc.extensions.set(extension.name, extension);
-    const exported = exporter.exportStructDef(extension, input);
+    exporter.exportStructDef(extension);
+    const exported = exporter.structDefs[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
@@ -126,7 +133,8 @@ describe('StructureDefinitionExporter', () => {
     const extension = new Extension('Foo');
     extension.parent = 'http://hl7.org/fhir/StructureDefinition/patient-animal';
     doc.extensions.set(extension.name, extension);
-    const exported = exporter.exportStructDef(extension, input);
+    exporter.exportStructDef(extension);
+    const exported = exporter.structDefs[0];
     expect(exported.context).toEqual([
       {
         type: 'element',
@@ -140,21 +148,24 @@ describe('StructureDefinitionExporter', () => {
     extension.parent = 'Bar';
     doc.extensions.set(extension.name, extension);
     expect(() => {
-      exporter.exportStructDef(extension, input);
+      exporter.exportStructDef(extension);
     }).toThrow('Parent Bar not found for Foo');
   });
 
   // Rules
   it('should emit an error and continue when the path is not found', () => {
-    // TODO: This should check for emitting an error once we have logging
     const profile = new Profile('Foo');
-    const rule = new CardRule('fakePath');
+    const rule = new CardRule('fakePath').withFile('Foo.fsh').withLocation([3, 8, 4, 22]);
     rule.min = 0;
     rule.max = '1';
     profile.rules.push(rule);
-    const structDef = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const structDef = exporter.structDefs[0];
     expect(structDef).toBeDefined();
     expect(structDef.type).toBe('Resource');
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Foo\.fsh.*Line 3\D.*Column 8\D.*Line 4\D.*Column 22\D/s
+    );
   });
 
   // Card Rule
@@ -167,7 +178,8 @@ describe('StructureDefinitionExporter', () => {
     rule.max = '1';
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseCard = baseStructDef.findElement('Observation.subject');
@@ -180,16 +192,16 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should not apply an incorrect card rule', () => {
-    // TODO: this should check for emitting an error once logging is setup
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const rule = new CardRule('status');
+    const rule = new CardRule('status').withFile('Wrong.fsh').withLocation([5, 4, 5, 11]);
     rule.min = 0;
     rule.max = '1';
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseCard = baseStructDef.findElement('Observation.status');
@@ -199,6 +211,9 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Wrong\.fsh.*Line 5\D.*Column 4\D.*Line 5\D.*Column 11\D/s
+    );
   });
 
   // Flag Rule
@@ -211,7 +226,8 @@ describe('StructureDefinitionExporter', () => {
     rule.mustSupport = true;
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseElement = baseStructDef.findElement('DiagnosticReport.conclusion');
@@ -228,12 +244,13 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('Foo');
     profile.parent = 'DiagnosticReport';
 
-    const rule = new FlagRule('status');
+    const rule = new FlagRule('status').withFile('Nope.fsh').withLocation([8, 7, 8, 15]);
     rule.modifier = false;
     rule.mustSupport = true;
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseElement = baseStructDef.findElement('DiagnosticReport.status');
@@ -242,19 +259,23 @@ describe('StructureDefinitionExporter', () => {
     expect(baseElement.mustSupport).toBeFalsy();
     expect(changedElement.isModifier).toBe(true);
     expect(changedElement.mustSupport).toBeFalsy();
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Nope\.fsh.*Line 8\D.*Column 7\D.*Line 8\D.*Column 15\D/s
+    );
   });
 
   it('should not apply a flag rule that disables mustSupport', () => {
     const profile = new Profile('Foo');
     profile.parent = 'http://hl7.org/fhir/StructureDefinition/vitalsigns';
 
-    const rule = new FlagRule('code');
+    const rule = new FlagRule('code').withFile('Nope.fsh').withLocation([8, 7, 8, 15]);
     rule.modifier = true;
     rule.summary = false;
     rule.mustSupport = false;
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseElement = baseStructDef.findElement('Observation.code');
@@ -265,6 +286,9 @@ describe('StructureDefinitionExporter', () => {
     expect(changedElement.isModifier).toBeFalsy();
     expect(changedElement.isSummary).toBe(true);
     expect(changedElement.mustSupport).toBe(true);
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Nope\.fsh.*Line 8\D.*Column 7\D.*Line 8\D.*Column 15\D/s
+    );
   });
 
   // Value Set Rule
@@ -277,7 +301,8 @@ describe('StructureDefinitionExporter', () => {
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
     const baseElement = baseStructDef.findElement('Appointment.description');
     const changedElement = sd.findElement('Appointment.description');
@@ -295,7 +320,8 @@ describe('StructureDefinitionExporter', () => {
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
     const baseElement = baseStructDef.findElement('Observation.category');
     const changedElement = sd.findElement('Observation.category');
@@ -309,29 +335,34 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const vsRule = new ValueSetRule('note');
+    const vsRule = new ValueSetRule('note').withFile('Codeless.fsh').withLocation([6, 9, 6, 25]);
     vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
     const baseElement = baseStructDef.findElement('Observation.note');
     const changedElement = sd.findElement('Observation.note');
     expect(baseElement.binding).toBeUndefined();
     expect(changedElement.binding).toBeUndefined();
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Codeless\.fsh.*Line 6\D.*Column 9\D.*Line 6\D.*Column 25\D/s
+    );
   });
 
   it('should not override a binding with a less strict binding', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const vsRule = new ValueSetRule('category');
+    const vsRule = new ValueSetRule('category').withFile('Strict.fsh').withLocation([9, 10, 9, 35]);
     vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'example';
     profile.rules.push(vsRule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
     const baseElement = baseStructDef.findElement('Observation.category');
     const changedElement = sd.findElement('Observation.category');
@@ -341,6 +372,9 @@ describe('StructureDefinitionExporter', () => {
       'http://hl7.org/fhir/ValueSet/observation-category'
     );
     expect(changedElement.binding.strength).toBe('preferred');
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Strict\.fsh.*Line 9\D.*Column 10\D.*Line 9\D.*Column 35\D/s
+    );
   });
 
   // Only Rule
@@ -352,7 +386,8 @@ describe('StructureDefinitionExporter', () => {
     rule.types = [{ type: 'string' }];
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
@@ -375,7 +410,8 @@ describe('StructureDefinitionExporter', () => {
     rule.types = [{ type: 'Device', isReference: true }];
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseSubject = baseStructDef.findElement('Observation.subject');
@@ -414,7 +450,8 @@ describe('StructureDefinitionExporter', () => {
     ];
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');
@@ -447,15 +484,15 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should not apply an incorrect OnlyRule', () => {
-    // TODO: this should check for emitting an error once logging is set up
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const rule = new OnlyRule('value[x]');
+    const rule = new OnlyRule('value[x]').withFile('Only.fsh').withLocation([10, 12, 10, 22]);
     rule.types = [{ type: 'instant' }];
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
@@ -463,6 +500,9 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseValue.type).toHaveLength(11);
     expect(constrainedValue.type).toHaveLength(11);
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Only\.fsh.*Line 10\D.*Column 12\D.*Line 10\D.*Column 22\D/s
+    );
   });
 
   // Fixed Value Rule
@@ -475,7 +515,8 @@ describe('StructureDefinitionExporter', () => {
     rule.fixedValue = fixedFshCode;
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseCode = baseStructDef.findElement('Observation.code');
@@ -488,15 +529,15 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should not apply an incorrect FixedValueRule', () => {
-    // TODO: this should check for emitting an error once logging is set up
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const rule = new FixedValueRule('code');
+    const rule = new FixedValueRule('code').withFile('Fixed.fsh').withLocation([4, 18, 4, 28]);
     rule.fixedValue = true; // Incorrect boolean
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const baseStructDef = sd.getBaseStructureDefinition();
 
     const baseCode = baseStructDef.findElement('Observation.code');
@@ -504,6 +545,9 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Fixed\.fsh.*Line 4\D.*Column 18\D.*Line 4\D.*Column 28\D/s
+    );
   });
 
   // toJSON
@@ -518,7 +562,8 @@ describe('StructureDefinitionExporter', () => {
     rule.max = '1';
     profile.rules.push(rule);
 
-    const sd = exporter.exportStructDef(profile, input);
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
     const json = sd.toJSON();
 
     expect(json.differential.element).toHaveLength(1);
