@@ -75,11 +75,15 @@ export interface SdRuleContext extends ParserRuleContext {
   containsRule(): ContainsRuleContext;
   onlyRule(): OnlyRuleContext;
   // obeysRule(): ObeysRuleContext;
-  // caretValueRule(): CaretValueRuleContext;
+  caretValueRule(): CaretValueRuleContext;
 }
 
 export interface PathContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
+}
+
+export interface CaretPathContext extends ParserRuleContext {
+  CARET_SEQUENCE(): ParserRuleContext;
 }
 
 export interface PathsContext extends ParserRuleContext {
@@ -177,4 +181,10 @@ export interface OnlyRuleContext extends ParserRuleContext {
 export interface TargetTypeContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   REFERENCE(): ParserRuleContext;
+}
+
+export interface CaretValueRuleContext extends ParserRuleContext {
+  path(): PathContext;
+  caretPath(): CaretPathContext;
+  value(): ValueContext;
 }

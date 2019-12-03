@@ -18,7 +18,8 @@ import {
   FixedValueRule,
   FixedValueType,
   OnlyRule,
-  ContainsRule
+  ContainsRule,
+  CaretValueRule
 } from '../fshtypes/rules';
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -257,6 +258,8 @@ export class FSHImporter extends FSHVisitor {
       return [this.visitOnlyRule(ctx.onlyRule())];
     } else if (ctx.containsRule()) {
       return this.visitContainsRule(ctx.containsRule());
+    } else if (ctx.caretValueRule()) {
+      return [this.visitCaretValueRule(ctx.caretValueRule())];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.file,
@@ -267,6 +270,10 @@ export class FSHImporter extends FSHVisitor {
 
   visitPath(ctx: pc.PathContext): string {
     return ctx.SEQUENCE().getText();
+  }
+
+  visitCaretPath(ctx: pc.CaretPathContext): string {
+    return ctx.CARET_SEQUENCE().getText();
   }
 
   visitPaths(ctx: pc.PathsContext): string[] {
@@ -512,6 +519,18 @@ export class FSHImporter extends FSHVisitor {
       }
     });
     return rules;
+  }
+
+  visitCaretValueRule(ctx: pc.CaretValueRuleContext): CaretValueRule {
+    const path = ctx.path() ? this.visitPath(ctx.path()) : null;
+    const caretValueRule = new CaretValueRule(path)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
+
+    // Get the caret path, but slice off the starting ^
+    caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
+    caretValueRule.value = this.visitValue(ctx.value());
+    return caretValueRule;
   }
 
   private aliasAwareValue(value: string): string {
