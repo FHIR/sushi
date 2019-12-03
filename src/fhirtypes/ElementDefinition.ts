@@ -279,12 +279,12 @@ export class ElementDefinition {
       const sumOfMins = slices.reduce((prev, curr) => (prev += curr.min), 0);
       // Check that new max >= sum of mins of children
       if (!isUnbounded && sumOfMins > maxInt) {
-        throw new InvalidSumOfSliceMinsError(sumOfMins, max);
+        throw new InvalidSumOfSliceMinsError(sumOfMins, max, this.id);
       }
       // Check that new max >= every individual child max
       const overMaxChild = slices.find(child => child.max === '*' || parseInt(child.max) > maxInt);
       if (!isUnbounded && overMaxChild) {
-        throw new InvalidMaxOfSliceError(overMaxChild.max, max);
+        throw new InvalidMaxOfSliceError(overMaxChild.max, overMaxChild.sliceName, max);
       }
     }
 
@@ -297,7 +297,7 @@ export class ElementDefinition {
       const sumOfMins = min + slices.reduce((prev, curr) => (prev += curr.min), 0);
       // Check that slicedElement max >= new sum of mins
       if (slicedElement.max !== '*' && sumOfMins > parseInt(slicedElement.max)) {
-        throw new InvalidSumOfSliceMinsError(sumOfMins, slicedElement.max);
+        throw new InvalidSumOfSliceMinsError(sumOfMins, slicedElement.max, slicedElement.id);
       }
       // If new sum of mins > slicedElement min, increase slicedElement min
       if (sumOfMins > slicedElement.min) {
