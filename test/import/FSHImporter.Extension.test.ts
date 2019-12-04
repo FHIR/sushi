@@ -5,8 +5,15 @@ import {
   assertValueSetRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
+import { logger } from '../../src/utils/FSHLogger';
 
 describe('FSHImporter', () => {
+  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
+
+  beforeAll(() => {
+    mockWriter = jest.spyOn(logger.transports[0], 'write');
+  });
+
   describe('Extension', () => {
     describe('#sdMetadata', () => {
       it('should parse the simplest possible extension', () => {
@@ -76,6 +83,26 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
+      });
+
+      it('should log an error when encountering a duplicate metadata attribute', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        Id: some-extension
+        Title: "Some Extension"
+        Description: "An extension on something"
+        Title: "Some Duplicate Extension"
+        Description: "A duplicated extension on something"
+        `;
+
+        importText(input, 'Dupe.fsh');
+        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
+          /File: Dupe\.fsh.*Line 7\D.*Column 9\D.*Line 7\D.*Column 41\D/s
+        );
+        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+          /File: Dupe\.fsh.*Line 8\D.*Column 9\D.*Line 8\D.*Column 58\D/s
+        );
       });
     });
 

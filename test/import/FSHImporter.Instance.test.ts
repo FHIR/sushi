@@ -1,8 +1,15 @@
 import { importText } from '../../src/import';
 import { assertFixedValueRule } from '../utils/asserts';
 import { FshCode } from '../../src/fshtypes';
+import { logger } from '../../src/utils/FSHLogger';
 
 describe('FSHImporter', () => {
+  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
+
+  beforeAll(() => {
+    mockWriter = jest.spyOn(logger.transports[0], 'write');
+  });
+
   describe('Instance', () => {
     describe('#instanceOf', () => {
       it('should parse the simplest possible instance', () => {
@@ -46,8 +53,11 @@ describe('FSHImporter', () => {
         Title: "My Important Observation"
         `;
 
-        const result = importText(input);
+        const result = importText(input, 'Missing.fsh');
         expect(result.instances.size).toBe(0);
+        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+          /File: Missing\.fsh.*Line 2\D.*Column 9\D.*Line 3\D.*Column 41\D/s
+        );
       });
     });
 
@@ -109,6 +119,24 @@ describe('FSHImporter', () => {
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBe('My Important Observation');
+      });
+
+      it('should log an error when encountering a duplicate metadata attribute', () => {
+        const input = `
+        Instance: MyObservation
+        InstanceOf: Observation
+        Title: "My Important Observation"
+        InstanceOf: DuplicateObservation
+        Title: "My Duplicate Observation"
+        `;
+
+        importText(input, 'Dupe.fsh');
+        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
+          /File: Dupe\.fsh.*Line 5\D.*Column 9\D.*Line 5\D.*Column 40\D/s
+        );
+        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+          /File: Dupe\.fsh.*Line 6\D.*Column 9\D.*Line 6\D.*Column 41\D/s
+        );
       });
     });
   });
