@@ -2,7 +2,8 @@ import {
   assertCardRule,
   assertFlagRule,
   assertOnlyRule,
-  assertValueSetRule
+  assertValueSetRule,
+  assertCaretValueRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
 
@@ -159,6 +160,21 @@ describe('FSHImporter', () => {
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
         assertOnlyRule(extension.rules[0], 'value[x]', { type: 'Quantity' });
+      });
+    });
+
+    // Since Extensions use the same rule parsing code as Profiles, only do a minimal tests
+    describe('#caretValueRule', () => {
+      it('should parse a caret value rule with a path', () => {
+        const input = `
+        Extension: SomeExtension
+        * id ^short = "foo"
+        `;
+
+        const result = importText(input);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertCaretValueRule(extension.rules[0], 'id', 'short', 'foo');
       });
     });
   });
