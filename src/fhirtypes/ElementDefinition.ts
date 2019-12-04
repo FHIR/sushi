@@ -20,6 +20,7 @@ import {
   InvalidSumOfSliceMinsError,
   InvalidMaxOfSliceError
 } from '../errors';
+import { setPropertyOnInstance } from './common';
 
 /**
  * A class representing a FHIR R4 ElementDefinition.  For the most part, each allowable property in an ElementDefinition
@@ -148,7 +149,7 @@ export class ElementDefinition {
    * Get the StructureDefinition for ElementDefinition
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    */
-  private getEdStructureDefinition(resolve: ResolveFn = () => undefined) {
+  getOwnStructureDefinition(resolve: ResolveFn = () => undefined) {
     if (this._edStructureDefinition == null) {
       this._edStructureDefinition = resolve('ElementDefinition');
     }
@@ -259,54 +260,7 @@ export class ElementDefinition {
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    */
   setInstancePropertyByPath(path: string, value: any, resolve: ResolveFn = () => undefined): void {
-    // The StructureDefinition of the ElementDefinition resource is stored on our ElementDefinition class
-    const edStructureDefinition = this.getEdStructureDefinition(resolve);
-    const { fixedValue, pathParts } = edStructureDefinition.validateValueAtPath(
-      path,
-      value,
-      resolve
-    );
-    if (fixedValue != null) {
-      // If we can fix the value on the ElementDefinition StructureDefinition, then we can set the
-      // instance property here
-      // eslint-disable-next-line
-      let current: any = this;
-      for (const [i, pathPart] of pathParts.entries()) {
-        const key = pathPart.base;
-        // If this part of the path indexes into an array, the index will be the last bracket
-        const lastBracket = pathPart.brackets?.slice(-1)[0];
-        let index: number;
-        if (/^[-+]?\d+$/.test(lastBracket)) {
-          index = parseInt(lastBracket);
-        }
-        if (index != null) {
-          // If the array doesn't exist, create it
-          if (current[key] == null) current[key] = [];
-          // If the index doesn't exist in the array, add it and lesser indices
-          let j = current[key].length;
-          for (; j < index; j++) {
-            current[key].push(undefined);
-          }
-          if (j === index) {
-            current[key].push({});
-          }
-          // If it isn't the last element, move on, if it is, set the value
-          if (i < pathParts.length - 1) {
-            current = current[key][index];
-          } else {
-            current[key][index] = fixedValue;
-          }
-        } else {
-          // If it isn't the last element, move on, if it is, set the value
-          if (i < pathParts.length - 1) {
-            if (current[key] == null) current[key] = {};
-            current = current[key];
-          } else {
-            current[key] = fixedValue;
-          }
-        }
-      }
-    }
+    setPropertyOnInstance(this, path, value, resolve);
   }
 
   /**

@@ -5,6 +5,7 @@ import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
+import { getArrayIndex, setPropertyOnInstance } from './common';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -89,7 +90,7 @@ export class StructureDefinition {
    * Get the Structure Definition for Structure Definition
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    */
-  private getSdStructureDefinition(resolve: ResolveFn = () => undefined) {
+  getOwnStructureDefinition(resolve: ResolveFn = () => undefined) {
     if (this._sdStructureDefinition == null) {
       this._sdStructureDefinition = resolve('StructureDefinition');
     }
@@ -228,50 +229,7 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    // The StructureDefinition of the StructureDefinition resource is stored on our StructureDefinition class
-    const structureDefinitionStructureDefinition = this.getSdStructureDefinition(resolve);
-    const { fixedValue, pathParts } = structureDefinitionStructureDefinition.validateValueAtPath(
-      path,
-      value,
-      resolve
-    );
-    if (fixedValue != null) {
-      // If we can fix the value on the StructureDefinition StructureDefinition, then we can set the
-      // instance property here
-      // eslint-disable-next-line
-      let current: any = this;
-      for (const [i, pathPart] of pathParts.entries()) {
-        const key = pathPart.base;
-        // If this part of the path indexes into an array, the index will be the last bracket
-        const index = this.getArrayIndex(pathPart);
-        if (index != null) {
-          // If the array doesn't exist, create it
-          if (current[key] == null) current[key] = [];
-          // If the index doesn't exist in the array, add it and lesser indices
-          let j = current[key].length;
-          for (; j < index; j++) {
-            current[key].push(undefined);
-          }
-          if (j === index) {
-            current[key].push({});
-          }
-          // If it isn't the last element, move on, if it is, set the value
-          if (i < pathParts.length - 1) {
-            current = current[key][index];
-          } else {
-            current[key][index] = fixedValue;
-          }
-        } else {
-          // If it isn't the last element, move on, if it is, set the value
-          if (i < pathParts.length - 1) {
-            if (current[key] == null) current[key] = {};
-            current = current[key];
-          } else {
-            current[key] = fixedValue;
-          }
-        }
-      }
-    }
+    setPropertyOnInstance(this, path, value, resolve);
   }
 
   /**
@@ -376,7 +334,7 @@ export class StructureDefinition {
       // Construct the path up to this point
       currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
       // If we are indexing into an array, the last bracket should be numeric
-      const arrayIndex = this.getArrayIndex(pathPart);
+      const arrayIndex = getArrayIndex(pathPart);
       if (arrayIndex != null) {
         // If it is a number, add all bracket info besides it back to path
         pathPart.brackets.slice(0, -1).forEach(p => (currentPath += `[${p}]`));
@@ -443,21 +401,6 @@ export class StructureDefinition {
       }
     }
     return pathParts;
-  }
-
-  /**
-   * Tests to see if the last bracket in a PathPart is a non-negative int, and if so returns it
-   * @param {PathPart} pathPart - The part of the path to test
-   * @returns {number} The index if it exists and is non-negative, otherwise undefined
-   *
-   */
-  private getArrayIndex(pathPart: PathPart): number {
-    const lastBracket = pathPart.brackets?.slice(-1)[0];
-    let arrayIndex: number;
-    if (/^[-+]?\d+$/.test(lastBracket)) {
-      arrayIndex = parseInt(lastBracket);
-    }
-    return arrayIndex >= 0 ? arrayIndex : null;
   }
 
   /**
@@ -579,7 +522,7 @@ export type StructureDefinitionContext = {
   expression: string;
 };
 
-type PathPart = {
+export type PathPart = {
   base: string;
   brackets?: string[];
 };
