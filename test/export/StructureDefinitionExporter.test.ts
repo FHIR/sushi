@@ -7,7 +7,8 @@ import {
   FlagRule,
   OnlyRule,
   ValueSetRule,
-  FixedValueRule
+  FixedValueRule,
+  ContainsRule
 } from '../../src/fshtypes/rules';
 import { logger } from '../../src/utils/FSHLogger';
 
@@ -547,6 +548,69 @@ describe('StructureDefinitionExporter', () => {
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
       /File: Fixed\.fsh.*Line 4\D.*Column 18\D.*Line 4\D.*Column 28\D/s
+    );
+  });
+
+  // Contains Rule
+  it('should apply a ContainsRule on an element with defined slicing', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const rule = new ContainsRule('code.coding');
+    rule.items = ['barSlice'];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 1);
+    expect(barSlice).toBeDefined();
+  });
+
+  it('should apply multiple ContainsRule on an element with defined slicing', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const rule1 = new ContainsRule('code.coding');
+    const rule2 = new ContainsRule('code.coding');
+    rule1.items = ['barSlice'];
+    rule2.items = ['fooSlice'];
+    profile.rules.push(rule1);
+    profile.rules.push(rule2);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
+    const fooSlice = sd.elements.find(e => e.id === 'Observation.code.coding:fooSlice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 2);
+    expect(barSlice).toBeDefined();
+    expect(fooSlice).toBeDefined();
+  });
+
+  it('should not apply a ContainsRule on an element without defined slicing', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const rule = new ContainsRule('identifier').withFile('NoSlice.fsh').withLocation([6, 3, 6, 12]);
+    rule.items = ['barSlice'];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const barSlice = sd.elements.find(e => e.id === 'Observation.identifier:barSlice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length);
+    expect(barSlice).toBeUndefined();
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: NoSlice\.fsh.*Line 6\D.*Column 3\D.*Line 6\D.*Column 12\D/s
     );
   });
 
