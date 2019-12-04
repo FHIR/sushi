@@ -54,6 +54,29 @@ describe('FSHImporter', () => {
           endColumn: 48
         });
       });
+
+      it('should only apply each metadata attribute the first time it is declared', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        Id: some-extension
+        Title: "Some Extension"
+        Description: "An extension on something"
+        Parent: DuplicateParentExtension
+        Id: some-duplicate-extension
+        Title: "Some Duplicate Extension"
+        Description: "A duplicated extension on something"
+        `;
+
+        const result = importText(input);
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.name).toBe('SomeExtension');
+        expect(extension.parent).toBe('ParentExtension');
+        expect(extension.id).toBe('some-extension');
+        expect(extension.title).toBe('Some Extension');
+        expect(extension.description).toBe('An extension on something');
+      });
     });
 
     // Since Extensions use the same rule parsing code as Profiles, only do a minimal tests

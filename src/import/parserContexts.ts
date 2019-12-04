@@ -8,6 +8,7 @@ export interface EntityContext extends ParserRuleContext {
   alias(): AliasContext;
   profile(): ProfileContext;
   extension(): ExtensionContext;
+  instance(): InstanceContext;
   //invariant(): InvariantContext;
 }
 
@@ -34,6 +35,17 @@ export interface SdMetadataContext extends ParserRuleContext {
   description(): DescriptionContext;
 }
 
+export interface InstanceContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  instanceMetadata(): InstanceMetadataContext[];
+  fixedValueRule(): FixedValueRuleContext[];
+}
+
+export interface InstanceMetadataContext extends ParserRuleContext {
+  instanceOf(): InstanceOfContext;
+  title(): TitleContext;
+}
+
 export interface ParentContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
 }
@@ -49,6 +61,10 @@ export interface TitleContext extends ParserRuleContext {
 export interface DescriptionContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
+}
+
+export interface InstanceOfContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
 }
 
 export interface SdRuleContext extends ParserRuleContext {

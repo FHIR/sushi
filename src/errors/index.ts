@@ -12,6 +12,7 @@ export * from './InvalidDateTimeError';
 export * from './InvalidPeriodError';
 export * from './InvalidRangeValueError';
 export * from './InvalidTypeError';
+export * from './RequiredMetadataError';
 export * from './SlicingDefinitionError';
 export * from './SlicingNotDefinedError';
 export * from './TypeNotFoundError';
