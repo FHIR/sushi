@@ -119,6 +119,28 @@ describe('FSHImporter', () => {
         expect(profile.name).toBe('ObservationProfile');
         expect(profile.parent).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
       });
+
+      it('should only apply each metadata attribute the first time it is declared', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Id: observation-profile
+        Title: "An Observation Profile"
+        Description: "A profile on Observation"
+        Parent: DuplicateObservation
+        Id: duplicate-observation-profile
+        Title: "Duplicate Observation Profile"
+        Description: "A duplicated profile on Observation"
+        `;
+
+        const result = importText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.name).toBe('ObservationProfile');
+        expect(profile.id).toBe('observation-profile');
+        expect(profile.title).toBe('An Observation Profile');
+        expect(profile.description).toBe('A profile on Observation');
+      });
     });
 
     describe('#cardRule', () => {

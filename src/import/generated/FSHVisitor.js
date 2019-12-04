@@ -54,6 +54,18 @@ FSHVisitor.prototype.visitSdRule = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#instance.
+FSHVisitor.prototype.visitInstance = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#instanceMetadata.
+FSHVisitor.prototype.visitInstanceMetadata = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#invariant.
 FSHVisitor.prototype.visitInvariant = function(ctx) {
   return this.visitChildren(ctx);
@@ -104,6 +116,12 @@ FSHVisitor.prototype.visitXpath = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#severity.
 FSHVisitor.prototype.visitSeverity = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#instanceOf.
+FSHVisitor.prototype.visitInstanceOf = function(ctx) {
   return this.visitChildren(ctx);
 };
 

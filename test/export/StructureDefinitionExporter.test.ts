@@ -440,6 +440,40 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
+  it('should apply a correct OnlyRule on a reference to Any', () => {
+    const extension = new Extension('Foo');
+
+    const rule = new OnlyRule('value[x]');
+    rule.types = [
+      { type: 'Observation', isReference: true },
+      { type: 'Condition', isReference: true }
+    ];
+    extension.rules.push(rule);
+
+    exporter.exportStructDef(extension);
+    const sd = exporter.structDefs[0];
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const baseValueX = baseStructDef.findElement('Extension.value[x]');
+    const constrainedValueX = sd.findElement('Extension.value[x]');
+
+    expect(baseValueX.type).toHaveLength(50);
+    expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual({
+      code: 'Reference'
+    });
+
+    expect(constrainedValueX.type).toHaveLength(1);
+    expect(constrainedValueX.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: [
+          'http://hl7.org/fhir/StructureDefinition/Observation',
+          'http://hl7.org/fhir/StructureDefinition/Condition'
+        ]
+      }
+    ]);
+  });
+
   it('should apply a correct OnlyRule with a specific target constrained', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';

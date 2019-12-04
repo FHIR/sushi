@@ -1,7 +1,15 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { FSHVisitor } from './generated/FSHVisitor';
-import { Profile, Extension, FshCode, FshQuantity, FshRatio, TextLocation } from '../fshtypes';
+import {
+  Profile,
+  Extension,
+  FshCode,
+  FshQuantity,
+  FshRatio,
+  TextLocation,
+  Instance
+} from '../fshtypes';
 import {
   Rule,
   CardRule,
@@ -15,13 +23,20 @@ import {
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
+import { RequiredMetadataError } from '../errors';
 
 enum SdMetadataKey {
-  Id,
-  Parent,
-  Title,
-  Description,
-  Unknown
+  Id = 'Id',
+  Parent = 'Parent',
+  Title = 'Title',
+  Description = 'Description',
+  Unknown = 'Unknown'
+}
+
+enum InstanceMetadataKey {
+  InstanceOf = 'InstanceOf',
+  Title = 'Title',
+  Unknown = 'Unknown'
 }
 
 enum Flag {
@@ -81,6 +96,10 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.extension()) {
       this.visitExtension(ctx.extension());
     }
+
+    if (ctx.instance()) {
+      this.visitInstance(ctx.instance());
+    }
   }
 
   visitAlias(ctx: pc.AliasContext): void {
@@ -108,9 +127,17 @@ export class FSHImporter extends FSHVisitor {
     metaCtx: pc.SdMetadataContext[] = [],
     ruleCtx: pc.SdRuleContext[] = []
   ): void {
+    const seenPairs: Map<SdMetadataKey, string> = new Map();
     metaCtx
       .map(sdMeta => this.visitSdMetadata(sdMeta))
       .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(pair.key)}'.`
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
         if (pair.key === SdMetadataKey.Id) {
           def.id = pair.value;
         } else if (pair.key === SdMetadataKey.Parent) {
@@ -126,6 +153,48 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
+  visitInstance(ctx: pc.InstanceContext) {
+    const instance = new Instance(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
+    try {
+      this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
+      this.doc.instances.set(instance.name, instance);
+    } catch (e) {
+      logger.error(e.message);
+    }
+  }
+
+  private parseInstance(
+    instance: Instance,
+    metaCtx: pc.InstanceMetadataContext[] = [],
+    ruleCtx: pc.FixedValueRuleContext[] = []
+  ): void {
+    const seenPairs: Map<InstanceMetadataKey, string> = new Map();
+    metaCtx
+      .map(instanceMetadata => this.visitInstanceMetadata(instanceMetadata))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(pair.key)}'.`
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === InstanceMetadataKey.InstanceOf) {
+          instance.instanceOf = pair.value;
+        } else if (pair.key === InstanceMetadataKey.Title) {
+          instance.title = pair.value;
+        }
+      });
+    if (!instance.instanceOf) {
+      throw new RequiredMetadataError('InstanceOf', 'Instance', instance.name);
+    }
+    ruleCtx.forEach(fvRule => {
+      instance.rules.push(this.visitFixedValueRule(fvRule));
+    });
+  }
+
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
@@ -137,6 +206,17 @@ export class FSHImporter extends FSHVisitor {
       return { key: SdMetadataKey.Description, value: this.visitDescription(ctx.description()) };
     }
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
+  }
+
+  visitInstanceMetadata(
+    ctx: pc.InstanceMetadataContext
+  ): { key: InstanceMetadataKey; value: string } {
+    if (ctx.instanceOf()) {
+      return { key: InstanceMetadataKey.InstanceOf, value: this.visitInstanceOf(ctx.instanceOf()) };
+    } else if (ctx.title()) {
+      return { key: InstanceMetadataKey.Title, value: this.visitTitle(ctx.title()) };
+    }
+    return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
 
   visitId(ctx: pc.IdContext): string {
@@ -158,6 +238,10 @@ export class FSHImporter extends FSHVisitor {
 
     // it must be a multiline string
     return this.extractMultilineString(ctx.MULTILINE_STRING());
+  }
+
+  visitInstanceOf(ctx: pc.InstanceOfContext): string {
+    return this.aliasAwareValue(ctx.SEQUENCE().getText());
   }
 
   visitSdRule(ctx: pc.SdRuleContext): Rule[] {

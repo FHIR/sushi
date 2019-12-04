@@ -519,9 +519,12 @@ export class ElementDefinition {
     for (const sd of lineage) {
       if (type.isReference) {
         // References always have a code 'Reference' w/ the referenced type's defining URL set as
-        // one of the targetProfiles
+        // one of the targetProfiles.  If the targetProfile property is null, that means any
+        // reference is allowed.
         matchedType = targetTypes.find(
-          t2 => t2.code === 'Reference' && t2.targetProfile?.includes(sd.url)
+          t2 =>
+            t2.code === 'Reference' &&
+            (t2.targetProfile == null || t2.targetProfile.includes(sd.url))
         );
       } else {
         // Look for exact match on the code (w/ no profile) or a match on the same base type with
