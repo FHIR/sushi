@@ -148,8 +148,9 @@ export class ElementDefinition {
   /**
    * Get the StructureDefinition for ElementDefinition
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @returns {StructureDefinition} the StructureDefinition of ElementDefinition
    */
-  getOwnStructureDefinition(resolve: ResolveFn = () => undefined) {
+  getOwnStructureDefinition(resolve: ResolveFn = () => undefined): StructureDefinition {
     if (this._edStructureDefinition == null) {
       this._edStructureDefinition = resolve('ElementDefinition');
     }

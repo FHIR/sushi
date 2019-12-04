@@ -89,8 +89,9 @@ export class StructureDefinition {
   /**
    * Get the Structure Definition for Structure Definition
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @returns {StructureDefinition} the StructureDefinition of StructureDefinition
    */
-  getOwnStructureDefinition(resolve: ResolveFn = () => undefined) {
+  getOwnStructureDefinition(resolve: ResolveFn = () => undefined): StructureDefinition {
     if (this._sdStructureDefinition == null) {
       this._sdStructureDefinition = resolve('StructureDefinition');
     }
