@@ -2,7 +2,8 @@ import {
   assertCardRule,
   assertFlagRule,
   assertOnlyRule,
-  assertValueSetRule
+  assertValueSetRule,
+  assertCaretValueRule
 } from '../utils/asserts';
 import { importText } from '../../src/import';
 
@@ -79,7 +80,7 @@ describe('FSHImporter', () => {
       });
     });
 
-    // Since Extensions use the same rule parsing code as Profiles, only do a minimal tests
+    // Since Extensions use the same rule parsing code as Profiles, only do minimal tests of rules
     describe('#cardRule', () => {
       it('should parse simple card rules', () => {
         const input = `
@@ -111,7 +112,6 @@ describe('FSHImporter', () => {
       });
     });
 
-    // Since Extensions use the same rule parsing code as Profiles, only do a minimal tests
     describe('#flagRule', () => {
       it('should parse single-path single-value flag rules', () => {
         const input = `
@@ -126,7 +126,6 @@ describe('FSHImporter', () => {
       });
     });
 
-    // Since Extensions use the same rule parsing code as Profiles, only do a minimal tests
     describe('#valueSetRule', () => {
       it('should parse value set rules w/ names and strength', () => {
         const input = `
@@ -147,7 +146,6 @@ describe('FSHImporter', () => {
       });
     });
 
-    // Since Extensions use the same rule parsing code as Profiles, only do a minimal tests
     describe('#onlyRule', () => {
       it('should parse an only rule with one type', () => {
         const input = `
@@ -159,6 +157,20 @@ describe('FSHImporter', () => {
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
         assertOnlyRule(extension.rules[0], 'value[x]', { type: 'Quantity' });
+      });
+    });
+
+    describe('#caretValueRule', () => {
+      it('should parse a caret value rule with a path', () => {
+        const input = `
+        Extension: SomeExtension
+        * id ^short = "foo"
+        `;
+
+        const result = importText(input);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertCaretValueRule(extension.rules[0], 'id', 'short', 'foo');
       });
     });
   });
