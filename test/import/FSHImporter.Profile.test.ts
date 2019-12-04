@@ -804,11 +804,11 @@ describe('FSHImporter', () => {
         `;
         const result = importText(input);
         const profile = result.profiles.get('ObservationProfile');
-        assertCaretValueRule(profile.rules[0], null, 'description', 'foo');
-        assertCaretValueRule(profile.rules[1], null, 'experimental', false);
+        assertCaretValueRule(profile.rules[0], '', 'description', 'foo');
+        assertCaretValueRule(profile.rules[1], '', 'experimental', false);
         assertCaretValueRule(
           profile.rules[2],
-          null,
+          '',
           'keyword[0]',
           new FshCode('bar', 'foo', 'baz').withLocation([6, 25, 6, 37]).withFile('')
         );

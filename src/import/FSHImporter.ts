@@ -522,7 +522,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCaretValueRule(ctx: pc.CaretValueRuleContext): CaretValueRule {
-    const path = ctx.path() ? this.visitPath(ctx.path()) : null;
+    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
     const caretValueRule = new CaretValueRule(path)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.file);
