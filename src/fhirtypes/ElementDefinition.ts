@@ -20,6 +20,7 @@ import {
   InvalidSumOfSliceMinsError,
   InvalidMaxOfSliceError
 } from '../errors';
+import { setPropertyOnInstance } from './common';
 
 /**
  * A class representing a FHIR R4 ElementDefinition.  For the most part, each allowable property in an ElementDefinition
@@ -95,6 +96,7 @@ export class ElementDefinition {
   mapping: ElementDefinitionMapping;
   structDef: StructureDefinition;
   private _original: ElementDefinition;
+  private _edStructureDefinition: StructureDefinition;
 
   /**
    * Constructs a new ElementDefinition with the given ID.
@@ -141,6 +143,18 @@ export class ElementDefinition {
 
   getPathWithoutBase(): string {
     return this.path.slice(this.structDef.type.length + 1);
+  }
+
+  /**
+   * Get the StructureDefinition for ElementDefinition
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @returns {StructureDefinition} the StructureDefinition of ElementDefinition
+   */
+  getOwnStructureDefinition(resolve: ResolveFn = () => undefined): StructureDefinition {
+    if (this._edStructureDefinition == null) {
+      this._edStructureDefinition = resolve('ElementDefinition');
+    }
+    return this._edStructureDefinition;
   }
 
   /**
@@ -238,6 +252,16 @@ export class ElementDefinition {
       })
       .join('.');
     return diff;
+  }
+
+  /**
+   * This function sets an instance property of an ED if possible
+   * @param {string} path - The path to the ElementDefinition to fix
+   * @param {any} value - The value to fix
+   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   */
+  setInstancePropertyByPath(path: string, value: any, resolve: ResolveFn = () => undefined): void {
+    setPropertyOnInstance(this, path, value, resolve);
   }
 
   /**
