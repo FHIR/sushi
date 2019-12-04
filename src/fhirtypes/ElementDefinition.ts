@@ -1251,6 +1251,8 @@ export class ElementDefinition {
           const eClone = e.clone();
           eClone.id = eClone.id.replace(def.type, `${this.id}`);
           eClone.structDef = this.structDef;
+          // Capture the original so that diffs only show what changed *after* unfolding
+          eClone.captureOriginal();
           return eClone;
         });
         this.structDef.addElements(newElements);

@@ -17,6 +17,7 @@ describe('ElementDefinition', () => {
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    observation.captureOriginalElements();
     valueX = ElementDefinition.fromJSON(jsonValueX);
     valueX.structDef = observation;
   });
@@ -131,6 +132,25 @@ describe('ElementDefinition', () => {
       valueX.fixedInteger = 1;
       expect(valueX.hasDiff()).toBeFalsy();
     });
+
+    it('should detect diffs and non-diffs correctly when elements are unfolded', () => {
+      const code = observation.elements.find(e => e.id === 'Observation.code');
+      code.unfold(getResolver(defs));
+      const codeCoding = observation.elements.find(e => e.id === 'Observation.code.coding');
+      const codeText = observation.elements.find(e => e.id === 'Observation.code.text');
+      // Unfolded elements haven't been changed from their base definitions, so no diff...
+      expect(code.hasDiff()).toBeFalsy();
+      expect(codeCoding.hasDiff()).toBeFalsy();
+      expect(codeText.hasDiff()).toBeFalsy();
+
+      // Change just Observation.code.coding cardinality
+      codeCoding.constrainCardinality(1, '*');
+
+      // Only Observation.code.coding should have diff
+      expect(code.hasDiff()).toBeFalsy();
+      expect(codeCoding.hasDiff()).toBeTruthy();
+      expect(codeText.hasDiff()).toBeFalsy();
+    });
   });
 
   describe('#calculateDiff', () => {
@@ -149,7 +169,7 @@ describe('ElementDefinition', () => {
       expect(Object.keys(diff.toJSON())).toHaveLength(2);
     });
 
-    it('should have a diff containing changes elements after the original is captured', () => {
+    it('should have a diff containing changed elements after the original is captured', () => {
       valueX.min = 1;
       valueX.max = '2';
       valueX.captureOriginal();

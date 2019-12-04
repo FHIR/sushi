@@ -671,4 +671,39 @@ describe('StructureDefinitionExporter', () => {
       min: 1
     });
   });
+
+  it('should correctly generate a diff containing only changed elements when elements are unfolded', () => {
+    // We already have separate tests for the differentials, so this just ensures that the
+    // StructureDefinition captures originals at the right time to produce the most correct
+    // differentials
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    // Create a few rules that will force complex types to be "unfolded"
+    let rule = new CardRule('code.coding');
+    rule.min = 1;
+    rule.max = '*';
+    profile.rules.push(rule);
+
+    rule = new CardRule('code.coding.userSelected');
+    rule.min = 1;
+    rule.max = '1';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    const json = sd.toJSON();
+
+    expect(json.differential.element).toHaveLength(2);
+    expect(json.differential.element[0]).toEqual({
+      id: 'Observation.code.coding',
+      path: 'Observation.code.coding',
+      min: 1
+    });
+    expect(json.differential.element[1]).toEqual({
+      id: 'Observation.code.coding.userSelected',
+      path: 'Observation.code.coding.userSelected',
+      min: 1
+    });
+  });
 });
