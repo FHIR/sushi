@@ -1,7 +1,6 @@
 import { importText } from '../../src/import';
 import { assertFixedValueRule } from '../utils/asserts';
 import { FshCode } from '../../src/fshtypes';
-import { RequiredMetadataError } from '../../src/errors';
 
 describe('FSHImporter', () => {
   describe('Instance', () => {
@@ -41,15 +40,14 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
       });
 
-      it('should throw an error when an instance has no type', () => {
+      it('should not parse an instance that has no type', () => {
         const input = `
         Instance: MyObservation
         Title: "My Important Observation"
         `;
 
-        expect(() => {
-          importText(input);
-        }).toThrow(RequiredMetadataError);
+        const result = importText(input);
+        expect(result.instances.size).toBe(0);
       });
     });
 

@@ -157,8 +157,12 @@ export class FSHImporter extends FSHVisitor {
     const instance = new Instance(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.file);
-    this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
-    this.doc.instances.set(instance.name, instance);
+    try {
+      this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
+      this.doc.instances.set(instance.name, instance);
+    } catch (e) {
+      logger.error(e.message);
+    }
   }
 
   private parseInstance(
@@ -184,7 +188,7 @@ export class FSHImporter extends FSHVisitor {
         }
       });
     if (!instance.instanceOf) {
-      throw new RequiredMetadataError('InstanceOf', 'Instance');
+      throw new RequiredMetadataError('InstanceOf', 'Instance', instance.name);
     }
     ruleCtx.forEach(fvRule => {
       instance.rules.push(this.visitFixedValueRule(fvRule));
