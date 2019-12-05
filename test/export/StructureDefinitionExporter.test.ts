@@ -8,7 +8,8 @@ import {
   OnlyRule,
   ValueSetRule,
   FixedValueRule,
-  ContainsRule
+  ContainsRule,
+  CaretValueRule
 } from '../../src/fshtypes/rules';
 import { logger } from '../../src/utils/FSHLogger';
 import { getResolver } from '../utils/getResolver';
@@ -649,6 +650,80 @@ describe('StructureDefinitionExporter', () => {
     expect(barSlice).toBeUndefined();
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
       /File: NoSlice\.fsh.*Line 6\D.*Column 3\D.*Line 6\D.*Column 12\D/s
+    );
+  });
+
+  // CaretValueRule
+  it('should apply a CaretValueRule on an element with a path', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('status');
+    rule.caretPath = 'short';
+    rule.value = 'foo';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+
+    const status = sd.findElement('Observation.status');
+    expect(status.short).toBe('foo');
+  });
+
+  it('should not apply an invalid CaretValueRule on an element with a path', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('status')
+      .withFile('InvalidValue.fsh')
+      .withLocation([6, 3, 6, 12]);
+    rule.caretPath = 'short';
+    rule.value = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    const status = sd.findElement('Observation.status');
+    const baseStatus = baseStructDef.findElement('Observation.status');
+
+    expect(status.short).toBe(baseStatus.short);
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: InvalidValue\.fsh.*Line 6\D.*Column 3\D.*Line 6\D.*Column 12\D/s
+    );
+  });
+
+  it('should apply a CaretValueRule on an element without a path', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'description';
+    rule.value = 'foo';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    expect(sd.description).toBe('foo');
+  });
+
+  it('should not apply an invalid CaretValueRule on an element without a path', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);
+    rule.caretPath = 'description';
+    rule.value = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+    const baseStructDef = sd.getBaseStructureDefinition();
+
+    expect(sd.description).toBe(baseStructDef.description);
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: InvalidValue\.fsh.*Line 6\D.*Column 3\D.*Line 6\D.*Column 12\D/s
     );
   });
 
