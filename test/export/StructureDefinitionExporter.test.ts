@@ -683,7 +683,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.structDefs[0];
-    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseStructDef = resolve('Observation');
 
     const status = sd.findElement('Observation.status');
     const baseStatus = baseStructDef.findElement('Observation.status');
@@ -719,7 +719,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.structDefs[0];
-    const baseStructDef = sd.getBaseStructureDefinition();
+    const baseStructDef = resolve('Observation');
 
     expect(sd.description).toBe(baseStructDef.description);
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(

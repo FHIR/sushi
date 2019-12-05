@@ -30,6 +30,40 @@ describe('StructureDefinition', () => {
       });
       expect(observation.elements).toHaveLength(50);
       const valueX = observation.elements[21];
+      expect(valueX.hasDiff()).toBeFalsy();
+      expect(valueX.id).toBe('Observation.value[x]');
+      expect(valueX.path).toBe('Observation.value[x]');
+      expect(valueX.min).toBe(0);
+      expect(valueX.max).toBe('1');
+      expect(valueX.type).toEqual([
+        { code: 'Quantity' },
+        { code: 'CodeableConcept' },
+        { code: 'string' },
+        { code: 'boolean' },
+        { code: 'integer' },
+        { code: 'Range' },
+        { code: 'Ratio' },
+        { code: 'SampledData' },
+        { code: 'time' },
+        { code: 'dateTime' },
+        { code: 'Period' }
+      ]);
+    });
+
+    it('should load a resource properly without capturing originals', () => {
+      observation = StructureDefinition.fromJSON(jsonObservation, false);
+      // Don't test everything, but get a sample anyway
+      expect(observation.id).toBe('Observation');
+      expect(observation.meta.lastUpdated).toBe('2019-11-01T09:29:23.356+11:00');
+      expect(observation.extension).toHaveLength(6);
+      expect(observation.extension[0]).toEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
+        valueString: 'Clinical.Diagnostics'
+      });
+      expect(observation.elements).toHaveLength(50);
+      const valueX = observation.elements[21];
+      expect(valueX.hasDiff()).toBeTruthy();
+      expect(valueX.calculateDiff()).toEqual(valueX);
       expect(valueX.id).toBe('Observation.value[x]');
       expect(valueX.path).toBe('Observation.value[x]');
       expect(valueX.min).toBe(0);
