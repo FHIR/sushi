@@ -59,7 +59,6 @@ describe('StructureDefinition', () => {
     });
 
     it('should reflect differentials for elements that changed after capturing originals', () => {
-      observation.captureOriginalElements();
       const code = observation.elements.find(e => e.id === 'Observation.code');
       code.short = 'Special observation code';
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');

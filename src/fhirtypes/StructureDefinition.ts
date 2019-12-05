@@ -58,10 +58,6 @@ export class StructureDefinition {
    */
   elements: ElementDefinition[];
 
-  /**
-   * A base clone of the Structure Definition from before any rules were applied
-   */
-  private _baseStructureDefinition: StructureDefinition;
   private _sdStructureDefinition: StructureDefinition;
 
   /**
@@ -77,13 +73,6 @@ export class StructureDefinition {
     root.isModifier = false;
     root.isSummary = false;
     this.elements = [root];
-  }
-
-  /**
-   * Get the base Structure Definition before any rules were applied
-   */
-  getBaseStructureDefinition() {
-    return this._baseStructureDefinition;
   }
 
   /**
@@ -289,9 +278,11 @@ export class StructureDefinition {
    * Constructs a new StructureDefinition representing the passed in JSON.  The JSON that is passed in must be a
    * properly formatted FHIR 3.0.1 StructureDefinition JSON.
    * @param {any} json - the FHIR 3.0.1 JSON representation of a StructureDefinition to construct
+   * @param {captureOriginalElements} - indicate if original elements should be captured for purposes of
+   *   detecting differentials.  Defaults to true.
    * @returns {StructureDefinition} a new StructureDefinition instance representing the passed in JSON
    */
-  static fromJSON(json: LooseStructDefJSON): StructureDefinition {
+  static fromJSON(json: LooseStructDefJSON, captureOriginalElements = true): StructureDefinition {
     const sd = new StructureDefinition();
     // First handle properties that are just straight translations from JSON
     for (const prop of PROPS) {
@@ -305,13 +296,11 @@ export class StructureDefinition {
     sd.elements.length = 0;
     if (json.snapshot && json.snapshot.element) {
       for (const el of json.snapshot.element) {
-        const ed = ElementDefinition.fromJSON(el);
+        const ed = ElementDefinition.fromJSON(el, captureOriginalElements);
         ed.structDef = sd;
         sd.elements.push(ed);
       }
     }
-    // Keep a clone of the base structure definition for comparison once rules are applied
-    sd._baseStructureDefinition = cloneDeep(sd);
     return sd;
   }
 
