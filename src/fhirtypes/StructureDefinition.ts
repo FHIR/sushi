@@ -289,9 +289,11 @@ export class StructureDefinition {
    * Constructs a new StructureDefinition representing the passed in JSON.  The JSON that is passed in must be a
    * properly formatted FHIR 3.0.1 StructureDefinition JSON.
    * @param {any} json - the FHIR 3.0.1 JSON representation of a StructureDefinition to construct
+   * @param {captureOriginalElements} - indicate if original elements should be captured for purposes of
+   *   detecting differentials.  Defaults to true.
    * @returns {StructureDefinition} a new StructureDefinition instance representing the passed in JSON
    */
-  static fromJSON(json: LooseStructDefJSON): StructureDefinition {
+  static fromJSON(json: LooseStructDefJSON, captureOriginalElements = true): StructureDefinition {
     const sd = new StructureDefinition();
     // First handle properties that are just straight translations from JSON
     for (const prop of PROPS) {
@@ -305,7 +307,7 @@ export class StructureDefinition {
     sd.elements.length = 0;
     if (json.snapshot && json.snapshot.element) {
       for (const el of json.snapshot.element) {
-        const ed = ElementDefinition.fromJSON(el);
+        const ed = ElementDefinition.fromJSON(el, captureOriginalElements);
         ed.structDef = sd;
         sd.elements.push(ed);
       }

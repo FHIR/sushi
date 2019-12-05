@@ -1495,9 +1495,11 @@ export class ElementDefinition {
   /**
    * Instantiates a new ElementDefinition from a FHIR-conformant JSON representation
    * @param {Object} json - the FHIR-conformant JSON representation of the ElementDefinition to instantiate
+   * @param {captureOriginal} - indicate if original element should be captured for purposes of detecting
+   *   differential.  Defaults to true.
    * @returns {ElementDefinition} the ElementDefinition representing the data passed in
    */
-  static fromJSON(json: LooseElementDefJSON): ElementDefinition {
+  static fromJSON(json: LooseElementDefJSON, captureOriginal = true): ElementDefinition {
     const ed = new ElementDefinition();
     for (let prop of PROPS) {
       if (prop.endsWith('[x]')) {
@@ -1509,6 +1511,9 @@ export class ElementDefinition {
         // @ts-ignore
         ed[prop] = cloneDeep(json[prop]);
       }
+    }
+    if (captureOriginal) {
+      ed.captureOriginal();
     }
 
     return ed;

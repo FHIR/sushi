@@ -17,7 +17,6 @@ describe('ElementDefinition', () => {
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
-    observation.captureOriginalElements();
     valueX = ElementDefinition.fromJSON(jsonValueX);
     valueX.structDef = observation;
   });
@@ -102,7 +101,8 @@ describe('ElementDefinition', () => {
 
   describe('#hasDiff', () => {
     it('should always show a diff for brand new elements w/ no original captured', () => {
-      expect(valueX.hasDiff()).toBeTruthy();
+      const newElement = new ElementDefinition('newElement');
+      expect(newElement.hasDiff()).toBeTruthy();
     });
 
     it('should not have a diff if nothing changes after capturing original', () => {
@@ -155,8 +155,11 @@ describe('ElementDefinition', () => {
 
   describe('#calculateDiff', () => {
     it('should have diff containing everything when there is no captured original', () => {
-      valueX.min = 1;
-      expect(valueX.calculateDiff()).toEqual(valueX);
+      const newElement = new ElementDefinition('newElement');
+      newElement.min = 0;
+      newElement.max = '1';
+      newElement.type = [{ code: 'string' }];
+      expect(newElement.calculateDiff()).toEqual(newElement);
     });
 
     it('should have a diff w/ only id and path when nothing changes after capturing original', () => {
@@ -287,7 +290,7 @@ describe('ElementDefinition', () => {
 
   describe('#clone', () => {
     it('should clone an element so that changes in the clone are not reflected in the original', () => {
-      const clone = valueX.clone();
+      const clone = valueX.clone(false);
       expect(clone).toEqual(valueX); // value-based equality (not sameness)
       clone.definition = 'I am a clone';
       expect(clone).not.toEqual(valueX);
