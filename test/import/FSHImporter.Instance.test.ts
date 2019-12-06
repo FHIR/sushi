@@ -132,10 +132,10 @@ describe('FSHImporter', () => {
 
         importText(input, 'Dupe.fsh');
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
-          /File: Dupe\.fsh.*Line: 5/s
+          /File: Dupe\.fsh.*Line: 5\D/s
         );
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Dupe\.fsh.*Line: 6/s
+          /File: Dupe\.fsh.*Line: 6\D/s
         );
       });
     });

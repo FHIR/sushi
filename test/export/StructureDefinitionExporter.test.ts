@@ -170,7 +170,7 @@ describe('StructureDefinitionExporter', () => {
     expect(structDef).toBeDefined();
     expect(structDef.type).toBe('Resource');
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Foo\.fsh.*Line: 3 - 4/s
+      /File: Foo\.fsh.*Line: 3 - 4\D/s
     );
   });
 
