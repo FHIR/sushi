@@ -24,6 +24,31 @@ describe('ElementDefinition', () => {
   describe('#fromJSON', () => {
     it('should load an element properly', () => {
       // Don't test everything, but get a sample anyway
+      expect(valueX.hasDiff()).toBeFalsy();
+      expect(valueX.id).toBe('Observation.value[x]');
+      expect(valueX.path).toBe('Observation.value[x]');
+      expect(valueX.min).toBe(0);
+      expect(valueX.max).toBe('1');
+      expect(valueX.type).toEqual([
+        { code: 'Quantity' },
+        { code: 'CodeableConcept' },
+        { code: 'string' },
+        { code: 'boolean' },
+        { code: 'integer' },
+        { code: 'Range' },
+        { code: 'Ratio' },
+        { code: 'SampledData' },
+        { code: 'time' },
+        { code: 'dateTime' },
+        { code: 'Period' }
+      ]);
+    });
+
+    it('should load an element properly without capturing original', () => {
+      const valueX = ElementDefinition.fromJSON(jsonValueX, false);
+      // Don't test everything, but get a sample anyway
+      expect(valueX.hasDiff()).toBeTruthy();
+      expect(valueX.calculateDiff()).toEqual(valueX);
       expect(valueX.id).toBe('Observation.value[x]');
       expect(valueX.path).toBe('Observation.value[x]');
       expect(valueX.min).toBe(0);
@@ -101,7 +126,8 @@ describe('ElementDefinition', () => {
 
   describe('#hasDiff', () => {
     it('should always show a diff for brand new elements w/ no original captured', () => {
-      expect(valueX.hasDiff()).toBeTruthy();
+      const newElement = new ElementDefinition('newElement');
+      expect(newElement.hasDiff()).toBeTruthy();
     });
 
     it('should not have a diff if nothing changes after capturing original', () => {
@@ -131,12 +157,34 @@ describe('ElementDefinition', () => {
       valueX.fixedInteger = 1;
       expect(valueX.hasDiff()).toBeFalsy();
     });
+
+    it('should detect diffs and non-diffs correctly when elements are unfolded', () => {
+      const code = observation.elements.find(e => e.id === 'Observation.code');
+      code.unfold(getResolver(defs));
+      const codeCoding = observation.elements.find(e => e.id === 'Observation.code.coding');
+      const codeText = observation.elements.find(e => e.id === 'Observation.code.text');
+      // Unfolded elements haven't been changed from their base definitions, so no diff...
+      expect(code.hasDiff()).toBeFalsy();
+      expect(codeCoding.hasDiff()).toBeFalsy();
+      expect(codeText.hasDiff()).toBeFalsy();
+
+      // Change just Observation.code.coding cardinality
+      codeCoding.constrainCardinality(1, '*');
+
+      // Only Observation.code.coding should have diff
+      expect(code.hasDiff()).toBeFalsy();
+      expect(codeCoding.hasDiff()).toBeTruthy();
+      expect(codeText.hasDiff()).toBeFalsy();
+    });
   });
 
   describe('#calculateDiff', () => {
     it('should have diff containing everything when there is no captured original', () => {
-      valueX.min = 1;
-      expect(valueX.calculateDiff()).toEqual(valueX);
+      const newElement = new ElementDefinition('newElement');
+      newElement.min = 0;
+      newElement.max = '1';
+      newElement.type = [{ code: 'string' }];
+      expect(newElement.calculateDiff()).toEqual(newElement);
     });
 
     it('should have a diff w/ only id and path when nothing changes after capturing original', () => {
@@ -149,7 +197,7 @@ describe('ElementDefinition', () => {
       expect(Object.keys(diff.toJSON())).toHaveLength(2);
     });
 
-    it('should have a diff containing changes elements after the original is captured', () => {
+    it('should have a diff containing changed elements after the original is captured', () => {
       valueX.min = 1;
       valueX.max = '2';
       valueX.captureOriginal();
@@ -267,7 +315,7 @@ describe('ElementDefinition', () => {
 
   describe('#clone', () => {
     it('should clone an element so that changes in the clone are not reflected in the original', () => {
-      const clone = valueX.clone();
+      const clone = valueX.clone(false);
       expect(clone).toEqual(valueX); // value-based equality (not sameness)
       clone.definition = 'I am a clone';
       expect(clone).not.toEqual(valueX);

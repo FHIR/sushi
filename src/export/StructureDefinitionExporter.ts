@@ -9,7 +9,8 @@ import {
   FlagRule,
   OnlyRule,
   ValueSetRule,
-  ContainsRule
+  ContainsRule,
+  CaretValueRule
 } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import cloneDeep from 'lodash/cloneDeep';
@@ -80,6 +81,20 @@ export class StructureDefinitionExporter {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
             rule.items.forEach(item => element.addSlice(item));
+          } else if (rule instanceof CaretValueRule) {
+            if (rule.path !== '') {
+              element.setInstancePropertyByPath(
+                rule.caretPath,
+                rule.value,
+                this.resolve.bind(this)
+              );
+            } else {
+              structDef.setInstancePropertyByPath(
+                rule.caretPath,
+                rule.value,
+                this.resolve.bind(this)
+              );
+            }
           }
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
@@ -137,8 +152,6 @@ export class StructureDefinitionExporter {
       throw new ParentNotDefinedError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
     }
 
-    // Capture the orginal elements so that any further changes are reflected in the differential
-    structDef.captureOriginalElements();
     this.setMetadata(structDef, fshDefinition);
     this.setRules(structDef, fshDefinition);
 
