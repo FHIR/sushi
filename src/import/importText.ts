@@ -4,6 +4,7 @@ import { FSHParser } from './generated/FSHParser';
 import { DocContext } from './parserContexts';
 import { FSHImporter } from './FSHImporter';
 import { FSHDocument } from './FSHDocument';
+import { FSHErrorListener } from './FSHErrorListener';
 
 /**
  * Parses a text string as a FSHDocument.
@@ -13,16 +14,25 @@ import { FSHDocument } from './FSHDocument';
  */
 export function importText(text: string, file?: string): FSHDocument {
   const importer = new FSHImporter(file);
-  return importer.visitDoc(parseDoc(text));
+  return importer.visitDoc(parseDoc(text, file));
 }
 
 // NOTE: Since the ANTLR parser/lexer is JS (not typescript), we need to use some ts-ignore here.
-function parseDoc(input: string): DocContext {
+function parseDoc(input: string, file?: string): DocContext {
   const chars = new InputStream(input);
   const lexer = new FSHLexer(chars);
+  const listener = new FSHErrorListener(file);
+  // @ts-ignore
+  lexer.removeErrorListeners();
+  // @ts-ignore
+  lexer.addErrorListener(listener);
   // @ts-ignore
   const tokens = new CommonTokenStream(lexer);
   const parser = new FSHParser(tokens);
+  // @ts-ignore
+  parser.removeErrorListeners();
+  // @ts-ignore
+  parser.addErrorListener(listener);
   // @ts-ignore
   parser.buildParseTrees = true;
   // @ts-ignore

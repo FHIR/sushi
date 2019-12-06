@@ -1,6 +1,13 @@
 import { importText, FSHImporter, FSHDocument } from '../../src/import';
+import { logger } from '../../src/utils/FSHLogger';
 
 describe('FSHImporter', () => {
+  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
+
+  beforeAll(() => {
+    mockWriter = jest.spyOn(logger.transports[0], 'write');
+  });
+
   it('should default filename to blank string', () => {
     const input = '';
     const result = importText(input);
@@ -32,5 +39,27 @@ describe('FSHImporter', () => {
     // @ts-ignore
     const result2 = visitor.visitDoc({ entity: () => [] });
     expect(result2).toBeUndefined();
+  });
+
+  it('should report mismatched input errors from antlr', () => {
+    const input = `
+    Profile: MismatchedPizza
+    Pizza: Large
+    `;
+    importText(input, 'Pizza.fsh');
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Pizza\.fsh.*Line 3\D.*Column 5\D.*Line 3\D.*Column 10\D/s
+    );
+  });
+
+  it('should report extraneous input errors from antlr', () => {
+    const input = `
+    Profile: Something Spaced
+    Parent: Spacious
+    `;
+    importText(input, 'Space.fsh');
+    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+      /File: Space\.fsh.*Line 2\D.*Column 24\D.*Line 2\D.*Column 29\D/s
+    );
   });
 });
