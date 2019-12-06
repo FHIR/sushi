@@ -48,7 +48,7 @@ describe('FSHImporter', () => {
     `;
     importText(input, 'Pizza.fsh');
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Pizza\.fsh.*Line 3\D.*Column 5\D.*Line 3\D.*Column 10\D/s
+      /File: Pizza\.fsh.*Line: 3\D/s
     );
   });
 
@@ -59,7 +59,7 @@ describe('FSHImporter', () => {
     `;
     importText(input, 'Space.fsh');
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Space\.fsh.*Line 2\D.*Column 24\D.*Line 2\D.*Column 29\D/s
+      /File: Space\.fsh.*Line: 2\D/s
     );
   });
 });

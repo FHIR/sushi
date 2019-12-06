@@ -4,12 +4,14 @@ const { combine, colorize, simple } = format;
 
 const withLocation = format(info => {
   if (info.file) {
-    info.message += `\nFile: ${info.file}`;
+    info.message += `\n  File: ${info.file}`;
     delete info.file;
   }
   if (info.location) {
-    info.message += `\nFrom: (Line ${info.location.startLine}, Column ${info.location.startColumn})`;
-    info.message += `\nTo: (Line ${info.location.endLine}, Column ${info.location.endColumn})`;
+    info.message += `\n  Line: ${info.location.startLine}`;
+    if (info.location.endLine !== info.location.startLine) {
+      info.message += ` - ${info.location.endLine}`;
+    }
     delete info.location;
   }
   return info;
