@@ -24,6 +24,31 @@ describe('ElementDefinition', () => {
   describe('#fromJSON', () => {
     it('should load an element properly', () => {
       // Don't test everything, but get a sample anyway
+      expect(valueX.hasDiff()).toBeFalsy();
+      expect(valueX.id).toBe('Observation.value[x]');
+      expect(valueX.path).toBe('Observation.value[x]');
+      expect(valueX.min).toBe(0);
+      expect(valueX.max).toBe('1');
+      expect(valueX.type).toEqual([
+        { code: 'Quantity' },
+        { code: 'CodeableConcept' },
+        { code: 'string' },
+        { code: 'boolean' },
+        { code: 'integer' },
+        { code: 'Range' },
+        { code: 'Ratio' },
+        { code: 'SampledData' },
+        { code: 'time' },
+        { code: 'dateTime' },
+        { code: 'Period' }
+      ]);
+    });
+
+    it('should load an element properly without capturing original', () => {
+      const valueX = ElementDefinition.fromJSON(jsonValueX, false);
+      // Don't test everything, but get a sample anyway
+      expect(valueX.hasDiff()).toBeTruthy();
+      expect(valueX.calculateDiff()).toEqual(valueX);
       expect(valueX.id).toBe('Observation.value[x]');
       expect(valueX.path).toBe('Observation.value[x]');
       expect(valueX.min).toBe(0);
