@@ -5,14 +5,14 @@ export class ValueSet extends FshEntity {
   id: string;
   description?: string;
   codes: FshCode[];
-  includesDescendents: FshCode[];
-  excludesDescendents: FshCode[];
+  includesDescendants: FshCode[];
+  excludesDescendants: FshCode[];
 
   constructor(public name: string) {
     super();
     this.id = name;
     this.codes = [];
-    this.includesDescendents = [];
-    this.excludesDescendents = [];
+    this.includesDescendants = [];
+    this.excludesDescendants = [];
   }
 }

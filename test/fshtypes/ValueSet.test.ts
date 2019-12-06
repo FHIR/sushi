@@ -9,8 +9,8 @@ describe('ValueSet', () => {
       expect(vs.id).toBe('MyValueSet');
       expect(vs.description).toBeUndefined();
       expect(vs.codes).toBeEmpty();
-      expect(vs.includesDescendents).toBeEmpty();
-      expect(vs.excludesDescendents).toBeEmpty();
+      expect(vs.includesDescendants).toBeEmpty();
+      expect(vs.excludesDescendants).toBeEmpty();
     });
   });
 });
