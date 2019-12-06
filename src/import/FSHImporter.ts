@@ -129,7 +129,7 @@ export class FSHImporter extends FSHVisitor {
   ): void {
     const seenPairs: Map<SdMetadataKey, string> = new Map();
     metaCtx
-      .map(sdMeta => Object.assign(this.visitSdMetadata(sdMeta), { context: sdMeta }))
+      .map(sdMeta => ({ ...this.visitSdMetadata(sdMeta), context: sdMeta }))
       .forEach(pair => {
         if (seenPairs.has(pair.key)) {
           logger.error(
@@ -175,9 +175,10 @@ export class FSHImporter extends FSHVisitor {
   ): void {
     const seenPairs: Map<InstanceMetadataKey, string> = new Map();
     metaCtx
-      .map(instanceMetadata =>
-        Object.assign(this.visitInstanceMetadata(instanceMetadata), { context: instanceMetadata })
-      )
+      .map(instanceMetadata => ({
+        ...this.visitInstanceMetadata(instanceMetadata),
+        context: instanceMetadata
+      }))
       .forEach(pair => {
         if (seenPairs.has(pair.key)) {
           logger.error(
