@@ -56,7 +56,7 @@ describe('FSHImporter', () => {
         const result = importText(input, 'Missing.fsh');
         expect(result.instances.size).toBe(0);
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Missing\.fsh.*Line 2\D.*Column 9\D.*Line 3\D.*Column 41\D/s
+          /File: Missing\.fsh.*Line: 2 - 3\D/s
         );
       });
     });
@@ -132,10 +132,10 @@ describe('FSHImporter', () => {
 
         importText(input, 'Dupe.fsh');
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
-          /File: Dupe\.fsh.*Line 5\D.*Column 9\D.*Line 5\D.*Column 40\D/s
+          /File: Dupe\.fsh.*Line: 5\D/s
         );
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Dupe\.fsh.*Line 6\D.*Column 9\D.*Line 6\D.*Column 41\D/s
+          /File: Dupe\.fsh.*Line: 6\D/s
         );
       });
     });

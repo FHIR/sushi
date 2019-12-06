@@ -156,10 +156,10 @@ describe('FSHImporter', () => {
 
         importText(input, 'Dupe.fsh');
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
-          /File: Dupe\.fsh.*Line 7\D.*Column 9\D.*Line 7\D.*Column 46\D/s
+          /File: Dupe\.fsh.*Line: 7\D/s
         );
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Dupe\.fsh.*Line 8\D.*Column 9\D.*Line 8\D.*Column 58\D/s
+          /File: Dupe\.fsh.*Line: 8\D/s
         );
       });
     });
@@ -868,7 +868,7 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(0);
         expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Obeys\.fsh.*Line 4\D.*Column 9\D.*Line 4\D.*Column 38\D/s
+          /File: Obeys\.fsh.*Line: 4\D/s
         );
       });
     });
