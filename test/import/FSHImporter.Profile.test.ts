@@ -142,6 +142,26 @@ describe('FSHImporter', () => {
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
       });
+
+      it('should log an error when encountering a duplicate metadata attribute', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Id: observation-profile
+        Title: "An Observation Profile"
+        Description: "A profile on Observation"
+        Title: "Duplicate Observation Profile"
+        Description: "A duplicated profile on Observation"
+        `;
+
+        importText(input, 'Dupe.fsh');
+        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
+          /File: Dupe\.fsh.*Line 7\D.*Column 9\D.*Line 7\D.*Column 46\D/s
+        );
+        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
+          /File: Dupe\.fsh.*Line 8\D.*Column 9\D.*Line 8\D.*Column 58\D/s
+        );
+      });
     });
 
     describe('#cardRule', () => {

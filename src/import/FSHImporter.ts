@@ -130,11 +130,14 @@ export class FSHImporter extends FSHVisitor {
   ): void {
     const seenPairs: Map<SdMetadataKey, string> = new Map();
     metaCtx
-      .map(sdMeta => this.visitSdMetadata(sdMeta))
+      .map(sdMeta => ({ ...this.visitSdMetadata(sdMeta), context: sdMeta }))
       .forEach(pair => {
         if (seenPairs.has(pair.key)) {
           logger.error(
-            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(pair.key)}'.`
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.file, location: this.extractStartStop(pair.context) }
           );
           return;
         }
@@ -162,7 +165,7 @@ export class FSHImporter extends FSHVisitor {
       this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
       this.doc.instances.set(instance.name, instance);
     } catch (e) {
-      logger.error(e.message);
+      logger.error(e.message, instance.sourceInfo);
     }
   }
 
@@ -173,11 +176,17 @@ export class FSHImporter extends FSHVisitor {
   ): void {
     const seenPairs: Map<InstanceMetadataKey, string> = new Map();
     metaCtx
-      .map(instanceMetadata => this.visitInstanceMetadata(instanceMetadata))
+      .map(instanceMetadata => ({
+        ...this.visitInstanceMetadata(instanceMetadata),
+        context: instanceMetadata
+      }))
       .forEach(pair => {
         if (seenPairs.has(pair.key)) {
           logger.error(
-            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(pair.key)}'.`
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.file, location: this.extractStartStop(pair.context) }
           );
           return;
         }
