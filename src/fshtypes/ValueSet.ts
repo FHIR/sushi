@@ -1,10 +1,11 @@
 import { FshEntity } from './FshEntity';
 import { FshCode } from './FshCode';
+import { ValueSetTerm } from './ValueSetTerm';
 
 export class ValueSet extends FshEntity {
   id: string;
   description?: string;
-  codes: FshCode[];
+  codes: ValueSetTerm[];
   includesDescendants: FshCode[];
   excludesDescendants: FshCode[];
 
