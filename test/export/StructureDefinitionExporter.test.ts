@@ -635,6 +635,32 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should apply a ContainsRule of a defined extension on a modifierExtension element', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new ContainsRule('modifierExtension');
+    rule.items = ['valueset-expression'];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+
+    const extension = sd.elements.find(e => e.id === 'Observation.modifierExtension');
+    const valuesetExpression = sd.elements.find(
+      e => e.id === 'Observation.modifierExtension:valueset-expression'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(valuesetExpression).toBeDefined();
+    expect(valuesetExpression.type[0]).toEqual({
+      code: 'Extension',
+      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
+    });
+  });
+
   it('should apply a ContainsRule of an undefined extension on an extension element', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
