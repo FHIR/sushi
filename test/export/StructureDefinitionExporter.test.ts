@@ -609,6 +609,53 @@ describe('StructureDefinitionExporter', () => {
     expect(barSlice).toBeDefined();
   });
 
+  it('should apply a ContainsRule of a defined extension on an extension element', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new ContainsRule('extension');
+    rule.items = ['valueset-expression'];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const valuesetExpression = sd.elements.find(
+      e => e.id === 'Observation.extension:valueset-expression'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(valuesetExpression).toBeDefined();
+    expect(valuesetExpression.type[0]).toEqual({
+      code: 'Extension',
+      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
+    });
+  });
+
+  it('should apply a ContainsRule of an undefined extension on an extension element', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new ContainsRule('extension');
+    rule.items = ['foo'];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const foo = sd.elements.find(e => e.id === 'Observation.extension:foo');
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(foo).toBeDefined();
+    expect(foo.type[0]).toEqual({ code: 'Extension' });
+  });
+
   it('should apply multiple ContainsRule on an element with defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';

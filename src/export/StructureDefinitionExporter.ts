@@ -80,7 +80,20 @@ export class StructureDefinitionExporter {
           } else if (rule instanceof ValueSetRule) {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
-            rule.items.forEach(item => element.addSlice(item));
+            const isExtension = element.type?.length === 1 && element.type[0].code === 'Extension';
+            if (isExtension && !element.slicing) {
+              element.sliceIt('value', 'url');
+            }
+            rule.items.forEach(item => {
+              const slice = element.addSlice(item);
+              if (isExtension) {
+                const extension = this.resolve(item);
+                if (extension) {
+                  if (!slice.type[0].profile) slice.type[0].profile = [];
+                  slice.type[0].profile.push(extension.url);
+                }
+              }
+            });
           } else if (rule instanceof CaretValueRule) {
             if (rule.path !== '') {
               element.setInstancePropertyByPath(
