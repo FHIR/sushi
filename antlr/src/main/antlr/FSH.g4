@@ -1,7 +1,7 @@
 grammar FSH;
 
 doc:                entity*;
-entity:             alias | profile | extension | invariant | instance;
+entity:             alias | profile | extension | invariant | instance | valueSet;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
@@ -15,6 +15,9 @@ instanceMetadata:   instanceOf | title;
 
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
+
+valueSet:           KW_VALUESET SEQUENCE STRING? vsMetadata* vsMember+;
+vsMetadata:         description;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -36,6 +39,12 @@ containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
+
+// VALUESET MEMBERS
+vsMember:           vsTerm | vsInclude | vsExclude;
+vsTerm:             code STRING?;
+vsInclude:          STAR KW_INCLUDE KW_DESCENDANT_OF code;
+vsExclude:          STAR KW_EXCLUDE KW_DESCENDANT_OF code;
 
 // MISC
 path:               SEQUENCE;
@@ -59,6 +68,7 @@ KW_EXTENSION:       'Extension' WS* ':';
 KW_INSTANCE:        'Instance' WS* ':';
 KW_INSTANCEOF:      'InstanceOf' WS* ':';
 KW_INVARIANT:       'Invariant' WS* ':';
+KW_VALUESET:        'ValueSet' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';
 KW_TITLE:           'Title' WS* ':';
@@ -81,6 +91,9 @@ KW_OR:              'or';
 KW_OBEYS:           'obeys';
 KW_TRUE:            'true';
 KW_FALSE:           'false';
+KW_INCLUDE:         'include';
+KW_EXCLUDE:         'exclude';
+KW_DESCENDANT_OF:   'descendant-of';
 
 // SYMBOLS
 EQUAL:              '=';
@@ -102,8 +115,8 @@ NUMBER:             [+\-]? [0-9]+('.' [0-9]+)?;
                  //   '  UCUM UNIT   '
 UNIT:               '\'' (~[\\'])* '\'';
 
-                 // SYSTEM     #  SYSTEM   "DISPLAY"
-CODE:               SEQUENCE? '#' SEQUENCE STRING?;
+                 // SYSTEM     #  SYSTEM
+CODE:               SEQUENCE? '#' SEQUENCE;
 
                  //        YEAR         ( -   MONTH   ( -    DAY    ( T TIME )?)?)?
 DATETIME:           [0-9][0-9][0-9][0-9]('-'[0-9][0-9]('-'[0-9][0-9]('T' TIME)?)?)?;

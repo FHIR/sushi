@@ -9,6 +9,7 @@ export interface EntityContext extends ParserRuleContext {
   profile(): ProfileContext;
   extension(): ExtensionContext;
   instance(): InstanceContext;
+  valueSet(): ValueSetContext;
   //invariant(): InvariantContext;
 }
 
@@ -44,6 +45,17 @@ export interface InstanceContext extends ParserRuleContext {
 export interface InstanceMetadataContext extends ParserRuleContext {
   instanceOf(): InstanceOfContext;
   title(): TitleContext;
+}
+
+export interface ValueSetContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  STRING(): ParserRuleContext;
+  vsMetadata(): VsMetadataContext[];
+  vsMember(): VsMemberContext[];
+}
+
+export interface VsMetadataContext extends ParserRuleContext {
+  description(): DescriptionContext;
 }
 
 export interface ParentContext extends ParserRuleContext {
@@ -187,4 +199,23 @@ export interface CaretValueRuleContext extends ParserRuleContext {
   path(): PathContext;
   caretPath(): CaretPathContext;
   value(): ValueContext;
+}
+
+export interface VsMemberContext extends ParserRuleContext {
+  vsTerm(): VsTermContext;
+  vsInclude(): VsIncludeContext;
+  vsExclude(): VsExcludeContext;
+}
+
+export interface VsTermContext extends ParserRuleContext {
+  code(): CodeContext;
+  STRING(): ParserRuleContext;
+}
+
+export interface VsIncludeContext extends ParserRuleContext {
+  code(): CodeContext;
+}
+
+export interface VsExcludeContext extends ParserRuleContext {
+  code(): CodeContext;
 }

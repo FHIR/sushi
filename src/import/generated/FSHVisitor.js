@@ -78,6 +78,18 @@ FSHVisitor.prototype.visitInvariantMetadata = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#valueSet.
+FSHVisitor.prototype.visitValueSet = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsMetadata.
+FSHVisitor.prototype.visitVsMetadata = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#parent.
 FSHVisitor.prototype.visitParent = function(ctx) {
   return this.visitChildren(ctx);
@@ -170,6 +182,30 @@ FSHVisitor.prototype.visitObeysRule = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#caretValueRule.
 FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsMember.
+FSHVisitor.prototype.visitVsMember = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsTerm.
+FSHVisitor.prototype.visitVsTerm = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsInclude.
+FSHVisitor.prototype.visitVsInclude = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsExclude.
+FSHVisitor.prototype.visitVsExclude = function(ctx) {
   return this.visitChildren(ctx);
 };
 

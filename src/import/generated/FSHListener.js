@@ -110,6 +110,24 @@ FSHListener.prototype.exitInvariantMetadata = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#valueSet.
+FSHListener.prototype.enterValueSet = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#valueSet.
+FSHListener.prototype.exitValueSet = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#vsMetadata.
+FSHListener.prototype.enterVsMetadata = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#vsMetadata.
+FSHListener.prototype.exitVsMetadata = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#parent.
 FSHListener.prototype.enterParent = function(ctx) {
 };
@@ -251,6 +269,42 @@ FSHListener.prototype.enterCaretValueRule = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#caretValueRule.
 FSHListener.prototype.exitCaretValueRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#vsMember.
+FSHListener.prototype.enterVsMember = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#vsMember.
+FSHListener.prototype.exitVsMember = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#vsTerm.
+FSHListener.prototype.enterVsTerm = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#vsTerm.
+FSHListener.prototype.exitVsTerm = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#vsInclude.
+FSHListener.prototype.enterVsInclude = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#vsInclude.
+FSHListener.prototype.exitVsInclude = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#vsExclude.
+FSHListener.prototype.enterVsExclude = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#vsExclude.
+FSHListener.prototype.exitVsExclude = function(ctx) {
 };
 
 
