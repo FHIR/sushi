@@ -682,6 +682,47 @@ describe('StructureDefinitionExporter', () => {
     expect(foo.type[0]).toEqual({ code: 'Extension' });
   });
 
+  it('should apply a ContainsRule of an aliased extension on an extension element', () => {
+    const profile = new Profile('Foo');
+    const extBar = new Extension('Bar');
+    const extBaz = new Extension('Baz');
+    extBaz.id = 'BazId';
+    profile.parent = 'Observation';
+
+    doc.aliases.set('barAlias', 'Bar');
+    doc.aliases.set('bazAlias', 'BazId');
+    doc.extensions.set('Bar', extBar);
+    doc.extensions.set('Baz', extBaz);
+
+    const ruleBar = new ContainsRule('extension');
+    ruleBar.items = ['barAlias'];
+    profile.rules.push(ruleBar);
+    const ruleBaz = new ContainsRule('extension');
+    ruleBaz.items = ['bazAlias'];
+    profile.rules.push(ruleBaz);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[2];
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const bar = sd.elements.find(e => e.id === 'Observation.extension:barAlias');
+    const baz = sd.elements.find(e => e.id === 'Observation.extension:bazAlias');
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(bar).toBeDefined();
+    expect(bar.type[0]).toEqual({
+      code: 'Extension',
+      profile: ['http://example.com/StructureDefinition/Bar']
+    });
+    expect(baz).toBeDefined();
+    expect(baz.type[0]).toEqual({
+      code: 'Extension',
+      profile: ['http://example.com/StructureDefinition/BazId']
+    });
+  });
+
   it('should apply multiple ContainsRule on an element with defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';

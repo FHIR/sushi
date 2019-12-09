@@ -135,11 +135,10 @@ export class StructureDefinitionExporter {
       let structDef = cloneDeep(this.structDefs.find(sd => sd.name === type));
       if (!structDef) {
         // If we find a parent, then we can export and resolve for its type again
-        const parentDefinition =
-          this.tank.findProfileByName(type) ?? this.tank.findExtensionByName(type);
+        const parentDefinition = this.tank.findProfile(type) ?? this.tank.findExtension(type);
         if (parentDefinition) {
           this.exportStructDef(parentDefinition);
-          structDef = this.resolve(type);
+          structDef = this.resolve(parentDefinition.name);
         }
       }
       return structDef;

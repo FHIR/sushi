@@ -508,7 +508,7 @@ export class FSHImporter extends FSHVisitor {
 
     rules.push(containsRule);
     ctx.item().forEach(i => {
-      const item = this.aliasAwareValue(i.SEQUENCE().getText());
+      const item = i.SEQUENCE().getText();
       containsRule.items.push(item);
 
       const cardRule = new CardRule(`${containsRule.path}[${item}]`)

@@ -765,21 +765,6 @@ describe('FSHImporter', () => {
         assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
       });
 
-      it('should parse contains rule with an alias', () => {
-        const input = `
-        Alias: FooBar = http://example.com
-        Profile: ObservationProfile
-        Parent: Observation
-        * component contains FooBar 1..1
-        `;
-
-        const result = importText(input);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(2);
-        assertContainsRule(profile.rules[0], 'component', 'http://example.com');
-        assertCardRule(profile.rules[1], 'component[http://example.com]', 1, 1);
-      });
-
       it('should parse contains rules with multiple types', () => {
         const input = `
         Profile: ObservationProfile
