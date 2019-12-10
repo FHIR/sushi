@@ -1,6 +1,5 @@
 import { FshEntity } from './FshEntity';
-import { ValueSetTerm } from './ValueSetTerm';
-import { ValueSetFilter } from './ValueSetFilter';
+import { ValueSetComponent } from './ValueSetComponent';
 
 /**
  * For more information about the composition of a ValueSet,
@@ -10,8 +9,8 @@ export class ValueSet extends FshEntity {
   id: string;
   url?: string;
   description?: string;
-  inclusions: (ValueSetTerm | ValueSetFilter | ValueSet)[];
-  exclusions: (ValueSetTerm | ValueSetFilter | ValueSet)[];
+  inclusions: ValueSetComponent[];
+  exclusions: ValueSetComponent[];
 
   constructor(public name: string) {
     super();
