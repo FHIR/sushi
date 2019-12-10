@@ -1,19 +1,22 @@
 import { FshEntity } from './FshEntity';
-import { FshCode } from './FshCode';
 import { ValueSetTerm } from './ValueSetTerm';
+import { ValueSetFilter } from './ValueSetFilter';
 
+/**
+ * For more information about the composition of a ValueSet,
+ * @see {@link http://hl7.org/fhir/valueset-definitions.html#ValueSet.compose}
+ */
 export class ValueSet extends FshEntity {
   id: string;
+  url?: string;
   description?: string;
-  codes: ValueSetTerm[];
-  includesDescendants: FshCode[];
-  excludesDescendants: FshCode[];
+  inclusions: (ValueSetTerm | ValueSetFilter | ValueSet)[];
+  exclusions: (ValueSetTerm | ValueSetFilter | ValueSet)[];
 
   constructor(public name: string) {
     super();
     this.id = name;
-    this.codes = [];
-    this.includesDescendants = [];
-    this.excludesDescendants = [];
+    this.inclusions = [];
+    this.exclusions = [];
   }
 }

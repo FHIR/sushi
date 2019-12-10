@@ -7,10 +7,10 @@ describe('ValueSet', () => {
       const vs = new ValueSet('MyValueSet');
       expect(vs.name).toBe('MyValueSet');
       expect(vs.id).toBe('MyValueSet');
+      expect(vs.url).toBeUndefined();
       expect(vs.description).toBeUndefined();
-      expect(vs.codes).toBeEmpty();
-      expect(vs.includesDescendants).toBeEmpty();
-      expect(vs.excludesDescendants).toBeEmpty();
+      expect(vs.inclusions).toBeEmpty();
+      expect(vs.exclusions).toBeEmpty();
     });
   });
 });

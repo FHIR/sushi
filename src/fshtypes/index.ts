@@ -3,6 +3,8 @@ export * from './Extension';
 export * from './Instance';
 export * from './Profile';
 export * from './ValueSet';
+export * from './ValueSetFilter';
+export * from './ValueSetTerm';
 export * from './FshQuantity';
 export * from './FshRatio';
 export * from './FshEntity';
