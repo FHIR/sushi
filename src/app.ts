@@ -95,6 +95,14 @@ async function app() {
       );
     }
   }
+  for (const instance of outPackage.instances) {
+    fs.writeFileSync(
+      path.join(program.out, `${instance.instanceName}-Instance-${instance.id}.json`),
+      JSON.stringify(instance, null, 2),
+      'utf8'
+    );
+  }
+}
 
   logger.info(`
   Profiles:    ${outPackage.profiles.length}
