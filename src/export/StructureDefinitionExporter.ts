@@ -2,7 +2,7 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirtypes';
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
-import { ParentNotDefinedError } from '../errors/ParentNotDefinedError';
+import { ParentNotDefinedError, InvalidExtensionSliceError } from '../errors';
 import {
   CardRule,
   FixedValueRule,
@@ -89,7 +89,9 @@ export class StructureDefinitionExporter {
               if (isExtension) {
                 const extension = this.resolve(item);
                 if (extension) {
-                  if (!slice.type[0].profile) slice.type[0].profile = [];
+                  if (!slice.type[0].profile) {
+                    slice.type[0].profile = [];
+                  }
                   slice.type[0].profile.push(extension.url);
                 }
               }
@@ -122,17 +124,41 @@ export class StructureDefinitionExporter {
   }
 
   /**
+   * Does post processing validation on the sd
+   * @param {StructureDefinition} structDef - The sd to validate
+   * @throws {InvalidExtensionSliceError} when the sd contains an extension with invalid slices
+   */
+  private validateStructureDefinition(structDef: StructureDefinition): void {
+    // Need to check that extensions define a URL correctly
+    const extensionSlices = structDef.elements.filter(
+      e => e.path.endsWith('extension') && e.sliceName
+    );
+    extensionSlices?.forEach(ext => {
+      const profileUrl =
+        ext.type?.length > 0 && ext.type[0].profile?.length > 0 && ext.type[0].profile[0];
+      const urlChild = ext.children().find(c => c.id === `${ext.id}.url`);
+      // If an element is a slice of extension, it should have a url in type, or a fixedUri
+      if (!profileUrl && !urlChild?.fixedUri) {
+        throw new InvalidExtensionSliceError(ext.sliceName);
+      }
+    });
+  }
+
+  /**
    * Looks through FHIR definitions to find the definition of the passed-in type
    * @param {string} type - The type to search for the FHIR definition of
    * @returns {StructureDefinition | undefined}
    */
   private resolve(type: string): StructureDefinition | undefined {
+    type = this.tank.resolveAlias(type);
     const json = this.FHIRDefs.find(type);
     if (json) {
       return StructureDefinition.fromJSON(json);
       // Maybe it's a FSH-defined definition and not a FHIR one
     } else {
-      let structDef = cloneDeep(this.structDefs.find(sd => sd.name === type));
+      let structDef = cloneDeep(
+        this.structDefs.find(sd => sd.name === type || sd.id === type || sd.url === type)
+      );
       if (!structDef) {
         // If we find a parent, then we can export and resolve for its type again
         const parentDefinition = this.tank.findProfile(type) ?? this.tank.findExtension(type);
@@ -166,6 +192,7 @@ export class StructureDefinitionExporter {
 
     this.setMetadata(structDef, fshDefinition);
     this.setRules(structDef, fshDefinition);
+    this.validateStructureDefinition(structDef);
 
     this.structDefs.push(structDef);
   }

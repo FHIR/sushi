@@ -27,12 +27,7 @@ export class FSHTank {
    * @returns {Profile | undefined}
    */
   public findProfile(key: string): Profile | undefined {
-    let profile = this.getAllProfiles().find(p => p.name === key || p.id === key);
-    if (!profile) {
-      const aliased = this.findAlias(key);
-      if (aliased) profile = this.getAllProfiles().find(p => p.name === key || p.id === key);
-    }
-    return profile;
+    return this.getAllProfiles().find(p => p.name === key || p.id === key);
   }
 
   /**
@@ -41,13 +36,7 @@ export class FSHTank {
    * @returns {[Extension, string]}
    */
   public findExtension(key: string): Extension | undefined {
-    let extension = this.getAllExtensions().find(p => p.name === key || p.id === key);
-    if (!extension) {
-      const aliased = this.findAlias(key);
-      if (aliased)
-        extension = this.getAllExtensions().find(p => p.name === aliased || p.id === aliased);
-    }
-    return extension;
+    return this.getAllExtensions().find(p => p.name === key || p.id === key);
   }
 
   /**
@@ -55,10 +44,11 @@ export class FSHTank {
    * @param {string} name - The name of the alias we're looking for
    * @returns {string | undefined}
    */
-  public findAlias(name: string): string | undefined {
+  public resolveAlias(name: string): string | undefined {
     for (const doc of this.docs) {
       const foundAlias = doc.aliases.get(name);
       if (foundAlias) return foundAlias;
     }
+    return name;
   }
 }

@@ -661,27 +661,6 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
-  it('should apply a ContainsRule of an undefined extension on an extension element', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'Observation';
-
-    const rule = new ContainsRule('extension');
-    rule.items = ['foo'];
-    profile.rules.push(rule);
-
-    exporter.exportStructDef(profile);
-    const sd = exporter.structDefs[0];
-
-    const extension = sd.elements.find(e => e.id === 'Observation.extension');
-    const foo = sd.elements.find(e => e.id === 'Observation.extension:foo');
-
-    expect(extension.slicing).toBeDefined();
-    expect(extension.slicing.discriminator.length).toBe(1);
-    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
-    expect(foo).toBeDefined();
-    expect(foo.type[0]).toEqual({ code: 'Extension' });
-  });
-
   it('should apply a ContainsRule of an aliased extension on an extension element', () => {
     const profile = new Profile('Foo');
     const extBar = new Extension('Bar');
@@ -720,6 +699,34 @@ describe('StructureDefinitionExporter', () => {
     expect(baz.type[0]).toEqual({
       code: 'Extension',
       profile: ['http://example.com/StructureDefinition/BazId']
+    });
+  });
+
+  it('should apply a ContainsRule of an existing aliased extension on an extension element', () => {
+    const profile = new Profile('Foo');
+    const ext = new Extension('VSExpression');
+    profile.parent = 'Observation';
+
+    doc.aliases.set('VSAlias', 'http://hl7.org/fhir/StructureDefinition/valueset-expression');
+    doc.extensions.set('VSExpression', ext);
+
+    const ruleBar = new ContainsRule('extension');
+    ruleBar.items = ['VSAlias'];
+    profile.rules.push(ruleBar);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[0];
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const VSExpression = sd.elements.find(e => e.id === 'Observation.extension:VSAlias');
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(VSExpression).toBeDefined();
+    expect(VSExpression.type[0]).toEqual({
+      code: 'Extension',
+      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
     });
   });
 
@@ -838,6 +845,22 @@ describe('StructureDefinitionExporter', () => {
     expect(sd.description).toBe(baseStructDef.description);
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
       /File: InvalidValue\.fsh.*Line: 6\D/s
+    );
+  });
+
+  // validateStructureDefinition
+  it('should throw InvalidExtensionSliceError when an extension is sliced without providing url', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new ContainsRule('extension');
+    rule.items = ['foo'];
+    profile.rules.push(rule);
+
+    expect(() => {
+      exporter.exportStructDef(profile);
+    }).toThrow(
+      'The slice foo on extension must reference an existing extension, or fix a url if the extension is defined inline.'
     );
   });
 
