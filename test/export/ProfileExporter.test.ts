@@ -60,7 +60,7 @@ describe('ProfileExporter', () => {
     doc.profiles.set(profile.name, profile);
     exporter.export();
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Bogus\.fsh.*Line 2\D.*Column 9\D.*Line 4\D.*Column 23\D/s
+      /File: Bogus\.fsh.*Line: 2 - 4\D/s
     );
   });
 

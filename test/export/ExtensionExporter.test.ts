@@ -60,7 +60,7 @@ describe('ExtensionExporter', () => {
     doc.extensions.set(extension.name, extension);
     exporter.export();
     expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Wrong\.fsh.*Line 14\D.*Column 8\D.*Line 24\D.*Column 17\D/s
+      /File: Wrong\.fsh.*Line: 14 - 24\D/s
     );
   });
 

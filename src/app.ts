@@ -36,8 +36,9 @@ try {
 const docs: FSHDocument[] = [];
 for (const file of files) {
   if (file.endsWith('.fsh')) {
-    const fileContent = fs.readFileSync(path.join(input, file), 'utf8');
-    const doc = importText(fileContent, file);
+    const filePath = path.resolve(input, file);
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const doc = importText(fileContent, filePath);
     if (doc) docs.push(doc);
   }
 }
