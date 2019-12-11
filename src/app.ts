@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import program from 'commander';
 import { importText, FSHDocument, FSHTank } from './import';
 import { exportFHIR } from './export';
-import { logger } from './utils/FSHLogger';
+import { stats, logger } from './utils/FSHLogger';
 
 let input: string;
 
@@ -79,4 +79,8 @@ fs.writeFileSync(
 
 logger.info(
   `Exported ${outPackage.profiles.length} profile(s) and ${outPackage.extensions.length} extension(s).`
+);
+
+logger.info(
+  `There was a total of ${stats.numError} error(s) and ${stats.numWarn} warning(s).`
 );
