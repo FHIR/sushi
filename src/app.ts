@@ -81,6 +81,4 @@ logger.info(
   `Exported ${outPackage.profiles.length} profile(s) and ${outPackage.extensions.length} extension(s).`
 );
 
-logger.info(
-  `There was a total of ${stats.numError} error(s) and ${stats.numWarn} warning(s).`
-);
+logger.info(`There was a total of ${stats.numError} error(s) and ${stats.numWarn} warning(s).`);
