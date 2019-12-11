@@ -133,7 +133,7 @@ export class StructureDefinitionExporter {
     const extensionSlices = structDef.elements.filter(
       e => e.path.endsWith('extension') && e.sliceName
     );
-    extensionSlices?.forEach(ext => {
+    extensionSlices.forEach(ext => {
       const profileUrl =
         ext.type?.length > 0 && ext.type[0].profile?.length > 0 && ext.type[0].profile[0];
       const urlChild = ext.children().find(c => c.id === `${ext.id}.url`);
@@ -150,7 +150,8 @@ export class StructureDefinitionExporter {
    * @returns {StructureDefinition | undefined}
    */
   private resolve(type: string): StructureDefinition | undefined {
-    type = this.tank.resolveAlias(type);
+    const alias = this.tank.resolveAlias(type);
+    type = alias ? alias : type;
     const json = this.FHIRDefs.find(type);
     if (json) {
       return StructureDefinition.fromJSON(json);

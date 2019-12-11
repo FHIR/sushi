@@ -27,7 +27,12 @@ export class FSHTank {
    * @returns {Profile | undefined}
    */
   public findProfile(key: string): Profile | undefined {
-    return this.getAllProfiles().find(p => p.name === key || p.id === key);
+    return this.getAllProfiles().find(
+      p =>
+        p.name === key ||
+        p.id === key ||
+        `${this.config.canonical}/StructureDefinition/${p.id}` === key
+    );
   }
 
   /**
@@ -36,7 +41,12 @@ export class FSHTank {
    * @returns {[Extension, string]}
    */
   public findExtension(key: string): Extension | undefined {
-    return this.getAllExtensions().find(p => p.name === key || p.id === key);
+    return this.getAllExtensions().find(
+      p =>
+        p.name === key ||
+        p.id === key ||
+        `${this.config.canonical}/StructureDefinition/${p.id}` === key
+    );
   }
 
   /**
@@ -49,6 +59,6 @@ export class FSHTank {
       const foundAlias = doc.aliases.get(name);
       if (foundAlias) return foundAlias;
     }
-    return name;
+    return undefined;
   }
 }
