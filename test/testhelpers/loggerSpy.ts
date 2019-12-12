@@ -17,6 +17,6 @@ export class LoggerSpy {
   }
 
   getLastMessage(): string {
-    return this.getMessageAtIndex(this.mockWriter.mock.calls.length - 1);
+    return this.getMessageAtIndex(0, true);
   }
 }
