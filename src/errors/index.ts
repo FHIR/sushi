@@ -22,3 +22,5 @@ export * from './CannotResolvePathError';
 export * from './InvalidElementAccessError';
 export * from './InvalidSumOfSliceMinsError';
 export * from './InvalidMaxOfSliceError';
+export * from './InvalidExtensionSliceError';
+export * from './ParentNotDefinedError';

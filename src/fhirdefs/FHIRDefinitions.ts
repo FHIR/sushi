@@ -90,6 +90,9 @@ function addDefinitionToMap(def: any, defMap: Map<string, any>): void {
   if (def.url) {
     defMap.set(def.url, def);
   }
+  if (def.name) {
+    defMap.set(def.name, def);
+  }
 }
 
 function cloneJsonMapValues(map: Map<string, any>): any {

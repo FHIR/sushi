@@ -22,20 +22,43 @@ export class FSHTank {
   }
 
   /**
-   * Finds the profile in the tank by name, if it exists
-   * @param {string} name - The name of the profile we're looking for
+   * Finds the profile in the tank by name, id, or alias, if it exists
+   * @param {string} key - The name or id of the profile we're looking for
    * @returns {Profile | undefined}
    */
-  public findProfileByName(name: string): Profile | undefined {
-    return this.getAllProfiles().find(profile => profile.name === name);
+  public findProfile(key: string): Profile | undefined {
+    return this.getAllProfiles().find(
+      p =>
+        p.name === key ||
+        p.id === key ||
+        `${this.config.canonical}/StructureDefinition/${p.id}` === key
+    );
   }
 
   /**
-   * Finds the extension in the tank by name, if it exists
-   * @param {string} name - The name of the extension we're looking for
-   * @returns {Extension | undefined}
+   * Finds the extension in the tank by name, id, or alias, if it exists
+   * @param {string} key - The name or id of the extension we're looking for
+   * @returns {[Extension, string]}
    */
-  public findExtensionByName(name: string): Extension | undefined {
-    return this.getAllExtensions().find(extension => extension.name === name);
+  public findExtension(key: string): Extension | undefined {
+    return this.getAllExtensions().find(
+      p =>
+        p.name === key ||
+        p.id === key ||
+        `${this.config.canonical}/StructureDefinition/${p.id}` === key
+    );
+  }
+
+  /**
+   * Finds the alias in the tank, if it exists
+   * @param {string} name - The name of the alias we're looking for
+   * @returns {string | undefined}
+   */
+  public resolveAlias(name: string): string | undefined {
+    for (const doc of this.docs) {
+      const foundAlias = doc.aliases.get(name);
+      if (foundAlias) return foundAlias;
+    }
+    return undefined;
   }
 }
