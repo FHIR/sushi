@@ -2,13 +2,10 @@ import { importText } from '../../src/import';
 import { assertFixedValueRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { logger } from '../../src/utils/FSHLogger';
+import { LoggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
-  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
-
-  beforeAll(() => {
-    mockWriter = jest.spyOn(logger.transports[0], 'write');
-  });
+  const loggerSpy = new LoggerSpy(logger);
 
   describe('Instance', () => {
     describe('#instanceOf', () => {
@@ -55,9 +52,7 @@ describe('FSHImporter', () => {
 
         const result = importText(input, 'Missing.fsh');
         expect(result.instances.size).toBe(0);
-        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Missing\.fsh.*Line: 2 - 3\D/s
-        );
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Missing\.fsh.*Line: 2 - 3\D/s);
       });
     });
 
@@ -131,12 +126,8 @@ describe('FSHImporter', () => {
         `;
 
         importText(input, 'Dupe.fsh');
-        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
-          /File: Dupe\.fsh.*Line: 5\D/s
-        );
-        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Dupe\.fsh.*Line: 6\D/s
-        );
+        expect(loggerSpy.getMessageAtIndex(1, true)).toMatch(/File: Dupe\.fsh.*Line: 5\D/s);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
       });
     });
   });

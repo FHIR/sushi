@@ -3,17 +3,17 @@ import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Extension } from '../../src/fshtypes';
 import { logger } from '../../src/utils/FSHLogger';
+import { LoggerSpy } from '../testhelpers/loggerSpy';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ExtensionExporter;
-  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
+  const loggerSpy = new LoggerSpy(logger);
 
   beforeAll(() => {
     defs = load('4.0.1');
-    mockWriter = jest.spyOn(logger.transports[0], 'write');
   });
 
   beforeEach(() => {
@@ -59,9 +59,7 @@ describe('ExtensionExporter', () => {
     extension.parent = 'DoesNotExist';
     doc.extensions.set(extension.name, extension);
     exporter.export();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Wrong\.fsh.*Line: 14 - 24\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 14 - 24\D/s);
   });
 
   it('should export extensions with FSHy parents', () => {
