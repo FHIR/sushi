@@ -186,8 +186,8 @@ FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#vsMember.
-FSHVisitor.prototype.visitVsMember = function(ctx) {
+// Visit a parse tree produced by FSHParser#vsComponent.
+FSHVisitor.prototype.visitVsComponent = function(ctx) {
   return this.visitChildren(ctx);
 };
 
@@ -198,14 +198,32 @@ FSHVisitor.prototype.visitVsTerm = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#vsInclude.
-FSHVisitor.prototype.visitVsInclude = function(ctx) {
+// Visit a parse tree produced by FSHParser#vsReference.
+FSHVisitor.prototype.visitVsReference = function(ctx) {
   return this.visitChildren(ctx);
 };
 
 
-// Visit a parse tree produced by FSHParser#vsExclude.
-FSHVisitor.prototype.visitVsExclude = function(ctx) {
+// Visit a parse tree produced by FSHParser#vsFilter.
+FSHVisitor.prototype.visitVsFilter = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#filterDefinition.
+FSHVisitor.prototype.visitFilterDefinition = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#filterOperator.
+FSHVisitor.prototype.visitFilterOperator = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#filterValue.
+FSHVisitor.prototype.visitFilterValue = function(ctx) {
   return this.visitChildren(ctx);
 };
 

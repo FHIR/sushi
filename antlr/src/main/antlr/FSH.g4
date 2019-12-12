@@ -16,7 +16,7 @@ instanceMetadata:   instanceOf | title;
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
 
-valueSet:           KW_VALUESET SEQUENCE STRING? vsMetadata* vsMember+;
+valueSet:           KW_VALUESET SEQUENCE STRING? vsMetadata* vsComponent+;
 vsMetadata:         description;
 
 // METADATA FIELDS
@@ -40,11 +40,19 @@ onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 
-// VALUESET MEMBERS
-vsMember:           vsTerm | vsInclude | vsExclude;
+// VALUESET COMPONENTS
+vsComponent:        vsTerm | vsReference | vsFilter;
 vsTerm:             code STRING?;
-vsInclude:          STAR KW_INCLUDE KW_DESCENDANT_OF code;
-vsExclude:          STAR KW_EXCLUDE KW_DESCENDANT_OF code;
+vsReference:        STAR (KW_INCLUDE | KW_EXCLUDE) KW_VSREFERENCE SEQUENCE;
+// Filter definitions are usually: System Property Operator Value
+// However, exceptions exist:
+// Property['system'] Operator Value: system = ABCD
+// System Operator Value: ABCD descendant-of #1234
+vsFilter:           STAR (KW_INCLUDE | KW_EXCLUDE) filterDefinition;
+filterDefinition:   KW_SYSTEM filterOperator filterValue
+                    | SEQUENCE SEQUENCE? filterOperator filterValue;
+filterOperator:     EQUAL | SEQUENCE;
+filterValue:        code | REGEX | COMMA_DELIMITED_SEQUENCES | SEQUENCE;
 
 // MISC
 path:               SEQUENCE;
@@ -93,7 +101,8 @@ KW_TRUE:            'true';
 KW_FALSE:           'false';
 KW_INCLUDE:         'include';
 KW_EXCLUDE:         'exclude';
-KW_DESCENDANT_OF:   'descendant-of';
+KW_VSREFERENCE:     'valueset';
+KW_SYSTEM:          'system';
 
 // SYMBOLS
 EQUAL:              '=';
@@ -133,6 +142,9 @@ REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)*
                  //  ^  NON-WHITESPACE
 CARET_SEQUENCE:     '^' ~[ \t\r\n\f]+;
 
+                 // '/' EXPRESSION '/' FLAGS
+REGEX:              '/' ('\\/' | ~[/\r\n])+ '/' REGEX_FLAGS;
+
                         // (NON-WS     ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE COMMA WS+)+ SEQUENCE;
 
@@ -143,6 +155,7 @@ SEQUENCE:           ~[ \t\r\n\f]+;
 
 // FRAGMENTS
 fragment WS: [ \t\r\n\f];
+fragment REGEX_FLAGS: [imsu]? [imsu]? [imsu]? [imsu]? ;
 
 // IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);

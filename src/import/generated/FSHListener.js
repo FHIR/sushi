@@ -272,12 +272,12 @@ FSHListener.prototype.exitCaretValueRule = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#vsMember.
-FSHListener.prototype.enterVsMember = function(ctx) {
+// Enter a parse tree produced by FSHParser#vsComponent.
+FSHListener.prototype.enterVsComponent = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#vsMember.
-FSHListener.prototype.exitVsMember = function(ctx) {
+// Exit a parse tree produced by FSHParser#vsComponent.
+FSHListener.prototype.exitVsComponent = function(ctx) {
 };
 
 
@@ -290,21 +290,48 @@ FSHListener.prototype.exitVsTerm = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#vsInclude.
-FSHListener.prototype.enterVsInclude = function(ctx) {
+// Enter a parse tree produced by FSHParser#vsReference.
+FSHListener.prototype.enterVsReference = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#vsInclude.
-FSHListener.prototype.exitVsInclude = function(ctx) {
+// Exit a parse tree produced by FSHParser#vsReference.
+FSHListener.prototype.exitVsReference = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#vsExclude.
-FSHListener.prototype.enterVsExclude = function(ctx) {
+// Enter a parse tree produced by FSHParser#vsFilter.
+FSHListener.prototype.enterVsFilter = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#vsExclude.
-FSHListener.prototype.exitVsExclude = function(ctx) {
+// Exit a parse tree produced by FSHParser#vsFilter.
+FSHListener.prototype.exitVsFilter = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#filterDefinition.
+FSHListener.prototype.enterFilterDefinition = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#filterDefinition.
+FSHListener.prototype.exitFilterDefinition = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#filterOperator.
+FSHListener.prototype.enterFilterOperator = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#filterOperator.
+FSHListener.prototype.exitFilterOperator = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#filterValue.
+FSHListener.prototype.enterFilterValue = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#filterValue.
+FSHListener.prototype.exitFilterValue = function(ctx) {
 };
 
 
