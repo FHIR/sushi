@@ -4,7 +4,7 @@ import {
   assertOnlyRule,
   assertValueSetRule,
   assertCaretValueRule
-} from '../utils/asserts';
+} from '../testhelpers/asserts';
 import { importText } from '../../src/import';
 import { logger } from '../../src/utils/FSHLogger';
 

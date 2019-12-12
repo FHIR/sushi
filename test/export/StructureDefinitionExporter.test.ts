@@ -12,7 +12,7 @@ import {
   CaretValueRule
 } from '../../src/fshtypes/rules';
 import { logger } from '../../src/utils/FSHLogger';
-import { getResolver } from '../utils/getResolver';
+import { getResolver } from '../testhelpers/getResolver';
 import { ResolveFn } from '../../src/fhirtypes';
 
 describe('StructureDefinitionExporter', () => {

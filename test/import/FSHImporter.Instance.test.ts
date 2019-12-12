@@ -1,5 +1,5 @@
 import { importText } from '../../src/import';
-import { assertFixedValueRule } from '../utils/asserts';
+import { assertFixedValueRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { logger } from '../../src/utils/FSHLogger';
 

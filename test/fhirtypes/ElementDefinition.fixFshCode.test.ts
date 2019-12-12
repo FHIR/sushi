@@ -1,5 +1,5 @@
 import cloneDeep from 'lodash/cloneDeep';
-import { getResolver } from '../utils/getResolver';
+import { getResolver } from '../testhelpers/getResolver';
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';

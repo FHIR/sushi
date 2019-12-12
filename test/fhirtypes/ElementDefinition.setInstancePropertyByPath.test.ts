@@ -2,7 +2,7 @@ import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ElementDefinition } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { getResolver } from '../utils/getResolver';
+import { getResolver } from '../testhelpers/getResolver';
 import { FshCode } from '../../src/fshtypes';
 
 describe('ElementDefinition', () => {

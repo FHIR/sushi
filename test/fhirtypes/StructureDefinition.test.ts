@@ -4,7 +4,7 @@ import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition } from '../../src/fhirtypes/ElementDefinition';
-import { getResolver } from '../utils/getResolver';
+import { getResolver } from '../testhelpers/getResolver';
 import { FshCode } from '../../src/fshtypes';
 
 describe('StructureDefinition', () => {
