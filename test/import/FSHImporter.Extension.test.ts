@@ -6,12 +6,9 @@ import {
   assertCaretValueRule
 } from '../testhelpers/asserts';
 import { importText } from '../../src/import';
-import { logger } from '../../src/utils/FSHLogger';
-import { LoggerSpy } from '../testhelpers/loggerSpy';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
-  const loggerSpy = new LoggerSpy(logger);
-
   describe('Extension', () => {
     describe('#sdMetadata', () => {
       it('should parse the simplest possible extension', () => {

@@ -11,8 +11,7 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../../src/fshtypes/rules';
-import { logger } from '../../src/utils/FSHLogger';
-import { LoggerSpy } from '../testhelpers/loggerSpy';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 import { getResolver } from '../testhelpers/getResolver';
 import { ResolveFn } from '../../src/fhirtypes';
 
@@ -22,7 +21,6 @@ describe('StructureDefinitionExporter', () => {
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: StructureDefinitionExporter;
-  const loggerSpy = new LoggerSpy(logger);
 
   beforeAll(() => {
     defs = load('4.0.1');

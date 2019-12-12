@@ -1,10 +1,7 @@
 import { importText, FSHImporter, FSHDocument } from '../../src/import';
-import { logger } from '../../src/utils/FSHLogger';
-import { LoggerSpy } from '../testhelpers/loggerSpy';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
-  const loggerSpy = new LoggerSpy(logger);
-
   it('should default filename to blank string', () => {
     const input = '';
     const result = importText(input);

@@ -1,12 +1,9 @@
 import { importText } from '../../src/import';
 import { assertFixedValueRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
-import { logger } from '../../src/utils/FSHLogger';
-import { LoggerSpy } from '../testhelpers/loggerSpy';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
-  const loggerSpy = new LoggerSpy(logger);
-
   describe('Instance', () => {
     describe('#instanceOf', () => {
       it('should parse the simplest possible instance', () => {

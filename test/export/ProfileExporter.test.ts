@@ -2,15 +2,13 @@ import { ProfileExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile } from '../../src/fshtypes';
-import { logger } from '../../src/utils/FSHLogger';
-import { LoggerSpy } from '../testhelpers/loggerSpy';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ProfileExporter;
-  const loggerSpy = new LoggerSpy(logger);
 
   beforeAll(() => {
     defs = load('4.0.1');

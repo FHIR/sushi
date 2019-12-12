@@ -1,11 +1,7 @@
-import { Logger } from 'winston';
+import { logger } from '../../src/utils/FSHLogger';
 
-export class LoggerSpy {
-  private mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
-
-  constructor(logger: Logger) {
-    this.mockWriter = jest.spyOn(logger.transports[0], 'write');
-  }
+class LoggerSpy {
+  private mockWriter = jest.spyOn(logger.transports[0], 'write');
 
   getMessageAtIndex(index: number, reverse = false): string {
     const i = reverse ? this.mockWriter.mock.calls.length - index - 1 : index;
@@ -20,3 +16,5 @@ export class LoggerSpy {
     return this.getMessageAtIndex(0, true);
   }
 }
+
+export const loggerSpy = new LoggerSpy();

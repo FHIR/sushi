@@ -9,12 +9,9 @@ import {
 } from '../testhelpers/asserts';
 import { importText } from '../../src/import';
 import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
-import { logger } from '../../src/utils/FSHLogger';
-import { LoggerSpy } from '../testhelpers/loggerSpy';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
-  const loggerSpy = new LoggerSpy(logger);
-
   describe('Profile', () => {
     describe('#sdMetadata', () => {
       it('should parse the simplest possible profile', () => {
