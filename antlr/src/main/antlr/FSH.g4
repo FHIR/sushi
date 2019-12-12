@@ -48,9 +48,10 @@ vsReference:        STAR (KW_INCLUDE | KW_EXCLUDE) KW_VSREFERENCE SEQUENCE;
 // However, exceptions exist:
 // Property['system'] Operator Value: system = ABCD
 // System Operator Value: ABCD descendant-of #1234
+// Operator Value[code with system]: descendant-of ABCD#1234 "1234 Description"
 vsFilter:           STAR (KW_INCLUDE | KW_EXCLUDE) filterDefinition;
 filterDefinition:   KW_SYSTEM filterOperator filterValue
-                    | SEQUENCE SEQUENCE? filterOperator filterValue;
+                    | SEQUENCE? SEQUENCE? filterOperator filterValue;
 filterOperator:     EQUAL | SEQUENCE;
 filterValue:        code | REGEX | COMMA_DELIMITED_SEQUENCES | SEQUENCE;
 
