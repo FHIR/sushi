@@ -67,13 +67,13 @@ describe('ElementDefinition', () => {
     it('should change an instance property in an array', () => {
       status.setInstancePropertyByPath('type[0].code', 'foo', getResolver(defs));
       expect(status.type.length).toBe(1);
-      expect(status.type[0]).toEqual({ code: 'foo' });
+      expect(status.type[0]).toEqual({ _code: 'foo' });
     });
 
     it('should change a part of an instance property in an array', () => {
       status.setInstancePropertyByPath('type[0].profile[0]', 'foo', getResolver(defs));
       expect(status.type.length).toBe(1);
-      expect(status.type[0]).toEqual({ code: 'code', profile: ['foo'] });
+      expect(status.type[0]).toEqual({ _code: 'code', profile: ['foo'] });
     });
 
     // Complex values

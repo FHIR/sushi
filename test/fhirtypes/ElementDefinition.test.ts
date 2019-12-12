@@ -1,6 +1,6 @@
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { ElementDefinition } from '../../src/fhirtypes/ElementDefinition';
+import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { getResolver } from '../testhelpers/getResolver';
 
@@ -8,16 +8,20 @@ describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let jsonValueX: any;
+  let jsonValueId: any;
   let observation: StructureDefinition;
   let valueX: ElementDefinition;
+  let valueId: ElementDefinition;
   beforeAll(() => {
     defs = load('4.0.1');
     jsonObservation = defs.findResource('Observation');
     jsonValueX = jsonObservation.snapshot.element[21];
+    jsonValueId = jsonObservation.snapshot.element[1];
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
     valueX = ElementDefinition.fromJSON(jsonValueX);
+    valueId = ElementDefinition.fromJSON(jsonValueId);
     valueX.structDef = observation;
   });
 
@@ -30,17 +34,17 @@ describe('ElementDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        { _code: 'Quantity' },
+        { _code: 'CodeableConcept' },
+        { _code: 'string' },
+        { _code: 'boolean' },
+        { _code: 'integer' },
+        { _code: 'Range' },
+        { _code: 'Ratio' },
+        { _code: 'SampledData' },
+        { _code: 'time' },
+        { _code: 'dateTime' },
+        { _code: 'Period' }
       ]);
     });
 
@@ -54,17 +58,17 @@ describe('ElementDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        { _code: 'Quantity' },
+        { _code: 'CodeableConcept' },
+        { _code: 'string' },
+        { _code: 'boolean' },
+        { _code: 'integer' },
+        { _code: 'Range' },
+        { _code: 'Ratio' },
+        { _code: 'SampledData' },
+        { _code: 'time' },
+        { _code: 'dateTime' },
+        { _code: 'Period' }
       ]);
     });
   });
@@ -183,7 +187,7 @@ describe('ElementDefinition', () => {
       const newElement = new ElementDefinition('newElement');
       newElement.min = 0;
       newElement.max = '1';
-      newElement.type = [{ code: 'string' }];
+      newElement.type = [new ElementDefinitionType('string')];
       expect(newElement.calculateDiff()).toEqual(newElement);
     });
 
@@ -227,7 +231,7 @@ describe('ElementDefinition', () => {
 
     it('should calculate diff id using shortcut syntax for a choice slice', () => {
       valueX.sliceIt('type', '$this', false, 'open');
-      const valueString = valueX.addSlice('valueString', { code: 'string' });
+      const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       const diff = valueString.calculateDiff();
       expect(valueString.id).toBe('Observation.value[x]:valueString');
       expect(valueString.path).toBe('Observation.value[x]');
@@ -332,6 +336,19 @@ describe('ElementDefinition', () => {
       // Best way to check state of original is by checking hasDiff
       expect(valueX.hasDiff()).toBeFalsy();
       expect(clone.hasDiff()).toBeTruthy();
+    });
+  });
+
+  describe('#ElementDefinitionType get code', () => {
+    it('should return valueUrl value when extension of fhir-type', () => {
+      const code = valueId.type[0].code;
+      const trueCodeValue = valueId.type[0].getActualCode();
+      expect(code).toEqual('string');
+      expect(trueCodeValue).toEqual('http://hl7.org/fhirpath/System.String');
+    });
+    it('should return code value when extension is not of fhir-type', () => {
+      const code = valueX.type[0].code;
+      expect(code).toEqual('Quantity');
     });
   });
 });

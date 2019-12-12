@@ -386,12 +386,12 @@ describe('StructureDefinitionExporter', () => {
     const constrainedValue = sd.findElement('Observation.value[x]');
 
     expect(baseValue.type).toHaveLength(11);
-    expect(baseValue.type[0]).toEqual({ code: 'Quantity' });
-    expect(baseValue.type[1]).toEqual({ code: 'CodeableConcept' });
-    expect(baseValue.type[2]).toEqual({ code: 'string' });
+    expect(baseValue.type[0]).toEqual({ _code: 'Quantity' });
+    expect(baseValue.type[1]).toEqual({ _code: 'CodeableConcept' });
+    expect(baseValue.type[2]).toEqual({ _code: 'string' });
 
     expect(constrainedValue.type).toHaveLength(1);
-    expect(constrainedValue.type[0]).toEqual({ code: 'string' });
+    expect(constrainedValue.type[0]).toEqual({ _code: 'string' });
   });
 
   it('should apply a correct OnlyRule on a reference', () => {
@@ -412,7 +412,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseSubject.type).toHaveLength(1);
     expect(baseSubject.type).toEqual([
       {
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/Patient',
           'http://hl7.org/fhir/StructureDefinition/Group',
@@ -425,7 +425,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedSubject.type).toHaveLength(1);
     expect(constrainedSubject.type).toEqual([
       {
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: ['http://hl7.org/fhir/StructureDefinition/Device']
       }
     ]);
@@ -450,13 +450,13 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseValueX.type).toHaveLength(50);
     expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual({
-      code: 'Reference'
+      _code: 'Reference'
     });
 
     expect(constrainedValueX.type).toHaveLength(1);
     expect(constrainedValueX.type).toEqual([
       {
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/Observation',
           'http://hl7.org/fhir/StructureDefinition/Condition'
@@ -486,7 +486,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseHasMember.type).toHaveLength(1);
     expect(baseHasMember.type).toEqual([
       {
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/Observation',
           'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
@@ -498,7 +498,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedHasMember.type).toHaveLength(1);
     expect(constrainedHasMember.type).toEqual([
       {
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/bodyheight',
           'http://hl7.org/fhir/StructureDefinition/bodyweight',

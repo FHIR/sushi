@@ -36,17 +36,17 @@ describe('StructureDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        { _code: 'Quantity' },
+        { _code: 'CodeableConcept' },
+        { _code: 'string' },
+        { _code: 'boolean' },
+        { _code: 'integer' },
+        { _code: 'Range' },
+        { _code: 'Ratio' },
+        { _code: 'SampledData' },
+        { _code: 'time' },
+        { _code: 'dateTime' },
+        { _code: 'Period' }
       ]);
     });
 
@@ -69,17 +69,17 @@ describe('StructureDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        { _code: 'Quantity' },
+        { _code: 'CodeableConcept' },
+        { _code: 'string' },
+        { _code: 'boolean' },
+        { _code: 'integer' },
+        { _code: 'Range' },
+        { _code: 'Ratio' },
+        { _code: 'SampledData' },
+        { _code: 'time' },
+        { _code: 'dateTime' },
+        { _code: 'Period' }
       ]);
     });
   });

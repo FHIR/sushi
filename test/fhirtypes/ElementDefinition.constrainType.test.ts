@@ -21,8 +21,8 @@ describe('ElementDefinition', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.constrainType([{ type: 'Quantity' }, { type: 'integer' }], getResolver(defs));
       expect(valueX.type).toHaveLength(2);
-      expect(valueX.type[0]).toEqual({ code: 'Quantity' });
-      expect(valueX.type[1]).toEqual({ code: 'integer' });
+      expect(valueX.type[0]).toEqual({ _code: 'Quantity' });
+      expect(valueX.type[1]).toEqual({ _code: 'integer' });
     });
 
     it('should maintain original type order when constraining to a subset', () => {
@@ -32,17 +32,17 @@ describe('ElementDefinition', () => {
         getResolver(defs)
       );
       expect(valueX.type).toHaveLength(4);
-      expect(valueX.type[0]).toEqual({ code: 'Quantity' });
-      expect(valueX.type[1]).toEqual({ code: 'integer' });
-      expect(valueX.type[2]).toEqual({ code: 'Ratio' });
-      expect(valueX.type[3]).toEqual({ code: 'Period' });
+      expect(valueX.type[0]).toEqual({ _code: 'Quantity' });
+      expect(valueX.type[1]).toEqual({ _code: 'integer' });
+      expect(valueX.type[2]).toEqual({ _code: 'Ratio' });
+      expect(valueX.type[3]).toEqual({ _code: 'Period' });
     });
 
     it('should allow a choice to be constrained to a single item', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.constrainType([{ type: 'Quantity' }], getResolver(defs));
       expect(valueX.type).toHaveLength(1);
-      expect(valueX.type[0]).toEqual({ code: 'Quantity' });
+      expect(valueX.type[0]).toEqual({ _code: 'Quantity' });
     });
 
     it('should allow a choice to be constrained to a single item by its URL', () => {
@@ -52,7 +52,7 @@ describe('ElementDefinition', () => {
         getResolver(defs)
       );
       expect(valueX.type).toHaveLength(1);
-      expect(valueX.type[0]).toEqual({ code: 'Quantity' });
+      expect(valueX.type[0]).toEqual({ _code: 'Quantity' });
     });
 
     it('should allow a choice to be constrained to a single profile', () => {
@@ -60,7 +60,7 @@ describe('ElementDefinition', () => {
       valueX.constrainType([{ type: 'SimpleQuantity' }], getResolver(defs));
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual({
-        code: 'Quantity',
+        _code: 'Quantity',
         profile: ['http://hl7.org/fhir/StructureDefinition/SimpleQuantity']
       });
     });
@@ -73,7 +73,7 @@ describe('ElementDefinition', () => {
       );
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual({
-        code: 'Quantity',
+        _code: 'Quantity',
         profile: [
           'http://hl7.org/fhir/StructureDefinition/SimpleQuantity',
           'http://hl7.org/fhir/StructureDefinition/MoneyQuantity'
@@ -91,7 +91,7 @@ describe('ElementDefinition', () => {
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
       entryResource.constrainType([{ type: 'Patient' }], getResolver(defs));
       expect(entryResource.type).toHaveLength(1);
-      expect(entryResource.type[0]).toEqual({ code: 'Patient' });
+      expect(entryResource.type[0]).toEqual({ _code: 'Patient' });
     });
 
     it('should allow Resource to be constrained to a profile', () => {
@@ -104,7 +104,7 @@ describe('ElementDefinition', () => {
       );
       expect(entryResource.type).toHaveLength(1);
       expect(entryResource.type[0]).toEqual({
-        code: 'Observation',
+        _code: 'Observation',
         profile: ['http://hl7.org/fhir/StructureDefinition/bp']
       });
     });
@@ -125,21 +125,21 @@ describe('ElementDefinition', () => {
       );
       expect(entryResource.type).toHaveLength(4);
       expect(entryResource.type[0]).toEqual({
-        code: 'Practitioner'
+        _code: 'Practitioner'
       });
       expect(entryResource.type[1]).toEqual({
-        code: 'Observation',
+        _code: 'Observation',
         profile: [
           'http://hl7.org/fhir/StructureDefinition/bodyheight',
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
         ]
       });
       expect(entryResource.type[2]).toEqual({
-        code: 'FamilyMemberHistory',
+        _code: 'FamilyMemberHistory',
         profile: ['http://hl7.org/fhir/StructureDefinition/familymemberhistory-genetic']
       });
       expect(entryResource.type[3]).toEqual({
-        code: 'Procedure'
+        _code: 'Procedure'
       });
     });
 
@@ -148,7 +148,7 @@ describe('ElementDefinition', () => {
       valueX.constrainType([{ type: 'SimpleQuantity' }], getResolver(defs), 'Quantity');
       expect(valueX.type).toHaveLength(11);
       expect(valueX.type[0]).toEqual({
-        code: 'Quantity',
+        _code: 'Quantity',
         profile: ['http://hl7.org/fhir/StructureDefinition/SimpleQuantity']
       });
     });
@@ -174,21 +174,21 @@ describe('ElementDefinition', () => {
       );
       expect(entryResource.type).toHaveLength(4);
       expect(entryResource.type[0]).toEqual({
-        code: 'Practitioner'
+        _code: 'Practitioner'
       });
       expect(entryResource.type[1]).toEqual({
-        code: 'Observation',
+        _code: 'Observation',
         profile: [
           'http://hl7.org/fhir/StructureDefinition/bodyheight',
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
         ]
       });
       expect(entryResource.type[2]).toEqual({
-        code: 'FamilyMemberHistory',
+        _code: 'FamilyMemberHistory',
         profile: ['http://hl7.org/fhir/StructureDefinition/familymemberhistory-genetic']
       });
       expect(entryResource.type[3]).toEqual({
-        code: 'Procedure'
+        _code: 'Procedure'
       });
     });
 
@@ -203,7 +203,7 @@ describe('ElementDefinition', () => {
       );
       expect(performer.type).toHaveLength(1);
       expect(performer.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/Practitioner',
           'http://hl7.org/fhir/StructureDefinition/Organization'
@@ -216,7 +216,7 @@ describe('ElementDefinition', () => {
       performer.constrainType([{ type: 'Organization', isReference: true }], getResolver(defs));
       expect(performer.type).toHaveLength(1);
       expect(performer.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: ['http://hl7.org/fhir/StructureDefinition/Organization']
       });
     });
@@ -229,7 +229,7 @@ describe('ElementDefinition', () => {
       );
       expect(subject.type).toHaveLength(1);
       expect(subject.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: ['http://hl7.org/fhir/StructureDefinition/actualgroup']
       });
     });
@@ -245,7 +245,7 @@ describe('ElementDefinition', () => {
       );
       expect(hasMember.type).toHaveLength(1);
       expect(hasMember.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/bodyheight',
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
@@ -264,7 +264,7 @@ describe('ElementDefinition', () => {
       );
       expect(subject.type).toHaveLength(1);
       expect(subject.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/Patient',
           'http://hl7.org/fhir/StructureDefinition/actualgroup'
@@ -285,7 +285,7 @@ describe('ElementDefinition', () => {
       );
       expect(hasMember.type).toHaveLength(1);
       expect(hasMember.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/bodyheight',
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
@@ -298,7 +298,7 @@ describe('ElementDefinition', () => {
       focus.constrainType([{ type: 'Practitioner', isReference: true }], getResolver(defs));
       expect(focus.type).toHaveLength(1);
       expect(focus.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: ['http://hl7.org/fhir/StructureDefinition/Practitioner']
       });
     });
@@ -311,7 +311,7 @@ describe('ElementDefinition', () => {
       );
       expect(focus.type).toHaveLength(1);
       expect(focus.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: ['http://hl7.org/fhir/StructureDefinition/bp']
       });
     });
@@ -327,7 +327,7 @@ describe('ElementDefinition', () => {
       );
       expect(focus.type).toHaveLength(1);
       expect(focus.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/Practitioner',
           'http://hl7.org/fhir/StructureDefinition/bp'
@@ -347,7 +347,7 @@ describe('ElementDefinition', () => {
       );
       expect(hasMember.type).toHaveLength(1);
       expect(hasMember.type[0]).toEqual({
-        code: 'Reference',
+        _code: 'Reference',
         targetProfile: [
           'http://hl7.org/fhir/StructureDefinition/bodyheight',
           'http://hl7.org/fhir/StructureDefinition/bodyweight',
