@@ -18,9 +18,20 @@ const withLocation = format(info => {
 });
 
 const incrementCounts = format(info => {
-  if (info.level === 'info') stats.numInfo++;
-  if (info.level === 'warn') stats.numWarn++;
-  if (info.level === 'error') stats.numError++;
+  switch (info.level) {
+    case 'info':
+      stats.numInfo++;
+      break;
+    case 'warn':
+      stats.numWarn++;
+      break;
+    case 'error':
+      stats.numError++;
+      break;
+    default:
+      break;
+  }
+
   return info;
 });
 
@@ -33,6 +44,12 @@ class LoggerStats {
   public numInfo = 0;
   public numWarn = 0;
   public numError = 0;
+
+  reset(): void {
+    this.numInfo = 0;
+    this.numWarn = 0;
+    this.numError = 0;
+  }
 }
 
 export const stats = new LoggerStats();

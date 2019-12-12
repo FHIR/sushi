@@ -6,7 +6,7 @@ import {
   assertValueSetRule,
   assertContainsRule,
   assertCaretValueRule
-} from '../utils/asserts';
+} from '../testhelpers/asserts';
 import { importText } from '../../src/import';
 import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
 import { logger } from '../../src/utils/FSHLogger';
