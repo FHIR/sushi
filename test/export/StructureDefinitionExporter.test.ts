@@ -11,7 +11,7 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../../src/fshtypes/rules';
-import { logger } from '../../src/utils/FSHLogger';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 import { getResolver } from '../testhelpers/getResolver';
 import { ResolveFn } from '../../src/fhirtypes';
 
@@ -21,12 +21,10 @@ describe('StructureDefinitionExporter', () => {
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: StructureDefinitionExporter;
-  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
 
   beforeAll(() => {
     defs = load('4.0.1');
     resolve = getResolver(defs);
-    mockWriter = jest.spyOn(logger.transports[0], 'write');
   });
 
   beforeEach(() => {
@@ -169,9 +167,7 @@ describe('StructureDefinitionExporter', () => {
     const structDef = exporter.structDefs[0];
     expect(structDef).toBeDefined();
     expect(structDef.type).toBe('Resource');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Foo\.fsh.*Line: 3 - 4\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Foo\.fsh.*Line: 3 - 4\D/s);
   });
 
   // Card Rule
@@ -217,9 +213,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Wrong\.fsh.*Line: 5\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 5\D/s);
   });
 
   // Flag Rule
@@ -265,9 +259,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseElement.mustSupport).toBeFalsy();
     expect(changedElement.isModifier).toBe(true);
     expect(changedElement.mustSupport).toBeFalsy();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Nope\.fsh.*Line: 8\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D/s);
   });
 
   it('should not apply a flag rule that disables mustSupport', () => {
@@ -292,9 +284,7 @@ describe('StructureDefinitionExporter', () => {
     expect(changedElement.isModifier).toBeFalsy();
     expect(changedElement.isSummary).toBe(true);
     expect(changedElement.mustSupport).toBe(true);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Nope\.fsh.*Line: 8\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D/s);
   });
 
   // Value Set Rule
@@ -353,9 +343,7 @@ describe('StructureDefinitionExporter', () => {
     const changedElement = sd.findElement('Observation.note');
     expect(baseElement.binding).toBeUndefined();
     expect(changedElement.binding).toBeUndefined();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Codeless\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Codeless\.fsh.*Line: 6\D/s);
   });
 
   it('should not override a binding with a less strict binding', () => {
@@ -378,9 +366,7 @@ describe('StructureDefinitionExporter', () => {
       'http://hl7.org/fhir/ValueSet/observation-category'
     );
     expect(changedElement.binding.strength).toBe('preferred');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Strict\.fsh.*Line: 9\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Strict\.fsh.*Line: 9\D/s);
   });
 
   // Only Rule
@@ -540,9 +526,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseValue.type).toHaveLength(11);
     expect(constrainedValue.type).toHaveLength(11);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Only\.fsh.*Line: 10\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Only\.fsh.*Line: 10\D/s);
   });
 
   // Fixed Value Rule
@@ -585,9 +569,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Fixed\.fsh.*Line: 4\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D/s);
   });
 
   // Contains Rule
@@ -769,9 +751,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(sd.elements.length).toBe(baseStructDef.elements.length);
     expect(barSlice).toBeUndefined();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: NoSlice\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: NoSlice\.fsh.*Line: 6\D/s);
   });
 
   // CaretValueRule
@@ -810,9 +790,7 @@ describe('StructureDefinitionExporter', () => {
     const baseStatus = baseStructDef.findElement('Observation.status');
 
     expect(status.short).toBe(baseStatus.short);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: InvalidValue\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 
   it('should apply a CaretValueRule on an element without a path', () => {
@@ -843,9 +821,7 @@ describe('StructureDefinitionExporter', () => {
     const baseStructDef = resolve('Observation');
 
     expect(sd.description).toBe(baseStructDef.description);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: InvalidValue\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 
   // validateStructureDefinition

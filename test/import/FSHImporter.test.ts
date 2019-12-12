@@ -1,13 +1,7 @@
 import { importText, FSHImporter, FSHDocument } from '../../src/import';
-import { logger } from '../../src/utils/FSHLogger';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
-  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
-
-  beforeAll(() => {
-    mockWriter = jest.spyOn(logger.transports[0], 'write');
-  });
-
   it('should default filename to blank string', () => {
     const input = '';
     const result = importText(input);
@@ -47,9 +41,7 @@ describe('FSHImporter', () => {
     Pizza: Large
     `;
     importText(input, 'Pizza.fsh');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Pizza\.fsh.*Line: 3\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Pizza\.fsh.*Line: 3\D/s);
   });
 
   it('should report extraneous input errors from antlr', () => {
@@ -58,8 +50,6 @@ describe('FSHImporter', () => {
     Parent: Spacious
     `;
     importText(input, 'Space.fsh');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Space\.fsh.*Line: 2\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Space\.fsh.*Line: 2\D/s);
   });
 });

@@ -6,15 +6,9 @@ import {
   assertCaretValueRule
 } from '../testhelpers/asserts';
 import { importText } from '../../src/import';
-import { logger } from '../../src/utils/FSHLogger';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
-  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
-
-  beforeAll(() => {
-    mockWriter = jest.spyOn(logger.transports[0], 'write');
-  });
-
   describe('Extension', () => {
     describe('#sdMetadata', () => {
       it('should parse the simplest possible extension', () => {
@@ -98,12 +92,8 @@ describe('FSHImporter', () => {
         `;
 
         importText(input, 'Dupe.fsh');
-        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 2][0].message).toMatch(
-          /File: Dupe\.fsh.*Line: 7\D/s
-        );
-        expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-          /File: Dupe\.fsh.*Line: 8\D/s
-        );
+        expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
       });
     });
 
