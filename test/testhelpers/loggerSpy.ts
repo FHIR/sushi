@@ -3,8 +3,8 @@ import { logger } from '../../src/utils/FSHLogger';
 class LoggerSpy {
   private mockWriter = jest.spyOn(logger.transports[0], 'write');
 
-  getMessageAtIndex(index: number, reverse = false): string {
-    const i = reverse ? this.mockWriter.mock.calls.length - index - 1 : index;
+  getMessageAtIndex(index: number): string {
+    const i = index < 0 ? this.mockWriter.mock.calls.length + index : index;
     return this.mockWriter.mock.calls[i][0].message;
   }
 
@@ -13,7 +13,7 @@ class LoggerSpy {
   }
 
   getLastMessage(): string {
-    return this.getMessageAtIndex(0, true);
+    return this.getMessageAtIndex(-1);
   }
 }
 

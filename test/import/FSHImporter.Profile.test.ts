@@ -149,7 +149,7 @@ describe('FSHImporter', () => {
         `;
 
         importText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(1, true)).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
+        expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
       });
     });
