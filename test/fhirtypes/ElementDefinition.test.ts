@@ -34,17 +34,17 @@ describe('ElementDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { _code: 'Quantity' },
-        { _code: 'CodeableConcept' },
-        { _code: 'string' },
-        { _code: 'boolean' },
-        { _code: 'integer' },
-        { _code: 'Range' },
-        { _code: 'Ratio' },
-        { _code: 'SampledData' },
-        { _code: 'time' },
-        { _code: 'dateTime' },
-        { _code: 'Period' }
+        new ElementDefinitionType('Quantity'),
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('string'),
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('integer'),
+        new ElementDefinitionType('Range'),
+        new ElementDefinitionType('Ratio'),
+        new ElementDefinitionType('SampledData'),
+        new ElementDefinitionType('time'),
+        new ElementDefinitionType('dateTime'),
+        new ElementDefinitionType('Period')
       ]);
     });
 
@@ -58,17 +58,17 @@ describe('ElementDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { _code: 'Quantity' },
-        { _code: 'CodeableConcept' },
-        { _code: 'string' },
-        { _code: 'boolean' },
-        { _code: 'integer' },
-        { _code: 'Range' },
-        { _code: 'Ratio' },
-        { _code: 'SampledData' },
-        { _code: 'time' },
-        { _code: 'dateTime' },
-        { _code: 'Period' }
+        new ElementDefinitionType('Quantity'),
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('string'),
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('integer'),
+        new ElementDefinitionType('Range'),
+        new ElementDefinitionType('Ratio'),
+        new ElementDefinitionType('SampledData'),
+        new ElementDefinitionType('time'),
+        new ElementDefinitionType('dateTime'),
+        new ElementDefinitionType('Period')
       ]);
     });
   });

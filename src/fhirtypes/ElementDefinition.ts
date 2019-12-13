@@ -54,6 +54,16 @@ export class ElementDefinitionType {
     return this._code;
   }
 
+  withProfiles(...profiles: string[]): this {
+    this.profile = profiles;
+    return this;
+  }
+
+  withTargetProfiles(...targetProfiles: string[]): this {
+    this.targetProfile = targetProfiles;
+    return this;
+  }
+
   toJSON(): ElementDefinitionTypeJSON {
     // Remove the _code key specific to ElementDefinitionType
     const elDefTypeClone = cloneDeep(this);
