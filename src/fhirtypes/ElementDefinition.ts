@@ -30,24 +30,20 @@ export class ElementDefinitionType {
   versioning?: string;
   extension?: ElementDefinitionExtension[];
 
-  constructor(code?: string) {
+  constructor(code: string) {
     this._code = code;
   }
 
   /**
-   * Element.id type is specified in the valueUrl of an extension.
-   * This function returns the extension valueUrl if available, else returns the code.
+   * Element.id, Extension.url, and primitive types are specified in the valueUrl of an extension.
+   * This function returns the fhir-type extension's valueUrl if available, else returns the code.
    * @see {@link http://hl7.org/fhir/extension-structuredefinition-fhir-type.html}
    */
   get code(): string {
-    if (this.extension) {
-      const fhirTypeExtension = this.extension.find(
-        ext => ext.url === 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type'
-      );
-      if (fhirTypeExtension) return fhirTypeExtension.valueUrl;
-      return this._code;
-    }
-    return this._code;
+    const fhirTypeExtension = this.extension?.find(
+      ext => ext.url === 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type'
+    );
+    return fhirTypeExtension?.valueUrl ?? this._code;
   }
 
   set code(c: string) {
@@ -72,13 +68,13 @@ export class ElementDefinitionType {
   }
 
   static fromJSON(json: any): ElementDefinitionType {
-    const elDefType = new ElementDefinitionType();
-    elDefType._code = json.code;
-    if (json.profile) elDefType.profile = json.profile;
-    if (json.targetProfile) elDefType.targetProfile = json.targetProfile;
-    if (json.aggregation) elDefType.aggregation = json.aggregation;
-    if (json.versioning) elDefType.versioning = json.versioning;
-    if (json.extension) elDefType.extension = json.extension;
+    const elDefType = new ElementDefinitionType(json.code);
+
+    elDefType.profile = json.profile;
+    elDefType.targetProfile = json.targetProfile;
+    elDefType.aggregation = json.aggregation;
+    elDefType.versioning = json.versioning;
+    elDefType.extension = json.extension;
     return elDefType;
   }
 }
