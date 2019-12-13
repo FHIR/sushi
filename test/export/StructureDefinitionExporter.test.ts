@@ -516,15 +516,16 @@ describe('StructureDefinitionExporter', () => {
     const constrainedValue = sd.findElement('Observation.value[x]');
 
     expect(baseValue.type).toHaveLength(11);
-    expect(baseValue.type[0]).toEqual({ code: 'Quantity' });
-    expect(baseValue.type[1]).toEqual({ code: 'CodeableConcept' });
-    expect(baseValue.type[2]).toEqual({ code: 'string' });
+    expect(baseValue.type[0]).toEqual(new ElementDefinitionType('Quantity'));
+    expect(baseValue.type[1]).toEqual(new ElementDefinitionType('CodeableConcept'));
+    expect(baseValue.type[2]).toEqual(new ElementDefinitionType('string'));
 
     expect(constrainedValue.type).toHaveLength(1);
-    expect(constrainedValue.type[0]).toEqual({
-      code: 'Quantity',
-      profile: ['http://example.com/StructureDefinition/MySpecialQuantity']
-    });
+    expect(constrainedValue.type[0]).toEqual(
+      new ElementDefinitionType('Quantity').withProfiles(
+        'http://example.com/StructureDefinition/MySpecialQuantity'
+      )
+    );
   });
 
   it('should apply a correct OnlyRule on a FSHy reference', () => {
@@ -547,25 +548,21 @@ describe('StructureDefinitionExporter', () => {
     const constrainedSubject = sd.findElement('Observation.subject');
 
     expect(baseSubject.type).toHaveLength(1);
-    expect(baseSubject.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: [
-          'http://hl7.org/fhir/StructureDefinition/Patient',
-          'http://hl7.org/fhir/StructureDefinition/Group',
-          'http://hl7.org/fhir/StructureDefinition/Device',
-          'http://hl7.org/fhir/StructureDefinition/Location'
-        ]
-      }
-    ]);
+    expect(baseSubject.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Patient',
+        'http://hl7.org/fhir/StructureDefinition/Group',
+        'http://hl7.org/fhir/StructureDefinition/Device',
+        'http://hl7.org/fhir/StructureDefinition/Location'
+      )
+    );
 
     expect(constrainedSubject.type).toHaveLength(1);
-    expect(constrainedSubject.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: ['http://example.com/StructureDefinition/MySpecialDevice']
-      }
-    ]);
+    expect(constrainedSubject.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/MySpecialDevice'
+      )
+    );
   });
 
   it('should apply a correct OnlyRule with a specific target constrained to FSHy definition', () => {
@@ -594,29 +591,23 @@ describe('StructureDefinitionExporter', () => {
     const constrainedHasMember = sd.findElement('Observation.hasMember');
 
     expect(baseHasMember.type).toHaveLength(1);
-    expect(baseHasMember.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: [
-          'http://hl7.org/fhir/StructureDefinition/Observation',
-          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
-          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
-        ]
-      }
-    ]);
+    expect(baseHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
 
     expect(constrainedHasMember.type).toHaveLength(1);
-    expect(constrainedHasMember.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: [
-          'http://example.com/StructureDefinition/MySpecialObservation1',
-          'http://example.com/StructureDefinition/MySpecialObservation2',
-          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
-          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
-        ]
-      }
-    ]);
+    expect(constrainedHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/MySpecialObservation1',
+        'http://example.com/StructureDefinition/MySpecialObservation2',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
   });
 
   it('should not apply an incorrect OnlyRule', () => {
