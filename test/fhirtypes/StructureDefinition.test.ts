@@ -3,7 +3,7 @@ import path from 'path';
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { ElementDefinition } from '../../src/fhirtypes/ElementDefinition';
+import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { getResolver } from '../testhelpers/getResolver';
 import { FshCode } from '../../src/fshtypes';
 
@@ -36,17 +36,17 @@ describe('StructureDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        new ElementDefinitionType('Quantity'),
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('string'),
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('integer'),
+        new ElementDefinitionType('Range'),
+        new ElementDefinitionType('Ratio'),
+        new ElementDefinitionType('SampledData'),
+        new ElementDefinitionType('time'),
+        new ElementDefinitionType('dateTime'),
+        new ElementDefinitionType('Period')
       ]);
     });
 
@@ -69,17 +69,17 @@ describe('StructureDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        new ElementDefinitionType('Quantity'),
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('string'),
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('integer'),
+        new ElementDefinitionType('Range'),
+        new ElementDefinitionType('Ratio'),
+        new ElementDefinitionType('SampledData'),
+        new ElementDefinitionType('time'),
+        new ElementDefinitionType('dateTime'),
+        new ElementDefinitionType('Period')
       ]);
     });
   });

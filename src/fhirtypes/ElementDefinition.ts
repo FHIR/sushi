@@ -22,6 +22,73 @@ import {
 } from '../errors';
 import { setPropertyOnInstance } from './common';
 
+export class ElementDefinitionType {
+  private _code: string;
+  profile?: string[];
+  targetProfile?: string[];
+  aggregation?: string[];
+  versioning?: string;
+  extension?: ElementDefinitionExtension[];
+
+  constructor(code: string) {
+    this._code = code;
+  }
+
+  /**
+   * Element.id, Extension.url, and primitive types are specified in the valueUrl of an extension.
+   * This function returns the fhir-type extension's valueUrl if available, else returns the code.
+   * @see {@link http://hl7.org/fhir/extension-structuredefinition-fhir-type.html}
+   */
+  get code(): string {
+    const fhirTypeExtension = this.extension?.find(
+      ext => ext.url === 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type'
+    );
+    return fhirTypeExtension?.valueUrl ?? this._code;
+  }
+
+  set code(c: string) {
+    this._code = c;
+  }
+
+  getActualCode(): string {
+    return this._code;
+  }
+
+  withProfiles(...profiles: string[]): this {
+    this.profile = profiles;
+    return this;
+  }
+
+  withTargetProfiles(...targetProfiles: string[]): this {
+    this.targetProfile = targetProfiles;
+    return this;
+  }
+
+  toJSON(): ElementDefinitionTypeJSON {
+    // Remove the _code key specific to ElementDefinitionType
+    const elDefTypeClone = cloneDeep(this);
+    delete elDefTypeClone._code;
+
+    // Create ElementDefinitionTypeJSON with a code and any properties present on the ElementDefinitionType
+    const elDefTypeJSON: ElementDefinitionTypeJSON = {
+      code: this.getActualCode(),
+      ...elDefTypeClone
+    };
+    return elDefTypeJSON;
+  }
+
+  static fromJSON(json: any): ElementDefinitionType {
+    const elDefType = new ElementDefinitionType(json.code);
+
+    elDefType.profile = json.profile;
+    elDefType.targetProfile = json.targetProfile;
+    elDefType.aggregation = json.aggregation;
+    elDefType.versioning = json.versioning;
+    elDefType.extension = json.extension;
+    return elDefType;
+  }
+}
+
 /**
  * A class representing a FHIR R4 ElementDefinition.  For the most part, each allowable property in an ElementDefinition
  * is represented via a get/set in this class, and the value is expected to be the FHIR-compliant JSON that would go
@@ -1484,8 +1551,12 @@ export class ElementDefinition {
       }
       // @ts-ignore
       if (prop && this[prop] !== undefined) {
-        // @ts-ignore
-        j[prop] = cloneDeep(this[prop]);
+        if (prop === 'type') {
+          j.type = this.type.map(t => t.toJSON());
+        } else {
+          // @ts-ignore
+          j[prop] = cloneDeep(this[prop]);
+        }
       }
     }
 
@@ -1508,8 +1579,12 @@ export class ElementDefinition {
       }
       // @ts-ignore
       if (prop && json[prop] !== undefined) {
-        // @ts-ignore
-        ed[prop] = cloneDeep(json[prop]);
+        if (prop === 'type') {
+          ed.type = json[prop].map(type => ElementDefinitionType.fromJSON(type));
+        } else {
+          // @ts-ignore
+          ed[prop] = cloneDeep(json[prop]);
+        }
       }
     }
     if (captureOriginal) {
@@ -1538,12 +1613,19 @@ export type ElementDefinitionBase = {
   max: string;
 };
 
-export type ElementDefinitionType = {
+export type ElementDefinitionTypeJSON = {
   code: string;
   profile?: string[];
   targetProfile?: string[];
   aggregation?: string[];
   versioning?: string;
+  extension?: ElementDefinitionExtension[];
+};
+
+export type ElementDefinitionExtension = {
+  url: string;
+  // TODO: support all the value[x]
+  valueUrl?: string;
 };
 
 export type ElementDefinitionExample = {
@@ -1583,7 +1665,7 @@ export type ResolveFn = (type: string) => StructureDefinition | undefined;
  * A barebones and lenient definition of ElementDefinition JSON
  */
 interface LooseElementDefJSON {
-  type?: ElementDefinitionType[];
+  type?: ElementDefinitionTypeJSON[];
   binding?: ElementDefinitionBinding;
   // [key: string]: any;
 }
