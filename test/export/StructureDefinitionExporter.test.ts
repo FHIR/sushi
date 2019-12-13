@@ -496,6 +496,129 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should apply a correct OnlyRule on a non-reference FSHy choice', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const targetProfile = new Profile('MySpecialQuantity');
+    targetProfile.parent = 'Quantity';
+    doc.profiles.set(targetProfile.name, targetProfile);
+
+    const rule = new OnlyRule('value[x]');
+    rule.types = [{ type: 'MySpecialQuantity' }];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[1];
+    const baseStructDef = resolve('Observation');
+
+    const baseValue = baseStructDef.findElement('Observation.value[x]');
+    const constrainedValue = sd.findElement('Observation.value[x]');
+
+    expect(baseValue.type).toHaveLength(11);
+    expect(baseValue.type[0]).toEqual({ code: 'Quantity' });
+    expect(baseValue.type[1]).toEqual({ code: 'CodeableConcept' });
+    expect(baseValue.type[2]).toEqual({ code: 'string' });
+
+    expect(constrainedValue.type).toHaveLength(1);
+    expect(constrainedValue.type[0]).toEqual({
+      code: 'Quantity',
+      profile: ['http://example.com/StructureDefinition/MySpecialQuantity']
+    });
+  });
+
+  it('should apply a correct OnlyRule on a FSHy reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const targetProfile = new Profile('MySpecialDevice');
+    targetProfile.parent = 'Device';
+    doc.profiles.set(targetProfile.name, targetProfile);
+
+    const rule = new OnlyRule('subject');
+    rule.types = [{ type: 'MySpecialDevice', isReference: true }];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[1];
+    const baseStructDef = resolve('Observation');
+
+    const baseSubject = baseStructDef.findElement('Observation.subject');
+    const constrainedSubject = sd.findElement('Observation.subject');
+
+    expect(baseSubject.type).toHaveLength(1);
+    expect(baseSubject.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: [
+          'http://hl7.org/fhir/StructureDefinition/Patient',
+          'http://hl7.org/fhir/StructureDefinition/Group',
+          'http://hl7.org/fhir/StructureDefinition/Device',
+          'http://hl7.org/fhir/StructureDefinition/Location'
+        ]
+      }
+    ]);
+
+    expect(constrainedSubject.type).toHaveLength(1);
+    expect(constrainedSubject.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: ['http://example.com/StructureDefinition/MySpecialDevice']
+      }
+    ]);
+  });
+
+  it('should apply a correct OnlyRule with a specific target constrained to FSHy definition', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const targetProfile1 = new Profile('MySpecialObservation1');
+    targetProfile1.parent = 'Observation';
+    const targetProfile2 = new Profile('MySpecialObservation2');
+    targetProfile2.parent = 'Observation';
+    doc.profiles.set(targetProfile1.name, targetProfile1);
+    doc.profiles.set(targetProfile2.name, targetProfile2);
+
+    const rule = new OnlyRule('hasMember[Observation]');
+    rule.types = [
+      { type: 'MySpecialObservation1', isReference: true },
+      { type: 'MySpecialObservation2', isReference: true }
+    ];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[2];
+    const baseStructDef = resolve('Observation');
+
+    const baseHasMember = baseStructDef.findElement('Observation.hasMember');
+    const constrainedHasMember = sd.findElement('Observation.hasMember');
+
+    expect(baseHasMember.type).toHaveLength(1);
+    expect(baseHasMember.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: [
+          'http://hl7.org/fhir/StructureDefinition/Observation',
+          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+        ]
+      }
+    ]);
+
+    expect(constrainedHasMember.type).toHaveLength(1);
+    expect(constrainedHasMember.type).toEqual([
+      {
+        code: 'Reference',
+        targetProfile: [
+          'http://example.com/StructureDefinition/MySpecialObservation1',
+          'http://example.com/StructureDefinition/MySpecialObservation2',
+          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+        ]
+      }
+    ]);
+  });
+
   it('should not apply an incorrect OnlyRule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
