@@ -598,10 +598,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(valuesetExpression).toBeDefined();
-    expect(valuesetExpression.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
-    });
+    expect(valuesetExpression.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/valueset-expression'
+      )
+    );
   });
 
   it('should apply a ContainsRule of a defined extension on a modifierExtension element', () => {
@@ -624,10 +625,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(valuesetExpression).toBeDefined();
-    expect(valuesetExpression.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
-    });
+    expect(valuesetExpression.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/valueset-expression'
+      )
+    );
   });
 
   it('should apply a ContainsRule of an aliased extension on an extension element', () => {
@@ -660,15 +662,17 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(bar).toBeDefined();
-    expect(bar.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://example.com/StructureDefinition/Bar']
-    });
+    expect(bar.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://example.com/StructureDefinition/Bar'
+      )
+    );
     expect(baz).toBeDefined();
-    expect(baz.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://example.com/StructureDefinition/BazId']
-    });
+    expect(baz.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://example.com/StructureDefinition/BazId'
+      )
+    );
   });
 
   it('should apply a ContainsRule of an existing aliased extension on an extension element', () => {
@@ -693,10 +697,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(VSExpression).toBeDefined();
-    expect(VSExpression.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
-    });
+    expect(VSExpression.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/valueset-expression'
+      )
+    );
   });
 
   it('should apply multiple ContainsRule on an element with defined slicing', () => {
