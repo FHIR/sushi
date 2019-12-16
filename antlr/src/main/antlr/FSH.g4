@@ -141,8 +141,8 @@ REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)*
                  //  ^  NON-WHITESPACE
 CARET_SEQUENCE:     '^' ~[ \t\r\n\f]+;
 
-                 // '/' EXPRESSION '/' FLAGS
-REGEX:              '/' ('\\/' | ~[/\r\n])+ '/' REGEX_FLAGS;
+                 // '/' EXPRESSION '/'
+REGEX:              '/' ('\\/' | ~[/\r\n])+ '/';
 
                         // (NON-WS     ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE COMMA WS+)+ SEQUENCE;
@@ -154,7 +154,6 @@ SEQUENCE:           ~[ \t\r\n\f]+;
 
 // FRAGMENTS
 fragment WS: [ \t\r\n\f];
-fragment REGEX_FLAGS: [imsu]? [imsu]? [imsu]? [imsu]? ;
 
 // IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);
