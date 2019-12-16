@@ -148,13 +148,17 @@ export class StructureDefinition {
     let fhirPathString = this.type;
     let matchingElements = this.elements;
     let newMatchingElements: ElementDefinition[] = [];
-    let unfoldedElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
     for (const pathPart of parsedPath) {
       // Add the next part to the path, and see if we have matches on it
       fhirPathString += `.${pathPart.base}`;
       newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
 
+      // TODO: If path is A.B.C, and we unfold B, but C is invalid, the unfolded
+      // elements are still on the structDef. We may want to change this to remove the elements
+      // upon error
+      // Array for tracking newly added unfolded elements
+      let unfoldedElements: ElementDefinition[] = [];
       if (newMatchingElements.length === 0 && matchingElements.length === 1) {
         // If there was previously only one match,
         // we want to unfold that match and dig deeper into it
