@@ -96,8 +96,10 @@ async function app() {
     }
   }
   for (const instance of outPackage.instances) {
+    const fileName = `${instance.resourceType}-${instance.id ?? instance.instanceName}`;
+    delete instance.instanceName; // Only needed for the file name - not a FHIR property
     fs.writeFileSync(
-      path.join(program.out, `${instance.instanceName}-Instance-${instance.id}.json`),
+      path.join(program.out, `${fileName}.json`),
       JSON.stringify(instance, null, 2),
       'utf8'
     );

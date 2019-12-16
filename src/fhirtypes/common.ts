@@ -1,4 +1,5 @@
 import { ResolveFn, StructureDefinition, PathPart, ElementDefinition } from '.';
+import { InstanceDefinition } from '../export';
 
 /**
  * This function sets an instance property of an SD or ED if possible
@@ -19,6 +20,14 @@ export function setPropertyOnInstance(
     value,
     resolve
   );
+  setFixedValueOfPath(instance, pathParts, fixedValue);
+}
+
+export function setFixedValueOfPath(
+  instance: StructureDefinition | ElementDefinition | InstanceDefinition,
+  pathParts: PathPart[],
+  fixedValue: any
+): void {
   if (fixedValue != null) {
     // If we can fix the value on the StructureDefinition StructureDefinition, then we can set the
     // instance property here
