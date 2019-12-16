@@ -148,32 +148,33 @@ export class StructureDefinition {
     let fhirPathString = this.type;
     let matchingElements = this.elements;
     let newMatchingElements: ElementDefinition[] = [];
+    let unfoldedElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
     for (const pathPart of parsedPath) {
       // Add the next part to the path, and see if we have matches on it
       fhirPathString += `.${pathPart.base}`;
       newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
 
-      if (newMatchingElements.length === 0) {
-        // If we fail to find any matches, first try to find the appropriate [x] element
-        // Ex: valueString -> value[x]
-        const matchingSlice = this.sliceMatchingValueX(fhirPathString, matchingElements);
-        if (matchingSlice) {
-          newMatchingElements.push(matchingSlice, ...matchingSlice.children());
-          fhirPathString = matchingSlice.path;
-        }
-      }
-
-      // TODO: If path is A.B.C, and we unfold B, but C is invalid, the unfolded
-      // elements are still on the structDef. We may want to change this to remove the elements
-      // upon error
       if (newMatchingElements.length === 0 && matchingElements.length === 1) {
         // If we did not find an [x] element, and there was previously only one match,
         // We want to unfold that match and dig deeper into it
-        const newElements = matchingElements[0].unfold(resolve);
-        if (newElements.length > 0) {
+        unfoldedElements = matchingElements[0].unfold(resolve);
+        if (unfoldedElements.length > 0) {
           // Only get the children that match our path
-          newMatchingElements = newElements.filter(e => e.path.startsWith(fhirPathString));
+          newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
+        }
+      }
+
+      if (newMatchingElements.length === 0) {
+        // If we fail to find any matches, first try to find the appropriate [x] element
+        // Ex: valueString -> value[x]
+        const matchingSlice = this.sliceMatchingValueX(fhirPathString, [
+          ...matchingElements,
+          ...unfoldedElements
+        ]);
+        if (matchingSlice) {
+          newMatchingElements.push(matchingSlice, ...matchingSlice.children());
+          fhirPathString = matchingSlice.path;
         }
       }
 
