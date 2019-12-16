@@ -1,6 +1,7 @@
 // TODO: Load from package files instead of these static folders.
 import { FHIRDefinitions } from './FHIRDefinitions';
 import fs from 'fs';
+import path from 'path';
 
 const _cache: Map<string, FHIRDefinitions> = new Map();
 
@@ -26,4 +27,23 @@ export function load(fhirVersion: string): FHIRDefinitions {
   }
 
   return _cache.get(fhirVersion);
+}
+
+/**
+ * Loads a set of JSON files at targetPath into FHIRDefs
+ * @param {string} targetPath - The path to the directory containing the JSON definitions
+ * @param {FHIRDefinitions} FHIRDefs - The FHIRDefinitions object to load defs into
+ * @returns {FHIRDefinitions} the updated FHIRDefs object
+ */
+export function loadFromPath(targetPath: string, FHIRDefs: FHIRDefinitions): FHIRDefinitions {
+  if (fs.existsSync(targetPath)) {
+    const files = fs.readdirSync(targetPath);
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const def = JSON.parse(fs.readFileSync(path.join(targetPath, file), 'utf-8'));
+        FHIRDefs.add(def);
+      }
+    }
+    return FHIRDefs;
+  }
 }
