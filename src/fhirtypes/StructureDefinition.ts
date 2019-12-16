@@ -156,8 +156,8 @@ export class StructureDefinition {
       newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
 
       if (newMatchingElements.length === 0 && matchingElements.length === 1) {
-        // If we did not find an [x] element, and there was previously only one match,
-        // We want to unfold that match and dig deeper into it
+        // If there was previously only one match,
+        // we want to unfold that match and dig deeper into it
         unfoldedElements = matchingElements[0].unfold(resolve);
         if (unfoldedElements.length > 0) {
           // Only get the children that match our path
@@ -166,7 +166,8 @@ export class StructureDefinition {
       }
 
       if (newMatchingElements.length === 0) {
-        // If we fail to find any matches, first try to find the appropriate [x] element
+        // If we fail to find any matches, try to find the appropriate [x] element
+        // from previous matches or from newly unfolded elements
         // Ex: valueString -> value[x]
         const matchingSlice = this.sliceMatchingValueX(fhirPathString, [
           ...matchingElements,
