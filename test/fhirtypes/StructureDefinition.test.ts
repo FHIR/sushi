@@ -250,6 +250,19 @@ describe('StructureDefinition', () => {
       expect(observation.elements.length).toBe(originalLength + 1);
     });
 
+    it('should make explicit a non-existent choice element that must first be unfolded', () => {
+      const originalLength = observation.elements.length;
+      const valueQuantity = observation.findElementByPath(
+        'extension.valueQuantity',
+        getResolver(defs)
+      );
+      expect(valueQuantity).toBeDefined();
+      expect(valueQuantity.id).toBe('Observation.extension.value[x]:valueQuantity');
+      expect(valueQuantity.sliceName).toBe('valueQuantity');
+      expect(valueQuantity.path).toBe('Observation.extension.value[x]');
+      expect(observation.elements.length).toBe(originalLength + 5);
+    });
+
     it('should make explicit a non-existent choice element by child path', () => {
       const originalLength = observation.elements.length;
       const valueX = observation.findElementByPath('value[x]');
