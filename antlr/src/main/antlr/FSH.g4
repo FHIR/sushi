@@ -16,8 +16,8 @@ instanceMetadata:   instanceOf | title;
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
 
-valueSet:           KW_VALUESET SEQUENCE STRING? vsMetadata* vsComponent+;
-vsMetadata:         description;
+valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsComponent+;
+vsMetadata:         id | title | description;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -41,19 +41,16 @@ obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 
 // VALUESET COMPONENTS
-vsComponent:        vsTerm | vsReference | vsFilter;
-vsTerm:             code STRING?;
-vsReference:        STAR (KW_INCLUDE | KW_EXCLUDE) KW_VSREFERENCE SEQUENCE;
-// Filter definitions are usually: System Property Operator Value
-// However, exceptions exist:
-// Property['system'] Operator Value: system = ABCD
-// System Operator Value: ABCD descendant-of #1234
-// Operator Value[code with system]: descendant-of ABCD#1234 "1234 Description"
-vsFilter:           STAR (KW_INCLUDE | KW_EXCLUDE) filterDefinition;
-filterDefinition:   KW_SYSTEM filterOperator filterValue
-                    | SEQUENCE? SEQUENCE? filterOperator filterValue;
-filterOperator:     EQUAL | SEQUENCE;
-filterValue:        code | REGEX | COMMA_DELIMITED_SEQUENCES | SEQUENCE;
+vsComponent:        STAR KW_EXCLUDE? ( vsConceptComponent | vsFilterComponent );
+vsConceptComponent: code* vsComponentFrom?;
+vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
+vsComponentFrom:    KW_FROM (vsFromSystem vsFromValueset | vsFromValueset vsFromSystem | vsFromSystem | vsFromValueset);
+vsFromSystem:       KW_SYSTEM SEQUENCE;
+vsFromValueset:     KW_VSREFERENCE COMMA_DELIMITED_SEQUENCES;
+vsFilterList:       (vsFilterDefinition KW_AND)+ vsFilterDefinition;
+vsFilterDefinition: SEQUENCE vsFilterOperator vsFilterValue;
+vsFilterOperator:   EQUAL | SEQUENCE;
+vsFilterValue:      code | REGEX | COMMA_DELIMITED_SEQUENCES | SEQUENCE;
 
 // MISC
 path:               SEQUENCE;
@@ -100,8 +97,9 @@ KW_OR:              'or';
 KW_OBEYS:           'obeys';
 KW_TRUE:            'true';
 KW_FALSE:           'false';
-KW_INCLUDE:         'include';
 KW_EXCLUDE:         'exclude';
+KW_CODES:           'codes';
+KW_WHERE:           'where';
 KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
 
