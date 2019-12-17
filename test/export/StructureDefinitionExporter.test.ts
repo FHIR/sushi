@@ -11,9 +11,9 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../../src/fshtypes/rules';
-import { logger } from '../../src/utils/FSHLogger';
-import { getResolver } from '../utils/getResolver';
-import { ResolveFn } from '../../src/fhirtypes';
+import { loggerSpy } from '../testhelpers/loggerSpy';
+import { getResolver } from '../testhelpers/getResolver';
+import { ResolveFn, ElementDefinitionType } from '../../src/fhirtypes';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -21,12 +21,10 @@ describe('StructureDefinitionExporter', () => {
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: StructureDefinitionExporter;
-  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
 
   beforeAll(() => {
     defs = load('4.0.1');
     resolve = getResolver(defs);
-    mockWriter = jest.spyOn(logger.transports[0], 'write');
   });
 
   beforeEach(() => {
@@ -169,9 +167,7 @@ describe('StructureDefinitionExporter', () => {
     const structDef = exporter.structDefs[0];
     expect(structDef).toBeDefined();
     expect(structDef.type).toBe('Resource');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Foo\.fsh.*Line: 3 - 4\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Foo\.fsh.*Line: 3 - 4\D/s);
   });
 
   // Card Rule
@@ -217,9 +213,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Wrong\.fsh.*Line: 5\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 5\D/s);
   });
 
   // Flag Rule
@@ -265,9 +259,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseElement.mustSupport).toBeFalsy();
     expect(changedElement.isModifier).toBe(true);
     expect(changedElement.mustSupport).toBeFalsy();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Nope\.fsh.*Line: 8\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D/s);
   });
 
   it('should not apply a flag rule that disables mustSupport', () => {
@@ -292,9 +284,7 @@ describe('StructureDefinitionExporter', () => {
     expect(changedElement.isModifier).toBeFalsy();
     expect(changedElement.isSummary).toBe(true);
     expect(changedElement.mustSupport).toBe(true);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Nope\.fsh.*Line: 8\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D/s);
   });
 
   // Value Set Rule
@@ -353,9 +343,7 @@ describe('StructureDefinitionExporter', () => {
     const changedElement = sd.findElement('Observation.note');
     expect(baseElement.binding).toBeUndefined();
     expect(changedElement.binding).toBeUndefined();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Codeless\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Codeless\.fsh.*Line: 6\D/s);
   });
 
   it('should not override a binding with a less strict binding', () => {
@@ -378,9 +366,7 @@ describe('StructureDefinitionExporter', () => {
       'http://hl7.org/fhir/ValueSet/observation-category'
     );
     expect(changedElement.binding.strength).toBe('preferred');
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Strict\.fsh.*Line: 9\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Strict\.fsh.*Line: 9\D/s);
   });
 
   // Only Rule
@@ -400,12 +386,12 @@ describe('StructureDefinitionExporter', () => {
     const constrainedValue = sd.findElement('Observation.value[x]');
 
     expect(baseValue.type).toHaveLength(11);
-    expect(baseValue.type[0]).toEqual({ code: 'Quantity' });
-    expect(baseValue.type[1]).toEqual({ code: 'CodeableConcept' });
-    expect(baseValue.type[2]).toEqual({ code: 'string' });
+    expect(baseValue.type[0]).toEqual(new ElementDefinitionType('Quantity'));
+    expect(baseValue.type[1]).toEqual(new ElementDefinitionType('CodeableConcept'));
+    expect(baseValue.type[2]).toEqual(new ElementDefinitionType('string'));
 
     expect(constrainedValue.type).toHaveLength(1);
-    expect(constrainedValue.type[0]).toEqual({ code: 'string' });
+    expect(constrainedValue.type[0]).toEqual(new ElementDefinitionType('string'));
   });
 
   it('should apply a correct OnlyRule on a reference', () => {
@@ -424,25 +410,21 @@ describe('StructureDefinitionExporter', () => {
     const constrainedSubject = sd.findElement('Observation.subject');
 
     expect(baseSubject.type).toHaveLength(1);
-    expect(baseSubject.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: [
-          'http://hl7.org/fhir/StructureDefinition/Patient',
-          'http://hl7.org/fhir/StructureDefinition/Group',
-          'http://hl7.org/fhir/StructureDefinition/Device',
-          'http://hl7.org/fhir/StructureDefinition/Location'
-        ]
-      }
-    ]);
+    expect(baseSubject.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Patient',
+        'http://hl7.org/fhir/StructureDefinition/Group',
+        'http://hl7.org/fhir/StructureDefinition/Device',
+        'http://hl7.org/fhir/StructureDefinition/Location'
+      )
+    );
 
     expect(constrainedSubject.type).toHaveLength(1);
-    expect(constrainedSubject.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: ['http://hl7.org/fhir/StructureDefinition/Device']
-      }
-    ]);
+    expect(constrainedSubject.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Device'
+      )
+    );
   });
 
   it('should apply a correct OnlyRule on a reference to Any', () => {
@@ -463,20 +445,17 @@ describe('StructureDefinitionExporter', () => {
     const constrainedValueX = sd.findElement('Extension.value[x]');
 
     expect(baseValueX.type).toHaveLength(50);
-    expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual({
-      code: 'Reference'
-    });
+    expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual(
+      new ElementDefinitionType('Reference')
+    );
 
     expect(constrainedValueX.type).toHaveLength(1);
-    expect(constrainedValueX.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: [
-          'http://hl7.org/fhir/StructureDefinition/Observation',
-          'http://hl7.org/fhir/StructureDefinition/Condition'
-        ]
-      }
-    ]);
+    expect(constrainedValueX.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/Condition'
+      )
+    );
   });
 
   it('should apply a correct OnlyRule with a specific target constrained', () => {
@@ -498,29 +477,137 @@ describe('StructureDefinitionExporter', () => {
     const constrainedHasMember = sd.findElement('Observation.hasMember');
 
     expect(baseHasMember.type).toHaveLength(1);
-    expect(baseHasMember.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: [
-          'http://hl7.org/fhir/StructureDefinition/Observation',
-          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
-          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
-        ]
-      }
-    ]);
+    expect(baseHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
 
     expect(constrainedHasMember.type).toHaveLength(1);
-    expect(constrainedHasMember.type).toEqual([
-      {
-        code: 'Reference',
-        targetProfile: [
-          'http://hl7.org/fhir/StructureDefinition/bodyheight',
-          'http://hl7.org/fhir/StructureDefinition/bodyweight',
-          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
-          'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
-        ]
-      }
-    ]);
+    expect(constrainedHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bodyheight',
+        'http://hl7.org/fhir/StructureDefinition/bodyweight',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+  });
+
+  it('should apply a correct OnlyRule on a non-reference FSHy choice', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const targetProfile = new Profile('MySpecialQuantity');
+    targetProfile.parent = 'Quantity';
+    doc.profiles.set(targetProfile.name, targetProfile);
+
+    const rule = new OnlyRule('value[x]');
+    rule.types = [{ type: 'MySpecialQuantity' }];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[1];
+    const baseStructDef = resolve('Observation');
+
+    const baseValue = baseStructDef.findElement('Observation.value[x]');
+    const constrainedValue = sd.findElement('Observation.value[x]');
+
+    expect(baseValue.type).toHaveLength(11);
+    expect(baseValue.type[0]).toEqual(new ElementDefinitionType('Quantity'));
+    expect(baseValue.type[1]).toEqual(new ElementDefinitionType('CodeableConcept'));
+    expect(baseValue.type[2]).toEqual(new ElementDefinitionType('string'));
+
+    expect(constrainedValue.type).toHaveLength(1);
+    expect(constrainedValue.type[0]).toEqual(
+      new ElementDefinitionType('Quantity').withProfiles(
+        'http://example.com/StructureDefinition/MySpecialQuantity'
+      )
+    );
+  });
+
+  it('should apply a correct OnlyRule on a FSHy reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const targetProfile = new Profile('MySpecialDevice');
+    targetProfile.parent = 'Device';
+    doc.profiles.set(targetProfile.name, targetProfile);
+
+    const rule = new OnlyRule('subject');
+    rule.types = [{ type: 'MySpecialDevice', isReference: true }];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[1];
+    const baseStructDef = resolve('Observation');
+
+    const baseSubject = baseStructDef.findElement('Observation.subject');
+    const constrainedSubject = sd.findElement('Observation.subject');
+
+    expect(baseSubject.type).toHaveLength(1);
+    expect(baseSubject.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Patient',
+        'http://hl7.org/fhir/StructureDefinition/Group',
+        'http://hl7.org/fhir/StructureDefinition/Device',
+        'http://hl7.org/fhir/StructureDefinition/Location'
+      )
+    );
+
+    expect(constrainedSubject.type).toHaveLength(1);
+    expect(constrainedSubject.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/MySpecialDevice'
+      )
+    );
+  });
+
+  it('should apply a correct OnlyRule with a specific target constrained to FSHy definition', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const targetProfile1 = new Profile('MySpecialObservation1');
+    targetProfile1.parent = 'Observation';
+    const targetProfile2 = new Profile('MySpecialObservation2');
+    targetProfile2.parent = 'Observation';
+    doc.profiles.set(targetProfile1.name, targetProfile1);
+    doc.profiles.set(targetProfile2.name, targetProfile2);
+
+    const rule = new OnlyRule('hasMember[Observation]');
+    rule.types = [
+      { type: 'MySpecialObservation1', isReference: true },
+      { type: 'MySpecialObservation2', isReference: true }
+    ];
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.structDefs[2];
+    const baseStructDef = resolve('Observation');
+
+    const baseHasMember = baseStructDef.findElement('Observation.hasMember');
+    const constrainedHasMember = sd.findElement('Observation.hasMember');
+
+    expect(baseHasMember.type).toHaveLength(1);
+    expect(baseHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMember.type).toHaveLength(1);
+    expect(constrainedHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/MySpecialObservation1',
+        'http://example.com/StructureDefinition/MySpecialObservation2',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
   });
 
   it('should not apply an incorrect OnlyRule', () => {
@@ -540,9 +627,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseValue.type).toHaveLength(11);
     expect(constrainedValue.type).toHaveLength(11);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Only\.fsh.*Line: 10\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Only\.fsh.*Line: 10\D/s);
   });
 
   // Fixed Value Rule
@@ -585,9 +670,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Fixed\.fsh.*Line: 4\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D/s);
   });
 
   // Contains Rule
@@ -629,10 +712,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(valuesetExpression).toBeDefined();
-    expect(valuesetExpression.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
-    });
+    expect(valuesetExpression.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/valueset-expression'
+      )
+    );
   });
 
   it('should apply a ContainsRule of a defined extension on a modifierExtension element', () => {
@@ -655,10 +739,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(valuesetExpression).toBeDefined();
-    expect(valuesetExpression.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
-    });
+    expect(valuesetExpression.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/valueset-expression'
+      )
+    );
   });
 
   it('should apply a ContainsRule of an aliased extension on an extension element', () => {
@@ -691,15 +776,17 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(bar).toBeDefined();
-    expect(bar.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://example.com/StructureDefinition/Bar']
-    });
+    expect(bar.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://example.com/StructureDefinition/Bar'
+      )
+    );
     expect(baz).toBeDefined();
-    expect(baz.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://example.com/StructureDefinition/BazId']
-    });
+    expect(baz.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://example.com/StructureDefinition/BazId'
+      )
+    );
   });
 
   it('should apply a ContainsRule of an existing aliased extension on an extension element', () => {
@@ -724,10 +811,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extension.slicing.discriminator.length).toBe(1);
     expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(VSExpression).toBeDefined();
-    expect(VSExpression.type[0]).toEqual({
-      code: 'Extension',
-      profile: ['http://hl7.org/fhir/StructureDefinition/valueset-expression']
-    });
+    expect(VSExpression.type[0]).toEqual(
+      new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/valueset-expression'
+      )
+    );
   });
 
   it('should apply multiple ContainsRule on an element with defined slicing', () => {
@@ -769,9 +857,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(sd.elements.length).toBe(baseStructDef.elements.length);
     expect(barSlice).toBeUndefined();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: NoSlice\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: NoSlice\.fsh.*Line: 6\D/s);
   });
 
   // CaretValueRule
@@ -810,9 +896,7 @@ describe('StructureDefinitionExporter', () => {
     const baseStatus = baseStructDef.findElement('Observation.status');
 
     expect(status.short).toBe(baseStatus.short);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: InvalidValue\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 
   it('should apply a CaretValueRule on an element without a path', () => {
@@ -843,9 +927,7 @@ describe('StructureDefinitionExporter', () => {
     const baseStructDef = resolve('Observation');
 
     expect(sd.description).toBe(baseStructDef.description);
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: InvalidValue\.fsh.*Line: 6\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 
   // validateStructureDefinition

@@ -1,8 +1,8 @@
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { ElementDefinition } from '../../src/fhirtypes/ElementDefinition';
+import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { getResolver } from '../utils/getResolver';
+import { getResolver } from '../testhelpers/getResolver';
 import { FshCode } from '../../src/fshtypes';
 
 describe('ElementDefinition', () => {
@@ -67,13 +67,13 @@ describe('ElementDefinition', () => {
     it('should change an instance property in an array', () => {
       status.setInstancePropertyByPath('type[0].code', 'foo', getResolver(defs));
       expect(status.type.length).toBe(1);
-      expect(status.type[0]).toEqual({ code: 'foo' });
+      expect(status.type[0]).toEqual(new ElementDefinitionType('foo'));
     });
 
     it('should change a part of an instance property in an array', () => {
       status.setInstancePropertyByPath('type[0].profile[0]', 'foo', getResolver(defs));
       expect(status.type.length).toBe(1);
-      expect(status.type[0]).toEqual({ code: 'code', profile: ['foo'] });
+      expect(status.type[0]).toEqual(new ElementDefinitionType('code').withProfiles('foo'));
     });
 
     // Complex values

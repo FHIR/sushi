@@ -2,18 +2,16 @@ import { ProfileExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Profile } from '../../src/fshtypes';
-import { logger } from '../../src/utils/FSHLogger';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ProfileExporter;
-  let mockWriter: jest.SpyInstance<boolean, [any, string, ((error: Error) => void)?]>;
 
   beforeAll(() => {
     defs = load('4.0.1');
-    mockWriter = jest.spyOn(logger.transports[0], 'write');
   });
 
   beforeEach(() => {
@@ -59,9 +57,7 @@ describe('ProfileExporter', () => {
     profile.parent = 'BogusParent';
     doc.profiles.set(profile.name, profile);
     exporter.export();
-    expect(mockWriter.mock.calls[mockWriter.mock.calls.length - 1][0].message).toMatch(
-      /File: Bogus\.fsh.*Line: 2 - 4\D/s
-    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D/s);
   });
 
   it('should export profiles with FSHy parents', () => {

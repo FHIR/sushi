@@ -154,26 +154,32 @@ export class StructureDefinition {
       fhirPathString += `.${pathPart.base}`;
       newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
 
-      if (newMatchingElements.length === 0) {
-        // If we fail to find any matches, first try to find the appropriate [x] element
-        // Ex: valueString -> value[x]
-        const matchingSlice = this.sliceMatchingValueX(fhirPathString, matchingElements);
-        if (matchingSlice) {
-          newMatchingElements.push(matchingSlice, ...matchingSlice.children());
-          fhirPathString = matchingSlice.path;
-        }
-      }
-
       // TODO: If path is A.B.C, and we unfold B, but C is invalid, the unfolded
       // elements are still on the structDef. We may want to change this to remove the elements
       // upon error
+      // Array for tracking newly added unfolded elements
+      let unfoldedElements: ElementDefinition[] = [];
       if (newMatchingElements.length === 0 && matchingElements.length === 1) {
-        // If we did not find an [x] element, and there was previously only one match,
-        // We want to unfold that match and dig deeper into it
-        const newElements = matchingElements[0].unfold(resolve);
-        if (newElements.length > 0) {
+        // If there was previously only one match,
+        // we want to unfold that match and dig deeper into it
+        unfoldedElements = matchingElements[0].unfold(resolve);
+        if (unfoldedElements.length > 0) {
           // Only get the children that match our path
-          newMatchingElements = newElements.filter(e => e.path.startsWith(fhirPathString));
+          newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
+        }
+      }
+
+      if (newMatchingElements.length === 0) {
+        // If we fail to find any matches, try to find the appropriate [x] element
+        // from previous matches or from newly unfolded elements
+        // Ex: valueString -> value[x]
+        const matchingSlice = this.sliceMatchingValueX(fhirPathString, [
+          ...matchingElements,
+          ...unfoldedElements
+        ]);
+        if (matchingSlice) {
+          newMatchingElements.push(matchingSlice, ...matchingSlice.children());
+          fhirPathString = matchingSlice.path;
         }
       }
 

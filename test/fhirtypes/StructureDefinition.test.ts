@@ -3,8 +3,8 @@ import path from 'path';
 import { load } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { ElementDefinition } from '../../src/fhirtypes/ElementDefinition';
-import { getResolver } from '../utils/getResolver';
+import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
+import { getResolver } from '../testhelpers/getResolver';
 import { FshCode } from '../../src/fshtypes';
 
 describe('StructureDefinition', () => {
@@ -36,17 +36,17 @@ describe('StructureDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        new ElementDefinitionType('Quantity'),
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('string'),
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('integer'),
+        new ElementDefinitionType('Range'),
+        new ElementDefinitionType('Ratio'),
+        new ElementDefinitionType('SampledData'),
+        new ElementDefinitionType('time'),
+        new ElementDefinitionType('dateTime'),
+        new ElementDefinitionType('Period')
       ]);
     });
 
@@ -69,17 +69,17 @@ describe('StructureDefinition', () => {
       expect(valueX.min).toBe(0);
       expect(valueX.max).toBe('1');
       expect(valueX.type).toEqual([
-        { code: 'Quantity' },
-        { code: 'CodeableConcept' },
-        { code: 'string' },
-        { code: 'boolean' },
-        { code: 'integer' },
-        { code: 'Range' },
-        { code: 'Ratio' },
-        { code: 'SampledData' },
-        { code: 'time' },
-        { code: 'dateTime' },
-        { code: 'Period' }
+        new ElementDefinitionType('Quantity'),
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('string'),
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('integer'),
+        new ElementDefinitionType('Range'),
+        new ElementDefinitionType('Ratio'),
+        new ElementDefinitionType('SampledData'),
+        new ElementDefinitionType('time'),
+        new ElementDefinitionType('dateTime'),
+        new ElementDefinitionType('Period')
       ]);
     });
   });
@@ -248,6 +248,19 @@ describe('StructureDefinition', () => {
       expect(valueX.slicing).toBeDefined();
       expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
       expect(observation.elements.length).toBe(originalLength + 1);
+    });
+
+    it('should make explicit a non-existent choice element that must first be unfolded', () => {
+      const originalLength = observation.elements.length;
+      const valueQuantity = observation.findElementByPath(
+        'extension.valueQuantity',
+        getResolver(defs)
+      );
+      expect(valueQuantity).toBeDefined();
+      expect(valueQuantity.id).toBe('Observation.extension.value[x]:valueQuantity');
+      expect(valueQuantity.sliceName).toBe('valueQuantity');
+      expect(valueQuantity.path).toBe('Observation.extension.value[x]');
+      expect(observation.elements.length).toBe(originalLength + 5);
     });
 
     it('should make explicit a non-existent choice element by child path', () => {
