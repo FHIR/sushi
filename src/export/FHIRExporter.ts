@@ -19,7 +19,7 @@ export class FHIRExporter {
   }
 
   export(tank: FSHTank): Package {
-    for (const dep of Object.keys(tank.config.dependencies)) {
+    for (const dep of Object.keys(tank.config?.dependencies ?? {})) {
       try {
         loadDependency(dep, tank.config.dependencies[dep], this.FHIRDefs);
       } catch (e) {

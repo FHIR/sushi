@@ -1,6 +1,6 @@
 // TODO: Load from package files instead of these static folders.
 import { FHIRDefinitions } from './FHIRDefinitions';
-import { PackageLoadError } from '../errors';
+import { PackageLoadError, DevPackageLoadError } from '../errors';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -35,29 +35,50 @@ export function load(fhirVersion: string): FHIRDefinitions {
   return _cache.get(fhirVersion);
 }
 
-// TODO need to handle current and dev, add tests of this function
+// TODO add tests of this function
 /**
  * Loads a dependency from user FHIR cache or from online
- * @param {any} dependencies - The object of depedency version pairs
- * @param {FHIRDefinitions} - The FHIRDefinitions to load the dependencies into
+ * @param {string} packageName - The name of the package to load
+ * @param {string} version - The version of the package to load
+ * @param {FHIRDefinitions} FHIRDefs - The FHIRDefinitions to load the dependencies into
+ * @param {string} cachePath - The path to load the package into
  * @throws {PackageLoadError} when the desired package can't be loaded
  */
 export function loadDependency(
   packageName: string,
   version: string,
-  FHIRDefs: FHIRDefinitions
+  FHIRDefs: FHIRDefinitions,
+  cachePath: string = null
 ): void {
-  const cachePath = path.join(os.homedir(), '.fhir', 'packages');
+  cachePath = cachePath ?? path.join(os.homedir(), '.fhir', 'packages');
   const targetPath = path.join(cachePath, `${packageName}#${version}`, 'package');
   const fullPackageName = `${packageName}#${version}`;
   let loadedPackage = loadFromPath(targetPath, fullPackageName, FHIRDefs);
   if (!loadedPackage) {
-    // Load package into the user's cache
-    const packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
+    let packageUrl: string;
+    if (version === 'dev') {
+      // dev packages must be present in local FHIR cache
+      throw new DevPackageLoadError(fullPackageName);
+    } else if (version === 'current') {
+      // current packages need to be loaded using build.fhir.org
+      const baseUrl = 'http://build.fhir.org/ig';
+      const res = request('GET', `${baseUrl}/qas.json`);
+      const qaJSON = JSON.parse(String.fromCharCode(...new Uint16Array(res.body as Buffer)));
+      const matchingPackages = qaJSON.filter((p: any) => p['package-id'] === packageName);
+      const newestPackage = matchingPackages.sort((p1: any, p2: any) => {
+        return Date.parse(p2['date']) - Date.parse(p1['date']);
+      })[0];
+      packageUrl = `${baseUrl}/${newestPackage.repo}/package.tgz`;
+    } else {
+      // Load package into the user's cache
+      packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
+    }
     const tempFile = tmp.fileSync();
     const targetDirectory = path.join(cachePath, fullPackageName);
     const res = request('GET', packageUrl);
-    fs.mkdirSync(targetDirectory);
+    if (!fs.existsSync(targetDirectory)) {
+      fs.mkdirSync(targetDirectory);
+    }
     fs.writeFileSync(tempFile.name, res.body);
     tar.x({
       cwd: targetDirectory,
