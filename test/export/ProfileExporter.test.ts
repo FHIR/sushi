@@ -16,7 +16,7 @@ describe('ProfileExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    input = new FSHTank([doc], { canonical: 'http://example.com' });
+    input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
     exporter = new ProfileExporter(defs, input);
   });
 

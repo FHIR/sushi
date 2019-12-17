@@ -1,9 +1,14 @@
 import { FSHDocument } from './FSHDocument';
 import { Profile, Extension } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
+import { Config } from '../fshtypes/Config';
 
 export class FSHTank {
-  constructor(public readonly docs: FSHDocument[], public readonly config: any) {}
+  constructor(
+    public readonly docs: FSHDocument[],
+    public readonly config: Config,
+    public readonly root?: string
+  ) {}
 
   /**
    * Gets all profiles in the tank
