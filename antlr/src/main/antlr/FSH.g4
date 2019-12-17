@@ -125,7 +125,10 @@ NUMBER:             [+\-]? [0-9]+('.' [0-9]+)?;
 UNIT:               '\'' (~[\\'])* '\'';
 
                  // SYSTEM     #  SYSTEM
-CODE:               SEQUENCE? '#' SEQUENCE;
+CODE:               SEQUENCE? '#' (SEQUENCE | CONCEPT_STRING);
+
+
+CONCEPT_STRING:      '"' ~[ \t\r\n\f\\"]+ (WS ~[ \t\r\n\f\\"]+)* '"';
 
                  //        YEAR         ( -   MONTH   ( -    DAY    ( T TIME )?)?)?
 DATETIME:           [0-9][0-9][0-9][0-9]('-'[0-9][0-9]('-'[0-9][0-9]('T' TIME)?)?)?;
