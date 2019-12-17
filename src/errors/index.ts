@@ -24,3 +24,4 @@ export * from './InvalidSumOfSliceMinsError';
 export * from './InvalidMaxOfSliceError';
 export * from './InvalidExtensionSliceError';
 export * from './ParentNotDefinedError';
+export * from './PackageLoadError';

@@ -97,9 +97,16 @@ describe('#load()', () => {
 });
 
 describe('#loadFromPath', () => {
+  let result: string;
   let defs: FHIRDefinitions;
   beforeAll(() => {
-    defs = loadFromPath(path.join(__dirname, './testdefs/package'), new FHIRDefinitions('4.0.1'));
+    defs = new FHIRDefinitions();
+    result = loadFromPath(path.join(__dirname, './testdefs/package'), 'test#1.1.1', defs);
+  });
+
+  it('should record the name of the loaded package', () => {
+    expect(defs.packages.length).toBe(1);
+    expect(defs.packages[0]).toBe('test#1.1.1');
   });
 
   it('should load base FHIR resources', () => {
@@ -152,5 +159,10 @@ describe('#loadFromPath', () => {
     expect(defs.findValueSet('http://hl7.org/fhir/ValueSet/allergyintolerance-clinical')).toEqual(
       allergyStatusValueSetByID
     );
+  });
+
+  it('should return undefined when loading from a non-existent path', () => {
+    result = loadFromPath('./not/a/path', 'fail#2.2.2', new FHIRDefinitions());
+    expect(result).toBeUndefined();
   });
 });
