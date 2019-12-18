@@ -10,6 +10,7 @@ export interface EntityContext extends ParserRuleContext {
   extension(): ExtensionContext;
   instance(): InstanceContext;
   valueSet(): ValueSetContext;
+  codeSystem(): CodeSystemContext;
   //invariant(): InvariantContext;
 }
 
@@ -54,6 +55,18 @@ export interface ValueSetContext extends ParserRuleContext {
 }
 
 export interface VsMetadataContext extends ParserRuleContext {
+  id(): IdContext;
+  title(): TitleContext;
+  description(): DescriptionContext;
+}
+
+export interface CodeSystemContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  csMetadata(): CsMetadataContext[];
+  code(): CodeContext[];
+}
+
+export interface CsMetadataContext extends ParserRuleContext {
   id(): IdContext;
   title(): TitleContext;
   description(): DescriptionContext;

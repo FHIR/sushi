@@ -90,6 +90,18 @@ FSHVisitor.prototype.visitVsMetadata = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#codeSystem.
+FSHVisitor.prototype.visitCodeSystem = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#csMetadata.
+FSHVisitor.prototype.visitCsMetadata = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#parent.
 FSHVisitor.prototype.visitParent = function(ctx) {
   return this.visitChildren(ctx);
