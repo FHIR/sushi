@@ -431,10 +431,18 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCode(ctx: pc.CodeContext): FshCode {
-    const [system, code] = ctx
+    const conceptText = ctx
       .CODE()
       .getText()
       .split('#', 2);
+    const system = conceptText[0];
+    let code = conceptText[1];
+    if (code.startsWith('"')) {
+      code = code
+        .slice(1, code.length - 1)
+        .replace(/\\\\/g, '\\')
+        .replace(/\\"/g, '"');
+    }
     const concept = new FshCode(code).withLocation(this.extractStartStop(ctx)).withFile(this.file);
     if (system && system.length > 0) {
       concept.system = this.aliasAwareValue(system);
@@ -548,7 +556,10 @@ export class FSHImporter extends FSHVisitor {
 
   private extractString(stringCtx: ParserRuleContext): string {
     const str = stringCtx.getText();
-    return str.slice(1, str.length - 1);
+    return str
+      .slice(1, str.length - 1)
+      .replace(/\\\\/g, '\\')
+      .replace(/\\"/g, '"');
   }
 
   /**
