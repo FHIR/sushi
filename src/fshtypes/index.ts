@@ -1,4 +1,5 @@
 export * from './FshCode';
+export * from './CodeSystem';
 export * from './Extension';
 export * from './Instance';
 export * from './Profile';
