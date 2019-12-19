@@ -313,13 +313,13 @@ describe('IGExporter', () => {
     it('should should log errors for invalid user-specified values in ig.ini', () => {
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-5)).toMatch(
-        /igi\.ini: sushi does not currently support overriding ig value\..*File: .*\/invalid-data-ig\/ig-data\/ig.ini/s
+        /igi\.ini: sushi does not currently support overriding ig value\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]ig.ini/s
       );
       expect(loggerSpy.getMessageAtIndex(-4)).toMatch(
-        /igi\.ini: license value \(Apache2\.0\) does not match license declared in package\.json \(CC0-1\.0\)\.  Keeping CC0-1\.0\..*File: .*\/invalid-data-ig\/ig-data\/ig.ini/s
+        /igi\.ini: license value \(Apache2\.0\) does not match license declared in package\.json \(CC0-1\.0\)\.  Keeping CC0-1\.0\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]ig.ini/s
       );
       expect(loggerSpy.getMessageAtIndex(-3)).toMatch(
-        /igi\.ini: version value \(0\.2\.0\) does not match version declared in package\.json \(0\.1\.0\)\.  Keeping 0\.1\.0\..*File: .*\/invalid-data-ig\/ig-data\/ig.ini/s
+        /igi\.ini: version value \(0\.2\.0\) does not match version declared in package\.json \(0\.1\.0\)\.  Keeping 0\.1\.0\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]ig.ini/s
       );
 
       // And ensure that invalid inputs did not override existing values
@@ -344,17 +344,17 @@ describe('IGExporter', () => {
     it('should log an error if the user attempted to add more pages', () => {
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-6)).toMatch(
-        /SUSHI does not yet support custom pagecontent other than index\.md\..*File: .*\/invalid-data-ig\/ig-data\/input\/pagecontent/s
+        /SUSHI does not yet support custom pagecontent other than index\.md\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
 
     it('should log an error if supplied package-list.json does not match package.json', () => {
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-2)).toMatch(
-        /package-list\.json: package-id value \(wrong-package-id\) does not match name declared in package\.json \(sushi-test\)\.  Ignoring custom package-list\.json\..*File: .*\/invalid-data-ig\/ig-data\/package-list.json/s
+        /package-list\.json: package-id value \(wrong-package-id\) does not match name declared in package\.json \(sushi-test\)\.  Ignoring custom package-list\.json\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]package-list.json/s
       );
       expect(loggerSpy.getMessageAtIndex(-1)).toMatch(
-        /package-list\.json: canonical value \(wrong-canonical\) does not match canonical declared in package\.json \(http:\/\/hl7\.org\/fhir\/sushi-test\)\.  Ignoring custom package-list\.json\..*File: .*\/invalid-data-ig\/ig-data\/package-list.json/s
+        /package-list\.json: canonical value \(wrong-canonical\) does not match canonical declared in package\.json \(http:\/\/hl7\.org\/fhir\/sushi-test\)\.  Ignoring custom package-list\.json\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]package-list.json/s
       );
 
       // Confirm it makes up a package-list instead of using the supplied one.
