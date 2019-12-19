@@ -29,7 +29,15 @@ Options:
 
 # IG Generation
 
-If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", then SUSHI will generate a basic Implementation Guide project that can be built using the IG Publisher.  Currently the existence of the folder itself determines if an IG is published or not.  There is not yet support for any content _within_ that folder.
+SUSHI supports publishing implementation guides via the new template-based IG Publisher.  The template-based publisher is still being developed by the FHIR community.  See the [Guidance for HL7 IG Creation](https://build.fhir.org/ig/FHIR/ig-guidance/) for more details.
+
+If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", then SUSHI will generate a basic Implementation Guide project that can be built using the template-based IG Publisher.  SUSHI currently supports very limited customization of the IG via the following files:
+
+* `ig-data/ig.ini`: If present, the user-provided igi.ini values will be merged with SUSHI-generated ig.ini.
+* `ig-data/package-list.json`: If present, it will be used instead of a generated package-list.json.
+* `ig-data/input/pagecontent/index.md`: If present, it will provide the content for the IG's main page.
+
+After running SUSHI, change to the output folder and run the `updatePublisher` and `genonce` scripts.
 
 If the input folder does not contain a sub-folder named "ig-data", then only the resources (e.g., profiles, extensions, etc.) will be generated.
 

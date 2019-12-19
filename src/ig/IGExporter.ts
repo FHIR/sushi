@@ -1,8 +1,10 @@
+import fs from 'fs-extra';
 import path from 'path';
 import ini from 'ini';
 import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
 import { Package } from '../export';
 import { ContactDetail, ImplementationGuide } from '../fhirtypes';
+import { logger } from '../utils/FSHLogger';
 
 /**
  * The IG Exporter exports the FSH artifacts into a file structure supported by the IG Publisher.
@@ -26,9 +28,11 @@ export class IGExporter {
     this.initIG();
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
+    this.checkForOtherPageContent();
     this.addResources(outPath);
     this.addImplementationGuide(outPath);
     this.addIgIni(outPath);
+    this.addPackageList(outPath);
   }
 
   /**
@@ -95,16 +99,41 @@ export class IGExporter {
   }
 
   /**
-   * Add the index.md file, setting its content to be the package description.
+   * Add the index.md file.  If the user provided one in ig-data/input/pagecontent,
+   * use that -- otherwise create one, setting its content to be the package
+   * description.
    *
    * @param igPath {string} - the path where the IG is exported to
    */
   private addIndex(igPath: string) {
     ensureDirSync(path.join(igPath, 'input', 'pagecontent'));
-    outputFileSync(
-      path.join(igPath, 'input', 'pagecontent', 'index.md'),
-      this.pkg.config.description ?? ''
-    );
+
+    // If the user provided an index.md file, use that
+    const inputIndexPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
+    if (fs.existsSync(inputIndexPath)) {
+      fs.copySync(inputIndexPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+    } else {
+      outputFileSync(
+        path.join(igPath, 'input', 'pagecontent', 'index.md'),
+        this.pkg.config.description ?? ''
+      );
+    }
+  }
+
+  /**
+   * SUSHI doesn't yet support authors adding additional pages beyond index.md.  If we detect
+   * additional pages, we need to log an error.
+   */
+  private checkForOtherPageContent() {
+    const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
+    if (fs.existsSync(inputPageContentPath)) {
+      const pages = fs.readdirSync(inputPageContentPath);
+      if (pages.length > 1 || (pages.length === 1 && pages[0] !== 'index.md')) {
+        logger.error('SUSHI does not yet support custom pagecontent other than index.md.', {
+          file: inputPageContentPath
+        });
+      }
+    }
   }
 
   /**
@@ -140,10 +169,13 @@ export class IGExporter {
 
   /**
    * Creates an ig.ini file based on the package.json and exports it to the IG folder.
+   * If the user specified an igi.ini file in the ig-data folder, then use its values
+   * as long as they don't conflict with values already in package.json.
    *
    * @param igPath {string} - the path where the IG is exported to
    */
   private addIgIni(igPath: string): void {
+    // First generate the ig.ini from the package.json
     const iniObj: any = {};
     iniObj.ig = `input/ImplementationGuide-${this.pkg.config.name}.json`;
     iniObj.template = 'fhir.base.template';
@@ -154,9 +186,102 @@ export class IGExporter {
     iniObj.ballotstatus = 'CI Build';
     iniObj.fhirspec = 'http://build.fhir.org/';
 
+    // Then add properties from the user-provided ig.ini (if applicable)
+    const inputIniPath = path.join(this.igDataPath, 'ig.ini');
+    if (fs.existsSync(inputIniPath)) {
+      const inputIni = ini.parse(fs.readFileSync(inputIniPath, 'utf8'));
+      if (Object.keys(inputIni).length > 1 || inputIni.IG == null) {
+        logger.error('igi.ini file must contain an [IG] section with no other sections', {
+          file: inputIniPath
+        });
+      } else {
+        Object.keys(inputIni.IG).forEach(key => {
+          if (key === 'ig' && inputIni.IG.ig !== iniObj.ig) {
+            logger.error('igi.ini: sushi does not currently support overriding ig value.', {
+              file: inputIniPath
+            });
+          } else if (key === 'license' && inputIni.IG.license !== iniObj.license) {
+            logger.error(
+              `igi.ini: license value (${inputIni.IG.license}) does not match license declared in package.json (${iniObj.license}).  Keeping ${iniObj.license}.`,
+              { file: inputIniPath }
+            );
+          } else if (key === 'version' && inputIni.IG.version !== iniObj.version) {
+            logger.error(
+              `igi.ini: version value (${inputIni.IG.version}) does not match version declared in package.json (${iniObj.version}).  Keeping ${iniObj.version}.`,
+              { file: inputIniPath }
+            );
+          } else {
+            iniObj[key] = inputIni.IG[key];
+          }
+        });
+      }
+    }
+
+    // Finally, write it to disk
     outputFileSync(
       path.join(igPath, 'ig.ini'),
       ini.encode(iniObj, { section: 'IG', whitespace: true })
+    );
+  }
+
+  /**
+   * Adds the package-list.json file to the IG.  If one already exists, it will be used, otherwise
+   * it will be generated based on the package.json.
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
+  private addPackageList(igPath: string): void {
+    // If the user provided an index.md file, use that
+    const inputPackageListPath = path.join(this.igDataPath, 'package-list.json');
+    if (fs.existsSync(inputPackageListPath)) {
+      let mismatch = false;
+      const inputPackageList = fs.readJSONSync(inputPackageListPath);
+      if (inputPackageList['package-id'] !== this.pkg.config.name) {
+        logger.error(
+          `package-list.json: package-id value (${inputPackageList['package-id']}) does not match name declared in package.json (${this.pkg.config.name}).  Ignoring custom package-list.json.`,
+          { file: inputPackageListPath }
+        );
+        mismatch = true;
+      }
+      if (inputPackageList.canonical !== this.pkg.config.canonical) {
+        logger.error(
+          `package-list.json: canonical value (${inputPackageList.canonical}) does not match canonical declared in package.json (${this.pkg.config.canonical}).  Ignoring custom package-list.json.`,
+          { file: inputPackageListPath }
+        );
+        mismatch = true;
+      }
+      if (!mismatch) {
+        fs.copySync(inputPackageListPath, path.join(igPath, 'package-list.json'));
+        return;
+      }
+    }
+    outputJSONSync(
+      path.join(igPath, 'package-list.json'),
+      {
+        'package-id': this.pkg.config.name,
+        title: this.pkg.config.title ?? this.pkg.config.name,
+        canonical: this.pkg.config.canonical,
+        introduction: this.pkg.config.description ?? this.pkg.config.title ?? this.pkg.config.name,
+        list: [
+          {
+            version: 'current',
+            desc: 'Continuous Integration Build (latest in version control)',
+            path: this.pkg.config.url,
+            status: 'ci-build',
+            current: true
+          },
+          {
+            version: this.pkg.config.version,
+            fhirversion: '4.0.1',
+            date: '2099-01-01',
+            desc: 'Initial STU ballot (Mmm yyyy Ballot)',
+            path: this.pkg.config.url,
+            status: 'ballot',
+            sequence: 'STU 1'
+          }
+        ]
+      },
+      { spaces: 2 }
     );
   }
 }
