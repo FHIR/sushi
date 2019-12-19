@@ -81,18 +81,8 @@ export class IGExporter {
   }
 
   private addResources(igPath: string) {
-    this.pkg.profiles.forEach(sd => {
-      const sdPath = path.join(igPath, 'input', 'profiles', `StructureDefinition-${sd.id}.json`);
-      outputJSONSync(sdPath, sd.toJSON(), { spaces: 2 });
-      this.ig.definition.resource.push({
-        reference: { reference: `StructureDefinition/${sd.id}` },
-        name: sd.title ?? sd.name,
-        description: sd.description,
-        exampleBoolean: false
-      });
-    });
-    this.pkg.extensions.forEach(sd => {
-      const sdPath = path.join(igPath, 'input', 'extensions', `StructureDefinition-${sd.id}.json`);
+    [...this.pkg.profiles, ...this.pkg.extensions].forEach(sd => {
+      const sdPath = path.join(igPath, 'input', 'resources', sd.getFileName());
       outputJSONSync(sdPath, sd.toJSON(), { spaces: 2 });
       this.ig.definition.resource.push({
         reference: { reference: `StructureDefinition/${sd.id}` },

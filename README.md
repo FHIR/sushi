@@ -23,9 +23,15 @@ $ sushi --help
 Usage: sushi <path-to-fsh-defs> [options]
 
 Options:
-  -o, --out <out>  the path to the output folder (default: "out")
+  -o, --out <out>  the path to the output folder (default: "build")
   -h, --help       output usage information
 ```
+
+# IG Generation
+
+If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", then SUSHI will generate a basic Implementation Guide project that can be built using the IG Publisher.  Currently the existence of the folder itself determines if an IG is published or not.  There is not yet support for any content _within_ that folder.
+
+If the input folder does not contain a sub-folder named "ig-data", then only the resources (e.g., profiles, extensions, etc.) will be generated.
 
 # Installation for Developers
 

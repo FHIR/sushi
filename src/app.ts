@@ -13,7 +13,7 @@ let input: string;
 program
   .name('sushi')
   .usage('<path-to-fsh-defs> [options]')
-  .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'out'))
+  .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
   .arguments('<path-to-fsh-defs>')
   .action(function(pathToFshDefs) {
     input = pathToFshDefs;
@@ -57,14 +57,25 @@ const outPackage = exportFHIR(tank);
 
 fs.ensureDirSync(program.out);
 
-const igExporter = new IGExporter(tank, outPackage);
-igExporter.export(program.out);
-
 fs.writeFileSync(
   path.join(program.out, 'package.json'),
   JSON.stringify(outPackage.config, null, 2),
   'utf8'
 );
+
+// If ig-data exists, generate an IG, otherwise, generate resources only
+if (fs.existsSync(path.join(input, 'ig-data'))) {
+  const igExporter = new IGExporter(tank, outPackage);
+  igExporter.export(program.out);
+} else {
+  for (const sd of [...outPackage.profiles, ...outPackage.extensions]) {
+    fs.writeFileSync(
+      path.join(program.out, sd.getFileName()),
+      JSON.stringify(sd.toJSON(), null, 2),
+      'utf8'
+    );
+  }
+}
 
 logger.info(`
   Profiles:    ${outPackage.profiles.length}
