@@ -78,6 +78,18 @@ FSHVisitor.prototype.visitInvariantMetadata = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#valueSet.
+FSHVisitor.prototype.visitValueSet = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsMetadata.
+FSHVisitor.prototype.visitVsMetadata = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#parent.
 FSHVisitor.prototype.visitParent = function(ctx) {
   return this.visitChildren(ctx);
@@ -170,6 +182,66 @@ FSHVisitor.prototype.visitObeysRule = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#caretValueRule.
 FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsComponent.
+FSHVisitor.prototype.visitVsComponent = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsConceptComponent.
+FSHVisitor.prototype.visitVsConceptComponent = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsFilterComponent.
+FSHVisitor.prototype.visitVsFilterComponent = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsComponentFrom.
+FSHVisitor.prototype.visitVsComponentFrom = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsFromSystem.
+FSHVisitor.prototype.visitVsFromSystem = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsFromValueset.
+FSHVisitor.prototype.visitVsFromValueset = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsFilterList.
+FSHVisitor.prototype.visitVsFilterList = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsFilterDefinition.
+FSHVisitor.prototype.visitVsFilterDefinition = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsFilterOperator.
+FSHVisitor.prototype.visitVsFilterOperator = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#vsFilterValue.
+FSHVisitor.prototype.visitVsFilterValue = function(ctx) {
   return this.visitChildren(ctx);
 };
 

@@ -9,6 +9,7 @@ export interface EntityContext extends ParserRuleContext {
   profile(): ProfileContext;
   extension(): ExtensionContext;
   instance(): InstanceContext;
+  valueSet(): ValueSetContext;
   //invariant(): InvariantContext;
 }
 
@@ -44,6 +45,18 @@ export interface InstanceContext extends ParserRuleContext {
 export interface InstanceMetadataContext extends ParserRuleContext {
   instanceOf(): InstanceOfContext;
   title(): TitleContext;
+}
+
+export interface ValueSetContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  vsMetadata(): VsMetadataContext[];
+  vsComponent(): VsComponentContext[];
+}
+
+export interface VsMetadataContext extends ParserRuleContext {
+  id(): IdContext;
+  title(): TitleContext;
+  description(): DescriptionContext;
 }
 
 export interface ParentContext extends ParserRuleContext {
@@ -187,4 +200,61 @@ export interface CaretValueRuleContext extends ParserRuleContext {
   path(): PathContext;
   caretPath(): CaretPathContext;
   value(): ValueContext;
+}
+
+export interface VsComponentContext extends ParserRuleContext {
+  KW_EXCLUDE(): ParserRuleContext;
+  vsConceptComponent(): VsConceptComponentContext;
+  vsFilterComponent(): VsFilterComponentContext;
+}
+
+export interface VsConceptComponentContext extends ParserRuleContext {
+  code(): CodeContext[];
+  vsComponentFrom(): VsComponentFromContext;
+  COMMA_DELIMITED_CODES(): ParserRuleContext;
+}
+
+export interface VsFilterComponentContext extends ParserRuleContext {
+  KW_CODES(): ParserRuleContext;
+  vsComponentFrom(): VsComponentFromContext;
+  KW_WHERE(): ParserRuleContext;
+  vsFilterList(): VsFilterListContext;
+}
+
+export interface VsComponentFromContext extends ParserRuleContext {
+  KW_FROM(): ParserRuleContext;
+  vsFromSystem(): VsFromSystemContext;
+  vsFromValueset(): VsFromValuesetContext;
+}
+
+export interface VsFromSystemContext extends ParserRuleContext {
+  KW_SYSTEM(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
+}
+
+export interface VsFromValuesetContext extends ParserRuleContext {
+  KW_VSREFERENCE(): ParserRuleContext;
+  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
+}
+
+export interface VsFilterListContext extends ParserRuleContext {
+  vsFilterDefinition(): VsFilterDefinitionContext[];
+}
+
+export interface VsFilterDefinitionContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  vsFilterOperator(): VsFilterOperatorContext;
+  vsFilterValue(): VsFilterValueContext;
+}
+
+export interface VsFilterOperatorContext extends ParserRuleContext {
+  EQUAL(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
+}
+
+export interface VsFilterValueContext extends ParserRuleContext {
+  code(): CodeContext;
+  REGEX(): ParserRuleContext;
+  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
 }

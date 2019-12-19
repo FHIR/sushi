@@ -1,5 +1,7 @@
 import { importText, FSHImporter, FSHDocument } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { FshCode } from '../../src/fshtypes';
+import { assertFixedValueRule } from '../testhelpers/asserts';
 
 describe('FSHImporter', () => {
   it('should default filename to blank string', () => {
@@ -51,5 +53,22 @@ describe('FSHImporter', () => {
     `;
     importText(input, 'Space.fsh');
     expect(loggerSpy.getLastMessage()).toMatch(/File: Space\.fsh.*Line: 2\D/s);
+  });
+
+  it('should parse escaped double-quote and backslash characters in strings', () => {
+    const input = `
+    Profile: Escape
+    Parent: Observation
+    Title: "Can \\"you\\" escape \\\\ this \\\\ string?"
+    * code = #"This \\\\ code \\"is quite\\" challenging \\\\to escape"
+    `;
+    const result = importText(input, 'Escape.fsh');
+    const profile = result.profiles.get('Escape');
+    expect(profile.title).toBe('Can "you" escape \\ this \\ string?');
+    const expectedCode = new FshCode('This \\ code "is quite" challenging \\to escape')
+      .withLocation([5, 14, 5, 65])
+      .withFile('Escape.fsh');
+    expect(profile.rules).toHaveLength(1);
+    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
   });
 });
