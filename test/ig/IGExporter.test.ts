@@ -48,7 +48,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, '_genonce.sh'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'ignorewarnings.txt'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
     });
 
