@@ -160,6 +160,9 @@ export class StructureDefinition {
     for (const pathPart of parsedPath) {
       // Add the next part to the path, and see if we have matches on it
       fhirPathString += `.${pathPart.base}`;
+      // If there are no brackets on the path, they we can filter out any slices that partially matched
+      if (!pathPart.brackets) matchingElements = matchingElements.filter(e => !e.sliceName);
+      // Check for matches on the path
       newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
 
       // TODO: If path is A.B.C, and we unfold B, but C is invalid, the unfolded
