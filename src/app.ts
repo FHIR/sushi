@@ -64,8 +64,9 @@ fs.writeFileSync(
 );
 
 // If ig-data exists, generate an IG, otherwise, generate resources only
-if (fs.existsSync(path.join(input, 'ig-data'))) {
-  const igExporter = new IGExporter(tank, outPackage);
+const igDataPath = path.resolve(input, 'ig-data');
+if (fs.existsSync(igDataPath)) {
+  const igExporter = new IGExporter(outPackage, igDataPath);
   igExporter.export(program.out);
 } else {
   for (const sd of [...outPackage.profiles, ...outPackage.extensions]) {

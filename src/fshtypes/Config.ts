@@ -1,5 +1,9 @@
-// Config follows the package.json format defined for FSH
-// See: https://github.com/HL7/fhir-shorthand/wiki/1.1-Configuration-File
+/**
+ * Config follows the package.json format defined for FSH
+ *
+ * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/index.html}
+ * @see {@link https://confluence.hl7.org/display/FHIR/NPM+Package+Specification}
+ */
 export type Config = {
   name: string;
   version: string;
