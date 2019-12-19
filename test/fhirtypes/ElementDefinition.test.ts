@@ -1,8 +1,14 @@
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
+import {
+  ElementDefinition,
+  ElementDefinitionType,
+  ResolveFn
+} from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { getResolver } from '../testhelpers/getResolver';
+import path from 'path';
+import { get } from 'https';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -12,8 +18,17 @@ describe('ElementDefinition', () => {
   let observation: StructureDefinition;
   let valueX: ElementDefinition;
   let valueId: ElementDefinition;
+  let resolve: ResolveFn;
   beforeAll(() => {
-    defs = load('4.0.1');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
+    // resolve observation once to ensure it is present in defs
+    observation = resolve('Observation');
     jsonObservation = defs.findResource('Observation');
     jsonValueX = jsonObservation.snapshot.element[21];
     jsonValueId = jsonObservation.snapshot.element[1];
@@ -164,7 +179,7 @@ describe('ElementDefinition', () => {
 
     it('should detect diffs and non-diffs correctly when elements are unfolded', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
-      code.unfold(getResolver(defs));
+      code.unfold(resolve);
       const codeCoding = observation.elements.find(e => e.id === 'Observation.code.coding');
       const codeText = observation.elements.find(e => e.id === 'Observation.code.text');
       // Unfolded elements haven't been changed from their base definitions, so no diff...
@@ -291,7 +306,7 @@ describe('ElementDefinition', () => {
       const codeIdx = observation.elements.findIndex(e => e.path === 'Observation.code');
       const parent = observation.elements[codeIdx];
       expect(observation.elements[codeIdx + 1].id).toBe('Observation.subject');
-      const newElements = parent.unfold(getResolver(defs));
+      const newElements = parent.unfold(resolve);
       expect(newElements).toHaveLength(4);
       expect(newElements[0].id).toBe('Observation.code.id');
       expect(newElements[1].id).toBe('Observation.code.extension');
@@ -310,7 +325,7 @@ describe('ElementDefinition', () => {
       const valueIdx = observation.elements.findIndex(e => e.path === 'Observation.value[x]');
       const parent = observation.elements[valueIdx];
       expect(observation.elements[valueIdx + 1].id).toBe('Observation.dataAbsentReason');
-      const newElements = parent.unfold(getResolver(defs));
+      const newElements = parent.unfold(resolve);
       expect(newElements).toEqual([]);
       expect(observation.elements).toHaveLength(numOriginalElements);
       expect(observation.elements[valueIdx + 1].id).toBe('Observation.dataAbsentReason');

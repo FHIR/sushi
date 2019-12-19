@@ -2,7 +2,7 @@ import { FSHTank } from '../import/FSHTank';
 import { Package } from './Package';
 import { ProfileExporter } from './ProfileExporter';
 import { ExtensionExporter } from './ExtensionExporter';
-import { load, FHIRDefinitions, loadDependency } from '../fhirdefs';
+import { FHIRDefinitions, loadDependency } from '../fhirdefs';
 import { logger } from '../utils/FSHLogger';
 /**
  * FHIRExporter handles the processing of FSH documents, storing the FSH types within them as FHIR types.
@@ -15,7 +15,7 @@ export class FHIRExporter {
   private extensionExporter: ExtensionExporter;
 
   constructor() {
-    this.FHIRDefs = load('4.0.1');
+    this.FHIRDefs = new FHIRDefinitions();
   }
 
   export(tank: FSHTank): Package {

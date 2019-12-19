@@ -8,33 +8,6 @@ import tmp from 'tmp';
 import tar from 'tar';
 import request from 'sync-request';
 
-const _cache: Map<string, FHIRDefinitions> = new Map();
-
-// TODO: remove load and treat FHIR Defs as any other package
-export function load(fhirVersion: string): FHIRDefinitions {
-  if (!_cache.has(fhirVersion)) {
-    const result = new FHIRDefinitions();
-    // Load the base FHIR definitions
-    const files = [
-      `${__dirname}/fhir-${fhirVersion}/extension-definitions.json`,
-      `${__dirname}/fhir-${fhirVersion}/profiles-resources.json`,
-      `${__dirname}/fhir-${fhirVersion}/profiles-types.json`,
-      `${__dirname}/fhir-${fhirVersion}/profiles-others.json`,
-      `${__dirname}/fhir-${fhirVersion}/valuesets.json`
-    ];
-    for (const file of files) {
-      const definitions = JSON.parse(fs.readFileSync(file, 'utf-8'));
-      for (const entry of definitions.entry) {
-        result.add(entry.resource);
-      }
-    }
-
-    _cache.set(fhirVersion, result);
-  }
-
-  return _cache.get(fhirVersion);
-}
-
 // TODO add tests of this function
 /**
  * Loads a dependency from user FHIR cache or from online

@@ -1,19 +1,27 @@
 import findLastIndex from 'lodash/findLastIndex';
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType } from '../../src/fhirtypes';
+import { getResolver } from '../testhelpers/getResolver';
+import { ResolveFn } from '../../src/fhirtypes';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let jsonObservation: any;
   let observation: StructureDefinition;
+  let resolve: ResolveFn;
   beforeAll(() => {
-    defs = load('4.0.1');
-    jsonObservation = defs.findResource('Observation');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
   beforeEach(() => {
-    observation = StructureDefinition.fromJSON(jsonObservation);
+    observation = resolve('Observation');
   });
 
   describe('#sliceIt()', () => {

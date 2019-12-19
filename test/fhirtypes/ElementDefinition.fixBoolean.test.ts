@@ -1,22 +1,28 @@
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
+import { getResolver } from '../testhelpers/getResolver';
+import { ResolveFn } from '../../src/fhirtypes';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let jsonObservation: any;
-  let jsonLocation: any;
   let observation: StructureDefinition;
   let location: StructureDefinition;
+  let resolve: ResolveFn;
 
   beforeAll(() => {
-    defs = load('4.0.1');
-    jsonObservation = defs.findResource('Observation');
-    jsonLocation = defs.findResource('Location');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
   beforeEach(() => {
-    observation = StructureDefinition.fromJSON(jsonObservation);
-    location = StructureDefinition.fromJSON(jsonLocation);
+    observation = resolve('Observation');
+    location = resolve('Location');
   });
 
   describe('#fixBoolean', () => {

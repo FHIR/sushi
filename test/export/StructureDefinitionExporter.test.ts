@@ -1,6 +1,6 @@
 import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
-import { FHIRDefinitions, load } from '../../src/fhirdefs';
+import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Profile, Extension, FshCode } from '../../src/fshtypes';
 import {
   CardRule,
@@ -14,6 +14,8 @@ import {
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { getResolver } from '../testhelpers/getResolver';
 import { ResolveFn, ElementDefinitionType } from '../../src/fhirtypes';
+import { spyResolve } from '../testhelpers/spyResolve';
+import path from 'path';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -23,7 +25,12 @@ describe('StructureDefinitionExporter', () => {
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
-    defs = load('4.0.1');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
     resolve = getResolver(defs);
   });
 
@@ -31,6 +38,7 @@ describe('StructureDefinitionExporter', () => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
     exporter = new StructureDefinitionExporter(defs, input);
+    spyResolve(exporter, resolve);
   });
 
   // Profile

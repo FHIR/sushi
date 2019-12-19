@@ -1,27 +1,31 @@
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
 import { FshQuantity, FshRatio } from '../../src/fshtypes';
+import { getResolver } from '../testhelpers/getResolver';
+import { ResolveFn } from '../../src/fhirtypes';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let jsonRiskEvidenceSynthesis: any;
-  let jsonMedicationRequest: any;
-  let jsonMedication: any;
   let riskEvidenceSynthesis: StructureDefinition;
   let medicationRequest: StructureDefinition;
   let medication: StructureDefinition;
+  let resolve: ResolveFn;
   beforeAll(() => {
-    defs = load('4.0.1');
-    jsonRiskEvidenceSynthesis = defs.findResource('RiskEvidenceSynthesis');
-    jsonMedicationRequest = defs.findResource('MedicationRequest');
-    jsonMedication = defs.findResource('Medication');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
   beforeEach(() => {
-    riskEvidenceSynthesis = StructureDefinition.fromJSON(jsonRiskEvidenceSynthesis);
-    medicationRequest = StructureDefinition.fromJSON(jsonMedicationRequest);
-    medication = StructureDefinition.fromJSON(jsonMedication);
+    riskEvidenceSynthesis = resolve('RiskEvidenceSynthesis');
+    medicationRequest = resolve('MedicationRequest');
+    medication = resolve('Medication');
   });
 
   describe('#fixValue', () => {

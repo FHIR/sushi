@@ -1,30 +1,32 @@
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
+import { getResolver } from '../testhelpers/getResolver';
+import { ResolveFn } from '../../src/fhirtypes';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let jsonObservation: any;
-  let jsonRiskEvidenceSynthesis: any;
-  let jsonCapabilityStatement: any;
-  let jsonAppointment: any;
   let observation: StructureDefinition;
   let riskEvidenceSynthesis: StructureDefinition;
   let capabilityStatement: StructureDefinition;
   let appointment: StructureDefinition;
+  let resolve: ResolveFn;
 
   beforeAll(() => {
-    defs = load('4.0.1');
-    jsonObservation = defs.findResource('Observation');
-    jsonRiskEvidenceSynthesis = defs.findResource('RiskEvidenceSynthesis');
-    jsonCapabilityStatement = defs.findResource('CapabilityStatement');
-    jsonAppointment = defs.findResource('Appointment');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
   beforeEach(() => {
-    observation = StructureDefinition.fromJSON(jsonObservation);
-    riskEvidenceSynthesis = StructureDefinition.fromJSON(jsonRiskEvidenceSynthesis);
-    capabilityStatement = StructureDefinition.fromJSON(jsonCapabilityStatement);
-    appointment = StructureDefinition.fromJSON(jsonAppointment);
+    observation = resolve('Observation');
+    riskEvidenceSynthesis = resolve('RiskEvidenceSynthesis');
+    capabilityStatement = resolve('CapabilityStatement');
+    appointment = resolve('Appointment');
   });
 
   describe('#fixNumber', () => {

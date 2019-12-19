@@ -1,18 +1,12 @@
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
+import { getResolver } from '../testhelpers/getResolver';
+import { ResolveFn } from '../../src/fhirtypes';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let jsonObservation: any;
-  let jsonMedication: any;
-  let jsonPatient: any;
-  let jsonRiskEvidenceSynthesis: any;
-  let jsonLocation: any;
-  let jsonCapabilityStatement: any;
-  let jsonImagingStudy: any;
-  let jsonDevice: any;
-  let jsonTask: any;
   let observation: StructureDefinition;
   let medication: StructureDefinition;
   let patient: StructureDefinition;
@@ -22,29 +16,27 @@ describe('ElementDefinition', () => {
   let imagingStudy: StructureDefinition;
   let device: StructureDefinition;
   let task: StructureDefinition;
+  let resolve: ResolveFn;
 
   beforeAll(() => {
-    defs = load('4.0.1');
-    jsonObservation = defs.findResource('Observation');
-    jsonMedication = defs.findResource('Medication');
-    jsonPatient = defs.findResource('Patient');
-    jsonRiskEvidenceSynthesis = defs.findResource('RiskEvidenceSynthesis');
-    jsonLocation = defs.findResource('Location');
-    jsonCapabilityStatement = defs.findResource('CapabilityStatement');
-    jsonImagingStudy = defs.findResource('ImagingStudy');
-    jsonDevice = defs.findResource('Device');
-    jsonTask = defs.findResource('Task');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
   beforeEach(() => {
-    observation = StructureDefinition.fromJSON(jsonObservation);
-    patient = StructureDefinition.fromJSON(jsonPatient);
-    medication = StructureDefinition.fromJSON(jsonMedication);
-    riskEvidenceSynthesis = StructureDefinition.fromJSON(jsonRiskEvidenceSynthesis);
-    location = StructureDefinition.fromJSON(jsonLocation);
-    capabilityStatement = StructureDefinition.fromJSON(jsonCapabilityStatement);
-    imagingStudy = StructureDefinition.fromJSON(jsonImagingStudy);
-    device = StructureDefinition.fromJSON(jsonDevice);
-    task = StructureDefinition.fromJSON(jsonTask);
+    observation = resolve('Observation');
+    medication = resolve('Medication');
+    patient = resolve('Patient');
+    riskEvidenceSynthesis = resolve('RiskEvidenceSynthesis');
+    location = resolve('Location');
+    capabilityStatement = resolve('CapabilityStatement');
+    imagingStudy = resolve('ImagingStudy');
+    device = resolve('Device');
+    task = resolve('Task');
   });
   describe('#fixString', () => {
     // Fixing a string

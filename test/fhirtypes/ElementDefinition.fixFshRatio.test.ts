@@ -1,25 +1,31 @@
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshQuantity, FshCode, FshRatio } from '../../src/fshtypes';
+import { getResolver } from '../testhelpers/getResolver';
+import { ResolveFn } from '../../src/fhirtypes';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let jsonMedication: any;
-  let jsonObservation: any;
   let medication: StructureDefinition;
   let observation: StructureDefinition;
   let fshRatio: FshRatio;
   let fshRatioNoUnits: FshRatio;
   let differentFshRatio: FshRatio;
+  let resolve: ResolveFn;
   beforeAll(() => {
-    defs = load('4.0.1');
-    jsonObservation = defs.findResource('Observation');
-    jsonMedication = defs.findResource('Medication');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
   beforeEach(() => {
-    observation = StructureDefinition.fromJSON(jsonObservation);
-    medication = StructureDefinition.fromJSON(jsonMedication);
+    observation = resolve('Observation');
+    medication = resolve('Medication');
     fshRatio = new FshRatio(
       new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
       new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
