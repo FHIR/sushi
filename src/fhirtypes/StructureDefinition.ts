@@ -76,6 +76,14 @@ export class StructureDefinition {
   }
 
   /**
+   * Get the file name for serializing to disk.
+   * @returns {string} the filename
+   */
+  getFileName(): string {
+    return `StructureDefinition-${this.id}.json`;
+  }
+
+  /**
    * Get the Structure Definition for Structure Definition
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    * @returns {StructureDefinition} the StructureDefinition of StructureDefinition

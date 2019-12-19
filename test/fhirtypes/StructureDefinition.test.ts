@@ -223,7 +223,7 @@ describe('StructureDefinition', () => {
     it('should find a re-sliced element by path', () => {
       const jsonReslice = JSON.parse(
         fs.readFileSync(
-          path.join(__dirname, '../fhirdefs/testdefs/patient-telecom-reslice-profile.json'),
+          path.join(__dirname, '../fhirdefs/fixtures/patient-telecom-reslice-profile.json'),
           'utf-8'
         )
       );

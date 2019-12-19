@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 import program from 'commander';
 import { importText, FSHDocument, FSHTank } from './import';
 import { exportFHIR } from './export';
+import { IGExporter } from './ig/IGExporter';
 import { logger, stats } from './utils/FSHLogger';
 
 let input: string;
@@ -12,7 +13,7 @@ let input: string;
 program
   .name('sushi')
   .usage('<path-to-fsh-defs> [options]')
-  .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'out'))
+  .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
   .arguments('<path-to-fsh-defs>')
   .action(function(pathToFshDefs) {
     input = pathToFshDefs;
@@ -56,26 +57,26 @@ const outPackage = exportFHIR(tank);
 
 fs.ensureDirSync(program.out);
 
-for (const profile of outPackage.profiles) {
-  fs.writeFileSync(
-    path.join(program.out, `StructureDefinition-${profile.id}.json`),
-    JSON.stringify(profile.toJSON(), null, 2),
-    'utf8'
-  );
-}
-for (const extension of outPackage.extensions) {
-  fs.writeFileSync(
-    path.join(program.out, `StructureDefinition-${extension.id}.json`),
-    JSON.stringify(extension.toJSON(), null, 2),
-    'utf8'
-  );
-}
-
 fs.writeFileSync(
   path.join(program.out, 'package.json'),
   JSON.stringify(outPackage.config, null, 2),
   'utf8'
 );
+
+// If ig-data exists, generate an IG, otherwise, generate resources only
+const igDataPath = path.resolve(input, 'ig-data');
+if (fs.existsSync(igDataPath)) {
+  const igExporter = new IGExporter(outPackage, igDataPath);
+  igExporter.export(program.out);
+} else {
+  for (const sd of [...outPackage.profiles, ...outPackage.extensions]) {
+    fs.writeFileSync(
+      path.join(program.out, sd.getFileName()),
+      JSON.stringify(sd.toJSON(), null, 2),
+      'utf8'
+    );
+  }
+}
 
 logger.info(`
   Profiles:    ${outPackage.profiles.length}
