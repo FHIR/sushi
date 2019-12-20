@@ -161,11 +161,18 @@ export class StructureDefinitionExporter {
         this.structDefs.find(sd => sd.name === type || sd.id === type || sd.url === type)
       );
       if (!structDef) {
-        // If we find a parent, then we can export and resolve for its type again
-        const parentDefinition = this.tank.findProfile(type) ?? this.tank.findExtension(type);
-        if (parentDefinition) {
-          this.exportStructDef(parentDefinition);
-          structDef = this.resolve(parentDefinition.name);
+        // If we find a FSH definition, then we can export and resolve for its type again
+        // TODO: This causes a problem because this instance of StructureDefinitionExporter is
+        // either a ProfileExporter or ExtensionExporter -- but we are resolving profiles and
+        // extensions here.  So the end result is that an Extension definition might end up in
+        // the ProfileExporter's structDefs array and/or a Profile definition might end up in the
+        // ExtensionExporter's array.  This causes duplicates in the final Package.  We need to
+        // fix this, but until we decide the best solution, we are just deduplicating in the
+        // FHIRExporter.
+        const fshDefinition = this.tank.findProfile(type) ?? this.tank.findExtension(type);
+        if (fshDefinition) {
+          this.exportStructDef(fshDefinition);
+          structDef = this.resolve(fshDefinition.name);
         }
       }
       return structDef;

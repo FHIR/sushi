@@ -22,6 +22,13 @@ export class FHIRExporter {
     this.extensionExporter = new ExtensionExporter(this.FHIRDefs, tank);
     const profileDefs = this.profileExporter.export();
     const extensionDefs = this.extensionExporter.export();
-    return new Package(profileDefs, extensionDefs, tank.config);
+    // TODO: There is currently a bug in how we do exports that causes some duplicates in the
+    // Package.  More specifically, if a FSH Extension is resolved while exporting a Profile,
+    // then the resolved Extension will be put in the Profiles array.  The reverse is also
+    // true.  We need to determine how best to fix that bug, but in the meantime, we will
+    // just remove the duplicates here so the downstream processes don't have to deal with it.
+    const deduplicatedProfileDefs = profileDefs.filter(sd => tank.findProfile(sd.name));
+    const deduplicatedExtensionDefs = extensionDefs.filter(sd => tank.findExtension(sd.name));
+    return new Package(deduplicatedProfileDefs, deduplicatedExtensionDefs, tank.config);
   }
 }
