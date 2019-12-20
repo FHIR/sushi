@@ -1,3 +1,4 @@
+export * from './CodeSystem';
 export * from './Config';
 export * from './Extension';
 export * from './Instance';
