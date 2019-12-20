@@ -7,15 +7,13 @@ import { ValueSetComponent } from './ValueSetComponent';
  */
 export class ValueSet extends FshEntity {
   id: string;
-  url?: string;
+  title?: string;
   description?: string;
-  inclusions: ValueSetComponent[];
-  exclusions: ValueSetComponent[];
+  components: ValueSetComponent[];
 
   constructor(public name: string) {
     super();
     this.id = name;
-    this.inclusions = [];
-    this.exclusions = [];
+    this.components = [];
   }
 }

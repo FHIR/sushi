@@ -8,7 +8,12 @@ import {
   FshQuantity,
   FshRatio,
   TextLocation,
-  Instance
+  Instance,
+  ValueSet,
+  ValueSetComponent,
+  ValueSetConceptComponent,
+  ValueSetFilterComponent,
+  ValueSetComponentFrom
 } from '../fshtypes';
 import {
   Rule,
@@ -100,6 +105,10 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.instance()) {
       this.visitInstance(ctx.instance());
+    }
+
+    if (ctx.valueSet()) {
+      this.visitValueSet(ctx.valueSet());
     }
   }
 
@@ -203,6 +212,19 @@ export class FSHImporter extends FSHVisitor {
     ruleCtx.forEach(fvRule => {
       instance.rules.push(this.visitFixedValueRule(fvRule));
     });
+  }
+
+  visitValueSet(ctx: pc.ValueSetContext) {
+    const valueSet = new ValueSet(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
+    ctx
+      .vsComponent()
+      .map(vsComponentCtx => this.visitVsComponent(vsComponentCtx))
+      .forEach(vsComponent => {
+        valueSet.components.push(vsComponent);
+      });
+    this.doc.valueSets.set(valueSet.name, valueSet);
   }
 
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
@@ -548,6 +570,102 @@ export class FSHImporter extends FSHVisitor {
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
     return caretValueRule;
+  }
+
+  visitVsComponent(ctx: pc.VsComponentContext): ValueSetComponent {
+    const inclusion = ctx.KW_EXCLUDE() == null;
+    let vsComponent: ValueSetConceptComponent | ValueSetFilterComponent;
+    if (ctx.vsConceptComponent()) {
+      vsComponent = new ValueSetConceptComponent(inclusion);
+      [vsComponent.concepts, vsComponent.from] = this.visitVsConceptComponent(
+        ctx.vsConceptComponent()
+      );
+    } else if (ctx.vsFilterComponent()) {
+      vsComponent = new ValueSetFilterComponent(inclusion);
+    }
+    return vsComponent;
+  }
+
+  visitVsConceptComponent(ctx: pc.VsConceptComponentContext): [FshCode[], ValueSetComponentFrom] {
+    const concepts: FshCode[] = [];
+    const from: ValueSetComponentFrom = ctx.vsComponentFrom()
+      ? this.visitVsComponentFrom(ctx.vsComponentFrom())
+      : {};
+    if (ctx.code()) {
+      const singleCode = this.visitCode(ctx.code());
+      if (singleCode.system) {
+        from.system = singleCode.system;
+        concepts.push(singleCode);
+      } else if (from.system) {
+        singleCode.system = from.system;
+        concepts.push(singleCode);
+      } else {
+        logger.error(
+          `Concept ${singleCode.code} must include system as "SYSTEM#CONCEPT" or "#CONCEPT from system SYSTEM"`,
+          {
+            file: this.file,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    } else if (ctx.COMMA_DELIMITED_CODES()) {
+      const codes = ctx
+        .COMMA_DELIMITED_CODES()
+        .getText()
+        .split(/\s*,\s+#/);
+      codes[0] = codes[0].slice(1);
+      codes.forEach(code => {
+        let codePart: string, description: string;
+        if (code.charAt(0) == '"') {
+          // codePart is a quoted string, just like description (if present).
+          [codePart, description] = code
+            .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
+            .map(quotedString => quotedString.slice(1, -1));
+          // concepts.push(new FshCode(codePart, from.system, description));
+        } else {
+          // codePart is not a quoted string.
+          // if there is a description after the code,
+          // it will be separated by whitespace before the leading "
+          const codeEnd = code.match(/\s+"/)?.index;
+          if (codeEnd) {
+            codePart = code.slice(0, codeEnd);
+            description = code
+              .slice(codeEnd)
+              .trim()
+              .slice(1, -1);
+            // concepts.push(new FshCode(codePart, from.system, description));
+          } else {
+            codePart = code.trim();
+            // concepts.push(new FshCode(codePart, from.system));
+          }
+        }
+        concepts.push(
+          new FshCode(codePart, from.system, description)
+            .withLocation(this.extractStartStop(ctx.COMMA_DELIMITED_CODES()))
+            .withFile(this.file)
+        );
+      });
+    }
+    return [concepts, from];
+  }
+
+  visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
+    const from: ValueSetComponentFrom = {};
+    if (ctx.vsFromSystem()) {
+      from.system = ctx
+        .vsFromSystem()
+        .SEQUENCE()
+        .getText();
+    }
+    if (ctx.vsFromValueset()) {
+      from.valueSets = ctx
+        .vsFromValueset()
+        .COMMA_DELIMITED_SEQUENCES()
+        .getText()
+        .split(',')
+        .map(fromVs => fromVs.trim());
+    }
+    return from;
   }
 
   private aliasAwareValue(value: string): string {

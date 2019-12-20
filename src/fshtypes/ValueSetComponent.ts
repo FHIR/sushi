@@ -1,38 +1,28 @@
 import { FshEntity } from './FshEntity';
+import { FshCode } from './FshCode';
 
 export class ValueSetComponent extends FshEntity {
-  public system?: string;
-  public rule?: ValueSetConcept | ValueSetFilter | ValueSetReference;
-
-  public withSystem(system: string): ValueSetComponent {
-    this.system = system;
-    return this;
-  }
-
-  public withRule(rule: ValueSetConcept | ValueSetFilter | ValueSetReference): ValueSetComponent {
-    this.rule = rule;
-    return this;
+  public from: ValueSetComponentFrom = {};
+  constructor(public inclusion: boolean) {
+    super();
   }
 }
 
-export class ValueSetConcept {
-  public code: string;
-  public display: string;
+export class ValueSetConceptComponent extends ValueSetComponent {
+  public concepts: FshCode[] = [];
 }
 
-export class ValueSetFilter {
-  public property: string;
-  public op:
-    | '='
-    | 'is-a'
-    | 'descendant-of'
-    | 'is-not-a'
-    | 'regex'
-    | 'in'
-    | 'not-in'
-    | 'generalizes'
-    | 'exists';
-  public value: string;
+export class ValueSetFilterComponent extends ValueSetComponent {
+  public filters: ValueSetFilter[] = [];
 }
 
-export type ValueSetReference = string;
+export type ValueSetComponentFrom = {
+  system?: string;
+  valueSets?: string[];
+};
+
+export type ValueSetFilter = {
+  property: string;
+  operator: string;
+  value: string | string[];
+};
