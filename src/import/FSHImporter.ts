@@ -45,6 +45,13 @@ enum InstanceMetadataKey {
   Unknown = 'Unknown'
 }
 
+enum VsMetadataKey {
+  Id = 'Id',
+  Title = 'Title',
+  Description = 'Description',
+  Unknown = 'Unknown'
+}
+
 enum Flag {
   MustSupport,
   Summary,
@@ -218,13 +225,45 @@ export class FSHImporter extends FSHVisitor {
     const valueSet = new ValueSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.file);
-    ctx
-      .vsComponent()
+    this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent());
+    this.doc.valueSets.set(valueSet.name, valueSet);
+  }
+
+  private parseValueSet(
+    valueSet: ValueSet,
+    metaCtx: pc.VsMetadataContext[] = [],
+    componentCtx: pc.VsComponentContext[] = []
+  ) {
+    const seenPairs: Map<VsMetadataKey, string> = new Map();
+    metaCtx
+      .map(vsMetadata => ({
+        ...this.visitVsMetadata(vsMetadata),
+        context: vsMetadata
+      }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.file, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === VsMetadataKey.Id) {
+          valueSet.id = pair.value;
+        } else if (pair.key === VsMetadataKey.Title) {
+          valueSet.title = pair.value;
+        } else if (pair.key === VsMetadataKey.Description) {
+          valueSet.description = pair.value;
+        }
+      });
+    componentCtx
       .map(vsComponentCtx => this.visitVsComponent(vsComponentCtx))
       .forEach(vsComponent => {
         valueSet.components.push(vsComponent);
       });
-    this.doc.valueSets.set(valueSet.name, valueSet);
   }
 
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
@@ -249,6 +288,17 @@ export class FSHImporter extends FSHVisitor {
       return { key: InstanceMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
+  }
+
+  visitVsMetadata(ctx: pc.VsMetadataContext): { key: VsMetadataKey; value: string } {
+    if (ctx.id()) {
+      return { key: VsMetadataKey.Id, value: this.visitId(ctx.id()) };
+    } else if (ctx.title()) {
+      return { key: VsMetadataKey.Title, value: this.visitTitle(ctx.title()) };
+    } else if (ctx.description()) {
+      return { key: VsMetadataKey.Description, value: this.visitDescription(ctx.description()) };
+    }
+    return { key: VsMetadataKey.Unknown, value: ctx.getText() };
   }
 
   visitId(ctx: pc.IdContext): string {
