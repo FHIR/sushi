@@ -128,6 +128,24 @@ FSHListener.prototype.exitVsMetadata = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#codeSystem.
+FSHListener.prototype.enterCodeSystem = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#codeSystem.
+FSHListener.prototype.exitCodeSystem = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#csMetadata.
+FSHListener.prototype.enterCsMetadata = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#csMetadata.
+FSHListener.prototype.exitCsMetadata = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#parent.
 FSHListener.prototype.enterParent = function(ctx) {
 };
@@ -431,6 +449,15 @@ FSHListener.prototype.enterCode = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#code.
 FSHListener.prototype.exitCode = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#concept.
+FSHListener.prototype.enterConcept = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#concept.
+FSHListener.prototype.exitConcept = function(ctx) {
 };
 
 

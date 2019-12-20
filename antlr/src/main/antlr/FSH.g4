@@ -1,7 +1,7 @@
 grammar FSH;
 
 doc:                entity*;
-entity:             alias | profile | extension | invariant | instance | valueSet;
+entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
@@ -18,6 +18,8 @@ invariantMetadata:  description | expression | xpath | severity;
 
 valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsComponent+;
 vsMetadata:         id | title | description;
+codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* concept*;
+csMetadata:         id | title | description;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -62,6 +64,7 @@ strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | code | quantity | ratio | bool ;
 item:               SEQUENCE CARD flag*;
 code:               CODE STRING?;
+concept:            code STRING?;
 quantity:           NUMBER UNIT;
 ratio:              ratioPart COLON ratioPart;
 ratioPart:          NUMBER | quantity;
@@ -76,6 +79,7 @@ KW_INSTANCE:        'Instance' WS* ':';
 KW_INSTANCEOF:      'InstanceOf' WS* ':';
 KW_INVARIANT:       'Invariant' WS* ':';
 KW_VALUESET:        'ValueSet' WS* ':';
+KW_CODESYSTEM:      'CodeSystem' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';
 KW_TITLE:           'Title' WS* ':';
