@@ -63,7 +63,7 @@ export interface VsMetadataContext extends ParserRuleContext {
 export interface CodeSystemContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   csMetadata(): CsMetadataContext[];
-  code(): CodeContext[];
+  concept(): ConceptContext[];
 }
 
 export interface CsMetadataContext extends ParserRuleContext {
@@ -166,6 +166,11 @@ export interface ValueContext extends ParserRuleContext {
 
 export interface CodeContext extends ParserRuleContext {
   CODE(): ParserRuleContext;
+  STRING(): ParserRuleContext;
+}
+
+export interface ConceptContext extends ParserRuleContext {
+  code(): CodeContext;
   STRING(): ParserRuleContext;
 }
 

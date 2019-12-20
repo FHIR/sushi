@@ -452,6 +452,15 @@ FSHListener.prototype.exitCode = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#concept.
+FSHListener.prototype.enterConcept = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#concept.
+FSHListener.prototype.exitConcept = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#quantity.
 FSHListener.prototype.enterQuantity = function(ctx) {
 };

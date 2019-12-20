@@ -18,7 +18,7 @@ invariantMetadata:  description | expression | xpath | severity;
 
 valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsComponent+;
 vsMetadata:         id | title | description;
-codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* code*;
+codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* concept*;
 csMetadata:         id | title | description;
 
 // METADATA FIELDS
@@ -64,6 +64,7 @@ strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | code | quantity | ratio | bool ;
 item:               SEQUENCE CARD flag*;
 code:               CODE STRING?;
+concept:            code STRING?;
 quantity:           NUMBER UNIT;
 ratio:              ratioPart COLON ratioPart;
 ratioPart:          NUMBER | quantity;

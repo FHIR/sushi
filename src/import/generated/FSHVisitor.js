@@ -306,6 +306,12 @@ FSHVisitor.prototype.visitCode = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#concept.
+FSHVisitor.prototype.visitConcept = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#quantity.
 FSHVisitor.prototype.visitQuantity = function(ctx) {
   return this.visitChildren(ctx);
