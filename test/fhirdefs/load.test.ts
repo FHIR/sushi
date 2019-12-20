@@ -3,8 +3,9 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { getResolver } from '../testhelpers/getResolver';
 import { ResolveFn } from '../../src/fhirtypes/ElementDefinition';
 import path from 'path';
-import fs from 'fs';
+import fs from 'fs-extra';
 import tar from 'tar';
+import { TextEncoder } from 'util';
 
 describe('#loadFromPath()', () => {
   let defs: FHIRDefinitions;

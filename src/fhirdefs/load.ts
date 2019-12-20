@@ -1,6 +1,6 @@
 import { FHIRDefinitions } from './FHIRDefinitions';
 import { PackageLoadError, DevPackageLoadError } from '../errors';
-import fs from 'fs';
+import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import tmp from 'tmp';

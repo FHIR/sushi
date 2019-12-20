@@ -4,7 +4,7 @@ import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { loadFromPath } from '../../src/fhirdefs';
 import path from 'path';
 import os from 'os';
-import fs from 'fs';
+import fs from 'fs-extra';
 
 const defsCache = new FHIRDefinitions();
 
