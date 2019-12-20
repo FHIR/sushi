@@ -3,7 +3,7 @@
   "version": "0.4.1",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
-    "build": "rm -rf dist && tsc && cp -r src/fhirdefs/fhir-4.0.1 dist/fhirdefs/fhir-4.0.1 && cp -r src/ig/files dist/ig/files",
+    "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files",
     "build:watch": "tsc -w",
     "build:grammar": "bash antlr/gradlew -p antlr generateGrammarSource",
     "test": "jest --coverage",

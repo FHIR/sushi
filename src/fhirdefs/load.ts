@@ -1,4 +1,3 @@
-// TODO: Load from package files instead of these static folders.
 import { FHIRDefinitions } from './FHIRDefinitions';
 import { PackageLoadError, DevPackageLoadError } from '../errors';
 import fs from 'fs';
@@ -8,7 +7,6 @@ import tmp from 'tmp';
 import tar from 'tar';
 import request from 'sync-request';
 
-// TODO add tests of this function
 /**
  * Loads a dependency from user FHIR cache or from online
  * @param {string} packageName - The name of the package to load
@@ -21,38 +19,46 @@ export function loadDependency(
   packageName: string,
   version: string,
   FHIRDefs: FHIRDefinitions,
-  cachePath: string = null
+  requestFn: (op: string, url: string) => any = request,
+  cachePath: string = path.join(os.homedir(), '.fhir', 'packages')
 ): void {
-  cachePath = cachePath ?? path.join(os.homedir(), '.fhir', 'packages');
-  const targetPath = path.join(cachePath, `${packageName}#${version}`, 'package');
   const fullPackageName = `${packageName}#${version}`;
-  let loadedPackage = loadFromPath(targetPath, fullPackageName, FHIRDefs);
+  const loadPath = path.join(cachePath, fullPackageName, 'package');
+  let loadedPackage: string;
+  if (version != 'current') {
+    loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
+  }
   if (!loadedPackage) {
     let packageUrl: string;
     if (version === 'dev') {
-      // dev packages must be present in local FHIR cache
+      // Dev packages must be present in local FHIR cache
       throw new DevPackageLoadError(fullPackageName);
     } else if (version === 'current') {
-      // current packages need to be loaded using build.fhir.org
+      // Current packages need to be loaded using build.fhir.org
       const baseUrl = 'http://build.fhir.org/ig';
-      const res = request('GET', `${baseUrl}/qas.json`);
-      const qaJSON = JSON.parse(String.fromCharCode(...new Uint16Array(res.body as Buffer)));
+      const res = requestFn('GET', `${baseUrl}/qas.json`);
+      const decoded = String.fromCharCode(...new Uint16Array(res.body));
+      const qaJSON = JSON.parse(decoded);
+      // Find matching packages and sort by date to get the most recent
       const matchingPackages = qaJSON.filter((p: any) => p['package-id'] === packageName);
       const newestPackage = matchingPackages.sort((p1: any, p2: any) => {
         return Date.parse(p2['date']) - Date.parse(p1['date']);
       })[0];
+      // Current packages are stored at build.fhir.org
       packageUrl = `${baseUrl}/${newestPackage.repo}/package.tgz`;
     } else {
-      // Load package into the user's cache
+      // All non-current packages are stored at packages.fhir.org
       packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
     }
+    // Create a temporary file and write the package to there
     const tempFile = tmp.fileSync();
     const targetDirectory = path.join(cachePath, fullPackageName);
-    const res = request('GET', packageUrl);
+    const res = requestFn('GET', packageUrl);
     if (!fs.existsSync(targetDirectory)) {
       fs.mkdirSync(targetDirectory);
     }
     fs.writeFileSync(tempFile.name, res.body);
+    // Extract the package from that temporary file location
     tar.x({
       cwd: targetDirectory,
       file: tempFile.name,
@@ -60,8 +66,9 @@ export function loadDependency(
       strict: true
     });
     // Now try to load again from the path
-    loadedPackage = loadFromPath(targetPath, fullPackageName, FHIRDefs);
+    loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
     if (!loadedPackage) {
+      // If we fail again, then we couldn't get the package locally or from online
       throw new PackageLoadError(fullPackageName);
     }
   }
@@ -85,7 +92,7 @@ export function loadFromPath(
       const files = fs.readdirSync(targetPath);
       for (const file of files) {
         if (file.endsWith('.json')) {
-          const def = JSON.parse(fs.readFileSync(path.join(targetPath, file), 'utf-8'));
+          const def = JSON.parse(fs.readFileSync(path.join(targetPath, file), 'utf-8').trim());
           FHIRDefs.add(def);
         }
       }

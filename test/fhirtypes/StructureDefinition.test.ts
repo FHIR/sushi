@@ -229,11 +229,7 @@ describe('StructureDefinition', () => {
     it('should find a re-sliced element by path', () => {
       const jsonReslice = JSON.parse(
         fs.readFileSync(
-<<<<<<< HEAD
-          path.join(__dirname, '../fhirdefs/fixtures/patient-telecom-reslice-profile.json'),
-=======
           path.join(__dirname, '../testhelpers/testdefs/patient-telecom-reslice-profile.json'),
->>>>>>> Removing FHIR 4.0.1 and updating tests
           'utf-8'
         )
       );

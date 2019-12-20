@@ -8,7 +8,6 @@ import {
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { getResolver } from '../testhelpers/getResolver';
 import path from 'path';
-import { get } from 'https';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
