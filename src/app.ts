@@ -109,6 +109,7 @@ async function app() {
   logger.info(`
   Profiles:    ${outPackage.profiles.length}
   Extensions:  ${outPackage.extensions.length}
+  Instances:   ${outPackage.instances.length}
   Errors:      ${stats.numError}
   Warnings:    ${stats.numWarn}`);
 }

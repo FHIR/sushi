@@ -350,6 +350,10 @@ export class StructureDefinition {
         pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
       }
       currentElement = this.findElementByPath(currentPath, resolve);
+
+      // If the element has a base.max that is great than 1, the property should be set inside of an array
+      const valueShouldBeWithinArray =
+        currentElement?.base?.max !== '0' && currentElement?.base?.max !== '1';
       if (
         !currentElement ||
         currentElement.max === '0' ||
@@ -361,10 +365,11 @@ export class StructureDefinition {
         // or is being incorrectly accessed as an array
         throw new CannotResolvePathError(path);
       } else if (
-        arrayIndex == null &&
-        currentElement.max != null &&
-        currentElement.max !== '0' &&
-        currentElement.max !== '1'
+        (arrayIndex == null &&
+          currentElement.max != null &&
+          currentElement.max !== '0' &&
+          currentElement.max !== '1') ||
+        valueShouldBeWithinArray
       ) {
         // Modify the path to have 0 indices
         if (!pathPart.brackets) pathPart.brackets = [];
