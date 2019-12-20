@@ -1,5 +1,5 @@
 import { FshEntity } from './FshEntity';
-import { FshCode } from './FshCode';
+import { FshConcept } from './FshConcept';
 
 /**
  * For more information about a CodeSystem in FHIR,
@@ -9,7 +9,7 @@ export class CodeSystem extends FshEntity {
   id: string;
   title?: string;
   description?: string;
-  concepts: FshCode[];
+  concepts: FshConcept[];
 
   constructor(public name: string) {
     super();
@@ -17,7 +17,7 @@ export class CodeSystem extends FshEntity {
     this.concepts = [];
   }
 
-  addConcept(code: string, display?: string) {
-    this.concepts.push(new FshCode(code, this.id, display));
+  addConcept(code: string, display?: string, definition?: string) {
+    this.concepts.push(new FshConcept(code, display, definition));
   }
 }
