@@ -1,5 +1,5 @@
 import { FSHTank } from '../import/FSHTank';
-import { StructureDefinition, PathPart } from '../fhirtypes';
+import { StructureDefinition } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
 import { StructureDefinitionExporter } from '.';

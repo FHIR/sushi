@@ -160,9 +160,6 @@ export class StructureDefinition {
     for (const pathPart of parsedPath) {
       // Add the next part to the path, and see if we have matches on it
       fhirPathString += `.${pathPart.base}`;
-      // If there are no brackets on the path, they we can filter out any slices that partially matched
-      if (!pathPart.brackets) matchingElements = matchingElements.filter(e => !e.sliceName);
-      // Check for matches on the path
       newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
 
       // TODO: If path is A.B.C, and we unfold B, but C is invalid, the unfolded
@@ -217,6 +214,15 @@ export class StructureDefinition {
             return;
           }
         }
+      }
+
+      // If there are no brackets, remove any slices that don't match exactly
+      if (!pathPart.brackets) {
+        matchingElements = matchingElements.filter(
+          e =>
+            e.id.includes(`${fhirPathString}:${pathPart.base}`) ||
+            !e.id.includes(`${fhirPathString}:`)
+        );
       }
     }
 
@@ -351,9 +357,11 @@ export class StructureDefinition {
       }
       currentElement = this.findElementByPath(currentPath, resolve);
 
-      // If the element has a base.max that is great than 1, the property should be set inside of an array
+      // If the element has a base.max that is great than 1, but the element has been constrained, still set properties in an array
       const valueShouldBeWithinArray =
-        currentElement?.base?.max !== '0' && currentElement?.base?.max !== '1';
+        currentElement?.base?.max !== '0' &&
+        currentElement?.base?.max !== '1' &&
+        (currentElement?.max === '0' || currentElement?.max === '1');
       if (
         !currentElement ||
         currentElement.max === '0' ||

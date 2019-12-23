@@ -519,7 +519,7 @@ describe('StructureDefinition', () => {
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
-      expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat'] });
+      expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat', '0'] });
       expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['0'] });
       expect(pathParts[2]).toEqual({ base: 'version' });
     });
