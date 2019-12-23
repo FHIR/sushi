@@ -50,10 +50,10 @@ vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
 vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValueset (KW_AND vsFromSystem)?);
 vsFromSystem:       KW_SYSTEM SEQUENCE;
 vsFromValueset:     KW_VSREFERENCE (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
-vsFilterList:       (vsFilterDefinition KW_AND)+ vsFilterDefinition;
+vsFilterList:       (vsFilterDefinition KW_AND)* vsFilterDefinition;
 vsFilterDefinition: SEQUENCE vsFilterOperator vsFilterValue;
 vsFilterOperator:   EQUAL | SEQUENCE;
-vsFilterValue:      code | REGEX | COMMA_DELIMITED_SEQUENCES | SEQUENCE;
+vsFilterValue:      code | REGEX | STRING;
 
 // MISC
 path:               SEQUENCE;

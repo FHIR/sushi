@@ -12,9 +12,11 @@ import {
   ValueSet,
   ValueSetComponent,
   ValueSetConceptComponent,
+  VsProperty,
   ValueSetFilterComponent,
   ValueSetComponentFrom,
-  ValueSetFilter
+  ValueSetFilter,
+  VsOperator
 } from '../fshtypes';
 import {
   Rule,
@@ -30,7 +32,11 @@ import {
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
-import { RequiredMetadataError } from '../errors';
+import {
+  RequiredMetadataError,
+  ValueSetFilterPropertyError,
+  ValueSetFilterOperatorError
+} from '../errors';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -712,6 +718,21 @@ export class FSHImporter extends FSHVisitor {
     const from: ValueSetComponentFrom = ctx.vsComponentFrom()
       ? this.visitVsComponentFrom(ctx.vsComponentFrom())
       : {};
+    if (ctx.vsFilterList()) {
+      ctx
+        .vsFilterList()
+        .vsFilterDefinition()
+        .forEach(filterDefinition => {
+          try {
+            filters.push(this.visitVsFilterDefinition(filterDefinition));
+          } catch (e) {
+            logger.error(e, {
+              location: this.extractStartStop(filterDefinition),
+              file: this.file
+            });
+          }
+        });
+    }
     return [filters, from];
   }
 
@@ -741,6 +762,41 @@ export class FSHImporter extends FSHVisitor {
       }
     }
     return from;
+  }
+
+  /**
+   * The replace makes FSH permissive in regards to the official specifications,
+   * which spells operator "descendant-of" as "descendent-of".
+   * @see {@link http://hl7.org/fhir/valueset-filter-operator.html}
+   */
+  visitVsFilterDefinition(ctx: pc.VsFilterDefinitionContext): ValueSetFilter {
+    const property = ctx.SEQUENCE().getText() as VsProperty;
+    if (!property) {
+      throw new ValueSetFilterPropertyError(ctx.SEQUENCE().getText());
+    }
+    const operator = ctx
+      .vsFilterOperator()
+      .getText()
+      .replace('descendant', 'descendent') as VsOperator;
+    if (!operator) {
+      throw new ValueSetFilterOperatorError(ctx.vsFilterOperator().getText());
+    }
+    const value = this.visitVsFilterValue(ctx.vsFilterValue());
+    return {
+      property: property,
+      operator: operator,
+      value: value
+    };
+  }
+
+  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | string[] | FshCode {
+    if (ctx.code()) {
+      return this.visitCode(ctx.code());
+    } else if (ctx.REGEX()) {
+      return ctx.REGEX().getText();
+    } else if (ctx.STRING()) {
+      return this.extractString(ctx.STRING());
+    }
   }
 
   private aliasAwareValue(value: string): string {

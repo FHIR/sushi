@@ -274,6 +274,5 @@ export interface VsFilterOperatorContext extends ParserRuleContext {
 export interface VsFilterValueContext extends ParserRuleContext {
   code(): CodeContext;
   REGEX(): ParserRuleContext;
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext;
+  STRING(): ParserRuleContext;
 }

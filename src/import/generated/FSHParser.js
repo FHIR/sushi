@@ -61,9 +61,9 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\"\u0161\n\"\u0003\"\u0003\"\u0005\"\u0165\n\"\u0003#\u0003#\u0003#",
     "\u0003#\u0005#\u016b\n#\u0003$\u0003$\u0003$\u0003$\u0005$\u0171\n$",
     "\u0003$\u0003$\u0003$\u0005$\u0176\n$\u0005$\u0178\n$\u0003%\u0003%",
-    "\u0003%\u0003&\u0003&\u0003&\u0003\'\u0003\'\u0003\'\u0006\'\u0183\n",
-    "\'\r\'\u000e\'\u0184\u0003\'\u0003\'\u0003(\u0003(\u0003(\u0003(\u0003",
-    ")\u0003)\u0003*\u0003*\u0003*\u0003*\u0005*\u0193\n*\u0003+\u0003+\u0003",
+    "\u0003%\u0003&\u0003&\u0003&\u0003\'\u0003\'\u0003\'\u0007\'\u0183\n",
+    "\'\f\'\u000e\'\u0186\u000b\'\u0003\'\u0003\'\u0003(\u0003(\u0003(\u0003",
+    "(\u0003)\u0003)\u0003*\u0003*\u0003*\u0005*\u0193\n*\u0003+\u0003+\u0003",
     ",\u0003,\u0003-\u0003-\u0003.\u0003.\u0003/\u0003/\u00030\u00030\u0003",
     "0\u00030\u00030\u00030\u00030\u00030\u00030\u00050\u01a8\n0\u00031\u0003",
     "1\u00031\u00071\u01ad\n1\f1\u000e1\u01b0\u000b1\u00032\u00032\u0005",
@@ -73,7 +73,7 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u0014\u0016\u0018\u001a\u001c\u001e \"$&(*,.02468:<>@BDFHJLNPRTVXZ",
     "\\^`bdfhjln\u0002\t\u0003\u0002*+\u0003\u000278\u0004\u0002&&88\u0003",
     "\u0002\u0012\u0014\u0003\u0002\u0016\u0019\u0003\u0002\u001f \u0004",
-    "\u00023388\u0002\u01d6\u0002s\u0003\u0002\u0002\u0002\u0004}\u0003\u0002",
+    "\u00023388\u0002\u01d5\u0002s\u0003\u0002\u0002\u0002\u0004}\u0003\u0002",
     "\u0002\u0002\u0006\u007f\u0003\u0002\u0002\u0002\b\u0084\u0003\u0002",
     "\u0002\u0002\n\u0091\u0003\u0002\u0002\u0002\f\u00a3\u0003\u0002\u0002",
     "\u0002\u000e\u00ad\u0003\u0002\u0002\u0002\u0010\u00af\u0003\u0002\u0002",
@@ -90,8 +90,8 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "<\u0141\u0003\u0002\u0002\u0002>\u014e\u0003\u0002\u0002\u0002@\u0156",
     "\u0003\u0002\u0002\u0002B\u0164\u0003\u0002\u0002\u0002D\u0166\u0003",
     "\u0002\u0002\u0002F\u016c\u0003\u0002\u0002\u0002H\u0179\u0003\u0002",
-    "\u0002\u0002J\u017c\u0003\u0002\u0002\u0002L\u0182\u0003\u0002\u0002",
-    "\u0002N\u0188\u0003\u0002\u0002\u0002P\u018c\u0003\u0002\u0002\u0002",
+    "\u0002\u0002J\u017c\u0003\u0002\u0002\u0002L\u0184\u0003\u0002\u0002",
+    "\u0002N\u0189\u0003\u0002\u0002\u0002P\u018d\u0003\u0002\u0002\u0002",
     "R\u0192\u0003\u0002\u0002\u0002T\u0194\u0003\u0002\u0002\u0002V\u0196",
     "\u0003\u0002\u0002\u0002X\u0198\u0003\u0002\u0002\u0002Z\u019a\u0003",
     "\u0002\u0002\u0002\\\u019c\u0003\u0002\u0002\u0002^\u01a7\u0003\u0002",
@@ -253,50 +253,49 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u0002\u0002\u017c\u017d\u0007$\u0002\u0002\u017d\u017e\t\u0003\u0002",
     "\u0002\u017eK\u0003\u0002\u0002\u0002\u017f\u0180\u0005N(\u0002\u0180",
     "\u0181\u0007\u001b\u0002\u0002\u0181\u0183\u0003\u0002\u0002\u0002\u0182",
-    "\u017f\u0003\u0002\u0002\u0002\u0183\u0184\u0003\u0002\u0002\u0002\u0184",
+    "\u017f\u0003\u0002\u0002\u0002\u0183\u0186\u0003\u0002\u0002\u0002\u0184",
     "\u0182\u0003\u0002\u0002\u0002\u0184\u0185\u0003\u0002\u0002\u0002\u0185",
-    "\u0186\u0003\u0002\u0002\u0002\u0186\u0187\u0005N(\u0002\u0187M\u0003",
-    "\u0002\u0002\u0002\u0188\u0189\u00078\u0002\u0002\u0189\u018a\u0005",
-    "P)\u0002\u018a\u018b\u0005R*\u0002\u018bO\u0003\u0002\u0002\u0002\u018c",
-    "\u018d\t\u0004\u0002\u0002\u018dQ\u0003\u0002\u0002\u0002\u018e\u0193",
-    "\u0005b2\u0002\u018f\u0193\u00075\u0002\u0002\u0190\u0193\u00077\u0002",
-    "\u0002\u0191\u0193\u00078\u0002\u0002\u0192\u018e\u0003\u0002\u0002",
-    "\u0002\u0192\u018f\u0003\u0002\u0002\u0002\u0192\u0190\u0003\u0002\u0002",
-    "\u0002\u0192\u0191\u0003\u0002\u0002\u0002\u0193S\u0003\u0002\u0002",
-    "\u0002\u0194\u0195\u00078\u0002\u0002\u0195U\u0003\u0002\u0002\u0002",
-    "\u0196\u0197\u00077\u0002\u0002\u0197W\u0003\u0002\u0002\u0002\u0198",
-    "\u0199\u00074\u0002\u0002\u0199Y\u0003\u0002\u0002\u0002\u019a\u019b",
-    "\t\u0005\u0002\u0002\u019b[\u0003\u0002\u0002\u0002\u019c\u019d\t\u0006",
-    "\u0002\u0002\u019d]\u0003\u0002\u0002\u0002\u019e\u01a8\u0007*\u0002",
-    "\u0002\u019f\u01a8\u0007+\u0002\u0002\u01a0\u01a8\u0007,\u0002\u0002",
-    "\u01a1\u01a8\u00070\u0002\u0002\u01a2\u01a8\u00071\u0002\u0002\u01a3",
-    "\u01a8\u0005b2\u0002\u01a4\u01a8\u0005f4\u0002\u01a5\u01a8\u0005h5\u0002",
-    "\u01a6\u01a8\u0005l7\u0002\u01a7\u019e\u0003\u0002\u0002\u0002\u01a7",
-    "\u019f\u0003\u0002\u0002\u0002\u01a7\u01a0\u0003\u0002\u0002\u0002\u01a7",
-    "\u01a1\u0003\u0002\u0002\u0002\u01a7\u01a2\u0003\u0002\u0002\u0002\u01a7",
-    "\u01a3\u0003\u0002\u0002\u0002\u01a7\u01a4\u0003\u0002\u0002\u0002\u01a7",
-    "\u01a5\u0003\u0002\u0002\u0002\u01a7\u01a6\u0003\u0002\u0002\u0002\u01a8",
-    "_\u0003\u0002\u0002\u0002\u01a9\u01aa\u00078\u0002\u0002\u01aa\u01ae",
-    "\u00072\u0002\u0002\u01ab\u01ad\u0005Z.\u0002\u01ac\u01ab\u0003\u0002",
-    "\u0002\u0002\u01ad\u01b0\u0003\u0002\u0002\u0002\u01ae\u01ac\u0003\u0002",
-    "\u0002\u0002\u01ae\u01af\u0003\u0002\u0002\u0002\u01afa\u0003\u0002",
-    "\u0002\u0002\u01b0\u01ae\u0003\u0002\u0002\u0002\u01b1\u01b3\u0007.",
-    "\u0002\u0002\u01b2\u01b4\u0007*\u0002\u0002\u01b3\u01b2\u0003\u0002",
-    "\u0002\u0002\u01b3\u01b4\u0003\u0002\u0002\u0002\u01b4c\u0003\u0002",
-    "\u0002\u0002\u01b5\u01b7\u0005b2\u0002\u01b6\u01b8\u0007*\u0002\u0002",
-    "\u01b7\u01b6\u0003\u0002\u0002\u0002\u01b7\u01b8\u0003\u0002\u0002\u0002",
-    "\u01b8e\u0003\u0002\u0002\u0002\u01b9\u01ba\u0007,\u0002\u0002\u01ba",
-    "\u01bb\u0007-\u0002\u0002\u01bbg\u0003\u0002\u0002\u0002\u01bc\u01bd",
-    "\u0005j6\u0002\u01bd\u01be\u0007(\u0002\u0002\u01be\u01bf\u0005j6\u0002",
-    "\u01bfi\u0003\u0002\u0002\u0002\u01c0\u01c3\u0007,\u0002\u0002\u01c1",
-    "\u01c3\u0005f4\u0002\u01c2\u01c0\u0003\u0002\u0002\u0002\u01c2\u01c1",
-    "\u0003\u0002\u0002\u0002\u01c3k\u0003\u0002\u0002\u0002\u01c4\u01c5",
-    "\t\u0007\u0002\u0002\u01c5m\u0003\u0002\u0002\u0002\u01c6\u01c7\t\b",
-    "\u0002\u0002\u01c7o\u0003\u0002\u0002\u0002-s}\u0089\u008e\u0096\u009c",
-    "\u00a3\u00ad\u00b4\u00ba\u00bf\u00c6\u00cc\u00d3\u00d9\u00df\u00e6\u00ec",
-    "\u00f2\u0112\u0118\u011d\u0124\u0133\u013e\u0143\u014b\u0150\u0158\u015c",
-    "\u0160\u0164\u016a\u0170\u0175\u0177\u0184\u0192\u01a7\u01ae\u01b3\u01b7",
-    "\u01c2"].join("");
+    "\u0187\u0003\u0002\u0002\u0002\u0186\u0184\u0003\u0002\u0002\u0002\u0187",
+    "\u0188\u0005N(\u0002\u0188M\u0003\u0002\u0002\u0002\u0189\u018a\u0007",
+    "8\u0002\u0002\u018a\u018b\u0005P)\u0002\u018b\u018c\u0005R*\u0002\u018c",
+    "O\u0003\u0002\u0002\u0002\u018d\u018e\t\u0004\u0002\u0002\u018eQ\u0003",
+    "\u0002\u0002\u0002\u018f\u0193\u0005b2\u0002\u0190\u0193\u00075\u0002",
+    "\u0002\u0191\u0193\u0007*\u0002\u0002\u0192\u018f\u0003\u0002\u0002",
+    "\u0002\u0192\u0190\u0003\u0002\u0002\u0002\u0192\u0191\u0003\u0002\u0002",
+    "\u0002\u0193S\u0003\u0002\u0002\u0002\u0194\u0195\u00078\u0002\u0002",
+    "\u0195U\u0003\u0002\u0002\u0002\u0196\u0197\u00077\u0002\u0002\u0197",
+    "W\u0003\u0002\u0002\u0002\u0198\u0199\u00074\u0002\u0002\u0199Y\u0003",
+    "\u0002\u0002\u0002\u019a\u019b\t\u0005\u0002\u0002\u019b[\u0003\u0002",
+    "\u0002\u0002\u019c\u019d\t\u0006\u0002\u0002\u019d]\u0003\u0002\u0002",
+    "\u0002\u019e\u01a8\u0007*\u0002\u0002\u019f\u01a8\u0007+\u0002\u0002",
+    "\u01a0\u01a8\u0007,\u0002\u0002\u01a1\u01a8\u00070\u0002\u0002\u01a2",
+    "\u01a8\u00071\u0002\u0002\u01a3\u01a8\u0005b2\u0002\u01a4\u01a8\u0005",
+    "f4\u0002\u01a5\u01a8\u0005h5\u0002\u01a6\u01a8\u0005l7\u0002\u01a7\u019e",
+    "\u0003\u0002\u0002\u0002\u01a7\u019f\u0003\u0002\u0002\u0002\u01a7\u01a0",
+    "\u0003\u0002\u0002\u0002\u01a7\u01a1\u0003\u0002\u0002\u0002\u01a7\u01a2",
+    "\u0003\u0002\u0002\u0002\u01a7\u01a3\u0003\u0002\u0002\u0002\u01a7\u01a4",
+    "\u0003\u0002\u0002\u0002\u01a7\u01a5\u0003\u0002\u0002\u0002\u01a7\u01a6",
+    "\u0003\u0002\u0002\u0002\u01a8_\u0003\u0002\u0002\u0002\u01a9\u01aa",
+    "\u00078\u0002\u0002\u01aa\u01ae\u00072\u0002\u0002\u01ab\u01ad\u0005",
+    "Z.\u0002\u01ac\u01ab\u0003\u0002\u0002\u0002\u01ad\u01b0\u0003\u0002",
+    "\u0002\u0002\u01ae\u01ac\u0003\u0002\u0002\u0002\u01ae\u01af\u0003\u0002",
+    "\u0002\u0002\u01afa\u0003\u0002\u0002\u0002\u01b0\u01ae\u0003\u0002",
+    "\u0002\u0002\u01b1\u01b3\u0007.\u0002\u0002\u01b2\u01b4\u0007*\u0002",
+    "\u0002\u01b3\u01b2\u0003\u0002\u0002\u0002\u01b3\u01b4\u0003\u0002\u0002",
+    "\u0002\u01b4c\u0003\u0002\u0002\u0002\u01b5\u01b7\u0005b2\u0002\u01b6",
+    "\u01b8\u0007*\u0002\u0002\u01b7\u01b6\u0003\u0002\u0002\u0002\u01b7",
+    "\u01b8\u0003\u0002\u0002\u0002\u01b8e\u0003\u0002\u0002\u0002\u01b9",
+    "\u01ba\u0007,\u0002\u0002\u01ba\u01bb\u0007-\u0002\u0002\u01bbg\u0003",
+    "\u0002\u0002\u0002\u01bc\u01bd\u0005j6\u0002\u01bd\u01be\u0007(\u0002",
+    "\u0002\u01be\u01bf\u0005j6\u0002\u01bfi\u0003\u0002\u0002\u0002\u01c0",
+    "\u01c3\u0007,\u0002\u0002\u01c1\u01c3\u0005f4\u0002\u01c2\u01c0\u0003",
+    "\u0002\u0002\u0002\u01c2\u01c1\u0003\u0002\u0002\u0002\u01c3k\u0003",
+    "\u0002\u0002\u0002\u01c4\u01c5\t\u0007\u0002\u0002\u01c5m\u0003\u0002",
+    "\u0002\u0002\u01c6\u01c7\t\b\u0002\u0002\u01c7o\u0003\u0002\u0002\u0002",
+    "-s}\u0089\u008e\u0096\u009c\u00a3\u00ad\u00b4\u00ba\u00bf\u00c6\u00cc",
+    "\u00d3\u00d9\u00df\u00e6\u00ec\u00f2\u0112\u0118\u011d\u0124\u0133\u013e",
+    "\u0143\u014b\u0150\u0158\u015c\u0160\u0164\u016a\u0170\u0175\u0177\u0184",
+    "\u0192\u01a7\u01ae\u01b3\u01b7\u01c2"].join("");
 
 
 var atn = new antlr4.atn.ATNDeserializer().deserialize(serializedATN);
@@ -4189,25 +4188,22 @@ FSHParser.prototype.vsFilterList = function() {
     this.enterRule(localctx, 74, FSHParser.RULE_vsFilterList);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 384; 
+        this.state = 386;
         this._errHandler.sync(this);
-        var _alt = 1;
-        do {
-        	switch (_alt) {
-        	case 1:
-        		this.state = 381;
-        		this.vsFilterDefinition();
-        		this.state = 382;
-        		this.match(FSHParser.KW_AND);
-        		break;
-        	default:
-        		throw new antlr4.error.NoViableAltException(this);
-        	}
-        	this.state = 386; 
-        	this._errHandler.sync(this);
-        	_alt = this._interp.adaptivePredict(this._input,36, this._ctx);
-        } while ( _alt!=2 && _alt!=antlr4.atn.ATN.INVALID_ALT_NUMBER );
-        this.state = 388;
+        var _alt = this._interp.adaptivePredict(this._input,36,this._ctx)
+        while(_alt!=2 && _alt!=antlr4.atn.ATN.INVALID_ALT_NUMBER) {
+            if(_alt===1) {
+                this.state = 381;
+                this.vsFilterDefinition();
+                this.state = 382;
+                this.match(FSHParser.KW_AND); 
+            }
+            this.state = 388;
+            this._errHandler.sync(this);
+            _alt = this._interp.adaptivePredict(this._input,36,this._ctx);
+        }
+
+        this.state = 389;
         this.vsFilterDefinition();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -4283,11 +4279,11 @@ FSHParser.prototype.vsFilterDefinition = function() {
     this.enterRule(localctx, 76, FSHParser.RULE_vsFilterDefinition);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 390;
-        this.match(FSHParser.SEQUENCE);
         this.state = 391;
-        this.vsFilterOperator();
+        this.match(FSHParser.SEQUENCE);
         this.state = 392;
+        this.vsFilterOperator();
+        this.state = 393;
         this.vsFilterValue();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -4360,7 +4356,7 @@ FSHParser.prototype.vsFilterOperator = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 394;
+        this.state = 395;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.EQUAL || _la===FSHParser.SEQUENCE)) {
         this._errHandler.recoverInline(this);
@@ -4408,12 +4404,8 @@ VsFilterValueContext.prototype.REGEX = function() {
     return this.getToken(FSHParser.REGEX, 0);
 };
 
-VsFilterValueContext.prototype.COMMA_DELIMITED_SEQUENCES = function() {
-    return this.getToken(FSHParser.COMMA_DELIMITED_SEQUENCES, 0);
-};
-
-VsFilterValueContext.prototype.SEQUENCE = function() {
-    return this.getToken(FSHParser.SEQUENCE, 0);
+VsFilterValueContext.prototype.STRING = function() {
+    return this.getToken(FSHParser.STRING, 0);
 };
 
 VsFilterValueContext.prototype.enterRule = function(listener) {
@@ -4451,23 +4443,18 @@ FSHParser.prototype.vsFilterValue = function() {
         switch(this._input.LA(1)) {
         case FSHParser.CODE:
             this.enterOuterAlt(localctx, 1);
-            this.state = 396;
+            this.state = 397;
             this.code();
             break;
         case FSHParser.REGEX:
             this.enterOuterAlt(localctx, 2);
-            this.state = 397;
+            this.state = 398;
             this.match(FSHParser.REGEX);
             break;
-        case FSHParser.COMMA_DELIMITED_SEQUENCES:
+        case FSHParser.STRING:
             this.enterOuterAlt(localctx, 3);
-            this.state = 398;
-            this.match(FSHParser.COMMA_DELIMITED_SEQUENCES);
-            break;
-        case FSHParser.SEQUENCE:
-            this.enterOuterAlt(localctx, 4);
             this.state = 399;
-            this.match(FSHParser.SEQUENCE);
+            this.match(FSHParser.STRING);
             break;
         default:
             throw new antlr4.error.NoViableAltException(this);

@@ -4,7 +4,7 @@ import {
   assertValueSetFilterComponent
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { FshCode } from '../../src/fshtypes';
+import { FshCode, VsProperty, VsOperator } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
   describe('ValueSet', () => {
@@ -153,7 +153,24 @@ describe('FSHImporter', () => {
           []
         );
       });
-      it.todo('should parse a value set that uses filter operator =');
+
+      it('should parse a value set that uses filter operator =', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where version = "2.0"
+        `;
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.VERSION,
+            operator: VsOperator.EQUALS,
+            value: '2.0'
+          }
+        ]);
+      });
       it.todo('should parse a value set that uses filter operator is-a');
       it.todo('should parse a value set that uses filter operator descendant-of');
       it.todo('should parse a value set that uses filter operator is-not-a');

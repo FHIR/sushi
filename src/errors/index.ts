@@ -13,6 +13,8 @@ export * from './InvalidPeriodError';
 export * from './InvalidRangeValueError';
 export * from './InvalidTypeError';
 export * from './RequiredMetadataError';
+export * from './ValueSetFilterPropertyError';
+export * from './ValueSetFilterOperatorError';
 export * from './SlicingDefinitionError';
 export * from './SlicingNotDefinedError';
 export * from './TypeNotFoundError';
