@@ -56,7 +56,7 @@ export async function loadDependency(
     const res = await rp.get({ uri: packageUrl, encoding: null });
 
     if (!fs.existsSync(targetDirectory)) {
-      fs.mkdirSync(targetDirectory);
+      fs.ensureDirSync(targetDirectory);
     }
     fs.writeFileSync(tempFile.path, res);
     // Extract the package from that temporary file location

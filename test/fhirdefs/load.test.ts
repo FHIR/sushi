@@ -116,7 +116,7 @@ describe('#loadDependency()', () => {
   let defs: FHIRDefinitions;
   let requestSpy: jest.SpyInstance;
   let tarSpy: jest.SpyInstance;
-  let mkdirSpy: jest.SpyInstance;
+  let ensureDirSpy: jest.SpyInstance;
   let writeSpy: jest.SpyInstance;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -156,16 +156,32 @@ describe('#loadDependency()', () => {
     });
     tarSpy = jest.spyOn(tar, 'x').mockImplementation(() => {});
     writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-    mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {
-      console.log('');
-    });
+    ensureDirSpy = jest.spyOn(fs, 'ensureDirSync').mockImplementation(() => {});
   });
 
   beforeEach(() => {
     requestSpy.mockClear();
     tarSpy.mockClear();
     writeSpy.mockClear();
-    mkdirSpy.mockClear();
+    ensureDirSpy.mockClear();
+  });
+
+  it('should not try to download a package that is already in the cache', async () => {
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'test#1.1.1',
+      defs
+    );
+    await expect(
+      loadDependency(
+        'test',
+        '1.1.1',
+        defs,
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package')
+      )
+    ).resolves.toEqual(defs);
+    expect(requestSpy.mock.calls.length).toBe(0);
   });
 
   it('should try to load a package from packages.fhir.org when a non-special package version is loaded', async () => {
@@ -178,7 +194,7 @@ describe('#loadDependency()', () => {
         uri: 'http://packages.fhir.org/hl7.fhir.hspc/1.1.1'
       }
     ]);
-    expect(mkdirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#1.1.1')]);
+    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#1.1.1')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#1.1.1'));
   });
 
@@ -198,7 +214,7 @@ describe('#loadDependency()', () => {
         uri: 'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/branches/package.tgz'
       }
     ]);
-    expect(mkdirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#current')]);
+    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#current'));
   });
 
