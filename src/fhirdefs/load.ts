@@ -3,9 +3,9 @@ import { PackageLoadError, DevPackageLoadError } from '../errors';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import tmp from 'tmp';
 import tar from 'tar';
-import request from 'sync-request';
+import rp from 'request-promise-native';
+import temp from 'temp';
 
 /**
  * Loads a dependency from user FHIR cache or from online
@@ -15,13 +15,12 @@ import request from 'sync-request';
  * @param {string} cachePath - The path to load the package into
  * @throws {PackageLoadError} when the desired package can't be loaded
  */
-export function loadDependency(
+export async function loadDependency(
   packageName: string,
   version: string,
   FHIRDefs: FHIRDefinitions,
-  requestFn: (op: string, url: string) => any = request,
   cachePath: string = path.join(os.homedir(), '.fhir', 'packages')
-): void {
+): Promise<FHIRDefinitions> {
   const fullPackageName = `${packageName}#${version}`;
   const loadPath = path.join(cachePath, fullPackageName, 'package');
   let loadedPackage: string;
@@ -36,8 +35,8 @@ export function loadDependency(
     } else if (version === 'current') {
       // Current packages need to be loaded using build.fhir.org
       const baseUrl = 'http://build.fhir.org/ig';
-      const res = requestFn('GET', `${baseUrl}/qas.json`);
-      const decoded = String.fromCharCode(...new Uint16Array(res.body));
+      const res = await rp.get({ uri: `${baseUrl}/qas.json`, encoding: null });
+      const decoded = String.fromCharCode(...new Uint16Array(res));
       const qaJSON = JSON.parse(decoded);
       // Find matching packages and sort by date to get the most recent
       const matchingPackages = qaJSON.filter((p: any) => p['package-id'] === packageName);
@@ -51,20 +50,23 @@ export function loadDependency(
       packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
     }
     // Create a temporary file and write the package to there
-    const tempFile = tmp.fileSync();
+    temp.track();
+    const tempFile = temp.openSync(); // TODO CHANGE THIS TO USE OTHER TEMP LIB
     const targetDirectory = path.join(cachePath, fullPackageName);
-    const res = requestFn('GET', packageUrl);
+    const res = await rp.get({ uri: packageUrl, encoding: null });
+
     if (!fs.existsSync(targetDirectory)) {
       fs.mkdirSync(targetDirectory);
     }
-    fs.writeFileSync(tempFile.name, res.body);
+    fs.writeFileSync(tempFile.path, res);
     // Extract the package from that temporary file location
     tar.x({
       cwd: targetDirectory,
-      file: tempFile.name,
+      file: tempFile.path,
       sync: true,
       strict: true
     });
+
     // Now try to load again from the path
     loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
     if (!loadedPackage) {
@@ -72,6 +74,7 @@ export function loadDependency(
       throw new PackageLoadError(fullPackageName);
     }
   }
+  return FHIRDefs;
 }
 
 /**

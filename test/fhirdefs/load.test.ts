@@ -5,6 +5,7 @@ import { ResolveFn } from '../../src/fhirtypes/ElementDefinition';
 import path from 'path';
 import fs from 'fs-extra';
 import tar from 'tar';
+import rp from 'request-promise-native';
 import { TextEncoder } from 'util';
 
 describe('#loadFromPath()', () => {
@@ -113,16 +114,15 @@ describe('#loadFromPath()', () => {
 
 describe('#loadDependency()', () => {
   let defs: FHIRDefinitions;
-  let requestFn: (op: string, url: string) => any;
+  let requestSpy: jest.SpyInstance;
   let tarSpy: jest.SpyInstance;
   let mkdirSpy: jest.SpyInstance;
   let writeSpy: jest.SpyInstance;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    requestFn = jest.fn((op: string, url: string): any => {
-      if (url === 'http://build.fhir.org/ig/qas.json') {
-        return {
-          body: new TextEncoder().encode(`[
+    requestSpy = jest.spyOn(rp, 'get').mockImplementation((options: any): any => {
+      if (options.uri === 'http://build.fhir.org/ig/qas.json') {
+        return new TextEncoder().encode(`[
             {
               "url": "http://hl7.org/fhir/hspc/ImplementationGuide/hspc",
               "name": "HSPC Implementation Guide",
@@ -149,60 +149,61 @@ describe('#loadDependency()', () => {
               "tool": "3.4.0-13844",
               "repo": "nrdavis1/HSPCFHIRtest/branches"
             }
-        ]`)
-        };
+        ]`);
       } else {
         return {};
       }
     });
     tarSpy = jest.spyOn(tar, 'x').mockImplementation(() => {});
     writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-    mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+    mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {
+      console.log('');
+    });
   });
 
   beforeEach(() => {
+    requestSpy.mockClear();
     tarSpy.mockClear();
     writeSpy.mockClear();
     mkdirSpy.mockClear();
-    //@ts-ignore
-    requestFn.mockClear();
   });
 
-  it('should try to load a package from packages.fhir.org when a non-special package version is loaded', () => {
-    expect(() => {
-      loadDependency('hl7.fhir.hspc', '1.1.1', defs, requestFn, 'foo');
-    }).toThrow(
+  it('should try to load a package from packages.fhir.org when a non-special package version is loaded', async () => {
+    await expect(loadDependency('hl7.fhir.hspc', '1.1.1', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.hspc#1.1.1 could not be loaded locally or from the FHIR package registry'
     );
-    //@ts-ignore
-    expect(requestFn.mock.calls[0]).toEqual([
-      'GET',
-      'http://packages.fhir.org/hl7.fhir.hspc/1.1.1'
+    expect(requestSpy.mock.calls[0]).toEqual([
+      {
+        encoding: null,
+        uri: 'http://packages.fhir.org/hl7.fhir.hspc/1.1.1'
+      }
     ]);
     expect(mkdirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#1.1.1')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#1.1.1'));
   });
 
-  it('should try to load the latest package from build.fhir.org when a current package version is loaded', () => {
-    expect(() => {
-      loadDependency('hl7.fhir.hspc', 'current', defs, requestFn, 'foo');
-    }).toThrow(
+  it('should try to load the latest package from build.fhir.org when a current package version is loaded', async () => {
+    await expect(loadDependency('hl7.fhir.hspc', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.hspc#current could not be loaded locally or from the FHIR package registry'
     );
-    //@ts-ignore
-    expect(requestFn.mock.calls[0]).toEqual(['GET', 'http://build.fhir.org/ig/qas.json']);
-    expect(
-      //@ts-ignore
-      requestFn.mock.calls[1]
-    ).toEqual(['GET', 'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/branches/package.tgz']);
+    expect(requestSpy.mock.calls[0]).toEqual([
+      {
+        encoding: null,
+        uri: 'http://build.fhir.org/ig/qas.json'
+      }
+    ]);
+    expect(requestSpy.mock.calls[1]).toEqual([
+      {
+        encoding: null,
+        uri: 'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/branches/package.tgz'
+      }
+    ]);
     expect(mkdirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#current'));
   });
 
-  it('should throw DevPackageLoadError when a dev package version is not locally present', () => {
-    expect(() => {
-      loadDependency('test', 'dev', defs, requestFn, 'somePath');
-    }).toThrow(
+  it('should throw DevPackageLoadError when a dev package version is not locally present', async () => {
+    await expect(loadDependency('test', 'dev', defs, 'somePath')).rejects.toThrow(
       'The package test#dev could not be loaded locally. Dev packages must be present in local cache'
     );
   });

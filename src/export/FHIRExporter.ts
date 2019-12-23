@@ -2,8 +2,7 @@ import { FSHTank } from '../import/FSHTank';
 import { Package } from './Package';
 import { ProfileExporter } from './ProfileExporter';
 import { ExtensionExporter } from './ExtensionExporter';
-import { FHIRDefinitions, loadDependency } from '../fhirdefs';
-import { logger } from '../utils/FSHLogger';
+import { FHIRDefinitions } from '../fhirdefs';
 /**
  * FHIRExporter handles the processing of FSH documents, storing the FSH types within them as FHIR types.
  * FHIRExporter takes the Profiles and Extensions within the FSHDocuments of a FSHTank and returns them
@@ -14,19 +13,11 @@ export class FHIRExporter {
   private profileExporter: ProfileExporter;
   private extensionExporter: ExtensionExporter;
 
-  constructor() {
-    this.FHIRDefs = new FHIRDefinitions();
+  constructor(FHIRDefs: FHIRDefinitions) {
+    this.FHIRDefs = FHIRDefs;
   }
 
   export(tank: FSHTank): Package {
-    for (const dep of Object.keys(tank.config?.dependencies ?? {})) {
-      try {
-        loadDependency(dep, tank.config.dependencies[dep], this.FHIRDefs);
-      } catch (e) {
-        logger.error(e.message);
-        logger.error(`Failed to load ${dep}#${tank.config.dependencies[dep]}`);
-      }
-    }
     this.profileExporter = new ProfileExporter(this.FHIRDefs, tank);
     this.extensionExporter = new ExtensionExporter(this.FHIRDefs, tank);
     const profileDefs = this.profileExporter.export();
