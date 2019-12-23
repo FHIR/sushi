@@ -13,6 +13,7 @@ import temp from 'temp';
  * @param {string} version - The version of the package to load
  * @param {FHIRDefinitions} FHIRDefs - The FHIRDefinitions to load the dependencies into
  * @param {string} cachePath - The path to load the package into
+ * @returns {Promise<FHIRDefinitions>} the loaded FHIRDefs
  * @throws {PackageLoadError} when the desired package can't be loaded
  */
 export async function loadDependency(

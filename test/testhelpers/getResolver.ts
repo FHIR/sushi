@@ -21,8 +21,11 @@ export function getResolver(defs: FHIRDefinitions): ResolveFn {
         'hl7.fhir.r4.core#4.0.1',
         'package'
       );
+      // If there is no defsCache, load the FHIR defs from ~/.fhir
       if (defsCache.size() === 0) loadFromPath(cachePath, 'temp', defsCache);
       if (defsCache.size() > 0) {
+        // If the cache has been loaded, and we use a resource from the cache,
+        // make sure that resource is now copied into the test case package.
         const def = defsCache.find(type);
         if (def) {
           defs.add(def);

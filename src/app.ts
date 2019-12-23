@@ -10,9 +10,9 @@ import { logger, stats } from './utils/FSHLogger';
 import { loadDependency } from './fhirdefs/load';
 import { FHIRDefinitions } from './fhirdefs';
 
-main();
+app();
 
-async function main() {
+async function app() {
   let input: string;
 
   program
@@ -47,6 +47,7 @@ async function main() {
     program.help();
   }
 
+  // Load external dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs: Promise<FHIRDefinitions>[] = [];
   for (const dep of Object.keys(config?.dependencies ?? {})) {
