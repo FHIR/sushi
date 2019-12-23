@@ -156,9 +156,8 @@ export class IGExporter {
       });
     });
     this.pkg.instances.forEach(instance => {
-      const instanceFileName = `${instance.resourceType}-${instance.id ??
-        instance.instanceName}.json`;
-      const instancePath = path.join(igPath, 'input', 'instances', instanceFileName);
+      const instanceFileName = `${instance.resourceType}-${instance.id ?? instance.instanceName}`;
+      const instancePath = path.join(igPath, 'input', 'instances', `${instanceFileName}.json`);
       outputJSONSync(instancePath, instance, { spaces: 2 });
       this.ig.definition.resource.push({
         reference: {

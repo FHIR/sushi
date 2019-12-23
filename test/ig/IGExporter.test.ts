@@ -22,6 +22,7 @@ describe('IGExporter', () => {
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
       pkg = new Package([], [], [], config);
       const resources = path.join(fixtures, 'resources');
+      const instances = path.join(fixtures, 'instances');
       fs.readdirSync(resources).forEach(f => {
         if (f.endsWith('.json')) {
           const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(resources, f)));
@@ -30,6 +31,11 @@ describe('IGExporter', () => {
           } else {
             pkg.profiles.push(sd);
           }
+        }
+      });
+      fs.readdirSync(instances).forEach(f => {
+        if (f.endsWith('.json')) {
+          pkg.instances.push(fs.readJSONSync(path.join(instances, f)));
         }
       });
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
@@ -66,6 +72,14 @@ describe('IGExporter', () => {
         expect(fs.existsSync(resourcePath)).toBeTruthy();
         expect(fs.readJSONSync(resourcePath).id).toEqual(id);
       });
+    });
+
+    it('should copy over the instance files', () => {
+      const instancesPath = path.join(tempOut, 'input', 'instances');
+      expect(fs.readdirSync(instancesPath)).toHaveLength(1);
+      const instancePath = path.join(instancesPath, 'Patient-example.json');
+      expect(fs.existsSync(instancePath)).toBeTruthy();
+      expect(fs.readJSONSync(instancePath).id).toEqual('example');
     });
 
     it('should generate an ig.ini with the correct values based on the package.json', () => {
@@ -148,6 +162,13 @@ describe('IGExporter', () => {
               description:
                 'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
               exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'Patient/example'
+              },
+              name: 'Patient-example',
+              exampleBoolean: true
             }
           ],
           page: {

@@ -5,6 +5,7 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { StructureDefinitionExporter } from '.';
 import { logger } from '../utils/FSHLogger';
 import { setFixedValueOfPath } from '../fhirtypes/common';
+import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 
 export type InstanceDefinition = {
   resourceType: string;
@@ -35,29 +36,17 @@ export class InstanceExporter {
     return instanceDef;
   }
 
-  /**
-   * Exports Instances
-   * @param {FSHTank} tank - The FSH tank we are exporting
-   * @returns {InstanceDefinition[]}
-   */
-  export(): InstanceDefinition[] {
-    const instanceDefs: InstanceDefinition[] = [];
-    for (const doc of this.tank.docs) {
-      for (const instance of doc.instances.values()) {
-        try {
-          const docInstances = this.exportInstance(instance);
-          instanceDefs.push(docInstances);
-        } catch (e) {
-          logger.error(e.message);
-        }
-      }
-    }
-    return instanceDefs;
-  }
-
   exportInstance(fshDefinition: Instance): InstanceDefinition {
     const structDefExporter = new StructureDefinitionExporter(this.FHIRDefs, this.tank);
     const instanceOfStructureDefinition = structDefExporter.resolve(fshDefinition.instanceOf);
+
+    if (!instanceOfStructureDefinition) {
+      throw new InstanceOfNotDefinedError(
+        fshDefinition.name,
+        fshDefinition.instanceOf,
+        fshDefinition.sourceInfo
+      );
+    }
 
     let instanceDef: InstanceDefinition = {
       resourceType: instanceOfStructureDefinition.type, // ResourceType is determined by the StructureDefinition of the type
@@ -75,5 +64,25 @@ export class InstanceExporter {
     // Add any set values that were set on the StructDef but not explicitly on the FSH Instance
 
     return instanceDef;
+  }
+
+  /**
+   * Exports Instances
+   * @param {FSHTank} tank - The FSH tank we are exporting
+   * @returns {InstanceDefinition[]} - The Instances exported
+   */
+  export(): InstanceDefinition[] {
+    const instanceDefs: InstanceDefinition[] = [];
+    for (const doc of this.tank.docs) {
+      for (const instance of doc.instances.values()) {
+        try {
+          const instanceDef = this.exportInstance(instance);
+          instanceDefs.push(instanceDef);
+        } catch (e) {
+          logger.error(e.message, e.sourceInfo);
+        }
+      }
+    }
+    return instanceDefs;
   }
 }
