@@ -74,8 +74,6 @@ export class InstanceExporter {
 
     // Add any set values that were set on the StructDef but not explicitly on the FSH Instance
 
-    // Any missing/extra cardinalities
-
     return instanceDef;
   }
 }

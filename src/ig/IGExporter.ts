@@ -155,6 +155,19 @@ export class IGExporter {
         exampleBoolean: false
       });
     });
+    this.pkg.instances.forEach(instance => {
+      const instanceFileName = `${instance.resourceType}-${instance.id ??
+        instance.instanceName}.json`;
+      const instancePath = path.join(igPath, 'input', 'instances', instanceFileName);
+      outputJSONSync(instancePath, instance, { spaces: 2 });
+      this.ig.definition.resource.push({
+        reference: {
+          reference: `${instance.resourceType}/${instance.id ?? instance.instanceName}`
+        },
+        name: instanceFileName,
+        exampleBoolean: true
+      });
+    });
   }
 
   /**
