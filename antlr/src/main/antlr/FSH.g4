@@ -16,7 +16,7 @@ instanceMetadata:   instanceOf | title;
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
 
-valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsComponent+;
+valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsComponent*;
 vsMetadata:         id | title | description;
 codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* concept*;
 csMetadata:         id | title | description;
@@ -49,7 +49,7 @@ vsConceptComponent: code vsComponentFrom?
 vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
 vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValueset (KW_AND vsFromSystem)?);
 vsFromSystem:       KW_SYSTEM SEQUENCE;
-vsFromValueset:     KW_VSREFERENCE COMMA_DELIMITED_SEQUENCES;
+vsFromValueset:     KW_VSREFERENCE (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 vsFilterList:       (vsFilterDefinition KW_AND)+ vsFilterDefinition;
 vsFilterDefinition: SEQUENCE vsFilterOperator vsFilterValue;
 vsFilterOperator:   EQUAL | SEQUENCE;

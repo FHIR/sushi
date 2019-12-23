@@ -13,7 +13,8 @@ import {
   ValueSetComponent,
   ValueSetConceptComponent,
   ValueSetFilterComponent,
-  ValueSetComponentFrom
+  ValueSetComponentFrom,
+  ValueSetFilter
 } from '../fshtypes';
 import {
   Rule,
@@ -632,6 +633,9 @@ export class FSHImporter extends FSHVisitor {
       );
     } else if (ctx.vsFilterComponent()) {
       vsComponent = new ValueSetFilterComponent(inclusion);
+      [vsComponent.filters, vsComponent.from] = this.visitVsFilterComponent(
+        ctx.vsFilterComponent()
+      );
     }
     return vsComponent;
   }
@@ -643,7 +647,12 @@ export class FSHImporter extends FSHVisitor {
       : {};
     if (ctx.code()) {
       const singleCode = this.visitCode(ctx.code());
-      if (singleCode.system) {
+      if (singleCode.system && from.system) {
+        logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
+          file: this.file,
+          location: this.extractStartStop(ctx)
+        });
+      } else if (singleCode.system) {
         from.system = singleCode.system;
         concepts.push(singleCode);
       } else if (from.system) {
@@ -671,7 +680,6 @@ export class FSHImporter extends FSHVisitor {
           [codePart, description] = code
             .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
             .map(quotedString => quotedString.slice(1, -1));
-          // concepts.push(new FshCode(codePart, from.system, description));
         } else {
           // codePart is not a quoted string.
           // if there is a description after the code,
@@ -683,10 +691,8 @@ export class FSHImporter extends FSHVisitor {
               .slice(codeEnd)
               .trim()
               .slice(1, -1);
-            // concepts.push(new FshCode(codePart, from.system, description));
           } else {
             codePart = code.trim();
-            // concepts.push(new FshCode(codePart, from.system));
           }
         }
         concepts.push(
@@ -699,6 +705,16 @@ export class FSHImporter extends FSHVisitor {
     return [concepts, from];
   }
 
+  visitVsFilterComponent(
+    ctx: pc.VsFilterComponentContext
+  ): [ValueSetFilter[], ValueSetComponentFrom] {
+    const filters: ValueSetFilter[] = [];
+    const from: ValueSetComponentFrom = ctx.vsComponentFrom()
+      ? this.visitVsComponentFrom(ctx.vsComponentFrom())
+      : {};
+    return [filters, from];
+  }
+
   visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
     const from: ValueSetComponentFrom = {};
     if (ctx.vsFromSystem()) {
@@ -708,12 +724,21 @@ export class FSHImporter extends FSHVisitor {
         .getText();
     }
     if (ctx.vsFromValueset()) {
-      from.valueSets = ctx
-        .vsFromValueset()
-        .COMMA_DELIMITED_SEQUENCES()
-        .getText()
-        .split(',')
-        .map(fromVs => fromVs.trim());
+      if (ctx.vsFromValueset().SEQUENCE()) {
+        from.valueSets = [
+          ctx
+            .vsFromValueset()
+            .SEQUENCE()
+            .getText()
+        ];
+      } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
+        from.valueSets = ctx
+          .vsFromValueset()
+          .COMMA_DELIMITED_SEQUENCES()
+          .getText()
+          .split(',')
+          .map(fromVs => fromVs.trim());
+      }
     }
     return from;
   }

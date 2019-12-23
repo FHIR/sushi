@@ -10,7 +10,13 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../../src/fshtypes/rules';
-import { ValueSetComponent, ValueSetConceptComponent, FshCode } from '../../src/fshtypes';
+import {
+  ValueSetComponent,
+  ValueSetConceptComponent,
+  FshCode,
+  ValueSetFilterComponent,
+  ValueSetFilter
+} from '../../src/fshtypes';
 
 export function assertCardRule(rule: Rule, path: string, min: number, max: number | string): void {
   expect(rule).toBeInstanceOf(CardRule);
@@ -94,4 +100,17 @@ export function assertValueSetConceptComponent(
   expect(conceptComponent.from.system).toBe(fromSystem);
   expect(conceptComponent.from.valueSets).toEqual(fromValueSets);
   expect(conceptComponent.concepts).toEqual(concepts);
+}
+
+export function assertValueSetFilterComponent(
+  component: ValueSetComponent,
+  fromSystem: string,
+  fromValueSets: string[],
+  filters: ValueSetFilter[]
+): void {
+  expect(component).toBeInstanceOf(ValueSetFilterComponent);
+  const filterComponent = component as ValueSetFilterComponent;
+  expect(filterComponent.from.system).toBe(fromSystem);
+  expect(filterComponent.from.valueSets).toEqual(fromValueSets);
+  expect(filterComponent.filters).toEqual(filters);
 }
