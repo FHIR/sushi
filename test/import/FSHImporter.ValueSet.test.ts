@@ -118,6 +118,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
       });
+
       it('should parse a value set that includes all codes from other value sets', () => {
         const input = `
         ValueSet: ZooVS
@@ -172,6 +173,20 @@ describe('FSHImporter', () => {
         ]);
       });
 
+      it('should log an error when the = filter has a non-string value', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where version = /[1-9].*/
+        `;
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"=".*string/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+      });
+
       it('should parse a value set that uses filter operator is-a', () => {
         const input = `
         ValueSet: AllUrsinesVS
@@ -192,7 +207,46 @@ describe('FSHImporter', () => {
         ]);
       });
 
-      it('should parse a value set that uses filter operator descendant-of', () => {
+      it('should log an error when the is-a filter has a non-code value', () => {
+        const input = `
+        ValueSet: AllUrsinesVS
+        * codes from system ZOO where code is-a "Bear"
+        `;
+        const result = importText(input, 'Ursines.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('AllUrsinesVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"is-a".*code/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Ursines\.fsh.*Line: 3\D/s);
+      });
+
+      it('should parse a value set that uses filter operator descendent-of', () => {
+        const input = `
+        ValueSet: AllFelinesVS
+        * codes from valueset ZooVS where code descendent-of ZOO#cat
+        `;
+        const result = importText(input, 'Felines.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('AllFelinesVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(
+          valueSet.components[0],
+          undefined,
+          ['ZooVS'],
+          [
+            {
+              property: VsProperty.CODE,
+              operator: VsOperator.DESCENDENT_OF,
+              value: new FshCode('cat', 'ZOO', undefined)
+                .withLocation([3, 62, 3, 68])
+                .withFile('Felines.fsh')
+            }
+          ]
+        );
+      });
+
+      it('should parse a value set that uses filter operator descendent-of, but spelled correctly', () => {
         const input = `
         ValueSet: AllFelinesVS
         * codes from valueset ZooVS where code descendant-of ZOO#cat
@@ -217,6 +271,20 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should log an error when the descendent-of filter has a non-code value', () => {
+        const input = `
+        ValueSet: AllFelinesVS
+        * codes from valueset ZooVS where code descendent-of "Cat"
+        `;
+        const result = importText(input, 'Felines.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('AllFelinesVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], undefined, ['ZooVS'], []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"descendent-of".*code/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Felines\.fsh.*Line: 3\D/s);
+      });
+
       it('should parse a value set that uses filter operator is-not-a', () => {
         const input = `
         ValueSet: NonCanineVS
@@ -237,6 +305,20 @@ describe('FSHImporter', () => {
         ]);
       });
 
+      it('should log an error when the is-not-a filter has a non-code value', () => {
+        const input = `
+        ValueSet: NonCanineVS
+        * codes from system ZOO where code is-not-a "dog"
+        `;
+        const result = importText(input, 'NonCanine.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('NonCanineVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"is-not-a".*code/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: NonCanine\.fsh.*Line: 3\D/s);
+      });
+
       it('should parse a value set that uses filter operator regex', () => {
         const input = `
       ValueSet: ProbablyDogsVS
@@ -250,9 +332,23 @@ describe('FSHImporter', () => {
           {
             property: VsProperty.DISPLAY,
             operator: VsOperator.REGEX,
-            value: '([Dd]og)|([Cc]anine)'
+            value: /([Dd]og)|([Cc]anine)/
           }
         ]);
+      });
+
+      it('should log an error when the regex filter has a non-regex value', () => {
+        const input = `
+      ValueSet: ProbablyDogsVS
+      * codes from system ZOO where display regex "Dog|Canine"
+      `;
+        const result = importText(input, 'MostlyDogs.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ProbablyDogsVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"regex".*regex/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: MostlyDogs\.fsh.*Line: 3\D/s);
       });
 
       it('should parse a value set that uses filter operator in', () => {
@@ -273,6 +369,20 @@ describe('FSHImporter', () => {
         ]);
       });
 
+      it('should log an error when the in filter has a non-string value', () => {
+        const input = `
+        ValueSet: CatAndDogVS
+        * codes from system ZOO where code in ZOO#cat
+        `;
+        const result = importText(input, 'CatDog.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('CatAndDogVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"in".*string/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: CatDog\.fsh.*Line: 3\D/s);
+      });
+
       it('should parse a value set that uses filter operator not-in', () => {
         const input = `
         ValueSet: NoGooseVS
@@ -289,6 +399,20 @@ describe('FSHImporter', () => {
             value: '#goose'
           }
         ]);
+      });
+
+      it('should log an error when the not-in filter has a non-string value', () => {
+        const input = `
+        ValueSet: NoGooseVS
+        * codes from system ZOO where code not-in /duck|goose/
+        `;
+        const result = importText(input, 'NoGoose.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('NoGooseVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"not-in".*string/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: NoGoose\.fsh.*Line: 3\D/s);
       });
 
       it('should parse a value set that uses filter operator generalizes', () => {
@@ -311,6 +435,20 @@ describe('FSHImporter', () => {
         ]);
       });
 
+      it('should log an error when the generalizes filter has a non-code value', () => {
+        const input = `
+        ValueSet: MustelidVS
+        * codes from system ZOO where code generalizes "least weasel"
+        `;
+        const result = importText(input, 'Mustelids.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('MustelidVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"generalizes".*code/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Mustelids\.fsh.*Line: 3\D/s);
+      });
+
       it('should parse a value set that uses filter operator exists', () => {
         const input = `
       ValueSet: ZooVS
@@ -327,6 +465,20 @@ describe('FSHImporter', () => {
             value: true
           }
         ]);
+      });
+
+      it('should log an error when the exists filter has a non-boolean value', () => {
+        const input = `
+      ValueSet: ZooVS
+      * codes from system ZOO where display exists "display"
+      `;
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/"exists".*boolean/);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
       });
 
       it('should parse a value set with an excluded component', () => {

@@ -15,6 +15,7 @@ export * from './InvalidTypeError';
 export * from './RequiredMetadataError';
 export * from './ValueSetFilterPropertyError';
 export * from './ValueSetFilterOperatorError';
+export * from './ValueSetFilterValueTypeError';
 export * from './SlicingDefinitionError';
 export * from './SlicingNotDefinedError';
 export * from './TypeNotFoundError';

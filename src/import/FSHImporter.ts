@@ -35,7 +35,8 @@ import { TerminalNode } from 'antlr4/tree/Tree';
 import {
   RequiredMetadataError,
   ValueSetFilterPropertyError,
-  ValueSetFilterOperatorError
+  ValueSetFilterOperatorError,
+  ValueSetFilterValueTypeError
 } from '../errors';
 
 enum SdMetadataKey {
@@ -782,6 +783,33 @@ export class FSHImporter extends FSHVisitor {
       throw new ValueSetFilterOperatorError(ctx.vsFilterOperator().getText());
     }
     const value = this.visitVsFilterValue(ctx.vsFilterValue());
+    switch (operator) {
+      case VsOperator.EQUALS:
+      case VsOperator.IN:
+      case VsOperator.NOT_IN:
+        if (typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, 'string');
+        }
+        break;
+      case VsOperator.IS_A:
+      case VsOperator.DESCENDENT_OF:
+      case VsOperator.IS_NOT_A:
+      case VsOperator.GENERALIZES:
+        if (!(value instanceof FshCode)) {
+          throw new ValueSetFilterValueTypeError(operator, 'code');
+        }
+        break;
+      case VsOperator.REGEX:
+        if (!(value instanceof RegExp)) {
+          throw new ValueSetFilterValueTypeError(operator, 'regex');
+        }
+        break;
+      case VsOperator.EXISTS:
+        if (typeof value !== 'boolean') {
+          throw new ValueSetFilterValueTypeError(operator, 'boolean');
+        }
+        break;
+    }
     return {
       property: property,
       operator: operator,
@@ -789,14 +817,16 @@ export class FSHImporter extends FSHVisitor {
     };
   }
 
-  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | boolean | FshCode {
+  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | RegExp | boolean | FshCode {
     if (ctx.code()) {
       return this.visitCode(ctx.code());
     } else if (ctx.REGEX()) {
-      return ctx
-        .REGEX()
-        .getText()
-        .slice(1, -1);
+      return RegExp(
+        ctx
+          .REGEX()
+          .getText()
+          .slice(1, -1)
+      );
     } else if (ctx.STRING()) {
       return this.extractString(ctx.STRING());
     } else if (ctx.KW_TRUE()) {
