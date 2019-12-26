@@ -171,15 +171,183 @@ describe('FSHImporter', () => {
           }
         ]);
       });
-      it.todo('should parse a value set that uses filter operator is-a');
-      it.todo('should parse a value set that uses filter operator descendant-of');
-      it.todo('should parse a value set that uses filter operator is-not-a');
-      it.todo('should parse a value set that uses filter operator regex');
-      it.todo('should parse a value set that uses filter operator in');
-      it.todo('should parse a value set that uses filter operator not-in');
-      it.todo('should parse a value set that uses filter operator generalizes');
-      it.todo('should parse a value set that uses filter operator exists');
-      it.todo('should parse a value set with an excluded component');
+
+      it('should parse a value set that uses filter operator is-a', () => {
+        const input = `
+        ValueSet: AllUrsinesVS
+        * codes from system ZOO where code is-a #bear "Bear"
+        `;
+        const result = importText(input, 'Ursines.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('AllUrsinesVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.CODE,
+            operator: VsOperator.IS_A,
+            value: new FshCode('bear', undefined, 'Bear')
+              .withLocation([3, 49, 3, 60])
+              .withFile('Ursines.fsh')
+          }
+        ]);
+      });
+
+      it('should parse a value set that uses filter operator descendant-of', () => {
+        const input = `
+        ValueSet: AllFelinesVS
+        * codes from valueset ZooVS where code descendant-of ZOO#cat
+        `;
+        const result = importText(input, 'Felines.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('AllFelinesVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(
+          valueSet.components[0],
+          undefined,
+          ['ZooVS'],
+          [
+            {
+              property: VsProperty.CODE,
+              operator: VsOperator.DESCENDENT_OF,
+              value: new FshCode('cat', 'ZOO', undefined)
+                .withLocation([3, 62, 3, 68])
+                .withFile('Felines.fsh')
+            }
+          ]
+        );
+      });
+
+      it('should parse a value set that uses filter operator is-not-a', () => {
+        const input = `
+        ValueSet: NonCanineVS
+        * codes from system ZOO where code is-not-a #dog
+        `;
+        const result = importText(input, 'NonCanine.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('NonCanineVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.CODE,
+            operator: VsOperator.IS_NOT_A,
+            value: new FshCode('dog', undefined, undefined)
+              .withLocation([3, 53, 3, 56])
+              .withFile('NonCanine.fsh')
+          }
+        ]);
+      });
+
+      it('should parse a value set that uses filter operator regex', () => {
+        const input = `
+      ValueSet: ProbablyDogsVS
+      * codes from system ZOO where display regex /([Dd]og)|([Cc]anine)/
+      `;
+        const result = importText(input, 'MostlyDogs.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ProbablyDogsVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.DISPLAY,
+            operator: VsOperator.REGEX,
+            value: '([Dd]og)|([Cc]anine)'
+          }
+        ]);
+      });
+
+      it('should parse a value set that uses filter operator in', () => {
+        const input = `
+        ValueSet: CatAndDogVS
+        * codes from system ZOO where code in "#cat, #dog"
+        `;
+        const result = importText(input, 'CatDog.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('CatAndDogVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.CODE,
+            operator: VsOperator.IN,
+            value: '#cat, #dog'
+          }
+        ]);
+      });
+
+      it('should parse a value set that uses filter operator not-in', () => {
+        const input = `
+        ValueSet: NoGooseVS
+        * codes from system ZOO where code not-in "#goose"
+        `;
+        const result = importText(input, 'NoGoose.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('NoGooseVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.CODE,
+            operator: VsOperator.NOT_IN,
+            value: '#goose'
+          }
+        ]);
+      });
+
+      it('should parse a value set that uses filter operator generalizes', () => {
+        const input = `
+        ValueSet: MustelidVS
+        * codes from system ZOO where code generalizes #mustela-nivalis "least weasel"
+        `;
+        const result = importText(input, 'Mustelids.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('MustelidVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.CODE,
+            operator: VsOperator.GENERALIZES,
+            value: new FshCode('mustela-nivalis', undefined, 'least weasel')
+              .withLocation([3, 56, 3, 86])
+              .withFile('Mustelids.fsh')
+          }
+        ]);
+      });
+
+      it('should parse a value set that uses filter operator exists', () => {
+        const input = `
+      ValueSet: ZooVS
+      * codes from system ZOO where display exists true
+      `;
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.DISPLAY,
+            operator: VsOperator.EXISTS,
+            value: true
+          }
+        ]);
+      });
+
+      it('should parse a value set with an excluded component', () => {
+        const input = `
+        ValueSet: AvailableVS
+        * codes from system ZOO
+        * exclude codes from valueset UnavailableAnimalVS
+        `;
+        const result = importText(input, 'Available.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('AvailableVS');
+        expect(valueSet.components.length).toBe(2);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        assertValueSetFilterComponent(
+          valueSet.components[1],
+          undefined,
+          ['UnavailableAnimalVS'],
+          [],
+          false
+        );
+      });
     });
   });
 });

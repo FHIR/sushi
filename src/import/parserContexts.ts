@@ -273,6 +273,8 @@ export interface VsFilterOperatorContext extends ParserRuleContext {
 
 export interface VsFilterValueContext extends ParserRuleContext {
   code(): CodeContext;
+  KW_TRUE(): ParserRuleContext;
+  KW_FALSE(): ParserRuleContext;
   REGEX(): ParserRuleContext;
   STRING(): ParserRuleContext;
 }

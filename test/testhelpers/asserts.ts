@@ -106,11 +106,13 @@ export function assertValueSetFilterComponent(
   component: ValueSetComponent,
   fromSystem: string,
   fromValueSets: string[],
-  filters: ValueSetFilter[]
+  filters: ValueSetFilter[],
+  included = true
 ): void {
   expect(component).toBeInstanceOf(ValueSetFilterComponent);
   const filterComponent = component as ValueSetFilterComponent;
   expect(filterComponent.from.system).toBe(fromSystem);
   expect(filterComponent.from.valueSets).toEqual(fromValueSets);
   expect(filterComponent.filters).toEqual(filters);
+  expect(filterComponent.inclusion).toBe(included);
 }

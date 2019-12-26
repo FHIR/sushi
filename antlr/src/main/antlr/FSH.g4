@@ -53,7 +53,7 @@ vsFromValueset:     KW_VSREFERENCE (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 vsFilterList:       (vsFilterDefinition KW_AND)* vsFilterDefinition;
 vsFilterDefinition: SEQUENCE vsFilterOperator vsFilterValue;
 vsFilterOperator:   EQUAL | SEQUENCE;
-vsFilterValue:      code | REGEX | STRING;
+vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 
 // MISC
 path:               SEQUENCE;

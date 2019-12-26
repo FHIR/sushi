@@ -789,13 +789,20 @@ export class FSHImporter extends FSHVisitor {
     };
   }
 
-  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | string[] | FshCode {
+  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | boolean | FshCode {
     if (ctx.code()) {
       return this.visitCode(ctx.code());
     } else if (ctx.REGEX()) {
-      return ctx.REGEX().getText();
+      return ctx
+        .REGEX()
+        .getText()
+        .slice(1, -1);
     } else if (ctx.STRING()) {
       return this.extractString(ctx.STRING());
+    } else if (ctx.KW_TRUE()) {
+      return true;
+    } else if (ctx.KW_FALSE()) {
+      return false;
     }
   }
 
