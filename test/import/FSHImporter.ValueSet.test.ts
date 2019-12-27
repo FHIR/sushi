@@ -117,6 +117,13 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 31
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
       it('should parse a value set that includes all codes from other value sets', () => {
@@ -136,6 +143,13 @@ describe('FSHImporter', () => {
           ['SecondZooVS', 'ThirdZooVS'],
           []
         );
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 4,
+          endColumn: 53
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
       it('should parse a value set that includes all codes from a system and other value sets', () => {
@@ -153,6 +167,13 @@ describe('FSHImporter', () => {
           ['NorthZooVS', 'SouthZooVS'],
           []
         );
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 67
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
       it('should parse a value set that uses filter operator =', () => {
