@@ -1,5 +1,5 @@
 import { FHIRDefinitions } from './FHIRDefinitions';
-import { PackageLoadError, DevPackageLoadError } from '../errors';
+import { PackageLoadError, DevPackageLoadError, CurrentPackageLoadError } from '../errors';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -36,23 +36,28 @@ export async function loadDependency(
     } else if (version === 'current') {
       // Current packages need to be loaded using build.fhir.org
       const baseUrl = 'http://build.fhir.org/ig';
-      const res = await rp.get({ uri: `${baseUrl}/qas.json`, encoding: null });
-      const decoded = String.fromCharCode(...new Uint16Array(res));
-      const qaJSON = JSON.parse(decoded);
+      const res = await rp.get({ uri: `${baseUrl}/qas.json`, json: true });
       // Find matching packages and sort by date to get the most recent
-      const matchingPackages = qaJSON.filter((p: any) => p['package-id'] === packageName);
-      const newestPackage = matchingPackages.sort((p1: any, p2: any) => {
-        return Date.parse(p2['date']) - Date.parse(p1['date']);
-      })[0];
-      // Current packages are stored at build.fhir.org
-      packageUrl = `${baseUrl}/${newestPackage.repo}/package.tgz`;
+      let newestPackage;
+      if (res && res.length > 0) {
+        const matchingPackages = res.filter((p: any) => p['package-id'] === packageName);
+        newestPackage = matchingPackages.sort((p1: any, p2: any) => {
+          return Date.parse(p2['date']) - Date.parse(p1['date']);
+        })[0];
+      }
+      if (newestPackage) {
+        // Current packages are stored at build.fhir.org
+        packageUrl = `${baseUrl}/${newestPackage.repo}/package.tgz`;
+      } else {
+        throw new CurrentPackageLoadError(fullPackageName);
+      }
     } else {
       // All non-current packages are stored at packages.fhir.org
       packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
     }
     // Create a temporary file and write the package to there
     temp.track();
-    const tempFile = temp.openSync(); // TODO CHANGE THIS TO USE OTHER TEMP LIB
+    const tempFile = temp.openSync();
     const targetDirectory = path.join(cachePath, fullPackageName);
     const res = await rp.get({ uri: packageUrl, encoding: null });
 

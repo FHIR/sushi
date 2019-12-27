@@ -6,7 +6,6 @@ import path from 'path';
 import fs from 'fs-extra';
 import tar from 'tar';
 import rp from 'request-promise-native';
-import { TextEncoder } from 'util';
 
 describe('#loadFromPath()', () => {
   let defs: FHIRDefinitions;
@@ -122,34 +121,34 @@ describe('#loadDependency()', () => {
     defs = new FHIRDefinitions();
     requestSpy = jest.spyOn(rp, 'get').mockImplementation((options: any): any => {
       if (options.uri === 'http://build.fhir.org/ig/qas.json') {
-        return new TextEncoder().encode(`[
-            {
-              "url": "http://hl7.org/fhir/hspc/ImplementationGuide/hspc",
-              "name": "HSPC Implementation Guide",
-              "package-id": "hl7.fhir.hspc",
-              "ig-ver": "1.0",
-              "date": "Thu, 11 Oct, 2018 11:00:14 -0600",
-              "errs": 34,
-              "warnings": 10,
-              "hints": 0,
-              "version": "3.0.1",
-              "tool": "3.4.0-13844",
-              "repo": "nrdavis1/HSPCFHIRtest/bran"
-            },
-            {
-              "url": "http://hl7.org/fhir/hspc/ImplementationGuide/hspc",
-              "name": "HSPC Implementation Guide",
-              "package-id": "hl7.fhir.hspc",
-              "ig-ver": "1.0",
-              "date": "Tue, 05 Mar, 2019 12:02:14 -0700",
-              "errs": 26980,
-              "warnings": 10,
-              "hints": 0,
-              "version": "3.0.1",
-              "tool": "3.4.0-13844",
-              "repo": "nrdavis1/HSPCFHIRtest/branches"
-            }
-        ]`);
+        return [
+          {
+            url: 'http://hl7.org/fhir/hspc/ImplementationGuide/hspc',
+            name: 'HSPC Implementation Guide',
+            'package-id': 'hl7.fhir.hspc',
+            'ig-ver': '1.0',
+            date: 'Thu, 11 Oct, 2018 11:00:14 -0600',
+            errs: 34,
+            warnings: 10,
+            hints: 0,
+            version: '3.0.1',
+            tool: '3.4.0-13844',
+            repo: 'nrdavis1/HSPCFHIRtest/bran'
+          },
+          {
+            url: 'http://hl7.org/fhir/hspc/ImplementationGuide/hspc',
+            name: 'HSPC Implementation Guide',
+            'package-id': 'hl7.fhir.hspc',
+            'ig-ver': '1.0',
+            date: 'Tue, 05 Mar, 2019 12:02:14 -0700',
+            errs: 26980,
+            warnings: 10,
+            hints: 0,
+            version: '3.0.1',
+            tool: '3.4.0-13844',
+            repo: 'nrdavis1/HSPCFHIRtest/branches'
+          }
+        ];
       } else {
         return {};
       }
@@ -204,7 +203,7 @@ describe('#loadDependency()', () => {
     );
     expect(requestSpy.mock.calls[0]).toEqual([
       {
-        encoding: null,
+        json: true,
         uri: 'http://build.fhir.org/ig/qas.json'
       }
     ]);
@@ -216,6 +215,33 @@ describe('#loadDependency()', () => {
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#current'));
+  });
+
+  it('should throw CurrentPackageLoadError when a current package is not listed', async () => {
+    await expect(loadDependency('hl7.fhir.us.core', 'current', defs, 'foo')).rejects.toThrow(
+      'The package hl7.fhir.us.core#current is not available on http://build.fhir.org/ig/qas.json, so no current version can be loaded'
+    );
+    expect(requestSpy.mock.calls.length).toBe(1);
+    expect(requestSpy.mock.calls[0]).toEqual([
+      {
+        json: true,
+        uri: 'http://build.fhir.org/ig/qas.json'
+      }
+    ]);
+  });
+
+  it('should throw CurrentPackageLoadError when http://build.fhir.org/ig/qas.json gives a bad response', async () => {
+    requestSpy.mockImplementationOnce(() => {});
+    await expect(loadDependency('bad.response', 'current', defs, 'foo')).rejects.toThrow(
+      'The package bad.response#current is not available on http://build.fhir.org/ig/qas.json, so no current version can be loaded'
+    );
+    expect(requestSpy.mock.calls.length).toBe(1);
+    expect(requestSpy.mock.calls[0]).toEqual([
+      {
+        json: true,
+        uri: 'http://build.fhir.org/ig/qas.json'
+      }
+    ]);
   });
 
   it('should throw DevPackageLoadError when a dev package version is not locally present', async () => {

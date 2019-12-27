@@ -26,3 +26,4 @@ export * from './InvalidExtensionSliceError';
 export * from './ParentNotDefinedError';
 export * from './PackageLoadError';
 export * from './DevPackageLoadError';
+export * from './CurrentPackageLoadError';
