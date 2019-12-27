@@ -59,11 +59,24 @@ export async function loadDependency(
     temp.track();
     const tempFile = temp.openSync();
     const targetDirectory = path.join(cachePath, fullPackageName);
-    const res = await rp.get({ uri: packageUrl, encoding: null });
-
-    if (!fs.existsSync(targetDirectory)) {
-      fs.ensureDirSync(targetDirectory);
+    let res;
+    try {
+      res = await rp.get({
+        uri: packageUrl,
+        encoding: null,
+        transform: (body, response) => {
+          if (response.statusCode < 200 || response.statusCode > 299) {
+            return body.toString();
+          }
+          return body;
+        }
+      });
+    } catch (e) {
+      e.message = `${e.statusCode} - ${e.response}`;
+      throw e;
     }
+
+    fs.ensureDirSync(targetDirectory);
     fs.writeFileSync(tempFile.path, res);
     // Extract the package from that temporary file location
     tar.x({

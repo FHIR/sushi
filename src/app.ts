@@ -49,14 +49,14 @@ async function app() {
 
   // Load external dependencies
   const defs = new FHIRDefinitions();
-  const dependencyDefs: Promise<FHIRDefinitions>[] = [];
+  const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
   for (const dep of Object.keys(config?.dependencies ?? {})) {
-    try {
-      dependencyDefs.push(loadDependency(dep, config.dependencies[dep], defs));
-    } catch (e) {
-      logger.error(e.message);
-      logger.error(`Failed to load ${dep}#${config.dependencies[dep]}`);
-    }
+    dependencyDefs.push(
+      loadDependency(dep, config.dependencies[dep], defs).catch(e => {
+        logger.error(`Failed to load ${dep}#${config.dependencies[dep]}`);
+        logger.error(e.message);
+      })
+    );
   }
 
   const docs: FSHDocument[] = [];

@@ -187,12 +187,7 @@ describe('#loadDependency()', () => {
     await expect(loadDependency('hl7.fhir.hspc', '1.1.1', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.hspc#1.1.1 could not be loaded locally or from the FHIR package registry'
     );
-    expect(requestSpy.mock.calls[0]).toEqual([
-      {
-        encoding: null,
-        uri: 'http://packages.fhir.org/hl7.fhir.hspc/1.1.1'
-      }
-    ]);
+    expect(requestSpy.mock.calls[0][0].uri).toBe('http://packages.fhir.org/hl7.fhir.hspc/1.1.1');
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#1.1.1')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#1.1.1'));
   });
@@ -207,12 +202,9 @@ describe('#loadDependency()', () => {
         uri: 'http://build.fhir.org/ig/qas.json'
       }
     ]);
-    expect(requestSpy.mock.calls[1]).toEqual([
-      {
-        encoding: null,
-        uri: 'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/branches/package.tgz'
-      }
-    ]);
+    expect(requestSpy.mock.calls[1][0].uri).toBe(
+      'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/branches/package.tgz'
+    );
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#current'));
   });
