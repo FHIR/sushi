@@ -8,7 +8,7 @@ import { InstanceDefinition } from '../export';
  * @param {any} value - The value to fix
  * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
  */
-export function setPropertyOnInstance(
+export function setPropertyOnDefinitionInstance(
   instance: StructureDefinition | ElementDefinition,
   path: string,
   value: any,
@@ -20,10 +20,10 @@ export function setPropertyOnInstance(
     value,
     resolve
   );
-  setFixedValueOfPath(instance, pathParts, fixedValue);
+  setPropertyOnInstance(instance, pathParts, fixedValue);
 }
 
-export function setFixedValueOfPath(
+export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition,
   pathParts: PathPart[],
   fixedValue: any

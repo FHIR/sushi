@@ -5,7 +5,7 @@ import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
-import { getArrayIndex, setPropertyOnInstance } from './common';
+import { getArrayIndex, setPropertyOnDefinitionInstance } from './common';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -242,7 +242,7 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    setPropertyOnInstance(this, path, value, resolve);
+    setPropertyOnDefinitionInstance(this, path, value, resolve);
   }
 
   /**

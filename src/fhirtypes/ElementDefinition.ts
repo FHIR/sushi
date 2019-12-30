@@ -20,7 +20,7 @@ import {
   InvalidSumOfSliceMinsError,
   InvalidMaxOfSliceError
 } from '../errors';
-import { setPropertyOnInstance } from './common';
+import { setPropertyOnDefinitionInstance } from './common';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -328,7 +328,7 @@ export class ElementDefinition {
    * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
    */
   setInstancePropertyByPath(path: string, value: any, resolve: ResolveFn = () => undefined): void {
-    setPropertyOnInstance(this, path, value, resolve);
+    setPropertyOnDefinitionInstance(this, path, value, resolve);
   }
 
   /**

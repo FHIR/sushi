@@ -4,7 +4,7 @@ import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
 import { StructureDefinitionExporter } from '.';
 import { logger } from '../utils/FSHLogger';
-import { setFixedValueOfPath } from '../fhirtypes/common';
+import { setPropertyOnInstance } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 
 export type InstanceDefinition = {
@@ -30,7 +30,7 @@ export class InstanceExporter {
         structDefExporter.resolve.bind(structDefExporter)
       );
 
-      setFixedValueOfPath(instanceDef, pathParts, fixedValue);
+      setPropertyOnInstance(instanceDef, pathParts, fixedValue);
     });
 
     return instanceDef;
