@@ -342,9 +342,9 @@ describe('FSHImporter', () => {
 
       it('should parse a value set that uses filter operator regex', () => {
         const input = `
-      ValueSet: ProbablyDogsVS
-      * codes from system ZOO where display regex /([Dd]og)|([Cc]anine)/
-      `;
+        ValueSet: ProbablyDogsVS
+        * codes from system ZOO where display regex /([Dd]og)|([Cc]anine)/
+        `;
         const result = importText(input, 'MostlyDogs.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ProbablyDogsVS');
@@ -360,9 +360,9 @@ describe('FSHImporter', () => {
 
       it('should log an error when the regex filter has a non-regex value', () => {
         const input = `
-      ValueSet: ProbablyDogsVS
-      * codes from system ZOO where display regex "Dog|Canine"
-      `;
+        ValueSet: ProbablyDogsVS
+        * codes from system ZOO where display regex "Dog|Canine"
+        `;
         const result = importText(input, 'MostlyDogs.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ProbablyDogsVS');
@@ -472,9 +472,9 @@ describe('FSHImporter', () => {
 
       it('should parse a value set that uses filter operator exists', () => {
         const input = `
-      ValueSet: ZooVS
-      * codes from system ZOO where display exists true
-      `;
+        ValueSet: ZooVS
+        * codes from system ZOO where display exists true
+        `;
         const result = importText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
@@ -490,9 +490,9 @@ describe('FSHImporter', () => {
 
       it('should log an error when the exists filter has a non-boolean value', () => {
         const input = `
-      ValueSet: ZooVS
-      * codes from system ZOO where display exists "display"
-      `;
+        ValueSet: ZooVS
+        * codes from system ZOO where display exists "display"
+        `;
         const result = importText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
@@ -520,6 +520,32 @@ describe('FSHImporter', () => {
           [],
           false
         );
+      });
+
+      it('should log an error when a filter has an invalid property', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where animal exists true
+        `;
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+      });
+
+      it('should log an error when a filter has an invalid operator', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where display resembles "cat"
+        `;
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
       });
     });
   });

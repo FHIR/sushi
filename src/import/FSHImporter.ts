@@ -771,17 +771,18 @@ export class FSHImporter extends FSHVisitor {
    * @see {@link http://hl7.org/fhir/valueset-filter-operator.html}
    */
   visitVsFilterDefinition(ctx: pc.VsFilterDefinitionContext): ValueSetFilter {
-    const property = ctx.SEQUENCE().getText() as VsProperty;
-    if (!property) {
+    const property = ctx
+      .SEQUENCE()
+      .getText()
+      .toLocaleLowerCase() as VsProperty;
+    if (Object.values(VsProperty).indexOf(property) < 0) {
       throw new ValueSetFilterPropertyError(ctx.SEQUENCE().getText());
     }
     const operator = ctx
       .vsFilterOperator()
       .getText()
+      .toLocaleLowerCase()
       .replace('descendant', 'descendent') as VsOperator;
-    if (!operator) {
-      throw new ValueSetFilterOperatorError(ctx.vsFilterOperator().getText());
-    }
     const value = this.visitVsFilterValue(ctx.vsFilterValue());
     switch (operator) {
       case VsOperator.EQUALS:
@@ -809,6 +810,8 @@ export class FSHImporter extends FSHVisitor {
           throw new ValueSetFilterValueTypeError(operator, 'boolean');
         }
         break;
+      default:
+        throw new ValueSetFilterOperatorError(ctx.vsFilterOperator().getText());
     }
     return {
       property: property,
