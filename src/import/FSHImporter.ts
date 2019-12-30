@@ -36,7 +36,8 @@ import {
   RequiredMetadataError,
   ValueSetFilterPropertyError,
   ValueSetFilterOperatorError,
-  ValueSetFilterValueTypeError
+  ValueSetFilterValueTypeError,
+  ValueSetFilterMissingValueError
 } from '../errors';
 
 enum SdMetadataKey {
@@ -680,6 +681,7 @@ export class FSHImporter extends FSHVisitor {
         .getText()
         .split(/\s*,\s+#/);
       codes[0] = codes[0].slice(1);
+      const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
       codes.forEach(code => {
         let codePart: string, description: string;
         if (code.charAt(0) == '"') {
@@ -703,9 +705,7 @@ export class FSHImporter extends FSHVisitor {
           }
         }
         concepts.push(
-          new FshCode(codePart, from.system, description)
-            .withLocation(this.extractStartStop(ctx.COMMA_DELIMITED_CODES()))
-            .withFile(this.file)
+          new FshCode(codePart, from.system, description).withLocation(location).withFile(this.file)
         );
       });
     }
@@ -783,7 +783,10 @@ export class FSHImporter extends FSHVisitor {
       .getText()
       .toLocaleLowerCase()
       .replace('descendant', 'descendent') as VsOperator;
-    const value = this.visitVsFilterValue(ctx.vsFilterValue());
+    if (ctx.vsFilterValue() == null && operator !== VsOperator.EXISTS) {
+      throw new ValueSetFilterMissingValueError(operator);
+    }
+    const value = ctx.vsFilterValue() ? this.visitVsFilterValue(ctx.vsFilterValue()) : true;
     switch (operator) {
       case VsOperator.EQUALS:
       case VsOperator.IN:

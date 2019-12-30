@@ -51,7 +51,7 @@ vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValue
 vsFromSystem:       KW_SYSTEM SEQUENCE;
 vsFromValueset:     KW_VSREFERENCE (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 vsFilterList:       (vsFilterDefinition KW_AND)* vsFilterDefinition;
-vsFilterDefinition: SEQUENCE vsFilterOperator vsFilterValue;
+vsFilterDefinition: SEQUENCE vsFilterOperator vsFilterValue?;
 vsFilterOperator:   EQUAL | SEQUENCE;
 vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 

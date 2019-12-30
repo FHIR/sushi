@@ -31,7 +31,50 @@ describe('FSHImporter', () => {
         });
         expect(valueSet.sourceInfo.file).toBe('Simple.fsh');
       });
+
+      it('should only apply each metadata attribute the first time it is declared', () => {
+        const input = `
+        ValueSet: SimpleVS
+        Id: SimpleVS_ID
+        Title: "Simple Value Set"
+        Description: "A simple value set for testing metadata"
+        Id: DuplicateVS_ID
+        Title: "Duplicate Value Set"
+        Description: "A duplicate value set for testing metadata"
+        `;
+        const result = importText(input, 'Dupe.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('SimpleVS');
+        expect(valueSet.name).toBe('SimpleVS');
+        expect(valueSet.id).toBe('SimpleVS_ID');
+        expect(valueSet.title).toBe('Simple Value Set');
+        expect(valueSet.description).toBe('A simple value set for testing metadata');
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 8,
+          endColumn: 65
+        });
+        expect(valueSet.sourceInfo.file).toBe('Dupe.fsh');
+      });
+
+      it('should log an error when encountering a duplicate metadata attribute', () => {
+        const input = `
+        ValueSet: SimpleVS
+        Id: SimpleVS_ID
+        Title: "Simple Value Set"
+        Description: "A simple value set for testing metadata"
+        Id: DuplicateVS_ID
+        Title: "Duplicate Value Set"
+        Description: "A duplicate value set for testing metadata"
+        `;
+        importText(input, 'Dupe.fsh');
+        expect(loggerSpy.getMessageAtIndex(-3)).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
+        expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
+      });
     });
+
     describe('#ValueSetConceptComponent', () => {
       it('should parse a value set with a concept specified as SYSTEM#code', () => {
         const input = `
@@ -77,6 +120,33 @@ describe('FSHImporter', () => {
           startColumn: 9,
           endLine: 3,
           endColumn: 47
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a value set with a list of concepts', () => {
+        const input = `
+        ValueSet: ZooVS
+        * #hippo "Hippopotamus", #crocodile "Crocodile" from system ZOO
+        `;
+
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO', 'Hippopotamus')
+            .withLocation([3, 11, 3, 55])
+            .withFile('Zoo.fsh'),
+          new FshCode('crocodile', 'ZOO', 'Crocodile')
+            .withLocation([3, 11, 3, 55])
+            .withFile('Zoo.fsh')
+        ]);
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 71
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
@@ -267,7 +337,7 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should parse a value set that uses filter operator descendent-of, but spelled correctly', () => {
+      it('should parse a value set that uses filter operator descendant-of, which is the same as descendent-of, but spelled correctly', () => {
         const input = `
         ValueSet: AllFelinesVS
         * codes from valueset ZooVS where code descendant-of ZOO#cat
@@ -474,14 +544,22 @@ describe('FSHImporter', () => {
         const input = `
         ValueSet: ZooVS
         * codes from system ZOO where display exists true
+        * codes from system ZOO where version exists
         `;
         const result = importText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
+        expect(valueSet.components.length).toBe(2);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
             property: VsProperty.DISPLAY,
+            operator: VsOperator.EXISTS,
+            value: true
+          }
+        ]);
+        assertValueSetFilterComponent(valueSet.components[1], 'ZOO', undefined, [
+          {
+            property: VsProperty.VERSION,
             operator: VsOperator.EXISTS,
             value: true
           }
@@ -539,6 +617,19 @@ describe('FSHImporter', () => {
         const input = `
         ValueSet: ZooVS
         * codes from system ZOO where display resembles "cat"
+        `;
+        const result = importText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+      });
+
+      it('should log an error when a filter (other than the exists filter) has no value', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where display regex
         `;
         const result = importText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
