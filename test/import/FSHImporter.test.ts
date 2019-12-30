@@ -71,4 +71,19 @@ describe('FSHImporter', () => {
     expect(profile.rules).toHaveLength(1);
     assertFixedValueRule(profile.rules[0], 'code', expectedCode);
   });
+
+  it('should parse a rule with an identifying integer', () => {
+    const input = `
+    Profile: IdentifyingInteger
+    Parent: Observation
+    *123 code = #"This rule is identified"
+    `;
+    const result = importText(input, 'IdentifyingInteger.fsh');
+    const profile = result.profiles.get('IdentifyingInteger');
+    const expectedCode = new FshCode('This rule is identified')
+      .withLocation([4, 17, 4, 42])
+      .withFile('IdentifyingInteger.fsh');
+    expect(profile.rules).toHaveLength(1);
+    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+  });
 });
