@@ -1,4 +1,4 @@
-import { InstanceExporter } from '../../src/export';
+import { InstanceExporter, ProfileExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, load } from '../../src/fhirdefs';
 import { Instance, Profile, FshCode } from '../../src/fshtypes';
@@ -10,6 +10,7 @@ describe('InstanceExporter', () => {
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: InstanceExporter;
+  let profileExporter: ProfileExporter;
 
   beforeAll(() => {
     defs = load('4.0.1');
@@ -18,7 +19,8 @@ describe('InstanceExporter', () => {
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new InstanceExporter(defs, input);
+    profileExporter = new ProfileExporter(defs, input);
+    exporter = new InstanceExporter(defs, input, profileExporter.resolve.bind(profileExporter));
   });
 
   it('should output empty results with empty input', () => {

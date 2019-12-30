@@ -22,7 +22,11 @@ export class FHIRExporter {
   export(tank: FSHTank): Package {
     this.profileExporter = new ProfileExporter(this.FHIRDefs, tank);
     this.extensionExporter = new ExtensionExporter(this.FHIRDefs, tank);
-    this.instanceExporter = new InstanceExporter(this.FHIRDefs, tank);
+    this.instanceExporter = new InstanceExporter(
+      this.FHIRDefs,
+      tank,
+      this.profileExporter.resolve.bind(this.profileExporter)
+    );
     const profileDefs = this.profileExporter.export();
     const extensionDefs = this.extensionExporter.export();
     const instanceDefs = this.instanceExporter.export();
