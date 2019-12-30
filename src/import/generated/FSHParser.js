@@ -309,7 +309,7 @@ var literalNames = [ null, null, null, null, null, null, null, null, null,
                      "'SU'", "'from'", null, null, null, null, "'contains'", 
                      "'and'", "'only'", "'or'", "'obeys'", "'true'", "'false'", 
                      "'exclude'", "'codes'", "'where'", "'valueset'", "'system'", 
-                     "'='", "'*'", "':'", "','" ];
+                     "'='", null, "':'", "','" ];
 
 var symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTANCE", 
                       "KW_INSTANCEOF", "KW_INVARIANT", "KW_VALUESET", "KW_CODESYSTEM", 

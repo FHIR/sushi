@@ -110,7 +110,7 @@ KW_SYSTEM:          'system';
 
 // SYMBOLS
 EQUAL:              '=';
-STAR:               '*';
+STAR:               '*'  [0-9]*;
 COLON:              ':';
 COMMA:              ',';
 
