@@ -357,7 +357,7 @@ export class StructureDefinition {
       }
       currentElement = this.findElementByPath(currentPath, resolve);
 
-      // If the element has a base.max that is great than 1, but the element has been constrained, still set properties in an array
+      // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
       const valueShouldBeWithinArray =
         currentElement?.base?.max !== '0' &&
         currentElement?.base?.max !== '1' &&

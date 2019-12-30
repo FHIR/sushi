@@ -87,7 +87,7 @@ async function app() {
     const igExporter = new IGExporter(outPackage, igDataPath);
     igExporter.export(program.out);
   } else {
-    for (const sd of [...outPackage.profiles, ...outPackage.extensions]) {
+    for (const sd of [...outPackage.profiles, ...outPackage.extensions, ...outPackage.instances]) {
       fs.writeFileSync(
         path.join(program.out, sd.getFileName()),
         JSON.stringify(sd.toJSON(), null, 2),
@@ -95,16 +95,6 @@ async function app() {
       );
     }
   }
-  for (const instance of outPackage.instances) {
-    const fileName = `${instance.resourceType}-${instance.id ?? instance.instanceName}`;
-    delete instance.instanceName; // Only needed for the file name - not a FHIR property
-    fs.writeFileSync(
-      path.join(program.out, `${fileName}.json`),
-      JSON.stringify(instance, null, 2),
-      'utf8'
-    );
-  }
-}
 
   logger.info(`
   Profiles:    ${outPackage.profiles.length}

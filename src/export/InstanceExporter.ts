@@ -1,17 +1,11 @@
 import { FSHTank } from '../import/FSHTank';
-import { StructureDefinition } from '../fhirtypes';
+import { StructureDefinition, InstanceDefinition } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
 import { StructureDefinitionExporter } from '.';
 import { logger } from '../utils/FSHLogger';
 import { setPropertyOnInstance } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
-
-export type InstanceDefinition = {
-  resourceType: string;
-  instanceName: string;
-  id?: string;
-};
 
 export class InstanceExporter {
   constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
@@ -48,10 +42,9 @@ export class InstanceExporter {
       );
     }
 
-    let instanceDef: InstanceDefinition = {
-      resourceType: instanceOfStructureDefinition.type, // ResourceType is determined by the StructureDefinition of the type
-      instanceName: fshDefinition.id // This is name of the instance in the FSH
-    };
+    let instanceDef = new InstanceDefinition();
+    instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
+    instanceDef.instanceName = fshDefinition.id; // This is name of the instance in the FSH
 
     // All other values of the instance will be fixedValues explicitly on the FSH Instance
     instanceDef = this.setFixedValues(

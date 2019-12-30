@@ -88,7 +88,6 @@ describe('InstanceExporter', () => {
     doc.instances.set(instance.name, instance);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    // @ts-ignore
     expect(exported[0].gender).toBe('foo');
   });
 });

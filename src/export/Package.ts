@@ -1,5 +1,4 @@
-import { StructureDefinition } from '../fhirtypes';
-import { InstanceDefinition } from '../export';
+import { StructureDefinition, InstanceDefinition } from '../fhirtypes';
 import { Config } from '../fshtypes';
 
 export class Package {

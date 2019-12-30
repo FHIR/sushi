@@ -1,5 +1,4 @@
-import { ResolveFn, StructureDefinition, PathPart, ElementDefinition } from '.';
-import { InstanceDefinition } from '../export';
+import { ResolveFn, StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
 
 /**
  * This function sets an instance property of an SD or ED if possible

@@ -3,7 +3,7 @@ import path from 'path';
 import temp from 'temp';
 import ini from 'ini';
 import { IGExporter } from '../../src/ig';
-import { StructureDefinition } from '../../src/fhirtypes';
+import { StructureDefinition, InstanceDefinition } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Config } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -35,7 +35,8 @@ describe('IGExporter', () => {
       });
       fs.readdirSync(instances).forEach(f => {
         if (f.endsWith('.json')) {
-          pkg.instances.push(fs.readJSONSync(path.join(instances, f)));
+          const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(instances, f)));
+          pkg.instances.push(instanceDef);
         }
       });
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
@@ -60,24 +61,23 @@ describe('IGExporter', () => {
 
     it('should copy over the resource files', () => {
       const resourcesPath = path.join(tempOut, 'input', 'resources');
-      expect(fs.readdirSync(resourcesPath)).toHaveLength(4);
+      expect(fs.readdirSync(resourcesPath)).toHaveLength(5);
       const ids = [
         'sample-observation',
         'sample-patient',
         'sample-value-extension',
         'sample-complex-extension'
       ];
+
+      // StructureDefinitions copied
       ids.forEach(id => {
         const resourcePath = path.join(resourcesPath, `StructureDefinition-${id}.json`);
         expect(fs.existsSync(resourcePath)).toBeTruthy();
         expect(fs.readJSONSync(resourcePath).id).toEqual(id);
       });
-    });
 
-    it('should copy over the instance files', () => {
-      const instancesPath = path.join(tempOut, 'input', 'instances');
-      expect(fs.readdirSync(instancesPath)).toHaveLength(1);
-      const instancePath = path.join(instancesPath, 'Patient-example.json');
+      // Instances copied
+      const instancePath = path.join(resourcesPath, 'Patient-example.json');
       expect(fs.existsSync(instancePath)).toBeTruthy();
       expect(fs.readJSONSync(instancePath).id).toEqual('example');
     });
