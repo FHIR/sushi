@@ -13,7 +13,7 @@ let input: string;
 program
   .name('sushi')
   .usage('<path-to-fsh-defs> [options]')
-  .option('-o, --out <build>', 'the path to the output folder', path.join('.', 'build'))
+  .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
   .arguments('<path-to-fsh-defs>')
   .action(function(pathToFshDefs) {
     input = pathToFshDefs;
