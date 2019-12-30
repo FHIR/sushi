@@ -358,7 +358,7 @@ export class StructureDefinition {
       currentElement = this.findElementByPath(currentPath, resolve);
 
       // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
-      const valueShouldBeWithinArray =
+      const nonArrayElementIsBasedOnArray =
         currentElement?.base?.max !== '0' &&
         currentElement?.base?.max !== '1' &&
         (currentElement?.max === '0' || currentElement?.max === '1');
@@ -377,7 +377,7 @@ export class StructureDefinition {
           currentElement.max != null &&
           currentElement.max !== '0' &&
           currentElement.max !== '1') ||
-        valueShouldBeWithinArray
+        nonArrayElementIsBasedOnArray
       ) {
         // Modify the path to have 0 indices
         if (!pathPart.brackets) pathPart.brackets = [];
