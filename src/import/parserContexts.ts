@@ -227,7 +227,7 @@ export interface VsComponentContext extends ParserRuleContext {
 }
 
 export interface VsConceptComponentContext extends ParserRuleContext {
-  code(): CodeContext[];
+  code(): CodeContext;
   vsComponentFrom(): VsComponentFromContext;
   COMMA_DELIMITED_CODES(): ParserRuleContext;
 }
@@ -252,6 +252,7 @@ export interface VsFromSystemContext extends ParserRuleContext {
 
 export interface VsFromValuesetContext extends ParserRuleContext {
   KW_VSREFERENCE(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
   COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
 }
 
@@ -272,7 +273,8 @@ export interface VsFilterOperatorContext extends ParserRuleContext {
 
 export interface VsFilterValueContext extends ParserRuleContext {
   code(): CodeContext;
+  KW_TRUE(): ParserRuleContext;
+  KW_FALSE(): ParserRuleContext;
   REGEX(): ParserRuleContext;
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext;
+  STRING(): ParserRuleContext;
 }

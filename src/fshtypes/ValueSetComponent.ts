@@ -1,38 +1,47 @@
 import { FshEntity } from './FshEntity';
+import { FshCode } from './FshCode';
 
 export class ValueSetComponent extends FshEntity {
-  public system?: string;
-  public rule?: ValueSetConcept | ValueSetFilter | ValueSetReference;
-
-  public withSystem(system: string): ValueSetComponent {
-    this.system = system;
-    return this;
-  }
-
-  public withRule(rule: ValueSetConcept | ValueSetFilter | ValueSetReference): ValueSetComponent {
-    this.rule = rule;
-    return this;
+  public from: ValueSetComponentFrom = {};
+  constructor(public inclusion: boolean) {
+    super();
   }
 }
 
-export class ValueSetConcept {
-  public code: string;
-  public display: string;
+export class ValueSetConceptComponent extends ValueSetComponent {
+  public concepts: FshCode[] = [];
 }
 
-export class ValueSetFilter {
-  public property: string;
-  public op:
-    | '='
-    | 'is-a'
-    | 'descendant-of'
-    | 'is-not-a'
-    | 'regex'
-    | 'in'
-    | 'not-in'
-    | 'generalizes'
-    | 'exists';
-  public value: string;
+export class ValueSetFilterComponent extends ValueSetComponent {
+  public filters: ValueSetFilter[] = [];
 }
 
-export type ValueSetReference = string;
+export type ValueSetComponentFrom = {
+  system?: string;
+  valueSets?: string[];
+};
+
+export enum VsProperty {
+  SYSTEM = 'system',
+  VERSION = 'version',
+  CODE = 'code',
+  DISPLAY = 'display'
+}
+
+export enum VsOperator {
+  EQUALS = '=',
+  IS_A = 'is-a',
+  DESCENDENT_OF = 'descendent-of',
+  IS_NOT_A = 'is-not-a',
+  REGEX = 'regex',
+  IN = 'in',
+  NOT_IN = 'not-in',
+  GENERALIZES = 'generalizes',
+  EXISTS = 'exists'
+}
+
+export type ValueSetFilter = {
+  property: VsProperty;
+  operator: VsOperator;
+  value: string | RegExp | boolean | FshCode;
+};
