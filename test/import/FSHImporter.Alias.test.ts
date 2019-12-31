@@ -73,5 +73,21 @@ describe('FSHImporter', () => {
       const rule = result.profiles.get('ObservationProfile').rules[0] as ValueSetRule;
       expect(rule.valueSet).toBe('LAINC');
     });
+
+    it('should translate an alias from any input file', () => {
+      const input = `
+      Profile: ObservationProfile
+      Parent: Observation
+      * code from LOINC
+      `;
+      const input2 = `
+      Alias: LOINC = http://loinc.org
+      `;
+
+      const results = importText([new FileInfo(input), new FileInfo(input2)]);
+      expect(results.length).toBe(2);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as ValueSetRule;
+      expect(rule.valueSet).toBe('http://loinc.org');
+    });
   });
 });

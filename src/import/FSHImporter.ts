@@ -78,27 +78,36 @@ enum Flag {
 export class FSHImporter extends FSHVisitor {
   private used = false;
   private readonly doc: FSHDocument;
+  private allAliases: Map<string, string>;
 
   constructor(public readonly file: string = '') {
     super();
     this.doc = new FSHDocument(file);
   }
 
-  visitDoc(ctx: pc.DocContext): FSHDocument {
-    if (this.used) {
-      logger.error('FSHImporter cannot be re-used. Construct a new instance.');
-      return;
-    }
-    this.used = true;
-
-    // First collect the aliases
+  getAliases(ctx: pc.DocContext): Map<string, string> {
     ctx.entity().forEach(e => {
       if (e.alias()) {
         this.visitAlias(e.alias());
       }
     });
 
-    // Now process the rest of the document
+    return this.doc.aliases;
+  }
+
+  visitDoc(ctx: pc.DocContext, allAliases?: Map<string, string>): FSHDocument {
+    if (this.used) {
+      logger.error('FSHImporter cannot be re-used. Construct a new instance.');
+      return;
+    }
+    this.used = true;
+
+    if (allAliases) {
+      this.allAliases = allAliases;
+    } else {
+      this.getAliases(ctx);
+    }
+
     ctx.entity().forEach(e => {
       this.visitEntity(e);
     });
@@ -839,7 +848,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private aliasAwareValue(value: string): string {
-    return this.doc.aliases.has(value) ? this.doc.aliases.get(value) : value;
+    // If we don't have knowledge of all aliases, use aliases from this doc
+    const aliases = this.allAliases || this.doc.aliases;
+    return aliases.has(value) ? aliases.get(value) : value;
   }
 
   private extractString(stringCtx: ParserRuleContext): string {

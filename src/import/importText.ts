@@ -6,6 +6,7 @@ import { FSHImporter } from './FSHImporter';
 import { FSHDocument } from './FSHDocument';
 import { FSHErrorListener } from './FSHErrorListener';
 import { FileInfo } from './FileInfo';
+import flatMap from 'lodash/flatMap';
 
 /**
  * Parses various text strings into individual FSHDocuments.
@@ -13,12 +14,27 @@ import { FileInfo } from './FileInfo';
  * @returns {FSHDocument[]} - the FSH documents representing each parsed text
  */
 export function importText(filesInfo: FileInfo[]): FSHDocument[] {
+  const importers: FSHImporter[] = [];
+  const contexts: DocContext[] = [];
+  filesInfo.forEach(fileInfo => {
+    importers.push(new FSHImporter(fileInfo.path));
+    contexts.push(parseDoc(fileInfo.content, fileInfo.path));
+  });
+
+  // Import all aliases first
+  const allAliases = new Map(flatMap(importers.map((importer, index) => {
+    const context = contexts[index];
+    return importer.getAliases(context);
+  }),
+    aliases => Array.from(aliases)
+  ));
+
   const docs: FSHDocument[] = [];
-  for (const fileInfo of filesInfo) {
-    const importer = new FSHImporter(fileInfo.path);
-    const doc = importer.visitDoc(parseDoc(fileInfo.content, fileInfo.path));
+  importers.forEach((importer, index) => {
+    const context = contexts[index];
+    const doc = importer.visitDoc(context, allAliases);
     if (doc) docs.push(doc);
-  }
+  });
 
   return docs;
 }
