@@ -107,10 +107,6 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    if (ctx.alias()) {
-      this.visitAlias(ctx.alias());
-    }
-
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
     }

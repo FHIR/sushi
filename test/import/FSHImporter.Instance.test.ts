@@ -1,4 +1,4 @@
-import { importText } from '../../src/import';
+import { importText, FileInfo } from '../../src/import';
 import { assertFixedValueRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -12,7 +12,7 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         `;
 
-        const result = importText(input, 'SimpleInstance.fsh');
+        const result = importText([new FileInfo(input, 'SimpleInstance.fsh')])[0];
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('MyObservation');
         expect(instance.name).toBe('MyObservation');
@@ -35,7 +35,7 @@ describe('FSHImporter', () => {
         InstanceOf: obs
         `;
 
-        const result = importText(input);
+        const result = importText([new FileInfo(input)])[0];
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
@@ -47,7 +47,7 @@ describe('FSHImporter', () => {
         Title: "My Important Observation"
         `;
 
-        const result = importText(input, 'Missing.fsh');
+        const result = importText([new FileInfo(input, 'Missing.fsh')])[0];
         expect(result.instances.size).toBe(0);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Missing\.fsh.*Line: 2 - 3\D/s);
       });
@@ -61,7 +61,7 @@ describe('FSHImporter', () => {
         Title: "My Important Observation"
         `;
 
-        const result = importText(input);
+        const result = importText([new FileInfo(input)])[0];
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('MyObservation');
         expect(instance.name).toBe('MyObservation');
@@ -81,7 +81,7 @@ describe('FSHImporter', () => {
         * gender = #other
         `;
 
-        const result = importText(input);
+        const result = importText([new FileInfo(input)])[0];
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('SamplePatient');
         expect(instance.rules.length).toBe(3);
@@ -105,7 +105,7 @@ describe('FSHImporter', () => {
         Title: "My Duplicate Observation"
         `;
 
-        const result = importText(input);
+        const result = importText([new FileInfo(input)])[0];
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('MyObservation');
         expect(instance.name).toBe('MyObservation');
@@ -122,7 +122,7 @@ describe('FSHImporter', () => {
         Title: "My Duplicate Observation"
         `;
 
-        importText(input, 'Dupe.fsh');
+        importText([new FileInfo(input, 'Dupe.fsh')])[0];
         expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Dupe\.fsh.*Line: 5\D/s);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
       });

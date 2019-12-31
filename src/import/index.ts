@@ -1,3 +1,4 @@
+export * from './FileInfo';
 export * from './FSHDocument';
 export * from './FSHTank';
 export * from './FSHImporter';

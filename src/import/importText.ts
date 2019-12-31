@@ -5,16 +5,22 @@ import { DocContext } from './parserContexts';
 import { FSHImporter } from './FSHImporter';
 import { FSHDocument } from './FSHDocument';
 import { FSHErrorListener } from './FSHErrorListener';
+import { FileInfo } from './FileInfo';
 
 /**
- * Parses a text string as a FSHDocument.
- * @param {string} text - the FSH text to parse
- * @param {string} file - the file name to record as the text source
- * @returns {FSHDocument} - the FSH document representing the parsed text
+ * Parses various text strings into individual FSHDocuments.
+ * @param {FileInfo[]} filesInfo - the list of FileInfo to parse into FSHDocuments
+ * @returns {FSHDocument[]} - the FSH documents representing each parsed text
  */
-export function importText(text: string, file?: string): FSHDocument {
-  const importer = new FSHImporter(file);
-  return importer.visitDoc(parseDoc(text, file));
+export function importText(filesInfo: FileInfo[]): FSHDocument[] {
+  const docs: FSHDocument[] = [];
+  for (const fileInfo of filesInfo) {
+    const importer = new FSHImporter(fileInfo.path);
+    const doc = importer.visitDoc(parseDoc(fileInfo.content, fileInfo.path));
+    if (doc) docs.push(doc);
+  }
+
+  return docs;
 }
 
 // NOTE: Since the ANTLR parser/lexer is JS (not typescript), we need to use some ts-ignore here.

@@ -1,4 +1,4 @@
-import { importText, FSHImporter, FSHDocument } from '../../src/import';
+import { importText, FSHImporter, FSHDocument, FileInfo } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
 import { assertFixedValueRule } from '../testhelpers/asserts';
@@ -6,19 +6,19 @@ import { assertFixedValueRule } from '../testhelpers/asserts';
 describe('FSHImporter', () => {
   it('should default filename to blank string', () => {
     const input = '';
-    const result = importText(input);
+    const result = importText([new FileInfo(input)])[0];
     expect(result.file).toBe('');
   });
 
   it('should retain the passed in file name', () => {
     const input = '';
-    const result = importText(input, 'FSHImporter.test.ts');
+    const result = importText([new FileInfo(input, 'FSHImporter.test.ts')])[0];
     expect(result.file).toBe('FSHImporter.test.ts');
   });
 
   it('should allow a blank FSH document', () => {
     const input = '';
-    const result = importText(input);
+    const result = importText([new FileInfo(input)])[0];
     expect(result.aliases.size).toBe(0);
     expect(result.profiles.size).toBe(0);
     expect(result.extensions.size).toBe(0);
@@ -42,7 +42,7 @@ describe('FSHImporter', () => {
     Profile: MismatchedPizza
     Pizza: Large
     `;
-    importText(input, 'Pizza.fsh');
+    importText([new FileInfo(input, 'Pizza.fsh')])[0];
     expect(loggerSpy.getLastMessage()).toMatch(/File: Pizza\.fsh.*Line: 3\D/s);
   });
 
@@ -51,7 +51,7 @@ describe('FSHImporter', () => {
     Profile: Something Spaced
     Parent: Spacious
     `;
-    importText(input, 'Space.fsh');
+    importText([new FileInfo(input, 'Space.fsh')])[0];
     expect(loggerSpy.getLastMessage()).toMatch(/File: Space\.fsh.*Line: 2\D/s);
   });
 
@@ -62,7 +62,7 @@ describe('FSHImporter', () => {
     Title: "Can \\"you\\" escape \\\\ this \\\\ string?"
     * code = #"This \\\\ code \\"is quite\\" challenging \\\\to escape"
     `;
-    const result = importText(input, 'Escape.fsh');
+    const result = importText([new FileInfo(input, 'Escape.fsh')])[0];
     const profile = result.profiles.get('Escape');
     expect(profile.title).toBe('Can "you" escape \\ this \\ string?');
     const expectedCode = new FshCode('This \\ code "is quite" challenging \\to escape')
@@ -78,12 +78,41 @@ describe('FSHImporter', () => {
     Parent: Observation
     *123 code = #"This rule is identified"
     `;
-    const result = importText(input, 'IdentifyingInteger.fsh');
+    const result = importText([new FileInfo(input, 'IdentifyingInteger.fsh')])[0];
     const profile = result.profiles.get('IdentifyingInteger');
     const expectedCode = new FshCode('This rule is identified')
       .withLocation([4, 17, 4, 42])
       .withFile('IdentifyingInteger.fsh');
     expect(profile.rules).toHaveLength(1);
     assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+  });
+
+  it('should allow two FSH documents', () => {
+    const input = '';
+    const input2 = '';
+    const results = importText([new FileInfo(input), new FileInfo(input2)]);
+    expect(results.length).toBe(2);
+    expect(results[0].aliases.size).toBe(0);
+    expect(results[0].profiles.size).toBe(0);
+    expect(results[0].extensions.size).toBe(0);
+    expect(results[1].aliases.size).toBe(0);
+    expect(results[1].profiles.size).toBe(0);
+    expect(results[1].extensions.size).toBe(0);
+  });
+
+  it('should allow two FSH documents even when first is invalid', () => {
+    const input = 'invalid FSH string';
+    const input2 = '';
+    const results = importText([
+      new FileInfo(input, 'Invalid.fsh'),
+      new FileInfo(input2, 'Blank.fsh')
+    ]);
+    expect(results.length).toBe(2);
+    expect(results[0].aliases.size).toBe(0);
+    expect(results[0].profiles.size).toBe(0);
+    expect(results[0].extensions.size).toBe(0);
+    expect(results[1].aliases.size).toBe(0);
+    expect(results[1].profiles.size).toBe(0);
+    expect(results[1].extensions.size).toBe(0);
   });
 });

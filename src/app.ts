@@ -3,7 +3,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
-import { importText, FSHDocument, FSHTank } from './import';
+import { importText, FSHTank, FileInfo } from './import';
 import { exportFHIR } from './export';
 import { IGExporter } from './ig/IGExporter';
 import { logger, stats } from './utils/FSHLogger';
@@ -59,15 +59,15 @@ async function app() {
     );
   }
 
-  const docs: FSHDocument[] = [];
-  for (const file of files) {
-    if (file.endsWith('.fsh')) {
+  const filesInfo = files
+    .filter(file => file.endsWith('.fsh'))
+    .map(file => {
       const filePath = path.resolve(input, file);
       const fileContent = fs.readFileSync(filePath, 'utf8');
-      const doc = importText(fileContent, filePath);
-      if (doc) docs.push(doc);
-    }
-  }
+      return new FileInfo(fileContent, filePath);
+    });
+
+  const docs = importText(filesInfo);
 
   const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);
