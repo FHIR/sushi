@@ -22,12 +22,15 @@ export function importText(filesInfo: FileInfo[]): FSHDocument[] {
   });
 
   // Import all aliases first
-  const allAliases = new Map(flatMap(importers.map((importer, index) => {
-    const context = contexts[index];
-    return importer.getAliases(context);
-  }),
-    aliases => Array.from(aliases)
-  ));
+  const allAliases = new Map(
+    flatMap(
+      importers.map((importer, index) => {
+        const context = contexts[index];
+        return importer.getAliases(context);
+      }),
+      aliases => Array.from(aliases)
+    )
+  );
 
   const docs: FSHDocument[] = [];
   importers.forEach((importer, index) => {
