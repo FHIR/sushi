@@ -1,19 +1,26 @@
 import cloneDeep from 'lodash/cloneDeep';
 import { getResolver } from '../testhelpers/getResolver';
-import { load } from '../../src/fhirdefs/load';
+import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
+import { ResolveFn } from '../../src/fhirtypes';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let jsonObservation: any;
   let observation: StructureDefinition;
+  let resolve: ResolveFn;
   beforeAll(() => {
-    defs = load('4.0.1');
-    jsonObservation = defs.findResource('Observation');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
   beforeEach(() => {
-    observation = StructureDefinition.fromJSON(jsonObservation);
+    observation = resolve('Observation');
   });
 
   describe('#bindToVS()', () => {
@@ -26,7 +33,7 @@ describe('ElementDefinition', () => {
 
     it('should bind a value set on a Coding', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
-      concept.unfold(getResolver(defs));
+      concept.unfold(resolve);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       coding.bindToVS('http://myvaluesets.org/myvs', 'required');
       expect(coding.binding.valueSet).toBe('http://myvaluesets.org/myvs');

@@ -8,12 +8,18 @@ export class FHIRDefinitions {
   private resources: Map<string, any>;
   private types: Map<string, any>;
   private valueSets: Map<string, any>;
+  packages: string[];
 
-  constructor(public target: string) {
+  constructor() {
+    this.packages = [];
     this.extensions = new Map();
     this.resources = new Map();
     this.types = new Map();
     this.valueSets = new Map();
+  }
+
+  size(): number {
+    return this.extensions.size + this.resources.size + this.types.size + this.valueSets.size;
   }
 
   // NOTE: These all return clones of the JSON to prevent the source values from being overwritten

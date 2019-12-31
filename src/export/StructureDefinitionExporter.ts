@@ -149,7 +149,7 @@ export class StructureDefinitionExporter {
    * @param {string} type - The type to search for the FHIR definition of
    * @returns {StructureDefinition | undefined}
    */
-  private resolve(type: string): StructureDefinition | undefined {
+  resolve(type: string): StructureDefinition | undefined {
     const alias = this.tank.resolveAlias(type);
     type = alias ? alias : type;
     const json = this.FHIRDefs.find(type);

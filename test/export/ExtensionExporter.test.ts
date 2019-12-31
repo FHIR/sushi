@@ -1,23 +1,35 @@
 import { ExtensionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
-import { FHIRDefinitions, load } from '../../src/fhirdefs';
+import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Extension } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { spyResolve } from '../testhelpers/spyResolve';
+import { ResolveFn } from '../../src/fhirtypes';
+import { getResolver } from '../testhelpers/getResolver';
+import path from 'path';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ExtensionExporter;
+  let resolve: ResolveFn;
 
   beforeAll(() => {
-    defs = load('4.0.1');
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+    resolve = getResolver(defs);
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
     exporter = new ExtensionExporter(defs, input);
+    spyResolve(exporter, resolve);
   });
 
   it('should output empty results with empty input', () => {
