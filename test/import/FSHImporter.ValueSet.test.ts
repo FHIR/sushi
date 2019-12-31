@@ -580,6 +580,29 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
       });
 
+      it('should parse a value set that uses multiple filters on a single component', () => {
+        const input = `
+        ValueSet: ZooTwoVS
+        * codes from system ZOO where version regex /2\\./ and display exists
+        `;
+        const result = importText(input, 'ZooTwo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooTwoVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.VERSION,
+            operator: VsOperator.REGEX,
+            value: /2\./
+          },
+          {
+            property: VsProperty.DISPLAY,
+            operator: VsOperator.EXISTS,
+            value: true
+          }
+        ]);
+      });
+
       it('should parse a value set with an excluded component', () => {
         const input = `
         ValueSet: AvailableVS
