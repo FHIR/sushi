@@ -8,7 +8,15 @@ import {
   FshQuantity,
   FshRatio,
   TextLocation,
-  Instance
+  Instance,
+  ValueSet,
+  ValueSetComponent,
+  ValueSetConceptComponent,
+  VsProperty,
+  ValueSetFilterComponent,
+  ValueSetComponentFrom,
+  ValueSetFilter,
+  VsOperator
 } from '../fshtypes';
 import {
   Rule,
@@ -24,7 +32,13 @@ import {
 import { ParserRuleContext } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
-import { RequiredMetadataError } from '../errors';
+import {
+  RequiredMetadataError,
+  ValueSetFilterPropertyError,
+  ValueSetFilterOperatorError,
+  ValueSetFilterValueTypeError,
+  ValueSetFilterMissingValueError
+} from '../errors';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -37,6 +51,13 @@ enum SdMetadataKey {
 enum InstanceMetadataKey {
   InstanceOf = 'InstanceOf',
   Title = 'Title',
+  Unknown = 'Unknown'
+}
+
+enum VsMetadataKey {
+  Id = 'Id',
+  Title = 'Title',
+  Description = 'Description',
   Unknown = 'Unknown'
 }
 
@@ -100,6 +121,10 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.instance()) {
       this.visitInstance(ctx.instance());
+    }
+
+    if (ctx.valueSet()) {
+      this.visitValueSet(ctx.valueSet());
     }
   }
 
@@ -205,6 +230,51 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
+  visitValueSet(ctx: pc.ValueSetContext) {
+    const valueSet = new ValueSet(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.file);
+    this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent());
+    this.doc.valueSets.set(valueSet.name, valueSet);
+  }
+
+  private parseValueSet(
+    valueSet: ValueSet,
+    metaCtx: pc.VsMetadataContext[] = [],
+    componentCtx: pc.VsComponentContext[] = []
+  ) {
+    const seenPairs: Map<VsMetadataKey, string> = new Map();
+    metaCtx
+      .map(vsMetadata => ({
+        ...this.visitVsMetadata(vsMetadata),
+        context: vsMetadata
+      }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.file, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === VsMetadataKey.Id) {
+          valueSet.id = pair.value;
+        } else if (pair.key === VsMetadataKey.Title) {
+          valueSet.title = pair.value;
+        } else if (pair.key === VsMetadataKey.Description) {
+          valueSet.description = pair.value;
+        }
+      });
+    componentCtx
+      .map(vsComponentCtx => this.visitVsComponent(vsComponentCtx))
+      .forEach(vsComponent => {
+        valueSet.components.push(vsComponent);
+      });
+  }
+
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
@@ -227,6 +297,17 @@ export class FSHImporter extends FSHVisitor {
       return { key: InstanceMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
+  }
+
+  visitVsMetadata(ctx: pc.VsMetadataContext): { key: VsMetadataKey; value: string } {
+    if (ctx.id()) {
+      return { key: VsMetadataKey.Id, value: this.visitId(ctx.id()) };
+    } else if (ctx.title()) {
+      return { key: VsMetadataKey.Title, value: this.visitTitle(ctx.title()) };
+    } else if (ctx.description()) {
+      return { key: VsMetadataKey.Description, value: this.visitDescription(ctx.description()) };
+    }
+    return { key: VsMetadataKey.Unknown, value: ctx.getText() };
   }
 
   visitId(ctx: pc.IdContext): string {
@@ -548,6 +629,217 @@ export class FSHImporter extends FSHVisitor {
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
     return caretValueRule;
+  }
+
+  visitVsComponent(ctx: pc.VsComponentContext): ValueSetComponent {
+    const inclusion = ctx.KW_EXCLUDE() == null;
+    let vsComponent: ValueSetConceptComponent | ValueSetFilterComponent;
+    if (ctx.vsConceptComponent()) {
+      vsComponent = new ValueSetConceptComponent(inclusion);
+      [vsComponent.concepts, vsComponent.from] = this.visitVsConceptComponent(
+        ctx.vsConceptComponent()
+      );
+    } else if (ctx.vsFilterComponent()) {
+      vsComponent = new ValueSetFilterComponent(inclusion);
+      [vsComponent.filters, vsComponent.from] = this.visitVsFilterComponent(
+        ctx.vsFilterComponent()
+      );
+    }
+    return vsComponent;
+  }
+
+  visitVsConceptComponent(ctx: pc.VsConceptComponentContext): [FshCode[], ValueSetComponentFrom] {
+    const concepts: FshCode[] = [];
+    const from: ValueSetComponentFrom = ctx.vsComponentFrom()
+      ? this.visitVsComponentFrom(ctx.vsComponentFrom())
+      : {};
+    if (ctx.code()) {
+      const singleCode = this.visitCode(ctx.code());
+      if (singleCode.system && from.system) {
+        logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
+          file: this.file,
+          location: this.extractStartStop(ctx)
+        });
+      } else if (singleCode.system) {
+        from.system = singleCode.system;
+        concepts.push(singleCode);
+      } else if (from.system) {
+        singleCode.system = from.system;
+        concepts.push(singleCode);
+      } else {
+        logger.error(
+          `Concept ${singleCode.code} must include system as "SYSTEM#CONCEPT" or "#CONCEPT from system SYSTEM"`,
+          {
+            file: this.file,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    } else if (ctx.COMMA_DELIMITED_CODES()) {
+      const codes = ctx
+        .COMMA_DELIMITED_CODES()
+        .getText()
+        .split(/\s*,\s+#/);
+      codes[0] = codes[0].slice(1);
+      const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
+      codes.forEach(code => {
+        let codePart: string, description: string;
+        if (code.charAt(0) == '"') {
+          // codePart is a quoted string, just like description (if present).
+          [codePart, description] = code
+            .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
+            .map(quotedString => quotedString.slice(1, -1));
+        } else {
+          // codePart is not a quoted string.
+          // if there is a description after the code,
+          // it will be separated by whitespace before the leading "
+          const codeEnd = code.match(/\s+"/)?.index;
+          if (codeEnd) {
+            codePart = code.slice(0, codeEnd);
+            description = code
+              .slice(codeEnd)
+              .trim()
+              .slice(1, -1);
+          } else {
+            codePart = code.trim();
+          }
+        }
+        concepts.push(
+          new FshCode(codePart, from.system, description).withLocation(location).withFile(this.file)
+        );
+      });
+    }
+    return [concepts, from];
+  }
+
+  visitVsFilterComponent(
+    ctx: pc.VsFilterComponentContext
+  ): [ValueSetFilter[], ValueSetComponentFrom] {
+    const filters: ValueSetFilter[] = [];
+    const from: ValueSetComponentFrom = ctx.vsComponentFrom()
+      ? this.visitVsComponentFrom(ctx.vsComponentFrom())
+      : {};
+    if (ctx.vsFilterList()) {
+      ctx
+        .vsFilterList()
+        .vsFilterDefinition()
+        .forEach(filterDefinition => {
+          try {
+            filters.push(this.visitVsFilterDefinition(filterDefinition));
+          } catch (e) {
+            logger.error(e, {
+              location: this.extractStartStop(filterDefinition),
+              file: this.file
+            });
+          }
+        });
+    }
+    return [filters, from];
+  }
+
+  visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
+    const from: ValueSetComponentFrom = {};
+    if (ctx.vsFromSystem()) {
+      from.system = ctx
+        .vsFromSystem()
+        .SEQUENCE()
+        .getText();
+    }
+    if (ctx.vsFromValueset()) {
+      if (ctx.vsFromValueset().SEQUENCE()) {
+        from.valueSets = [
+          ctx
+            .vsFromValueset()
+            .SEQUENCE()
+            .getText()
+        ];
+      } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
+        from.valueSets = ctx
+          .vsFromValueset()
+          .COMMA_DELIMITED_SEQUENCES()
+          .getText()
+          .split(',')
+          .map(fromVs => fromVs.trim());
+      }
+    }
+    return from;
+  }
+
+  /**
+   * The replace makes FSH permissive in regards to the official specifications,
+   * which spells operator "descendant-of" as "descendent-of".
+   * @see {@link http://hl7.org/fhir/valueset-filter-operator.html}
+   */
+  visitVsFilterDefinition(ctx: pc.VsFilterDefinitionContext): ValueSetFilter {
+    const property = ctx
+      .SEQUENCE()
+      .getText()
+      .toLocaleLowerCase() as VsProperty;
+    if (Object.values(VsProperty).indexOf(property) < 0) {
+      throw new ValueSetFilterPropertyError(ctx.SEQUENCE().getText());
+    }
+    const operator = ctx
+      .vsFilterOperator()
+      .getText()
+      .toLocaleLowerCase()
+      .replace('descendant', 'descendent') as VsOperator;
+    if (ctx.vsFilterValue() == null && operator !== VsOperator.EXISTS) {
+      throw new ValueSetFilterMissingValueError(operator);
+    }
+    const value = ctx.vsFilterValue() ? this.visitVsFilterValue(ctx.vsFilterValue()) : true;
+    switch (operator) {
+      case VsOperator.EQUALS:
+      case VsOperator.IN:
+      case VsOperator.NOT_IN:
+        if (typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, 'string');
+        }
+        break;
+      case VsOperator.IS_A:
+      case VsOperator.DESCENDENT_OF:
+      case VsOperator.IS_NOT_A:
+      case VsOperator.GENERALIZES:
+        if (!(value instanceof FshCode)) {
+          throw new ValueSetFilterValueTypeError(operator, 'code');
+        }
+        break;
+      case VsOperator.REGEX:
+        if (!(value instanceof RegExp)) {
+          throw new ValueSetFilterValueTypeError(operator, 'regex');
+        }
+        break;
+      case VsOperator.EXISTS:
+        if (typeof value !== 'boolean') {
+          throw new ValueSetFilterValueTypeError(operator, 'boolean');
+        }
+        break;
+      default:
+        throw new ValueSetFilterOperatorError(ctx.vsFilterOperator().getText());
+    }
+    return {
+      property: property,
+      operator: operator,
+      value: value
+    };
+  }
+
+  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | RegExp | boolean | FshCode {
+    if (ctx.code()) {
+      return this.visitCode(ctx.code());
+    } else if (ctx.REGEX()) {
+      return RegExp(
+        ctx
+          .REGEX()
+          .getText()
+          .slice(1, -1)
+      );
+    } else if (ctx.STRING()) {
+      return this.extractString(ctx.STRING());
+    } else if (ctx.KW_TRUE()) {
+      return true;
+    } else if (ctx.KW_FALSE()) {
+      return false;
+    }
   }
 
   private aliasAwareValue(value: string): string {
