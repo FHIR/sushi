@@ -104,4 +104,52 @@ describe('InstanceExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].gender).toBe('foo');
   });
+
+  it('should fix values on an instance if the value is fixed on the Structure Definition', () => {
+    const patient = new Profile('TestPatient');
+    patient.parent = 'Patient';
+    doc.profiles.set(patient.name, patient);
+    const instance = new Instance('Bar');
+    instance.instanceOf = 'TestPatient';
+    doc.instances.set(instance.name, instance);
+    const fixedValRule = new FixedValueRule('active');
+    fixedValRule.fixedValue = true;
+    patient.rules.push(fixedValRule);
+    const exported = exporter.export();
+    expect(exported.length).toBe(1);
+    expect(exported[0].active).toBe(true);
+  });
+
+  it('should fix values on an instance if the value is fixed by a pattern on the Structure Definition', () => {
+    const patient = new Profile('TestPatient');
+    patient.parent = 'Patient';
+    doc.profiles.set(patient.name, patient);
+    const instance = new Instance('Bar');
+    instance.instanceOf = 'TestPatient';
+    doc.instances.set(instance.name, instance);
+    const fixedValRule = new FixedValueRule('maritalStatus');
+    const fixedFshCode = new FshCode('foo', 'http://foo.com');
+    fixedValRule.fixedValue = fixedFshCode;
+    patient.rules.push(fixedValRule);
+    const exported = exporter.export();
+    expect(exported.length).toBe(1);
+    expect(exported[0].maritalStatus).toEqual({
+      coding: [{ code: 'foo', system: 'http://foo.com' }]
+    });
+  });
+
+  it('should fix choice values on an instance if the value is fixed on the Structure Definition', () => {
+    const patient = new Profile('TestPatient');
+    patient.parent = 'Patient';
+    doc.profiles.set(patient.name, patient);
+    const instance = new Instance('Bar');
+    instance.instanceOf = 'TestPatient';
+    doc.instances.set(instance.name, instance);
+    const fixedValRule = new FixedValueRule('deceasedBoolean');
+    fixedValRule.fixedValue = true;
+    patient.rules.push(fixedValRule);
+    const exported = exporter.export();
+    expect(exported.length).toBe(1);
+    expect(exported[0].deceasedBoolean).toBe(true);
+  });
 });
