@@ -488,6 +488,20 @@ describe('StructureDefinition', () => {
       expect(pathParts[1]).toEqual({ base: 'value' });
     });
 
+    it('should allow fixing an instance value to an element in an array if the element was constrained from an array', () => {
+      // code.coding[RespRateCode] has been constrained from 1..* to 1..1
+      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        'code.coding[RespRateCode].id',
+        'foo',
+        getResolver(defs)
+      );
+      expect(fixedValue).toBe('foo');
+      expect(pathParts.length).toBe(3);
+      expect(pathParts[0]).toEqual({ base: 'code' });
+      expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['RespRateCode', '0'] }); // 0 in path parts means value will be set in an array
+      expect(pathParts[2]).toEqual({ base: 'id' });
+    });
+
     it('should not allow using array brackets when an element is not an array', () => {
       expect(() => {
         structureDefinition.validateValueAtPath('version[0]', 'foo', resolve);
@@ -519,7 +533,7 @@ describe('StructureDefinition', () => {
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
-      expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat'] });
+      expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat', '0'] });
       expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['0'] });
       expect(pathParts[2]).toEqual({ base: 'version' });
     });
@@ -534,6 +548,21 @@ describe('StructureDefinition', () => {
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['required', '3'] });
       expect(pathParts[1]).toEqual({ base: 'value[x]' });
+    });
+
+    it('should allow setting values directly on extensions by accessing indexes', () => {
+      // This test also tests that we can access later indexes of an array that has been unfolded at other indexes
+      // For example, extension[0].url has already been unfolded an has values fixed.
+      // validateValueAtPath correctly validates values for extension[2]
+      const { fixedValue, pathParts } = CSSPC.validateValueAtPath(
+        'extension[2].url',
+        'foo',
+        getResolver(defs)
+      );
+      expect(fixedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['2'] });
+      expect(pathParts[1]).toEqual({ base: 'url' });
     });
   });
 

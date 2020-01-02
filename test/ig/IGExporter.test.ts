@@ -3,7 +3,7 @@ import path from 'path';
 import temp from 'temp';
 import ini from 'ini';
 import { IGExporter } from '../../src/ig';
-import { StructureDefinition } from '../../src/fhirtypes';
+import { StructureDefinition, InstanceDefinition } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Config } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -20,8 +20,9 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], config);
+      pkg = new Package([], [], [], config);
       const resources = path.join(fixtures, 'resources');
+      const instances = path.join(fixtures, 'instances');
       fs.readdirSync(resources).forEach(f => {
         if (f.endsWith('.json')) {
           const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(resources, f)));
@@ -30,6 +31,12 @@ describe('IGExporter', () => {
           } else {
             pkg.profiles.push(sd);
           }
+        }
+      });
+      fs.readdirSync(instances).forEach(f => {
+        if (f.endsWith('.json')) {
+          const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(instances, f)));
+          pkg.instances.push(instanceDef);
         }
       });
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
@@ -54,18 +61,25 @@ describe('IGExporter', () => {
 
     it('should copy over the resource files', () => {
       const resourcesPath = path.join(tempOut, 'input', 'resources');
-      expect(fs.readdirSync(resourcesPath)).toHaveLength(4);
+      expect(fs.readdirSync(resourcesPath)).toHaveLength(5);
       const ids = [
         'sample-observation',
         'sample-patient',
         'sample-value-extension',
         'sample-complex-extension'
       ];
+
+      // StructureDefinitions copied
       ids.forEach(id => {
         const resourcePath = path.join(resourcesPath, `StructureDefinition-${id}.json`);
         expect(fs.existsSync(resourcePath)).toBeTruthy();
         expect(fs.readJSONSync(resourcePath).id).toEqual(id);
       });
+
+      // Instances copied
+      const instancePath = path.join(resourcesPath, 'Patient-example.json');
+      expect(fs.existsSync(instancePath)).toBeTruthy();
+      expect(fs.readJSONSync(instancePath).id).toEqual('example');
     });
 
     it('should generate an ig.ini with the correct values based on the package.json', () => {
@@ -148,6 +162,13 @@ describe('IGExporter', () => {
               description:
                 'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
               exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'Patient/example'
+              },
+              name: 'Patient-example',
+              exampleBoolean: true
             }
           ],
           page: {
@@ -212,7 +233,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], config);
+      pkg = new Package([], [], [], config);
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -298,7 +319,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'invalid-data-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], config);
+      pkg = new Package([], [], [], config);
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you

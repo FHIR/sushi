@@ -5,7 +5,7 @@ import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
-import { getArrayIndex, setPropertyOnInstance } from './common';
+import { getArrayIndex, setPropertyOnDefinitionInstance } from './common';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -145,7 +145,7 @@ export class StructureDefinition {
     // If the path already exists, get it and return the match
     // If !path just return the base parent element
     const fullPath = path ? `${this.type}.${path}` : this.type;
-    const match = this.elements.find(e => e.path === fullPath);
+    const match = this.elements.find(e => e.path === fullPath && !e.id.includes(':'));
     if (match != null) {
       return match;
     }
@@ -215,6 +215,15 @@ export class StructureDefinition {
           }
         }
       }
+
+      // If there are no brackets, remove any slices that don't match exactly
+      if (!pathPart.brackets) {
+        matchingElements = matchingElements.filter(
+          e =>
+            e.id.includes(`${fhirPathString}:${pathPart.base}`) ||
+            !e.id.includes(`${fhirPathString}:`)
+        );
+      }
     }
 
     // We could still have child elements that are matching, if so filter them out now
@@ -233,7 +242,7 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    setPropertyOnInstance(this, path, value, resolve);
+    setPropertyOnDefinitionInstance(this, path, value, resolve);
   }
 
   /**
@@ -347,6 +356,12 @@ export class StructureDefinition {
         pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
       }
       currentElement = this.findElementByPath(currentPath, resolve);
+
+      // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
+      const nonArrayElementIsBasedOnArray =
+        currentElement?.base?.max !== '0' &&
+        currentElement?.base?.max !== '1' &&
+        (currentElement?.max === '0' || currentElement?.max === '1');
       if (
         !currentElement ||
         currentElement.max === '0' ||
@@ -358,10 +373,11 @@ export class StructureDefinition {
         // or is being incorrectly accessed as an array
         throw new CannotResolvePathError(path);
       } else if (
-        arrayIndex == null &&
-        currentElement.max != null &&
-        currentElement.max !== '0' &&
-        currentElement.max !== '1'
+        (arrayIndex == null &&
+          currentElement.max != null &&
+          currentElement.max !== '0' &&
+          currentElement.max !== '1') ||
+        nonArrayElementIsBasedOnArray
       ) {
         // Modify the path to have 0 indices
         if (!pathPart.brackets) pathPart.brackets = [];
