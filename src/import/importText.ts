@@ -13,10 +13,10 @@ import flatMap from 'lodash/flatMap';
  * @param {RawFSH[]} filesInfo - the list of RawFSH to parse into FSHDocuments
  * @returns {FSHDocument[]} - the FSH documents representing each parsed text
  */
-export function importText(filesInfo: RawFSH[]): FSHDocument[] {
+export function importText(rawFSHes: RawFSH[]): FSHDocument[] {
   const importers: FSHImporter[] = [];
   const contexts: DocContext[] = [];
-  filesInfo.forEach(RawFSH => {
+  rawFSHes.forEach(RawFSH => {
     importers.push(new FSHImporter(RawFSH.path));
     contexts.push(parseDoc(RawFSH.content, RawFSH.path));
   });
