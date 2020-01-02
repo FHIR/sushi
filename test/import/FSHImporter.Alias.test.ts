@@ -1,5 +1,6 @@
-import { importText, FileInfo } from '../../src/import';
+import { importText, RawFSH } from '../../src/import';
 import { ValueSetRule } from '../../src/fshtypes/rules';
+import { importSingleText } from '../testhelpers/importSingleText';
 
 // Aliases are tested as part of the other entity tests where aliases are allowed
 // but these tests ensure that aliases work generally and can be in any order
@@ -22,8 +23,7 @@ describe('FSHImporter', () => {
       Alias: UCUM = http://unitsofmeasure.org
       `;
 
-      const results = importText([new FileInfo(input)]);
-      const result = results[0];
+      const result = importSingleText(input);
       expect(result.aliases.size).toBe(4);
       expect(result.aliases.get('LOINC')).toBe('http://loinc.org');
       expect(result.aliases.get('SCT')).toBe('http://snomed.info/sct');
@@ -40,8 +40,7 @@ describe('FSHImporter', () => {
       * code from LOINC
       `;
 
-      const results = importText([new FileInfo(input)]);
-      const result = results[0];
+      const result = importSingleText(input);
       const rule = result.profiles.get('ObservationProfile').rules[0] as ValueSetRule;
       expect(rule.valueSet).toBe('http://loinc.org');
     });
@@ -55,7 +54,7 @@ describe('FSHImporter', () => {
       Alias: LOINC = http://loinc.org
       `;
 
-      const result = importText([new FileInfo(input)])[0];
+      const result = importSingleText(input);
       const rule = result.profiles.get('ObservationProfile').rules[0] as ValueSetRule;
       expect(rule.valueSet).toBe('http://loinc.org');
     });
@@ -69,7 +68,7 @@ describe('FSHImporter', () => {
       * code from LAINC
       `;
 
-      const result = importText([new FileInfo(input)])[0];
+      const result = importSingleText(input);
       const rule = result.profiles.get('ObservationProfile').rules[0] as ValueSetRule;
       expect(rule.valueSet).toBe('LAINC');
     });
@@ -84,7 +83,7 @@ describe('FSHImporter', () => {
       Alias: LOINC = http://loinc.org
       `;
 
-      const results = importText([new FileInfo(input), new FileInfo(input2)]);
+      const results = importText([new RawFSH(input), new RawFSH(input2)]);
       expect(results.length).toBe(2);
       const rule = results[0].profiles.get('ObservationProfile').rules[0] as ValueSetRule;
       expect(rule.valueSet).toBe('http://loinc.org');

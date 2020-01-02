@@ -1,10 +1,10 @@
-import { importText, FileInfo } from '../../src/import';
 import {
   assertValueSetConceptComponent,
   assertValueSetFilterComponent
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode, VsProperty, VsOperator } from '../../src/fshtypes';
+import { importSingleText } from '../testhelpers/importSingleText';
 
 describe('FSHImporter', () => {
   describe('ValueSet', () => {
@@ -16,7 +16,7 @@ describe('FSHImporter', () => {
         Title: "Simple Value Set"
         Description: "A simple value set for testing metadata"
         `;
-        const result = importText([new FileInfo(input, 'Simple.fsh')])[0];
+        const result = importSingleText(input, 'Simple.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.name).toBe('SimpleVS');
@@ -42,7 +42,7 @@ describe('FSHImporter', () => {
         Title: "Duplicate Value Set"
         Description: "A duplicate value set for testing metadata"
         `;
-        const result = importText([new FileInfo(input, 'Dupe.fsh')])[0];
+        const result = importSingleText(input, 'Dupe.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.name).toBe('SimpleVS');
@@ -68,7 +68,7 @@ describe('FSHImporter', () => {
         Title: "Duplicate Value Set"
         Description: "A duplicate value set for testing metadata"
         `;
-        importText([new FileInfo(input, 'Dupe.fsh')])[0];
+        importSingleText(input, 'Dupe.fsh');
         expect(loggerSpy.getMessageAtIndex(-3)).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
         expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
@@ -81,7 +81,7 @@ describe('FSHImporter', () => {
         ValueSet: SimpleVS
         * ZOO#bear
         `;
-        const result = importText([new FileInfo(input, 'Simple.fsh')])[0];
+        const result = importSingleText(input, 'Simple.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.name).toBe('SimpleVS');
@@ -106,7 +106,7 @@ describe('FSHImporter', () => {
         * #hippo "Hippopotamus" from system ZOO
         `;
 
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -130,7 +130,7 @@ describe('FSHImporter', () => {
         * #hippo "Hippopotamus", #crocodile "Crocodile" from system ZOO
         `;
 
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -156,7 +156,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * #hippo
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -168,7 +168,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * ZOO#hippo from system ZOO
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -182,7 +182,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -202,7 +202,7 @@ describe('FSHImporter', () => {
         * codes from valueset FirstZooVS
         * codes from valueset SecondZooVS, ThirdZooVS
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(2);
@@ -227,7 +227,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO and valueset NorthZooVS, SouthZooVS
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -251,7 +251,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO where version = "2.0"
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -269,7 +269,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO where version = /[1-9].*/
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -283,7 +283,7 @@ describe('FSHImporter', () => {
         ValueSet: AllUrsinesVS
         * codes from system ZOO where code is-a #bear "Bear"
         `;
-        const result = importText([new FileInfo(input, 'Ursines.fsh')])[0];
+        const result = importSingleText(input, 'Ursines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllUrsinesVS');
         expect(valueSet.components.length).toBe(1);
@@ -303,7 +303,7 @@ describe('FSHImporter', () => {
         ValueSet: AllUrsinesVS
         * codes from system ZOO where code is-a "Bear"
         `;
-        const result = importText([new FileInfo(input, 'Ursines.fsh')])[0];
+        const result = importSingleText(input, 'Ursines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllUrsinesVS');
         expect(valueSet.components.length).toBe(1);
@@ -317,7 +317,7 @@ describe('FSHImporter', () => {
         ValueSet: AllFelinesVS
         * codes from valueset ZooVS where code descendent-of ZOO#cat
         `;
-        const result = importText([new FileInfo(input, 'Felines.fsh')])[0];
+        const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
         expect(valueSet.components.length).toBe(1);
@@ -342,7 +342,7 @@ describe('FSHImporter', () => {
         ValueSet: AllFelinesVS
         * codes from valueset ZooVS where code descendant-of ZOO#cat
         `;
-        const result = importText([new FileInfo(input, 'Felines.fsh')])[0];
+        const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
         expect(valueSet.components.length).toBe(1);
@@ -367,7 +367,7 @@ describe('FSHImporter', () => {
         ValueSet: AllFelinesVS
         * codes from valueset ZooVS where code descendent-of "Cat"
         `;
-        const result = importText([new FileInfo(input, 'Felines.fsh')])[0];
+        const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
         expect(valueSet.components.length).toBe(1);
@@ -381,7 +381,7 @@ describe('FSHImporter', () => {
         ValueSet: NonCanineVS
         * codes from system ZOO where code is-not-a #dog
         `;
-        const result = importText([new FileInfo(input, 'NonCanine.fsh')])[0];
+        const result = importSingleText(input, 'NonCanine.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NonCanineVS');
         expect(valueSet.components.length).toBe(1);
@@ -401,7 +401,7 @@ describe('FSHImporter', () => {
         ValueSet: NonCanineVS
         * codes from system ZOO where code is-not-a "dog"
         `;
-        const result = importText([new FileInfo(input, 'NonCanine.fsh')])[0];
+        const result = importSingleText(input, 'NonCanine.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NonCanineVS');
         expect(valueSet.components.length).toBe(1);
@@ -415,7 +415,7 @@ describe('FSHImporter', () => {
         ValueSet: ProbablyDogsVS
         * codes from system ZOO where display regex /([Dd]og)|([Cc]anine)/
         `;
-        const result = importText([new FileInfo(input, 'MostlyDogs.fsh')])[0];
+        const result = importSingleText(input, 'MostlyDogs.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ProbablyDogsVS');
         expect(valueSet.components.length).toBe(1);
@@ -433,7 +433,7 @@ describe('FSHImporter', () => {
         ValueSet: ProbablyDogsVS
         * codes from system ZOO where display regex "Dog|Canine"
         `;
-        const result = importText([new FileInfo(input, 'MostlyDogs.fsh')])[0];
+        const result = importSingleText(input, 'MostlyDogs.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ProbablyDogsVS');
         expect(valueSet.components.length).toBe(1);
@@ -447,7 +447,7 @@ describe('FSHImporter', () => {
         ValueSet: CatAndDogVS
         * codes from system ZOO where code in "#cat, #dog"
         `;
-        const result = importText([new FileInfo(input, 'CatDog.fsh')])[0];
+        const result = importSingleText(input, 'CatDog.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('CatAndDogVS');
         expect(valueSet.components.length).toBe(1);
@@ -465,7 +465,7 @@ describe('FSHImporter', () => {
         ValueSet: CatAndDogVS
         * codes from system ZOO where code in ZOO#cat
         `;
-        const result = importText([new FileInfo(input, 'CatDog.fsh')])[0];
+        const result = importSingleText(input, 'CatDog.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('CatAndDogVS');
         expect(valueSet.components.length).toBe(1);
@@ -479,7 +479,7 @@ describe('FSHImporter', () => {
         ValueSet: NoGooseVS
         * codes from system ZOO where code not-in "#goose"
         `;
-        const result = importText([new FileInfo(input, 'NoGoose.fsh')])[0];
+        const result = importSingleText(input, 'NoGoose.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NoGooseVS');
         expect(valueSet.components.length).toBe(1);
@@ -497,7 +497,7 @@ describe('FSHImporter', () => {
         ValueSet: NoGooseVS
         * codes from system ZOO where code not-in /duck|goose/
         `;
-        const result = importText([new FileInfo(input, 'NoGoose.fsh')])[0];
+        const result = importSingleText(input, 'NoGoose.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NoGooseVS');
         expect(valueSet.components.length).toBe(1);
@@ -511,7 +511,7 @@ describe('FSHImporter', () => {
         ValueSet: MustelidVS
         * codes from system ZOO where code generalizes #mustela-nivalis "least weasel"
         `;
-        const result = importText([new FileInfo(input, 'Mustelids.fsh')])[0];
+        const result = importSingleText(input, 'Mustelids.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('MustelidVS');
         expect(valueSet.components.length).toBe(1);
@@ -531,7 +531,7 @@ describe('FSHImporter', () => {
         ValueSet: MustelidVS
         * codes from system ZOO where code generalizes "least weasel"
         `;
-        const result = importText([new FileInfo(input, 'Mustelids.fsh')])[0];
+        const result = importSingleText(input, 'Mustelids.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('MustelidVS');
         expect(valueSet.components.length).toBe(1);
@@ -546,7 +546,7 @@ describe('FSHImporter', () => {
         * codes from system ZOO where display exists true
         * codes from system ZOO where version exists
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(2);
@@ -571,7 +571,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO where display exists "display"
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -585,7 +585,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooTwoVS
         * codes from system ZOO where version regex /2\\./ and display exists
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooTwoVS');
         expect(valueSet.components.length).toBe(1);
@@ -609,7 +609,7 @@ describe('FSHImporter', () => {
         * codes from system ZOO
         * exclude codes from valueset UnavailableAnimalVS
         `;
-        const result = importText([new FileInfo(input, 'Available.fsh')])[0];
+        const result = importSingleText(input, 'Available.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AvailableVS');
         expect(valueSet.components.length).toBe(2);
@@ -628,7 +628,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO where animal exists true
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -641,7 +641,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO where display resembles "cat"
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
@@ -654,7 +654,7 @@ describe('FSHImporter', () => {
         ValueSet: ZooVS
         * codes from system ZOO where display regex
         `;
-        const result = importText([new FileInfo(input, 'Zoo.fsh')])[0];
+        const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);

@@ -5,20 +5,20 @@ import { DocContext } from './parserContexts';
 import { FSHImporter } from './FSHImporter';
 import { FSHDocument } from './FSHDocument';
 import { FSHErrorListener } from './FSHErrorListener';
-import { FileInfo } from './FileInfo';
+import { RawFSH } from './RawFSH';
 import flatMap from 'lodash/flatMap';
 
 /**
  * Parses various text strings into individual FSHDocuments.
- * @param {FileInfo[]} filesInfo - the list of FileInfo to parse into FSHDocuments
+ * @param {RawFSH[]} filesInfo - the list of RawFSH to parse into FSHDocuments
  * @returns {FSHDocument[]} - the FSH documents representing each parsed text
  */
-export function importText(filesInfo: FileInfo[]): FSHDocument[] {
+export function importText(filesInfo: RawFSH[]): FSHDocument[] {
   const importers: FSHImporter[] = [];
   const contexts: DocContext[] = [];
-  filesInfo.forEach(fileInfo => {
-    importers.push(new FSHImporter(fileInfo.path));
-    contexts.push(parseDoc(fileInfo.content, fileInfo.path));
+  filesInfo.forEach(RawFSH => {
+    importers.push(new FSHImporter(RawFSH.path));
+    contexts.push(parseDoc(RawFSH.content, RawFSH.path));
   });
 
   // Import all aliases first

@@ -3,7 +3,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
-import { importText, FSHTank, FileInfo } from './import';
+import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR } from './export';
 import { IGExporter } from './ig/IGExporter';
 import { logger, stats } from './utils/FSHLogger';
@@ -64,7 +64,7 @@ async function app() {
     .map(file => {
       const filePath = path.resolve(input, file);
       const fileContent = fs.readFileSync(filePath, 'utf8');
-      return new FileInfo(fileContent, filePath);
+      return new RawFSH(fileContent, filePath);
     });
 
   const docs = importText(filesInfo);

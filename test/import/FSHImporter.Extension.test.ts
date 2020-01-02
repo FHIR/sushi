@@ -5,8 +5,8 @@ import {
   assertValueSetRule,
   assertCaretValueRule
 } from '../testhelpers/asserts';
-import { importText, FileInfo } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { importSingleText } from '../testhelpers/importSingleText';
 
 describe('FSHImporter', () => {
   describe('Extension', () => {
@@ -16,7 +16,7 @@ describe('FSHImporter', () => {
         Extension: SomeExtension
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         expect(result.extensions.size).toBe(1);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.name).toBe('SomeExtension');
@@ -41,7 +41,7 @@ describe('FSHImporter', () => {
         Description: "An extension on something"
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         expect(result.extensions.size).toBe(1);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.name).toBe('SomeExtension');
@@ -70,7 +70,7 @@ describe('FSHImporter', () => {
         Description: "A duplicated extension on something"
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         expect(result.extensions.size).toBe(1);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.name).toBe('SomeExtension');
@@ -91,7 +91,7 @@ describe('FSHImporter', () => {
         Description: "A duplicated extension on something"
         `;
 
-        importText([new FileInfo(input, 'Dupe.fsh')])[0];
+        importSingleText(input, 'Dupe.fsh');
         expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
       });
@@ -106,7 +106,7 @@ describe('FSHImporter', () => {
         * value[x] 1..1
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(2);
         assertCardRule(extension.rules[0], 'extension', 0, 0);
@@ -120,7 +120,7 @@ describe('FSHImporter', () => {
         * value[x] 1..1 MS
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(3);
         assertCardRule(extension.rules[0], 'extension', 0, 0);
@@ -136,7 +136,7 @@ describe('FSHImporter', () => {
         * extension MS
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
         assertFlagRule(extension.rules[0], 'extension', true, undefined, undefined);
@@ -151,7 +151,7 @@ describe('FSHImporter', () => {
         * valueCodeableConcept from ExtensionValueSet (extensible)
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
         assertValueSetRule(
@@ -170,7 +170,7 @@ describe('FSHImporter', () => {
         * value[x] only Quantity
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
         assertOnlyRule(extension.rules[0], 'value[x]', { type: 'Quantity' });
@@ -184,7 +184,7 @@ describe('FSHImporter', () => {
         * id ^short = "foo"
         `;
 
-        const result = importText([new FileInfo(input)])[0];
+        const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
         assertCaretValueRule(extension.rules[0], 'id', 'short', 'foo');
