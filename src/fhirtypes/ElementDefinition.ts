@@ -308,17 +308,24 @@ export class ElementDefinition {
         diff[prop] = cloneDeep(this[prop]);
       }
     }
-    // If the id is a choice slice, we change the id/path in the differential to use a shortcut syntax
-    // described here https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/.
     // Path gets set automatically when setting id
-    diff.id = diff.id
+    diff.id = diff.diffId();
+    return diff;
+  }
+
+  /**
+   * Gets the id of an element on the differential using the shortcut syntax described here
+   * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+   * @returns {string} the id for the differential
+   */
+  diffId(): string {
+    return this.id
       .split('.')
       .map(p => {
         const i = p.indexOf('[x]:');
         return i > -1 ? p.slice(i + 4) : p;
       })
       .join('.');
-    return diff;
   }
 
   /**
@@ -1291,11 +1298,16 @@ export class ElementDefinition {
    * Finds and returns all child elements of this element.  For example, the children of `Foo.bar` might be the
    * elements `Foo.bar.one`, `Foo.bar.two`, and `Foo.bar.two.a`.  This will not "expand" or "unroll" elements; it
    * only returns those child elements that already exist in the structure definition.
+   * @param {boolean} directOnly - If true, only direct children of the element are returned
    * @returns {ElementDefinition[]} the child elements of this element
    */
-  children(): ElementDefinition[] {
+  children(directOnly = false): ElementDefinition[] {
     return this.structDef.elements.filter(e => {
-      return e !== this && e.id.startsWith(`${this.id}.`);
+      return (
+        e !== this &&
+        e.id.startsWith(`${this.id}.`) &&
+        (!directOnly || e.path.split('.').length === this.path.split('.').length + 1)
+      );
     });
   }
 

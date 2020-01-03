@@ -1,5 +1,11 @@
 import { FSHTank } from '../import/FSHTank';
-import { StructureDefinition, InstanceDefinition, ResolveFn } from '../fhirtypes';
+import {
+  StructureDefinition,
+  InstanceDefinition,
+  ResolveFn,
+  ElementDefinition,
+  PathPart
+} from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
 import { logger } from '../utils/FSHLogger';
@@ -27,9 +33,59 @@ export class InstanceExporter {
       );
 
       setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+
+      // For each part of that path, we add fixed values from the SD
+      let path = '';
+      for (const [i, pathPart] of pathParts.entries()) {
+        path += `${path ? '.' : ''}${pathPart.base}`;
+        const element = instanceOfStructureDefinition.findElementByPath(path, this.resolve);
+        this.setFixedValuesForDirectChildren(element, pathParts.slice(0, i + 1), instanceDef);
+      }
     });
 
+    // Fix values from the SD for all elements at the top level of the SD
+    this.setFixedValuesForDirectChildren(
+      instanceOfStructureDefinition.findElement(instanceDef.resourceType),
+      [],
+      instanceDef
+    );
+
     return instanceDef;
+  }
+
+  /**
+   * Given an ElementDefinition, set fixed values for the direct children of that element
+   * according to the ElementDefinitions of the children
+   * @param {ElementDefinition} element - The element whose children we will fix
+   * @param {PathPart[]} existingPath - The path to the element whose children we will fix
+   * @param {InstanceDefinition} instanceDef - The InstanceDefinition to fix values on
+   */
+  private setFixedValuesForDirectChildren(
+    element: ElementDefinition,
+    existingPath: PathPart[],
+    instanceDef: InstanceDefinition
+  ) {
+    const directChildren = element.children(true);
+    for (const child of directChildren) {
+      // Fixed values may be specified by the fixed[x] or pattern[x] fields
+      const fixedValueKey = Object.keys(child).find(
+        k => k.startsWith('fixed') || k.startsWith('pattern')
+      );
+      if (fixedValueKey) {
+        // Get the end of the child path, this is the part that differs from existingPath
+        const childPathPart = {
+          base: child
+            .diffId()
+            .split('.')
+            .slice(-1)[0]
+        };
+        setPropertyOnInstance(
+          instanceDef,
+          [...existingPath, childPathPart],
+          child[fixedValueKey as keyof ElementDefinition]
+        );
+      }
+    }
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
@@ -47,10 +103,8 @@ export class InstanceExporter {
     instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
     instanceDef.instanceName = fshDefinition.id; // This is name of the instance in the FSH
 
-    // All other values of the instance will be fixedValues explicitly on the FSH Instance
+    // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
-
-    // Add any set values that were set on the StructDef but not explicitly on the FSH Instance
 
     return instanceDef;
   }
