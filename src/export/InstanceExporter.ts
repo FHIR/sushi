@@ -65,9 +65,7 @@ export class InstanceExporter {
     existingPath: PathPart[],
     instanceDef: InstanceDefinition
   ) {
-    const directChildren = element
-      .children()
-      .filter(c => c.path.split('.').length === element.path.split('.').length + 1);
+    const directChildren = element.children(true);
     for (const child of directChildren) {
       // Fixed values may be specified by the fixed[x] or pattern[x] fields
       const fixedValueKey = Object.keys(child).find(

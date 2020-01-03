@@ -105,7 +105,7 @@ describe('InstanceExporter', () => {
     expect(exported[0].gender).toBe('foo');
   });
 
-  describe('#setFixedValuesForDirectChildren', () => {
+  describe('#exportInstance', () => {
     let patient: Profile;
     let instance: Instance;
     beforeEach(() => {
@@ -122,9 +122,8 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exporter.export();
-      expect(exported.length).toBe(1);
-      expect(exported[0].active).toEqual(true);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toEqual(true);
     });
 
     it('should fix top level elements that are fixed by a pattern on the Structure Definition', () => {
@@ -132,9 +131,8 @@ describe('InstanceExporter', () => {
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
       patient.rules.push(fixedValRule);
-      const exported = exporter.export();
-      expect(exported.length).toBe(1);
-      expect(exported[0].maritalStatus).toEqual({
+      const exported = exporter.exportInstance(instance);
+      expect(exported.maritalStatus).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
       });
     });
@@ -143,9 +141,60 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('deceasedBoolean');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exporter.export();
-      expect(exported.length).toBe(1);
-      expect(exported[0].deceasedBoolean).toBe(true);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.deceasedBoolean).toBe(true);
+    });
+
+    it('should fix an element to a value the same as the fixed value on the Structure Definition', () => {
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('active');
+      instanceFixedValRule.fixedValue = true;
+      instance.rules.push(instanceFixedValRule);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toEqual(true);
+    });
+
+    it('should fix an element to a value the same as the fixed pattern on the Structure Definition', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus');
+      const fixedFshCode = new FshCode('foo', 'http://foo.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('maritalStatus');
+      const instanceFixedFshCode = new FshCode('foo', 'http://foo.com');
+      instanceFixedValRule.fixedValue = instanceFixedFshCode;
+      instance.rules.push(instanceFixedValRule);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.maritalStatus).toEqual({
+        coding: [{ code: 'foo', system: 'http://foo.com' }]
+      });
+    });
+
+    it('should not fix an element to a value different than the fixed value on the Structure Definition', () => {
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('active');
+      instanceFixedValRule.fixedValue = false;
+      instance.rules.push(instanceFixedValRule);
+      expect(() => exporter.exportInstance(instance)).toThrow(
+        'Cannot fix false to this element; a different boolean is already fixed: true'
+      );
+    });
+
+    it('should not fix an element to a value different than the pattern value on the Structure Definition', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus');
+      const fixedFshCode = new FshCode('foo', 'http://foo.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('maritalStatus');
+      const instanceFixedFshCode = new FshCode('bar', 'http://bar.com');
+      instanceFixedValRule.fixedValue = instanceFixedFshCode;
+      instance.rules.push(instanceFixedValRule);
+      expect(() => exporter.exportInstance(instance)).toThrow(
+        'Cannot fix http://bar.com#bar to this element; a different code is already fixed: http://foo.com#foo.'
+      );
     });
 
     // Nested elements
@@ -156,9 +205,8 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('communication[0].language');
       instanceFixedValRule.fixedValue = new FshCode('foo');
       instance.rules.push(instanceFixedValRule);
-      const exported = exporter.export();
-      expect(exported.length).toBe(1);
-      expect(exported[0].communication[0]).toEqual({
+      const exported = exporter.exportInstance(instance);
+      expect(exported.communication[0]).toEqual({
         preferred: true,
         language: { coding: [{ code: 'foo' }] }
       });
@@ -173,9 +221,8 @@ describe('InstanceExporter', () => {
       );
       instanceFixedValRule.fixedValue = 'bar';
       instance.rules.push(instanceFixedValRule);
-      const exported = exporter.export();
-      expect(exported.length).toBe(1);
-      expect(exported[0].communication[0]).toEqual({
+      const exported = exporter.exportInstance(instance);
+      expect(exported.communication[0]).toEqual({
         language: { text: 'foo', coding: [{ version: 'bar' }] }
       });
     });
@@ -184,9 +231,21 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('communication.preferred');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exporter.export();
-      expect(exported.length).toBe(1);
-      expect(exported[0].communication).toBeUndefined();
+      const exported = exporter.exportInstance(instance);
+      expect(exported.communication).toBeUndefined();
+    });
+
+    // TODO: The fixValue functions should be updated to not fix a value when a parent element sets
+    // the value to something different using a pattern
+    it.skip('should not fix an element to a value different than a parent pattern value on the Structure Definition', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus');
+      const fixedFshCode = new FshCode('foo', 'http://foo.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].system');
+      instanceFixedValRule.fixedValue = 'http://bar.com';
+      instance.rules.push(instanceFixedValRule);
+      expect(() => exporter.exportInstance(instance)).toThrow();
     });
   });
 });

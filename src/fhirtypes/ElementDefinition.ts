@@ -1298,11 +1298,16 @@ export class ElementDefinition {
    * Finds and returns all child elements of this element.  For example, the children of `Foo.bar` might be the
    * elements `Foo.bar.one`, `Foo.bar.two`, and `Foo.bar.two.a`.  This will not "expand" or "unroll" elements; it
    * only returns those child elements that already exist in the structure definition.
+   * @param {boolean} directOnly - If true, only direct children of the element are returned
    * @returns {ElementDefinition[]} the child elements of this element
    */
-  children(): ElementDefinition[] {
+  children(directOnly = false): ElementDefinition[] {
     return this.structDef.elements.filter(e => {
-      return e !== this && e.id.startsWith(`${this.id}.`);
+      return (
+        e !== this &&
+        e.id.startsWith(`${this.id}.`) &&
+        (!directOnly || e.path.split('.').length === this.path.split('.').length + 1)
+      );
     });
   }
 
