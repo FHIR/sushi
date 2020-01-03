@@ -3,7 +3,8 @@ import {
   StructureDefinition,
   InstanceDefinition,
   ResolveFn,
-  ElementDefinition
+  ElementDefinition,
+  PathPart
 } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -32,48 +33,58 @@ export class InstanceExporter {
       );
 
       setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+
+      // For each part of that path, we add fixed values from the SD
+      let path = '';
+      for (const [i, pathPart] of pathParts.entries()) {
+        path += `${path ? '.' : ''}${pathPart.base}`;
+        const element = instanceOfStructureDefinition.findElementByPath(path, this.resolve);
+        this.setFixedValuesForDirectChildren(element, pathParts.slice(0, i + 1), instanceDef);
+      }
     });
+
+    // Fix values from the SD for all elements at the top level of the SD
+    this.setFixedValuesForDirectChildren(
+      instanceOfStructureDefinition.findElement(instanceDef.resourceType),
+      [],
+      instanceDef
+    );
 
     return instanceDef;
   }
 
   /**
-   * Sets fixed values on the instance via the Structure Definition
-   * @param {InstanceDefinition} instanceDef - The instance we are defining
-   * @param {StructureDefinition} instanceOfStructureDefinition - The Structure Definition that we are making an instance of
+   * Given an ElementDefinition, set fixed values for the direct children of that element
+   * according to the ElementDefinitions of the children
+   * @param {ElementDefinition} element - The element whose children we will fix
+   * @param {PathPart[]} existingPath - The path to the element whose children we will fix
+   * @param {InstanceDefinition} instanceDef - The InstanceDefinition to fix values on
    */
-  private setFixedValuesFromStructureDefinition(
-    instanceDef: InstanceDefinition,
-    instanceOfStructureDefinition: StructureDefinition
+  private setFixedValuesForDirectChildren(
+    element: ElementDefinition,
+    existingPath: PathPart[],
+    instanceDef: InstanceDefinition
   ) {
-    for (const element of instanceOfStructureDefinition.elements) {
-      // we need to find fixed[x] or pattern[x] elements
-      const fixedValueKey = Object.keys(element).find(
+    const directChildren = element
+      .children()
+      .filter(c => c.path.split('.').length === element.path.split('.').length + 1);
+    for (const child of directChildren) {
+      // Fixed values may be specified by the fixed[x] or pattern[x] fields
+      const fixedValueKey = Object.keys(child).find(
         k => k.startsWith('fixed') || k.startsWith('pattern')
       );
       if (fixedValueKey) {
-        // If the id of an element has a choice, it is represented on the element using slicing
-        // ex: Patient.value[x]:valueQuantity.units
-        // But in an instance we need to represent this using the slice name
-        // ex: Patient.valueQuantity.units would be the path in the json
-        const choiceResolvedPath = element.id
-          .split('.')
-          .map(p => {
-            const i = p.indexOf('[x]:');
-            return i > -1 ? p.slice(i + 4) : p;
-          })
-          .join('.');
-        const pathParts = choiceResolvedPath
-          .split('.')
-          // Ignore first part of the path since it is just the resource name
-          .slice(1)
-          .map(p => {
-            return { base: p };
-          });
+        // Get the end of the child path, this is the part that differs from existingPath
+        const childPathPart = {
+          base: child
+            .diffId()
+            .split('.')
+            .slice(-1)[0]
+        };
         setPropertyOnInstance(
           instanceDef,
-          pathParts,
-          element[fixedValueKey as keyof ElementDefinition]
+          [...existingPath, childPathPart],
+          child[fixedValueKey as keyof ElementDefinition]
         );
       }
     }
@@ -94,10 +105,7 @@ export class InstanceExporter {
     instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
     instanceDef.instanceName = fshDefinition.id; // This is name of the instance in the FSH
 
-    // Add any set values that were set on the StructDef but not explicitly on the FSH Instance
-    this.setFixedValuesFromStructureDefinition(instanceDef, instanceOfStructureDefinition);
-
-    // All other values of the instance will be fixedValues explicitly on the FSH Instance
+    // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
 
     return instanceDef;
