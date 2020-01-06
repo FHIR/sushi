@@ -383,6 +383,9 @@ export class StructureDefinition {
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
       }
+      if (currentElement.type?.length === 1 && PRIMITIVES.includes(currentElement.type[0].code)) {
+        pathPart.primitive = true;
+      }
     }
     const clone = currentElement.clone();
     // fixValue will throw if it fails
@@ -545,6 +548,7 @@ export type StructureDefinitionContext = {
 export type PathPart = {
   base: string;
   brackets?: string[];
+  primitive?: boolean;
 };
 
 /**
@@ -595,4 +599,26 @@ const PROPS = [
   'type',
   'baseDefinition',
   'derivation'
+];
+
+const PRIMITIVES = [
+  'boolean',
+  'integer',
+  'string',
+  'decimal',
+  'uri',
+  'url',
+  'canonical',
+  'base64Binary',
+  'instant',
+  'date',
+  'dateTime',
+  'time',
+  'code',
+  'oid',
+  'id',
+  'markdown',
+  'unsignedInt',
+  'positiveInt',
+  'uuid'
 ];
