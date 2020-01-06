@@ -659,7 +659,7 @@ describe('FSHImporter', () => {
         * basedOn = Reference(fooProfile)
         `;
 
-        const result = importText(input);
+        const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
@@ -677,7 +677,7 @@ describe('FSHImporter', () => {
         * basedOn = Reference(fooProfile) "bar"
         `;
 
-        const result = importText(input);
+        const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 

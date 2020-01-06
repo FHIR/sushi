@@ -2,7 +2,7 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
-import { FshQuantity, FshRatio } from '../../src/fshtypes';
+import { FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
 import { getResolver } from '../testhelpers/getResolver';
 import { ResolveFn } from '../../src/fhirtypes';
 import path from 'path';
@@ -90,6 +90,15 @@ describe('ElementDefinition', () => {
           code: 'cm',
           system: 'http://unitsofmeasure.org'
         }
+      });
+    });
+
+    it('should fix a FshReference', () => {
+      const subject = medicationRequest.elements.find(e => e.id === 'MedicationRequest.subject');
+      subject.fixValue(new FshReference('foo', 'bar'));
+      expect(subject.patternReference).toEqual({
+        reference: 'foo',
+        display: 'bar'
       });
     });
   });

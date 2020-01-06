@@ -606,7 +606,7 @@ export class FSHImporter extends FSHVisitor {
   visitReference(ctx: pc.ReferenceContext): FshReference {
     const ref = new FshReference(this.parseReference(ctx.REFERENCE().getText())[0])
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     if (ctx.STRING()) {
       ref.display = this.extractString(ctx.STRING());
     }
