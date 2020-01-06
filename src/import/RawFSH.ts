@@ -1,3 +1,6 @@
 export class RawFSH {
-  constructor(public readonly content: string, public readonly path?: string) {}
+  public readonly path: string;
+  constructor(public readonly content: string, path?: string) {
+    this.path = path ?? '';
+  }
 }

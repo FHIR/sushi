@@ -1,4 +1,4 @@
-import { importText, FSHImporter, FSHDocument, RawFSH } from '../../src/import';
+import { importText, RawFSH } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
 import { assertFixedValueRule } from '../testhelpers/asserts';
@@ -23,19 +23,6 @@ describe('FSHImporter', () => {
     expect(result.aliases.size).toBe(0);
     expect(result.profiles.size).toBe(0);
     expect(result.extensions.size).toBe(0);
-  });
-
-  it('should not allow the same visitor instance to be invoked twice', () => {
-    const visitor = new FSHImporter();
-    // First time should work (ts-ignore is to get around typing of DocContext for now)
-    // @ts-ignore
-    const result = visitor.visitDoc({ entity: () => [] });
-    expect(result).toBeInstanceOf(FSHDocument);
-
-    // Second time should not work
-    // @ts-ignore
-    const result2 = visitor.visitDoc({ entity: () => [] });
-    expect(result2).toBeUndefined();
   });
 
   it('should report mismatched input errors from antlr', () => {
