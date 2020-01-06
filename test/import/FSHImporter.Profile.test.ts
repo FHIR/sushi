@@ -7,7 +7,7 @@ import {
   assertContainsRule,
   assertCaretValueRule
 } from '../testhelpers/asserts';
-import { FshCode, FshQuantity, FshRatio } from '../../src/fshtypes';
+import { FshCode, FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
 
@@ -649,6 +649,42 @@ describe('FSHImporter', () => {
           .withLocation([5, 24, 5, 30])
           .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
+      });
+
+      it('should parse fixed value Reference rule', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * basedOn = Reference(fooProfile)
+        `;
+
+        const result = importText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedReference = new FshReference('fooProfile')
+          .withLocation([5, 21, 5, 41])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+      });
+
+      it('should parse fixed value Reference rule with a display string', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * basedOn = Reference(fooProfile) "bar"
+        `;
+
+        const result = importText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedReference = new FshReference('fooProfile', 'bar')
+          .withLocation([5, 21, 5, 47])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
     });
 

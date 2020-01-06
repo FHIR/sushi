@@ -158,6 +158,7 @@ export interface ValueContext extends ParserRuleContext {
   NUMBER(): ParserRuleContext;
   DATETIME(): ParserRuleContext;
   TIME(): ParserRuleContext;
+  reference(): ReferenceContext;
   code(): CodeContext;
   quantity(): QuantityContext;
   ratio(): RatioContext;
@@ -187,6 +188,10 @@ export interface RatioPartContext extends ParserRuleContext {
   NUMBER(): ParserRuleContext;
   quantity(): QuantityContext;
 }
+export interface ReferenceContext extends ParserRuleContext {
+  REFERENCE(): ParserRuleContext;
+  STRING(): ParserRuleContext;
+}
 
 export interface BoolContext extends ParserRuleContext {
   KW_TRUE(): ParserRuleContext;
@@ -211,7 +216,7 @@ export interface OnlyRuleContext extends ParserRuleContext {
 
 export interface TargetTypeContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
-  REFERENCE(): ParserRuleContext;
+  reference(): ReferenceContext;
 }
 
 export interface CaretValueRuleContext extends ParserRuleContext {

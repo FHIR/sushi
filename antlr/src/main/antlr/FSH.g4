@@ -61,15 +61,16 @@ paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
-value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | code | quantity | ratio | bool ;
+value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | code | quantity | ratio | bool ;
 item:               SEQUENCE CARD flag*;
 code:               CODE STRING?;
 concept:            code STRING?;
 quantity:           NUMBER UNIT;
 ratio:              ratioPart COLON ratioPart;
+reference:          REFERENCE STRING?;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
-targetType:         SEQUENCE | REFERENCE;
+targetType:         SEQUENCE | reference;
 
 // KEYWORDS
 KW_ALIAS:           'Alias' WS* ':';
