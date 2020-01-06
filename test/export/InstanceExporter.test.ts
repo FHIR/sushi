@@ -1,4 +1,4 @@
-import { InstanceExporter, ProfileExporter } from '../../src/export';
+import { InstanceExporter, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { ResolveFn } from '../../src/fhirtypes';
@@ -15,7 +15,7 @@ describe('InstanceExporter', () => {
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: InstanceExporter;
-  let profileExporter: ProfileExporter;
+  let structureDefinitionExporter: StructureDefinitionExporter;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -30,9 +30,13 @@ describe('InstanceExporter', () => {
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    profileExporter = new ProfileExporter(defs, input);
-    spyResolve(profileExporter, resolve);
-    exporter = new InstanceExporter(defs, input, profileExporter.resolve.bind(profileExporter));
+    structureDefinitionExporter = new StructureDefinitionExporter(defs, input);
+    spyResolve(structureDefinitionExporter, resolve);
+    exporter = new InstanceExporter(
+      defs,
+      input,
+      structureDefinitionExporter.resolve.bind(structureDefinitionExporter)
+    );
   });
 
   it('should output empty results with empty input', () => {
