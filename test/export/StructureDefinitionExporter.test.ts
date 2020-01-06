@@ -1012,4 +1012,24 @@ describe('StructureDefinitionExporter', () => {
       min: 1
     });
   });
+
+  // No duplicate structure definitions exported
+  it('should not export duplicate structure definitions', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Patient';
+    doc.profiles.set(profile.name, profile);
+
+    const extension = new Extension('Bar');
+    extension.id = 'bar';
+    doc.aliases.set('barAlias', 'Bar');
+    doc.extensions.set(extension.name, extension);
+
+    const ruleBar = new ContainsRule('extension');
+    ruleBar.items = ['barAlias'];
+    profile.rules.push(ruleBar);
+
+    const { profileDefs, extensionDefs } = exporter.export();
+    expect(profileDefs.length).toBe(1);
+    expect(extensionDefs.length).toBe(1);
+  });
 });
