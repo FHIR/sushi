@@ -59,7 +59,7 @@ async function app() {
     );
   }
 
-  const filesInfo = files
+  const rawFSHes = files
     .filter(file => file.endsWith('.fsh'))
     .map(file => {
       const filePath = path.resolve(input, file);
@@ -67,7 +67,7 @@ async function app() {
       return new RawFSH(fileContent, filePath);
     });
 
-  const docs = importText(filesInfo);
+  const docs = importText(rawFSHes);
 
   const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);

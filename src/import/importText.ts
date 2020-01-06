@@ -10,7 +10,7 @@ import flatMap from 'lodash/flatMap';
 
 /**
  * Parses various text strings into individual FSHDocuments.
- * @param {RawFSH[]} filesInfo - the list of RawFSH to parse into FSHDocuments
+ * @param {RawFSH[]} rawFSHes - the list of RawFSH to parse into FSHDocuments
  * @returns {FSHDocument[]} - the FSH documents representing each parsed text
  */
 export function importText(rawFSHes: RawFSH[]): FSHDocument[] {
