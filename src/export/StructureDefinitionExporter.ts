@@ -20,7 +20,6 @@ import cloneDeep from 'lodash/cloneDeep';
  * The operations and structure of both exporters are very similar, so they currently share an exporter.
  */
 export class StructureDefinitionExporter {
-  public readonly structDefs: StructureDefinition[] = [];
   public readonly profileDefs: StructureDefinition[] = [];
   public readonly extensionDefs: StructureDefinition[] = [];
 
@@ -159,7 +158,9 @@ export class StructureDefinitionExporter {
       // Maybe it's a FSH-defined definition and not a FHIR one
     } else {
       let structDef = cloneDeep(
-        this.structDefs.find(sd => sd.name === type || sd.id === type || sd.url === type)
+        [...this.profileDefs, ...this.extensionDefs].find(
+          sd => sd.name === type || sd.id === type || sd.url === type
+        )
       );
       if (!structDef) {
         // If we find a FSH definition, then we can export and resolve for its type again
@@ -180,7 +181,7 @@ export class StructureDefinitionExporter {
    * @throws {ParentNotDefinedError} when the Profile or Extension's parent is not found
    */
   exportStructDef(fshDefinition: Profile | Extension): void {
-    if (this.structDefs.some(sd => sd.name === fshDefinition.name)) {
+    if ([...this.profileDefs, ...this.extensionDefs].some(sd => sd.name === fshDefinition.name)) {
       return;
     }
 
@@ -196,7 +197,6 @@ export class StructureDefinitionExporter {
     this.setRules(structDef, fshDefinition);
     this.validateStructureDefinition(structDef);
 
-    this.structDefs.push(structDef);
     if (structDef.type === 'Extension') {
       this.extensionDefs.push(structDef);
     } else {
