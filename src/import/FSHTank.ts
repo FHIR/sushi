@@ -27,6 +27,14 @@ export class FSHTank {
   }
 
   /**
+   * Gets all structure definitions (profiles and extensions) in the tank
+   * @returns {(Profile | Extension)[]}
+   */
+  public getAllStructureDefinitions(): (Profile | Extension)[] {
+    return [...this.getAllProfiles(), ...this.getAllExtensions()];
+  }
+
+  /**
    * Finds the profile in the tank by name, id, or alias, if it exists
    * @param {string} key - The name or id of the profile we're looking for
    * @returns {Profile | undefined}
