@@ -2,7 +2,8 @@ import { ValueSetExporter } from '../../src/export';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { FSHDocument, FSHTank } from '../../src/import';
 import path from 'path';
-import { FshValueSet } from '../../src/fshtypes';
+import { FshValueSet, ValueSetFilterComponent } from '../../src/fshtypes';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('ValueSetExporter', () => {
   let defs: FHIRDefinitions;
@@ -35,5 +36,27 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
+  });
+
+  it('should export multiple value sets', () => {
+    const breakfast = new FshValueSet('BreakfastVS');
+    const lunch = new FshValueSet('LunchVS');
+    doc.valueSets.set(breakfast.name, breakfast);
+    doc.valueSets.set(lunch.name, lunch);
+    const exported = exporter.export();
+    expect(exported.length).toBe(2);
+  });
+
+  it('should log a message when a value set has a logical definition without inclusions', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([2, 8, 4, 25]);
+    const candyFilter = new ValueSetFilterComponent(false);
+    candyFilter.from = { valueSets: ['CandyVS'] };
+    valueSet.components.push(candyFilter);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export();
+    expect(exported.length).toBe(0);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Breakfast\.fsh.*Line: 2\D/s);
   });
 });

@@ -151,7 +151,7 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
-      it('should log an error when a concept component does not have a system', () => {
+      it('should log an error when a concept component with one concept does not have a system', () => {
         const input = `
         ValueSet: ZooVS
         * #hippo
@@ -163,6 +163,21 @@ describe('FSHImporter', () => {
         assertValueSetConceptComponent(valueSet.components[0], undefined, undefined, []);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
       });
+
+      it('should log an error when a concept component with a list of concepts does not have a system', () => {
+        const input = `
+        ValueSet: ZooVS
+        * #hippo "Hippopotamus", #crocodile "Crocodile"
+        `;
+
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.components[0], undefined, undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+      });
+
       it('should log an error when a concept component has a system specified more than once', () => {
         const input = `
         ValueSet: ZooVS
@@ -315,63 +330,53 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator descendent-of', () => {
         const input = `
         ValueSet: AllFelinesVS
-        * codes from valueset ZooVS where code descendent-of ZOO#cat
+        * codes from system ZOO where code descendent-of ZOO#cat
         `;
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
         expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(
-          valueSet.components[0],
-          undefined,
-          ['ZooVS'],
-          [
-            {
-              property: VsProperty.CODE,
-              operator: VsOperator.DESCENDENT_OF,
-              value: new FshCode('cat', 'ZOO', undefined)
-                .withLocation([3, 62, 3, 68])
-                .withFile('Felines.fsh')
-            }
-          ]
-        );
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.CODE,
+            operator: VsOperator.DESCENDENT_OF,
+            value: new FshCode('cat', 'ZOO', undefined)
+              .withLocation([3, 58, 3, 64])
+              .withFile('Felines.fsh')
+          }
+        ]);
       });
 
       it('should parse a value set that uses filter operator descendant-of, which is the same as descendent-of, but spelled correctly', () => {
         const input = `
         ValueSet: AllFelinesVS
-        * codes from valueset ZooVS where code descendant-of ZOO#cat
+        * codes from system ZOO where code descendant-of ZOO#cat
         `;
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
         expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(
-          valueSet.components[0],
-          undefined,
-          ['ZooVS'],
-          [
-            {
-              property: VsProperty.CODE,
-              operator: VsOperator.DESCENDENT_OF,
-              value: new FshCode('cat', 'ZOO', undefined)
-                .withLocation([3, 62, 3, 68])
-                .withFile('Felines.fsh')
-            }
-          ]
-        );
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+          {
+            property: VsProperty.CODE,
+            operator: VsOperator.DESCENDENT_OF,
+            value: new FshCode('cat', 'ZOO', undefined)
+              .withLocation([3, 58, 3, 64])
+              .withFile('Felines.fsh')
+          }
+        ]);
       });
 
       it('should log an error when the descendent-of filter has a non-code value', () => {
         const input = `
         ValueSet: AllFelinesVS
-        * codes from valueset ZooVS where code descendent-of "Cat"
+        * codes from system ZOO where code descendent-of "Cat"
         `;
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
         expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], undefined, ['ZooVS'], []);
+        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage()).toMatch(/"descendent-of".*code/);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Felines\.fsh.*Line: 3\D/s);
       });
@@ -659,6 +664,19 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+      });
+
+      it('should log an error when a filter component has at least one filter, but no system', () => {
+        const input = `
+          ValueSet: ZooVS
+          * codes from valueset OtherZooVS where version = "2.0"
+          `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], undefined, ['OtherZooVS'], []);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
       });
     });

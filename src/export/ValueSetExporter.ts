@@ -9,19 +9,11 @@ import {
   FshCode
 } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
+import { ValueSetComposeError } from '../errors';
 
 export class ValueSetExporter {
   public readonly valueSets: ValueSet[] = [];
   constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
-
-  // resolve(id: string): ValueSet | undefined {
-  //   const alias = this.tank.resolveAlias(id);
-  //   id = alias ? alias : id;
-  //   const json = this.FHIRDefs.find(id);
-  //   if (json) {
-  //   } else {
-  //   }
-  // }
 
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.name = fshDefinition.name;
@@ -91,7 +83,7 @@ export class ValueSetExporter {
       try {
         this.exportValueSet(valueSet);
       } catch (e) {
-        logger.error(e.message, e.sourceInfo);
+        logger.error(e.message, valueSet.sourceInfo);
       }
     }
     return this.valueSets;
@@ -104,6 +96,9 @@ export class ValueSetExporter {
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
     this.setCompose(vs, fshDefinition.components);
+    if (vs.compose && vs.compose.include.length == 0) {
+      throw new ValueSetComposeError(fshDefinition.name);
+    }
     this.valueSets.push(vs);
   }
 }

@@ -707,40 +707,47 @@ export class FSHImporter extends FSHVisitor {
         );
       }
     } else if (ctx.COMMA_DELIMITED_CODES()) {
-      const codes = ctx
-        .COMMA_DELIMITED_CODES()
-        .getText()
-        .split(/\s*,\s+#/);
-      codes[0] = codes[0].slice(1);
-      const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
-      codes.forEach(code => {
-        let codePart: string, description: string;
-        if (code.charAt(0) == '"') {
-          // codePart is a quoted string, just like description (if present).
-          [codePart, description] = code
-            .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
-            .map(quotedString => quotedString.slice(1, -1));
-        } else {
-          // codePart is not a quoted string.
-          // if there is a description after the code,
-          // it will be separated by whitespace before the leading "
-          const codeEnd = code.match(/\s+"/)?.index;
-          if (codeEnd) {
-            codePart = code.slice(0, codeEnd);
-            description = code
-              .slice(codeEnd)
-              .trim()
-              .slice(1, -1);
+      if (from.system) {
+        const codes = ctx
+          .COMMA_DELIMITED_CODES()
+          .getText()
+          .split(/\s*,\s+#/);
+        codes[0] = codes[0].slice(1);
+        const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
+        codes.forEach(code => {
+          let codePart: string, description: string;
+          if (code.charAt(0) == '"') {
+            // codePart is a quoted string, just like description (if present).
+            [codePart, description] = code
+              .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
+              .map(quotedString => quotedString.slice(1, -1));
           } else {
-            codePart = code.trim();
+            // codePart is not a quoted string.
+            // if there is a description after the code,
+            // it will be separated by whitespace before the leading "
+            const codeEnd = code.match(/\s+"/)?.index;
+            if (codeEnd) {
+              codePart = code.slice(0, codeEnd);
+              description = code
+                .slice(codeEnd)
+                .trim()
+                .slice(1, -1);
+            } else {
+              codePart = code.trim();
+            }
           }
-        }
-        concepts.push(
-          new FshCode(codePart, from.system, description)
-            .withLocation(location)
-            .withFile(this.currentFile)
-        );
-      });
+          concepts.push(
+            new FshCode(codePart, from.system, description)
+              .withLocation(location)
+              .withFile(this.currentFile)
+          );
+        });
+      } else {
+        logger.error('When listing concepts, must include system as "from system SYSTEM"', {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        });
+      }
     }
     return [concepts, from];
   }
@@ -753,19 +760,26 @@ export class FSHImporter extends FSHVisitor {
       ? this.visitVsComponentFrom(ctx.vsComponentFrom())
       : {};
     if (ctx.vsFilterList()) {
-      ctx
-        .vsFilterList()
-        .vsFilterDefinition()
-        .forEach(filterDefinition => {
-          try {
-            filters.push(this.visitVsFilterDefinition(filterDefinition));
-          } catch (e) {
-            logger.error(e, {
-              location: this.extractStartStop(filterDefinition),
-              file: this.currentFile
-            });
-          }
+      if (!from.system) {
+        logger.error('System is required when filtering a value set component', {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
         });
+      } else {
+        ctx
+          .vsFilterList()
+          .vsFilterDefinition()
+          .forEach(filterDefinition => {
+            try {
+              filters.push(this.visitVsFilterDefinition(filterDefinition));
+            } catch (e) {
+              logger.error(e, {
+                location: this.extractStartStop(filterDefinition),
+                file: this.currentFile
+              });
+            }
+          });
+      }
     }
     return [filters, from];
   }
