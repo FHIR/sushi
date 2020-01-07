@@ -1,6 +1,10 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
+import { RawFSH } from './RawFSH';
+import { FSHErrorListener } from './FSHErrorListener';
 import { FSHVisitor } from './generated/FSHVisitor';
+import { FSHLexer } from './generated/FSHLexer';
+import { FSHParser } from './generated/FSHParser';
 import {
   Profile,
   Extension,
@@ -29,7 +33,7 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../fshtypes/rules';
-import { ParserRuleContext } from 'antlr4';
+import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
 import {
@@ -39,6 +43,7 @@ import {
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
 } from '../errors';
+import flatMap from 'lodash/flatMap';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -76,41 +81,65 @@ enum Flag {
  * we must call the explicit visitX functions.
  */
 export class FSHImporter extends FSHVisitor {
-  private used = false;
-  private readonly doc: FSHDocument;
+  private currentFile: string;
+  private currentDoc: FSHDocument;
+  private allAliases: Map<string, string>;
 
-  constructor(public readonly file: string = '') {
+  constructor() {
     super();
-    this.doc = new FSHDocument(file);
   }
 
-  visitDoc(ctx: pc.DocContext): FSHDocument {
-    if (this.used) {
-      logger.error('FSHImporter cannot be re-used. Construct a new instance.');
-      return;
-    }
-    this.used = true;
+  import(rawFSHes: RawFSH[]): FSHDocument[] {
+    const docs: FSHDocument[] = [];
+    const contexts: pc.DocContext[] = [];
+    rawFSHes.forEach(rawFSH => {
+      docs.push(new FSHDocument(rawFSH.path));
+      contexts.push(this.parseDoc(rawFSH.content, rawFSH.path));
+    });
 
-    // First collect the aliases
+    // Import all aliases first
+    this.allAliases = new Map(
+      flatMap(
+        contexts.map((context, index) => {
+          this.currentDoc = docs[index];
+          this.currentFile = this.currentDoc.file ?? '';
+          const currentAliases = this.getAliases(context);
+          this.currentDoc = null;
+          this.currentFile = null;
+          return currentAliases;
+        }),
+        aliases => Array.from(aliases)
+      )
+    );
+
+    contexts.forEach((context, index) => {
+      this.currentDoc = docs[index];
+      this.currentFile = this.currentDoc.file ?? '';
+      this.visitDoc(context);
+      this.currentDoc = null;
+      this.currentFile = null;
+    });
+
+    return docs;
+  }
+
+  getAliases(ctx: pc.DocContext): Map<string, string> {
     ctx.entity().forEach(e => {
       if (e.alias()) {
         this.visitAlias(e.alias());
       }
     });
 
-    // Now process the rest of the document
+    return this.currentDoc.aliases;
+  }
+
+  visitDoc(ctx: pc.DocContext): void {
     ctx.entity().forEach(e => {
       this.visitEntity(e);
     });
-
-    return this.doc;
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    if (ctx.alias()) {
-      this.visitAlias(ctx.alias());
-    }
-
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
     }
@@ -129,23 +158,23 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitAlias(ctx: pc.AliasContext): void {
-    this.doc.aliases.set(ctx.SEQUENCE()[0].getText(), ctx.SEQUENCE()[1].getText());
+    this.currentDoc.aliases.set(ctx.SEQUENCE()[0].getText(), ctx.SEQUENCE()[1].getText());
   }
 
   visitProfile(ctx: pc.ProfileContext) {
     const profile = new Profile(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
-    this.doc.profiles.set(profile.name, profile);
+    this.currentDoc.profiles.set(profile.name, profile);
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
     const extension = new Extension(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
-    this.doc.extensions.set(extension.name, extension);
+    this.currentDoc.extensions.set(extension.name, extension);
   }
 
   private parseProfileOrExtension(
@@ -162,7 +191,7 @@ export class FSHImporter extends FSHVisitor {
             `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
               pair.key
             )}'.`,
-            { file: this.file, location: this.extractStartStop(pair.context) }
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
           );
           return;
         }
@@ -185,10 +214,10 @@ export class FSHImporter extends FSHVisitor {
   visitInstance(ctx: pc.InstanceContext) {
     const instance = new Instance(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     try {
       this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
-      this.doc.instances.set(instance.name, instance);
+      this.currentDoc.instances.set(instance.name, instance);
     } catch (e) {
       logger.error(e.message, instance.sourceInfo);
     }
@@ -211,7 +240,7 @@ export class FSHImporter extends FSHVisitor {
             `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
               pair.key
             )}'.`,
-            { file: this.file, location: this.extractStartStop(pair.context) }
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
           );
           return;
         }
@@ -233,9 +262,9 @@ export class FSHImporter extends FSHVisitor {
   visitValueSet(ctx: pc.ValueSetContext) {
     const valueSet = new ValueSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent());
-    this.doc.valueSets.set(valueSet.name, valueSet);
+    this.currentDoc.valueSets.set(valueSet.name, valueSet);
   }
 
   private parseValueSet(
@@ -255,7 +284,7 @@ export class FSHImporter extends FSHVisitor {
             `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
               pair.key
             )}'.`,
-            { file: this.file, location: this.extractStartStop(pair.context) }
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
           );
           return;
         }
@@ -352,7 +381,7 @@ export class FSHImporter extends FSHVisitor {
       return [this.visitCaretValueRule(ctx.caretValueRule())];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
-      file: this.file,
+      file: this.currentFile,
       location: this.extractStartStop(ctx)
     });
     return [];
@@ -378,7 +407,7 @@ export class FSHImporter extends FSHVisitor {
 
     const cardRule = new CardRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     const card = this.parseCard(ctx.CARD().getText());
     cardRule.min = card.min;
     cardRule.max = card.max;
@@ -387,7 +416,7 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.flag() && ctx.flag().length > 0) {
       const flagRule = new FlagRule(cardRule.path)
         .withLocation(this.extractStartStop(ctx))
-        .withFile(this.file);
+        .withFile(this.currentFile);
       this.parseFlags(flagRule, ctx.flag());
       rules.push(flagRule);
     }
@@ -413,7 +442,7 @@ export class FSHImporter extends FSHVisitor {
     return paths.map(path => {
       const flagRule = new FlagRule(path)
         .withLocation(this.extractStartStop(ctx))
-        .withFile(this.file);
+        .withFile(this.currentFile);
       this.parseFlags(flagRule, ctx.flag());
       return flagRule;
     });
@@ -446,7 +475,7 @@ export class FSHImporter extends FSHVisitor {
   visitValueSetRule(ctx: pc.ValueSetRuleContext): ValueSetRule {
     const vsRule = new ValueSetRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE().getText());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     return vsRule;
@@ -466,7 +495,7 @@ export class FSHImporter extends FSHVisitor {
   visitFixedValueRule(ctx: pc.FixedValueRuleContext): FixedValueRule {
     const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
     return fixedValueRule;
   }
@@ -524,7 +553,9 @@ export class FSHImporter extends FSHVisitor {
         .replace(/\\\\/g, '\\')
         .replace(/\\"/g, '"');
     }
-    const concept = new FshCode(code).withLocation(this.extractStartStop(ctx)).withFile(this.file);
+    const concept = new FshCode(code)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
     if (system && system.length > 0) {
       concept.system = this.aliasAwareValue(system);
     }
@@ -540,10 +571,10 @@ export class FSHImporter extends FSHVisitor {
     // the literal version of quantity always assumes UCUM code system
     const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org')
       .withLocation(this.extractStartStop(ctx.UNIT()))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     const quantity = new FshQuantity(value, unit)
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     return quantity;
   }
 
@@ -553,7 +584,7 @@ export class FSHImporter extends FSHVisitor {
       this.visitRatioPart(ctx.ratioPart()[1])
     )
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     return ratio;
   }
 
@@ -561,7 +592,7 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.NUMBER()) {
       const quantity = new FshQuantity(parseFloat(ctx.NUMBER().getText()))
         .withLocation(this.extractStartStop(ctx.NUMBER()))
-        .withFile(this.file);
+        .withFile(this.currentFile);
       return quantity;
     }
     return this.visitQuantity(ctx.quantity());
@@ -574,7 +605,7 @@ export class FSHImporter extends FSHVisitor {
   visitOnlyRule(ctx: pc.OnlyRuleContext): OnlyRule {
     const onlyRule = new OnlyRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
       if (t.REFERENCE()) {
         const text = t.REFERENCE().getText();
@@ -593,7 +624,7 @@ export class FSHImporter extends FSHVisitor {
     const rules: (ContainsRule | CardRule | FlagRule)[] = [];
     const containsRule = new ContainsRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
 
     rules.push(containsRule);
     ctx.item().forEach(i => {
@@ -602,7 +633,7 @@ export class FSHImporter extends FSHVisitor {
 
       const cardRule = new CardRule(`${containsRule.path}[${item}]`)
         .withLocation(this.extractStartStop(i))
-        .withFile(this.file);
+        .withFile(this.currentFile);
       const card = this.parseCard(i.CARD().getText());
       cardRule.min = card.min;
       cardRule.max = card.max;
@@ -611,7 +642,7 @@ export class FSHImporter extends FSHVisitor {
       if (i.flag() && i.flag().length > 0) {
         const flagRule = new FlagRule(`${containsRule.path}[${item}]`)
           .withLocation(this.extractStartStop(i))
-          .withFile(this.file);
+          .withFile(this.currentFile);
         this.parseFlags(flagRule, i.flag());
         rules.push(flagRule);
       }
@@ -623,7 +654,7 @@ export class FSHImporter extends FSHVisitor {
     const path = ctx.path() ? this.visitPath(ctx.path()) : '';
     const caretValueRule = new CaretValueRule(path)
       .withLocation(this.extractStartStop(ctx))
-      .withFile(this.file);
+      .withFile(this.currentFile);
 
     // Get the caret path, but slice off the starting ^
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
@@ -657,7 +688,7 @@ export class FSHImporter extends FSHVisitor {
       const singleCode = this.visitCode(ctx.code());
       if (singleCode.system && from.system) {
         logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
-          file: this.file,
+          file: this.currentFile,
           location: this.extractStartStop(ctx)
         });
       } else if (singleCode.system) {
@@ -670,7 +701,7 @@ export class FSHImporter extends FSHVisitor {
         logger.error(
           `Concept ${singleCode.code} must include system as "SYSTEM#CONCEPT" or "#CONCEPT from system SYSTEM"`,
           {
-            file: this.file,
+            file: this.currentFile,
             location: this.extractStartStop(ctx)
           }
         );
@@ -705,7 +736,9 @@ export class FSHImporter extends FSHVisitor {
           }
         }
         concepts.push(
-          new FshCode(codePart, from.system, description).withLocation(location).withFile(this.file)
+          new FshCode(codePart, from.system, description)
+            .withLocation(location)
+            .withFile(this.currentFile)
         );
       });
     }
@@ -729,7 +762,7 @@ export class FSHImporter extends FSHVisitor {
           } catch (e) {
             logger.error(e, {
               location: this.extractStartStop(filterDefinition),
-              file: this.file
+              file: this.currentFile
             });
           }
         });
@@ -843,7 +876,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private aliasAwareValue(value: string): string {
-    return this.doc.aliases.has(value) ? this.doc.aliases.get(value) : value;
+    return this.allAliases.has(value) ? this.allAliases.get(value) : value;
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
@@ -904,5 +937,27 @@ export class FSHImporter extends FSHVisitor {
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
     }
+  }
+
+  // NOTE: Since the ANTLR parser/lexer is JS (not typescript), we need to use some ts-ignore here.
+  private parseDoc(input: string, file?: string): pc.DocContext {
+    const chars = new InputStream(input);
+    const lexer = new FSHLexer(chars);
+    const listener = new FSHErrorListener(file);
+    // @ts-ignore
+    lexer.removeErrorListeners();
+    // @ts-ignore
+    lexer.addErrorListener(listener);
+    // @ts-ignore
+    const tokens = new CommonTokenStream(lexer);
+    const parser = new FSHParser(tokens);
+    // @ts-ignore
+    parser.removeErrorListeners();
+    // @ts-ignore
+    parser.addErrorListener(listener);
+    // @ts-ignore
+    parser.buildParseTrees = true;
+    // @ts-ignore
+    return parser.doc() as DocContext;
   }
 }
