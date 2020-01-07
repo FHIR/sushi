@@ -103,7 +103,10 @@ export class FSHImporter extends FSHVisitor {
         contexts.map((context, index) => {
           this.currentDoc = docs[index];
           this.currentFile = this.currentDoc.file ?? '';
-          return this.getAliases(context);
+          const currentAliases = this.getAliases(context);
+          this.currentDoc = null;
+          this.currentFile = null;
+          return currentAliases;
         }),
         aliases => Array.from(aliases)
       )
@@ -113,6 +116,8 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = docs[index];
       this.currentFile = this.currentDoc.file ?? '';
       this.visitDoc(context);
+      this.currentDoc = null;
+      this.currentFile = null;
     });
 
     return docs;
