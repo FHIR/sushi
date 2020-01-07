@@ -16,14 +16,18 @@ import { logger } from '../utils/FSHLogger';
 import cloneDeep from 'lodash/cloneDeep';
 
 /**
- * The StructureDefinitionExporter is a parent class for ProfileExporter and ExtensionExporter.
- * The operations and structure of both exporters are very similar, so any shared functionality
- * between the two should be included in this class.
+ * The StructureDefinitionExporter is the class for exporting Profiles and Extensions.
+ * The operations and structure of both exporters are very similar, so they currently share an exporter.
  */
 export class StructureDefinitionExporter {
-  public readonly structDefs: StructureDefinition[] = [];
+  public readonly profileDefs: StructureDefinition[] = [];
+  public readonly extensionDefs: StructureDefinition[] = [];
 
   constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
+
+  private get structDefs(): StructureDefinition[] {
+    return [...this.profileDefs, ...this.extensionDefs];
+  }
 
   /**
    * Sets the metadata for the StructureDefinition
@@ -162,13 +166,6 @@ export class StructureDefinitionExporter {
       );
       if (!structDef) {
         // If we find a FSH definition, then we can export and resolve for its type again
-        // TODO: This causes a problem because this instance of StructureDefinitionExporter is
-        // either a ProfileExporter or ExtensionExporter -- but we are resolving profiles and
-        // extensions here.  So the end result is that an Extension definition might end up in
-        // the ProfileExporter's structDefs array and/or a Profile definition might end up in the
-        // ExtensionExporter's array.  This causes duplicates in the final Package.  We need to
-        // fix this, but until we decide the best solution, we are just deduplicating in the
-        // FHIRExporter.
         const fshDefinition = this.tank.findProfile(type) ?? this.tank.findExtension(type);
         if (fshDefinition) {
           this.exportStructDef(fshDefinition);
@@ -202,6 +199,34 @@ export class StructureDefinitionExporter {
     this.setRules(structDef, fshDefinition);
     this.validateStructureDefinition(structDef);
 
-    this.structDefs.push(structDef);
+    if (structDef.type === 'Extension') {
+      this.extensionDefs.push(structDef);
+    } else {
+      this.profileDefs.push(structDef);
+    }
+  }
+
+  /**
+   * Exports Profiles and Extensions to StructureDefinitions
+   * @returns {AllStructureDefinitions}
+   */
+  export(): AllStructureDefinitions {
+    this.tank.getAllStructureDefinitions().forEach(sd => {
+      try {
+        this.exportStructDef(sd);
+      } catch (e) {
+        logger.error(e.message, e.sourceInfo);
+      }
+    });
+    return {
+      profileDefs: this.profileDefs,
+      extensionDefs: this.extensionDefs
+    };
   }
 }
+
+// Type to hold both profile and extension structure definitions
+export type AllStructureDefinitions = {
+  profileDefs: StructureDefinition[];
+  extensionDefs: StructureDefinition[];
+};

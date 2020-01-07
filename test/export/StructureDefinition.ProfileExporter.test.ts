@@ -1,4 +1,4 @@
-import { ProfileExporter } from '../../src/export';
+import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Profile } from '../../src/fshtypes';
@@ -12,7 +12,7 @@ describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
-  let exporter: ProfileExporter;
+  let exporter: StructureDefinitionExporter;
   let resolve: ResolveFn;
 
   beforeAll(() => {
@@ -28,19 +28,19 @@ describe('ProfileExporter', () => {
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new ProfileExporter(defs, input);
+    exporter = new StructureDefinitionExporter(defs, input);
     spyResolve(exporter, resolve);
   });
 
   it('should output empty results with empty input', () => {
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported).toEqual([]);
   });
 
   it('should export a single profile', () => {
     const profile = new Profile('Foo');
     doc.profiles.set(profile.name, profile);
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported.length).toBe(1);
   });
 
@@ -49,7 +49,7 @@ describe('ProfileExporter', () => {
     const profileBar = new Profile('Bar');
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported.length).toBe(2);
   });
 
@@ -59,7 +59,7 @@ describe('ProfileExporter', () => {
     const profileBar = new Profile('Bar');
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Bar');
   });
@@ -78,7 +78,7 @@ describe('ProfileExporter', () => {
     profileBar.parent = 'Foo';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported.length).toBe(2);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
@@ -94,7 +94,7 @@ describe('ProfileExporter', () => {
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     doc.profiles.set(profileBaz.name, profileBaz);
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported.length).toBe(3);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
@@ -112,7 +112,7 @@ describe('ProfileExporter', () => {
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     doc.profiles.set(profileBaz.name, profileBaz);
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported.length).toBe(3);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
@@ -130,7 +130,7 @@ describe('ProfileExporter', () => {
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     doc.profiles.set(profileBaz.name, profileBaz);
-    const exported = exporter.export();
+    const exported = exporter.export().profileDefs;
     expect(exported.length).toBe(3);
     expect(exported[0].name).toBe('Baz');
     expect(exported[1].name).toBe('Bar');
