@@ -25,6 +25,10 @@ export class StructureDefinitionExporter {
 
   constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
 
+  private get structDefs(): StructureDefinition[] {
+    return [...this.profileDefs, ...this.extensionDefs];
+  }
+
   /**
    * Sets the metadata for the StructureDefinition
    * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
@@ -158,9 +162,7 @@ export class StructureDefinitionExporter {
       // Maybe it's a FSH-defined definition and not a FHIR one
     } else {
       let structDef = cloneDeep(
-        [...this.profileDefs, ...this.extensionDefs].find(
-          sd => sd.name === type || sd.id === type || sd.url === type
-        )
+        this.structDefs.find(sd => sd.name === type || sd.id === type || sd.url === type)
       );
       if (!structDef) {
         // If we find a FSH definition, then we can export and resolve for its type again
@@ -181,7 +183,7 @@ export class StructureDefinitionExporter {
    * @throws {ParentNotDefinedError} when the Profile or Extension's parent is not found
    */
   exportStructDef(fshDefinition: Profile | Extension): void {
-    if ([...this.profileDefs, ...this.extensionDefs].some(sd => sd.name === fshDefinition.name)) {
+    if (this.structDefs.some(sd => sd.name === fshDefinition.name)) {
       return;
     }
 
@@ -209,7 +211,7 @@ export class StructureDefinitionExporter {
    * @returns {AllStructureDefinitions}
    */
   export(): AllStructureDefinitions {
-    [...this.tank.getAllProfiles(), ...this.tank.getAllExtensions()].forEach(sd => {
+    this.tank.getAllStructureDefinitions().forEach(sd => {
       try {
         this.exportStructDef(sd);
       } catch (e) {
