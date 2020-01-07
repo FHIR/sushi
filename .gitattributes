@@ -1,0 +1,4 @@
+* text=auto
+
+# Ensure .sh files stay LF always
+*.sh text eol=lf
