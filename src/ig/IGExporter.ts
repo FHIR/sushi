@@ -96,6 +96,23 @@ export class IGExporter {
    */
   private addStaticFiles(igPath: string): void {
     copySync(path.join(__dirname, 'files'), igPath);
+
+    // On Windows, the file permissions are not always preserved. This doesn't
+    // cause a problem for the Windows user, but it may cause problems for
+    // Mac and Linux users who use an NPM package published by a Windows user.
+    // To work around this, we set the necessary permissions on executable
+    // scripts after copying them to the IG path.
+    try {
+      fs.chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
+      fs.chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
+    } catch (e) {
+      // We don't want to fail the whole export for this, but we should log it
+      logger.warn(
+        'Failed to set executable permissions on IG publisher scripts (_genonce.sh, ' +
+          '_updatePublisher.sh). You may need to set these permissions manually before they can ' +
+          'be executed (e.g., chmod 755 _genonce.sh).'
+      );
+    }
   }
 
   /**
