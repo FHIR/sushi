@@ -13,7 +13,7 @@ import {
   FshRatio,
   TextLocation,
   Instance,
-  ValueSet,
+  FshValueSet,
   ValueSetComponent,
   ValueSetConceptComponent,
   VsProperty,
@@ -260,7 +260,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSet(ctx: pc.ValueSetContext) {
-    const valueSet = new ValueSet(ctx.SEQUENCE().getText())
+    const valueSet = new FshValueSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent());
@@ -268,7 +268,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private parseValueSet(
-    valueSet: ValueSet,
+    valueSet: FshValueSet,
     metaCtx: pc.VsMetadataContext[] = [],
     componentCtx: pc.VsComponentContext[] = []
   ) {

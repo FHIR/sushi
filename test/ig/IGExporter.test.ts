@@ -20,7 +20,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], [], config);
+      pkg = new Package([], [], [], [], config);
       const resources = path.join(fixtures, 'resources');
       const instances = path.join(fixtures, 'instances');
       fs.readdirSync(resources).forEach(f => {
@@ -233,7 +233,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], [], config);
+      pkg = new Package([], [], [], [], config);
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -319,7 +319,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'invalid-data-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], [], config);
+      pkg = new Package([], [], [], [], config);
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
