@@ -188,14 +188,15 @@ export class StructureDefinitionExporter implements Fishable {
 
     const structDef = StructureDefinition.fromJSON(json);
     this.setMetadata(structDef, fshDefinition);
-    this.setRules(structDef, fshDefinition);
-    this.validateStructureDefinition(structDef);
 
     if (structDef.type === 'Extension') {
       this.pkg.extensions.push(structDef);
     } else {
       this.pkg.profiles.push(structDef);
     }
+
+    this.setRules(structDef, fshDefinition);
+    this.validateStructureDefinition(structDef);
 
     return structDef;
   }
