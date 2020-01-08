@@ -68,7 +68,15 @@ describe('ElementDefinition', () => {
       status.setInstancePropertyByPath('type[2].code', 'foo', resolve);
       expect(status.type.length).toBe(3);
       expect(status.type[2]).toEqual({ code: 'foo' });
-      expect(status.type[1]).toBeUndefined();
+      expect(status.type[1]).toBeNull();
+    });
+
+    it('should add an instance property in an array that has been empty filled', () => {
+      status.setInstancePropertyByPath('type[2].code', 'foo', resolve);
+      status.setInstancePropertyByPath('type[1].code', 'bar', resolve);
+      expect(status.type.length).toBe(3);
+      expect(status.type[2]).toEqual({ code: 'foo' });
+      expect(status.type[1]).toEqual({ code: 'bar' });
     });
 
     it('should change an instance property in an array', () => {
@@ -109,6 +117,36 @@ describe('ElementDefinition', () => {
       expect(status.code.length).toBe(2);
       expect(status.code[0]).toEqual({ code: 'foo', system: 'http://example.com' });
       expect(status.code[1]).toEqual({ code: 'bar', system: 'http://example.com' });
+    });
+
+    // Children of primitives
+    it('should set a child of a primitive instance property which has a value', () => {
+      status.setInstancePropertyByPath('short', 'foo', resolve);
+      status.setInstancePropertyByPath('short.id', 'bar', resolve);
+      expect(status.short).toBe('foo');
+      // @ts-ignore
+      expect(status._short.id).toBe('bar');
+    });
+
+    it('should set a child of a primitive instance property array which has a value', () => {
+      status.setInstancePropertyByPath('alias[0]', 'foo', resolve);
+      status.setInstancePropertyByPath('alias[0].id', 'bar', resolve);
+      expect(status.alias.length).toBe(1);
+      expect(status.alias[0]).toBe('foo');
+      // @ts-ignore
+      expect(status._alias[0].id).toBe('bar');
+    });
+
+    it('should set a child of a primitive instance property array and null fill the array', () => {
+      status.setInstancePropertyByPath('alias[1]', 'foo', resolve);
+      status.setInstancePropertyByPath('alias[1].id', 'bar', resolve);
+      expect(status.alias.length).toBe(2);
+      expect(status.alias[0]).toBeNull();
+      expect(status.alias[1]).toBe('foo');
+      // @ts-ignore
+      expect(status._alias[0]).toBeNull();
+      // @ts-ignore
+      expect(status._alias[1].id).toBe('bar');
     });
   });
 });

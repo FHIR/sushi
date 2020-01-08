@@ -383,6 +383,14 @@ export class StructureDefinition {
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
       }
+      // Primitive and only primitives have a lower case first letter
+      if (
+        currentElement.type?.length === 1 &&
+        currentElement.type[0].code.charAt(0) ===
+          currentElement.type[0].code.charAt(0).toLowerCase()
+      ) {
+        pathPart.primitive = true;
+      }
     }
     const clone = currentElement.clone();
     // fixValue will throw if it fails
@@ -545,6 +553,7 @@ export type StructureDefinitionContext = {
 export type PathPart = {
   base: string;
   brackets?: string[];
+  primitive?: boolean;
 };
 
 /**

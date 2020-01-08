@@ -32,15 +32,23 @@ export function setPropertyOnInstance(
     // instance property here
     let current: any = instance;
     for (const [i, pathPart] of pathParts.entries()) {
-      const key = pathPart.base;
+      // When a primitive has child elements, a _ is appended to the name of the primitive
+      // According to https://www.hl7.org/fhir/json.html#primitive
+      const key =
+        pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
       // If this part of the path indexes into an array, the index will be the last bracket
       const index = getArrayIndex(pathPart);
       if (index != null) {
         // If the array doesn't exist, create it
         if (current[key] == null) current[key] = [];
         // If the index doesn't exist in the array, add it and lesser indices
-        if (index >= current[key].length) {
-          current[key][index] = {};
+        // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
+        for (let j = 0; j <= index; j++) {
+          if (j < current[key].length && j === index && current[key][index] == null) {
+            current[key][index] = {};
+          } else if (j >= current[key].length) {
+            current[key].push(j === index ? {} : null);
+          }
         }
         // If it isn't the last element, move on, if it is, set the value
         if (i < pathParts.length - 1) {

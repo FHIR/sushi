@@ -346,8 +346,16 @@ describe('StructureDefinition', () => {
       observation.setInstancePropertyByPath('contact[4].telecom[0].value', 'foo', resolve);
       expect(observation.contact.length).toBe(5);
       expect(observation.contact[4]).toEqual({ telecom: [{ value: 'foo' }] });
-      expect(observation.contact[3]).toBeUndefined();
-      expect(observation.contact[2]).toBeUndefined();
+      expect(observation.contact[3]).toBeNull();
+      expect(observation.contact[2]).toBeNull();
+    });
+
+    it('should add an instance property in an array that has been empty filled', () => {
+      observation.setInstancePropertyByPath('contact[3].telecom[0].value', 'foo', resolve);
+      observation.setInstancePropertyByPath('contact[2].telecom[0].value', 'bar', resolve);
+      expect(observation.contact.length).toBe(4);
+      expect(observation.contact[3]).toEqual({ telecom: [{ value: 'foo' }] });
+      expect(observation.contact[2]).toEqual({ telecom: [{ value: 'bar' }] });
     });
 
     it('should change an instance property in an array', () => {
@@ -406,6 +414,36 @@ describe('StructureDefinition', () => {
       });
     });
 
+    // Children of primitives
+    it('should set a child of a primitive instance property which has a value', () => {
+      observation.setInstancePropertyByPath('version', 'foo', resolve);
+      observation.setInstancePropertyByPath('version.id', 'bar', resolve);
+      expect(observation.version).toBe('foo');
+      // @ts-ignore
+      expect(observation._version.id).toBe('bar');
+    });
+
+    it('should set a child of a primitive instance property array which has a value', () => {
+      observation.setInstancePropertyByPath('contextInvariant[0]', 'foo', resolve);
+      observation.setInstancePropertyByPath('contextInvariant[0].id', 'bar', resolve);
+      expect(observation.contextInvariant.length).toBe(1);
+      expect(observation.contextInvariant[0]).toBe('foo');
+      // @ts-ignore
+      expect(observation._contextInvariant[0].id).toBe('bar');
+    });
+
+    it('should set a child of a primitive instance property array and null fill the array', () => {
+      observation.setInstancePropertyByPath('contextInvariant[1]', 'foo', resolve);
+      observation.setInstancePropertyByPath('contextInvariant[1].id', 'bar', resolve);
+      expect(observation.contextInvariant.length).toBe(2);
+      expect(observation.contextInvariant[0]).toBeNull();
+      expect(observation.contextInvariant[1]).toBe('foo');
+      // @ts-ignore
+      expect(observation._contextInvariant[0]).toBeNull();
+      // @ts-ignore
+      expect(observation._contextInvariant[1].id).toBe('bar');
+    });
+
     // Invalid access
     it('should throw an InvalidElementAccessError when trying to access the snapshot', () => {
       expect(() => {
@@ -437,7 +475,7 @@ describe('StructureDefinition', () => {
       const { fixedValue, pathParts } = structureDefinition.validateValueAtPath('version', '4.0.2');
       expect(fixedValue).toBe('4.0.2');
       expect(pathParts.length).toBe(1);
-      expect(pathParts[0]).toEqual({ base: 'version' });
+      expect(pathParts[0]).toEqual({ primitive: true, base: 'version' });
     });
 
     // Invalid paths
@@ -473,7 +511,7 @@ describe('StructureDefinition', () => {
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
-      expect(pathParts[1]).toEqual({ base: 'value' });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'value' });
     });
 
     it('should allow fixing an instance value to an element in an array, with implied 0 index', () => {
@@ -485,7 +523,7 @@ describe('StructureDefinition', () => {
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
-      expect(pathParts[1]).toEqual({ base: 'value' });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'value' });
     });
 
     it('should allow fixing an instance value to an element in an array if the element was constrained from an array', () => {
@@ -499,7 +537,7 @@ describe('StructureDefinition', () => {
       expect(pathParts.length).toBe(3);
       expect(pathParts[0]).toEqual({ base: 'code' });
       expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['RespRateCode', '0'] }); // 0 in path parts means value will be set in an array
-      expect(pathParts[2]).toEqual({ base: 'id' });
+      expect(pathParts[2]).toEqual({ primitive: true, base: 'id' });
     });
 
     it('should not allow using array brackets when an element is not an array', () => {
@@ -535,7 +573,7 @@ describe('StructureDefinition', () => {
       expect(pathParts.length).toBe(3);
       expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat', '0'] });
       expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['0'] });
-      expect(pathParts[2]).toEqual({ base: 'version' });
+      expect(pathParts[2]).toEqual({ primitive: true, base: 'version' });
     });
 
     it('should allow fixing an instance value on a slice array', () => {
@@ -547,7 +585,7 @@ describe('StructureDefinition', () => {
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['required', '3'] });
-      expect(pathParts[1]).toEqual({ base: 'value[x]' });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'value[x]' });
     });
 
     it('should allow setting values directly on extensions by accessing indexes', () => {
@@ -562,7 +600,7 @@ describe('StructureDefinition', () => {
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['2'] });
-      expect(pathParts[1]).toEqual({ base: 'url' });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'url' });
     });
   });
 

@@ -251,5 +251,58 @@ describe('InstanceExporter', () => {
       instance.rules.push(instanceFixedValRule);
       expect(() => exporter.exportInstance(instance)).toThrow();
     });
+
+    // Fixing children of primitives
+    it('should fix children of primitive values on an instance', () => {
+      const fixedValRule = new FixedValueRule('active.id');
+      fixedValRule.fixedValue = 'foo';
+      instance.rules.push(fixedValRule);
+      doc.instances.set(instance.name, instance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported._active.id).toBe('foo');
+    });
+
+    it('should fix primitive values and their children on an instance', () => {
+      const fixedValRule1 = new FixedValueRule('active');
+      fixedValRule1.fixedValue = true;
+      instance.rules.push(fixedValRule1);
+      const fixedValRule2 = new FixedValueRule('active.id');
+      fixedValRule2.fixedValue = 'foo';
+      instance.rules.push(fixedValRule2);
+      doc.instances.set(instance.name, instance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toBe(true);
+      expect(exported._active.id).toBe('foo');
+    });
+
+    it('should fix children of primitive value arrays on an instance', () => {
+      const fixedValRule = new FixedValueRule('address[0].line[1].extension[0].url');
+      fixedValRule.fixedValue = 'foo';
+      instance.rules.push(fixedValRule);
+      doc.instances.set(instance.name, instance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.address.length).toBe(1);
+      expect(exported.address[0]._line.length).toBe(2);
+      expect(exported.address[0]._line[0]).toBeNull();
+      expect(exported.address[0]._line[1].extension.length).toBe(1);
+      expect(exported.address[0]._line[1].extension[0].url).toBe('foo');
+    });
+
+    it('should fix children of primitive value arrays on an instance with out of order rules', () => {
+      const fixedValRule1 = new FixedValueRule('address[0].line[1].extension[0].url');
+      fixedValRule1.fixedValue = 'bar';
+      instance.rules.push(fixedValRule1);
+      const fixedValRule2 = new FixedValueRule('address[0].line[0].extension[0].url');
+      fixedValRule2.fixedValue = 'foo';
+      instance.rules.push(fixedValRule2);
+      doc.instances.set(instance.name, instance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.address.length).toBe(1);
+      expect(exported.address[0]._line.length).toBe(2);
+      expect(exported.address[0]._line[0].extension.length).toBe(1);
+      expect(exported.address[0]._line[0].extension[0].url).toBe('foo');
+      expect(exported.address[0]._line[1].extension.length).toBe(1);
+      expect(exported.address[0]._line[1].extension[0].url).toBe('bar');
+    });
   });
 });
