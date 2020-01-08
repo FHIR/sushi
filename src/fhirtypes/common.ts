@@ -43,12 +43,12 @@ export function setPropertyOnInstance(
         if (current[key] == null) current[key] = [];
         // If the index doesn't exist in the array, add it and lesser indices
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
-        let j = current[key].length;
-        for (; j < index; j++) {
-          current[key].push(null);
-        }
-        if (j === index) {
-          current[key].push({});
+        for (let j = 0; j <= index; j++) {
+          if (j < current[key].length && j === index && !current[key][index]) {
+            current[key][index] = {};
+          } else if (j >= current[key].length) {
+            current[key].push(j === index ? {} : null);
+          }
         }
         // If it isn't the last element, move on, if it is, set the value
         if (i < pathParts.length - 1) {

@@ -383,7 +383,12 @@ export class StructureDefinition {
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
       }
-      if (currentElement.type?.length === 1 && PRIMITIVES.includes(currentElement.type[0].code)) {
+      // Primitive and only primitives have a lower case first letter
+      if (
+        currentElement.type?.length === 1 &&
+        currentElement.type[0].code.charAt(0) ===
+          currentElement.type[0].code.charAt(0).toLowerCase()
+      ) {
         pathPart.primitive = true;
       }
     }
@@ -599,26 +604,4 @@ const PROPS = [
   'type',
   'baseDefinition',
   'derivation'
-];
-
-const PRIMITIVES = [
-  'boolean',
-  'integer',
-  'string',
-  'decimal',
-  'uri',
-  'url',
-  'canonical',
-  'base64Binary',
-  'instant',
-  'date',
-  'dateTime',
-  'time',
-  'code',
-  'oid',
-  'id',
-  'markdown',
-  'unsignedInt',
-  'positiveInt',
-  'uuid'
 ];

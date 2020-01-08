@@ -274,5 +274,22 @@ describe('InstanceExporter', () => {
       expect(exported.address[0]._line[1].extension.length).toBe(1);
       expect(exported.address[0]._line[1].extension[0].url).toBe('foo');
     });
+
+    it('should fix children of primitive value arrays on an instance with out of order rules', () => {
+      const fixedValRule1 = new FixedValueRule('address[0].line[1].extension[0].url');
+      fixedValRule1.fixedValue = 'bar';
+      instance.rules.push(fixedValRule1);
+      const fixedValRule2 = new FixedValueRule('address[0].line[0].extension[0].url');
+      fixedValRule2.fixedValue = 'foo';
+      instance.rules.push(fixedValRule2);
+      doc.instances.set(instance.name, instance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.address.length).toBe(1);
+      expect(exported.address[0]._line.length).toBe(2);
+      expect(exported.address[0]._line[0].extension.length).toBe(1);
+      expect(exported.address[0]._line[0].extension[0].url).toBe('foo');
+      expect(exported.address[0]._line[1].extension.length).toBe(1);
+      expect(exported.address[0]._line[1].extension[0].url).toBe('bar');
+    });
   });
 });

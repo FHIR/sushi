@@ -350,6 +350,14 @@ describe('StructureDefinition', () => {
       expect(observation.contact[2]).toBeNull();
     });
 
+    it('should add an instance property in an array that has been empty filled', () => {
+      observation.setInstancePropertyByPath('contact[3].telecom[0].value', 'foo', resolve);
+      observation.setInstancePropertyByPath('contact[2].telecom[0].value', 'bar', resolve);
+      expect(observation.contact.length).toBe(4);
+      expect(observation.contact[3]).toEqual({ telecom: [{ value: 'foo' }] });
+      expect(observation.contact[2]).toEqual({ telecom: [{ value: 'bar' }] });
+    });
+
     it('should change an instance property in an array', () => {
       observation.setInstancePropertyByPath('contact[1].telecom[0].value', 'foo', resolve);
       expect(observation.contact.length).toBe(2);

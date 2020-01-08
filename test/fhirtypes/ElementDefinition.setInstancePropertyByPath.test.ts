@@ -71,6 +71,14 @@ describe('ElementDefinition', () => {
       expect(status.type[1]).toBeNull();
     });
 
+    it('should add an instance property in an array that has been empty filled', () => {
+      status.setInstancePropertyByPath('type[2].code', 'foo', resolve);
+      status.setInstancePropertyByPath('type[1].code', 'bar', resolve);
+      expect(status.type.length).toBe(3);
+      expect(status.type[2]).toEqual({ code: 'foo' });
+      expect(status.type[1]).toEqual({ code: 'bar' });
+    });
+
     it('should change an instance property in an array', () => {
       status.setInstancePropertyByPath('type[0].code', 'foo', resolve);
       expect(status.type.length).toBe(1);
