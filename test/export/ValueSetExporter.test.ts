@@ -164,7 +164,7 @@ describe('ValueSetExporter', () => {
     expect(exported[0].compose.include[0].filter.length).toBe(1);
     expect(exported[0].compose.include[0].filter[0].property).toBe('code');
     expect(exported[0].compose.include[0].filter[0].op).toBe('descendent-of');
-    expect(exported[0].compose.include[0].filter[0].value).toBe('FOOD#Potatoes');
+    expect(exported[0].compose.include[0].filter[0].value).toBe('Potatoes');
   });
 
   it('should export a value set that includes a filter component with a string filter', () => {

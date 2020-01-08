@@ -72,7 +72,7 @@ export class ValueSetExporter {
     if (value instanceof RegExp) {
       return value.source;
     } else if (value instanceof FshCode) {
-      return `${value.system}#${value.code}`;
+      return value.code;
     } else {
       return value.toString();
     }
