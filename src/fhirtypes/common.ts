@@ -44,7 +44,7 @@ export function setPropertyOnInstance(
         // If the index doesn't exist in the array, add it and lesser indices
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
         for (let j = 0; j <= index; j++) {
-          if (j < current[key].length && j === index && !current[key][index]) {
+          if (j < current[key].length && j === index && current[key][index] == null) {
             current[key][index] = {};
           } else if (j >= current[key].length) {
             current[key].push(j === index ? {} : null);

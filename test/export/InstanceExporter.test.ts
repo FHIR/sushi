@@ -262,6 +262,19 @@ describe('InstanceExporter', () => {
       expect(exported._active.id).toBe('foo');
     });
 
+    it('should fix primitive values and their children on an instance', () => {
+      const fixedValRule1 = new FixedValueRule('active');
+      fixedValRule1.fixedValue = true;
+      instance.rules.push(fixedValRule1);
+      const fixedValRule2 = new FixedValueRule('active.id');
+      fixedValRule2.fixedValue = 'foo';
+      instance.rules.push(fixedValRule2);
+      doc.instances.set(instance.name, instance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toBe(true);
+      expect(exported._active.id).toBe('foo');
+    });
+
     it('should fix children of primitive value arrays on an instance', () => {
       const fixedValRule = new FixedValueRule('address[0].line[1].extension[0].url');
       fixedValRule.fixedValue = 'foo';
