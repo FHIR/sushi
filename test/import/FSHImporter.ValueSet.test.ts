@@ -124,6 +124,32 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
+      it('should parse a value set with a concept specified from an aliased system', () => {
+        const input = `
+        Alias: AQ = http://aquarium.org
+
+        ValueSet: ZooVS
+        * #octopus "Octopus" from system AQ
+        `;
+
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.components[0], 'http://aquarium.org', undefined, [
+          new FshCode('octopus', 'http://aquarium.org', 'Octopus')
+            .withLocation([5, 11, 5, 28])
+            .withFile('Zoo.fsh')
+        ]);
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 4,
+          startColumn: 9,
+          endLine: 5,
+          endColumn: 43
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
       it('should parse a value set with a list of concepts', () => {
         const input = `
         ValueSet: ZooVS
@@ -233,6 +259,27 @@ describe('FSHImporter', () => {
           startColumn: 9,
           endLine: 4,
           endColumn: 53
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a value set that includes all codes from an aliased value set', () => {
+        const input = `
+        Alias: Z1 = FirstZooVS
+
+        ValueSet: ZooVS
+        * codes from valueset Z1
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.components[0], undefined, ['FirstZooVS'], []);
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 4,
+          startColumn: 9,
+          endLine: 5,
+          endColumn: 32
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
