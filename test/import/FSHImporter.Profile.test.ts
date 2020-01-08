@@ -669,6 +669,28 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
+      it('should parse fixed value Reference rules while allowing and translating aliases', () => {
+        const input = `
+        Alias: FOO = http://hl7.org/fhir/StructureDefinition/Foo
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * basedOn = Reference(FOO) "bar"
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedReference = new FshReference(
+          'http://hl7.org/fhir/StructureDefinition/Foo',
+          'bar'
+        )
+          .withLocation([6, 21, 6, 40])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+      });
+
       it('should parse fixed value Reference rule with a display string', () => {
         const input = `
 
