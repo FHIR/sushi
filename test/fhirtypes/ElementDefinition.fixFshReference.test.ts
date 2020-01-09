@@ -38,6 +38,19 @@ describe('ElementDefinition', () => {
       });
     });
 
+    it('should fix a FshReference to a Reference allowing a more specific display', () => {
+      const subject = observation.elements.find(e => e.id === 'Observation.subject');
+      subject.fixFshReference(new FshReference('foo'));
+      expect(subject.patternReference).toEqual({
+        reference: 'foo'
+      });
+      subject.fixFshReference(new FshReference('foo', 'bar'));
+      expect(subject.patternReference).toEqual({
+        reference: 'foo',
+        display: 'bar'
+      });
+    });
+
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
@@ -50,7 +63,7 @@ describe('ElementDefinition', () => {
     it('should throw ValueAlreadyFixedError when the value is fixed to a different value', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
       subject.fixFshReference(fshReference1);
-      // should be able to fix a Quantity twice in the same way without issue
+      // should be able to fix a Reference twice in the same way without issue
       subject.fixFshReference(fshReference1);
       expect(subject.patternReference).toEqual({
         reference: 'foo',
@@ -67,7 +80,7 @@ describe('ElementDefinition', () => {
     it('should throw ValueAlreadyFixedError when the value is fixed to a different value, no display', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
       subject.fixFshReference(new FshReference('foo'));
-      // should be able to fix a Quantity twice in the same way without issue
+      // should be able to fix a Reference twice in the same way without issue
       subject.fixFshReference(new FshReference('foo'));
       expect(subject.patternReference).toEqual({
         reference: 'foo'

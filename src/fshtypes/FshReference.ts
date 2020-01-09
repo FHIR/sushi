@@ -10,6 +10,6 @@ export class FshReference extends FshEntity {
   }
 
   equals(other: FshReference) {
-    return this.reference === other.reference && this.display === other.display;
+    return this.reference === other.reference && this.display == other.display;
   }
 }

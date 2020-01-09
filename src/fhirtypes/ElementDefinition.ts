@@ -1104,12 +1104,19 @@ export class ElementDefinition {
         const found = this.patternReference;
         const foundFshReference = new FshReference(found.reference, found.display);
         // Check if the new quantity matches the current
-        if (!value.equals(foundFshReference)) {
+        if (
+          !value.equals(foundFshReference) &&
+          !(foundFshReference.display == null && value.display != null)
+        ) {
           throw new ValueAlreadyFixedError(
             value.toString(),
             'Reference',
             foundFshReference.toString()
           );
+        }
+        // The original display was not set, allow it to be set if references are otherwise equal
+        if (foundFshReference.display == null) {
+          this.patternReference.display = value.display;
         }
         // If they do match, there is nothing to do, so return
         return;

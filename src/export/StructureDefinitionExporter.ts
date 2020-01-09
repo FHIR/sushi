@@ -14,6 +14,7 @@ import {
 } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import cloneDeep from 'lodash/cloneDeep';
+import { replaceReferences } from '../fhirtypes/common';
 
 /**
  * The StructureDefinitionExporter is the class for exporting Profiles and Extensions.
@@ -75,6 +76,7 @@ export class StructureDefinitionExporter {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
+            replaceReferences(rule, this.tank, this.resolve);
             element.fixValue(rule.fixedValue);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);

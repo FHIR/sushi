@@ -1,4 +1,7 @@
 import { ResolveFn, StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
+import { FixedValueRule } from '../fshtypes/rules';
+import { FshReference } from '../fshtypes';
+import { FSHTank } from '../import';
 
 /**
  * This function sets an instance property of an SD or ED if possible
@@ -82,4 +85,24 @@ export function getArrayIndex(pathPart: PathPart): number {
     arrayIndex = parseInt(lastBracket);
   }
   return arrayIndex >= 0 ? arrayIndex : null;
+}
+
+/**
+ * Replaces references to instances by the correct path to that instance
+ * @param {FixedValueRule} rule - The rule to replace references on
+ * @param {FSHTank} tank - The tank holding the instances
+ * @param {ResolveFn} resolve - A function that can resolve to Structure Definitions
+ */
+export function replaceReferences(rule: FixedValueRule, tank: FSHTank, resolve: ResolveFn): void {
+  if (rule.fixedValue instanceof FshReference) {
+    const instance = tank.findInstance(rule.fixedValue.reference);
+    const instanceSD = resolve(instance?.instanceOf);
+    // If we can't find a matching instance, just leave the reference as is
+    if (instance && instanceSD) {
+      // If the instance has a rule setting id, that overrides instance.id
+      const idRule = instance.rules.find(r => r.path === 'id');
+      const id = idRule?.fixedValue ?? instance.id;
+      rule.fixedValue.reference = `${instanceSD.type}/${id}`;
+    }
+  }
 }
