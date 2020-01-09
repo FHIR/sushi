@@ -655,6 +655,110 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should apply correct OnlyRules on circular FSHy choices', () => {
+    const profile1 = new Profile('Foo');
+    profile1.parent = 'Observation';
+    const profile2 = new Profile('Bar');
+    profile2.parent = 'Observation';
+
+    doc.profiles.set(profile2.name, profile2);
+
+    const rule1 = new OnlyRule('hasMember[Observation]');
+    rule1.types = [{ type: 'Bar', isReference: true }];
+    const rule2 = new OnlyRule('hasMember[Observation]');
+    rule2.types = [{ type: 'Foo', isReference: true }];
+    profile1.rules.push(rule1);
+    profile2.rules.push(rule2);
+
+    exporter.exportStructDef(profile1);
+    const sdFoo = exporter.profileDefs.find(def => def.id === 'Foo');
+    const sdBar = exporter.profileDefs.find(def => def.id === 'Bar');
+    const baseStructDef = resolve('Observation');
+
+    const baseHasMember = baseStructDef.findElement('Observation.hasMember');
+    const constrainedHasMemberFoo = sdFoo.findElement('Observation.hasMember');
+    const constrainedHasMemberBar = sdBar.findElement('Observation.hasMember');
+
+    expect(baseHasMember.type).toHaveLength(1);
+    expect(baseHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberFoo.type).toHaveLength(1);
+    expect(constrainedHasMemberFoo.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberBar.type).toHaveLength(1);
+    expect(constrainedHasMemberBar.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/Foo',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+  });
+
+  it('should apply correct OnlyRule with circular FSHy parent', () => {
+    const profile1 = new Profile('Foo');
+    profile1.parent = 'Observation';
+    const profile2 = new Profile('Bar');
+    profile2.parent = 'Foo';
+
+    doc.profiles.set(profile2.name, profile2);
+
+    const rule = new OnlyRule('hasMember[Observation]');
+    rule.types = [{ type: 'Bar', isReference: true }];
+    profile1.rules.push(rule);
+
+    exporter.exportStructDef(profile1);
+    const sdFoo = exporter.profileDefs.find(def => def.id === 'Foo');
+    const sdBar = exporter.profileDefs.find(def => def.id === 'Bar');
+    const baseStructDef = resolve('Observation');
+
+    expect(sdFoo.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
+    expect(sdBar.baseDefinition).toBe('http://example.com/StructureDefinition/Foo');
+
+    const baseHasMember = baseStructDef.findElement('Observation.hasMember');
+    const constrainedHasMemberFoo = sdFoo.findElement('Observation.hasMember');
+    const constrainedHasMemberBar = sdBar.findElement('Observation.hasMember');
+
+    expect(baseHasMember.type).toHaveLength(1);
+    expect(baseHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberFoo.type).toHaveLength(1);
+    expect(constrainedHasMemberFoo.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberBar.type).toHaveLength(1);
+    expect(constrainedHasMemberBar.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+  });
+
   it('should not apply an incorrect OnlyRule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
