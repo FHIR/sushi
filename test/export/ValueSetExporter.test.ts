@@ -134,6 +134,7 @@ describe('ValueSetExporter', () => {
     component.concepts.push(
       new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.')
     );
+    component.concepts.push(new FshCode('Mulch', 'http://food.org/food'));
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
@@ -149,7 +150,8 @@ describe('ValueSetExporter', () => {
             system: 'http://food.org/food',
             concept: [
               { code: 'Pizza', display: 'Delicious pizza to share.' },
-              { code: 'Salad', display: 'Plenty of fresh vegetables.' }
+              { code: 'Salad', display: 'Plenty of fresh vegetables.' },
+              { code: 'Mulch' }
             ]
           }
         ]

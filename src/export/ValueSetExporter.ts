@@ -1,4 +1,4 @@
-import { ValueSet, ValueSetComposeIncludeOrExclude } from '../fhirtypes';
+import { ValueSet, ValueSetComposeIncludeOrExclude, ValueSetComposeConcept } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import {
   FshValueSet,
@@ -42,10 +42,13 @@ export class ValueSetExporter {
         }
         if (component instanceof ValueSetConceptComponent && component.concepts.length > 0) {
           composeElement.concept = component.concepts.map(concept => {
-            return {
-              code: concept.code,
-              display: concept.display
+            const composeConcept: ValueSetComposeConcept = {
+              code: concept.code
             };
+            if (concept.display) {
+              composeConcept.display = concept.display;
+            }
+            return composeConcept;
           });
         } else if (component instanceof ValueSetFilterComponent && component.filters.length > 0) {
           composeElement.filter = component.filters.map(filter => {
