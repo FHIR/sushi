@@ -20,7 +20,8 @@ import {
   ValueSetFilterComponent,
   ValueSetComponentFrom,
   ValueSetFilter,
-  VsOperator
+  VsOperator,
+  ValueSetFilterValue
 } from '../fshtypes';
 import {
   Rule,
@@ -874,7 +875,7 @@ export class FSHImporter extends FSHVisitor {
     };
   }
 
-  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | RegExp | boolean | FshCode {
+  visitVsFilterValue(ctx: pc.VsFilterValueContext): ValueSetFilterValue {
     if (ctx.code()) {
       return this.visitCode(ctx.code());
     } else if (ctx.REGEX()) {

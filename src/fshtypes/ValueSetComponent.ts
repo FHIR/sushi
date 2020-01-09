@@ -43,5 +43,7 @@ export enum VsOperator {
 export type ValueSetFilter = {
   property: VsProperty;
   operator: VsOperator;
-  value: string | RegExp | boolean | FshCode;
+  value: ValueSetFilterValue;
 };
+
+export type ValueSetFilterValue = string | RegExp | boolean | FshCode;

@@ -5,7 +5,8 @@ import {
   ValueSetComponent,
   ValueSetConceptComponent,
   ValueSetFilterComponent,
-  FshCode
+  FshCode,
+  ValueSetFilterValue
 } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError } from '../errors';
@@ -71,7 +72,7 @@ export class ValueSetExporter {
     }
   }
 
-  private filterValueToString(value: string | RegExp | boolean | FshCode): string {
+  private filterValueToString(value: ValueSetFilterValue): string {
     if (value instanceof RegExp) {
       return value.source;
     } else if (value instanceof FshCode) {
