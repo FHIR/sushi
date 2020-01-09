@@ -2,6 +2,7 @@ import { ResolveFn, StructureDefinition, PathPart, ElementDefinition, InstanceDe
 import { FixedValueRule } from '../fshtypes/rules';
 import { FshReference } from '../fshtypes';
 import { FSHTank } from '../import';
+import cloneDeep = require('lodash/cloneDeep');
 
 /**
  * This function sets an instance property of an SD or ED if possible
@@ -92,8 +93,14 @@ export function getArrayIndex(pathPart: PathPart): number {
  * @param {FixedValueRule} rule - The rule to replace references on
  * @param {FSHTank} tank - The tank holding the instances
  * @param {ResolveFn} resolve - A function that can resolve to Structure Definitions
+ * @returns {FixedValueRule} a clone of the rule if replacing is done, otherwise the original rule
  */
-export function replaceReferences(rule: FixedValueRule, tank: FSHTank, resolve: ResolveFn): void {
+export function replaceReferences(
+  rule: FixedValueRule,
+  tank: FSHTank,
+  resolve: ResolveFn
+): FixedValueRule {
+  let clone: FixedValueRule;
   if (rule.fixedValue instanceof FshReference) {
     const instance = tank.findInstance(rule.fixedValue.reference);
     const instanceSD = resolve(instance?.instanceOf);
@@ -102,7 +109,10 @@ export function replaceReferences(rule: FixedValueRule, tank: FSHTank, resolve: 
       // If the instance has a rule setting id, that overrides instance.id
       const idRule = instance.rules.find(r => r.path === 'id');
       const id = idRule?.fixedValue ?? instance.id;
-      rule.fixedValue.reference = `${instanceSD.type}/${id}`;
+      clone = new FixedValueRule(rule.path);
+      clone.fixedValue = cloneDeep(rule.fixedValue);
+      clone.fixedValue.reference = `${instanceSD.type}/${id}`;
     }
   }
+  return clone ?? rule;
 }

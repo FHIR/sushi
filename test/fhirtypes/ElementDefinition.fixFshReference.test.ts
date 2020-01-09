@@ -77,6 +77,17 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should throw ValueAlreadyFixedError when the value is fixed to a different value and a display is added', () => {
+      const subject = observation.elements.find(e => e.id === 'Observation.subject');
+      subject.fixFshReference(new FshReference('foo'));
+      expect(subject.patternReference).toEqual({
+        reference: 'foo'
+      });
+      expect(() => subject.fixFshReference(new FshReference('bar', 'bar'))).toThrow(
+        'Cannot fix Reference(bar) "bar" to this element; a different Reference is already fixed: Reference(foo)'
+      );
+    });
+
     it('should throw ValueAlreadyFixedError when the value is fixed to a different value, no display', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
       subject.fixFshReference(new FshReference('foo'));

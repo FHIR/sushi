@@ -9,7 +9,10 @@ export class FshReference extends FshEntity {
     return `Reference(${this.reference})${this.display ? ` "${this.display}"` : ''}`;
   }
 
-  equals(other: FshReference) {
-    return this.reference === other.reference && this.display == other.display;
+  equals(other: FshReference, ignoreOtherDisplay = false) {
+    return (
+      this.reference === other.reference &&
+      (this.display == other.display || (ignoreOtherDisplay && other.display == null))
+    );
   }
 }

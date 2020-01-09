@@ -1104,10 +1104,7 @@ export class ElementDefinition {
         const found = this.patternReference;
         const foundFshReference = new FshReference(found.reference, found.display);
         // Check if the new quantity matches the current
-        if (
-          !value.equals(foundFshReference) &&
-          !(foundFshReference.display == null && value.display != null)
-        ) {
+        if (!value.equals(foundFshReference, true)) {
           throw new ValueAlreadyFixedError(
             value.toString(),
             'Reference',

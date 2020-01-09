@@ -26,7 +26,7 @@ export class InstanceExporter {
   ): InstanceDefinition {
     // All rules will be FixValueRule
     fshInstanceDef.rules.forEach(rule => {
-      replaceReferences(rule, this.tank, this.resolve);
+      rule = replaceReferences(rule, this.tank, this.resolve);
       const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
         rule.path,
         rule.fixedValue,
