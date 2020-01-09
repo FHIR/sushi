@@ -30,6 +30,7 @@ const incrementCounts = format(info => {
       break;
     case 'debug':
       stats.numDebug++;
+      break;
     default:
       break;
   }
