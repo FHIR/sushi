@@ -21,7 +21,7 @@ import {
   InvalidMaxOfSliceError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
-import { Fishable, Type, Metadata } from '../utils/Fishable';
+import { Fishable, Type, Metadata, logger } from '../utils';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -1405,6 +1405,9 @@ export class ElementDefinition {
         );
         if (json) {
           const def = StructureDefinition.fromJSON(json);
+          if (!def.complete) {
+            logger.debug(`${def.name} is incomplete and may be missing required fields.`);
+          }
           newElements = def.elements.slice(1).map(e => {
             const eClone = e.clone();
             eClone.id = eClone.id.replace(def.type, `${this.id}`);

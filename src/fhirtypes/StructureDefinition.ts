@@ -61,6 +61,8 @@ export class StructureDefinition {
 
   private _sdStructureDefinition: StructureDefinition;
 
+  public complete: boolean;
+
   /**
    * Constructs a StructureDefinition with a root element.
    */
@@ -74,6 +76,7 @@ export class StructureDefinition {
     root.isModifier = false;
     root.isSummary = false;
     this.elements = [root];
+    this.complete = false;
   }
 
   /**

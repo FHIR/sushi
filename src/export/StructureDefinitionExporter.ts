@@ -139,6 +139,8 @@ export class StructureDefinitionExporter implements Fishable {
         throw new InvalidExtensionSliceError(ext.sliceName);
       }
     });
+
+    structDef.complete = true;
   }
 
   fishForFHIR(item: string, ...types: Type[]) {
