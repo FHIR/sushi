@@ -1,7 +1,5 @@
 import { ValueSetExporter } from '../../src/export';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { FSHDocument, FSHTank } from '../../src/import';
-import path from 'path';
 import {
   FshValueSet,
   ValueSetFilterComponent,
@@ -13,24 +11,14 @@ import {
 import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('ValueSetExporter', () => {
-  let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: ValueSetExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
-  });
-
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new ValueSetExporter(defs, input);
+    exporter = new ValueSetExporter(input);
   });
 
   it('should output empty results with empty input', () => {
@@ -43,11 +31,12 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].name).toBe('BreakfastVS');
-    expect(exported[0].id).toBe('BreakfastVS');
-    expect(exported[0].title).toBeUndefined();
-    expect(exported[0].description).toBeUndefined();
-    expect(exported[0].url).toBe('http://example.com/ValueSet/BreakfastVS');
+    expect(exported[0]).toEqual({
+      name: 'BreakfastVS',
+      id: 'BreakfastVS',
+      status: 'active',
+      url: 'http://example.com/ValueSet/BreakfastVS'
+    });
   });
 
   it('should export multiple value sets', () => {
@@ -66,11 +55,14 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].name).toBe('BreakfastVS');
-    expect(exported[0].id).toBe('BreakfastVS');
-    expect(exported[0].title).toBe('Breakfast Values');
-    expect(exported[0].description).toBe('A value set for breakfast items');
-    expect(exported[0].url).toBe('http://example.com/ValueSet/BreakfastVS');
+    expect(exported[0]).toEqual({
+      name: 'BreakfastVS',
+      id: 'BreakfastVS',
+      status: 'active',
+      title: 'Breakfast Values',
+      description: 'A value set for breakfast items',
+      url: 'http://example.com/ValueSet/BreakfastVS'
+    });
   });
 
   it('should export each value set once, even if export is called more than once', () => {
@@ -85,50 +77,90 @@ describe('ValueSetExporter', () => {
   it('should export a value set that includes a component from a system', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponent(true);
-    component.from = { system: 'FOOD' };
+    component.from = { system: 'http://food.org/food' };
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].compose.include.length).toBe(1);
-    expect(exported[0].compose.include[0].system).toBe('FOOD');
+    expect(exported[0]).toEqual({
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'active',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      compose: {
+        include: [{ system: 'http://food.org/food' }]
+      }
+    });
   });
 
   it('should export a value set that includes a component from a value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponent(true);
-    component.from = { valueSets: ['HotFoodVS', 'ColdFoodVS'] };
+    component.from = {
+      valueSets: [
+        'http://food.org/food/ValueSet/hot-food',
+        'http://food.org/food/ValueSet/cold-food'
+      ]
+    };
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].compose.include.length).toBe(1);
-    expect(exported[0].compose.include[0].valueSet).toEqual(['HotFoodVS', 'ColdFoodVS']);
+    expect(exported[0]).toEqual({
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            valueSet: [
+              'http://food.org/food/ValueSet/hot-food',
+              'http://food.org/food/ValueSet/cold-food'
+            ]
+          }
+        ]
+      }
+    });
   });
 
   it('should export a value set that includes a concept component with at least one concept', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponent(true);
-    component.from = { system: 'FOOD' };
-    component.concepts.push(new FshCode('Pizza', 'FOOD', 'Delicious pizza to share.'));
-    component.concepts.push(new FshCode('Salad', 'FOOD', 'Plenty of fresh vegetables.'));
+    component.from = { system: 'http://food.org/food' };
+    component.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
+    );
+    component.concepts.push(
+      new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.')
+    );
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].compose.include.length).toBe(1);
-    expect(exported[0].compose.include[0].system).toBe('FOOD');
-    expect(exported[0].compose.include[0].concept.length).toBe(2);
-    expect(exported[0].compose.include[0].concept[0].code).toBe('Pizza');
-    expect(exported[0].compose.include[0].concept[0].display).toBe('Delicious pizza to share.');
-    expect(exported[0].compose.include[0].concept[1].code).toBe('Salad');
-    expect(exported[0].compose.include[0].concept[1].display).toBe('Plenty of fresh vegetables.');
+    expect(exported[0]).toEqual({
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              { code: 'Pizza', display: 'Delicious pizza to share.' },
+              { code: 'Salad', display: 'Plenty of fresh vegetables.' }
+            ]
+          }
+        ]
+      }
+    });
   });
 
   it('should export a value set that includes a filter component with a regex filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     const component = new ValueSetFilterComponent(true);
-    component.from = { system: 'FOOD' };
+    component.from = { system: 'http://food.org/food' };
     component.filters.push({
       property: VsProperty.DISPLAY,
       operator: VsOperator.REGEX,
@@ -138,39 +170,67 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].compose.include.length).toBe(1);
-    expect(exported[0].compose.include[0].system).toBe('FOOD');
-    expect(exported[0].compose.include[0].filter.length).toBe(1);
-    expect(exported[0].compose.include[0].filter[0].property).toBe('display');
-    expect(exported[0].compose.include[0].filter[0].op).toBe('regex');
-    expect(exported[0].compose.include[0].filter[0].value).toBe('pancakes|flapjacks');
+    expect(exported[0]).toEqual({
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://example.com/ValueSet/BreakfastVS',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            filter: [
+              {
+                property: 'display',
+                op: 'regex',
+                value: 'pancakes|flapjacks'
+              }
+            ]
+          }
+        ]
+      }
+    });
   });
 
   it('should export a value set that includes a filter component with a code filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     const component = new ValueSetFilterComponent(true);
-    component.from = { system: 'FOOD' };
+    component.from = { system: 'http://food.org/food' };
     component.filters.push({
       property: VsProperty.CODE,
       operator: VsOperator.DESCENDENT_OF,
-      value: new FshCode('Potatoes', 'FOOD')
+      value: new FshCode('Potatoes', 'http://food.org/food')
     });
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].compose.include.length).toBe(1);
-    expect(exported[0].compose.include[0].system).toBe('FOOD');
-    expect(exported[0].compose.include[0].filter.length).toBe(1);
-    expect(exported[0].compose.include[0].filter[0].property).toBe('code');
-    expect(exported[0].compose.include[0].filter[0].op).toBe('descendent-of');
-    expect(exported[0].compose.include[0].filter[0].value).toBe('Potatoes');
+    expect(exported[0]).toEqual({
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://example.com/ValueSet/BreakfastVS',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            filter: [
+              {
+                property: 'code',
+                op: 'descendent-of',
+                value: 'Potatoes'
+              }
+            ]
+          }
+        ]
+      }
+    });
   });
 
   it('should export a value set that includes a filter component with a string filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     const component = new ValueSetFilterComponent(true);
-    component.from = { system: 'FOOD' };
+    component.from = { system: 'http://food.org/food' };
     component.filters.push({
       property: VsProperty.VERSION,
       operator: VsOperator.EQUALS,
@@ -180,38 +240,73 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].compose.include.length).toBe(1);
-    expect(exported[0].compose.include[0].system).toBe('FOOD');
-    expect(exported[0].compose.include[0].filter.length).toBe(1);
-    expect(exported[0].compose.include[0].filter[0].property).toBe('version');
-    expect(exported[0].compose.include[0].filter[0].op).toBe('=');
-    expect(exported[0].compose.include[0].filter[0].value).toBe('3.0.0');
+    expect(exported[0]).toEqual({
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://example.com/ValueSet/BreakfastVS',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            filter: [
+              {
+                property: 'version',
+                op: '=',
+                value: '3.0.0'
+              }
+            ]
+          }
+        ]
+      }
+    });
   });
 
   it('should export a value set that excludes a component', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const includedComponent = new ValueSetFilterComponent(true);
-    includedComponent.from = { system: 'FOOD', valueSets: ['BakedVS', 'GrilledVS'] };
+    includedComponent.from = {
+      system: 'http://food.org/food',
+      valueSets: ['http://food.org/food/ValueSet/baked', 'http://food.org/food/ValueSet/grilled']
+    };
     const excludedComponent = new ValueSetConceptComponent(false);
-    excludedComponent.from = { system: 'FOOD' };
+    excludedComponent.from = { system: 'http://food.org/food' };
     excludedComponent.concepts.push(
-      new FshCode('Cake', 'FOOD', 'A delicious treat for special occasions.')
+      new FshCode('Cake', 'http://food.org/food', 'A delicious treat for special occasions.')
     );
     valueSet.components.push(includedComponent);
     valueSet.components.push(excludedComponent);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
-    expect(exported[0].compose.include.length).toBe(1);
-    expect(exported[0].compose.include[0].system).toBe('FOOD');
-    expect(exported[0].compose.include[0].valueSet).toEqual(['BakedVS', 'GrilledVS']);
-    expect(exported[0].compose.exclude.length).toBe(1);
-    expect(exported[0].compose.exclude[0].system).toBe('FOOD');
-    expect(exported[0].compose.exclude[0].concept.length).toBe(1);
-    expect(exported[0].compose.exclude[0].concept[0].code).toBe('Cake');
-    expect(exported[0].compose.exclude[0].concept[0].display).toBe(
-      'A delicious treat for special occasions.'
-    );
+    expect(exported[0]).toEqual({
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            valueSet: [
+              'http://food.org/food/ValueSet/baked',
+              'http://food.org/food/ValueSet/grilled'
+            ]
+          }
+        ],
+        exclude: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              {
+                code: 'Cake',
+                display: 'A delicious treat for special occasions.'
+              }
+            ]
+          }
+        ]
+      }
+    });
   });
 
   it('should log a message when a value set has a logical definition without inclusions', () => {

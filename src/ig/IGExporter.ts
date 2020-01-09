@@ -183,6 +183,15 @@ export class IGExporter {
         exampleBoolean: true
       });
     });
+    this.pkg.valueSets.forEach(valueSet => {
+      const valueSetPath = path.join(igPath, 'input', 'resources', valueSet.getFileName());
+      outputJSONSync(valueSetPath, valueSet.toJSON(), { spaces: 2 });
+      this.ig.definition.resource.push({
+        reference: { reference: `ValueSet/${valueSet.id}` },
+        name: valueSet.title ?? valueSet.name,
+        description: valueSet.description
+      });
+    });
   }
 
   /**

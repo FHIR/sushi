@@ -1,6 +1,5 @@
-import { ValueSet, ValueSetCompose } from '../fhirtypes';
+import { ValueSet, ValueSetComposeIncludeOrExclude } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
-import { FHIRDefinitions } from '../fhirdefs/FHIRDefinitions';
 import {
   FshValueSet,
   ValueSetComponent,
@@ -13,7 +12,7 @@ import { ValueSetComposeError } from '../errors';
 
 export class ValueSetExporter {
   public readonly valueSets: ValueSet[] = [];
-  constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
+  constructor(public readonly tank: FSHTank) {}
 
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.name = fshDefinition.name;
@@ -34,29 +33,27 @@ export class ValueSetExporter {
         exclude: []
       };
       components.forEach(component => {
-        const composeElement: ValueSetCompose = {};
+        const composeElement: ValueSetComposeIncludeOrExclude = {};
         if (component.from.system) {
           composeElement.system = component.from.system;
         }
         if (component.from.valueSets) {
           composeElement.valueSet = component.from.valueSets;
         }
-        if (component instanceof ValueSetConceptComponent) {
-          composeElement.concept = [];
-          component.concepts.forEach(concept => {
-            composeElement.concept.push({
+        if (component instanceof ValueSetConceptComponent && component.concepts.length > 0) {
+          composeElement.concept = component.concepts.map(concept => {
+            return {
               code: concept.code,
               display: concept.display
-            });
+            };
           });
-        } else if (component instanceof ValueSetFilterComponent) {
-          composeElement.filter = [];
-          component.filters.forEach(filter => {
-            composeElement.filter.push({
+        } else if (component instanceof ValueSetFilterComponent && component.filters.length > 0) {
+          composeElement.filter = component.filters.map(filter => {
+            return {
               property: filter.property.toString(),
               op: filter.operator.toString(),
               value: this.filterValueToString(filter.value)
-            });
+            };
           });
         }
         if (component.inclusion) {
@@ -65,6 +62,9 @@ export class ValueSetExporter {
           valueSet.compose.exclude.push(composeElement);
         }
       });
+      if (valueSet.compose.exclude.length == 0) {
+        delete valueSet.compose.exclude;
+      }
     }
   }
 

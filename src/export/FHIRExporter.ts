@@ -26,7 +26,7 @@ export class FHIRExporter {
       tank,
       this.structureDefinitionExporter.resolve.bind(this.structureDefinitionExporter)
     );
-    this.valueSetExporter = new ValueSetExporter(this.FHIRDefs, tank);
+    this.valueSetExporter = new ValueSetExporter(tank);
 
     const { profileDefs, extensionDefs } = this.structureDefinitionExporter.export();
     const instanceDefs = this.instanceExporter.export();

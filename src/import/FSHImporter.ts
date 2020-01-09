@@ -743,7 +743,7 @@ export class FSHImporter extends FSHVisitor {
           );
         });
       } else {
-        logger.error('When listing concepts, must include system as "from system SYSTEM"', {
+        logger.error('System is required when listing concepts in a value set component', {
           file: this.currentFile,
           location: this.extractStartStop(ctx)
         });
@@ -760,12 +760,7 @@ export class FSHImporter extends FSHVisitor {
       ? this.visitVsComponentFrom(ctx.vsComponentFrom())
       : {};
     if (ctx.vsFilterList()) {
-      if (!from.system) {
-        logger.error('System is required when filtering a value set component', {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        });
-      } else {
+      if (from.system) {
         ctx
           .vsFilterList()
           .vsFilterDefinition()
@@ -779,6 +774,11 @@ export class FSHImporter extends FSHVisitor {
               });
             }
           });
+      } else {
+        logger.error('System is required when filtering a value set component', {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        });
       }
     }
     return [filters, from];

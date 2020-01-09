@@ -24,7 +24,7 @@ export class ValueSet {
   version: string;
   name: string;
   title: string;
-  status: string;
+  status = 'active';
   experimental: boolean;
   date: string;
   publisher: string;
@@ -35,37 +35,55 @@ export class ValueSet {
   immutable: boolean;
   purpose: string;
   copyright: string;
-  compose: ValueSetLogicalDefinition;
+  compose: ValueSetCompose;
+
+  /**
+   * Get the file name for serializing to disk.
+   * @returns {string} the filename
+   */
+  getFileName(): string {
+    return `ValueSet-${this.id}.json`;
+  }
+
+  /**
+   * Exports the ValueSet to a properly formatted FHIR JSON representation.
+   * Currently, no changes need to be made to the formatting,
+   * so the instance is directly returned.
+   * @returns {any} the FHIR JSON representation of the ValueSet
+   */
+  toJSON(): any {
+    return this;
+  }
 }
 
-export type ValueSetLogicalDefinition = {
+export type ValueSetCompose = {
   lockedDate?: string;
   inactive?: boolean;
-  include: ValueSetCompose[];
-  exclude?: ValueSetCompose[];
+  include: ValueSetComposeIncludeOrExclude[];
+  exclude?: ValueSetComposeIncludeOrExclude[];
 };
 
-export type ValueSetCompose = {
+export type ValueSetComposeIncludeOrExclude = {
   system?: string;
   version?: string;
   valueSet?: string[];
-  concept?: ValueSetConcept[];
-  filter?: ValueSetLogicalFilter[];
+  concept?: ValueSetComposeConcept[];
+  filter?: ValueSetComposeFilter[];
 };
 
-export type ValueSetConcept = {
+export type ValueSetComposeConcept = {
   code: string;
   display?: string;
-  designation?: ValueSetConceptDesignation[];
+  designation?: ValueSetComposeConceptDesignation[];
 };
 
-export type ValueSetConceptDesignation = {
+export type ValueSetComposeConceptDesignation = {
   language?: string;
   use?: Coding;
   value: string;
 };
 
-export type ValueSetLogicalFilter = {
+export type ValueSetComposeFilter = {
   property: string;
   op: string;
   value: string;
