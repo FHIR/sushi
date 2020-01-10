@@ -479,6 +479,15 @@ FSHListener.prototype.exitRatio = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#reference.
+FSHListener.prototype.enterReference = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#reference.
+FSHListener.prototype.exitReference = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#ratioPart.
 FSHListener.prototype.enterRatioPart = function(ctx) {
 };

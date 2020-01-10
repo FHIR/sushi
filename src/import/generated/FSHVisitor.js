@@ -324,6 +324,12 @@ FSHVisitor.prototype.visitRatio = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#reference.
+FSHVisitor.prototype.visitReference = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#ratioPart.
 FSHVisitor.prototype.visitRatioPart = function(ctx) {
   return this.visitChildren(ctx);

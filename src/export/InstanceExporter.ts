@@ -9,7 +9,7 @@ import {
 import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
 import { logger } from '../utils/FSHLogger';
-import { setPropertyOnInstance } from '../fhirtypes/common';
+import { setPropertyOnInstance, replaceReferences } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 
 export class InstanceExporter {
@@ -26,6 +26,7 @@ export class InstanceExporter {
   ): InstanceDefinition {
     // All rules will be FixValueRule
     fshInstanceDef.rules.forEach(rule => {
+      rule = replaceReferences(rule, this.tank, this.resolve);
       const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
         rule.path,
         rule.fixedValue,

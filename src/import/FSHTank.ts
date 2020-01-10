@@ -1,5 +1,5 @@
 import { FSHDocument } from './FSHDocument';
-import { Profile, Extension } from '../fshtypes';
+import { Profile, Extension, Instance } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
 import { Config } from '../fshtypes/Config';
 
@@ -24,6 +24,14 @@ export class FSHTank {
    */
   public getAllExtensions(): Extension[] {
     return flatMap(this.docs, doc => Array.from(doc.extensions.values()));
+  }
+
+  /**
+   * Gets all instances in the tank
+   * @returns {Instance[]}
+   */
+  public getAllInstances(): Instance[] {
+    return flatMap(this.docs, doc => Array.from(doc.instances.values()));
   }
 
   /**
@@ -60,6 +68,15 @@ export class FSHTank {
         p.id === key ||
         `${this.config.canonical}/StructureDefinition/${p.id}` === key
     );
+  }
+
+  /**
+   * Finds the instance in the tank by name or id, if it exists
+   * @param {string} key - The name or id of the instance we're looking for
+   * @returns {[Instance, string]}
+   */
+  public findInstance(key: string): Instance | undefined {
+    return this.getAllInstances().find(p => p.name === key || p.id === key);
   }
 
   /**
