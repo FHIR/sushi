@@ -5,7 +5,6 @@ import {
   ValueSetFilterComponent,
   ValueSetConceptComponent,
   FshCode,
-  VsProperty,
   VsOperator
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -164,7 +163,7 @@ describe('ValueSetExporter', () => {
     const component = new ValueSetFilterComponent(true);
     component.from = { system: 'http://food.org/food' };
     component.filters.push({
-      property: VsProperty.DISPLAY,
+      property: 'display',
       operator: VsOperator.REGEX,
       value: /pancakes|flapjacks/
     });
@@ -199,7 +198,7 @@ describe('ValueSetExporter', () => {
     const component = new ValueSetFilterComponent(true);
     component.from = { system: 'http://food.org/food' };
     component.filters.push({
-      property: VsProperty.CODE,
+      property: 'concept',
       operator: VsOperator.DESCENDENT_OF,
       value: new FshCode('Potatoes', 'http://food.org/food')
     });
@@ -218,7 +217,7 @@ describe('ValueSetExporter', () => {
             system: 'http://food.org/food',
             filter: [
               {
-                property: 'code',
+                property: 'concept',
                 op: 'descendent-of',
                 value: 'Potatoes'
               }
@@ -234,7 +233,7 @@ describe('ValueSetExporter', () => {
     const component = new ValueSetFilterComponent(true);
     component.from = { system: 'http://food.org/food' };
     component.filters.push({
-      property: VsProperty.VERSION,
+      property: 'version',
       operator: VsOperator.EQUALS,
       value: '3.0.0'
     });

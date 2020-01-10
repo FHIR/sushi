@@ -16,7 +16,6 @@ import {
   FshValueSet,
   ValueSetComponent,
   ValueSetConceptComponent,
-  VsProperty,
   ValueSetFilterComponent,
   ValueSetComponentFrom,
   ValueSetFilter,
@@ -39,7 +38,6 @@ import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
 import {
   RequiredMetadataError,
-  ValueSetFilterPropertyError,
   ValueSetFilterOperatorError,
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
@@ -843,13 +841,7 @@ export class FSHImporter extends FSHVisitor {
    * @see {@link http://hl7.org/fhir/valueset-filter-operator.html}
    */
   visitVsFilterDefinition(ctx: pc.VsFilterDefinitionContext): ValueSetFilter {
-    const property = ctx
-      .SEQUENCE()
-      .getText()
-      .toLocaleLowerCase() as VsProperty;
-    if (Object.values(VsProperty).indexOf(property) < 0) {
-      throw new ValueSetFilterPropertyError(ctx.SEQUENCE().getText());
-    }
+    const property = ctx.SEQUENCE().getText();
     const operator = ctx
       .vsFilterOperator()
       .getText()

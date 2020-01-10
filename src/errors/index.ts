@@ -14,7 +14,6 @@ export * from './InvalidRangeValueError';
 export * from './InvalidTypeError';
 export * from './RequiredMetadataError';
 export * from './ValueSetComposeError';
-export * from './ValueSetFilterPropertyError';
 export * from './ValueSetFilterOperatorError';
 export * from './ValueSetFilterMissingValueError';
 export * from './ValueSetFilterValueTypeError';

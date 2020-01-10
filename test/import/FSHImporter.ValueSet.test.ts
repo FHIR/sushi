@@ -3,7 +3,7 @@ import {
   assertValueSetFilterComponent
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { FshCode, VsProperty, VsOperator } from '../../src/fshtypes';
+import { FshCode, VsOperator } from '../../src/fshtypes';
 import { importSingleText } from '../testhelpers/importSingleText';
 
 describe('FSHImporter', () => {
@@ -382,7 +382,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.VERSION,
+            property: 'version',
             operator: VsOperator.EQUALS,
             value: '2.0'
           }
@@ -406,7 +406,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator is-a', () => {
         const input = `
         ValueSet: AllUrsinesVS
-        * codes from system ZOO where code is-a #bear "Bear"
+        * codes from system ZOO where concept is-a #bear "Bear"
         `;
         const result = importSingleText(input, 'Ursines.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -414,10 +414,10 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.CODE,
+            property: 'concept',
             operator: VsOperator.IS_A,
             value: new FshCode('bear', undefined, 'Bear')
-              .withLocation([3, 49, 3, 60])
+              .withLocation([3, 52, 3, 63])
               .withFile('Ursines.fsh')
           }
         ]);
@@ -426,7 +426,7 @@ describe('FSHImporter', () => {
       it('should log an error when the is-a filter has a non-code value', () => {
         const input = `
         ValueSet: AllUrsinesVS
-        * codes from system ZOO where code is-a "Bear"
+        * codes from system ZOO where concept is-a "Bear"
         `;
         const result = importSingleText(input, 'Ursines.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -440,7 +440,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator descendent-of', () => {
         const input = `
         ValueSet: AllFelinesVS
-        * codes from system ZOO where code descendent-of ZOO#cat
+        * codes from system ZOO where concept descendent-of ZOO#cat
         `;
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -448,10 +448,10 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.CODE,
+            property: 'concept',
             operator: VsOperator.DESCENDENT_OF,
             value: new FshCode('cat', 'ZOO', undefined)
-              .withLocation([3, 58, 3, 64])
+              .withLocation([3, 61, 3, 67])
               .withFile('Felines.fsh')
           }
         ]);
@@ -460,7 +460,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator descendant-of, which is the same as descendent-of, but spelled correctly', () => {
         const input = `
         ValueSet: AllFelinesVS
-        * codes from system ZOO where code descendant-of ZOO#cat
+        * codes from system ZOO where concept descendant-of ZOO#cat
         `;
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -468,10 +468,10 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.CODE,
+            property: 'concept',
             operator: VsOperator.DESCENDENT_OF,
             value: new FshCode('cat', 'ZOO', undefined)
-              .withLocation([3, 58, 3, 64])
+              .withLocation([3, 61, 3, 67])
               .withFile('Felines.fsh')
           }
         ]);
@@ -480,7 +480,7 @@ describe('FSHImporter', () => {
       it('should log an error when the descendent-of filter has a non-code value', () => {
         const input = `
         ValueSet: AllFelinesVS
-        * codes from system ZOO where code descendent-of "Cat"
+        * codes from system ZOO where concept descendent-of "Cat"
         `;
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -494,7 +494,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator is-not-a', () => {
         const input = `
         ValueSet: NonCanineVS
-        * codes from system ZOO where code is-not-a #dog
+        * codes from system ZOO where concept is-not-a #dog
         `;
         const result = importSingleText(input, 'NonCanine.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -502,10 +502,10 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.CODE,
+            property: 'concept',
             operator: VsOperator.IS_NOT_A,
             value: new FshCode('dog', undefined, undefined)
-              .withLocation([3, 53, 3, 56])
+              .withLocation([3, 56, 3, 59])
               .withFile('NonCanine.fsh')
           }
         ]);
@@ -514,7 +514,7 @@ describe('FSHImporter', () => {
       it('should log an error when the is-not-a filter has a non-code value', () => {
         const input = `
         ValueSet: NonCanineVS
-        * codes from system ZOO where code is-not-a "dog"
+        * codes from system ZOO where concept is-not-a "dog"
         `;
         const result = importSingleText(input, 'NonCanine.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -536,7 +536,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.DISPLAY,
+            property: 'display',
             operator: VsOperator.REGEX,
             value: /([Dd]og)|([Cc]anine)/
           }
@@ -560,7 +560,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator in', () => {
         const input = `
         ValueSet: CatAndDogVS
-        * codes from system ZOO where code in "#cat, #dog"
+        * codes from system ZOO where concept in "#cat, #dog"
         `;
         const result = importSingleText(input, 'CatDog.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -568,7 +568,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.CODE,
+            property: 'concept',
             operator: VsOperator.IN,
             value: '#cat, #dog'
           }
@@ -578,7 +578,7 @@ describe('FSHImporter', () => {
       it('should log an error when the in filter has a non-string value', () => {
         const input = `
         ValueSet: CatAndDogVS
-        * codes from system ZOO where code in ZOO#cat
+        * codes from system ZOO where concept in ZOO#cat
         `;
         const result = importSingleText(input, 'CatDog.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -592,7 +592,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator not-in', () => {
         const input = `
         ValueSet: NoGooseVS
-        * codes from system ZOO where code not-in "#goose"
+        * codes from system ZOO where concept not-in "#goose"
         `;
         const result = importSingleText(input, 'NoGoose.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -600,7 +600,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.CODE,
+            property: 'concept',
             operator: VsOperator.NOT_IN,
             value: '#goose'
           }
@@ -610,7 +610,7 @@ describe('FSHImporter', () => {
       it('should log an error when the not-in filter has a non-string value', () => {
         const input = `
         ValueSet: NoGooseVS
-        * codes from system ZOO where code not-in /duck|goose/
+        * codes from system ZOO where concept not-in /duck|goose/
         `;
         const result = importSingleText(input, 'NoGoose.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -624,7 +624,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that uses filter operator generalizes', () => {
         const input = `
         ValueSet: MustelidVS
-        * codes from system ZOO where code generalizes #mustela-nivalis "least weasel"
+        * codes from system ZOO where concept generalizes #mustela-nivalis "least weasel"
         `;
         const result = importSingleText(input, 'Mustelids.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -632,10 +632,10 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.CODE,
+            property: 'concept',
             operator: VsOperator.GENERALIZES,
             value: new FshCode('mustela-nivalis', undefined, 'least weasel')
-              .withLocation([3, 56, 3, 86])
+              .withLocation([3, 59, 3, 89])
               .withFile('Mustelids.fsh')
           }
         ]);
@@ -644,7 +644,7 @@ describe('FSHImporter', () => {
       it('should log an error when the generalizes filter has a non-code value', () => {
         const input = `
         ValueSet: MustelidVS
-        * codes from system ZOO where code generalizes "least weasel"
+        * codes from system ZOO where concept generalizes "least weasel"
         `;
         const result = importSingleText(input, 'Mustelids.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -667,14 +667,14 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(2);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.DISPLAY,
+            property: 'display',
             operator: VsOperator.EXISTS,
             value: true
           }
         ]);
         assertValueSetFilterComponent(valueSet.components[1], 'ZOO', undefined, [
           {
-            property: VsProperty.VERSION,
+            property: 'version',
             operator: VsOperator.EXISTS,
             value: true
           }
@@ -706,12 +706,12 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
           {
-            property: VsProperty.VERSION,
+            property: 'version',
             operator: VsOperator.REGEX,
             value: /2\./
           },
           {
-            property: VsProperty.DISPLAY,
+            property: 'display',
             operator: VsOperator.EXISTS,
             value: true
           }
@@ -736,19 +736,6 @@ describe('FSHImporter', () => {
           [],
           false
         );
-      });
-
-      it('should log an error when a filter has an invalid property', () => {
-        const input = `
-        ValueSet: ZooVS
-        * codes from system ZOO where animal exists true
-        `;
-        const result = importSingleText(input, 'Zoo.fsh');
-        expect(result.valueSets.size).toBe(1);
-        const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
       });
 
       it('should log an error when a filter has an invalid operator', () => {
