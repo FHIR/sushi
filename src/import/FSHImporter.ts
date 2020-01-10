@@ -313,7 +313,7 @@ export class FSHImporter extends FSHVisitor {
             );
           }) as ValueSetConceptComponent;
           if (matchedComponent) {
-            matchedComponent.concepts = matchedComponent.concepts.concat(vsComponent.concepts);
+            matchedComponent.concepts.push(...vsComponent.concepts);
           } else {
             valueSet.components.push(vsComponent);
           }
