@@ -1,7 +1,7 @@
 import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
 import { StructureDefinition } from './StructureDefinition';
-import { CodeableConcept, Coding, Quantity, Ratio } from './dataTypes';
-import { FshCode, FshRatio, FshQuantity } from '../fshtypes';
+import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
+import { FshCode, FshRatio, FshQuantity, FshReference } from '../fshtypes';
 import { FixedValueType } from '../fshtypes/rules';
 import {
   BindingStrengthError,
@@ -147,6 +147,7 @@ export class ElementDefinition {
   patternCoding: Coding;
   patternQuantity: Quantity;
   patternRatio: Ratio;
+  patternReference: Reference;
   example: ElementDefinitionExample[];
   // minValue[x] can be many different field names (e.g., minValueDate, minValueQuantity, etc.),
   // so we can't easily use a getter/setter.  It will be just an unspecified property.  For now.
@@ -805,6 +806,8 @@ export class ElementDefinition {
       this.fixFshQuantity(value);
     } else if (value instanceof FshRatio) {
       this.fixFshRatio(value);
+    } else if (value instanceof FshReference) {
+      this.fixFshReference(value);
     }
   }
 
@@ -1080,6 +1083,45 @@ export class ElementDefinition {
       }
     } else {
       throw new MismatchedTypeError('Ratio', value.toString(), type);
+    }
+  }
+
+  /**
+   * Fixes a Reference to this element.
+   * @see {@link fixValue}
+   * @param {FshReference} value - the Reference value to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
+   */
+  fixFshReference(value: FshReference): void {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError('Reference');
+    }
+    const type = this.type[0].code;
+    if (type === 'Reference') {
+      if (this.patternReference) {
+        const found = this.patternReference;
+        const foundFshReference = new FshReference(found.reference, found.display);
+        // Check if the new quantity matches the current
+        if (!value.equals(foundFshReference, true)) {
+          throw new ValueAlreadyFixedError(
+            value.toString(),
+            'Reference',
+            foundFshReference.toString()
+          );
+        }
+        // The original display was not set, allow it to be set if references are otherwise equal
+        if (foundFshReference.display == null) {
+          this.patternReference.display = value.display;
+        }
+        // If they do match, there is nothing to do, so return
+        return;
+      }
+      this.patternReference = { reference: value.reference };
+      if (value.display) this.patternReference.display = value.display;
+    } else {
+      throw new MismatchedTypeError('Reference', value.toString(), type);
     }
   }
 

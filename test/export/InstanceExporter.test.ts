@@ -2,7 +2,7 @@ import { InstanceExporter, StructureDefinitionExporter } from '../../src/export'
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { ResolveFn } from '../../src/fhirtypes';
-import { Instance, Profile, FshCode } from '../../src/fshtypes';
+import { Instance, Profile, FshCode, FshReference } from '../../src/fshtypes';
 import { FixedValueRule } from '../../src/fshtypes/rules';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { getResolver } from '../testhelpers/getResolver';
@@ -303,6 +303,35 @@ describe('InstanceExporter', () => {
       expect(exported.address[0]._line[0].extension[0].url).toBe('foo');
       expect(exported.address[0]._line[1].extension.length).toBe(1);
       expect(exported.address[0]._line[1].extension[0].url).toBe('bar');
+    });
+
+    // Fixing References
+    it('should fix a reference while resolving the Instance being referred to', () => {
+      const orgInstance = new Instance('TestOrganization');
+      orgInstance.instanceOf = 'Organization';
+      const fixedIdRule = new FixedValueRule('id');
+      fixedIdRule.fixedValue = 'org-id';
+      orgInstance.rules.push(fixedIdRule);
+      const fixedRefRule = new FixedValueRule('managingOrganization');
+      fixedRefRule.fixedValue = new FshReference('TestOrganization');
+      instance.rules.push(fixedRefRule);
+      doc.instances.set(instance.name, instance);
+      doc.instances.set(orgInstance.name, orgInstance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.managingOrganization).toEqual({
+        reference: 'Organization/org-id'
+      });
+    });
+
+    it('should fix a reference without replacing if the referred Instance does not exist', () => {
+      const fixedRefRule = new FixedValueRule('managingOrganization');
+      fixedRefRule.fixedValue = new FshReference('http://example.com');
+      instance.rules.push(fixedRefRule);
+      doc.instances.set(instance.name, instance);
+      const exported = exporter.exportInstance(instance);
+      expect(exported.managingOrganization).toEqual({
+        reference: 'http://example.com'
+      });
     });
   });
 });

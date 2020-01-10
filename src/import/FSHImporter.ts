@@ -11,6 +11,7 @@ import {
   FshCode,
   FshQuantity,
   FshRatio,
+  FshReference,
   TextLocation,
   Instance,
   FshValueSet,
@@ -542,6 +543,10 @@ export class FSHImporter extends FSHVisitor {
       return ctx.TIME().getText();
     }
 
+    if (ctx.reference()) {
+      return this.visitReference(ctx.reference());
+    }
+
     if (ctx.code()) {
       return this.visitCode(ctx.code());
     }
@@ -617,6 +622,22 @@ export class FSHImporter extends FSHVisitor {
     return this.visitQuantity(ctx.quantity());
   }
 
+  visitReference(ctx: pc.ReferenceContext): FshReference {
+    const ref = new FshReference(
+      this.aliasAwareValue(this.parseReference(ctx.REFERENCE().getText())[0])
+    )
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (ctx.STRING()) {
+      ref.display = this.extractString(ctx.STRING());
+    }
+    return ref;
+  }
+
+  private parseReference(reference: string): string[] {
+    return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s*\|\s*/);
+  }
+
   visitBool(ctx: pc.BoolContext): boolean {
     return ctx.KW_TRUE() != null;
   }
@@ -626,9 +647,13 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
-      if (t.REFERENCE()) {
-        const text = t.REFERENCE().getText();
-        const references = text.slice(text.indexOf('(') + 1, text.length - 1).split(/\s*\|\s*/);
+      if (t.reference()) {
+        const references = this.parseReference(
+          t
+            .reference()
+            .REFERENCE()
+            .getText()
+        );
         references.forEach(r =>
           onlyRule.types.push({ type: this.aliasAwareValue(r), isReference: true })
         );

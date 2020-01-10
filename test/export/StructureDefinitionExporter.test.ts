@@ -1,7 +1,7 @@
 import { StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Profile, Extension, FshCode } from '../../src/fshtypes';
+import { Profile, Extension, FshCode, FshReference, Instance } from '../../src/fshtypes';
 import {
   CardRule,
   FlagRule,
@@ -658,6 +658,29 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toEqual({
       coding: [{ code: 'foo', system: 'http://foo.com' }]
+    });
+  });
+
+  it('should apply a Reference FixedValueRule and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new FixedValueRule('subject');
+    rule.fixedValue = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = exporter.profileDefs[0];
+
+    const fixedSubject = sd.findElement('Observation.subject');
+
+    expect(fixedSubject.patternReference).toEqual({
+      reference: 'Patient/bar-id'
     });
   });
 
