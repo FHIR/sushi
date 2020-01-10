@@ -47,12 +47,13 @@ export class ValueSet {
 
   /**
    * Exports the ValueSet to a properly formatted FHIR JSON representation.
-   * Currently, no changes need to be made to the formatting,
-   * so the instance is directly returned.
    * @returns {any} the FHIR JSON representation of the ValueSet
    */
   toJSON(): any {
-    return this;
+    return {
+      resourceType: 'ValueSet',
+      ...this
+    };
   }
 }
 

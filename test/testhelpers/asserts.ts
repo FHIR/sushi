@@ -93,13 +93,15 @@ export function assertValueSetConceptComponent(
   component: ValueSetComponent,
   fromSystem: string,
   fromValueSets: string[],
-  concepts: FshCode[]
+  concepts: FshCode[],
+  included = true
 ): void {
   expect(component).toBeInstanceOf(ValueSetConceptComponent);
   const conceptComponent = component as ValueSetConceptComponent;
   expect(conceptComponent.from.system).toBe(fromSystem);
   expect(conceptComponent.from.valueSets).toEqual(fromValueSets);
   expect(conceptComponent.concepts).toEqual(concepts);
+  expect(conceptComponent.inclusion).toBe(included);
 }
 
 export function assertValueSetFilterComponent(

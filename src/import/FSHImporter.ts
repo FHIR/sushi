@@ -45,6 +45,8 @@ import {
   ValueSetFilterMissingValueError
 } from '../errors';
 import flatMap from 'lodash/flatMap';
+import isEqual from 'lodash/isEqual';
+import sortBy from 'lodash/sortBy';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -301,7 +303,25 @@ export class FSHImporter extends FSHVisitor {
     componentCtx
       .map(vsComponentCtx => this.visitVsComponent(vsComponentCtx))
       .forEach(vsComponent => {
-        valueSet.components.push(vsComponent);
+        // if vsComponent is a concept component,
+        // we may be able to merge its concepts into an existing concept component.
+        if (vsComponent instanceof ValueSetConceptComponent) {
+          const matchedComponent = valueSet.components.find(existingComponent => {
+            return (
+              existingComponent instanceof ValueSetConceptComponent &&
+              vsComponent.inclusion == existingComponent.inclusion &&
+              vsComponent.from.system == existingComponent.from.system &&
+              isEqual(sortBy(vsComponent.from.valueSets), sortBy(existingComponent.from.valueSets))
+            );
+          }) as ValueSetConceptComponent;
+          if (matchedComponent) {
+            matchedComponent.concepts = matchedComponent.concepts.concat(vsComponent.concepts);
+          } else {
+            valueSet.components.push(vsComponent);
+          }
+        } else {
+          valueSet.components.push(vsComponent);
+        }
       });
   }
 

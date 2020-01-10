@@ -177,6 +177,68 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
+      it('should merge concept components when possible', () => {
+        const input = `
+        ValueSet: ZooVS
+        * ZOO#hippo "Hippopotamus"
+        * #crocodile "Crocodile", #emu "Emu" from system ZOO
+        * ZOO#alligator "Alligator" from valueset ReptileVS
+        * CRYPTID#jackalope "Jackalope"
+        * exclude ZOO#lion "Lion"
+        * exclude #cobra "Cobra" from system ZOO
+        * exclude ZOO#monitor "Monitor lizard" from valueset ReptileVS
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(5);
+        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO', 'Hippopotamus')
+            .withLocation([3, 11, 3, 34])
+            .withFile('Zoo.fsh'),
+          new FshCode('crocodile', 'ZOO', 'Crocodile')
+            .withLocation([4, 11, 4, 44])
+            .withFile('Zoo.fsh'),
+          new FshCode('emu', 'ZOO', 'Emu').withLocation([4, 11, 4, 44]).withFile('Zoo.fsh')
+        ]);
+        assertValueSetConceptComponent(
+          valueSet.components[1],
+          'ZOO',
+          ['ReptileVS'],
+          [
+            new FshCode('alligator', 'ZOO', 'Alligator')
+              .withLocation([5, 11, 5, 35])
+              .withFile('Zoo.fsh')
+          ]
+        );
+        assertValueSetConceptComponent(valueSet.components[2], 'CRYPTID', undefined, [
+          new FshCode('jackalope', 'CRYPTID', 'Jackalope')
+            .withLocation([6, 11, 6, 39])
+            .withFile('Zoo.fsh')
+        ]);
+        assertValueSetConceptComponent(
+          valueSet.components[3],
+          'ZOO',
+          undefined,
+          [
+            new FshCode('lion', 'ZOO', 'Lion').withLocation([7, 19, 7, 33]).withFile('Zoo.fsh'),
+            new FshCode('cobra', 'ZOO', 'Cobra').withLocation([8, 19, 8, 32]).withFile('Zoo.fsh')
+          ],
+          false
+        );
+        assertValueSetConceptComponent(
+          valueSet.components[4],
+          'ZOO',
+          ['ReptileVS'],
+          [
+            new FshCode('monitor', 'ZOO', 'Monitor lizard')
+              .withLocation([9, 19, 9, 46])
+              .withFile('Zoo.fsh')
+          ],
+          false
+        );
+      });
+
       it('should log an error when a concept component with one concept does not have a system', () => {
         const input = `
         ValueSet: ZooVS
@@ -217,6 +279,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
       });
     });
+
     describe('#ValueSetFilterComponent', () => {
       it('should parse a value set that includes all codes from a system', () => {
         const input = `
