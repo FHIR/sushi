@@ -6,7 +6,7 @@ import { CodeSystemDuplicateCodeError } from '../errors/CodeSystemDuplicateCodeE
  * For more information about a CodeSystem in FHIR,
  * @see {@link http://hl7.org/fhir/codesystem-definitions.html}
  */
-export class CodeSystem extends FshEntity {
+export class FshCodeSystem extends FshEntity {
   id: string;
   title?: string;
   description?: string;
