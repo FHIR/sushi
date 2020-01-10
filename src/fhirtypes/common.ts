@@ -109,9 +109,9 @@ export function replaceReferences(
       // If the instance has a rule setting id, that overrides instance.id
       const idRule = instance.rules.find(r => r.path === 'id');
       const id = idRule?.fixedValue ?? instance.id;
-      clone = new FixedValueRule(rule.path);
-      clone.fixedValue = cloneDeep(rule.fixedValue);
-      clone.fixedValue.reference = `${instanceSD.type}/${id}`;
+      clone = cloneDeep(rule);
+      const fv = clone.fixedValue as FshReference;
+      fv.reference = `${instanceSD.type}/${id}`;
     }
   }
   return clone ?? rule;
