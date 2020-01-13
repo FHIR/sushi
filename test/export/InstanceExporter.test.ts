@@ -111,14 +111,22 @@ describe('InstanceExporter', () => {
 
   describe('#exportInstance', () => {
     let patient: Profile;
+    let patientProf: Profile;
     let instance: Instance;
+    let patientProfInstance: Instance;
     beforeEach(() => {
       patient = new Profile('TestPatient');
       patient.parent = 'Patient';
       doc.profiles.set(patient.name, patient);
+      patientProf = new Profile('TestPatientProf');
+      patientProf.parent = 'patient-proficiency';
+      doc.profiles.set(patientProf.name, patientProf);
       instance = new Instance('Bar');
       instance.instanceOf = 'TestPatient';
       doc.instances.set(instance.name, instance);
+      patientProfInstance = new Instance('Baz');
+      patientProfInstance.instanceOf = 'TestPatientProf';
+      doc.instances.set(patientProfInstance.name, patientProfInstance);
     });
 
     // Fixing top level elements
@@ -332,6 +340,101 @@ describe('InstanceExporter', () => {
       expect(exported.managingOrganization).toEqual({
         reference: 'http://example.com'
       });
+    });
+
+    // Sliced elements
+    it('should fix a single sliced element to a value', () => {
+      const fixedValRule = new FixedValueRule('extension[level].valueCoding.system');
+      fixedValRule.fixedValue = 'foo';
+      patientProfInstance.rules.push(fixedValRule);
+      const exported = exporter.exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([{ url: 'level', valueCoding: { system: 'foo' } }]);
+    });
+
+    it('should fix sliced elements in an array that are fixed in order', () => {
+      const fooRule = new FixedValueRule('extension[type][0].valueCoding.system');
+      fooRule.fixedValue = 'foo';
+      patientProfInstance.rules.push(fooRule);
+      const barRule = new FixedValueRule('extension[type][1].valueCoding.system');
+      barRule.fixedValue = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exporter.exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        { url: 'type', valueCoding: { system: 'foo' } },
+        { url: 'type', valueCoding: { system: 'bar' } }
+      ]);
+    });
+
+    it('should fix a sliced element in an array that is fixed by multiple rules', () => {
+      const fooRule = new FixedValueRule('extension[type][1].valueCoding.system');
+      fooRule.fixedValue = 'foo';
+      patientProfInstance.rules.push(fooRule);
+      const barRule = new FixedValueRule('extension[type][1].valueCoding.version');
+      barRule.fixedValue = '1.2.3';
+      patientProfInstance.rules.push(barRule);
+      const exported = exporter.exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        null,
+        { url: 'type', valueCoding: { system: 'foo', version: '1.2.3' } }
+      ]);
+    });
+
+    it('should fix sliced elements in an array that are fixed out of order', () => {
+      const fooRule = new FixedValueRule('extension[type][1].valueCoding.system');
+      fooRule.fixedValue = 'foo';
+      patientProfInstance.rules.push(fooRule);
+      const barRule = new FixedValueRule('extension[type][0].valueCoding.system');
+      barRule.fixedValue = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exporter.exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        { url: 'type', valueCoding: { system: 'bar' } },
+        { url: 'type', valueCoding: { system: 'foo' } }
+      ]);
+    });
+
+    it('should fix sliced elements in an array and null fill empty values', () => {
+      const fooRule = new FixedValueRule('extension[type][1].valueCoding.system');
+      fooRule.fixedValue = 'foo';
+      patientProfInstance.rules.push(fooRule);
+      const exported = exporter.exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([null, { url: 'type', valueCoding: { system: 'foo' } }]);
+    });
+
+    it('should fix mixed sliced elements in an array', () => {
+      const fooRule = new FixedValueRule('extension[type][0].valueCoding.system');
+      fooRule.fixedValue = 'foo';
+      patientProfInstance.rules.push(fooRule);
+      const bazRule = new FixedValueRule('extension[level].valueCoding.system');
+      bazRule.fixedValue = 'baz';
+      patientProfInstance.rules.push(bazRule);
+      const barRule = new FixedValueRule('extension[type][1].valueCoding.system');
+      barRule.fixedValue = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exporter.exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        { url: 'type', valueCoding: { system: 'foo' } },
+        { url: 'level', valueCoding: { system: 'baz' } },
+        { url: 'type', valueCoding: { system: 'bar' } }
+      ]);
+    });
+
+    it('should fix mixed sliced elements in an array out of order', () => {
+      const fooRule = new FixedValueRule('extension[type][1].valueCoding.system');
+      fooRule.fixedValue = 'foo';
+      patientProfInstance.rules.push(fooRule);
+      const bazRule = new FixedValueRule('extension[level].valueCoding.system');
+      bazRule.fixedValue = 'baz';
+      patientProfInstance.rules.push(bazRule);
+      const barRule = new FixedValueRule('extension[type][0].valueCoding.system');
+      barRule.fixedValue = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exporter.exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        { url: 'type', valueCoding: { system: 'bar' } },
+        { url: 'type', valueCoding: { system: 'foo' } },
+        { url: 'level', valueCoding: { system: 'baz' } }
+      ]);
     });
   });
 });

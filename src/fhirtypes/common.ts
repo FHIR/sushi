@@ -41,22 +41,44 @@ export function setPropertyOnInstance(
       const key =
         pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
       // If this part of the path indexes into an array, the index will be the last bracket
-      const index = getArrayIndex(pathPart);
+      let index = getArrayIndex(pathPart);
+      let sliceName: string;
       if (index != null) {
         // If the array doesn't exist, create it
         if (current[key] == null) current[key] = [];
+        sliceName = getSliceName(pathPart);
+        if (sliceName) {
+          const sliceIndices: number[] = [];
+          // Find the indices where slices are placed
+          current[key].forEach((el: any, i: number) => {
+            if (el?._sliceName === sliceName) {
+              sliceIndices.push(i);
+            }
+          });
+          // Convert the index in terms of the slice to the corresponding index in the overall array
+          if (index >= sliceIndices.length) {
+            index = index - sliceIndices.length + current[key].length;
+          } else {
+            index = sliceIndices[index];
+          }
+        }
         // If the index doesn't exist in the array, add it and lesser indices
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
         for (let j = 0; j <= index; j++) {
           if (j < current[key].length && j === index && current[key][index] == null) {
             current[key][index] = {};
           } else if (j >= current[key].length) {
-            current[key].push(j === index ? {} : null);
+            // _sliceName is used to later differentiate which slice an element represents
+            const arrayFiller = sliceName ? { _sliceName: sliceName } : null;
+            current[key].push(j === index ? {} : arrayFiller);
           }
         }
         // If it isn't the last element, move on, if it is, set the value
         if (i < pathParts.length - 1) {
           current = current[key][index];
+          if (sliceName) {
+            current._sliceName = sliceName;
+          }
         } else {
           current[key][index] = fixedValue;
         }
@@ -115,4 +137,35 @@ export function replaceReferences(
     }
   }
   return clone ?? rule;
+}
+
+/* Returns the sliceName for a set of pathParts
+ * @param {PathPart} pathPart - The part of the path to get a sliceName for
+ * @returns {string} The slicenName for the path part
+ */
+export function getSliceName(pathPart: PathPart): string {
+  const arrayIndex = getArrayIndex(pathPart);
+  const nonNumericBrackets =
+    arrayIndex == null ? pathPart.brackets : pathPart.brackets.slice(0, -1);
+  return nonNumericBrackets.join('/');
+}
+
+/**
+ * Replaces fields in an object that match a certain condition
+ * @param { {[key: string]: any} } object - The object to replace fields on
+ * @param {(object: { [key: string]: any }, prop: string) => boolean} matchFn - The function to match with
+ * @param {(object: { [key: string]: any }, prop: string) => void} replaceFn - The function to replace with
+ */
+export function replaceField(
+  object: { [key: string]: any },
+  matchFn: (object: { [key: string]: any }, prop: string) => boolean,
+  replaceFn: (object: { [key: string]: any }, prop: string) => void
+): void {
+  for (const prop in object) {
+    if (matchFn(object, prop)) {
+      replaceFn(object, prop);
+    } else if (typeof object[prop] === 'object') {
+      replaceField(object[prop], matchFn, replaceFn);
+    }
+  }
 }
