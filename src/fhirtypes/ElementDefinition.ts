@@ -387,15 +387,13 @@ export class ElementDefinition {
     }
 
     // If element is a slice
-    if (this.sliceName) {
-      const slicedElement = this.structDef.elements.find(e => e.path === this.path && e.slicing);
-      if (slicedElement) {
-        // Check that slicedElement max >= new sum of mins
-        const sumOfMins = slicedElement.checkSumOfSliceMins(slicedElement.max, min - this.min);
-        // If new sum of mins > slicedElement min, increase slicedElement min
-        if (sumOfMins > slicedElement.min) {
-          slicedElement.min = sumOfMins;
-        }
+    const slicedElement = this.slicedElement();
+    if (slicedElement) {
+      // Check that slicedElement max >= new sum of mins
+      const sumOfMins = slicedElement.checkSumOfSliceMins(slicedElement.max, min - this.min);
+      // If new sum of mins > slicedElement min, increase slicedElement min
+      if (sumOfMins > slicedElement.min) {
+        slicedElement.min = sumOfMins;
       }
     }
 
@@ -411,9 +409,9 @@ export class ElementDefinition {
    * @throws {InvalidSumOfSliceMinsError} when the sum of mins of the slices exceeds max of sliced element
    */
   private checkSumOfSliceMins(newSlicedElementMax: string, sliceMinIncrease = 0) {
-    const slices = this.structDef.elements.filter(
-      e => e.id !== this.id && e.path === this.path && !e.slicing
-    );
+    const slices = this.parent()
+      .children()
+      .filter(e => e.id !== this.id && e.path === this.path && !e.slicing);
     const sumOfMins = sliceMinIncrease + slices.reduce((prev, curr) => (prev += curr.min), 0);
     if (newSlicedElementMax !== '*' && sumOfMins > parseInt(newSlicedElementMax)) {
       throw new InvalidSumOfSliceMinsError(sumOfMins, newSlicedElementMax, this.id);
@@ -1354,6 +1352,16 @@ export class ElementDefinition {
   }
 
   /**
+   * Finds and returns the elemnent being sliced
+   * @returns {ElementDefinition | undefined} the sliced element or undefined if the element is not a slice
+   */
+  slicedElement(): ElementDefinition | undefined {
+    if (this.sliceName) {
+      return this.structDef.elements.find(e => e.id === this.id.slice(0, this.id.lastIndexOf(':')));
+    }
+  }
+
+  /**
    * If the element has a single type, graft the type's elements into this StructureDefinition as child elements.
    * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
    * @returns {ElementDefinition[]} the unfolded elements or an empty array if the type is multi-value or type can't
@@ -1364,11 +1372,23 @@ export class ElementDefinition {
       this.type.length === 1 &&
       (this.type[0].profile == null || this.type[0].profile.length <= 1)
     ) {
-      // If it has a profile, use that, otherwise use the code
-      const type = this.type[0].profile?.[0] ?? this.type[0].code;
-      const def = resolve(type);
-      if (def) {
-        const newElements = def.elements.slice(1).map(e => {
+      let newElements: ElementDefinition[] = [];
+      if (this.sliceName) {
+        // If the element is sliced, we first try to unfold from the SD itself
+        const slicedElement = this.slicedElement();
+        newElements = slicedElement.children().map(e => {
+          const eClone = e.clone();
+          eClone.id = eClone.id.replace(slicedElement.id, this.id);
+          eClone.structDef = this.structDef;
+          eClone.captureOriginal();
+          return eClone;
+        });
+      }
+      if (newElements.length === 0) {
+        // If it has a profile, use that, otherwise use the code
+        const type = this.type[0].profile?.[0] ?? this.type[0].code;
+        const def = resolve(type);
+        newElements = def?.elements.slice(1).map(e => {
           const eClone = e.clone();
           eClone.id = eClone.id.replace(def.type, `${this.id}`);
           eClone.structDef = this.structDef;
@@ -1376,6 +1396,8 @@ export class ElementDefinition {
           eClone.captureOriginal();
           return eClone;
         });
+      }
+      if (newElements.length > 0) {
         this.structDef.addElements(newElements);
         return newElements;
       }
