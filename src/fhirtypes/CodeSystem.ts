@@ -43,6 +43,25 @@ export class CodeSystem {
   filter?: CodeSystemFilter[];
   property?: CodeSystemProperty[];
   concept?: CodeSystemConcept[];
+
+  /**
+   * Get the file name for serializing to disk.
+   * @returns {string} the filename
+   */
+  getFileName(): string {
+    return `CodeSystem-${this.id}.json`;
+  }
+
+  /**
+   * Exports the CodeSystem to a properly formatted FHIR JSON representation.
+   * @returns {any} the FHIR JSON representation of the CodeSystem
+   */
+  toJSON(): any {
+    return {
+      resourceType: 'CodeSystem',
+      ...this
+    };
+  }
 }
 
 export type CodeSystemFilter = {

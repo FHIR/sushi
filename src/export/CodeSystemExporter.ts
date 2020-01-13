@@ -26,7 +26,7 @@ export class CodeSystemExporter {
     }
   }
 
-  exportCodeSystem(fshDefinition: FshCodeSystem) {
+  exportCodeSystem(fshDefinition: FshCodeSystem): void {
     if (this.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
     }
@@ -38,14 +38,14 @@ export class CodeSystemExporter {
 
   // TODO Get rid of argument once codesystems are on the tank
   export(curCodeSystems: FshCodeSystem[]): CodeSystem[] {
-    // this.tank.getAllCodeSystems().forEach(cs => {
-    curCodeSystems.forEach(cs => {
+    // for (const cs of this.tank.getAllCodeSystems()) {
+    for (const cs of curCodeSystems) {
       try {
         this.exportCodeSystem(cs);
       } catch (e) {
         logger.error(e.message, cs.sourceInfo);
       }
-    });
+    }
     return this.codeSystems;
   }
 }

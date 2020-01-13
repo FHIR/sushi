@@ -193,6 +193,15 @@ export class IGExporter {
         description: valueSet.description
       });
     });
+    sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name).forEach(codeSystem => {
+      const codeSystemPath = path.join(igPath, 'input', 'resources', codeSystem.getFileName());
+      outputJSONSync(codeSystemPath, codeSystem.toJSON(), { spaces: 2 });
+      this.ig.definition.resource.push({
+        reference: { reference: `CodeSystem/${codeSystem.id}` },
+        name: codeSystem.title ?? codeSystem.name,
+        description: codeSystem.description
+      });
+    });
   }
 
   /**

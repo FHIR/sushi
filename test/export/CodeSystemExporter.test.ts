@@ -28,6 +28,7 @@ describe('CodeSystemExporter', () => {
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
       status: 'active',
+      content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem'
     });
   });
@@ -43,6 +44,7 @@ describe('CodeSystemExporter', () => {
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
       status: 'active',
+      content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       title: 'My Fancy Code System',
       description: 'Lots of important details about my fancy code system'
@@ -70,6 +72,7 @@ describe('CodeSystemExporter', () => {
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
       status: 'active',
+      content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       concept: [{ code: 'myCode' }]
     });
@@ -86,6 +89,7 @@ describe('CodeSystemExporter', () => {
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
       status: 'active',
+      content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       concept: [
         {
