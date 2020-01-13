@@ -5,6 +5,7 @@ import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extr
 import { Package } from '../export';
 import { ContactDetail, ImplementationGuide } from '../fhirtypes';
 import { logger } from '../utils/FSHLogger';
+import sortBy from 'lodash/sortBy';
 
 /**
  * The IG Exporter exports the FSH artifacts into a file structure supported by the IG Publisher.
@@ -159,9 +160,7 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   private addResources(igPath: string) {
-    const sds = [...this.pkg.profiles, ...this.pkg.extensions].sort((a, b) => {
-      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-    });
+    const sds = sortBy([...this.pkg.profiles, ...this.pkg.extensions], sd => sd.name);
     sds.forEach(sd => {
       const sdPath = path.join(igPath, 'input', 'resources', sd.getFileName());
       outputJSONSync(sdPath, sd.toJSON(), { spaces: 2 });
@@ -172,15 +171,26 @@ export class IGExporter {
         exampleBoolean: false
       });
     });
-    this.pkg.instances.forEach(instance => {
-      const instancePath = path.join(igPath, 'input', 'resources', instance.getFileName());
-      outputJSONSync(instancePath, instance.toJSON(), { spaces: 2 });
+    sortBy(this.pkg.instances, instance => instance.id ?? instance.instanceName).forEach(
+      instance => {
+        const instancePath = path.join(igPath, 'input', 'resources', instance.getFileName());
+        outputJSONSync(instancePath, instance.toJSON(), { spaces: 2 });
+        this.ig.definition.resource.push({
+          reference: {
+            reference: `${instance.resourceType}/${instance.id ?? instance.instanceName}`
+          },
+          name: instance.getFileName().slice(0, -5), // Slice off the .json of the file name
+          exampleBoolean: true
+        });
+      }
+    );
+    sortBy(this.pkg.valueSets, valueSet => valueSet.name).forEach(valueSet => {
+      const valueSetPath = path.join(igPath, 'input', 'resources', valueSet.getFileName());
+      outputJSONSync(valueSetPath, valueSet.toJSON(), { spaces: 2 });
       this.ig.definition.resource.push({
-        reference: {
-          reference: `${instance.resourceType}/${instance.id ?? instance.instanceName}`
-        },
-        name: instance.getFileName().slice(0, -5), // Slice off the .json of the file name
-        exampleBoolean: true
+        reference: { reference: `ValueSet/${valueSet.id}` },
+        name: valueSet.title ?? valueSet.name,
+        description: valueSet.description
       });
     });
   }

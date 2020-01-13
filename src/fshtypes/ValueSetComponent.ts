@@ -21,13 +21,6 @@ export type ValueSetComponentFrom = {
   valueSets?: string[];
 };
 
-export enum VsProperty {
-  SYSTEM = 'system',
-  VERSION = 'version',
-  CODE = 'code',
-  DISPLAY = 'display'
-}
-
 export enum VsOperator {
   EQUALS = '=',
   IS_A = 'is-a',
@@ -41,7 +34,9 @@ export enum VsOperator {
 }
 
 export type ValueSetFilter = {
-  property: VsProperty;
+  property: string;
   operator: VsOperator;
-  value: string | RegExp | boolean | FshCode;
+  value: ValueSetFilterValue;
 };
+
+export type ValueSetFilterValue = string | RegExp | boolean | FshCode;

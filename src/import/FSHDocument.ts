@@ -1,11 +1,11 @@
-import { Profile, Extension, Instance, ValueSet } from '../fshtypes';
+import { Profile, Extension, Instance, FshValueSet } from '../fshtypes';
 
 export class FSHDocument {
   readonly aliases: Map<string, string>;
   readonly profiles: Map<string, Profile>;
   readonly extensions: Map<string, Extension>;
   readonly instances: Map<string, Instance>;
-  readonly valueSets: Map<string, ValueSet>;
+  readonly valueSets: Map<string, FshValueSet>;
 
   constructor(public readonly file: string) {
     this.aliases = new Map();

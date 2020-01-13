@@ -6,3 +6,4 @@ export * from './ElementDefinition';
 export * from './ImplementationGuide';
 export * from './InstanceDefinition';
 export * from './StructureDefinition';
+export * from './ValueSet';

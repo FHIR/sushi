@@ -14,14 +14,14 @@ import {
   FshReference,
   TextLocation,
   Instance,
-  ValueSet,
+  FshValueSet,
   ValueSetComponent,
   ValueSetConceptComponent,
-  VsProperty,
   ValueSetFilterComponent,
   ValueSetComponentFrom,
   ValueSetFilter,
-  VsOperator
+  VsOperator,
+  ValueSetFilterValue
 } from '../fshtypes';
 import {
   Rule,
@@ -39,12 +39,13 @@ import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
 import {
   RequiredMetadataError,
-  ValueSetFilterPropertyError,
   ValueSetFilterOperatorError,
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
 } from '../errors';
 import flatMap from 'lodash/flatMap';
+import isEqual from 'lodash/isEqual';
+import sortBy from 'lodash/sortBy';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -261,7 +262,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSet(ctx: pc.ValueSetContext) {
-    const valueSet = new ValueSet(ctx.SEQUENCE().getText())
+    const valueSet = new FshValueSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent());
@@ -269,7 +270,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private parseValueSet(
-    valueSet: ValueSet,
+    valueSet: FshValueSet,
     metaCtx: pc.VsMetadataContext[] = [],
     componentCtx: pc.VsComponentContext[] = []
   ) {
@@ -301,7 +302,25 @@ export class FSHImporter extends FSHVisitor {
     componentCtx
       .map(vsComponentCtx => this.visitVsComponent(vsComponentCtx))
       .forEach(vsComponent => {
-        valueSet.components.push(vsComponent);
+        // if vsComponent is a concept component,
+        // we may be able to merge its concepts into an existing concept component.
+        if (vsComponent instanceof ValueSetConceptComponent) {
+          const matchedComponent = valueSet.components.find(existingComponent => {
+            return (
+              existingComponent instanceof ValueSetConceptComponent &&
+              vsComponent.inclusion == existingComponent.inclusion &&
+              vsComponent.from.system == existingComponent.from.system &&
+              isEqual(sortBy(vsComponent.from.valueSets), sortBy(existingComponent.from.valueSets))
+            );
+          }) as ValueSetConceptComponent;
+          if (matchedComponent) {
+            matchedComponent.concepts.push(...vsComponent.concepts);
+          } else {
+            valueSet.components.push(vsComponent);
+          }
+        } else {
+          valueSet.components.push(vsComponent);
+        }
       });
   }
 
@@ -732,40 +751,47 @@ export class FSHImporter extends FSHVisitor {
         );
       }
     } else if (ctx.COMMA_DELIMITED_CODES()) {
-      const codes = ctx
-        .COMMA_DELIMITED_CODES()
-        .getText()
-        .split(/\s*,\s+#/);
-      codes[0] = codes[0].slice(1);
-      const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
-      codes.forEach(code => {
-        let codePart: string, description: string;
-        if (code.charAt(0) == '"') {
-          // codePart is a quoted string, just like description (if present).
-          [codePart, description] = code
-            .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
-            .map(quotedString => quotedString.slice(1, -1));
-        } else {
-          // codePart is not a quoted string.
-          // if there is a description after the code,
-          // it will be separated by whitespace before the leading "
-          const codeEnd = code.match(/\s+"/)?.index;
-          if (codeEnd) {
-            codePart = code.slice(0, codeEnd);
-            description = code
-              .slice(codeEnd)
-              .trim()
-              .slice(1, -1);
+      if (from.system) {
+        const codes = ctx
+          .COMMA_DELIMITED_CODES()
+          .getText()
+          .split(/\s*,\s+#/);
+        codes[0] = codes[0].slice(1);
+        const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
+        codes.forEach(code => {
+          let codePart: string, description: string;
+          if (code.charAt(0) == '"') {
+            // codePart is a quoted string, just like description (if present).
+            [codePart, description] = code
+              .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
+              .map(quotedString => quotedString.slice(1, -1));
           } else {
-            codePart = code.trim();
+            // codePart is not a quoted string.
+            // if there is a description after the code,
+            // it will be separated by whitespace before the leading "
+            const codeEnd = code.match(/\s+"/)?.index;
+            if (codeEnd) {
+              codePart = code.slice(0, codeEnd);
+              description = code
+                .slice(codeEnd)
+                .trim()
+                .slice(1, -1);
+            } else {
+              codePart = code.trim();
+            }
           }
-        }
-        concepts.push(
-          new FshCode(codePart, from.system, description)
-            .withLocation(location)
-            .withFile(this.currentFile)
-        );
-      });
+          concepts.push(
+            new FshCode(codePart, from.system, description)
+              .withLocation(location)
+              .withFile(this.currentFile)
+          );
+        });
+      } else {
+        logger.error('System is required when listing concepts in a value set component', {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        });
+      }
     }
     return [concepts, from];
   }
@@ -778,19 +804,26 @@ export class FSHImporter extends FSHVisitor {
       ? this.visitVsComponentFrom(ctx.vsComponentFrom())
       : {};
     if (ctx.vsFilterList()) {
-      ctx
-        .vsFilterList()
-        .vsFilterDefinition()
-        .forEach(filterDefinition => {
-          try {
-            filters.push(this.visitVsFilterDefinition(filterDefinition));
-          } catch (e) {
-            logger.error(e, {
-              location: this.extractStartStop(filterDefinition),
-              file: this.currentFile
-            });
-          }
+      if (from.system) {
+        ctx
+          .vsFilterList()
+          .vsFilterDefinition()
+          .forEach(filterDefinition => {
+            try {
+              filters.push(this.visitVsFilterDefinition(filterDefinition));
+            } catch (e) {
+              logger.error(e, {
+                location: this.extractStartStop(filterDefinition),
+                file: this.currentFile
+              });
+            }
+          });
+      } else {
+        logger.error('System is required when filtering a value set component', {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
         });
+      }
     }
     return [filters, from];
   }
@@ -798,18 +831,22 @@ export class FSHImporter extends FSHVisitor {
   visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
     const from: ValueSetComponentFrom = {};
     if (ctx.vsFromSystem()) {
-      from.system = ctx
-        .vsFromSystem()
-        .SEQUENCE()
-        .getText();
+      from.system = this.aliasAwareValue(
+        ctx
+          .vsFromSystem()
+          .SEQUENCE()
+          .getText()
+      );
     }
     if (ctx.vsFromValueset()) {
       if (ctx.vsFromValueset().SEQUENCE()) {
         from.valueSets = [
-          ctx
-            .vsFromValueset()
-            .SEQUENCE()
-            .getText()
+          this.aliasAwareValue(
+            ctx
+              .vsFromValueset()
+              .SEQUENCE()
+              .getText()
+          )
         ];
       } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
         from.valueSets = ctx
@@ -817,7 +854,7 @@ export class FSHImporter extends FSHVisitor {
           .COMMA_DELIMITED_SEQUENCES()
           .getText()
           .split(',')
-          .map(fromVs => fromVs.trim());
+          .map(fromVs => this.aliasAwareValue(fromVs.trim()));
       }
     }
     return from;
@@ -829,13 +866,7 @@ export class FSHImporter extends FSHVisitor {
    * @see {@link http://hl7.org/fhir/valueset-filter-operator.html}
    */
   visitVsFilterDefinition(ctx: pc.VsFilterDefinitionContext): ValueSetFilter {
-    const property = ctx
-      .SEQUENCE()
-      .getText()
-      .toLocaleLowerCase() as VsProperty;
-    if (Object.values(VsProperty).indexOf(property) < 0) {
-      throw new ValueSetFilterPropertyError(ctx.SEQUENCE().getText());
-    }
+    const property = ctx.SEQUENCE().getText();
     const operator = ctx
       .vsFilterOperator()
       .getText()
@@ -881,7 +912,7 @@ export class FSHImporter extends FSHVisitor {
     };
   }
 
-  visitVsFilterValue(ctx: pc.VsFilterValueContext): string | RegExp | boolean | FshCode {
+  visitVsFilterValue(ctx: pc.VsFilterValueContext): ValueSetFilterValue {
     if (ctx.code()) {
       return this.visitCode(ctx.code());
     } else if (ctx.REGEX()) {

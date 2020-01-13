@@ -9,5 +9,5 @@ export * from './FshRatio';
 export * from './FshReference';
 export * from './Instance';
 export * from './Profile';
-export * from './ValueSet';
+export * from './FshValueSet';
 export * from './ValueSetComponent';

@@ -11,7 +11,11 @@ describe('FHIRExporter', () => {
     });
     const result = exportFHIR(input, new FHIRDefinitions());
     expect(result).toEqual(
-      new Package([], [], [], { name: 'test', version: '0.0.1', canonical: 'http://example.com' })
+      new Package([], [], [], [], {
+        name: 'test',
+        version: '0.0.1',
+        canonical: 'http://example.com'
+      })
     );
   });
 });
