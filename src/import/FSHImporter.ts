@@ -375,7 +375,14 @@ export class FSHImporter extends FSHVisitor {
           codeSystem.description = pair.value;
         }
       });
-    codeSystem.concepts = conceptCtx.map(conceptCtx => this.visitConcept(conceptCtx));
+    conceptCtx.forEach(conceptCtx => {
+      const newConcept = this.visitConcept(conceptCtx);
+      try {
+        codeSystem.addConcept(newConcept);
+      } catch (e) {
+        logger.error(e.message, newConcept.sourceInfo);
+      }
+    });
   }
 
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
@@ -659,6 +666,12 @@ export class FSHImporter extends FSHVisitor {
     const concept = new FshConcept(codePart.code, codePart.display)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+    if (codePart.system) {
+      logger.error(
+        'Do not include the system when listing concepts for a code system.',
+        concept.sourceInfo
+      );
+    }
     if (ctx.STRING()) {
       concept.definition = this.extractString(ctx.STRING());
     }

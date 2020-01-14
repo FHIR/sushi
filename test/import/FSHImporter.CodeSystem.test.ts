@@ -127,11 +127,148 @@ describe('FSHImporter', () => {
       });
     });
     describe('#concept', () => {
-      it.todo('should parse a code system with one concept');
-      it.todo('should parse a code system with one concept with a display string');
-      it.todo('should parse a code system with one concept with display and definition strings');
-      it.todo('should parse a code system with more than one concept');
-      it.todo('should log an error when encountering a duplicate code');
+      it('should parse a code system with one concept', () => {
+        const input = `
+        CodeSystem: ZOO
+        #lion
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.concepts.length).toBe(1);
+        expect(codeSystem.concepts[0].code).toBe('lion');
+        expect(codeSystem.concepts[0].display).toBeUndefined();
+        expect(codeSystem.concepts[0].definition).toBeUndefined();
+        expect(codeSystem.concepts[0].sourceInfo.location).toEqual({
+          startLine: 3,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 13
+        });
+        expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a code system with one concept with a display string', () => {
+        const input = `
+        CodeSystem: ZOO
+        #tiger "Tiger"
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.concepts.length).toBe(1);
+        expect(codeSystem.concepts[0].code).toBe('tiger');
+        expect(codeSystem.concepts[0].display).toBe('Tiger');
+        expect(codeSystem.concepts[0].definition).toBeUndefined();
+        expect(codeSystem.concepts[0].sourceInfo.location).toEqual({
+          startLine: 3,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 22
+        });
+        expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a code system with one concept with display and definition strings', () => {
+        const input = `
+        CodeSystem: ZOO
+        #bear "Bear" "A member of family Ursidae."
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.concepts.length).toBe(1);
+        expect(codeSystem.concepts[0].code).toBe('bear');
+        expect(codeSystem.concepts[0].display).toBe('Bear');
+        expect(codeSystem.concepts[0].definition).toBe('A member of family Ursidae.');
+        expect(codeSystem.concepts[0].sourceInfo.location).toEqual({
+          startLine: 3,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 50
+        });
+        expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a code system with more than one concept', () => {
+        const input = `
+        CodeSystem: ZOO
+        #lion
+        #tiger "Tiger"
+        #bear "Bear" "A member of family Ursidae."
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.concepts.length).toBe(3);
+        expect(codeSystem.concepts[0].code).toBe('lion');
+        expect(codeSystem.concepts[0].display).toBeUndefined();
+        expect(codeSystem.concepts[0].definition).toBeUndefined();
+        expect(codeSystem.concepts[0].sourceInfo.location).toEqual({
+          startLine: 3,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 13
+        });
+        expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.concepts[1].code).toBe('tiger');
+        expect(codeSystem.concepts[1].display).toBe('Tiger');
+        expect(codeSystem.concepts[1].definition).toBeUndefined();
+        expect(codeSystem.concepts[1].sourceInfo.location).toEqual({
+          startLine: 4,
+          startColumn: 9,
+          endLine: 4,
+          endColumn: 22
+        });
+        expect(codeSystem.concepts[1].sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.concepts[2].code).toBe('bear');
+        expect(codeSystem.concepts[2].display).toBe('Bear');
+        expect(codeSystem.concepts[2].definition).toBe('A member of family Ursidae.');
+        expect(codeSystem.concepts[2].sourceInfo.location).toEqual({
+          startLine: 5,
+          startColumn: 9,
+          endLine: 5,
+          endColumn: 50
+        });
+        expect(codeSystem.concepts[2].sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should log an error when encountering a duplicate code', () => {
+        const input = `
+        CodeSystem: ZOO
+        #goat
+        #goat
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.concepts.length).toBe(1);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 4\D/s);
+      });
+
+      it('should log an error when a concept includes a system declaration', () => {
+        const input = `
+        CodeSystem: ZOO
+        #goat
+        ZOO#bat
+        CRYPTID#jackalope
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.concepts.length).toBe(3);
+        expect(codeSystem.concepts[0].code).toBe('goat');
+        expect(codeSystem.concepts[1].code).toBe('bat');
+        expect(codeSystem.concepts[2].code).toBe('jackalope');
+        expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Zoo\.fsh.*Line: 4\D/s);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 5\D/s);
+      });
     });
   });
 });
