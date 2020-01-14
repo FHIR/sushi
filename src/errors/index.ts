@@ -6,6 +6,7 @@ export * from './NoSingleTypeError';
 export * from './MismatchedTypeError';
 export * from './CodeAndSystemMismatchError';
 export * from './CodedTypeNotFoundError';
+export * from './CodeSystemDuplicateCodeError';
 export * from './DisableFlagError';
 export * from './InvalidCardinalityError';
 export * from './InvalidDateTimeError';

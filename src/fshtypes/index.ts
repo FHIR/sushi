@@ -3,6 +3,7 @@ export * from './Config';
 export * from './Extension';
 export * from './Instance';
 export * from './FshCode';
+export * from './FshConcept';
 export * from './FshEntity';
 export * from './FshQuantity';
 export * from './FshRatio';

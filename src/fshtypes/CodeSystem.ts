@@ -1,5 +1,6 @@
 import { FshEntity } from './FshEntity';
 import { FshConcept } from './FshConcept';
+import { CodeSystemDuplicateCodeError } from '../errors/CodeSystemDuplicateCodeError';
 
 /**
  * For more information about a CodeSystem in FHIR,
@@ -17,7 +18,10 @@ export class CodeSystem extends FshEntity {
     this.concepts = [];
   }
 
-  addConcept(code: string, display?: string, definition?: string) {
-    this.concepts.push(new FshConcept(code, display, definition));
+  addConcept(newConcept: FshConcept) {
+    if (this.concepts.find(existingConcept => existingConcept.code == newConcept.code)) {
+      throw new CodeSystemDuplicateCodeError(this.id, newConcept.code);
+    }
+    this.concepts.push(newConcept);
   }
 }

@@ -9,6 +9,7 @@ import {
   Profile,
   Extension,
   FshCode,
+  FshConcept,
   FshQuantity,
   FshRatio,
   FshReference,
@@ -21,7 +22,8 @@ import {
   ValueSetComponentFrom,
   ValueSetFilter,
   VsOperator,
-  ValueSetFilterValue
+  ValueSetFilterValue,
+  CodeSystem
 } from '../fshtypes';
 import {
   Rule,
@@ -62,6 +64,13 @@ enum InstanceMetadataKey {
 }
 
 enum VsMetadataKey {
+  Id = 'Id',
+  Title = 'Title',
+  Description = 'Description',
+  Unknown = 'Unknown'
+}
+
+enum CsMetadataKey {
   Id = 'Id',
   Title = 'Title',
   Description = 'Description',
@@ -156,6 +165,10 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.valueSet()) {
       this.visitValueSet(ctx.valueSet());
+    }
+
+    if (ctx.codeSystem()) {
+      this.visitCodeSystem(ctx.codeSystem());
     }
   }
 
@@ -324,6 +337,54 @@ export class FSHImporter extends FSHVisitor {
       });
   }
 
+  visitCodeSystem(ctx: pc.CodeSystemContext) {
+    const codeSystem = new CodeSystem(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.concept());
+    this.currentDoc.codeSystems.set(codeSystem.name, codeSystem);
+  }
+
+  private parseCodeSystem(
+    codeSystem: CodeSystem,
+    metaCtx: pc.CsMetadataContext[] = [],
+    conceptCtx: pc.ConceptContext[] = []
+  ) {
+    const seenPairs: Map<CsMetadataKey, string> = new Map();
+    metaCtx
+      .map(csMetadata => ({
+        ...this.visitCsMetadata(csMetadata),
+        context: csMetadata
+      }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === CsMetadataKey.Id) {
+          codeSystem.id = pair.value;
+        } else if (pair.key === CsMetadataKey.Title) {
+          codeSystem.title = pair.value;
+        } else if (pair.key === CsMetadataKey.Description) {
+          codeSystem.description = pair.value;
+        }
+      });
+    conceptCtx.forEach(conceptCtx => {
+      const newConcept = this.visitConcept(conceptCtx);
+      try {
+        codeSystem.addConcept(newConcept);
+      } catch (e) {
+        logger.error(e.message, newConcept.sourceInfo);
+      }
+    });
+  }
+
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
@@ -357,6 +418,17 @@ export class FSHImporter extends FSHVisitor {
       return { key: VsMetadataKey.Description, value: this.visitDescription(ctx.description()) };
     }
     return { key: VsMetadataKey.Unknown, value: ctx.getText() };
+  }
+
+  visitCsMetadata(ctx: pc.CsMetadataContext): { key: CsMetadataKey; value: string } {
+    if (ctx.id()) {
+      return { key: CsMetadataKey.Id, value: this.visitId(ctx.id()) };
+    } else if (ctx.title()) {
+      return { key: CsMetadataKey.Title, value: this.visitTitle(ctx.title()) };
+    } else if (ctx.description()) {
+      return { key: CsMetadataKey.Description, value: this.visitDescription(ctx.description()) };
+    }
+    return { key: CsMetadataKey.Unknown, value: ctx.getText() };
   }
 
   visitId(ctx: pc.IdContext): string {
@@ -585,6 +657,23 @@ export class FSHImporter extends FSHVisitor {
     }
     if (ctx.STRING()) {
       concept.display = this.extractString(ctx.STRING());
+    }
+    return concept;
+  }
+
+  visitConcept(ctx: pc.ConceptContext): FshConcept {
+    const codePart = this.visitCode(ctx.code());
+    const concept = new FshConcept(codePart.code, codePart.display)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (codePart.system) {
+      logger.error(
+        'Do not include the system when listing concepts for a code system.',
+        concept.sourceInfo
+      );
+    }
+    if (ctx.STRING()) {
+      concept.definition = this.extractString(ctx.STRING());
     }
     return concept;
   }
