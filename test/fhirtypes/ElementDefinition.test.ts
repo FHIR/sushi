@@ -319,6 +319,53 @@ describe('ElementDefinition', () => {
       expect(observation.elements[codeIdx + 5].id).toBe('Observation.subject');
     });
 
+    it('should add children from the Structure Definition when they exist', () => {
+      const numOriginalElements = observation.elements.length;
+      const component = observation.elements.find(e => e.path === 'Observation.component');
+      component.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'code' }]
+      };
+      const componentSlice = component.addSlice('FooSlice');
+      const componentSliceIdx = observation.elements.findIndex(e => e.id === componentSlice.id);
+      const newElements = componentSlice.unfold(resolve);
+      expect(newElements).toHaveLength(8);
+      expect(newElements[0].id).toBe('Observation.component:FooSlice.id');
+      expect(newElements[1].id).toBe('Observation.component:FooSlice.extension');
+      expect(newElements[2].id).toBe('Observation.component:FooSlice.modifierExtension');
+      expect(newElements[3].id).toBe('Observation.component:FooSlice.code');
+      expect(newElements[4].id).toBe('Observation.component:FooSlice.value[x]');
+      expect(newElements[5].id).toBe('Observation.component:FooSlice.dataAbsentReason');
+      expect(newElements[6].id).toBe('Observation.component:FooSlice.interpretation');
+      expect(newElements[7].id).toBe('Observation.component:FooSlice.referenceRange');
+      expect(observation.elements).toHaveLength(numOriginalElements + 9);
+      expect(observation.elements[componentSliceIdx + 1].id).toBe(
+        'Observation.component:FooSlice.id'
+      );
+      expect(observation.elements[componentSliceIdx + 2].id).toBe(
+        'Observation.component:FooSlice.extension'
+      );
+      expect(observation.elements[componentSliceIdx + 3].id).toBe(
+        'Observation.component:FooSlice.modifierExtension'
+      );
+      expect(observation.elements[componentSliceIdx + 4].id).toBe(
+        'Observation.component:FooSlice.code'
+      );
+      expect(observation.elements[componentSliceIdx + 5].id).toBe(
+        'Observation.component:FooSlice.value[x]'
+      );
+      expect(observation.elements[componentSliceIdx + 6].id).toBe(
+        'Observation.component:FooSlice.dataAbsentReason'
+      );
+      expect(observation.elements[componentSliceIdx + 7].id).toBe(
+        'Observation.component:FooSlice.interpretation'
+      );
+      expect(observation.elements[componentSliceIdx + 8].id).toBe(
+        'Observation.component:FooSlice.referenceRange'
+      );
+    });
+
     it('should not add any children when an element has multiple types', () => {
       const numOriginalElements = observation.elements.length;
       const valueIdx = observation.elements.findIndex(e => e.path === 'Observation.value[x]');

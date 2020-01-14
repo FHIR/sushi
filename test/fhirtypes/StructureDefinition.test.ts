@@ -307,6 +307,22 @@ describe('StructureDefinition', () => {
       expect(codeText.short).toBe('Plain text representation of the concept');
       expect(observation.elements.length).toBe(originalLength + 4);
     });
+
+    it('should find an element that must be unfolded from the Structure Definition by path', () => {
+      const originalLength = observation.elements.length;
+      const component = observation.elements.find(e => e.id === 'Observation.component');
+      component.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'code' }]
+      };
+      component.addSlice('FooSlice');
+      const componentCode = observation.findElementByPath('component[FooSlice].code', resolve);
+      expect(componentCode).toBeDefined();
+      expect(componentCode.id).toBe('Observation.component:FooSlice.code');
+      expect(componentCode.path).toBe('Observation.component.code');
+      expect(observation.elements.length).toBe(originalLength + 9);
+    });
   });
 
   describe('#setInstancePropertyByPath', () => {
