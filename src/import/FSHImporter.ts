@@ -23,7 +23,7 @@ import {
   ValueSetFilter,
   VsOperator,
   ValueSetFilterValue,
-  CodeSystem
+  FshCodeSystem
 } from '../fshtypes';
 import {
   Rule,
@@ -338,7 +338,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCodeSystem(ctx: pc.CodeSystemContext) {
-    const codeSystem = new CodeSystem(ctx.SEQUENCE().getText())
+    const codeSystem = new FshCodeSystem(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.concept());
@@ -346,7 +346,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private parseCodeSystem(
-    codeSystem: CodeSystem,
+    codeSystem: FshCodeSystem,
     metaCtx: pc.CsMetadataContext[] = [],
     conceptCtx: pc.ConceptContext[] = []
   ) {

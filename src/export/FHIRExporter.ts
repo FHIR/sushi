@@ -36,7 +36,7 @@ export class FHIRExporter {
     const { profileDefs, extensionDefs } = this.structureDefinitionExporter.export();
     const instanceDefs = this.instanceExporter.export();
     const valueSets = this.valueSetExporter.export();
-    const codeSystems = this.codeSystemExporter.export([]);
+    const codeSystems = this.codeSystemExporter.export();
 
     return new Package(
       profileDefs,

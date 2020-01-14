@@ -1,5 +1,5 @@
 import { FSHDocument } from './FSHDocument';
-import { Profile, Extension, Instance, FshValueSet } from '../fshtypes';
+import { Profile, Extension, Instance, FshValueSet, FshCodeSystem } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
 import { Config } from '../fshtypes/Config';
 
@@ -48,6 +48,14 @@ export class FSHTank {
    */
   public getAllValueSets(): FshValueSet[] {
     return flatMap(this.docs, doc => Array.from(doc.valueSets.values()));
+  }
+
+  /**
+   * Gets all code systems in the tank
+   * @returns {FshCodeSystem[]}
+   */
+  public getAllCodeSystems(): FshCodeSystem[] {
+    return flatMap(this.docs, doc => Array.from(doc.codeSystems.values()));
   }
 
   /**

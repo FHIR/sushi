@@ -15,14 +15,14 @@ describe('CodeSystemExporter', () => {
   });
 
   it('should output empty results with empty input', () => {
-    const exported = exporter.export([]);
+    const exported = exporter.export();
     expect(exported).toEqual([]);
   });
 
   it('should export a single code system', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
-    // doc.codeSystems.set(codeSystem.name, codeSystem); // TODO Add this and remove the argument
-    const exported = exporter.export([codeSystem]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export();
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
@@ -37,8 +37,8 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     codeSystem.title = 'My Fancy Code System';
     codeSystem.description = 'Lots of important details about my fancy code system';
-    // doc.codeSystems.set(codeSystem.name, codeSystem); // TODO add this and remove arg
-    const exported = exporter.export([codeSystem]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export();
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
@@ -51,13 +51,12 @@ describe('CodeSystemExporter', () => {
     });
   });
 
-  // TODO does this equivalent pass for instance export?? Probably not - maybe yes because not a global variable that's exported!
   it('should export each code system once, even if export is called more than once', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
-    // doc.codeSystems.set(codeSystem.name, codeSystem); // TODO add this and remove arg
-    const exported = exporter.export([codeSystem]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export();
     expect(exported.length).toBe(1);
-    const exportedAgain = exporter.export([codeSystem]); // TODO remove this arg too
+    const exportedAgain = exporter.export();
     expect(exportedAgain.length).toBe(1);
   });
 
@@ -65,8 +64,8 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     const concept = new FshConcept('myCode');
     codeSystem.concepts = [concept];
-    // doc.codeSystems.set(codeSystem.name, codeSystem); // TODO add this and remove arg
-    const exported = exporter.export([codeSystem]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export();
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
@@ -82,8 +81,8 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     const concept = new FshConcept('myCode', 'My code', 'This is the formal definition of my code');
     codeSystem.concepts = [concept];
-    // doc.codeSystems.set(codeSystem.name, codeSystem); // TODO add this and remove arg
-    const exported = exporter.export([codeSystem]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export();
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',

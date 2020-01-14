@@ -36,10 +36,8 @@ export class CodeSystemExporter {
     this.codeSystems.push(codeSystem);
   }
 
-  // TODO Get rid of argument once codesystems are on the tank
-  export(curCodeSystems: FshCodeSystem[]): CodeSystem[] {
-    // for (const cs of this.tank.getAllCodeSystems()) {
-    for (const cs of curCodeSystems) {
+  export(): CodeSystem[] {
+    for (const cs of this.tank.getAllCodeSystems()) {
       try {
         this.exportCodeSystem(cs);
       } catch (e) {
