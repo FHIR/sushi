@@ -15,6 +15,7 @@ import {
 import { logger } from '../utils/FSHLogger';
 import cloneDeep from 'lodash/cloneDeep';
 import { replaceReferences } from '../fhirtypes/common';
+import { Type } from '../utils/Fishable';
 
 /**
  * The StructureDefinitionExporter is the class for exporting Profiles and Extensions.
@@ -170,7 +171,9 @@ export class StructureDefinitionExporter {
       );
       if (!structDef) {
         // If we find a FSH definition, then we can export and resolve for its type again
-        const fshDefinition = this.tank.findProfile(type) ?? this.tank.findExtension(type);
+        const fshDefinition = this.tank.fish(type, Type.Profile, Type.Extension) as
+          | Profile
+          | Extension;
         if (fshDefinition) {
           this.exportStructDef(fshDefinition);
           structDef = this.resolve(fshDefinition.name);

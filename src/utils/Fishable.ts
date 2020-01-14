@@ -1,7 +1,6 @@
 import { StructureDefinition, ValueSet /*, CodeSystem*/ } from '../fhirtypes';
 
 export enum Type {
-  Alias,
   Profile,
   Extension,
   ValueSet,
@@ -14,7 +13,7 @@ export enum Type {
 export interface Metadata {
   id: string;
   name: string;
-  url: string;
+  url?: string;
   parent?: string;
   instanceOf?: string;
 }

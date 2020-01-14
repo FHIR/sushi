@@ -1,8 +1,9 @@
 import { ResolveFn, StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
 import { FixedValueRule } from '../fshtypes/rules';
-import { FshReference } from '../fshtypes';
+import { FshReference, Instance } from '../fshtypes';
 import { FSHTank } from '../import';
 import cloneDeep = require('lodash/cloneDeep');
+import { Type } from '../utils/Fishable';
 
 /**
  * This function sets an instance property of an SD or ED if possible
@@ -124,7 +125,7 @@ export function replaceReferences(
 ): FixedValueRule {
   let clone: FixedValueRule;
   if (rule.fixedValue instanceof FshReference) {
-    const instance = tank.findInstance(rule.fixedValue.reference);
+    const instance = tank.fish(rule.fixedValue.reference, Type.Instance) as Instance;
     const instanceSD = resolve(instance?.instanceOf);
     // If we can't find a matching instance, just leave the reference as is
     if (instance && instanceSD) {
