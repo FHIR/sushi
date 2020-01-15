@@ -2,7 +2,6 @@ import { Meta } from './specialTypes';
 import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { ValueSet } from './ValueSet';
 
 /**
  * Class representing a FHIR R4 CodeSystem
@@ -33,12 +32,12 @@ export class CodeSystem {
   purpose?: string;
   copyright?: string;
   caseSensitive?: boolean;
-  valueSet?: ValueSet;
+  valueSet?: string;
   hierarchyMeaning?: string;
   compositional?: boolean;
   versionNeeded?: boolean;
   content = 'complete';
-  supplements?: CodeSystem;
+  supplements?: string;
   count?: number;
   filter?: CodeSystemFilter[];
   property?: CodeSystemProperty[];

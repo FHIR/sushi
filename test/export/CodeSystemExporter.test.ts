@@ -35,6 +35,7 @@ describe('CodeSystemExporter', () => {
 
   it('should export a code system with additional metadata', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
+    codeSystem.id = 'CodeSystem1';
     codeSystem.title = 'My Fancy Code System';
     codeSystem.description = 'Lots of important details about my fancy code system';
     doc.codeSystems.set(codeSystem.name, codeSystem);
@@ -42,10 +43,10 @@ describe('CodeSystemExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
-      id: 'MyCodeSystem',
+      id: 'CodeSystem1',
       status: 'active',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/MyCodeSystem',
+      url: 'http://example.com/CodeSystem/CodeSystem1',
       title: 'My Fancy Code System',
       description: 'Lots of important details about my fancy code system'
     });
@@ -62,8 +63,9 @@ describe('CodeSystemExporter', () => {
 
   it('should export a code system with a concept with only a code', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
-    const concept = new FshConcept('myCode');
-    codeSystem.concepts = [concept];
+    const myCode = new FshConcept('myCode');
+    const anotherCode = new FshConcept('anotherCode');
+    codeSystem.concepts = [myCode, anotherCode];
     doc.codeSystems.set(codeSystem.name, codeSystem);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
@@ -73,14 +75,19 @@ describe('CodeSystemExporter', () => {
       status: 'active',
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
-      concept: [{ code: 'myCode' }]
+      concept: [{ code: 'myCode' }, { code: 'anotherCode' }]
     });
   });
 
   it('should export a code system with a concept with a code, display, and definition', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
-    const concept = new FshConcept('myCode', 'My code', 'This is the formal definition of my code');
-    codeSystem.concepts = [concept];
+    const myCode = new FshConcept('myCode', 'My code', 'This is the formal definition of my code');
+    const anotherCode = new FshConcept(
+      'anotherCode',
+      'A second code',
+      'More details about this code'
+    );
+    codeSystem.concepts = [myCode, anotherCode];
     doc.codeSystems.set(codeSystem.name, codeSystem);
     const exported = exporter.export();
     expect(exported.length).toBe(1);
@@ -95,6 +102,11 @@ describe('CodeSystemExporter', () => {
           code: 'myCode',
           display: 'My code',
           definition: 'This is the formal definition of my code'
+        },
+        {
+          code: 'anotherCode',
+          display: 'A second code',
+          definition: 'More details about this code'
         }
       ]
     });
