@@ -46,6 +46,7 @@ describe('FHIRDefinitions', () => {
       const vitalSignsByID = defs.fishForFHIR('vitalsigns', Type.Profile);
       expect(vitalSignsByID.url).toBe('http://hl7.org/fhir/StructureDefinition/vitalsigns');
       expect(vitalSignsByID.fhirVersion).toBe('4.0.1');
+      expect(defs.fishForFHIR('observation-vitalsigns', Type.Profile)).toEqual(vitalSignsByID);
       expect(
         defs.fishForFHIR('http://hl7.org/fhir/StructureDefinition/vitalsigns', Type.Profile)
       ).toEqual(vitalSignsByID);
@@ -57,6 +58,9 @@ describe('FHIRDefinitions', () => {
         'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
       );
       expect(maidenNameExtensionByID.fhirVersion).toBe('4.0.1');
+      expect(defs.fishForFHIR('mothersMaidenName', Type.Extension)).toEqual(
+        maidenNameExtensionByID
+      );
       expect(
         defs.fishForFHIR(
           'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
@@ -76,6 +80,9 @@ describe('FHIRDefinitions', () => {
       // For some reason, value sets don't specify a fhirVersion, but in this case the business
       // version is the FHIR version, so we'll verify that instead
       expect(allergyStatusValueSetByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('AllergyIntoleranceClinicalStatusCodes', Type.ValueSet)).toEqual(
+        allergyStatusValueSetByID
+      );
       expect(
         defs.fishForFHIR('http://hl7.org/fhir/ValueSet/allergyintolerance-clinical', Type.ValueSet)
       ).toEqual(allergyStatusValueSetByID);
@@ -94,6 +101,9 @@ describe('FHIRDefinitions', () => {
       // For some reason, code systems don't specify a fhirVersion, but in this case the business
       // version is the FHIR version, so we'll verify that instead
       expect(allergyStatusCodeSystemByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('AllergyIntoleranceClinicalStatusCodes', Type.CodeSystem)).toEqual(
+        allergyStatusCodeSystemByID
+      );
       expect(
         defs.fishForFHIR(
           'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
@@ -220,18 +230,20 @@ describe('FHIRDefinitions', () => {
         addressByID
       );
 
-      const vitalSignesProfileByID = defs.fishForFHIR('vitalsigns');
-      expect(vitalSignesProfileByID.type).toBe('Observation');
-      expect(vitalSignesProfileByID.kind).toBe('resource');
-      expect(vitalSignesProfileByID.derivation).toBe('constraint');
-      expect(vitalSignesProfileByID.fhirVersion).toBe('4.0.1');
+      const vitalSignsProfileByID = defs.fishForFHIR('vitalsigns');
+      expect(vitalSignsProfileByID.type).toBe('Observation');
+      expect(vitalSignsProfileByID.kind).toBe('resource');
+      expect(vitalSignsProfileByID.derivation).toBe('constraint');
+      expect(vitalSignsProfileByID.fhirVersion).toBe('4.0.1');
+      expect(defs.fishForFHIR('observation-vitalsigns')).toEqual(vitalSignsProfileByID);
       expect(defs.fishForFHIR('http://hl7.org/fhir/StructureDefinition/vitalsigns')).toEqual(
-        vitalSignesProfileByID
+        vitalSignsProfileByID
       );
 
       const maidenNameExtensionByID = defs.fishForFHIR('patient-mothersMaidenName');
       expect(maidenNameExtensionByID.type).toBe('Extension');
       expect(maidenNameExtensionByID.fhirVersion).toBe('4.0.1');
+      expect(defs.fishForFHIR('mothersMaidenName')).toEqual(maidenNameExtensionByID);
       expect(
         defs.fishForFHIR('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName')
       ).toEqual(maidenNameExtensionByID);
@@ -243,6 +255,9 @@ describe('FHIRDefinitions', () => {
       // For some reason, value sets don't specify a fhirVersion, but in this case the business
       // version is the FHIR version, so we'll verify that instead
       expect(allergyStatusValueSetByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('AllergyIntoleranceClinicalStatusCodes')).toEqual(
+        allergyStatusValueSetByID
+      );
       expect(defs.fishForFHIR('http://hl7.org/fhir/ValueSet/allergyintolerance-clinical')).toEqual(
         allergyStatusValueSetByID
       );
@@ -252,6 +267,7 @@ describe('FHIRDefinitions', () => {
       // For some reason, code systems don't specify a fhirVersion, but in this case the business
       // version is the FHIR version, so we'll verify that instead
       expect(w3cProvenanceCodeSystemByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('W3cProvenanceActivityType')).toEqual(w3cProvenanceCodeSystemByID);
       expect(defs.fishForFHIR('http://hl7.org/fhir/w3c-provenance-activity-type')).toEqual(
         w3cProvenanceCodeSystemByID
       );
@@ -306,6 +322,7 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
       });
+      expect(defs.fishForMetadata('observation-vitalsigns', Type.Profile)).toEqual(vitalSignsByID);
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/vitalsigns', Type.Profile)
       ).toEqual(vitalSignsByID);
@@ -322,6 +339,9 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });
+      expect(defs.fishForMetadata('mothersMaidenName', Type.Extension)).toEqual(
+        maidenNameExtensionByID
+      );
       expect(
         defs.fishForMetadata(
           'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
@@ -340,6 +360,9 @@ describe('FHIRDefinitions', () => {
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical'
       });
+      expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes', Type.ValueSet)).toEqual(
+        allergyStatusValueSetByID
+      );
       expect(
         defs.fishForMetadata(
           'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
@@ -358,6 +381,9 @@ describe('FHIRDefinitions', () => {
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
       });
+      expect(
+        defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes', Type.CodeSystem)
+      ).toEqual(allergyStatusCodeSystemByID);
       expect(
         defs.fishForMetadata(
           'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
@@ -500,15 +526,16 @@ describe('FHIRDefinitions', () => {
         addressByID
       );
 
-      const vitalSignesProfileByID = defs.fishForMetadata('vitalsigns');
-      expect(vitalSignesProfileByID).toEqual({
+      const vitalSignsProfileByID = defs.fishForMetadata('vitalsigns');
+      expect(vitalSignsProfileByID).toEqual({
         id: 'vitalsigns',
         name: 'observation-vitalsigns',
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
       });
+      expect(defs.fishForMetadata('observation-vitalsigns')).toEqual(vitalSignsProfileByID);
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/vitalsigns')).toEqual(
-        vitalSignesProfileByID
+        vitalSignsProfileByID
       );
 
       const maidenNameExtensionByID = defs.fishForMetadata('patient-mothersMaidenName');
@@ -518,6 +545,7 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });
+      expect(defs.fishForMetadata('mothersMaidenName')).toEqual(maidenNameExtensionByID);
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName')
       ).toEqual(maidenNameExtensionByID);
@@ -530,6 +558,9 @@ describe('FHIRDefinitions', () => {
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical'
       });
+      expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes')).toEqual(
+        allergyStatusValueSetByID
+      );
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/ValueSet/allergyintolerance-clinical')
       ).toEqual(allergyStatusValueSetByID);
@@ -540,6 +571,9 @@ describe('FHIRDefinitions', () => {
         name: 'W3cProvenanceActivityType',
         url: 'http://hl7.org/fhir/w3c-provenance-activity-type'
       });
+      expect(defs.fishForMetadata('W3cProvenanceActivityType')).toEqual(
+        w3cProvenanceCodeSystemByID
+      );
       expect(defs.fishForMetadata('http://hl7.org/fhir/w3c-provenance-activity-type')).toEqual(
         w3cProvenanceCodeSystemByID
       );
