@@ -2,6 +2,7 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ResolveFn } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { loadFromPath } from '../../src/fhirdefs';
+import { Type } from '../../src/utils/Fishable';
 import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
@@ -10,7 +11,7 @@ const defsCache = new FHIRDefinitions();
 
 export function getResolver(defs: FHIRDefinitions): ResolveFn {
   return (type: string): StructureDefinition | undefined => {
-    const json = defs.find(type);
+    const json = defs.fishForFHIR(type, Type.Resource, Type.Type, Type.Profile, Type.Extension);
     if (json) {
       return StructureDefinition.fromJSON(json);
     } else {
@@ -26,7 +27,13 @@ export function getResolver(defs: FHIRDefinitions): ResolveFn {
       if (defsCache.size() > 0) {
         // If the cache has been loaded, and we use a resource from the cache,
         // make sure that resource is now copied into the test case package.
-        const def = defsCache.find(type);
+        const def = defsCache.fishForFHIR(
+          type,
+          Type.Resource,
+          Type.Type,
+          Type.Profile,
+          Type.Extension
+        );
         if (def) {
           defs.add(def);
           fs.copyFileSync(

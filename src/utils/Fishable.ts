@@ -1,5 +1,3 @@
-import { StructureDefinition, ValueSet /*, CodeSystem*/ } from '../fhirtypes';
-
 export enum Type {
   Profile,
   Extension,
@@ -19,9 +17,6 @@ export interface Metadata {
 }
 
 export interface Fishable {
-  fishForFHIR(
-    item: string,
-    ...types: Type[]
-  ): StructureDefinition | ValueSet /*| CodeSystem */ | any | undefined;
+  fishForFHIR(item: string, ...types: Type[]): any | undefined;
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined;
 }

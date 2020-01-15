@@ -8,6 +8,7 @@ import {
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { getResolver } from '../testhelpers/getResolver';
 import path from 'path';
+import { Type } from '../../src/utils/Fishable';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -28,7 +29,7 @@ describe('ElementDefinition', () => {
     resolve = getResolver(defs);
     // resolve observation once to ensure it is present in defs
     observation = resolve('Observation');
-    jsonObservation = defs.findResource('Observation');
+    jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
     jsonValueX = jsonObservation.snapshot.element[21];
     jsonValueId = jsonObservation.snapshot.element[1];
   });

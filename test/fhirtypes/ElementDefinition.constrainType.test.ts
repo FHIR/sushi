@@ -6,6 +6,7 @@ import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType } from '../../src/fhirtypes';
 import { ResolveFn } from '../../src/fhirtypes';
 import path from 'path';
+import { Type } from '../../src/utils/Fishable';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -264,7 +265,10 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow a reference to a profile to be constrained to a reference to more specific profiles', () => {
-      const jsonVitalSigns = defs.find('http://hl7.org/fhir/StructureDefinition/vitalsigns');
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
       const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
       const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
       hasMember.constrainType(

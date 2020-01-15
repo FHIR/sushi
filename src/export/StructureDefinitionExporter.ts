@@ -161,7 +161,13 @@ export class StructureDefinitionExporter {
   resolve(type: string): StructureDefinition | undefined {
     const alias = this.tank.resolveAlias(type);
     type = alias ? alias : type;
-    const json = this.FHIRDefs.find(type);
+    const json = this.FHIRDefs.fishForFHIR(
+      type,
+      Type.Resource,
+      Type.Type,
+      Type.Profile,
+      Type.Extension
+    );
     if (json) {
       return StructureDefinition.fromJSON(json);
       // Maybe it's a FSH-defined definition and not a FHIR one
