@@ -133,6 +133,14 @@ describe('InstanceExporter', () => {
       doc.instances.set(lipidInstance.name, lipidInstance);
     });
 
+    // Setting Metadata
+    it('should set meta.profile to the defining URL we are making an instance of', () => {
+      const exported = exporter.exportInstance(instance);
+      expect(exported.meta).toEqual({
+        profile: ['http://example.com/StructureDefinition/TestPatient']
+      });
+    });
+
     // Fixing top level elements
     it('should fix top level elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('active');

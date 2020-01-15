@@ -119,6 +119,9 @@ export class InstanceExporter {
     instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
     instanceDef.instanceName = fshDefinition.id; // This is name of the instance in the FSH
 
+    // Add the profile we are making an instance of to meta.profile
+    // If we end up adding more metadata, we should wrap this in a setMetadata function
+    instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
 
