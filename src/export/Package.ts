@@ -15,7 +15,7 @@ export class Package implements Fishable {
   fish(
     item: string,
     ...types: Type[]
-  ): StructureDefinition | ValueSet | InstanceDefinition | undefined {
+  ): StructureDefinition | ValueSet | CodeSystem | InstanceDefinition | undefined {
     // No types passed in means to search ALL supported types
     if (types.length === 0) {
       types = [Type.Profile, Type.Extension, Type.ValueSet, Type.CodeSystem, Type.Instance];
@@ -33,9 +33,9 @@ export class Package implements Fishable {
         case Type.ValueSet:
           def = this.valueSets.find(vs => vs.id === item || vs.name === item || vs.url === item);
           break;
-        // case Type.CodeSystem:
-        //   def = this.codeSystems.find(cs => cs.id === item || cs.name === item || cs.url === item);
-        //   break;
+        case Type.CodeSystem:
+          def = this.codeSystems.find(cs => cs.id === item || cs.name === item || cs.url === item);
+          break;
         case Type.Instance:
           def = this.instances.find(i => i.id === item || i.instanceName === item);
           break;

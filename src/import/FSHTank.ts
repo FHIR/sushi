@@ -72,7 +72,10 @@ export class FSHTank implements Fishable {
     return undefined;
   }
 
-  fish(item: string, ...types: Type[]): Profile | Extension | FshValueSet | Instance | undefined {
+  fish(
+    item: string,
+    ...types: Type[]
+  ): Profile | Extension | FshValueSet | FshCodeSystem | Instance | undefined {
     // No types passed in means to search ALL supported types
     if (types.length === 0) {
       types = [Type.Profile, Type.Extension, Type.ValueSet, Type.CodeSystem, Type.Instance];
@@ -105,14 +108,14 @@ export class FSHTank implements Fishable {
               `${this.config.canonical}/ValueSet/${vs.id}` === item
           );
           break;
-        // case Type.CodeSystem:
-        //   result = this.getAllCodeSystems().find(
-        //     vs =>
-        //       vs.name === item ||
-        //       vs.id === item ||
-        //       `${this.config.canonical}/CodeSystem/${vs.id}` === item
-        //   );
-        //   break;
+        case Type.CodeSystem:
+          result = this.getAllCodeSystems().find(
+            vs =>
+              vs.name === item ||
+              vs.id === item ||
+              `${this.config.canonical}/CodeSystem/${vs.id}` === item
+          );
+          break;
         case Type.Instance:
           result = this.getAllInstances().find(i => i.name === item || i.id === item);
           break;
@@ -142,8 +145,8 @@ export class FSHTank implements Fishable {
         meta.parent = result.parent;
       } else if (result instanceof FshValueSet) {
         meta.url = `${this.config.canonical}/ValueSet/${result.id}`;
-        // } else if (result instanceof CodeSystem) {
-        //   meta.url = `${this.config.canonical}/CodeSystem/${result.id}`;
+      } else if (result instanceof FshCodeSystem) {
+        meta.url = `${this.config.canonical}/CodeSystem/${result.id}`;
       } else if (result instanceof Instance) {
         meta.instanceOf = result.instanceOf;
       }

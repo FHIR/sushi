@@ -35,7 +35,7 @@ describe('MasterFisher', () => {
     profile4.url = 'http://example.org/StructureDefinition/vitalsigns';
     profile4.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Observation';
     profile4.fhirVersion = '4.0.1';
-    const pkg = new Package([profile3, profile4], [], [], [], config);
+    const pkg = new Package([profile3, profile4], [], [], [], [], config);
 
     const defs = new FHIRDefinitions();
     loadFromPath(

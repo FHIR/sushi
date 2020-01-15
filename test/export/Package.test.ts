@@ -1,5 +1,5 @@
 import { Package } from '../../src/export';
-import { ValueSet, StructureDefinition, InstanceDefinition } from '../../src/fhirtypes';
+import { ValueSet, StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
 import { Type } from '../../src/utils/Fishable';
 
 describe('Package', () => {
@@ -45,6 +45,18 @@ describe('Package', () => {
     valueset1.id = 'cheese-flavors';
     valueset1.url = 'http://example.org/ValueSet/cheese-flavors';
     valueset1.version = '4.0.1';
+    // CodeSystem[0]: Letters / alphas
+    const codeSystem0 = new CodeSystem();
+    codeSystem0.name = 'Letters';
+    codeSystem0.id = 'alphas';
+    codeSystem0.url = 'http://example.org/CodeSystem/alphas';
+    codeSystem0.version = '4.0.1';
+    // CodeSystem[1]: Numbers / numerics
+    const codeSystem1 = new CodeSystem();
+    codeSystem1.name = 'Numbers';
+    codeSystem1.id = 'numerics';
+    codeSystem1.url = 'http://example.org/CodeSystem/numerics';
+    codeSystem1.version = '4.0.1';
     // Instance[0]: DrSue / dr-sue / Practitioner
     const instance0 = new InstanceDefinition();
     instance0.instanceName = 'DrSue';
@@ -65,6 +77,7 @@ describe('Package', () => {
       [extension0, extension1],
       [instance0, instance1],
       [valueset0, valueset1],
+      [codeSystem0, codeSystem1],
       config
     );
   });
@@ -102,7 +115,17 @@ describe('Package', () => {
       );
     });
 
-    // TODO: CodeSystems
+    it('should find code systems', () => {
+      const numericsCodeSystemByID = pkg.fishForFHIR('numerics', Type.CodeSystem);
+      expect(numericsCodeSystemByID.url).toBe('http://example.org/CodeSystem/numerics');
+      // For some reason, code systems don't specify a fhirVersion, but in this case the business
+      // version is the FHIR version, so we'll verify that instead
+      expect(numericsCodeSystemByID.version).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
+      expect(pkg.fishForFHIR('http://example.org/CodeSystem/numerics', Type.CodeSystem)).toEqual(
+        numericsCodeSystemByID
+      );
+    });
 
     it('should find instances', () => {
       const drSueInstanceById = pkg.fishForFHIR('dr-sue', Type.Instance);
@@ -140,11 +163,21 @@ describe('Package', () => {
         Type.Type,
         Type.Profile,
         Type.Extension,
+        Type.CodeSystem,
         Type.Instance
       );
       expect(soupsValueSetByID).toBeUndefined();
 
-      // TODO: CodeSystem
+      const numericsCodeSystemByID = pkg.fishForFHIR(
+        'numerics',
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.Instance
+      );
+      expect(numericsCodeSystemByID).toBeUndefined();
 
       const drSueInstanceByID = pkg.fishForFHIR(
         'dr-sue',
@@ -185,7 +218,15 @@ describe('Package', () => {
         soupsValueSetByID
       );
 
-      // TODO: CodeSystems
+      const numericsCodeSystemByID = pkg.fishForFHIR('numerics');
+      expect(numericsCodeSystemByID.name).toBe('Numbers');
+      // For some reason, value sets don't specify a fhirVersion, but in this case the business
+      // version is the FHIR version, so we'll verify that instead
+      expect(numericsCodeSystemByID.version).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Numbers')).toEqual(numericsCodeSystemByID);
+      expect(pkg.fishForFHIR('http://example.org/CodeSystem/numerics')).toEqual(
+        numericsCodeSystemByID
+      );
 
       const drSueInstanceByID = pkg.fishForFHIR('dr-sue');
       expect(drSueInstanceByID.gender).toBe('female');
@@ -235,7 +276,18 @@ describe('Package', () => {
       ).toEqual(soupsValueSetByID);
     });
 
-    // TODO: CodeSystems
+    it('should find code systems', () => {
+      const numericsCodeSystemByID = pkg.fishForMetadata('numerics', Type.CodeSystem);
+      expect(numericsCodeSystemByID).toEqual({
+        id: 'numerics',
+        name: 'Numbers',
+        url: 'http://example.org/CodeSystem/numerics'
+      });
+      expect(pkg.fishForMetadata('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
+      expect(
+        pkg.fishForMetadata('http://example.org/CodeSystem/numerics', Type.CodeSystem)
+      ).toEqual(numericsCodeSystemByID);
+    });
 
     it('should find instances', () => {
       const drSueInstanceById = pkg.fishForMetadata('dr-sue', Type.Instance);
@@ -276,11 +328,21 @@ describe('Package', () => {
         Type.Type,
         Type.Profile,
         Type.Extension,
+        Type.CodeSystem,
         Type.Instance
       );
       expect(soupsValueSetByID).toBeUndefined();
 
-      // TODO: CodeSystem
+      const numericsCodeSystemByID = pkg.fishForMetadata(
+        'numerics',
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.Instance
+      );
+      expect(numericsCodeSystemByID).toBeUndefined();
 
       const drSueInstanceByID = pkg.fishForMetadata(
         'dr-sue',
@@ -330,7 +392,16 @@ describe('Package', () => {
         soupsValueSetByID
       );
 
-      // TODO: CodeSystems
+      const numericsCodeSystemByID = pkg.fishForMetadata('numerics');
+      expect(numericsCodeSystemByID).toEqual({
+        id: 'numerics',
+        name: 'Numbers',
+        url: 'http://example.org/CodeSystem/numerics'
+      });
+      expect(pkg.fishForMetadata('Numbers')).toEqual(numericsCodeSystemByID);
+      expect(pkg.fishForMetadata('http://example.org/CodeSystem/numerics')).toEqual(
+        numericsCodeSystemByID
+      );
 
       const drSueInstanceByID = pkg.fishForMetadata('dr-sue');
       expect(drSueInstanceByID).toEqual({
