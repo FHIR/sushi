@@ -159,8 +159,10 @@ describe('StructureDefinition', () => {
 
   describe('#findElementByPath', () => {
     let respRate: StructureDefinition;
+    let lipidProfile: StructureDefinition;
     beforeEach(() => {
       respRate = resolve('resprate');
+      lipidProfile = resolve('lipidprofile');
     });
 
     // Simple paths (no brackets)
@@ -322,6 +324,14 @@ describe('StructureDefinition', () => {
       expect(componentCode.id).toBe('Observation.component:FooSlice.code');
       expect(componentCode.path).toBe('Observation.component.code');
       expect(observation.elements.length).toBe(originalLength + 9);
+    });
+
+    it('should find an element, whose name is contained in another element, that must be unfolded', () => {
+      const originalLength = lipidProfile.elements.length;
+      const resultDisplay = lipidProfile.findElementByPath('result.display', resolve);
+      expect(resultDisplay).toBeDefined();
+      expect(resultDisplay.id).toBe('DiagnosticReport.result.display');
+      expect(lipidProfile.elements.length).toBe(originalLength + 6);
     });
   });
 

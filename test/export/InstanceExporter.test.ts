@@ -114,6 +114,7 @@ describe('InstanceExporter', () => {
     let patientProf: Profile;
     let instance: Instance;
     let patientProfInstance: Instance;
+    let lipidInstance: Instance;
     beforeEach(() => {
       patient = new Profile('TestPatient');
       patient.parent = 'Patient';
@@ -127,6 +128,9 @@ describe('InstanceExporter', () => {
       patientProfInstance = new Instance('Baz');
       patientProfInstance.instanceOf = 'TestPatientProf';
       doc.instances.set(patientProfInstance.name, patientProfInstance);
+      lipidInstance = new Instance('Bam');
+      lipidInstance.instanceOf = 'lipidprofile';
+      doc.instances.set(lipidInstance.name, lipidInstance);
     });
 
     // Fixing top level elements
@@ -435,6 +439,29 @@ describe('InstanceExporter', () => {
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'level', valueCoding: { system: 'baz' } }
       ]);
+    });
+
+    it.skip('should throw when ordered is set in the discriminator but slices arrive out of order', () => {
+      const fixedValRule = new FixedValueRule('result[Triglyceride].display');
+      fixedValRule.fixedValue = 'foo';
+      lipidInstance.rules.push(fixedValRule);
+      // Feel free to change this error message when actually implementing
+      expect(() => exporter.exportInstance(lipidInstance)).toThrow(
+        'Slice Triglyceride of result fixed out of order'
+      );
+    });
+
+    it.skip('should throw if incorrect elements are added when the slicing is closed', () => {
+      const fixedValRule = new FixedValueRule('result[0].display');
+      fixedValRule.fixedValue = 'foo';
+      lipidInstance.rules.push(fixedValRule);
+      expect(() => exporter.exportInstance(lipidInstance)).toThrow(
+        'Slicing on result is closed, only named slices may be added'
+      );
+    });
+
+    it.skip('should fix sliced elements on a sliced primitive', () => {
+      /* Need example of sliced primitive */
     });
   });
 });

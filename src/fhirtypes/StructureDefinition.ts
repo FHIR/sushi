@@ -160,7 +160,12 @@ export class StructureDefinition {
     for (const pathPart of parsedPath) {
       // Add the next part to the path, and see if we have matches on it
       fhirPathString += `.${pathPart.base}`;
-      newMatchingElements = matchingElements.filter(e => e.path.startsWith(fhirPathString));
+      newMatchingElements = matchingElements.filter(
+        e =>
+          e.path.startsWith(`${fhirPathString}.`) ||
+          e.path.startsWith(`${fhirPathString}:`) ||
+          e.path === fhirPathString
+      );
 
       // TODO: If path is A.B.C, and we unfold B, but C is invalid, the unfolded
       // elements are still on the structDef. We may want to change this to remove the elements
