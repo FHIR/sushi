@@ -34,7 +34,8 @@ describe('ValueSetExporter', () => {
       name: 'BreakfastVS',
       id: 'BreakfastVS',
       status: 'active',
-      url: 'http://example.com/ValueSet/BreakfastVS'
+      url: 'http://example.com/ValueSet/BreakfastVS',
+      version: '0.0.1'
     });
   });
 
@@ -60,7 +61,8 @@ describe('ValueSetExporter', () => {
       status: 'active',
       title: 'Breakfast Values',
       description: 'A value set for breakfast items',
-      url: 'http://example.com/ValueSet/BreakfastVS'
+      url: 'http://example.com/ValueSet/BreakfastVS',
+      version: '0.0.1'
     });
   });
 
@@ -86,6 +88,7 @@ describe('ValueSetExporter', () => {
       id: 'DinnerVS',
       status: 'active',
       url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
       compose: {
         include: [{ system: 'http://food.org/food' }]
       }
@@ -109,6 +112,7 @@ describe('ValueSetExporter', () => {
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
       status: 'active',
       compose: {
         include: [
@@ -142,6 +146,7 @@ describe('ValueSetExporter', () => {
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
       status: 'active',
       compose: {
         include: [
@@ -175,6 +180,7 @@ describe('ValueSetExporter', () => {
       id: 'BreakfastVS',
       name: 'BreakfastVS',
       url: 'http://example.com/ValueSet/BreakfastVS',
+      version: '0.0.1',
       status: 'active',
       compose: {
         include: [
@@ -210,6 +216,7 @@ describe('ValueSetExporter', () => {
       id: 'BreakfastVS',
       name: 'BreakfastVS',
       url: 'http://example.com/ValueSet/BreakfastVS',
+      version: '0.0.1',
       status: 'active',
       compose: {
         include: [
@@ -245,6 +252,7 @@ describe('ValueSetExporter', () => {
       id: 'BreakfastVS',
       name: 'BreakfastVS',
       url: 'http://example.com/ValueSet/BreakfastVS',
+      version: '0.0.1',
       status: 'active',
       compose: {
         include: [
@@ -284,6 +292,7 @@ describe('ValueSetExporter', () => {
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
       status: 'active',
       compose: {
         include: [
