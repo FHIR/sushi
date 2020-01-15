@@ -9,8 +9,9 @@ import {
 import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
 import { logger } from '../utils/FSHLogger';
-import { setPropertyOnInstance, replaceReferences } from '../fhirtypes/common';
+import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
+import isEmpty from 'lodash/isEmpty';
 
 export class InstanceExporter {
   constructor(
@@ -34,11 +35,12 @@ export class InstanceExporter {
       );
 
       setPropertyOnInstance(instanceDef, pathParts, fixedValue);
-
       // For each part of that path, we add fixed values from the SD
       let path = '';
       for (const [i, pathPart] of pathParts.entries()) {
         path += `${path ? '.' : ''}${pathPart.base}`;
+        // Add back non-numeric (slice) brackets
+        pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
         const element = instanceOfStructureDefinition.findElementByPath(path, this.resolve);
         this.setFixedValuesForDirectChildren(element, pathParts.slice(0, i + 1), instanceDef);
       }
@@ -49,6 +51,19 @@ export class InstanceExporter {
       instanceOfStructureDefinition.findElement(instanceDef.resourceType),
       [],
       instanceDef
+    );
+
+    // Remove all _sliceName fields
+    replaceField(
+      instanceDef,
+      (o, p) => p === '_sliceName',
+      (o, p) => delete o[p]
+    );
+    // Change any {} to null
+    replaceField(
+      instanceDef,
+      (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
+      (o, p) => (o[p] = null)
     );
 
     return instanceDef;
