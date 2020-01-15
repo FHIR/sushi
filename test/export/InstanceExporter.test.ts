@@ -141,6 +141,13 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should not set meta.profile when we are making an instance of a base resource', () => {
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const exported = exporter.exportInstance(boo);
+      expect(exported.meta).toBeUndefined();
+    });
+
     // Fixing top level elements
     it('should fix top level elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('active');
