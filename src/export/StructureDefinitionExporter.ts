@@ -40,6 +40,8 @@ export class StructureDefinitionExporter {
     structDef.id = fshDefinition.id;
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
+    // Version is set to value provided in config, will be overriden if reset by rules
+    structDef.version = this.tank.config.version;
     // Assuming the starting StructureDefinition was a clone of the parent,
     // set the baseDefinition to the parent url before re-assiging the url
     structDef.baseDefinition = structDef.url;

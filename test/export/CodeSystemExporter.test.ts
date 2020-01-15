@@ -29,7 +29,8 @@ describe('CodeSystemExporter', () => {
       id: 'MyCodeSystem',
       status: 'active',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/MyCodeSystem'
+      url: 'http://example.com/CodeSystem/MyCodeSystem',
+      version: '0.0.1'
     });
   });
 
@@ -48,7 +49,8 @@ describe('CodeSystemExporter', () => {
       content: 'complete',
       url: 'http://example.com/CodeSystem/CodeSystem1',
       title: 'My Fancy Code System',
-      description: 'Lots of important details about my fancy code system'
+      description: 'Lots of important details about my fancy code system',
+      version: '0.0.1'
     });
   });
 
@@ -75,6 +77,7 @@ describe('CodeSystemExporter', () => {
       status: 'active',
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
+      version: '0.0.1',
       concept: [{ code: 'myCode' }, { code: 'anotherCode' }]
     });
   });
@@ -97,6 +100,7 @@ describe('CodeSystemExporter', () => {
       status: 'active',
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
+      version: '0.0.1',
       concept: [
         {
           code: 'myCode',

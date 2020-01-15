@@ -56,6 +56,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.title).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
+    expect(exported.version).toBe('0.0.1');
     expect(exported.type).toBe('Observation');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
     expect(exported.derivation).toBe('constraint');
@@ -71,6 +72,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.title).toBeUndefined();
     expect(exported.description).toBe('This is the base resource type for everything.');
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
+    expect(exported.version).toBe('0.0.1');
     expect(exported.type).toBe('Resource');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
     expect(exported.derivation).toBe('constraint');
@@ -99,6 +101,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.title).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
+    expect(exported.version).toBe('0.0.1');
     // NOTE: For now, we always set context to everything, but this will be user-specified in
     // the future
     expect(exported.context).toEqual([
@@ -124,6 +127,7 @@ describe('StructureDefinitionExporter', () => {
       'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.'
     );
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
+    expect(exported.version).toBe('0.0.1');
     // NOTE: For now, we always set context to everything, but this will be user-specified in
     // the future
     expect(exported.context).toEqual([

@@ -12,6 +12,8 @@ export class CodeSystemExporter {
     codeSystem.id = fshDefinition.id;
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
+    // Version is set to value provided in config, will be overriden if reset by rules
+    codeSystem.version = this.tank.config.version;
     codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
 

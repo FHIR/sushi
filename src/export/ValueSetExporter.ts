@@ -24,6 +24,8 @@ export class ValueSetExporter {
     if (fshDefinition.description) {
       valueSet.description = fshDefinition.description;
     }
+    // Version is set to value provided in config, will be overriden if reset by rules
+    valueSet.version = this.tank.config.version;
     valueSet.url = `${this.tank.config.canonical}/ValueSet/${valueSet.id}`;
   }
 
