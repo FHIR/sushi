@@ -91,7 +91,8 @@ async function app() {
       ...outPackage.profiles,
       ...outPackage.extensions,
       ...outPackage.instances,
-      ...outPackage.valueSets
+      ...outPackage.valueSets,
+      ...outPackage.codeSystems
     ]) {
       fs.writeFileSync(
         path.join(program.out, sd.getFileName()),
@@ -106,6 +107,7 @@ async function app() {
   Extensions:  ${outPackage.extensions.length}
   Instances:   ${outPackage.instances.length}
   ValueSets:   ${outPackage.valueSets.length}
+  CodeSystems: ${outPackage.codeSystems.length}
   Errors:      ${stats.numError}
   Warnings:    ${stats.numWarn}`);
 }

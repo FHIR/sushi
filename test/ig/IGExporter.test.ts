@@ -3,7 +3,7 @@ import path from 'path';
 import temp from 'temp';
 import ini from 'ini';
 import { IGExporter } from '../../src/ig';
-import { StructureDefinition, InstanceDefinition } from '../../src/fhirtypes';
+import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Config } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -20,7 +20,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], [], [], config);
+      pkg = new Package([], [], [], [], [], config);
       const resources = path.join(fixtures, 'resources');
       const instances = path.join(fixtures, 'instances');
       fs.readdirSync(resources).forEach(f => {
@@ -39,6 +39,14 @@ describe('IGExporter', () => {
           pkg.instances.push(instanceDef);
         }
       });
+
+      // Add CodeSystem directly because there is no fromJSON method on the class
+      const codeSystemDef = new CodeSystem();
+      codeSystemDef.id = 'sample-code-system';
+      codeSystemDef.name = 'SampleCodeSystem';
+      codeSystemDef.description = 'A code system description';
+      pkg.codeSystems.push(codeSystemDef);
+
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -61,7 +69,7 @@ describe('IGExporter', () => {
 
     it('should copy over the resource files', () => {
       const resourcesPath = path.join(tempOut, 'input', 'resources');
-      expect(fs.readdirSync(resourcesPath)).toHaveLength(5);
+      expect(fs.readdirSync(resourcesPath)).toHaveLength(6);
       const ids = [
         'sample-observation',
         'sample-patient',
@@ -80,6 +88,11 @@ describe('IGExporter', () => {
       const instancePath = path.join(resourcesPath, 'Patient-example.json');
       expect(fs.existsSync(instancePath)).toBeTruthy();
       expect(fs.readJSONSync(instancePath).id).toEqual('example');
+
+      // Code Systems copied
+      const codeSystemPath = path.join(resourcesPath, 'CodeSystem-sample-code-system.json');
+      expect(fs.existsSync(codeSystemPath)).toBeTruthy();
+      expect(fs.readJSONSync(codeSystemPath).id).toEqual('sample-code-system');
     });
 
     it('should generate an ig.ini with the correct values based on the package.json', () => {
@@ -169,6 +182,13 @@ describe('IGExporter', () => {
               },
               name: 'Patient-example',
               exampleBoolean: true
+            },
+            {
+              reference: {
+                reference: 'CodeSystem/sample-code-system'
+              },
+              name: 'SampleCodeSystem',
+              description: 'A code system description'
             }
           ],
           page: {
@@ -233,7 +253,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], [], [], config);
+      pkg = new Package([], [], [], [], [], config);
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -319,7 +339,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'invalid-data-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package([], [], [], [], config);
+      pkg = new Package([], [], [], [], [], config);
       exporter = new IGExporter(pkg, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you

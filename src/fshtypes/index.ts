@@ -1,4 +1,4 @@
-export * from './CodeSystem';
+export * from './FshCodeSystem';
 export * from './Config';
 export * from './Extension';
 export * from './Instance';
