@@ -64,7 +64,7 @@ strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | code | quantity | ratio | bool ;
 item:               SEQUENCE CARD flag*;
 code:               CODE STRING?;
-concept:            code STRING?;
+concept:            STAR code STRING?;
 quantity:           NUMBER UNIT;
 ratio:              ratioPart COLON ratioPart;
 reference:          REFERENCE STRING?;

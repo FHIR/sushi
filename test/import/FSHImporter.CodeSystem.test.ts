@@ -130,7 +130,7 @@ describe('FSHImporter', () => {
       it('should parse a code system with one concept', () => {
         const input = `
         CodeSystem: ZOO
-        #lion
+        * #lion
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
@@ -144,7 +144,7 @@ describe('FSHImporter', () => {
           startLine: 3,
           startColumn: 9,
           endLine: 3,
-          endColumn: 13
+          endColumn: 15
         });
         expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
       });
@@ -152,7 +152,7 @@ describe('FSHImporter', () => {
       it('should parse a code system with one concept with a display string', () => {
         const input = `
         CodeSystem: ZOO
-        #tiger "Tiger"
+        * #tiger "Tiger"
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
@@ -166,7 +166,7 @@ describe('FSHImporter', () => {
           startLine: 3,
           startColumn: 9,
           endLine: 3,
-          endColumn: 22
+          endColumn: 24
         });
         expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
       });
@@ -174,7 +174,7 @@ describe('FSHImporter', () => {
       it('should parse a code system with one concept with display and definition strings', () => {
         const input = `
         CodeSystem: ZOO
-        #bear "Bear" "A member of family Ursidae."
+        * #bear "Bear" "A member of family Ursidae."
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
@@ -188,7 +188,7 @@ describe('FSHImporter', () => {
           startLine: 3,
           startColumn: 9,
           endLine: 3,
-          endColumn: 50
+          endColumn: 52
         });
         expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
       });
@@ -196,9 +196,9 @@ describe('FSHImporter', () => {
       it('should parse a code system with more than one concept', () => {
         const input = `
         CodeSystem: ZOO
-        #lion
-        #tiger "Tiger"
-        #bear "Bear" "A member of family Ursidae."
+        * #lion
+        * #tiger "Tiger"
+        * #bear "Bear" "A member of family Ursidae."
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
@@ -212,7 +212,7 @@ describe('FSHImporter', () => {
           startLine: 3,
           startColumn: 9,
           endLine: 3,
-          endColumn: 13
+          endColumn: 15
         });
         expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
         expect(codeSystem.concepts[1].code).toBe('tiger');
@@ -222,7 +222,7 @@ describe('FSHImporter', () => {
           startLine: 4,
           startColumn: 9,
           endLine: 4,
-          endColumn: 22
+          endColumn: 24
         });
         expect(codeSystem.concepts[1].sourceInfo.file).toBe('Zoo.fsh');
         expect(codeSystem.concepts[2].code).toBe('bear');
@@ -232,7 +232,7 @@ describe('FSHImporter', () => {
           startLine: 5,
           startColumn: 9,
           endLine: 5,
-          endColumn: 50
+          endColumn: 52
         });
         expect(codeSystem.concepts[2].sourceInfo.file).toBe('Zoo.fsh');
       });
@@ -240,8 +240,8 @@ describe('FSHImporter', () => {
       it('should log an error when encountering a duplicate code', () => {
         const input = `
         CodeSystem: ZOO
-        #goat
-        #goat
+        * #goat
+        * #goat
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
@@ -254,9 +254,9 @@ describe('FSHImporter', () => {
       it('should log an error when a concept includes a system declaration', () => {
         const input = `
         CodeSystem: ZOO
-        #goat
-        ZOO#bat
-        CRYPTID#jackalope
+        * #goat
+        * ZOO#bat
+        * CRYPTID#jackalope
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
