@@ -173,13 +173,15 @@ export class IGExporter {
     });
     sortBy(this.pkg.instances, instance => instance.id ?? instance.instanceName).forEach(
       instance => {
-        const instancePath = path.join(igPath, 'input', 'resources', instance.getFileName());
+        const instanceIdentifier = instance.id ?? instance.instanceName;
+        const fileName = instance.getFileName();
+        const instancePath = path.join(igPath, 'input', 'resources', fileName);
         outputJSONSync(instancePath, instance.toJSON(), { spaces: 2 });
         this.ig.definition.resource.push({
           reference: {
-            reference: `${instance.resourceType}/${instance.id ?? instance.instanceName}`
+            reference: `${instance.resourceType}/${instanceIdentifier}`
           },
-          name: instance.getFileName().slice(0, -5), // Slice off the .json of the file name
+          name: fileName.slice(0, -5), // Slice off the .json of the file name
           exampleBoolean: true
         });
       }
