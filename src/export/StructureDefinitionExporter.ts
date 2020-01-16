@@ -85,7 +85,8 @@ export class StructureDefinitionExporter implements Fishable {
             const target = structDef.getReferenceName(rule.path, element);
             element.constrainType(rule.types, this, target);
           } else if (rule instanceof ValueSetRule) {
-            element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
+            const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
+            element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
             const isExtension = element.type?.length === 1 && element.type[0].code === 'Extension';
             if (isExtension && !element.slicing) {

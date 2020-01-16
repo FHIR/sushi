@@ -1,7 +1,14 @@
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Profile, Extension, FshCode, FshReference, Instance } from '../../src/fshtypes';
+import {
+  Profile,
+  Extension,
+  FshCode,
+  FshReference,
+  Instance,
+  FshValueSet
+} from '../../src/fshtypes';
 import {
   CardRule,
   FlagRule,
@@ -341,6 +348,25 @@ describe('StructureDefinitionExporter', () => {
     expect(baseElement.binding.strength).toBe('preferred');
     expect(changedElement.binding.valueSet).toBe('http://example.org/fhir/ValueSet/some-valueset');
     expect(changedElement.binding.strength).toBe('extensible');
+  });
+
+  it('should apply a correct value set rule when the VS is referenced by name', () => {
+    const customCategoriesVS = new FshValueSet('CustomCategories');
+    customCategoriesVS.id = 'custom-categories';
+    doc.valueSets.set('CustomCategories', customCategoriesVS);
+
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    const vsRule = new ValueSetRule('category');
+    vsRule.valueSet = 'CustomCategories';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const element = sd.findElement('Observation.category');
+    expect(element.binding.valueSet).toBe('http://example.com/ValueSet/custom-categories');
+    expect(element.binding.strength).toBe('extensible');
   });
 
   it('should not apply a value set rule on an element that cannot support it', () => {
