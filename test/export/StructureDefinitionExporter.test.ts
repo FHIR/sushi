@@ -11,15 +11,13 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../../src/fshtypes/rules';
-import { loggerSpy } from '../testhelpers/loggerSpy';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn, ElementDefinitionType } from '../../src/fhirtypes';
-import { spyResolve } from '../testhelpers/spyResolve';
+import { loggerSpy, TestFisher } from '../testhelpers';
+import { ElementDefinitionType } from '../../src/fhirtypes';
 import path from 'path';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: StructureDefinitionExporter;
@@ -31,14 +29,13 @@ describe('StructureDefinitionExporter', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
     exporter = new StructureDefinitionExporter(defs, input);
-    spyResolve(exporter, resolve);
   });
 
   // Profile
@@ -194,7 +191,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCard = baseStructDef.findElement('Observation.subject');
     const changedCard = sd.findElement('Observation.subject');
@@ -216,7 +213,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCard = baseStructDef.findElement('Observation.status');
     const changedCard = sd.findElement('Observation.status');
@@ -240,7 +237,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('DiagnosticReport');
+    const baseStructDef = fisher.fishForStructureDefinition('DiagnosticReport');
 
     const baseElement = baseStructDef.findElement('DiagnosticReport.conclusion');
     const changedElement = sd.findElement('DiagnosticReport.conclusion');
@@ -263,7 +260,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('DiagnosticReport');
+    const baseStructDef = fisher.fishForStructureDefinition('DiagnosticReport');
 
     const baseElement = baseStructDef.findElement('DiagnosticReport.status');
     const changedElement = sd.findElement('DiagnosticReport.status');
@@ -286,7 +283,9 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('http://hl7.org/fhir/StructureDefinition/vitalsigns');
+    const baseStructDef = fisher.fishForStructureDefinition(
+      'http://hl7.org/fhir/StructureDefinition/vitalsigns'
+    );
 
     const baseElement = baseStructDef.findElement('Observation.code');
     const changedElement = sd.findElement('Observation.code');
@@ -311,7 +310,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Appointment');
+    const baseStructDef = fisher.fishForStructureDefinition('Appointment');
     const baseElement = baseStructDef.findElement('Appointment.description');
     const changedElement = sd.findElement('Appointment.description');
     expect(baseElement.binding).toBeUndefined();
@@ -330,7 +329,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
     const baseElement = baseStructDef.findElement('Observation.category');
     const changedElement = sd.findElement('Observation.category');
     expect(baseElement.binding.valueSet).toBe('http://hl7.org/fhir/ValueSet/observation-category');
@@ -350,7 +349,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
     const baseElement = baseStructDef.findElement('Observation.note');
     const changedElement = sd.findElement('Observation.note');
     expect(baseElement.binding).toBeUndefined();
@@ -369,7 +368,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
     const baseElement = baseStructDef.findElement('Observation.category');
     const changedElement = sd.findElement('Observation.category');
     expect(baseElement.binding.valueSet).toBe('http://hl7.org/fhir/ValueSet/observation-category');
@@ -392,7 +391,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
     const constrainedValue = sd.findElement('Observation.value[x]');
@@ -416,7 +415,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseSubject = baseStructDef.findElement('Observation.subject');
     const constrainedSubject = sd.findElement('Observation.subject');
@@ -451,7 +450,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(extension);
     const sd = exporter.extensionDefs[0];
-    const baseStructDef = resolve('Extension');
+    const baseStructDef = fisher.fishForStructureDefinition('Extension');
 
     const baseValueX = baseStructDef.findElement('Extension.value[x]');
     const constrainedValueX = sd.findElement('Extension.value[x]');
@@ -483,7 +482,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');
     const constrainedHasMember = sd.findElement('Observation.hasMember');
@@ -521,8 +520,8 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[1];
-    const baseStructDef = resolve('Observation');
+    const sd = exporter.profileDefs.find(d => d.name === 'Foo');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
     const constrainedValue = sd.findElement('Observation.value[x]');
@@ -554,7 +553,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[1];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseSubject = baseStructDef.findElement('Observation.subject');
     const constrainedSubject = sd.findElement('Observation.subject');
@@ -597,7 +596,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[2];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');
     const constrainedHasMember = sd.findElement('Observation.hasMember');
@@ -632,7 +631,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
     const constrainedValue = sd.findElement('Observation.value[x]');
@@ -654,7 +653,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCode = baseStructDef.findElement('Observation.code');
     const fixedCode = sd.findElement('Observation.code');
@@ -698,7 +697,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCode = baseStructDef.findElement('Observation.code');
     const fixedCode = sd.findElement('Observation.code');
@@ -719,7 +718,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('resprate');
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
 
@@ -866,7 +865,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('resprate');
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
     const fooSlice = sd.elements.find(e => e.id === 'Observation.code.coding:fooSlice');
@@ -886,7 +885,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('resprate');
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.identifier:barSlice');
 
@@ -925,7 +924,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const status = sd.findElement('Observation.status');
     const baseStatus = baseStructDef.findElement('Observation.status');
@@ -959,7 +958,7 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = exporter.profileDefs[0];
-    const baseStructDef = resolve('Observation');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     expect(sd.description).toBe(baseStructDef.description);
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);

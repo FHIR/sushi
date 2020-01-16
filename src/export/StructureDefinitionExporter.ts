@@ -12,20 +12,23 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../fshtypes/rules';
-import { logger } from '../utils/FSHLogger';
-import cloneDeep from 'lodash/cloneDeep';
+import { logger, Type, MasterFisher, Fishable, Metadata } from '../utils';
 import { replaceReferences } from '../fhirtypes/common';
-import { Type } from '../utils/Fishable';
+import { Package } from './Package';
 
 /**
  * The StructureDefinitionExporter is the class for exporting Profiles and Extensions.
  * The operations and structure of both exporters are very similar, so they currently share an exporter.
  */
-export class StructureDefinitionExporter {
+export class StructureDefinitionExporter implements Fishable {
   public readonly profileDefs: StructureDefinition[] = [];
   public readonly extensionDefs: StructureDefinition[] = [];
+  private fisher: MasterFisher;
 
-  constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {}
+  constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {
+    const pkg = new Package(this.profileDefs, this.extensionDefs, [], [], [], tank.config);
+    this.fisher = new MasterFisher(pkg, FHIRDefs, tank);
+  }
 
   private get structDefs(): StructureDefinition[] {
     return [...this.profileDefs, ...this.extensionDefs];
@@ -73,19 +76,19 @@ export class StructureDefinitionExporter {
    */
   private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
     for (const rule of fshDefinition.rules) {
-      const element = structDef.findElementByPath(rule.path, this.resolve.bind(this));
+      const element = structDef.findElementByPath(rule.path, this);
       if (element) {
         try {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
-            const replacedRule = replaceReferences(rule, this.tank, this.resolve);
+            const replacedRule = replaceReferences(rule, this.tank, this);
             element.fixValue(replacedRule.fixedValue);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
           } else if (rule instanceof OnlyRule) {
             const target = structDef.getReferenceName(rule.path, element);
-            element.constrainType(rule.types, this.resolve.bind(this), target);
+            element.constrainType(rule.types, this, target);
           } else if (rule instanceof ValueSetRule) {
             element.bindToVS(rule.valueSet, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
@@ -96,7 +99,7 @@ export class StructureDefinitionExporter {
             rule.items.forEach(item => {
               const slice = element.addSlice(item);
               if (isExtension) {
-                const extension = this.resolve(item);
+                const extension = this.fishForMetadata(item);
                 if (extension) {
                   if (!slice.type[0].profile) {
                     slice.type[0].profile = [];
@@ -107,17 +110,9 @@ export class StructureDefinitionExporter {
             });
           } else if (rule instanceof CaretValueRule) {
             if (rule.path !== '') {
-              element.setInstancePropertyByPath(
-                rule.caretPath,
-                rule.value,
-                this.resolve.bind(this)
-              );
+              element.setInstancePropertyByPath(rule.caretPath, rule.value, this);
             } else {
-              structDef.setInstancePropertyByPath(
-                rule.caretPath,
-                rule.value,
-                this.resolve.bind(this)
-              );
+              structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
             }
           }
         } catch (e) {
@@ -153,40 +148,31 @@ export class StructureDefinitionExporter {
     });
   }
 
-  /**
-   * Looks through FHIR definitions to find the definition of the passed-in type
-   * @param {string} type - The type to search for the FHIR definition of
-   * @returns {StructureDefinition | undefined}
-   */
-  resolve(type: string): StructureDefinition | undefined {
-    const alias = this.tank.resolveAlias(type);
-    type = alias ? alias : type;
-    const json = this.FHIRDefs.fishForFHIR(
-      type,
-      Type.Resource,
-      Type.Type,
-      Type.Profile,
-      Type.Extension
-    );
-    if (json) {
-      return StructureDefinition.fromJSON(json);
-      // Maybe it's a FSH-defined definition and not a FHIR one
-    } else {
-      let structDef = cloneDeep(
-        this.structDefs.find(sd => sd.name === type || sd.id === type || sd.url === type)
-      );
-      if (!structDef) {
-        // If we find a FSH definition, then we can export and resolve for its type again
-        const fshDefinition = this.tank.fish(type, Type.Profile, Type.Extension) as
-          | Profile
-          | Extension;
-        if (fshDefinition) {
-          this.exportStructDef(fshDefinition);
-          structDef = this.resolve(fshDefinition.name);
-        }
+  fishForFHIR(item: string, ...types: Type[]) {
+    // TODO: Consider moving this into a more sophisticated MasterFisher
+    item = this.tank.resolveAlias(item) ?? item;
+    let result = this.fisher.fishForFHIR(item, ...types);
+    if (
+      result == null &&
+      (types.length === 0 || types.some(t => t === Type.Profile || t === Type.Extension))
+    ) {
+      // If we find a FSH definition, then we can export and fish for it again
+      const fshDefinition = this.tank.fish(item, Type.Profile, Type.Extension) as
+        | Profile
+        | Extension;
+      if (fshDefinition) {
+        this.exportStructDef(fshDefinition);
+        result = this.fisher.fishForFHIR(item, ...types);
       }
-      return structDef;
     }
+    return result;
+  }
+
+  fishForMetadata(item: string, ...types: Type[]): Metadata {
+    // TODO: Consider moving this into a more sophisticated MasterFisher
+    item = this.tank.resolveAlias(item) ?? item;
+    // If it's in the tank, it can get the metadata from there (no need to export like in fishForFHIR)
+    return this.fisher.fishForMetadata(item, ...types);
   }
 
   /**
@@ -201,13 +187,14 @@ export class StructureDefinitionExporter {
     }
 
     const parentName = fshDefinition.parent || 'Resource';
-    const structDef = this.resolve(parentName);
+    const json = this.fishForFHIR(parentName);
 
     // If we still don't have a resolution, then it's not defined
-    if (!structDef) {
+    if (!json) {
       throw new ParentNotDefinedError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
     }
 
+    const structDef = StructureDefinition.fromJSON(json);
     this.setMetadata(structDef, fshDefinition);
     this.setRules(structDef, fshDefinition);
     this.validateStructureDefinition(structDef);

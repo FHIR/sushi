@@ -1,17 +1,16 @@
-import cloneDeep from 'lodash/cloneDeep';
-import { getResolver } from '../testhelpers/getResolver';
+import { TestFisher } from '../testhelpers';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType } from '../../src/fhirtypes';
-import { ResolveFn } from '../../src/fhirtypes';
+import { Type } from '../../src/utils';
+import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
-import { Type } from '../../src/utils/Fishable';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -19,16 +18,16 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
+    observation = fisher.fishForStructureDefinition('Observation');
   });
 
   describe('#constrainType()', () => {
     it('should allow a choice to be constrained to a subset', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      valueX.constrainType([{ type: 'Quantity' }, { type: 'integer' }], resolve);
+      valueX.constrainType([{ type: 'Quantity' }, { type: 'integer' }], fisher);
       expect(valueX.type).toHaveLength(2);
       expect(valueX.type[0]).toEqual(new ElementDefinitionType('Quantity'));
       expect(valueX.type[1]).toEqual(new ElementDefinitionType('integer'));
@@ -38,7 +37,7 @@ describe('ElementDefinition', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.constrainType(
         [{ type: 'Period' }, { type: 'integer' }, { type: 'Quantity' }, { type: 'Ratio' }],
-        resolve
+        fisher
       );
       expect(valueX.type).toHaveLength(4);
       expect(valueX.type[0]).toEqual(new ElementDefinitionType('Quantity'));
@@ -49,21 +48,21 @@ describe('ElementDefinition', () => {
 
     it('should allow a choice to be constrained to a single item', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      valueX.constrainType([{ type: 'Quantity' }], resolve);
+      valueX.constrainType([{ type: 'Quantity' }], fisher);
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual(new ElementDefinitionType('Quantity'));
     });
 
     it('should allow a choice to be constrained to a single item by its URL', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      valueX.constrainType([{ type: 'http://hl7.org/fhir/StructureDefinition/Quantity' }], resolve);
+      valueX.constrainType([{ type: 'http://hl7.org/fhir/StructureDefinition/Quantity' }], fisher);
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual(new ElementDefinitionType('Quantity'));
     });
 
     it('should allow a choice to be constrained to a single profile', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      valueX.constrainType([{ type: 'SimpleQuantity' }], resolve);
+      valueX.constrainType([{ type: 'SimpleQuantity' }], fisher);
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual(
         new ElementDefinitionType('Quantity').withProfiles(
@@ -74,7 +73,7 @@ describe('ElementDefinition', () => {
 
     it('should allow a resource type to be constrained to multiple profiles', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      valueX.constrainType([{ type: 'SimpleQuantity' }, { type: 'MoneyQuantity' }], resolve);
+      valueX.constrainType([{ type: 'SimpleQuantity' }, { type: 'MoneyQuantity' }], fisher);
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual(
         new ElementDefinitionType('Quantity').withProfiles(
@@ -89,20 +88,17 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow Resource to be constrained to a resource', () => {
-      const bundle = resolve('Bundle');
+      const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
-      entryResource.constrainType([{ type: 'Patient' }], resolve);
+      entryResource.constrainType([{ type: 'Patient' }], fisher);
       expect(entryResource.type).toHaveLength(1);
       expect(entryResource.type[0]).toEqual(new ElementDefinitionType('Patient'));
     });
 
     it('should allow Resource to be constrained to a profile', () => {
-      const bundle = resolve('Bundle');
+      const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
-      entryResource.constrainType(
-        [{ type: 'http://hl7.org/fhir/StructureDefinition/bp' }],
-        resolve
-      );
+      entryResource.constrainType([{ type: 'http://hl7.org/fhir/StructureDefinition/bp' }], fisher);
       expect(entryResource.type).toHaveLength(1);
       expect(entryResource.type[0]).toEqual(
         new ElementDefinitionType('Observation').withProfiles(
@@ -112,7 +108,7 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow Resource to be constrained to multiple resources and profiles', () => {
-      const bundle = resolve('Bundle');
+      const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
       entryResource.constrainType(
         [
@@ -122,7 +118,7 @@ describe('ElementDefinition', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/familymemberhistory-genetic' },
           { type: 'http://hl7.org/fhir/StructureDefinition/Procedure' }
         ],
-        resolve
+        fisher
       );
       expect(entryResource.type).toHaveLength(4);
       expect(entryResource.type[0]).toEqual(new ElementDefinitionType('Practitioner'));
@@ -142,7 +138,7 @@ describe('ElementDefinition', () => {
 
     it('should allow a choice to be constrained such that only the target type is constrained to a profile and others remain as-is', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      valueX.constrainType([{ type: 'SimpleQuantity' }], resolve, 'Quantity');
+      valueX.constrainType([{ type: 'SimpleQuantity' }], fisher, 'Quantity');
       expect(valueX.type).toHaveLength(11);
       expect(valueX.type[0]).toEqual(
         new ElementDefinitionType('Quantity').withProfiles(
@@ -156,7 +152,7 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow Resource to be constrained to multiple resources and profiles when it is specifically targeted', () => {
-      const bundle = resolve('Bundle');
+      const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
       entryResource.constrainType(
         [
@@ -166,7 +162,7 @@ describe('ElementDefinition', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/familymemberhistory-genetic' },
           { type: 'http://hl7.org/fhir/StructureDefinition/Procedure' }
         ],
-        resolve,
+        fisher,
         'Resource'
       );
       expect(entryResource.type).toHaveLength(4);
@@ -192,7 +188,7 @@ describe('ElementDefinition', () => {
           { type: 'Practitioner', isReference: true },
           { type: 'Organization', isReference: true }
         ],
-        resolve
+        fisher
       );
       expect(performer.type).toHaveLength(1);
       expect(performer.type[0]).toEqual(
@@ -205,7 +201,7 @@ describe('ElementDefinition', () => {
 
     it('should allow a reference to multiple resource types to be constrained to a reference to a single type', () => {
       const performer = observation.elements.find(e => e.id === 'Observation.performer');
-      performer.constrainType([{ type: 'Organization', isReference: true }], resolve);
+      performer.constrainType([{ type: 'Organization', isReference: true }], fisher);
       expect(performer.type).toHaveLength(1);
       expect(performer.type[0]).toEqual(
         new ElementDefinitionType('Reference').withTargetProfiles(
@@ -218,7 +214,7 @@ describe('ElementDefinition', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
       subject.constrainType(
         [{ type: 'http://hl7.org/fhir/StructureDefinition/actualgroup', isReference: true }],
-        resolve
+        fisher
       );
       expect(subject.type).toHaveLength(1);
       expect(subject.type[0]).toEqual(
@@ -235,7 +231,7 @@ describe('ElementDefinition', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
           { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true }
         ],
-        resolve
+        fisher
       );
       expect(hasMember.type).toHaveLength(1);
       expect(hasMember.type[0]).toEqual(
@@ -253,7 +249,7 @@ describe('ElementDefinition', () => {
           { type: 'Patient', isReference: true },
           { type: 'http://hl7.org/fhir/StructureDefinition/actualgroup', isReference: true }
         ],
-        resolve
+        fisher
       );
       expect(subject.type).toHaveLength(1);
       expect(subject.type[0]).toEqual(
@@ -276,7 +272,7 @@ describe('ElementDefinition', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
           { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true }
         ],
-        resolve
+        fisher
       );
       expect(hasMember.type).toHaveLength(1);
       expect(hasMember.type[0]).toEqual(
@@ -289,7 +285,7 @@ describe('ElementDefinition', () => {
 
     it('should allow a reference to Any to be constrained to a reference to a resource', () => {
       const focus = observation.elements.find(e => e.id === 'Observation.focus');
-      focus.constrainType([{ type: 'Practitioner', isReference: true }], resolve);
+      focus.constrainType([{ type: 'Practitioner', isReference: true }], fisher);
       expect(focus.type).toHaveLength(1);
       expect(focus.type[0]).toEqual(
         new ElementDefinitionType('Reference').withTargetProfiles(
@@ -302,7 +298,7 @@ describe('ElementDefinition', () => {
       const focus = observation.elements.find(e => e.id === 'Observation.focus');
       focus.constrainType(
         [{ type: 'http://hl7.org/fhir/StructureDefinition/bp', isReference: true }],
-        resolve
+        fisher
       );
       expect(focus.type).toHaveLength(1);
       expect(focus.type[0]).toEqual(
@@ -319,7 +315,7 @@ describe('ElementDefinition', () => {
           { type: 'Practitioner', isReference: true },
           { type: 'http://hl7.org/fhir/StructureDefinition/bp', isReference: true }
         ],
-        resolve
+        fisher
       );
       expect(focus.type).toHaveLength(1);
       expect(focus.type[0]).toEqual(
@@ -337,7 +333,7 @@ describe('ElementDefinition', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
           { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true }
         ],
-        resolve,
+        fisher,
         'Observation'
       );
       expect(hasMember.type).toHaveLength(1);
@@ -355,7 +351,7 @@ describe('ElementDefinition', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       const clone = cloneDeep(valueX);
       expect(() => {
-        clone.constrainType([{ type: 'decimal' }], resolve);
+        clone.constrainType([{ type: 'decimal' }], fisher);
       }).toThrow(/"decimal" does not match .* Quantity or CodeableConcept or string/);
       expect(clone).toEqual(valueX);
     });
@@ -364,7 +360,7 @@ describe('ElementDefinition', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.performer');
       const clone = cloneDeep(valueX);
       expect(() => {
-        clone.constrainType([{ type: 'Medication', isReference: true }], resolve);
+        clone.constrainType([{ type: 'Medication', isReference: true }], fisher);
       }).toThrow(
         /"Reference\(Medication\)" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/Practitioner | http:\/\/hl7.org\/fhir\/StructureDefinition\/PractitionerRole .*\)/
       );
@@ -372,11 +368,11 @@ describe('ElementDefinition', () => {
     });
 
     it('should throw InvalidTypeError when attempting to constrain Resource to a reference', () => {
-      const bundle = resolve('Bundle');
+      const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
       const clone = cloneDeep(entryResource);
       expect(() => {
-        clone.constrainType([{ type: 'Procedure', isReference: true }], resolve);
+        clone.constrainType([{ type: 'Procedure', isReference: true }], fisher);
       }).toThrow(/"Reference\(Procedure\)" does not match .* Resource/);
       expect(clone).toEqual(entryResource);
     });
@@ -392,7 +388,7 @@ describe('ElementDefinition', () => {
               isReference: true
             }
           ],
-          resolve,
+          fisher,
           'FamilyMemberHistory'
         );
       }).toThrow(
@@ -405,7 +401,7 @@ describe('ElementDefinition', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       const clone = cloneDeep(valueX);
       expect(() => {
-        clone.constrainType([{ type: 'SimpleQuantity' }], resolve, 'CodeableConcept');
+        clone.constrainType([{ type: 'SimpleQuantity' }], fisher, 'CodeableConcept');
       }).toThrow(/"SimpleQuantity" does not match .* CodeableConcept/);
       expect(clone).toEqual(valueX);
     });
@@ -416,7 +412,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         clone.constrainType(
           [{ type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true }],
-          resolve,
+          fisher,
           'QuestionnaireResponse'
         );
       }).toThrow(
@@ -426,11 +422,11 @@ describe('ElementDefinition', () => {
     });
 
     it('should throw InvalidTypeError when attempting to constrain a reference when the target type is Resource', () => {
-      const bundle = resolve('Bundle');
+      const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
       const clone = cloneDeep(entryResource);
       expect(() => {
-        clone.constrainType([{ type: 'Procedure', isReference: true }], resolve, 'Resource');
+        clone.constrainType([{ type: 'Procedure', isReference: true }], fisher, 'Resource');
       }).toThrow(/"Reference\(Procedure\)" does not match .* Resource/);
       expect(clone).toEqual(entryResource);
     });
@@ -439,7 +435,7 @@ describe('ElementDefinition', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       const clone = cloneDeep(valueX);
       expect(() => {
-        clone.constrainType([{ type: 'Quantity' }, { type: 'Monocle' }], resolve);
+        clone.constrainType([{ type: 'Quantity' }, { type: 'Monocle' }], fisher);
       }).toThrow(/No definition for the type "Monocle" could be found./);
       expect(clone).toEqual(valueX);
     });
@@ -453,7 +449,7 @@ describe('ElementDefinition', () => {
             { type: 'Practitioner', isReference: true },
             { type: 'Juggler', isReference: true }
           ],
-          resolve
+          fisher
         );
       }).toThrow(/No definition for the type "Juggler" could be found./);
       expect(clone).toEqual(performer);
@@ -465,7 +461,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         clone.constrainType(
           [{ type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true }],
-          resolve,
+          fisher,
           'VitalBillboards'
         );
       }).toThrow(/No definition for the type "VitalBillboards" could be found./);

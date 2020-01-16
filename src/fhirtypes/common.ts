@@ -1,28 +1,28 @@
-import { ResolveFn, StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
+import { StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
 import { FixedValueRule } from '../fshtypes/rules';
 import { FshReference, Instance } from '../fshtypes';
 import { FSHTank } from '../import';
+import { Type, Fishable } from '../utils/Fishable';
 import cloneDeep = require('lodash/cloneDeep');
-import { Type } from '../utils/Fishable';
 
 /**
  * This function sets an instance property of an SD or ED if possible
  * @param {StructureDefinition | ElementDefinition} - The instance to fix a value on
  * @param {string} path - The path to fix a value at
  * @param {any} value - The value to fix
- * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+ * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  */
 export function setPropertyOnDefinitionInstance(
   instance: StructureDefinition | ElementDefinition,
   path: string,
   value: any,
-  resolve: ResolveFn = () => undefined
+  fisher: Fishable
 ): void {
-  const structureDefinitionStructureDefinition = instance.getOwnStructureDefinition(resolve);
+  const structureDefinitionStructureDefinition = instance.getOwnStructureDefinition(fisher);
   const { fixedValue, pathParts } = structureDefinitionStructureDefinition.validateValueAtPath(
     path,
     value,
-    resolve
+    fisher
   );
   setPropertyOnInstance(instance, pathParts, fixedValue);
 }
@@ -115,18 +115,24 @@ export function getArrayIndex(pathPart: PathPart): number {
  * Replaces references to instances by the correct path to that instance
  * @param {FixedValueRule} rule - The rule to replace references on
  * @param {FSHTank} tank - The tank holding the instances
- * @param {ResolveFn} resolve - A function that can resolve to Structure Definitions
+ * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  * @returns {FixedValueRule} a clone of the rule if replacing is done, otherwise the original rule
  */
 export function replaceReferences(
   rule: FixedValueRule,
   tank: FSHTank,
-  resolve: ResolveFn
+  fisher: Fishable
 ): FixedValueRule {
   let clone: FixedValueRule;
   if (rule.fixedValue instanceof FshReference) {
     const instance = tank.fish(rule.fixedValue.reference, Type.Instance) as Instance;
-    const instanceSD = resolve(instance?.instanceOf);
+    const instanceSD = fisher.fishForFHIR(
+      instance?.instanceOf,
+      Type.Resource,
+      Type.Type,
+      Type.Profile,
+      Type.Extension
+    );
     // If we can't find a matching instance, just leave the reference as is
     if (instance && instanceSD) {
       // If the instance has a rule setting id, that overrides instance.id

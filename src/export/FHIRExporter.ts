@@ -28,7 +28,7 @@ export class FHIRExporter {
     this.instanceExporter = new InstanceExporter(
       this.FHIRDefs,
       tank,
-      this.structureDefinitionExporter.resolve.bind(this.structureDefinitionExporter)
+      this.structureDefinitionExporter
     );
     this.valueSetExporter = new ValueSetExporter(tank);
     this.codeSystemExporter = new CodeSystemExporter(tank);

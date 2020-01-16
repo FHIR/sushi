@@ -1,15 +1,14 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn } from '../../src/fhirtypes';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
   let location: StructureDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -18,11 +17,11 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
-    location = resolve('Location');
+    observation = fisher.fishForStructureDefinition('Observation');
+    location = fisher.fishForStructureDefinition('Location');
   });
 
   describe('#fixBoolean', () => {

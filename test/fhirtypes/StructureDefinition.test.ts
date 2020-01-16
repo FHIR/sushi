@@ -3,12 +3,8 @@ import path from 'path';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import {
-  ElementDefinition,
-  ElementDefinitionType,
-  ResolveFn
-} from '../../src/fhirtypes/ElementDefinition';
-import { getResolver } from '../testhelpers/getResolver';
+import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
+import { TestFisher } from '../testhelpers';
 import { FshCode } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
 
@@ -16,7 +12,7 @@ describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let observation: StructureDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -24,9 +20,9 @@ describe('StructureDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
     // resolve observation once to ensure it is present in defs
-    observation = resolve('Observation');
+    observation = fisher.fishForStructureDefinition('Observation');
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
   });
   beforeEach(() => {
@@ -162,69 +158,69 @@ describe('StructureDefinition', () => {
     let respRate: StructureDefinition;
     let lipidProfile: StructureDefinition;
     beforeEach(() => {
-      respRate = resolve('resprate');
-      lipidProfile = resolve('lipidprofile');
+      respRate = fisher.fishForStructureDefinition('resprate');
+      lipidProfile = fisher.fishForStructureDefinition('lipidprofile');
     });
 
     // Simple paths (no brackets)
     it('should find an element by a path that exists', () => {
-      const status = observation.findElementByPath('status', resolve);
+      const status = observation.findElementByPath('status', fisher);
       expect(status).toBeDefined();
       expect(status.id).toBe('Observation.status');
     });
 
     it('should find a choice element by a path that exists', () => {
-      const valueX = observation.findElementByPath('value[x]', resolve);
+      const valueX = observation.findElementByPath('value[x]', fisher);
       expect(valueX).toBeDefined();
       expect(valueX.id).toBe('Observation.value[x]');
     });
 
     it('should find an element with children by a path that exists', () => {
-      const refRange = respRate.findElementByPath('referenceRange', resolve);
+      const refRange = respRate.findElementByPath('referenceRange', fisher);
       expect(refRange).toBeDefined();
       expect(refRange.id).toBe('Observation.referenceRange');
     });
 
     it('should find a child element by a path that exists', () => {
-      const refRangeLow = respRate.findElementByPath('referenceRange.low', resolve);
+      const refRangeLow = respRate.findElementByPath('referenceRange.low', fisher);
       expect(refRangeLow).toBeDefined();
       expect(refRangeLow.id).toBe('Observation.referenceRange.low');
     });
 
     it('should find the base element by an empty path', () => {
-      const observationElement = observation.findElementByPath('', resolve);
+      const observationElement = observation.findElementByPath('', fisher);
       expect(observationElement).toBeDefined();
       expect(observationElement.id).toBe('Observation');
     });
 
     it('should not find an element by non-existent path', () => {
-      const undefinedEl = observation.findElementByPath('foo', resolve);
+      const undefinedEl = observation.findElementByPath('foo', fisher);
       expect(undefinedEl).toBeUndefined();
     });
 
     // References
     it('should find a reference choice by path', () => {
-      const basedOnNoChoice = observation.findElementByPath('basedOn', resolve);
-      const basedOnChoice = observation.findElementByPath('basedOn[MedicationRequest]', resolve);
+      const basedOnNoChoice = observation.findElementByPath('basedOn', fisher);
+      const basedOnChoice = observation.findElementByPath('basedOn[MedicationRequest]', fisher);
       expect(basedOnChoice).toBeDefined();
       expect(basedOnChoice.id).toBe('Observation.basedOn');
       expect(basedOnChoice).toBe(basedOnNoChoice);
     });
 
     it('should not find an incorrect reference choice by path', () => {
-      const basedOn = observation.findElementByPath('basedOn[foo]', resolve);
+      const basedOn = observation.findElementByPath('basedOn[foo]', fisher);
       expect(basedOn).toBeUndefined();
     });
 
     // Slicing
     it('should find a sliced element by path', () => {
-      const VSCat = respRate.findElementByPath('category[VSCat]', resolve);
+      const VSCat = respRate.findElementByPath('category[VSCat]', fisher);
       expect(VSCat).toBeDefined();
       expect(VSCat.id).toBe('Observation.category:VSCat');
     });
 
     it('should find a child of a sliced element by path', () => {
-      const VSCatID = respRate.findElementByPath('category[VSCat].id', resolve);
+      const VSCatID = respRate.findElementByPath('category[VSCat].id', fisher);
       expect(VSCatID).toBeDefined();
       expect(VSCatID.id).toBe('Observation.category:VSCat.id');
     });
@@ -237,7 +233,7 @@ describe('StructureDefinition', () => {
         )
       );
       const reslice = StructureDefinition.fromJSON(jsonReslice);
-      const emailWorkEmail = reslice.findElementByPath('telecom[email][workEmail]');
+      const emailWorkEmail = reslice.findElementByPath('telecom[email][workEmail]', fisher);
       expect(emailWorkEmail).toBeDefined();
       expect(emailWorkEmail.sliceName).toBe('email/workEmail');
     });
@@ -245,9 +241,9 @@ describe('StructureDefinition', () => {
     // Choices
     it('should make explicit a non-existent choice element by path', () => {
       const originalLength = observation.elements.length;
-      const valueX = observation.findElementByPath('value[x]');
+      const valueX = observation.findElementByPath('value[x]', fisher);
       expect(valueX.slicing).toBeUndefined();
-      const valueQuantity = observation.findElementByPath('valueQuantity', resolve);
+      const valueQuantity = observation.findElementByPath('valueQuantity', fisher);
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantity.slicing).toBeUndefined();
@@ -261,10 +257,7 @@ describe('StructureDefinition', () => {
 
     it('should make explicit a non-existent choice element that must first be unfolded', () => {
       const originalLength = observation.elements.length;
-      const valueQuantity = observation.findElementByPath(
-        'extension.valueQuantity',
-        getResolver(defs)
-      );
+      const valueQuantity = observation.findElementByPath('extension.valueQuantity', fisher);
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.extension.value[x]:valueQuantity');
       expect(valueQuantity.sliceName).toBe('valueQuantity');
@@ -274,9 +267,9 @@ describe('StructureDefinition', () => {
 
     it('should make explicit a non-existent choice element by child path', () => {
       const originalLength = observation.elements.length;
-      const valueX = observation.findElementByPath('value[x]');
+      const valueX = observation.findElementByPath('value[x]', fisher);
       expect(valueX.slicing).toBeUndefined();
-      const valueQuantitySystem = observation.findElementByPath('valueQuantity.system', resolve);
+      const valueQuantitySystem = observation.findElementByPath('valueQuantity.system', fisher);
       expect(valueQuantitySystem).toBeDefined();
       expect(valueQuantitySystem.id).toBe('Observation.value[x]:valueQuantity.system');
       expect(valueQuantitySystem.path).toBe('Observation.value[x].system');
@@ -287,7 +280,7 @@ describe('StructureDefinition', () => {
 
     it('should find an already existing explicit choice element with slicing syntax', () => {
       const originalLength = respRate.elements.length;
-      const valueQuantity = respRate.findElementByPath('value[x][valueQuantity]');
+      const valueQuantity = respRate.findElementByPath('value[x][valueQuantity]', fisher);
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
       expect(respRate.elements.length).toBe(originalLength);
@@ -295,7 +288,7 @@ describe('StructureDefinition', () => {
 
     it('should find an already existing explicit choice element with name replacement syntax', () => {
       const originalLength = respRate.elements.length;
-      const valueQuantity = respRate.findElementByPath('valueQuantity');
+      const valueQuantity = respRate.findElementByPath('valueQuantity', fisher);
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
       expect(respRate.elements.length).toBe(originalLength);
@@ -304,7 +297,7 @@ describe('StructureDefinition', () => {
     // Unfolding
     it('should find an element that must be unfolded by path', () => {
       const originalLength = observation.elements.length;
-      const codeText = observation.findElementByPath('code.text', resolve);
+      const codeText = observation.findElementByPath('code.text', fisher);
       expect(codeText).toBeDefined();
       expect(codeText.id).toBe('Observation.code.text');
       expect(codeText.short).toBe('Plain text representation of the concept');
@@ -320,7 +313,7 @@ describe('StructureDefinition', () => {
         discriminator: [{ type: 'value', path: 'code' }]
       };
       component.addSlice('FooSlice');
-      const componentCode = observation.findElementByPath('component[FooSlice].code', resolve);
+      const componentCode = observation.findElementByPath('component[FooSlice].code', fisher);
       expect(componentCode).toBeDefined();
       expect(componentCode.id).toBe('Observation.component:FooSlice.code');
       expect(componentCode.path).toBe('Observation.component.code');
@@ -329,7 +322,7 @@ describe('StructureDefinition', () => {
 
     it('should find an element, whose name is contained in another element, that must be unfolded', () => {
       const originalLength = lipidProfile.elements.length;
-      const resultDisplay = lipidProfile.findElementByPath('result.display', resolve);
+      const resultDisplay = lipidProfile.findElementByPath('result.display', fisher);
       expect(resultDisplay).toBeDefined();
       expect(resultDisplay.id).toBe('DiagnosticReport.result.display');
       expect(lipidProfile.elements.length).toBe(originalLength + 6);
@@ -346,31 +339,31 @@ describe('StructureDefinition', () => {
 
     // Simple values
     it('should set an instance property which has a value', () => {
-      observation.setInstancePropertyByPath('version', '1.2.3', resolve);
+      observation.setInstancePropertyByPath('version', '1.2.3', fisher);
       expect(observation.version).toBe('1.2.3');
     });
 
     it('should set an instance property which must be created', () => {
-      observation.setInstancePropertyByPath('title', 'foo', resolve);
+      observation.setInstancePropertyByPath('title', 'foo', fisher);
       expect(observation.title).toBe('foo');
     });
 
     it('should not set an instance property which is being fixed incorrectly', () => {
       expect(() => {
-        observation.setInstancePropertyByPath('version', 1.2, resolve);
+        observation.setInstancePropertyByPath('version', 1.2, fisher);
       }).toThrow('Cannot fix number value: 1.2. Value does not match element type: string');
       expect(observation.version).toBe('4.0.1');
     });
 
     // Simple values in an array
     it('should add an instance property at the end of an array', () => {
-      observation.setInstancePropertyByPath('contact[2].telecom[0].value', 'foo', resolve);
+      observation.setInstancePropertyByPath('contact[2].telecom[0].value', 'foo', fisher);
       expect(observation.contact.length).toBe(3);
       expect(observation.contact[2]).toEqual({ telecom: [{ value: 'foo' }] });
     });
 
     it('should add an instance property in an array that must be empty filled', () => {
-      observation.setInstancePropertyByPath('contact[4].telecom[0].value', 'foo', resolve);
+      observation.setInstancePropertyByPath('contact[4].telecom[0].value', 'foo', fisher);
       expect(observation.contact.length).toBe(5);
       expect(observation.contact[4]).toEqual({ telecom: [{ value: 'foo' }] });
       expect(observation.contact[3]).toBeNull();
@@ -378,15 +371,15 @@ describe('StructureDefinition', () => {
     });
 
     it('should add an instance property in an array that has been empty filled', () => {
-      observation.setInstancePropertyByPath('contact[3].telecom[0].value', 'foo', resolve);
-      observation.setInstancePropertyByPath('contact[2].telecom[0].value', 'bar', resolve);
+      observation.setInstancePropertyByPath('contact[3].telecom[0].value', 'foo', fisher);
+      observation.setInstancePropertyByPath('contact[2].telecom[0].value', 'bar', fisher);
       expect(observation.contact.length).toBe(4);
       expect(observation.contact[3]).toEqual({ telecom: [{ value: 'foo' }] });
       expect(observation.contact[2]).toEqual({ telecom: [{ value: 'bar' }] });
     });
 
     it('should change an instance property in an array', () => {
-      observation.setInstancePropertyByPath('contact[1].telecom[0].value', 'foo', resolve);
+      observation.setInstancePropertyByPath('contact[1].telecom[0].value', 'foo', fisher);
       expect(observation.contact.length).toBe(2);
       expect(observation.contact[1]).toEqual({ telecom: [{ value: 'foo', system: 'url' }] });
     });
@@ -395,7 +388,7 @@ describe('StructureDefinition', () => {
       observation.setInstancePropertyByPath(
         'contact[0].telecom[0].period.start',
         '2019-11-25',
-        resolve
+        fisher
       );
       expect(observation.contact.length).toBe(2);
       expect(observation.contact[0]).toEqual({
@@ -405,7 +398,7 @@ describe('StructureDefinition', () => {
 
     // Complex values
     it('should set a complex instance property on a newly created array', () => {
-      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, resolve);
+      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, fisher);
       expect(observation.jurisdiction.length).toBe(1);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'foo', system: 'http://example.com' }]
@@ -413,7 +406,7 @@ describe('StructureDefinition', () => {
     });
 
     it('should set a complex instance property on a newly created array, with implied 0 index', () => {
-      observation.setInstancePropertyByPath('jurisdiction', fooCode, resolve);
+      observation.setInstancePropertyByPath('jurisdiction', fooCode, fisher);
       expect(observation.jurisdiction.length).toBe(1);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'foo', system: 'http://example.com' }]
@@ -421,8 +414,8 @@ describe('StructureDefinition', () => {
     });
 
     it('should set a complex instance property over a value that already exists', () => {
-      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, resolve);
-      observation.setInstancePropertyByPath('jurisdiction[0]', barCode, resolve);
+      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, fisher);
+      observation.setInstancePropertyByPath('jurisdiction[0]', barCode, fisher);
       expect(observation.jurisdiction.length).toBe(1);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'bar', system: 'http://example.com' }]
@@ -430,8 +423,8 @@ describe('StructureDefinition', () => {
     });
 
     it('should set a complex instance property on an existing array', () => {
-      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, resolve);
-      observation.setInstancePropertyByPath('jurisdiction[1]', barCode, resolve);
+      observation.setInstancePropertyByPath('jurisdiction[0]', fooCode, fisher);
+      observation.setInstancePropertyByPath('jurisdiction[1]', barCode, fisher);
       expect(observation.jurisdiction.length).toBe(2);
       expect(observation.jurisdiction[0]).toEqual({
         coding: [{ code: 'foo', system: 'http://example.com' }]
@@ -443,16 +436,16 @@ describe('StructureDefinition', () => {
 
     // Children of primitives
     it('should set a child of a primitive instance property which has a value', () => {
-      observation.setInstancePropertyByPath('version', 'foo', resolve);
-      observation.setInstancePropertyByPath('version.id', 'bar', resolve);
+      observation.setInstancePropertyByPath('version', 'foo', fisher);
+      observation.setInstancePropertyByPath('version.id', 'bar', fisher);
       expect(observation.version).toBe('foo');
       // @ts-ignore
       expect(observation._version.id).toBe('bar');
     });
 
     it('should set a child of a primitive instance property array which has a value', () => {
-      observation.setInstancePropertyByPath('contextInvariant[0]', 'foo', resolve);
-      observation.setInstancePropertyByPath('contextInvariant[0].id', 'bar', resolve);
+      observation.setInstancePropertyByPath('contextInvariant[0]', 'foo', fisher);
+      observation.setInstancePropertyByPath('contextInvariant[0].id', 'bar', fisher);
       expect(observation.contextInvariant.length).toBe(1);
       expect(observation.contextInvariant[0]).toBe('foo');
       // @ts-ignore
@@ -460,8 +453,8 @@ describe('StructureDefinition', () => {
     });
 
     it('should set a child of a primitive instance property array and null fill the array', () => {
-      observation.setInstancePropertyByPath('contextInvariant[1]', 'foo', resolve);
-      observation.setInstancePropertyByPath('contextInvariant[1].id', 'bar', resolve);
+      observation.setInstancePropertyByPath('contextInvariant[1]', 'foo', fisher);
+      observation.setInstancePropertyByPath('contextInvariant[1].id', 'bar', fisher);
       expect(observation.contextInvariant.length).toBe(2);
       expect(observation.contextInvariant[0]).toBeNull();
       expect(observation.contextInvariant[1]).toBe('foo');
@@ -474,13 +467,13 @@ describe('StructureDefinition', () => {
     // Invalid access
     it('should throw an InvalidElementAccessError when trying to access the snapshot', () => {
       expect(() => {
-        observation.setInstancePropertyByPath('snapshot.element[0]', 'foo', resolve);
+        observation.setInstancePropertyByPath('snapshot.element[0]', 'foo', fisher);
       }).toThrow('Cannot directly access differential or snapshot with path: snapshot.element[0]');
     });
 
     it('should throw an InvalidElementAccessError when trying to access the differential', () => {
       expect(() => {
-        observation.setInstancePropertyByPath('differential.element[0]', 'foo', resolve);
+        observation.setInstancePropertyByPath('differential.element[0]', 'foo', fisher);
       }).toThrow(
         'Cannot directly access differential or snapshot with path: differential.element[0]'
       );
@@ -492,14 +485,18 @@ describe('StructureDefinition', () => {
     let respRate: StructureDefinition;
     let CSSPC: StructureDefinition;
     beforeEach(() => {
-      structureDefinition = resolve('StructureDefinition');
-      respRate = resolve('resprate');
-      CSSPC = resolve('capabilitystatement-search-parameter-combination');
+      structureDefinition = fisher.fishForStructureDefinition('StructureDefinition');
+      respRate = fisher.fishForStructureDefinition('resprate');
+      CSSPC = fisher.fishForStructureDefinition('capabilitystatement-search-parameter-combination');
     });
 
     // Simple value
     it('should allow fixing an instance value', () => {
-      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath('version', '4.0.2');
+      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
+        'version',
+        '4.0.2',
+        fisher
+      );
       expect(fixedValue).toBe('4.0.2');
       expect(pathParts.length).toBe(1);
       expect(pathParts[0]).toEqual({ primitive: true, base: 'version' });
@@ -508,13 +505,13 @@ describe('StructureDefinition', () => {
     // Invalid paths
     it('should not allow fixing an instance value with an incorrect path', () => {
       expect(() => {
-        structureDefinition.validateValueAtPath('Version', '4.0.2');
+        structureDefinition.validateValueAtPath('Version', '4.0.2', fisher);
       }).toThrow('Cannot resolve element from path: Version');
     });
 
     it('should not allow fixing an instance value with an incorrect value', () => {
       expect(() => {
-        structureDefinition.validateValueAtPath('version', true);
+        structureDefinition.validateValueAtPath('version', true, fisher);
       }).toThrow('Cannot fix boolean value: true. Value does not match element type: string');
     });
 
@@ -524,7 +521,7 @@ describe('StructureDefinition', () => {
       );
       version.max = '0';
       expect(() => {
-        structureDefinition.validateValueAtPath('version', '4.0.2');
+        structureDefinition.validateValueAtPath('version', '4.0.2', fisher);
       }).toThrow('Cannot resolve element from path: version');
     });
 
@@ -533,7 +530,7 @@ describe('StructureDefinition', () => {
       const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
         'identifier[0].value',
         'foo',
-        resolve
+        fisher
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
@@ -545,7 +542,7 @@ describe('StructureDefinition', () => {
       const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
         'identifier.value',
         'foo',
-        resolve
+        fisher
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
@@ -558,7 +555,7 @@ describe('StructureDefinition', () => {
       const { fixedValue, pathParts } = respRate.validateValueAtPath(
         'code.coding[RespRateCode].id',
         'foo',
-        getResolver(defs)
+        fisher
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
@@ -569,13 +566,13 @@ describe('StructureDefinition', () => {
 
     it('should not allow using array brackets when an element is not an array', () => {
       expect(() => {
-        structureDefinition.validateValueAtPath('version[0]', 'foo', resolve);
+        structureDefinition.validateValueAtPath('version[0]', 'foo', fisher);
       }).toThrow('Cannot resolve element from path: version[0]');
     });
 
     it('should not add an instance property in an array with negative index', () => {
       expect(() => {
-        structureDefinition.validateValueAtPath('contact[-1].telecom[0].value', 'foo', resolve);
+        structureDefinition.validateValueAtPath('contact[-1].telecom[0].value', 'foo', fisher);
       }).toThrow('Cannot resolve element from path: contact[-1].telecom[0].value');
     });
 
@@ -585,7 +582,7 @@ describe('StructureDefinition', () => {
       );
       contact.max = '3';
       expect(() => {
-        structureDefinition.validateValueAtPath('contact[4].telecom[0].value', 'foo', resolve);
+        structureDefinition.validateValueAtPath('contact[4].telecom[0].value', 'foo', fisher);
       }).toThrow('Cannot resolve element from path: contact[4].telecom[0].value');
     });
 
@@ -594,7 +591,7 @@ describe('StructureDefinition', () => {
       const { fixedValue, pathParts } = respRate.validateValueAtPath(
         'category[VSCat].coding[0].version',
         'foo',
-        resolve
+        fisher
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
@@ -607,7 +604,7 @@ describe('StructureDefinition', () => {
       const { fixedValue, pathParts } = CSSPC.validateValueAtPath(
         'extension[required][3].value[x]',
         'foo',
-        resolve
+        fisher
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
@@ -622,7 +619,7 @@ describe('StructureDefinition', () => {
       const { fixedValue, pathParts } = CSSPC.validateValueAtPath(
         'extension[2].url',
         'foo',
-        getResolver(defs)
+        fisher
       );
       expect(fixedValue).toBe('foo');
       expect(pathParts.length).toBe(2);

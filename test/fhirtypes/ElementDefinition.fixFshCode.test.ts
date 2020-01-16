@@ -1,10 +1,9 @@
-import cloneDeep from 'lodash/cloneDeep';
-import { getResolver } from '../testhelpers/getResolver';
+import { TestFisher } from '../testhelpers';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
-import { ResolveFn } from '../../src/fhirtypes';
+import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -12,7 +11,7 @@ describe('ElementDefinition', () => {
   let observation: StructureDefinition;
   let fooBarCode: FshCode;
   let barFooCode: FshCode;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -20,10 +19,10 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
+    observation = fisher.fishForStructureDefinition('Observation');
     fooBarCode = new FshCode('bar', 'http://foo.com');
     barFooCode = new FshCode('foo', 'http://bar.com');
   });
@@ -50,7 +49,7 @@ describe('ElementDefinition', () => {
 
     it('should fix a code to a Coding', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
-      concept.unfold(resolve);
+      concept.unfold(fisher);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       coding.fixFshCode(fooBarCode);
       expect(coding.patternCoding).toEqual({ code: 'bar', system: 'http://foo.com' });
@@ -58,7 +57,7 @@ describe('ElementDefinition', () => {
 
     it('should throw CodeAlreadyFixedError when fixing a code to a Coding fixed to a different code', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
-      concept.unfold(resolve);
+      concept.unfold(fisher);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       // Setup original fixed code
       coding.fixFshCode(fooBarCode);

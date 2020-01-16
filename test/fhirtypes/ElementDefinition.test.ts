@@ -1,14 +1,10 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import {
-  ElementDefinition,
-  ElementDefinitionType,
-  ResolveFn
-} from '../../src/fhirtypes/ElementDefinition';
+import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { getResolver } from '../testhelpers/getResolver';
-import path from 'path';
+import { TestFisher } from '../testhelpers';
 import { Type } from '../../src/utils/Fishable';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -18,7 +14,7 @@ describe('ElementDefinition', () => {
   let observation: StructureDefinition;
   let valueX: ElementDefinition;
   let valueId: ElementDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -26,9 +22,9 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
     // resolve observation once to ensure it is present in defs
-    observation = resolve('Observation');
+    observation = fisher.fishForStructureDefinition('Observation');
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
     jsonValueX = jsonObservation.snapshot.element[21];
     jsonValueId = jsonObservation.snapshot.element[1];
@@ -179,7 +175,7 @@ describe('ElementDefinition', () => {
 
     it('should detect diffs and non-diffs correctly when elements are unfolded', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
-      code.unfold(resolve);
+      code.unfold(fisher);
       const codeCoding = observation.elements.find(e => e.id === 'Observation.code.coding');
       const codeText = observation.elements.find(e => e.id === 'Observation.code.text');
       // Unfolded elements haven't been changed from their base definitions, so no diff...
@@ -306,7 +302,7 @@ describe('ElementDefinition', () => {
       const codeIdx = observation.elements.findIndex(e => e.path === 'Observation.code');
       const parent = observation.elements[codeIdx];
       expect(observation.elements[codeIdx + 1].id).toBe('Observation.subject');
-      const newElements = parent.unfold(resolve);
+      const newElements = parent.unfold(fisher);
       expect(newElements).toHaveLength(4);
       expect(newElements[0].id).toBe('Observation.code.id');
       expect(newElements[1].id).toBe('Observation.code.extension');
@@ -330,7 +326,7 @@ describe('ElementDefinition', () => {
       };
       const componentSlice = component.addSlice('FooSlice');
       const componentSliceIdx = observation.elements.findIndex(e => e.id === componentSlice.id);
-      const newElements = componentSlice.unfold(resolve);
+      const newElements = componentSlice.unfold(fisher);
       expect(newElements).toHaveLength(8);
       expect(newElements[0].id).toBe('Observation.component:FooSlice.id');
       expect(newElements[1].id).toBe('Observation.component:FooSlice.extension');
@@ -372,7 +368,7 @@ describe('ElementDefinition', () => {
       const valueIdx = observation.elements.findIndex(e => e.path === 'Observation.value[x]');
       const parent = observation.elements[valueIdx];
       expect(observation.elements[valueIdx + 1].id).toBe('Observation.dataAbsentReason');
-      const newElements = parent.unfold(resolve);
+      const newElements = parent.unfold(fisher);
       expect(newElements).toEqual([]);
       expect(observation.elements).toHaveLength(numOriginalElements);
       expect(observation.elements[valueIdx + 1].id).toBe('Observation.dataAbsentReason');

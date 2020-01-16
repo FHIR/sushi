@@ -3,8 +3,7 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
 import { FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn } from '../../src/fhirtypes';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -12,7 +11,7 @@ describe('ElementDefinition', () => {
   let riskEvidenceSynthesis: StructureDefinition;
   let medicationRequest: StructureDefinition;
   let medication: StructureDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -20,12 +19,12 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
   });
   beforeEach(() => {
-    riskEvidenceSynthesis = resolve('RiskEvidenceSynthesis');
-    medicationRequest = resolve('MedicationRequest');
-    medication = resolve('Medication');
+    riskEvidenceSynthesis = fisher.fishForStructureDefinition('RiskEvidenceSynthesis');
+    medicationRequest = fisher.fishForStructureDefinition('MedicationRequest');
+    medication = fisher.fishForStructureDefinition('Medication');
   });
 
   describe('#fixValue', () => {

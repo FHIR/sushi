@@ -1,14 +1,8 @@
 import { FSHTank } from '../import/FSHTank';
-import {
-  StructureDefinition,
-  InstanceDefinition,
-  ResolveFn,
-  ElementDefinition,
-  PathPart
-} from '../fhirtypes';
+import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { FHIRDefinitions } from '../fhirdefs';
-import { logger } from '../utils/FSHLogger';
+import { logger, Fishable, Type } from '../utils';
 import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import isEmpty from 'lodash/isEmpty';
@@ -17,7 +11,7 @@ export class InstanceExporter {
   constructor(
     public readonly FHIRDefs: FHIRDefinitions,
     public readonly tank: FSHTank,
-    public readonly resolve: ResolveFn
+    public readonly fisher: Fishable
   ) {}
 
   private setFixedValues(
@@ -27,11 +21,11 @@ export class InstanceExporter {
   ): InstanceDefinition {
     // All rules will be FixValueRule
     fshInstanceDef.rules.forEach(rule => {
-      rule = replaceReferences(rule, this.tank, this.resolve);
+      rule = replaceReferences(rule, this.tank, this.fisher);
       const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
         rule.path,
         rule.fixedValue,
-        this.resolve
+        this.fisher
       );
 
       setPropertyOnInstance(instanceDef, pathParts, fixedValue);
@@ -41,7 +35,7 @@ export class InstanceExporter {
         path += `${path ? '.' : ''}${pathPart.base}`;
         // Add back non-numeric (slice) brackets
         pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
-        const element = instanceOfStructureDefinition.findElementByPath(path, this.resolve);
+        const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
         this.setFixedValuesForDirectChildren(element, pathParts.slice(0, i + 1), instanceDef);
       }
     });
@@ -105,15 +99,23 @@ export class InstanceExporter {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
-    const instanceOfStructureDefinition = this.resolve(fshDefinition.instanceOf);
+    const json = this.fisher.fishForFHIR(
+      fshDefinition.instanceOf,
+      Type.Resource,
+      Type.Type,
+      Type.Profile,
+      Type.Extension
+    );
 
-    if (!instanceOfStructureDefinition) {
+    if (!json) {
       throw new InstanceOfNotDefinedError(
         fshDefinition.name,
         fshDefinition.instanceOf,
         fshDefinition.sourceInfo
       );
     }
+
+    const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
 
     let instanceDef = new InstanceDefinition();
     instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type

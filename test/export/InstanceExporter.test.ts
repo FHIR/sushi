@@ -1,17 +1,13 @@
 import { InstanceExporter, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { ResolveFn } from '../../src/fhirtypes';
 import { Instance, Profile, FshCode, FshReference } from '../../src/fshtypes';
 import { FixedValueRule } from '../../src/fshtypes/rules';
-import { loggerSpy } from '../testhelpers/loggerSpy';
-import { getResolver } from '../testhelpers/getResolver';
-import { spyResolve } from '../testhelpers/spyResolve';
+import { loggerSpy } from '../testhelpers';
 import path from 'path';
 
 describe('InstanceExporter', () => {
   let defs: FHIRDefinitions;
-  let resolve: ResolveFn;
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: InstanceExporter;
@@ -24,19 +20,13 @@ describe('InstanceExporter', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
     structureDefinitionExporter = new StructureDefinitionExporter(defs, input);
-    spyResolve(structureDefinitionExporter, resolve);
-    exporter = new InstanceExporter(
-      defs,
-      input,
-      structureDefinitionExporter.resolve.bind(structureDefinitionExporter)
-    );
+    exporter = new InstanceExporter(defs, input, structureDefinitionExporter);
   });
 
   it('should output empty results with empty input', () => {

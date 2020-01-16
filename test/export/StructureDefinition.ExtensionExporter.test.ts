@@ -3,9 +3,6 @@ import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Extension } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { spyResolve } from '../testhelpers/spyResolve';
-import { ResolveFn } from '../../src/fhirtypes';
-import { getResolver } from '../testhelpers/getResolver';
 import path from 'path';
 
 describe('ExtensionExporter', () => {
@@ -13,7 +10,6 @@ describe('ExtensionExporter', () => {
   let doc: FSHDocument;
   let input: FSHTank;
   let exporter: StructureDefinitionExporter;
-  let resolve: ResolveFn;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -22,14 +18,12 @@ describe('ExtensionExporter', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
     exporter = new StructureDefinitionExporter(defs, input);
-    spyResolve(exporter, resolve);
   });
 
   it('should output empty results with empty input', () => {

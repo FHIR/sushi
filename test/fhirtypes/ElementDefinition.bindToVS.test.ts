@@ -1,15 +1,14 @@
-import cloneDeep from 'lodash/cloneDeep';
-import { getResolver } from '../testhelpers/getResolver';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { ResolveFn } from '../../src/fhirtypes';
+import { TestFisher } from '../testhelpers';
+import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -17,10 +16,10 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
+    observation = fisher.fishForStructureDefinition('Observation');
   });
 
   describe('#bindToVS()', () => {
@@ -33,7 +32,7 @@ describe('ElementDefinition', () => {
 
     it('should bind a value set on a Coding', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
-      concept.unfold(resolve);
+      concept.unfold(fisher);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       coding.bindToVS('http://myvaluesets.org/myvs', 'required');
       expect(coding.binding.valueSet).toBe('http://myvaluesets.org/myvs');

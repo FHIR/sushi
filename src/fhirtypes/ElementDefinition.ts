@@ -21,6 +21,7 @@ import {
   InvalidMaxOfSliceError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
+import { Fishable, Type } from '../utils/Fishable';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -215,12 +216,14 @@ export class ElementDefinition {
 
   /**
    * Get the StructureDefinition for ElementDefinition
-   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {StructureDefinition} the StructureDefinition of ElementDefinition
    */
-  getOwnStructureDefinition(resolve: ResolveFn = () => undefined): StructureDefinition {
+  getOwnStructureDefinition(fisher: Fishable): StructureDefinition {
     if (this._edStructureDefinition == null) {
-      this._edStructureDefinition = resolve('ElementDefinition');
+      this._edStructureDefinition = StructureDefinition.fromJSON(
+        fisher.fishForFHIR('ElementDefinition', Type.Type)
+      );
     }
     return this._edStructureDefinition;
   }
@@ -333,10 +336,10 @@ export class ElementDefinition {
    * This function sets an instance property of an ED if possible
    * @param {string} path - The path to the ElementDefinition to fix
    * @param {any} value - The value to fix
-   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
-  setInstancePropertyByPath(path: string, value: any, resolve: ResolveFn = () => undefined): void {
-    setPropertyOnDefinitionInstance(this, path, value, resolve);
+  setInstancePropertyByPath(path: string, value: any, fisher: Fishable): void {
+    setPropertyOnDefinitionInstance(this, path, value, fisher);
   }
 
   /**
@@ -442,7 +445,7 @@ export class ElementDefinition {
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.type}
    * @param {{ type: string; isReference?: boolean }[]} types - the set of constrained types,
    *   identified by id/type/url strings and an optional reference flag (defaults false)
-   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {string} [target] - a specific target type to constrain.  If supplied, will attempt to
    *   constrain only that type without affecting other types (in a choice or reference to a choice).
    * @throws {TypeNotFoundError} when a passed in type's definition cannot be found
@@ -451,11 +454,11 @@ export class ElementDefinition {
    */
   constrainType(
     types: { type: string; isReference?: boolean }[],
-    resolve: ResolveFn,
+    fisher: Fishable,
     target?: string
   ): void {
     // Establish the target types (if applicable)
-    const targetType = this.getTargetType(target, resolve);
+    const targetType = this.getTargetType(target, fisher);
     const targetTypes: ElementDefinitionType[] = targetType ? [targetType] : this.type;
 
     // Setup a map to store how each existing element type maps to the input types
@@ -464,7 +467,7 @@ export class ElementDefinition {
 
     // Loop through the input types and associate them to the element types in the map
     for (const type of types) {
-      const typeMatch = this.findTypeMatch(type, targetTypes, resolve);
+      const typeMatch = this.findTypeMatch(type, targetTypes, fisher);
       typeMatches.get(typeMatch.code).push(typeMatch);
     }
 
@@ -520,15 +523,21 @@ export class ElementDefinition {
    * Given a string representing a type or profile, will return this element's matching type, if
    * found -- with all other profiles or targetProfiles (e.g. references) removed from the type.
    * @param {string} target - the target to find a matching type for
-   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinitionType} the element's type that matches the target
    * @throws {TypeNotFoundError} when the target's definition cannot be found
    * @throws {InvalidTypeError} when the target doesn't match any existing types
    */
-  private getTargetType(target: string, resolve: ResolveFn): ElementDefinitionType {
+  private getTargetType(target: string, fisher: Fishable): ElementDefinitionType {
     let targetType: ElementDefinitionType;
     if (target) {
-      const targetSD = resolve(target);
+      const targetSD = fisher.fishForMetadata(
+        target,
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension
+      );
       if (targetSD == null) {
         throw new TypeNotFoundError(target);
       }
@@ -565,7 +574,7 @@ export class ElementDefinition {
    *   id/type/url string and an optional reference flag (defaults false)
    * @param {ElementDefinitionType[]} targetTypes - the element types that the constrained type
    *   can be potentially applied to
-   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {string} [target] - a specific target type to constrain.  If supplied, will attempt to
    *   constrain only that type without affecting other types (in a choice or reference to a choice).
    * @returns {ElementTypeMatchInfo} the information about the match
@@ -575,12 +584,12 @@ export class ElementDefinition {
   private findTypeMatch(
     type: { type: string; isReference?: boolean },
     targetTypes: ElementDefinitionType[],
-    resolve: ResolveFn
+    fisher: Fishable
   ): ElementTypeMatchInfo {
     let matchedType: ElementDefinitionType;
 
     // Get the lineage (type hierarchy) so we can walk up it when attempting to match
-    const lineage = this.getTypeLineage(type.type, resolve);
+    const lineage = this.getTypeLineage(type.type, fisher);
     if (isEmpty(lineage)) {
       throw new TypeNotFoundError(type.type);
     }
@@ -632,17 +641,19 @@ export class ElementDefinition {
    * the item at index 1 being its parent's, 2 being its grandparent's, etc.  If a definition can't be
    * found, it stops and returns as much lineage as its found thus far.
    * @param {string} type - the type to get the lineage for
-   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {StructureDefinition[]} representing the lineage of the type
    */
-  private getTypeLineage(type: string, resolve: ResolveFn): StructureDefinition[] {
+  private getTypeLineage(type: string, fisher: Fishable): StructureDefinition[] {
     const results: StructureDefinition[] = [];
 
     // Start with the current type and walk up the base definitions.
     // Stop when we can't find a definition or the base definition is blank.
     let currentType = type;
     while (currentType != null) {
-      const result = resolve(currentType);
+      // TODO: We really should be fishing for Metadata, but need to figure out how it should work because
+      // down the line, the sd.type is needed.
+      const result = fisher.fishForFHIR(currentType);
       if (result) {
         results.push(result);
       }
@@ -1363,11 +1374,11 @@ export class ElementDefinition {
 
   /**
    * If the element has a single type, graft the type's elements into this StructureDefinition as child elements.
-   * @param {ResolveFn} resolve - a function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition[]} the unfolded elements or an empty array if the type is multi-value or type can't
    *   be resolved.
    */
-  unfold(resolve: ResolveFn = () => undefined): ElementDefinition[] {
+  unfold(fisher: Fishable): ElementDefinition[] {
     if (
       this.type.length === 1 &&
       (this.type[0].profile == null || this.type[0].profile.length <= 1)
@@ -1387,15 +1398,24 @@ export class ElementDefinition {
       if (newElements.length === 0) {
         // If it has a profile, use that, otherwise use the code
         const type = this.type[0].profile?.[0] ?? this.type[0].code;
-        const def = resolve(type);
-        newElements = def?.elements.slice(1).map(e => {
-          const eClone = e.clone();
-          eClone.id = eClone.id.replace(def.type, `${this.id}`);
-          eClone.structDef = this.structDef;
-          // Capture the original so that diffs only show what changed *after* unfolding
-          eClone.captureOriginal();
-          return eClone;
-        });
+        const json = fisher.fishForFHIR(
+          type,
+          Type.Resource,
+          Type.Type,
+          Type.Profile,
+          Type.Extension
+        );
+        if (json) {
+          const def = StructureDefinition.fromJSON(json);
+          newElements = def.elements.slice(1).map(e => {
+            const eClone = e.clone();
+            eClone.id = eClone.id.replace(def.type, `${this.id}`);
+            eClone.structDef = this.structDef;
+            // Capture the original so that diffs only show what changed *after* unfolding
+            eClone.captureOriginal();
+            return eClone;
+          });
+        }
       }
       if (newElements.length > 0) {
         this.structDef.addElements(newElements);
@@ -1734,8 +1754,6 @@ export type ElementDefinitionMapping = {
   map: string;
   comment?: string;
 };
-
-export type ResolveFn = (type: string) => StructureDefinition | undefined;
 
 /**
  * A barebones and lenient definition of ElementDefinition JSON

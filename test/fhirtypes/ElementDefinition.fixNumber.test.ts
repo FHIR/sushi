@@ -1,8 +1,7 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn } from '../../src/fhirtypes';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -11,7 +10,7 @@ describe('ElementDefinition', () => {
   let riskEvidenceSynthesis: StructureDefinition;
   let capabilityStatement: StructureDefinition;
   let appointment: StructureDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -20,13 +19,13 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
-    riskEvidenceSynthesis = resolve('RiskEvidenceSynthesis');
-    capabilityStatement = resolve('CapabilityStatement');
-    appointment = resolve('Appointment');
+    observation = fisher.fishForStructureDefinition('Observation');
+    riskEvidenceSynthesis = fisher.fishForStructureDefinition('RiskEvidenceSynthesis');
+    capabilityStatement = fisher.fishForStructureDefinition('CapabilityStatement');
+    appointment = fisher.fishForStructureDefinition('Appointment');
   });
 
   describe('#fixNumber', () => {

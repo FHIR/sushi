@@ -1,16 +1,14 @@
 import { loadFromPath, loadDependency } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn } from '../../src/fhirtypes/ElementDefinition';
+import { Type } from '../../src/utils';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 import fs from 'fs-extra';
 import tar from 'tar';
 import rp from 'request-promise-native';
-import { Type } from '../../src/utils/Fishable';
 
 describe('#loadFromPath()', () => {
   let defs: FHIRDefinitions;
-  let resolve: ResolveFn;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -18,14 +16,16 @@ describe('#loadFromPath()', () => {
       'test#1.1.1',
       defs
     );
-    resolve = getResolver(defs);
-    resolve('Condition');
-    resolve('boolean');
-    resolve('Address');
-    resolve('vitalsigns');
-    resolve('patient-mothersMaidenName');
-    resolve('allergyintolerance-clinical');
-    resolve('w3c-provenance-activity-type');
+    // Run the dependency resources through TestFisher to force them into the testhelpers cache
+    const fisher = new TestFisher(defs);
+    fisher.fishForFHIR('Condition');
+    fisher.fishForFHIR('boolean');
+    fisher.fishForFHIR('Address');
+    fisher.fishForFHIR('vitalsigns');
+    fisher.fishForFHIR('patient-mothersMaidenName');
+    fisher.fishForFHIR('allergyintolerance-clinical', Type.ValueSet);
+    fisher.fishForFHIR('allergyintolerance-clinical', Type.CodeSystem);
+    fisher.fishForFHIR('w3c-provenance-activity-type');
   });
 
   it('should load base FHIR resources', () => {
