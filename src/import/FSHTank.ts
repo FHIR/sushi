@@ -76,6 +76,9 @@ export class FSHTank implements Fishable {
     item: string,
     ...types: Type[]
   ): Profile | Extension | FshValueSet | FshCodeSystem | Instance | undefined {
+    // Resolve alias if necessary
+    item = this.resolveAlias(item) ?? item;
+
     // No types passed in means to search ALL supported types
     if (types.length === 0) {
       types = [Type.Profile, Type.Extension, Type.ValueSet, Type.CodeSystem, Type.Instance];

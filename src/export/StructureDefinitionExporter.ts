@@ -27,7 +27,7 @@ export class StructureDefinitionExporter implements Fishable {
 
   constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {
     const pkg = new Package(this.profileDefs, this.extensionDefs, [], [], [], tank.config);
-    this.fisher = new MasterFisher(pkg, FHIRDefs, tank);
+    this.fisher = new MasterFisher(tank, FHIRDefs, pkg);
   }
 
   private get structDefs(): StructureDefinition[] {
@@ -149,8 +149,6 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   fishForFHIR(item: string, ...types: Type[]) {
-    // TODO: Consider moving this into a more sophisticated MasterFisher
-    item = this.tank.resolveAlias(item) ?? item;
     let result = this.fisher.fishForFHIR(item, ...types);
     if (
       result == null &&
@@ -169,8 +167,6 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   fishForMetadata(item: string, ...types: Type[]): Metadata {
-    // TODO: Consider moving this into a more sophisticated MasterFisher
-    item = this.tank.resolveAlias(item) ?? item;
     // If it's in the tank, it can get the metadata from there (no need to export like in fishForFHIR)
     return this.fisher.fishForMetadata(item, ...types);
   }

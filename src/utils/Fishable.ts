@@ -11,6 +11,7 @@ export enum Type {
 export interface Metadata {
   id: string;
   name: string;
+  sdType?: string;
   url?: string;
   parent?: string;
   instanceOf?: string;

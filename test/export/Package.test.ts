@@ -9,6 +9,7 @@ describe('Package', () => {
     const profile0 = new StructureDefinition();
     profile0.name = 'Funny';
     profile0.id = 'fun-ny';
+    profile0.type = 'Condition';
     profile0.url = 'http://example.org/StructureDefinition/fun-ny';
     profile0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile0.fhirVersion = '4.0.1';
@@ -16,6 +17,7 @@ describe('Package', () => {
     const profile1 = new StructureDefinition();
     profile1.name = 'Sanguine';
     profile1.id = 'san-guine';
+    profile1.type = 'Condition';
     profile1.url = 'http://example.org/StructureDefinition/san-guine';
     profile1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile1.fhirVersion = '4.0.1';
@@ -23,6 +25,7 @@ describe('Package', () => {
     const extension0 = new StructureDefinition();
     extension0.name = 'PreferredBeatle';
     extension0.id = 'preferred-beatle';
+    extension0.type = 'Extension';
     extension0.url = 'http://example.org/StructureDefinition/preferred-beatle';
     extension0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     extension0.fhirVersion = '4.0.1';
@@ -30,6 +33,7 @@ describe('Package', () => {
     const extension1 = new StructureDefinition();
     extension1.name = 'PoorTaste';
     extension1.id = 'poor-taste';
+    extension1.type = 'Extension';
     extension1.url = 'http://example.org/StructureDefinition/poor-taste';
     extension1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     extension1.fhirVersion = '4.0.1';
@@ -240,6 +244,7 @@ describe('Package', () => {
       expect(funnyProfile).toEqual({
         id: 'fun-ny',
         name: 'Funny',
+        sdType: 'Condition',
         url: 'http://example.org/StructureDefinition/fun-ny',
         parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
       });
@@ -254,6 +259,7 @@ describe('Package', () => {
       expect(poorTasteExtensionByID).toEqual({
         id: 'poor-taste',
         name: 'PoorTaste',
+        sdType: 'Extension',
         url: 'http://example.org/StructureDefinition/poor-taste',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });
@@ -361,6 +367,7 @@ describe('Package', () => {
       expect(funnyProfileByID).toEqual({
         id: 'fun-ny',
         name: 'Funny',
+        sdType: 'Condition',
         url: 'http://example.org/StructureDefinition/fun-ny',
         parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
       });
@@ -373,6 +380,7 @@ describe('Package', () => {
       expect(poorTasteExtensionByID).toEqual({
         id: 'poor-taste',
         name: 'PoorTaste',
+        sdType: 'Extension',
         url: 'http://example.org/StructureDefinition/poor-taste',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });

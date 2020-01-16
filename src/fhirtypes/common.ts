@@ -126,7 +126,7 @@ export function replaceReferences(
   let clone: FixedValueRule;
   if (rule.fixedValue instanceof FshReference) {
     const instance = tank.fish(rule.fixedValue.reference, Type.Instance) as Instance;
-    const instanceSD = fisher.fishForFHIR(
+    const instanceMeta = fisher.fishForMetadata(
       instance?.instanceOf,
       Type.Resource,
       Type.Type,
@@ -134,13 +134,13 @@ export function replaceReferences(
       Type.Extension
     );
     // If we can't find a matching instance, just leave the reference as is
-    if (instance && instanceSD) {
+    if (instance && instanceMeta) {
       // If the instance has a rule setting id, that overrides instance.id
       const idRule = instance.rules.find(r => r.path === 'id');
       const id = idRule?.fixedValue ?? instance.id;
       clone = cloneDeep(rule);
       const fv = clone.fixedValue as FshReference;
-      fv.reference = `${instanceSD.type}/${id}`;
+      fv.reference = `${instanceMeta.sdType}/${id}`;
     }
   }
   return clone ?? rule;

@@ -21,7 +21,7 @@ import {
   InvalidMaxOfSliceError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
-import { Fishable, Type } from '../utils/Fishable';
+import { Fishable, Type, Metadata } from '../utils/Fishable';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -498,7 +498,7 @@ export class ElementDefinition {
       for (const match of matches) {
         // If the original element type is a Reference, keep it a reference, otherwise take on the
         // input type's official type code (as represented in its StructureDefinition.type).
-        const typeString = match.code === 'Reference' ? 'Reference' : match.structDef.type;
+        const typeString = match.code === 'Reference' ? 'Reference' : match.metadata.sdType;
         if (!currentTypeMatches.has(typeString)) {
           currentTypeMatches.set(typeString, []);
         }
@@ -598,7 +598,7 @@ export class ElementDefinition {
     // type itself or any of its parents.  For example, a BloodPressure profile could match on
     // an Observation already having a BP profile, an Observation type w/ no profiles, a
     // DomainResource type w/ no profiles, or a Resource type w/ no profiles.
-    for (const sd of lineage) {
+    for (const md of lineage) {
       if (type.isReference) {
         // References always have a code 'Reference' w/ the referenced type's defining URL set as
         // one of the targetProfiles.  If the targetProfile property is null, that means any
@@ -606,14 +606,14 @@ export class ElementDefinition {
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'Reference' &&
-            (t2.targetProfile == null || t2.targetProfile.includes(sd.url))
+            (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
         // Look for exact match on the code (w/ no profile) or a match on the same base type with
         // a matching profile
         matchedType = targetTypes.find(t2 => {
-          const matchesUnprofiledResource = t2.code === sd.id && isEmpty(t2.profile);
-          const matchesProfile = t2.code === sd.type && t2.profile?.includes(sd.url);
+          const matchesUnprofiledResource = t2.code === md.id && isEmpty(t2.profile);
+          const matchesProfile = t2.code === md.sdType && t2.profile?.includes(md.url);
           return matchesUnprofiledResource || matchesProfile;
         });
       }
@@ -631,33 +631,31 @@ export class ElementDefinition {
     }
 
     return {
-      structDef: lineage[0],
+      metadata: lineage[0],
       code: matchedType.code
     };
   }
 
   /**
-   * Gets the full lineage of the type, w/ the item at index 0 being the type's own StructureDefinition,
+   * Gets the full lineage of the type, w/ the item at index 0 being the type's own Metadata,
    * the item at index 1 being its parent's, 2 being its grandparent's, etc.  If a definition can't be
-   * found, it stops and returns as much lineage as its found thus far.
+   * found, it stops and returns as much lineage as is found thus far.
    * @param {string} type - the type to get the lineage for
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @returns {StructureDefinition[]} representing the lineage of the type
+   * @returns {Metadata[]} representing the lineage of the type
    */
-  private getTypeLineage(type: string, fisher: Fishable): StructureDefinition[] {
-    const results: StructureDefinition[] = [];
+  private getTypeLineage(type: string, fisher: Fishable): Metadata[] {
+    const results: Metadata[] = [];
 
     // Start with the current type and walk up the base definitions.
     // Stop when we can't find a definition or the base definition is blank.
     let currentType = type;
     while (currentType != null) {
-      // TODO: We really should be fishing for Metadata, but need to figure out how it should work because
-      // down the line, the sd.type is needed.
-      const result = fisher.fishForFHIR(currentType);
+      const result = fisher.fishForMetadata(currentType);
       if (result) {
         results.push(result);
       }
-      currentType = result?.baseDefinition;
+      currentType = result?.parent;
     }
 
     return results;
@@ -681,12 +679,12 @@ export class ElementDefinition {
     const matchedProfiles: string[] = [];
     const matchedTargetProfiles: string[] = [];
     for (const match of matches) {
-      if (match.structDef.id === newType.code) {
+      if (match.metadata.id === newType.code) {
         continue;
       } else if (match.code === 'Reference') {
-        matchedTargetProfiles.push(match.structDef.url);
+        matchedTargetProfiles.push(match.metadata.url);
       } else {
-        matchedProfiles.push(match.structDef.url);
+        matchedProfiles.push(match.metadata.url);
       }
     }
     if (targetType) {
@@ -1766,7 +1764,7 @@ interface LooseElementDefJSON {
 
 interface ElementTypeMatchInfo {
   code: string;
-  structDef: StructureDefinition;
+  metadata: Metadata;
 }
 
 /**

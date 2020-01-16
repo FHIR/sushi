@@ -552,7 +552,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[1];
+    const sd = exporter.profileDefs.find(p => p.name === 'Foo');
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseSubject = baseStructDef.findElement('Observation.subject');
@@ -595,7 +595,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[2];
+    const sd = exporter.profileDefs.find(p => p.name === 'Foo');
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');

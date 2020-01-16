@@ -280,6 +280,7 @@ describe('FHIRDefinitions', () => {
       expect(conditionByID).toEqual({
         id: 'Condition',
         name: 'Condition',
+        sdType: 'Condition',
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource'
       });
@@ -293,6 +294,7 @@ describe('FHIRDefinitions', () => {
       expect(booleanByID).toEqual({
         id: 'boolean',
         name: 'boolean',
+        sdType: 'boolean',
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element'
       });
@@ -306,6 +308,7 @@ describe('FHIRDefinitions', () => {
       expect(addressByID).toEqual({
         id: 'Address',
         name: 'Address',
+        sdType: 'Address',
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element'
       });
@@ -319,6 +322,7 @@ describe('FHIRDefinitions', () => {
       expect(vitalSignsByID).toEqual({
         id: 'vitalsigns',
         name: 'observation-vitalsigns',
+        sdType: 'Observation',
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
       });
@@ -336,6 +340,7 @@ describe('FHIRDefinitions', () => {
       expect(maidenNameExtensionByID).toEqual({
         id: 'patient-mothersMaidenName',
         name: 'mothersMaidenName',
+        sdType: 'Extension',
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });
@@ -497,6 +502,7 @@ describe('FHIRDefinitions', () => {
       expect(conditionByID).toEqual({
         id: 'Condition',
         name: 'Condition',
+        sdType: 'Condition',
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource'
       });
@@ -508,6 +514,7 @@ describe('FHIRDefinitions', () => {
       expect(booleanByID).toEqual({
         id: 'boolean',
         name: 'boolean',
+        sdType: 'boolean',
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element'
       });
@@ -519,6 +526,7 @@ describe('FHIRDefinitions', () => {
       expect(addressByID).toEqual({
         id: 'Address',
         name: 'Address',
+        sdType: 'Address',
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element'
       });
@@ -530,6 +538,7 @@ describe('FHIRDefinitions', () => {
       expect(vitalSignsProfileByID).toEqual({
         id: 'vitalsigns',
         name: 'observation-vitalsigns',
+        sdType: 'Observation',
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
       });
@@ -542,6 +551,7 @@ describe('FHIRDefinitions', () => {
       expect(maidenNameExtensionByID).toEqual({
         id: 'patient-mothersMaidenName',
         name: 'mothersMaidenName',
+        sdType: 'Extension',
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });

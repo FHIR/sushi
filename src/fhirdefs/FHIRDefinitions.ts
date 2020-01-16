@@ -132,6 +132,7 @@ export class FHIRDefinitions implements Fishable {
       return {
         id: result.id as string,
         name: result.name as string,
+        sdType: result.type as string,
         url: result.url as string,
         parent: result.baseDefinition as string
       };
