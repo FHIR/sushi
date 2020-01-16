@@ -65,8 +65,11 @@ export class Package implements Fishable {
         metadata.sdType = result.type;
         metadata.parent = result.baseDefinition;
       } else if (result instanceof InstanceDefinition) {
-        // TODO: This really ought to be looking at the instance meta.profile but that's not there
-        metadata.instanceOf = result.resourceType;
+        if (result.meta && result.meta.profile && result.meta.profile.length > 0) {
+          metadata.instanceOf = result.meta.profile[0];
+        } else {
+          metadata.instanceOf = result.resourceType;
+        }
       }
       return metadata;
     }

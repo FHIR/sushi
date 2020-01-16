@@ -80,10 +80,11 @@ describe('Package', () => {
     instance0.resourceType = 'Practitioner';
     instance0.gender = 'female';
     pkg.instances.push(instance0);
-    // Instance[0]: DrBob / dr-bob / Practitioner
+    // Instance[1]: DrBob / dr-bob / Practitioner
     const instance1 = new InstanceDefinition();
     instance1.instanceName = 'DrBob';
     instance1.id = 'dr-bob';
+    instance1.meta = { profile: ['http://unreal.org/StructureDefinition/super-practitioner'] };
     instance1.resourceType = 'Practitioner';
     instance1.gender = 'male';
     pkg.instances.push(instance1);
@@ -306,6 +307,16 @@ describe('Package', () => {
         instanceOf: 'Practitioner'
       });
       expect(pkg.fishForMetadata('DrSue', Type.Instance)).toEqual(drSueInstanceById);
+    });
+
+    it('should associate the profile as the instanceOf when it exists in meta.profile', () => {
+      const drBobInstanceById = pkg.fishForMetadata('dr-bob', Type.Instance);
+      expect(drBobInstanceById).toEqual({
+        id: 'dr-bob',
+        name: 'DrBob',
+        instanceOf: 'http://unreal.org/StructureDefinition/super-practitioner'
+      });
+      expect(pkg.fishForMetadata('DrBob', Type.Instance)).toEqual(drBobInstanceById);
     });
 
     it('should not find the definition when the type is not requested', () => {
