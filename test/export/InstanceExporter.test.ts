@@ -137,7 +137,7 @@ describe('InstanceExporter', () => {
 
     // Setting Metadata
     it('should set meta.profile to the defining URL we are making an instance of', () => {
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.meta).toEqual({
         profile: ['http://example.com/StructureDefinition/TestPatient']
       });
@@ -146,7 +146,7 @@ describe('InstanceExporter', () => {
     it('should not set meta.profile when we are making an instance of a base resource', () => {
       const boo = new Instance('Boo');
       boo.instanceOf = 'Patient';
-      const exported = exporter.exportInstance(boo);
+      const exported = exportInstance(boo);
       expect(exported.meta).toBeUndefined();
     });
 
