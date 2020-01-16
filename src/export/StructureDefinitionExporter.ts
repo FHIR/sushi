@@ -187,6 +187,12 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     const structDef = StructureDefinition.fromJSON(json);
+    if (structDef.inProgress) {
+      logger.warn(
+        `The definition of ${fshDefinition.name} may end up incomplete because its parent ${parentName} is still in progress.`
+      );
+    }
+
     structDef.inProgress = true;
 
     this.setMetadata(structDef, fshDefinition);
