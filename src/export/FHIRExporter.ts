@@ -6,45 +6,38 @@ import {
   StructureDefinitionExporter,
   ValueSetExporter
 } from '.';
-import { FHIRDefinitions } from '../fhirdefs';
+import { MasterFisher } from '../utils';
 /**
  * FHIRExporter handles the processing of FSH documents, storing the FSH types within them as FHIR types.
  * FHIRExporter takes the Profiles and Extensions within the FSHDocuments of a FSHTank and returns them
  * as a structured Package.
  */
 export class FHIRExporter {
-  private readonly FHIRDefs: FHIRDefinitions;
   private structureDefinitionExporter: StructureDefinitionExporter;
   private instanceExporter: InstanceExporter;
   private valueSetExporter: ValueSetExporter;
   private codeSystemExporter: CodeSystemExporter;
-
-  constructor(FHIRDefs: FHIRDefinitions) {
-    this.FHIRDefs = FHIRDefs;
+  constructor(
+    private readonly tank: FSHTank,
+    private readonly pkg: Package,
+    private readonly fisher: MasterFisher
+  ) {
+    this.structureDefinitionExporter = new StructureDefinitionExporter(
+      this.tank,
+      this.pkg,
+      this.fisher
+    );
+    this.instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+    this.valueSetExporter = new ValueSetExporter(this.tank, this.pkg);
+    this.codeSystemExporter = new CodeSystemExporter(this.tank, this.pkg);
   }
 
-  export(tank: FSHTank): Package {
-    this.structureDefinitionExporter = new StructureDefinitionExporter(this.FHIRDefs, tank);
-    this.instanceExporter = new InstanceExporter(
-      this.FHIRDefs,
-      tank,
-      this.structureDefinitionExporter
-    );
-    this.valueSetExporter = new ValueSetExporter(tank);
-    this.codeSystemExporter = new CodeSystemExporter(tank);
+  export(): Package {
+    this.structureDefinitionExporter.export();
+    this.instanceExporter.export();
+    this.valueSetExporter.export();
+    this.codeSystemExporter.export();
 
-    const { profileDefs, extensionDefs } = this.structureDefinitionExporter.export();
-    const instanceDefs = this.instanceExporter.export();
-    const valueSets = this.valueSetExporter.export();
-    const codeSystems = this.codeSystemExporter.export();
-
-    return new Package(
-      profileDefs,
-      extensionDefs,
-      instanceDefs,
-      valueSets,
-      codeSystems,
-      tank.config
-    );
+    return this.pkg;
   }
 }

@@ -1,14 +1,14 @@
-import { StructureDefinitionExporter } from '../../src/export';
+import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Extension } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
-  let input: FSHTank;
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
@@ -22,19 +22,25 @@ describe('ExtensionExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new StructureDefinitionExporter(defs, input);
+    const input = new FSHTank([doc], {
+      name: 'test',
+      version: '0.0.1',
+      canonical: 'http://example.com'
+    });
+    const pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg);
+    exporter = new StructureDefinitionExporter(input, pkg, fisher);
   });
 
   it('should output empty results with empty input', () => {
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported).toEqual([]);
   });
 
   it('should export a single extension', () => {
     const extension = new Extension('Foo');
     doc.extensions.set(extension.name, extension);
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported.length).toBe(1);
   });
 
@@ -43,7 +49,7 @@ describe('ExtensionExporter', () => {
     const extensionBar = new Extension('Bar');
     doc.extensions.set(extensionFoo.name, extensionFoo);
     doc.extensions.set(extensionBar.name, extensionBar);
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported.length).toBe(2);
   });
 
@@ -53,7 +59,7 @@ describe('ExtensionExporter', () => {
     const extensionBar = new Extension('Bar');
     doc.extensions.set(extensionFoo.name, extensionFoo);
     doc.extensions.set(extensionBar.name, extensionBar);
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Bar');
   });
@@ -72,7 +78,7 @@ describe('ExtensionExporter', () => {
     extensionBar.parent = 'Foo';
     doc.extensions.set(extensionFoo.name, extensionFoo);
     doc.extensions.set(extensionBar.name, extensionBar);
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported.length).toBe(2);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
@@ -88,7 +94,7 @@ describe('ExtensionExporter', () => {
     doc.extensions.set(extensionFoo.name, extensionFoo);
     doc.extensions.set(extensionBar.name, extensionBar);
     doc.extensions.set(extensionBaz.name, extensionBaz);
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported.length).toBe(3);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
@@ -106,7 +112,7 @@ describe('ExtensionExporter', () => {
     doc.extensions.set(extensionFoo.name, extensionFoo);
     doc.extensions.set(extensionBar.name, extensionBar);
     doc.extensions.set(extensionBaz.name, extensionBaz);
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported.length).toBe(3);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
@@ -124,7 +130,7 @@ describe('ExtensionExporter', () => {
     doc.extensions.set(extensionFoo.name, extensionFoo);
     doc.extensions.set(extensionBar.name, extensionBar);
     doc.extensions.set(extensionBaz.name, extensionBaz);
-    const exported = exporter.export().extensionDefs;
+    const exported = exporter.export().extensions;
     expect(exported.length).toBe(3);
     expect(exported[0].name).toBe('Baz');
     expect(exported[1].name).toBe('Bar');

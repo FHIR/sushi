@@ -1,17 +1,17 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance } from '../fshtypes';
-import { FHIRDefinitions } from '../fhirdefs';
 import { logger, Fishable, Type } from '../utils';
 import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
+import { Package } from '.';
 import isEmpty from 'lodash/isEmpty';
 
 export class InstanceExporter {
   constructor(
-    public readonly FHIRDefs: FHIRDefinitions,
-    public readonly tank: FSHTank,
-    public readonly fisher: Fishable
+    private readonly tank: FSHTank,
+    private readonly pkg: Package,
+    private readonly fisher: Fishable
   ) {}
 
   private setFixedValues(
@@ -135,20 +135,19 @@ export class InstanceExporter {
   /**
    * Exports Instances
    * @param {FSHTank} tank - The FSH tank we are exporting
-   * @returns {InstanceDefinition[]} - The Instances exported
+   * @returns {Package}
    */
-  export(): InstanceDefinition[] {
-    const instanceDefs: InstanceDefinition[] = [];
+  export(): Package {
     for (const doc of this.tank.docs) {
       for (const instance of doc.instances.values()) {
         try {
           const instanceDef = this.exportInstance(instance);
-          instanceDefs.push(instanceDef);
+          this.pkg.instances.push(instanceDef);
         } catch (e) {
           logger.error(e.message, e.sourceInfo);
         }
       }
     }
-    return instanceDefs;
+    return this.pkg;
   }
 }

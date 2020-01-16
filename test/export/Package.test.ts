@@ -3,7 +3,11 @@ import { ValueSet, StructureDefinition, InstanceDefinition, CodeSystem } from '.
 import { Type } from '../../src/utils/Fishable';
 
 describe('Package', () => {
-  let pkg: Package;
+  const pkg: Package = new Package({
+    name: 'test',
+    canonical: 'http://example.org',
+    version: '0.0.1'
+  });
   beforeAll(() => {
     // Profile[0]: Funny / fun-ny / Condition
     const profile0 = new StructureDefinition();
@@ -13,6 +17,7 @@ describe('Package', () => {
     profile0.url = 'http://example.org/StructureDefinition/fun-ny';
     profile0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile0.fhirVersion = '4.0.1';
+    pkg.profiles.push(profile0);
     // Profile[1]: Sanguine / san-guine / Condition
     const profile1 = new StructureDefinition();
     profile1.name = 'Sanguine';
@@ -21,6 +26,7 @@ describe('Package', () => {
     profile1.url = 'http://example.org/StructureDefinition/san-guine';
     profile1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile1.fhirVersion = '4.0.1';
+    pkg.profiles.push(profile1);
     // Extension[0]: PreferredBeatle / preferred-beatle
     const extension0 = new StructureDefinition();
     extension0.name = 'PreferredBeatle';
@@ -29,6 +35,7 @@ describe('Package', () => {
     extension0.url = 'http://example.org/StructureDefinition/preferred-beatle';
     extension0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     extension0.fhirVersion = '4.0.1';
+    pkg.extensions.push(extension0);
     // Extension[1]: PoorTaste / poor-taste
     const extension1 = new StructureDefinition();
     extension1.name = 'PoorTaste';
@@ -37,53 +44,49 @@ describe('Package', () => {
     extension1.url = 'http://example.org/StructureDefinition/poor-taste';
     extension1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     extension1.fhirVersion = '4.0.1';
+    pkg.extensions.push(extension1);
     // ValueSet[0]: Soups / soup-flavors
     const valueset0 = new ValueSet();
     valueset0.name = 'Soups';
     valueset0.id = 'soup-flavors';
     valueset0.url = 'http://example.org/ValueSet/soup-flavors';
     valueset0.version = '4.0.1';
+    pkg.valueSets.push(valueset0);
     // ValueSet[1]: Cheeses / cheese-flavors
     const valueset1 = new ValueSet();
     valueset1.name = 'Cheeses';
     valueset1.id = 'cheese-flavors';
     valueset1.url = 'http://example.org/ValueSet/cheese-flavors';
     valueset1.version = '4.0.1';
+    pkg.valueSets.push(valueset1);
     // CodeSystem[0]: Letters / alphas
     const codeSystem0 = new CodeSystem();
     codeSystem0.name = 'Letters';
     codeSystem0.id = 'alphas';
     codeSystem0.url = 'http://example.org/CodeSystem/alphas';
     codeSystem0.version = '4.0.1';
+    pkg.codeSystems.push(codeSystem0);
     // CodeSystem[1]: Numbers / numerics
     const codeSystem1 = new CodeSystem();
     codeSystem1.name = 'Numbers';
     codeSystem1.id = 'numerics';
     codeSystem1.url = 'http://example.org/CodeSystem/numerics';
     codeSystem1.version = '4.0.1';
+    pkg.codeSystems.push(codeSystem1);
     // Instance[0]: DrSue / dr-sue / Practitioner
     const instance0 = new InstanceDefinition();
     instance0.instanceName = 'DrSue';
     instance0.id = 'dr-sue';
     instance0.resourceType = 'Practitioner';
     instance0.gender = 'female';
+    pkg.instances.push(instance0);
     // Instance[0]: DrBob / dr-bob / Practitioner
     const instance1 = new InstanceDefinition();
     instance1.instanceName = 'DrBob';
     instance1.id = 'dr-bob';
     instance1.resourceType = 'Practitioner';
     instance1.gender = 'male';
-    // Config
-    const config = { name: 'test', canonical: 'http://example.org', version: '0.0.1' };
-
-    pkg = new Package(
-      [profile0, profile1],
-      [extension0, extension1],
-      [instance0, instance1],
-      [valueset0, valueset1],
-      [codeSystem0, codeSystem1],
-      config
-    );
+    pkg.instances.push(instance1);
   });
 
   describe('#fishForFHIR()', () => {

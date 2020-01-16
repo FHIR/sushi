@@ -10,10 +10,10 @@ import {
 } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError } from '../errors';
+import { Package } from '.';
 
 export class ValueSetExporter {
-  public readonly valueSets: ValueSet[] = [];
-  constructor(public readonly tank: FSHTank) {}
+  constructor(private readonly tank: FSHTank, private pkg: Package) {}
 
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.name = fshDefinition.name;
@@ -84,7 +84,7 @@ export class ValueSetExporter {
     }
   }
 
-  export(): ValueSet[] {
+  export(): Package {
     for (const valueSet of this.tank.getAllValueSets()) {
       try {
         this.exportValueSet(valueSet);
@@ -92,11 +92,11 @@ export class ValueSetExporter {
         logger.error(e.message, valueSet.sourceInfo);
       }
     }
-    return this.valueSets;
+    return this.pkg;
   }
 
-  exportValueSet(fshDefinition: FshValueSet): void {
-    if (this.valueSets.some(vs => vs.name === fshDefinition.name)) {
+  exportValueSet(fshDefinition: FshValueSet): ValueSet {
+    if (this.pkg.valueSets.some(vs => vs.name === fshDefinition.name)) {
       return;
     }
     const vs = new ValueSet();
@@ -105,6 +105,7 @@ export class ValueSetExporter {
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);
     }
-    this.valueSets.push(vs);
+    this.pkg.valueSets.push(vs);
+    return vs;
   }
 }

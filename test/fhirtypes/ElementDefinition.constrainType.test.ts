@@ -18,7 +18,7 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    fisher = new TestFisher(defs);
+    fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');

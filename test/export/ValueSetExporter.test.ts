@@ -1,4 +1,4 @@
-import { ValueSetExporter } from '../../src/export';
+import { ValueSetExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import {
   FshValueSet,
@@ -11,24 +11,28 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('ValueSetExporter', () => {
   let doc: FSHDocument;
-  let input: FSHTank;
   let exporter: ValueSetExporter;
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new ValueSetExporter(input);
+    const input = new FSHTank([doc], {
+      name: 'test',
+      version: '0.0.1',
+      canonical: 'http://example.com'
+    });
+    const pkg = new Package(input.config);
+    exporter = new ValueSetExporter(input, pkg);
   });
 
   it('should output empty results with empty input', () => {
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported).toEqual([]);
   });
 
   it('should export a single value set', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'BreakfastVS',
@@ -44,7 +48,7 @@ describe('ValueSetExporter', () => {
     const lunch = new FshValueSet('LunchVS');
     doc.valueSets.set(breakfast.name, breakfast);
     doc.valueSets.set(lunch.name, lunch);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(2);
   });
 
@@ -53,7 +57,7 @@ describe('ValueSetExporter', () => {
     valueSet.title = 'Breakfast Values';
     valueSet.description = 'A value set for breakfast items';
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'BreakfastVS',
@@ -69,9 +73,9 @@ describe('ValueSetExporter', () => {
   it('should export each value set once, even if export is called more than once', () => {
     const breakfast = new FshValueSet('BreakfastVS');
     doc.valueSets.set(breakfast.name, breakfast);
-    let exported = exporter.export();
+    let exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
-    exported = exporter.export();
+    exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
   });
 
@@ -81,7 +85,7 @@ describe('ValueSetExporter', () => {
     component.from = { system: 'http://food.org/food' };
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'DinnerVS',
@@ -106,7 +110,7 @@ describe('ValueSetExporter', () => {
     };
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'DinnerVS',
@@ -140,7 +144,7 @@ describe('ValueSetExporter', () => {
     component.concepts.push(new FshCode('Mulch', 'http://food.org/food'));
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'DinnerVS',
@@ -174,7 +178,7 @@ describe('ValueSetExporter', () => {
     });
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'BreakfastVS',
@@ -210,7 +214,7 @@ describe('ValueSetExporter', () => {
     });
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'BreakfastVS',
@@ -246,7 +250,7 @@ describe('ValueSetExporter', () => {
     });
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'BreakfastVS',
@@ -286,7 +290,7 @@ describe('ValueSetExporter', () => {
     valueSet.components.push(includedComponent);
     valueSet.components.push(excludedComponent);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'DinnerVS',
@@ -327,7 +331,7 @@ describe('ValueSetExporter', () => {
     candyFilter.from = { valueSets: ['CandyVS'] };
     valueSet.components.push(candyFilter);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(0);
     expect(loggerSpy.getLastMessage()).toMatch(/File: Breakfast\.fsh.*Line: 2 - 4\D/s);
   });

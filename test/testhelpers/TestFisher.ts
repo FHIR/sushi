@@ -1,15 +1,31 @@
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { loadFromPath } from '../../src/fhirdefs';
-import { Type, Fishable, Metadata } from '../../src/utils/Fishable';
+import { Type, Metadata } from '../../src/utils/Fishable';
 import { StructureDefinition } from '../../src/fhirtypes';
+import { MasterFisher } from '../../src/utils';
+import { FSHTank } from '../../src/import';
+import { Package } from '../../src/export';
 import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
 
 const defsCache = new FHIRDefinitions();
 
-export class TestFisher implements Fishable {
-  constructor(private fhirDefs: FHIRDefinitions) {}
+export class TestFisher extends MasterFisher {
+  withTank(tank: FSHTank) {
+    this.tank = tank;
+    return this;
+  }
+
+  withFHIR(fhir: FHIRDefinitions) {
+    this.fhir = fhir;
+    return this;
+  }
+
+  withPackage(pkg: Package) {
+    this.pkg = pkg;
+    return this;
+  }
 
   fishForStructureDefinition(
     item: string,
@@ -21,22 +37,22 @@ export class TestFisher implements Fishable {
     }
   }
 
-  fishForFHIR(item: string, ...types: Type[]) {
-    let json = this.fhirDefs.fishForFHIR(item, ...types);
+  fishForFHIR(item: string, ...types: Type[]): any | undefined {
+    let json = super.fishForFHIR(item, ...types);
     if (!json) {
       // try loading it from the cache and fishing again
       this.loadFromCache(item, ...types);
-      json = this.fhirDefs.fishForFHIR(item, ...types);
+      json = super.fishForFHIR(item, ...types);
     }
     return json;
   }
 
   fishForMetadata(item: string, ...types: Type[]): Metadata {
-    let json = this.fhirDefs.fishForMetadata(item, ...types);
+    let json = super.fishForMetadata(item, ...types);
     if (!json) {
       // try loading it from the cache and fishing again
       this.loadFromCache(item, ...types);
-      json = this.fhirDefs.fishForMetadata(item, ...types);
+      json = super.fishForMetadata(item, ...types);
     }
     return json;
   }
@@ -58,7 +74,7 @@ export class TestFisher implements Fishable {
       // make sure that resource is now copied into the test case package.
       const json = defsCache.fishForFHIR(item, ...types);
       if (json) {
-        this.fhirDefs.add(json);
+        this.fhir.add(json);
         fs.copyFileSync(
           path.join(cachePath, `${json.resourceType}-${json.id}.json`),
           path.join(

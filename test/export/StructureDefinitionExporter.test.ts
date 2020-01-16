@@ -1,4 +1,4 @@
-import { StructureDefinitionExporter } from '../../src/export';
+import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Profile, Extension, FshCode, FshReference, Instance } from '../../src/fshtypes';
@@ -19,7 +19,7 @@ describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
   let fisher: TestFisher;
   let doc: FSHDocument;
-  let input: FSHTank;
+  let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
@@ -29,13 +29,18 @@ describe('StructureDefinitionExporter', () => {
       'testPackage',
       defs
     );
-    fisher = new TestFisher(defs);
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new StructureDefinitionExporter(defs, input);
+    const input = new FSHTank([doc], {
+      name: 'test',
+      version: '0.0.1',
+      canonical: 'http://example.com'
+    });
+    pkg = new Package(input.config);
+    fisher = new TestFisher(input, defs, pkg);
+    exporter = new StructureDefinitionExporter(input, pkg, fisher);
   });
 
   // Profile
@@ -47,7 +52,7 @@ describe('StructureDefinitionExporter', () => {
     profile.description = 'foo bar foobar';
     doc.profiles.set(profile.name, profile);
     exporter.exportStructDef(profile);
-    const exported = exporter.profileDefs[0];
+    const exported = pkg.profiles[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('foo');
     expect(exported.title).toBe('Foo Profile');
@@ -63,7 +68,7 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('Foo');
     doc.profiles.set(profile.name, profile);
     exporter.exportStructDef(profile);
-    const exported = exporter.profileDefs[0];
+    const exported = pkg.profiles[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
@@ -92,7 +97,7 @@ describe('StructureDefinitionExporter', () => {
     extension.description = 'foo bar foobar';
     doc.extensions.set(extension.name, extension);
     exporter.exportStructDef(extension);
-    const exported = exporter.extensionDefs[0];
+    const exported = pkg.extensions[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('foo');
     expect(exported.title).toBe('Foo Profile');
@@ -116,7 +121,7 @@ describe('StructureDefinitionExporter', () => {
     const extension = new Extension('Foo');
     doc.extensions.set(extension.name, extension);
     exporter.exportStructDef(extension);
-    const exported = exporter.extensionDefs[0];
+    const exported = pkg.extensions[0];
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
@@ -147,7 +152,7 @@ describe('StructureDefinitionExporter', () => {
     extension.parent = 'http://hl7.org/fhir/StructureDefinition/patient-animal';
     doc.extensions.set(extension.name, extension);
     exporter.exportStructDef(extension);
-    const exported = exporter.extensionDefs[0];
+    const exported = pkg.extensions[0];
     expect(exported.context).toEqual([
       {
         type: 'element',
@@ -173,7 +178,7 @@ describe('StructureDefinitionExporter', () => {
     rule.max = '1';
     profile.rules.push(rule);
     exporter.exportStructDef(profile);
-    const structDef = exporter.profileDefs[0];
+    const structDef = pkg.profiles[0];
     expect(structDef).toBeDefined();
     expect(structDef.type).toBe('Resource');
     expect(loggerSpy.getLastMessage()).toMatch(/File: Foo\.fsh.*Line: 3 - 4\D/s);
@@ -190,7 +195,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCard = baseStructDef.findElement('Observation.subject');
@@ -212,7 +217,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCard = baseStructDef.findElement('Observation.status');
@@ -236,7 +241,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('DiagnosticReport');
 
     const baseElement = baseStructDef.findElement('DiagnosticReport.conclusion');
@@ -259,7 +264,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('DiagnosticReport');
 
     const baseElement = baseStructDef.findElement('DiagnosticReport.status');
@@ -282,7 +287,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition(
       'http://hl7.org/fhir/StructureDefinition/vitalsigns'
     );
@@ -309,7 +314,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(vsRule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Appointment');
     const baseElement = baseStructDef.findElement('Appointment.description');
     const changedElement = sd.findElement('Appointment.description');
@@ -328,7 +333,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(vsRule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
     const baseElement = baseStructDef.findElement('Observation.category');
     const changedElement = sd.findElement('Observation.category');
@@ -348,7 +353,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(vsRule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
     const baseElement = baseStructDef.findElement('Observation.note');
     const changedElement = sd.findElement('Observation.note');
@@ -367,7 +372,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(vsRule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
     const baseElement = baseStructDef.findElement('Observation.category');
     const changedElement = sd.findElement('Observation.category');
@@ -390,7 +395,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
@@ -414,7 +419,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseSubject = baseStructDef.findElement('Observation.subject');
@@ -449,7 +454,7 @@ describe('StructureDefinitionExporter', () => {
     extension.rules.push(rule);
 
     exporter.exportStructDef(extension);
-    const sd = exporter.extensionDefs[0];
+    const sd = pkg.extensions[0];
     const baseStructDef = fisher.fishForStructureDefinition('Extension');
 
     const baseValueX = baseStructDef.findElement('Extension.value[x]');
@@ -481,7 +486,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');
@@ -520,7 +525,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs.find(d => d.name === 'Foo');
+    const sd = pkg.profiles.find(d => d.name === 'Foo');
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
@@ -552,7 +557,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs.find(p => p.name === 'Foo');
+    const sd = pkg.profiles.find(p => p.name === 'Foo');
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseSubject = baseStructDef.findElement('Observation.subject');
@@ -595,7 +600,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs.find(p => p.name === 'Foo');
+    const sd = pkg.profiles.find(p => p.name === 'Foo');
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');
@@ -630,7 +635,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseValue = baseStructDef.findElement('Observation.value[x]');
@@ -652,7 +657,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCode = baseStructDef.findElement('Observation.code');
@@ -678,7 +683,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
 
     const fixedSubject = sd.findElement('Observation.subject');
 
@@ -696,7 +701,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCode = baseStructDef.findElement('Observation.code');
@@ -717,7 +722,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('resprate');
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
@@ -735,7 +740,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
 
     const extension = sd.elements.find(e => e.id === 'Observation.extension');
     const valuesetExpression = sd.elements.find(
@@ -762,7 +767,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
 
     const extension = sd.elements.find(e => e.id === 'Observation.modifierExtension');
     const valuesetExpression = sd.elements.find(
@@ -800,7 +805,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(ruleBaz);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
 
     const extension = sd.elements.find(e => e.id === 'Observation.extension');
     const bar = sd.elements.find(e => e.id === 'Observation.extension:barAlias');
@@ -836,7 +841,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(ruleBar);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
 
     const extension = sd.elements.find(e => e.id === 'Observation.extension');
     const VSExpression = sd.elements.find(e => e.id === 'Observation.extension:VSAlias');
@@ -864,7 +869,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule2);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('resprate');
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.code.coding:barSlice');
@@ -884,7 +889,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('resprate');
 
     const barSlice = sd.elements.find(e => e.id === 'Observation.identifier:barSlice');
@@ -905,7 +910,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
 
     const status = sd.findElement('Observation.status');
     expect(status.short).toBe('foo');
@@ -923,7 +928,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const status = sd.findElement('Observation.status');
@@ -943,7 +948,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     expect(sd.description).toBe('foo');
   });
 
@@ -957,7 +962,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     expect(sd.description).toBe(baseStructDef.description);
@@ -993,7 +998,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const json = sd.toJSON();
 
     expect(json.differential.element).toHaveLength(1);
@@ -1023,7 +1028,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
-    const sd = exporter.profileDefs[0];
+    const sd = pkg.profiles[0];
     const json = sd.toJSON();
 
     expect(json.differential.element).toHaveLength(2);
@@ -1054,8 +1059,8 @@ describe('StructureDefinitionExporter', () => {
     ruleBar.items = ['barAlias'];
     profile.rules.push(ruleBar);
 
-    const { profileDefs, extensionDefs } = exporter.export();
-    expect(profileDefs.length).toBe(1);
-    expect(extensionDefs.length).toBe(1);
+    const pkg = exporter.export();
+    expect(pkg.profiles.length).toBe(1);
+    expect(pkg.extensions.length).toBe(1);
   });
 });

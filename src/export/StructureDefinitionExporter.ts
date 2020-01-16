@@ -1,4 +1,3 @@
-import { FHIRDefinitions } from '../fhirdefs';
 import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirtypes';
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
@@ -12,7 +11,7 @@ import {
   ContainsRule,
   CaretValueRule
 } from '../fshtypes/rules';
-import { logger, Type, MasterFisher, Fishable, Metadata } from '../utils';
+import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
 import { replaceReferences } from '../fhirtypes/common';
 import { Package } from './Package';
 
@@ -21,18 +20,14 @@ import { Package } from './Package';
  * The operations and structure of both exporters are very similar, so they currently share an exporter.
  */
 export class StructureDefinitionExporter implements Fishable {
-  public readonly profileDefs: StructureDefinition[] = [];
-  public readonly extensionDefs: StructureDefinition[] = [];
-  private fisher: MasterFisher;
+  public readonly profileDefs: StructureDefinition[];
+  public readonly extensionDefs: StructureDefinition[];
 
-  constructor(public readonly FHIRDefs: FHIRDefinitions, public readonly tank: FSHTank) {
-    const pkg = new Package(this.profileDefs, this.extensionDefs, [], [], [], tank.config);
-    this.fisher = new MasterFisher(tank, FHIRDefs, pkg);
-  }
-
-  private get structDefs(): StructureDefinition[] {
-    return [...this.profileDefs, ...this.extensionDefs];
-  }
+  constructor(
+    private readonly tank: FSHTank,
+    private readonly pkg: Package,
+    private readonly fisher: MasterFisher
+  ) {}
 
   /**
    * Sets the metadata for the StructureDefinition
@@ -177,8 +172,11 @@ export class StructureDefinitionExporter implements Fishable {
    * @returns {StructureDefinition}
    * @throws {ParentNotDefinedError} when the Profile or Extension's parent is not found
    */
-  exportStructDef(fshDefinition: Profile | Extension): void {
-    if (this.structDefs.some(sd => sd.name === fshDefinition.name)) {
+  exportStructDef(fshDefinition: Profile | Extension): StructureDefinition {
+    if (
+      this.pkg.profiles.some(sd => sd.name === fshDefinition.name) ||
+      this.pkg.extensions.some(sd => sd.name === fshDefinition.name)
+    ) {
       return;
     }
 
@@ -196,17 +194,19 @@ export class StructureDefinitionExporter implements Fishable {
     this.validateStructureDefinition(structDef);
 
     if (structDef.type === 'Extension') {
-      this.extensionDefs.push(structDef);
+      this.pkg.extensions.push(structDef);
     } else {
-      this.profileDefs.push(structDef);
+      this.pkg.profiles.push(structDef);
     }
+
+    return structDef;
   }
 
   /**
    * Exports Profiles and Extensions to StructureDefinitions
-   * @returns {AllStructureDefinitions}
+   * @returns {Package}
    */
-  export(): AllStructureDefinitions {
+  export(): Package {
     this.tank.getAllStructureDefinitions().forEach(sd => {
       try {
         this.exportStructDef(sd);
@@ -214,15 +214,6 @@ export class StructureDefinitionExporter implements Fishable {
         logger.error(e.message, e.sourceInfo);
       }
     });
-    return {
-      profileDefs: this.profileDefs,
-      extensionDefs: this.extensionDefs
-    };
+    return this.pkg;
   }
 }
-
-// Type to hold both profile and extension structure definitions
-export type AllStructureDefinitions = {
-  profileDefs: StructureDefinition[];
-  extensionDefs: StructureDefinition[];
-};

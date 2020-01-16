@@ -17,7 +17,7 @@ import { logger } from './FSHLogger';
  * only in the tank).
  */
 export class MasterFisher implements Fishable {
-  constructor(public tank: FSHTank, public fhir: FHIRDefinitions, public pkg: Package) {}
+  constructor(public tank?: FSHTank, public fhir?: FHIRDefinitions, public pkg?: Package) {}
 
   /**
    * Searches for the FHIR JSON by name/id/url.  It will first search through the local package
@@ -30,15 +30,15 @@ export class MasterFisher implements Fishable {
     item = this.tank?.resolveAlias(item) ?? item;
 
     // First check for it in the package
-    let result = this.pkg.fishForFHIR(item, ...types);
+    let result = this.pkg?.fishForFHIR(item, ...types);
     if (result == null) {
       // If it is in the tank, return undefined. We don't want to return the external FHIR
       // definition, even if it exists -- because it won't match what is in the tank.  This
       // ensures consistency between the outputs of fishForFHIR and fishForMetadata.
-      if (this.tank.fish(item, ...types)) {
+      if (this.tank?.fish(item, ...types)) {
         return;
       }
-      result = this.fhir.fishForFHIR(item, ...types);
+      result = this.fhir?.fishForFHIR(item, ...types);
     }
     return result;
   }
@@ -85,8 +85,8 @@ export class MasterFisher implements Fishable {
               'Circular dependency detected on parent relationships: ' +
               [...history, parentResult].map(l => l.name).join(' < ');
             const fhirMeta =
-              this.fhir.fishForMetadata(parentResult.name) ??
-              this.fhir.fishForMetadata(parentResult.id);
+              this.fhir?.fishForMetadata(parentResult.name) ??
+              this.fhir?.fishForMetadata(parentResult.id);
             if (fhirMeta) {
               message += `\n  If the parent ${parentResult.name} is intended to refer to the FHIR resource, use its URL: ${fhirMeta.url}`;
             }

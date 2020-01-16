@@ -19,7 +19,7 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    fisher = new TestFisher(defs);
+    fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
     riskEvidenceSynthesis = fisher.fishForStructureDefinition('RiskEvidenceSynthesis');

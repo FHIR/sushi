@@ -34,6 +34,7 @@ describe('MasterFisher', () => {
     doc1.profiles.get('Practitioner').parent = 'Practitioner';
     const tank = new FSHTank([doc1], config);
 
+    const pkg = new Package(config);
     const profile3 = new StructureDefinition();
     profile3.name = 'Profile3';
     profile3.id = 'profile3';
@@ -48,7 +49,7 @@ describe('MasterFisher', () => {
     profile4.url = 'http://example.org/StructureDefinition/vitalsigns';
     profile4.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Observation';
     profile4.fhirVersion = '4.0.1';
-    const pkg = new Package([profile3, profile4], [], [], [], [], config);
+    pkg.profiles.push(profile3, profile4);
 
     const defs = new FHIRDefinitions();
     loadFromPath(

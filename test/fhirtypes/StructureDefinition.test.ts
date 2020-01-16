@@ -20,7 +20,7 @@ describe('StructureDefinition', () => {
       'testPackage',
       defs
     );
-    fisher = new TestFisher(defs);
+    fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);

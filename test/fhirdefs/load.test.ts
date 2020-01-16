@@ -17,7 +17,7 @@ describe('#loadFromPath()', () => {
       defs
     );
     // Run the dependency resources through TestFisher to force them into the testhelpers cache
-    const fisher = new TestFisher(defs);
+    const fisher = new TestFisher().withFHIR(defs);
     fisher.fishForFHIR('Condition');
     fisher.fishForFHIR('boolean');
     fisher.fishForFHIR('Address');

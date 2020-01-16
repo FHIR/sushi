@@ -2,10 +2,10 @@ import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept } from '../fhirtypes';
 import { FshCodeSystem } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
+import { Package } from '.';
 
 export class CodeSystemExporter {
-  public readonly codeSystems: CodeSystem[] = [];
-  constructor(public readonly tank: FSHTank) {}
+  constructor(private readonly tank: FSHTank, private readonly pkg: Package) {}
 
   private setMetadata(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
     codeSystem.name = fshDefinition.name;
@@ -28,17 +28,18 @@ export class CodeSystemExporter {
     }
   }
 
-  exportCodeSystem(fshDefinition: FshCodeSystem): void {
-    if (this.codeSystems.some(cs => cs.name === fshDefinition.name)) {
+  exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
+    if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
     this.setConcepts(codeSystem, fshDefinition);
-    this.codeSystems.push(codeSystem);
+    this.pkg.codeSystems.push(codeSystem);
+    return codeSystem;
   }
 
-  export(): CodeSystem[] {
+  export(): Package {
     for (const cs of this.tank.getAllCodeSystems()) {
       try {
         this.exportCodeSystem(cs);
@@ -46,6 +47,6 @@ export class CodeSystemExporter {
         logger.error(e.message, cs.sourceInfo);
       }
     }
-    return this.codeSystems;
+    return this.pkg;
   }
 }
