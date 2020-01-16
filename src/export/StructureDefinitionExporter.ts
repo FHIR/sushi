@@ -139,8 +139,6 @@ export class StructureDefinitionExporter implements Fishable {
         throw new InvalidExtensionSliceError(ext.sliceName);
       }
     });
-
-    structDef.complete = true;
   }
 
   fishForFHIR(item: string, ...types: Type[]) {
@@ -189,8 +187,12 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     const structDef = StructureDefinition.fromJSON(json);
+    structDef.inProgress = true;
+
     this.setMetadata(structDef, fshDefinition);
 
+    // These are being pushed now in order to allow for
+    // incomplete definitions to be used to resolve circular reference issues.
     if (structDef.type === 'Extension') {
       this.pkg.extensions.push(structDef);
     } else {
@@ -199,6 +201,8 @@ export class StructureDefinitionExporter implements Fishable {
 
     this.setRules(structDef, fshDefinition);
     this.validateStructureDefinition(structDef);
+
+    structDef.inProgress = false;
 
     return structDef;
   }
