@@ -303,20 +303,9 @@ describe('Package', () => {
       const drSueInstanceById = pkg.fishForMetadata('dr-sue', Type.Instance);
       expect(drSueInstanceById).toEqual({
         id: 'dr-sue',
-        name: 'DrSue',
-        instanceOf: 'Practitioner'
+        name: 'DrSue'
       });
       expect(pkg.fishForMetadata('DrSue', Type.Instance)).toEqual(drSueInstanceById);
-    });
-
-    it('should associate the profile as the instanceOf when it exists in meta.profile', () => {
-      const drBobInstanceById = pkg.fishForMetadata('dr-bob', Type.Instance);
-      expect(drBobInstanceById).toEqual({
-        id: 'dr-bob',
-        name: 'DrBob',
-        instanceOf: 'http://unreal.org/StructureDefinition/super-practitioner'
-      });
-      expect(pkg.fishForMetadata('DrBob', Type.Instance)).toEqual(drBobInstanceById);
     });
 
     it('should not find the definition when the type is not requested', () => {
@@ -428,8 +417,7 @@ describe('Package', () => {
       const drSueInstanceByID = pkg.fishForMetadata('dr-sue');
       expect(drSueInstanceByID).toEqual({
         id: 'dr-sue',
-        name: 'DrSue',
-        instanceOf: 'Practitioner'
+        name: 'DrSue'
       });
 
       expect(pkg.fishForMetadata('DrSue')).toEqual(drSueInstanceByID);

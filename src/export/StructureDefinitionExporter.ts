@@ -20,9 +20,6 @@ import { Package } from './Package';
  * The operations and structure of both exporters are very similar, so they currently share an exporter.
  */
 export class StructureDefinitionExporter implements Fishable {
-  public readonly profileDefs: StructureDefinition[];
-  public readonly extensionDefs: StructureDefinition[];
-
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,

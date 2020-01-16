@@ -14,7 +14,6 @@ export interface Metadata {
   sdType?: string;
   url?: string;
   parent?: string;
-  instanceOf?: string;
 }
 
 export interface Fishable {

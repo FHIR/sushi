@@ -25,7 +25,6 @@ describe('#loadFromPath()', () => {
     fisher.fishForFHIR('patient-mothersMaidenName');
     fisher.fishForFHIR('allergyintolerance-clinical', Type.ValueSet);
     fisher.fishForFHIR('allergyintolerance-clinical', Type.CodeSystem);
-    fisher.fishForFHIR('w3c-provenance-activity-type');
   });
 
   it('should load base FHIR resources', () => {

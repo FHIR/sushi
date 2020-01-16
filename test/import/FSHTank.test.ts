@@ -170,8 +170,7 @@ describe('FSHTank', () => {
     };
     const inst1MD: Metadata = {
       id: 'inst1',
-      name: 'Instance1',
-      instanceOf: 'Condition'
+      name: 'Instance1'
     };
     it('should find valid fish metadata when fishing by id for all types', () => {
       expect(tank.fishForMetadata('prf1')).toEqual(prf1MD);

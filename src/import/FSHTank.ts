@@ -150,8 +150,6 @@ export class FSHTank implements Fishable {
         meta.url = `${this.config.canonical}/ValueSet/${result.id}`;
       } else if (result instanceof FshCodeSystem) {
         meta.url = `${this.config.canonical}/CodeSystem/${result.id}`;
-      } else if (result instanceof Instance) {
-        meta.instanceOf = result.instanceOf;
       }
       return meta;
     }

@@ -2,6 +2,7 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import path from 'path';
 import { Type } from '../../src/utils/Fishable';
+import { TestFisher } from '../testhelpers';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
@@ -12,6 +13,16 @@ describe('FHIRDefinitions', () => {
       'test#1.1.1',
       defs
     );
+    // Run the dependency resources through TestFisher to force them into the testhelpers cache
+    const fisher = new TestFisher().withFHIR(defs);
+    fisher.fishForFHIR('Condition');
+    fisher.fishForFHIR('boolean');
+    fisher.fishForFHIR('Address');
+    fisher.fishForFHIR('vitalsigns');
+    fisher.fishForFHIR('patient-mothersMaidenName');
+    fisher.fishForFHIR('allergyintolerance-clinical', Type.ValueSet);
+    fisher.fishForFHIR('allergyintolerance-clinical', Type.CodeSystem);
+    fisher.fishForFHIR('w3c-provenance-activity-type');
   });
 
   describe('#fishForFHIR()', () => {
