@@ -28,7 +28,7 @@ export class FHIRExporter {
       this.fisher
     );
     this.instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-    this.valueSetExporter = new ValueSetExporter(this.tank, this.pkg);
+    this.valueSetExporter = new ValueSetExporter(this.tank, this.pkg, this.fisher);
     this.codeSystemExporter = new CodeSystemExporter(this.tank, this.pkg);
   }
 

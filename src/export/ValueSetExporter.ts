@@ -11,9 +11,10 @@ import {
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError } from '../errors';
 import { Package } from '.';
+import { MasterFisher, Type } from '../utils';
 
 export class ValueSetExporter {
-  constructor(private readonly tank: FSHTank, private pkg: Package) {}
+  constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
 
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.name = fshDefinition.name;
@@ -38,10 +39,14 @@ export class ValueSetExporter {
       components.forEach(component => {
         const composeElement: ValueSetComposeIncludeOrExclude = {};
         if (component.from.system) {
-          composeElement.system = component.from.system;
+          composeElement.system =
+            this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
+            component.from.system;
         }
         if (component.from.valueSets) {
-          composeElement.valueSet = component.from.valueSets;
+          composeElement.valueSet = component.from.valueSets.map(vs => {
+            return this.fisher.fishForMetadata(vs, Type.ValueSet)?.url ?? vs;
+          });
         }
         if (component instanceof ValueSetConceptComponent && component.concepts.length > 0) {
           composeElement.concept = component.concepts.map(concept => {
