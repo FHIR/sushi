@@ -550,6 +550,9 @@ describe('StructureDefinitionExporter', () => {
     rule.types = [{ type: 'MySpecialQuantity' }];
     profile.rules.push(rule);
 
+    // force-load Quantity into the cache since MySpecialQuantity declares it as parent
+    fisher.fishForStructureDefinition('Quantity');
+
     exporter.exportStructDef(profile);
     const sd = pkg.profiles.find(d => d.name === 'Foo');
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
