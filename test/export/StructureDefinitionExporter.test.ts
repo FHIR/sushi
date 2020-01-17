@@ -658,9 +658,9 @@ describe('StructureDefinitionExporter', () => {
   it('should apply correct OnlyRules on circular FSHy choices', () => {
     const profile1 = new Profile('Foo');
     profile1.parent = 'Observation';
+    doc.profiles.set(profile1.name, profile1);
     const profile2 = new Profile('Bar');
     profile2.parent = 'Observation';
-
     doc.profiles.set(profile2.name, profile2);
 
     const rule1 = new OnlyRule('hasMember[Observation]');
@@ -670,10 +670,10 @@ describe('StructureDefinitionExporter', () => {
     profile1.rules.push(rule1);
     profile2.rules.push(rule2);
 
-    exporter.exportStructDef(profile1);
-    const sdFoo = exporter.profileDefs.find(def => def.id === 'Foo');
-    const sdBar = exporter.profileDefs.find(def => def.id === 'Bar');
-    const baseStructDef = resolve('Observation');
+    exporter.export();
+    const sdFoo = pkg.profiles.find(def => def.id === 'Foo');
+    const sdBar = pkg.profiles.find(def => def.id === 'Bar');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');
     const constrainedHasMemberFoo = sdFoo.findElement('Observation.hasMember');
@@ -710,19 +710,19 @@ describe('StructureDefinitionExporter', () => {
   it('should apply correct OnlyRule with circular FSHy parent', () => {
     const profile1 = new Profile('Foo');
     profile1.parent = 'Observation';
+    doc.profiles.set(profile1.name, profile1);
     const profile2 = new Profile('Bar');
     profile2.parent = 'Foo';
-
     doc.profiles.set(profile2.name, profile2);
 
     const rule = new OnlyRule('hasMember[Observation]');
     rule.types = [{ type: 'Bar', isReference: true }];
     profile1.rules.push(rule);
 
-    exporter.exportStructDef(profile1);
-    const sdFoo = exporter.profileDefs.find(def => def.id === 'Foo');
-    const sdBar = exporter.profileDefs.find(def => def.id === 'Bar');
-    const baseStructDef = resolve('Observation');
+    exporter.export();
+    const sdFoo = pkg.profiles.find(def => def.id === 'Foo');
+    const sdBar = pkg.profiles.find(def => def.id === 'Bar');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     expect(sdFoo.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
     expect(sdBar.baseDefinition).toBe('http://example.com/StructureDefinition/Foo');
@@ -752,7 +752,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedHasMemberBar.type).toHaveLength(1);
     expect(constrainedHasMemberBar.type[0]).toEqual(
       new ElementDefinitionType('Reference').withTargetProfiles(
-        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://example.com/StructureDefinition/Bar',
         'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
         'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
       )
