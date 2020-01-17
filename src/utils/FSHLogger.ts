@@ -28,6 +28,9 @@ const incrementCounts = format(info => {
     case 'error':
       stats.numError++;
       break;
+    case 'debug':
+      stats.numDebug++;
+      break;
     default:
       break;
   }
@@ -44,11 +47,13 @@ class LoggerStats {
   public numInfo = 0;
   public numWarn = 0;
   public numError = 0;
+  public numDebug = 0;
 
   reset(): void {
     this.numInfo = 0;
     this.numWarn = 0;
     this.numError = 0;
+    this.numDebug = 0;
   }
 }
 

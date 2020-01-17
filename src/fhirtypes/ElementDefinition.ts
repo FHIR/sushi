@@ -21,7 +21,7 @@ import {
   InvalidMaxOfSliceError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
-import { Fishable, Type, Metadata } from '../utils/Fishable';
+import { Fishable, Type, Metadata, logger } from '../utils';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -1405,6 +1405,11 @@ export class ElementDefinition {
         );
         if (json) {
           const def = StructureDefinition.fromJSON(json);
+          if (def.inProgress) {
+            logger.debug(
+              `Warning: Circular relationship detected between ${this.structDef?.name} and ${def.name}. As a result, it is possible that the definition of ${this.structDef?.name} may be based on incomplete components of ${def.name}.`
+            );
+          }
           newElements = def.elements.slice(1).map(e => {
             const eClone = e.clone();
             eClone.id = eClone.id.replace(def.type, `${this.id}`);

@@ -19,11 +19,14 @@ async function app() {
     .name('sushi')
     .usage('<path-to-fsh-defs> [options]')
     .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
+    .option('-d, --debug', 'output extra debugging information')
     .arguments('<path-to-fsh-defs>')
     .action(function(pathToFshDefs) {
       input = pathToFshDefs;
     })
     .parse(process.argv);
+
+  if (program.debug) logger.level = 'debug';
 
   // Check that input folder is specified
   if (!input) {

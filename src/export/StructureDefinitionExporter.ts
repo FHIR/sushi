@@ -187,15 +187,30 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     const structDef = StructureDefinition.fromJSON(json);
-    this.setMetadata(structDef, fshDefinition);
-    this.setRules(structDef, fshDefinition);
-    this.validateStructureDefinition(structDef);
+    if (structDef.inProgress) {
+      logger.warn(
+        `The definition of ${fshDefinition.name} may be incomplete because there is a circular ` +
+          `dependency with its parent ${parentName} causing the parent to be used before the ` +
+          'parent has been fully processed.'
+      );
+    }
 
+    structDef.inProgress = true;
+
+    this.setMetadata(structDef, fshDefinition);
+
+    // These are being pushed now in order to allow for
+    // incomplete definitions to be used to resolve circular reference issues.
     if (structDef.type === 'Extension') {
       this.pkg.extensions.push(structDef);
     } else {
       this.pkg.profiles.push(structDef);
     }
+
+    this.setRules(structDef, fshDefinition);
+    this.validateStructureDefinition(structDef);
+
+    structDef.inProgress = false;
 
     return structDef;
   }

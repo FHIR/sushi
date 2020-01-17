@@ -21,6 +21,8 @@ import {
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
 import path from 'path';
+import { logger } from '../../src/utils';
+import { withDebugLogging } from '../testhelpers/withDebugLogging';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -652,6 +654,187 @@ describe('StructureDefinitionExporter', () => {
         'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
         'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
       )
+    );
+  });
+
+  it('should apply correct OnlyRules on circular FSHy choices', () => {
+    const profile1 = new Profile('Foo');
+    profile1.parent = 'Observation';
+    doc.profiles.set(profile1.name, profile1);
+    const profile2 = new Profile('Bar');
+    profile2.parent = 'Observation';
+    doc.profiles.set(profile2.name, profile2);
+
+    const rule1 = new OnlyRule('hasMember[Observation]');
+    rule1.types = [{ type: 'Bar', isReference: true }];
+    const rule2 = new OnlyRule('hasMember[Observation]');
+    rule2.types = [{ type: 'Foo', isReference: true }];
+    profile1.rules.push(rule1);
+    profile2.rules.push(rule2);
+
+    withDebugLogging(() => exporter.export());
+    loggerSpy.getAllMessages().forEach(m => {
+      expect(m).not.toMatch(/circular/i);
+    });
+
+    const sdFoo = pkg.profiles.find(def => def.id === 'Foo');
+    const sdBar = pkg.profiles.find(def => def.id === 'Bar');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseHasMember = baseStructDef.findElement('Observation.hasMember');
+    const constrainedHasMemberFoo = sdFoo.findElement('Observation.hasMember');
+    const constrainedHasMemberBar = sdBar.findElement('Observation.hasMember');
+
+    expect(baseHasMember.type).toHaveLength(1);
+    expect(baseHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberFoo.type).toHaveLength(1);
+    expect(constrainedHasMemberFoo.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberBar.type).toHaveLength(1);
+    expect(constrainedHasMemberBar.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/Foo',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+  });
+
+  it('should safely apply correct OnlyRule with circular FSHy parent', () => {
+    const profile1 = new Profile('Foo');
+    profile1.parent = 'Observation';
+    doc.profiles.set(profile1.name, profile1);
+    const profile2 = new Profile('Bar');
+    profile2.parent = 'Foo';
+    doc.profiles.set(profile2.name, profile2);
+
+    const rule = new OnlyRule('hasMember[Observation]');
+    rule.types = [{ type: 'Bar', isReference: true }];
+    profile1.rules.push(rule);
+
+    withDebugLogging(() => exporter.export());
+    loggerSpy.getAllMessages().forEach(m => {
+      expect(m).not.toMatch(/circular/i);
+    });
+
+    const sdFoo = pkg.profiles.find(def => def.id === 'Foo');
+    const sdBar = pkg.profiles.find(def => def.id === 'Bar');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    expect(sdFoo.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
+    expect(sdBar.baseDefinition).toBe('http://example.com/StructureDefinition/Foo');
+
+    const baseHasMember = baseStructDef.findElement('Observation.hasMember');
+    const constrainedHasMemberFoo = sdFoo.findElement('Observation.hasMember');
+    const constrainedHasMemberBar = sdBar.findElement('Observation.hasMember');
+
+    expect(baseHasMember.type).toHaveLength(1);
+    expect(baseHasMember.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Observation',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberFoo.type).toHaveLength(1);
+    expect(constrainedHasMemberFoo.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+
+    expect(constrainedHasMemberBar.type).toHaveLength(1);
+    expect(constrainedHasMemberBar.type[0]).toEqual(
+      new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      )
+    );
+  });
+
+  it('should log a debug message when we detect a circular dependency in OnlyRules that might result in incomplete definitions', () => {
+    const profile1 = new Profile('FooQuantity');
+    profile1.parent = 'Quantity';
+    const p1ContainsRule = new ContainsRule('extension');
+    p1ContainsRule.items.push('QuantityExtension');
+    const p1OnlyRule = new OnlyRule('extension[QuantityExtension].valueQuantity');
+    p1OnlyRule.types = [{ type: 'BarQuantity' }];
+    const p1FixedValueRule = new FixedValueRule('extension[QuantityExtension].valueQuantity.code');
+    p1FixedValueRule.fixedValue = new FshCode('mg');
+    profile1.rules = [p1ContainsRule, p1OnlyRule, p1FixedValueRule];
+    doc.profiles.set(profile1.name, profile1);
+
+    const profile2 = new Profile('BarQuantity');
+    profile2.parent = 'Quantity';
+    const p2ContainsRule = new ContainsRule('extension');
+    p2ContainsRule.items.push('QuantityExtension');
+    const p2OnlyRule = new OnlyRule('extension[QuantityExtension].valueQuantity');
+    p2OnlyRule.types = [{ type: 'FooQuantity' }];
+    const p2FixedValueRule = new FixedValueRule('extension[QuantityExtension].valueQuantity.code');
+    p2FixedValueRule.fixedValue = new FshCode('mg');
+    profile2.rules = [p2ContainsRule, p2OnlyRule, p2FixedValueRule];
+    doc.profiles.set(profile2.name, profile2);
+
+    const extension = new Extension('QuantityExtension');
+    const extOnlyRule = new OnlyRule('value[x]');
+    extOnlyRule.types = [{ type: 'Quantity' }];
+    extension.rules = [extOnlyRule];
+    doc.extensions.set(extension.name, extension);
+
+    withDebugLogging(() => exporter.export());
+
+    const lastLog = loggerSpy.getLastLog();
+    expect(lastLog.level).toMatch(/debug/);
+    expect(lastLog.message).toMatch(/Warning: Circular .* BarQuantity and FooQuantity/);
+
+    expect(loggerSpy.getLastMessage()).toMatch(/Warning: Circular .* BarQuantity and FooQuantity/);
+  });
+
+  it('should log a warning message when we detect a circular dependency that causes an incomplete parent', () => {
+    const profile1 = new Profile('FooQuantity');
+    profile1.parent = 'BarQuantity';
+    doc.profiles.set(profile1.name, profile1);
+
+    const profile2 = new Profile('BarQuantity');
+    profile2.parent = 'Quantity';
+    const p2ContainsRule = new ContainsRule('extension');
+    p2ContainsRule.items.push('QuantityExtension');
+    const p2OnlyRule = new OnlyRule('extension[QuantityExtension].valueQuantity');
+    p2OnlyRule.types = [{ type: 'FooQuantity' }];
+    const p2FixedValueRule = new FixedValueRule('extension[QuantityExtension].valueQuantity.code');
+    p2FixedValueRule.fixedValue = new FshCode('mg');
+    profile2.rules = [p2ContainsRule, p2OnlyRule, p2FixedValueRule];
+    doc.profiles.set(profile2.name, profile2);
+
+    const extension = new Extension('QuantityExtension');
+    const extOnlyRule = new OnlyRule('value[x]');
+    extOnlyRule.types = [{ type: 'Quantity' }];
+    extension.rules = [extOnlyRule];
+    doc.extensions.set(extension.name, extension);
+
+    exporter.export();
+
+    const lastLog = loggerSpy.getLastLog();
+    expect(lastLog.level).toMatch(/warn/);
+    expect(lastLog.message).toMatch(
+      /The definition of FooQuantity may be incomplete .* BarQuantity/
     );
   });
 
