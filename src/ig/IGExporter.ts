@@ -1,11 +1,12 @@
 import fs from 'fs-extra';
 import path from 'path';
 import ini from 'ini';
+import sortBy from 'lodash/sortBy';
 import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
 import { Package } from '../export';
 import { ContactDetail, ImplementationGuide } from '../fhirtypes';
 import { logger } from '../utils/FSHLogger';
-import sortBy from 'lodash/sortBy';
+import { FHIRDefinitions } from '../fhirdefs';
 
 /**
  * The IG Exporter exports the FSH artifacts into a file structure supported by the IG Publisher.
@@ -16,7 +17,11 @@ import sortBy from 'lodash/sortBy';
  */
 export class IGExporter {
   private ig: ImplementationGuide;
-  constructor(public readonly pkg: Package, public readonly igDataPath: string) {}
+  constructor(
+    private readonly pkg: Package,
+    private readonly fhirDefs: FHIRDefinitions,
+    private readonly igDataPath: string
+  ) {}
 
   /**
    * Export the IG structure to the location specified by the outPath argument
@@ -72,6 +77,7 @@ export class IGExporter {
       packageId: config.name,
       license: config.license,
       fhirVersion: ['4.0.1'],
+      dependsOn: [],
       definition: {
         resource: [],
         page: {
@@ -88,6 +94,29 @@ export class IGExporter {
         }
       }
     };
+
+    // Add the dependencies
+    if (this.pkg.config.dependencies) {
+      const igs = this.fhirDefs.allImplementationGuides();
+      for (const key of Object.keys(this.pkg.config.dependencies)) {
+        if (key === 'hl7.fhir.r4.core') {
+          continue;
+        }
+        const depIG = igs.find(
+          ig => ig.packageId === key && ig.version == this.pkg.config.dependencies[key]
+        );
+        if (depIG) {
+          this.ig.dependsOn.push({
+            uri: `${depIG.url}|${depIG.version}`,
+            packageId: depIG.packageId,
+            version: depIG.version
+          });
+        }
+      }
+      if (this.ig.dependsOn.length === 0) {
+        delete this.ig.dependsOn;
+      }
+    }
   }
 
   /**
