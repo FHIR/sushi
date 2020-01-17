@@ -1,21 +1,18 @@
-import { InstanceExporter, StructureDefinitionExporter } from '../../src/export';
+import { InstanceExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { ResolveFn } from '../../src/fhirtypes';
 import { Instance, Profile, FshCode, FshReference } from '../../src/fshtypes';
 import { FixedValueRule } from '../../src/fshtypes/rules';
-import { loggerSpy } from '../testhelpers/loggerSpy';
-import { getResolver } from '../testhelpers/getResolver';
-import { spyResolve } from '../testhelpers/spyResolve';
+import { loggerSpy, TestFisher } from '../testhelpers';
+import { InstanceDefinition } from '../../src/fhirtypes';
 import path from 'path';
 
 describe('InstanceExporter', () => {
   let defs: FHIRDefinitions;
-  let resolve: ResolveFn;
   let doc: FSHDocument;
-  let input: FSHTank;
+  let sdExporter: StructureDefinitionExporter;
   let exporter: InstanceExporter;
-  let structureDefinitionExporter: StructureDefinitionExporter;
+  let exportInstance: (instance: Instance) => InstanceDefinition;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -24,23 +21,27 @@ describe('InstanceExporter', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    structureDefinitionExporter = new StructureDefinitionExporter(defs, input);
-    spyResolve(structureDefinitionExporter, resolve);
-    exporter = new InstanceExporter(
-      defs,
-      input,
-      structureDefinitionExporter.resolve.bind(structureDefinitionExporter)
-    );
+    const input = new FSHTank([doc], {
+      name: 'test',
+      version: '0.0.1',
+      canonical: 'http://example.com'
+    });
+    const pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg);
+    sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
+    exporter = new InstanceExporter(input, pkg, fisher);
+    exportInstance = (instance: Instance) => {
+      sdExporter.export();
+      return exporter.exportInstance(instance);
+    };
   });
 
   it('should output empty results with empty input', () => {
-    const exported = exporter.export();
+    const exported = exporter.export().instances;
     expect(exported).toEqual([]);
   });
 
@@ -48,7 +49,7 @@ describe('InstanceExporter', () => {
     const instance = new Instance('MyInstance');
     instance.instanceOf = 'Patient';
     doc.instances.set(instance.name, instance);
-    const exported = exporter.export();
+    const exported = exporter.export().instances;
     expect(exported.length).toBe(1);
   });
 
@@ -59,7 +60,7 @@ describe('InstanceExporter', () => {
     instanceBar.instanceOf = 'Patient';
     doc.instances.set(instanceFoo.name, instanceFoo);
     doc.instances.set(instanceBar.name, instanceBar);
-    const exported = exporter.export();
+    const exported = exporter.export().instances;
     expect(exported.length).toBe(2);
   });
 
@@ -70,7 +71,7 @@ describe('InstanceExporter', () => {
     instanceBar.instanceOf = 'Patient';
     doc.instances.set(instanceFoo.name, instanceFoo);
     doc.instances.set(instanceBar.name, instanceBar);
-    const exported = exporter.export();
+    const exported = exporter.export().instances;
     expect(exported.length).toBe(1);
     expect(exported[0].instanceName).toBe('Bar');
   });
@@ -90,7 +91,8 @@ describe('InstanceExporter', () => {
     instanceBar.instanceOf = 'Foo';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.instances.set(instanceBar.name, instanceBar);
-    const exported = exporter.export();
+    sdExporter.export();
+    const exported = exporter.export().instances;
     expect(exported.length).toBe(1); // One instance is successfully exported because profile is defined
     expect(exported[0].instanceName).toBe('Bar');
     expect(exported[0].resourceType).toBe('Patient');
@@ -104,7 +106,7 @@ describe('InstanceExporter', () => {
     fixedValRule.fixedValue = fixedFshCode;
     instance.rules.push(fixedValRule);
     doc.instances.set(instance.name, instance);
-    const exported = exporter.export();
+    const exported = exporter.export().instances;
     expect(exported.length).toBe(1);
     expect(exported[0].gender).toBe('foo');
   });
@@ -135,7 +137,7 @@ describe('InstanceExporter', () => {
 
     // Setting Metadata
     it('should set meta.profile to the defining URL we are making an instance of', () => {
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.meta).toEqual({
         profile: ['http://example.com/StructureDefinition/TestPatient']
       });
@@ -144,7 +146,7 @@ describe('InstanceExporter', () => {
     it('should not set meta.profile when we are making an instance of a base resource', () => {
       const boo = new Instance('Boo');
       boo.instanceOf = 'Patient';
-      const exported = exporter.exportInstance(boo);
+      const exported = exportInstance(boo);
       expect(exported.meta).toBeUndefined();
     });
 
@@ -153,7 +155,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.active).toEqual(true);
     });
 
@@ -162,7 +164,7 @@ describe('InstanceExporter', () => {
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
       patient.rules.push(fixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.maritalStatus).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
       });
@@ -172,7 +174,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('deceasedBoolean');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.deceasedBoolean).toBe(true);
     });
 
@@ -183,7 +185,7 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('active');
       instanceFixedValRule.fixedValue = true;
       instance.rules.push(instanceFixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.active).toEqual(true);
     });
 
@@ -196,7 +198,7 @@ describe('InstanceExporter', () => {
       const instanceFixedFshCode = new FshCode('foo', 'http://foo.com');
       instanceFixedValRule.fixedValue = instanceFixedFshCode;
       instance.rules.push(instanceFixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.maritalStatus).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
       });
@@ -209,7 +211,7 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('active');
       instanceFixedValRule.fixedValue = false;
       instance.rules.push(instanceFixedValRule);
-      expect(() => exporter.exportInstance(instance)).toThrow(
+      expect(() => exportInstance(instance)).toThrow(
         'Cannot fix false to this element; a different boolean is already fixed: true'
       );
     });
@@ -223,7 +225,7 @@ describe('InstanceExporter', () => {
       const instanceFixedFshCode = new FshCode('bar', 'http://bar.com');
       instanceFixedValRule.fixedValue = instanceFixedFshCode;
       instance.rules.push(instanceFixedValRule);
-      expect(() => exporter.exportInstance(instance)).toThrow(
+      expect(() => exportInstance(instance)).toThrow(
         'Cannot fix http://bar.com#bar to this element; a different code is already fixed: http://foo.com#foo.'
       );
     });
@@ -236,7 +238,7 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('communication[0].language');
       instanceFixedValRule.fixedValue = new FshCode('foo');
       instance.rules.push(instanceFixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.communication[0]).toEqual({
         preferred: true,
         language: { coding: [{ code: 'foo' }] }
@@ -252,7 +254,7 @@ describe('InstanceExporter', () => {
       );
       instanceFixedValRule.fixedValue = 'bar';
       instance.rules.push(instanceFixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.communication[0]).toEqual({
         language: { text: 'foo', coding: [{ version: 'bar' }] }
       });
@@ -262,7 +264,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('communication.preferred');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.communication).toBeUndefined();
     });
 
@@ -276,7 +278,7 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].system');
       instanceFixedValRule.fixedValue = 'http://bar.com';
       instance.rules.push(instanceFixedValRule);
-      expect(() => exporter.exportInstance(instance)).toThrow();
+      expect(() => exportInstance(instance)).toThrow();
     });
 
     // Fixing children of primitives
@@ -285,7 +287,7 @@ describe('InstanceExporter', () => {
       fixedValRule.fixedValue = 'foo';
       instance.rules.push(fixedValRule);
       doc.instances.set(instance.name, instance);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported._active.id).toBe('foo');
     });
 
@@ -297,7 +299,7 @@ describe('InstanceExporter', () => {
       fixedValRule2.fixedValue = 'foo';
       instance.rules.push(fixedValRule2);
       doc.instances.set(instance.name, instance);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.active).toBe(true);
       expect(exported._active.id).toBe('foo');
     });
@@ -307,7 +309,7 @@ describe('InstanceExporter', () => {
       fixedValRule.fixedValue = 'foo';
       instance.rules.push(fixedValRule);
       doc.instances.set(instance.name, instance);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.address.length).toBe(1);
       expect(exported.address[0]._line.length).toBe(2);
       expect(exported.address[0]._line[0]).toBeNull();
@@ -323,7 +325,7 @@ describe('InstanceExporter', () => {
       fixedValRule2.fixedValue = 'foo';
       instance.rules.push(fixedValRule2);
       doc.instances.set(instance.name, instance);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.address.length).toBe(1);
       expect(exported.address[0]._line.length).toBe(2);
       expect(exported.address[0]._line[0].extension.length).toBe(1);
@@ -344,7 +346,7 @@ describe('InstanceExporter', () => {
       instance.rules.push(fixedRefRule);
       doc.instances.set(instance.name, instance);
       doc.instances.set(orgInstance.name, orgInstance);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.managingOrganization).toEqual({
         reference: 'Organization/org-id'
       });
@@ -355,7 +357,7 @@ describe('InstanceExporter', () => {
       fixedRefRule.fixedValue = new FshReference('http://example.com');
       instance.rules.push(fixedRefRule);
       doc.instances.set(instance.name, instance);
-      const exported = exporter.exportInstance(instance);
+      const exported = exportInstance(instance);
       expect(exported.managingOrganization).toEqual({
         reference: 'http://example.com'
       });
@@ -366,7 +368,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('extension[level].valueCoding.system');
       fixedValRule.fixedValue = 'foo';
       patientProfInstance.rules.push(fixedValRule);
-      const exported = exporter.exportInstance(patientProfInstance);
+      const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([{ url: 'level', valueCoding: { system: 'foo' } }]);
     });
 
@@ -377,7 +379,7 @@ describe('InstanceExporter', () => {
       const barRule = new FixedValueRule('extension[type][1].valueCoding.system');
       barRule.fixedValue = 'bar';
       patientProfInstance.rules.push(barRule);
-      const exported = exporter.exportInstance(patientProfInstance);
+      const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'type', valueCoding: { system: 'bar' } }
@@ -391,7 +393,7 @@ describe('InstanceExporter', () => {
       const barRule = new FixedValueRule('extension[type][1].valueCoding.version');
       barRule.fixedValue = '1.2.3';
       patientProfInstance.rules.push(barRule);
-      const exported = exporter.exportInstance(patientProfInstance);
+      const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
         null,
         { url: 'type', valueCoding: { system: 'foo', version: '1.2.3' } }
@@ -405,7 +407,7 @@ describe('InstanceExporter', () => {
       const barRule = new FixedValueRule('extension[type][0].valueCoding.system');
       barRule.fixedValue = 'bar';
       patientProfInstance.rules.push(barRule);
-      const exported = exporter.exportInstance(patientProfInstance);
+      const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
         { url: 'type', valueCoding: { system: 'bar' } },
         { url: 'type', valueCoding: { system: 'foo' } }
@@ -416,7 +418,7 @@ describe('InstanceExporter', () => {
       const fooRule = new FixedValueRule('extension[type][1].valueCoding.system');
       fooRule.fixedValue = 'foo';
       patientProfInstance.rules.push(fooRule);
-      const exported = exporter.exportInstance(patientProfInstance);
+      const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([null, { url: 'type', valueCoding: { system: 'foo' } }]);
     });
 
@@ -430,7 +432,7 @@ describe('InstanceExporter', () => {
       const barRule = new FixedValueRule('extension[type][1].valueCoding.system');
       barRule.fixedValue = 'bar';
       patientProfInstance.rules.push(barRule);
-      const exported = exporter.exportInstance(patientProfInstance);
+      const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'level', valueCoding: { system: 'baz' } },
@@ -448,7 +450,7 @@ describe('InstanceExporter', () => {
       const barRule = new FixedValueRule('extension[type][0].valueCoding.system');
       barRule.fixedValue = 'bar';
       patientProfInstance.rules.push(barRule);
-      const exported = exporter.exportInstance(patientProfInstance);
+      const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
         { url: 'type', valueCoding: { system: 'bar' } },
         { url: 'type', valueCoding: { system: 'foo' } },
@@ -461,7 +463,7 @@ describe('InstanceExporter', () => {
       fixedValRule.fixedValue = 'foo';
       lipidInstance.rules.push(fixedValRule);
       // Feel free to change this error message when actually implementing
-      expect(() => exporter.exportInstance(lipidInstance)).toThrow(
+      expect(() => exportInstance(lipidInstance)).toThrow(
         'Slice Triglyceride of result fixed out of order'
       );
     });
@@ -470,7 +472,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('result[0].display');
       fixedValRule.fixedValue = 'foo';
       lipidInstance.rules.push(fixedValRule);
-      expect(() => exporter.exportInstance(lipidInstance)).toThrow(
+      expect(() => exportInstance(lipidInstance)).toThrow(
         'Slicing on result is closed, only named slices may be added'
       );
     });

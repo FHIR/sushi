@@ -3,6 +3,7 @@ import { Meta } from './specialTypes';
 import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
+import { cloneDeep } from 'lodash';
 
 /**
  * Class representing a FHIR R4 ValueSet.
@@ -52,7 +53,7 @@ export class ValueSet {
   toJSON(): any {
     return {
       resourceType: 'ValueSet',
-      ...this
+      ...cloneDeep(this)
     };
   }
 }

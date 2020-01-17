@@ -2,8 +2,7 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshQuantity, FshCode } from '../../src/fshtypes';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn } from '../../src/fhirtypes';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -11,7 +10,7 @@ describe('ElementDefinition', () => {
   let observation: StructureDefinition;
   let fshQuantity1: FshQuantity;
   let fshQuantity2: FshQuantity;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -20,10 +19,10 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
+    observation = fisher.fishForStructureDefinition('Observation');
     fshQuantity1 = new FshQuantity(1.23, new FshCode('mm', 'http://unitsofmeasure.org'));
     fshQuantity2 = new FshQuantity(1.24, new FshCode('mm', 'http://unitsofmeasure.org'));
   });

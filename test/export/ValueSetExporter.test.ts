@@ -1,34 +1,53 @@
-import { ValueSetExporter } from '../../src/export';
+import { ValueSetExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import {
   FshValueSet,
   ValueSetFilterComponent,
   ValueSetConceptComponent,
   FshCode,
-  VsOperator
+  VsOperator,
+  FshCodeSystem
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { TestFisher } from '../testhelpers';
+import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import path from 'path';
 
 describe('ValueSetExporter', () => {
+  let defs: FHIRDefinitions;
   let doc: FSHDocument;
-  let input: FSHTank;
   let exporter: ValueSetExporter;
+
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+  });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new ValueSetExporter(input);
+    const input = new FSHTank([doc], {
+      name: 'test',
+      version: '0.0.1',
+      canonical: 'http://example.com'
+    });
+    const pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg);
+    exporter = new ValueSetExporter(input, pkg, fisher);
   });
 
   it('should output empty results with empty input', () => {
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported).toEqual([]);
   });
 
   it('should export a single value set', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'BreakfastVS',
@@ -44,7 +63,7 @@ describe('ValueSetExporter', () => {
     const lunch = new FshValueSet('LunchVS');
     doc.valueSets.set(breakfast.name, breakfast);
     doc.valueSets.set(lunch.name, lunch);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(2);
   });
 
@@ -53,7 +72,7 @@ describe('ValueSetExporter', () => {
     valueSet.title = 'Breakfast Values';
     valueSet.description = 'A value set for breakfast items';
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'BreakfastVS',
@@ -69,9 +88,9 @@ describe('ValueSetExporter', () => {
   it('should export each value set once, even if export is called more than once', () => {
     const breakfast = new FshValueSet('BreakfastVS');
     doc.valueSets.set(breakfast.name, breakfast);
-    let exported = exporter.export();
+    let exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
-    exported = exporter.export();
+    exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
   });
 
@@ -81,7 +100,7 @@ describe('ValueSetExporter', () => {
     component.from = { system: 'http://food.org/food' };
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'DinnerVS',
@@ -91,6 +110,29 @@ describe('ValueSetExporter', () => {
       version: '0.0.1',
       compose: {
         include: [{ system: 'http://food.org/food' }]
+      }
+    });
+  });
+
+  it('should export a value set that includes a component from a named system', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponent(true);
+    component.from = { system: 'FoodCS' };
+    valueSet.components.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    doc.codeSystems.set(foodCS.name, foodCS);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'active',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
+      compose: {
+        include: [{ system: 'http://example.com/CodeSystem/food' }]
       }
     });
   });
@@ -106,7 +148,7 @@ describe('ValueSetExporter', () => {
     };
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'DinnerVS',
@@ -127,6 +169,41 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should export a value set that includes a component from a named value set', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponent(true);
+    component.from = {
+      valueSets: ['HotFoodVS', 'ColdFoodVS']
+    };
+    valueSet.components.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const hotFoodVS = new FshValueSet('HotFoodVS');
+    hotFoodVS.id = 'hot-food';
+    doc.valueSets.set(hotFoodVS.name, hotFoodVS);
+    const coldFoodVS = new FshValueSet('ColdFoodVS');
+    coldFoodVS.id = 'cold-food';
+    doc.valueSets.set(coldFoodVS.name, coldFoodVS);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(3);
+    expect(exported[0]).toEqual({
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            valueSet: [
+              'http://example.com/ValueSet/hot-food',
+              'http://example.com/ValueSet/cold-food'
+            ]
+          }
+        ]
+      }
+    });
+  });
+
   it('should export a value set that includes a concept component with at least one concept', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponent(true);
@@ -140,7 +217,7 @@ describe('ValueSetExporter', () => {
     component.concepts.push(new FshCode('Mulch', 'http://food.org/food'));
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'DinnerVS',
@@ -174,7 +251,7 @@ describe('ValueSetExporter', () => {
     });
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'BreakfastVS',
@@ -210,7 +287,7 @@ describe('ValueSetExporter', () => {
     });
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'BreakfastVS',
@@ -246,7 +323,7 @@ describe('ValueSetExporter', () => {
     });
     valueSet.components.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'BreakfastVS',
@@ -286,7 +363,7 @@ describe('ValueSetExporter', () => {
     valueSet.components.push(includedComponent);
     valueSet.components.push(excludedComponent);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       id: 'DinnerVS',
@@ -327,7 +404,7 @@ describe('ValueSetExporter', () => {
     candyFilter.from = { valueSets: ['CandyVS'] };
     valueSet.components.push(candyFilter);
     doc.valueSets.set(valueSet.name, valueSet);
-    const exported = exporter.export();
+    const exported = exporter.export().valueSets;
     expect(exported.length).toBe(0);
     expect(loggerSpy.getLastMessage()).toMatch(/File: Breakfast\.fsh.*Line: 2 - 4\D/s);
   });

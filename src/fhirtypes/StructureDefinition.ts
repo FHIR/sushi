@@ -1,11 +1,12 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
-import { ElementDefinition, ElementDefinitionType, ResolveFn } from './ElementDefinition';
+import { ElementDefinition, ElementDefinitionType } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
 import { getArrayIndex, setPropertyOnDefinitionInstance } from './common';
+import { Fishable, Type } from '../utils/Fishable';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -85,12 +86,14 @@ export class StructureDefinition {
 
   /**
    * Get the Structure Definition for Structure Definition
-   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {StructureDefinition} the StructureDefinition of StructureDefinition
    */
-  getOwnStructureDefinition(resolve: ResolveFn = () => undefined): StructureDefinition {
+  getOwnStructureDefinition(fisher: Fishable): StructureDefinition {
     if (this._sdStructureDefinition == null) {
-      this._sdStructureDefinition = resolve('StructureDefinition');
+      this._sdStructureDefinition = StructureDefinition.fromJSON(
+        fisher.fishForFHIR('StructureDefinition', Type.Resource)
+      );
     }
     return this._sdStructureDefinition;
   }
@@ -138,10 +141,10 @@ export class StructureDefinition {
   /**
    * Finds an element by a FSH-compatible path
    * @param {string} path - The FSH path
-   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition} - The found element (or undefined if it is not found)
    */
-  findElementByPath(path: string, resolve: ResolveFn = () => undefined): ElementDefinition {
+  findElementByPath(path: string, fisher: Fishable): ElementDefinition {
     // If the path already exists, get it and return the match
     // If !path just return the base parent element
     const fullPath = path ? `${this.type}.${path}` : this.type;
@@ -175,7 +178,7 @@ export class StructureDefinition {
       if (newMatchingElements.length === 0 && matchingElements.length === 1) {
         // If there was previously only one match,
         // we want to unfold that match and dig deeper into it
-        unfoldedElements = matchingElements[0].unfold(resolve);
+        unfoldedElements = matchingElements[0].unfold(fisher);
         if (unfoldedElements.length > 0) {
           // Only get the children that match our path
           newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
@@ -241,13 +244,13 @@ export class StructureDefinition {
    * This function sets an instance property of an SD if possible
    * @param {string} path - The path to the ElementDefinition to fix
    * @param {any} value - The value to fix
-   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
-  setInstancePropertyByPath(path: string, value: any, resolve: ResolveFn = () => undefined): void {
+  setInstancePropertyByPath(path: string, value: any, fisher: Fishable): void {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    setPropertyOnDefinitionInstance(this, path, value, resolve);
+    setPropertyOnDefinitionInstance(this, path, value, fisher);
   }
 
   /**
@@ -336,14 +339,14 @@ export class StructureDefinition {
    * This function tests if it is possible to fix value to a path, but does not actually fix it
    * @param {string} path - The path to the ElementDefinition to fix
    * @param {any} value - The value to fix
-   * @param {ResolveFn} resolve - A function that can resolve a type to a StructureDefinition instance
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @returns {any} - The object or value to fix
    */
   validateValueAtPath(
     path: string,
     value: any,
-    resolve: ResolveFn = () => undefined
+    fisher: Fishable
   ): { fixedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
     let currentPath = '';
@@ -360,7 +363,7 @@ export class StructureDefinition {
         // If it is not a number, then add all bracket info back to path
         pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
       }
-      currentElement = this.findElementByPath(currentPath, resolve);
+      currentElement = this.findElementByPath(currentPath, fisher);
 
       // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
       const nonArrayElementIsBasedOnArray =

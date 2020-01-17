@@ -2,8 +2,7 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshQuantity, FshCode, FshRatio } from '../../src/fshtypes';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn } from '../../src/fhirtypes';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -13,7 +12,7 @@ describe('ElementDefinition', () => {
   let fshRatio: FshRatio;
   let fshRatioNoUnits: FshRatio;
   let differentFshRatio: FshRatio;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -21,11 +20,11 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
-    medication = resolve('Medication');
+    observation = fisher.fishForStructureDefinition('Observation');
+    medication = fisher.fishForStructureDefinition('Medication');
     fshRatio = new FshRatio(
       new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
       new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))

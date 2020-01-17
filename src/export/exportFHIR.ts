@@ -2,6 +2,7 @@ import { FHIRExporter } from './FHIRExporter';
 import { Package } from './Package';
 import { FSHTank } from '../import';
 import { FHIRDefinitions } from '../fhirdefs';
+import { MasterFisher } from '../utils';
 
 /**
  * Processes a set of FSH definitions into StructureDefinitions.
@@ -10,6 +11,8 @@ import { FHIRDefinitions } from '../fhirdefs';
  * @returns {Package} - the Package structure returned from processing the FSH definitions
  */
 export function exportFHIR(tank: FSHTank, FHIRDefs: FHIRDefinitions): Package {
-  const exporter = new FHIRExporter(FHIRDefs);
-  return exporter.export(tank);
+  const pkg = new Package(tank.config);
+  const fisher = new MasterFisher(tank, FHIRDefs, pkg);
+  const exporter = new FHIRExporter(tank, pkg, fisher);
+  return exporter.export();
 }

@@ -1,3 +1,5 @@
+import cloneDeep = require('lodash/cloneDeep');
+
 /**
  * A class representing a FHIR Instance.
  *
@@ -19,8 +21,9 @@ export class InstanceDefinition {
   }
 
   toJSON(): any {
-    delete this.instanceName; // Only needed for the file name - not a FHIR property
-    return this;
+    const clone = cloneDeep(this);
+    delete clone.instanceName; // Only needed for the file name - not a FHIR property
+    return clone;
   }
 
   static fromJSON(json: { [key: string]: any }): InstanceDefinition {

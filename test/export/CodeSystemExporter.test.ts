@@ -1,28 +1,32 @@
-import { CodeSystemExporter } from '../../src/export';
+import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem } from '../../src/fshtypes';
 import { FshConcept } from '../../src/fshtypes/FshConcept';
 
 describe('CodeSystemExporter', () => {
   let doc: FSHDocument;
-  let input: FSHTank;
   let exporter: CodeSystemExporter;
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    input = new FSHTank([doc], { name: 'test', version: '0.0.1', canonical: 'http://example.com' });
-    exporter = new CodeSystemExporter(input);
+    const input = new FSHTank([doc], {
+      name: 'test',
+      version: '0.0.1',
+      canonical: 'http://example.com'
+    });
+    const pkg = new Package(input.config);
+    exporter = new CodeSystemExporter(input, pkg);
   });
 
   it('should output empty results with empty input', () => {
-    const exported = exporter.export();
+    const exported = exporter.export().codeSystems;
     expect(exported).toEqual([]);
   });
 
   it('should export a single code system', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     doc.codeSystems.set(codeSystem.name, codeSystem);
-    const exported = exporter.export();
+    const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
@@ -40,7 +44,7 @@ describe('CodeSystemExporter', () => {
     codeSystem.title = 'My Fancy Code System';
     codeSystem.description = 'Lots of important details about my fancy code system';
     doc.codeSystems.set(codeSystem.name, codeSystem);
-    const exported = exporter.export();
+    const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
@@ -57,9 +61,9 @@ describe('CodeSystemExporter', () => {
   it('should export each code system once, even if export is called more than once', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     doc.codeSystems.set(codeSystem.name, codeSystem);
-    const exported = exporter.export();
+    const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
-    const exportedAgain = exporter.export();
+    const exportedAgain = exporter.export().codeSystems;
     expect(exportedAgain.length).toBe(1);
   });
 
@@ -69,7 +73,7 @@ describe('CodeSystemExporter', () => {
     const anotherCode = new FshConcept('anotherCode');
     codeSystem.concepts = [myCode, anotherCode];
     doc.codeSystems.set(codeSystem.name, codeSystem);
-    const exported = exporter.export();
+    const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
@@ -92,7 +96,7 @@ describe('CodeSystemExporter', () => {
     );
     codeSystem.concepts = [myCode, anotherCode];
     doc.codeSystems.set(codeSystem.name, codeSystem);
-    const exported = exporter.export();
+    const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',

@@ -1,8 +1,7 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { getResolver } from '../testhelpers/getResolver';
-import { ResolveFn } from '../../src/fhirtypes';
+import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -16,7 +15,7 @@ describe('ElementDefinition', () => {
   let imagingStudy: StructureDefinition;
   let device: StructureDefinition;
   let task: StructureDefinition;
-  let resolve: ResolveFn;
+  let fisher: TestFisher;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -25,18 +24,18 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    resolve = getResolver(defs);
+    fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
-    observation = resolve('Observation');
-    medication = resolve('Medication');
-    patient = resolve('Patient');
-    riskEvidenceSynthesis = resolve('RiskEvidenceSynthesis');
-    location = resolve('Location');
-    capabilityStatement = resolve('CapabilityStatement');
-    imagingStudy = resolve('ImagingStudy');
-    device = resolve('Device');
-    task = resolve('Task');
+    observation = fisher.fishForStructureDefinition('Observation');
+    medication = fisher.fishForStructureDefinition('Medication');
+    patient = fisher.fishForStructureDefinition('Patient');
+    riskEvidenceSynthesis = fisher.fishForStructureDefinition('RiskEvidenceSynthesis');
+    location = fisher.fishForStructureDefinition('Location');
+    capabilityStatement = fisher.fishForStructureDefinition('CapabilityStatement');
+    imagingStudy = fisher.fishForStructureDefinition('ImagingStudy');
+    device = fisher.fishForStructureDefinition('Device');
+    task = fisher.fishForStructureDefinition('Task');
   });
   describe('#fixString', () => {
     // Fixing a string
@@ -289,13 +288,13 @@ describe('ElementDefinition', () => {
 
     // Fixing an oid
     it('should fix a string to an oid', () => {
-      const inputValueOid = task.findElementByPath('input.valueOid');
+      const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       inputValueOid.fixString('urn:oid:1.2.3.4.5');
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed oid', () => {
-      const inputValueOid = task.findElementByPath('input.valueOid');
+      const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       inputValueOid.fixString('urn:oid:1.2.3.4.5');
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
       expect(() => {
@@ -306,7 +305,7 @@ describe('ElementDefinition', () => {
     });
 
     it('should throw MismatchedTypeError when fixing an oid to an incorrect value', () => {
-      const inputValueOid = task.findElementByPath('input.valueOid');
+      const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       expect(() => {
         inputValueOid.fixString('invalid oid');
       }).toThrow('Cannot fix string value: invalid oid. Value does not match element type: oid');
@@ -361,13 +360,13 @@ describe('ElementDefinition', () => {
 
     // Fixing uuid
     it('should fix a string to a uuid', () => {
-      const inputValueUuid = task.findElementByPath('input.valueUuid');
+      const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
       inputValueUuid.fixString('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed uuid', () => {
-      const inputValueUuid = task.findElementByPath('input.valueUuid');
+      const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
       inputValueUuid.fixString('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(() => {
