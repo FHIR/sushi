@@ -21,7 +21,6 @@ import {
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
 import path from 'path';
-import { logger } from '../../src/utils';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 
 describe('StructureDefinitionExporter', () => {

@@ -6,7 +6,8 @@
   "title" : "FSH Test IG",
   "description": "Provides a simple example of how FSH can be used to create an IG",
   "dependencies": {
-     "hl7.fhir.core": "4.0.1"
+     "hl7.fhir.core": "4.0.1",
+     "hl7.fhir.us.core": "3.1.0"
   },
   "language": "en",
   "author": "James Tuna",

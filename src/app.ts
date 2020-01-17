@@ -87,7 +87,7 @@ async function app() {
   // If ig-data exists, generate an IG, otherwise, generate resources only
   const igDataPath = path.resolve(input, 'ig-data');
   if (fs.existsSync(igDataPath)) {
-    const igExporter = new IGExporter(outPackage, igDataPath);
+    const igExporter = new IGExporter(outPackage, defs, igDataPath);
     igExporter.export(program.out);
   } else {
     for (const sd of [

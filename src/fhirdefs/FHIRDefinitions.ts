@@ -8,6 +8,7 @@ export class FHIRDefinitions implements Fishable {
   private types: Map<string, any>;
   private valueSets: Map<string, any>;
   private codeSystems: Map<string, any>;
+  private implementationGuides: Map<string, any>;
   packages: string[];
 
   constructor() {
@@ -18,6 +19,7 @@ export class FHIRDefinitions implements Fishable {
     this.types = new Map();
     this.valueSets = new Map();
     this.codeSystems = new Map();
+    this.implementationGuides = new Map();
   }
 
   size(): number {
@@ -27,7 +29,8 @@ export class FHIRDefinitions implements Fishable {
       this.extensions.size +
       this.types.size +
       this.valueSets.size +
-      this.codeSystems.size
+      this.codeSystems.size +
+      this.implementationGuides.size
     );
   }
 
@@ -57,28 +60,36 @@ export class FHIRDefinitions implements Fishable {
     return cloneJsonMapValues(this.codeSystems);
   }
 
+  allImplementationGuides(): any[] {
+    return cloneJsonMapValues(this.implementationGuides);
+  }
+
   add(definition: any): void {
-    if (
-      definition.type === 'Extension' &&
-      definition.baseDefinition !== 'http://hl7.org/fhir/StructureDefinition/Element'
-    ) {
-      addDefinitionToMap(definition, this.extensions);
-    } else if (
-      definition.kind === 'primitive-type' ||
-      definition.kind === 'complex-type' ||
-      definition.kind === 'datatype'
-    ) {
-      addDefinitionToMap(definition, this.types);
-    } else if (definition.kind === 'resource') {
-      if (definition.derivation === 'constraint') {
-        addDefinitionToMap(definition, this.profiles);
-      } else {
-        addDefinitionToMap(definition, this.resources);
+    if (definition.resourceType === 'StructureDefinition') {
+      if (
+        definition.type === 'Extension' &&
+        definition.baseDefinition !== 'http://hl7.org/fhir/StructureDefinition/Element'
+      ) {
+        addDefinitionToMap(definition, this.extensions);
+      } else if (
+        definition.kind === 'primitive-type' ||
+        definition.kind === 'complex-type' ||
+        definition.kind === 'datatype'
+      ) {
+        addDefinitionToMap(definition, this.types);
+      } else if (definition.kind === 'resource') {
+        if (definition.derivation === 'constraint') {
+          addDefinitionToMap(definition, this.profiles);
+        } else {
+          addDefinitionToMap(definition, this.resources);
+        }
       }
     } else if (definition.resourceType === 'ValueSet') {
       addDefinitionToMap(definition, this.valueSets);
     } else if (definition.resourceType === 'CodeSystem') {
       addDefinitionToMap(definition, this.codeSystems);
+    } else if (definition.resourceType === 'ImplementationGuide') {
+      addDefinitionToMap(definition, this.implementationGuides);
     }
   }
 
