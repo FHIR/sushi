@@ -59,8 +59,15 @@ export class StructureDefinition {
    */
   elements: ElementDefinition[];
 
+  /**
+   * A StructureDefinition instance of StructureDefinition itself.  Needed for supporting escape syntax.
+   */
   private _sdStructureDefinition: StructureDefinition;
 
+  /**
+   * A flag indicating if the StructureDefinition is currently being processed.
+   * This allows us to log messages when processing might be affected by circular dependencies.
+   */
   public inProgress?: boolean;
 
   /**
@@ -304,6 +311,15 @@ export class StructureDefinition {
       element: this.elements.filter(e => e.hasDiff()).map(e => e.calculateDiff().toJSON())
     };
 
+    // If the StructureDefinition is in progress, we want to persist that in the JSON so that when
+    // the Fisher retrieves it from a package and converts to JSON, the inProgress state will be
+    // preserved.  But do NOT persist it when it is false.
+    // NOTE: This should be safe because StructureDefinitions should never be inProgress by the
+    // time we do the final export.
+    if (this.inProgress) {
+      j.inProgress = true;
+    }
+
     return j;
   }
 
@@ -333,6 +349,10 @@ export class StructureDefinition {
         ed.structDef = sd;
         sd.elements.push(ed);
       }
+    }
+    // And finally add back the inProgress field if it's there
+    if (json.inProgress) {
+      sd.inProgress = true;
     }
     return sd;
   }
@@ -574,6 +594,7 @@ interface LooseStructDefJSON {
   derivation?: string;
   snapshot?: { element: any[] };
   differential?: { element: any[] };
+  inProgress?: boolean;
   // [key: string]: any;
 }
 

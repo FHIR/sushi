@@ -189,7 +189,9 @@ export class StructureDefinitionExporter implements Fishable {
     const structDef = StructureDefinition.fromJSON(json);
     if (structDef.inProgress) {
       logger.warn(
-        `The definition of ${fshDefinition.name} may end up incomplete because its parent ${parentName} is still in progress.`
+        `The definition of ${fshDefinition.name} may be incomplete because there is a circular ` +
+          `dependency with its parent ${parentName} causing the parent to be used before the ` +
+          'parent has been fully processed.'
       );
     }
 
