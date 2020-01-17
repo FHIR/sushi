@@ -4,7 +4,7 @@ SUSHI (aka "SUSHI Unshortens Short Hand Inputs") is a reference implementation c
 
 FHIR Shorthand (FSH) is a specially-designed language for defining the content of FHIR Implementation Guides (IG). It is simple and compact, with tools to produce Fast Healthcare Interoperability Resources (FHIR) profiles, extensions and implementation guides (IG). Because it is a language, written in text statements, FHIR Shorthand encourages distributed, team-based development using conventional source code control tools such as Github.
 
-For more information about the evolving FSH syntax see the [FSH Wiki](https://github.com/HL7/fhir-shorthand/wiki).
+For more information about the evolving FSH syntax see the [FHIR Shorthand Reference Manual](https://build.fhir.org/ig/HL7/fhir-shorthand/).
 
 # Installation for SUSHI Users
 
@@ -37,7 +37,7 @@ If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", th
 * `ig-data/package-list.json`: If present, it will be used instead of a generated package-list.json.
 * `ig-data/input/pagecontent/index.md`: If present, it will provide the content for the IG's main page.
 
-After running SUSHI, change to the output folder and run the `updatePublisher` and `genonce` scripts.
+After running SUSHI, change to the output folder and run the `_updatePublisher` and `_genonce` scripts.
 
 If the input folder does not contain a sub-folder named "ig-data", then only the resources (e.g., profiles, extensions, etc.) will be generated.
 
