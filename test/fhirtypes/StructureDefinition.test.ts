@@ -238,6 +238,12 @@ describe('StructureDefinition', () => {
       expect(emailWorkEmail.sliceName).toBe('email/workEmail');
     });
 
+    it('should not crash when trying to find a non-existent slice containing elements without a type', () => {
+      // component.referenceRange does not have a type, this test verifies that this does not cause a crash
+      const componentFooSlice = observation.findElementByPath('component[FooSlice]', fisher);
+      expect(componentFooSlice).toBeUndefined();
+    });
+
     // Choices
     it('should make explicit a non-existent choice element by path', () => {
       const originalLength = observation.elements.length;
