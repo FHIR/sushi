@@ -18,7 +18,11 @@ async function app() {
   program
     .name('sushi')
     .usage('<path-to-fsh-defs> [options]')
-    .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
+    .option(
+      '-o, --out <out>',
+      'the path to the output folder',
+      path.join('.', 'build', 'input', 'resources')
+    )
     .option('-d, --debug', 'output extra debugging information')
     .arguments('<path-to-fsh-defs>')
     .action(function(pathToFshDefs) {
