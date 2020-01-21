@@ -472,7 +472,7 @@ export class StructureDefinition {
     let matchingType: ElementDefinitionType;
     const matchingXElements = elements.filter(e => {
       if (e.path.endsWith('[x]')) {
-        for (const t of e.type) {
+        for (const t of e.type ?? []) {
           if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
             matchingType = t;
             return true;
@@ -529,7 +529,7 @@ export class StructureDefinition {
         pathPart.brackets.length === 1 ||
         e.sliceName === pathPart.brackets.slice(0, -1).join('/')
       ) {
-        for (const t of e.type) {
+        for (const t of e.type ?? []) {
           return (
             t.code === 'Reference' &&
             t.targetProfile &&
