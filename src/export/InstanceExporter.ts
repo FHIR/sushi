@@ -120,6 +120,7 @@ export class InstanceExporter {
     let instanceDef = new InstanceDefinition();
     instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
     instanceDef.instanceName = fshDefinition.id; // This is name of the instance in the FSH
+    instanceDef.id = fshDefinition.id;
 
     // Add the SD we are making an instance of to meta.profile, as long as SD is not a base FHIR resource
     // If we end up adding more metadata, we should wrap this in a setMetadata function

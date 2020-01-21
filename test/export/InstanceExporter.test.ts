@@ -150,6 +150,32 @@ describe('InstanceExporter', () => {
       expect(exported.meta).toBeUndefined();
     });
 
+    // Setting instance id
+    it('should set id to instance name by default', () => {
+      const myExamplePatient = new Instance('MyExample');
+      myExamplePatient.instanceOf = 'Patient';
+      const exported = exportInstance(myExamplePatient);
+      const expectedInstanceDefinition = new InstanceDefinition();
+      expectedInstanceDefinition.resourceType = 'Patient';
+      expectedInstanceDefinition.instanceName = 'MyExample';
+      expectedInstanceDefinition.id = 'MyExample';
+      expect(exported).toEqual(expectedInstanceDefinition);
+    });
+
+    it('should overwrite id if it is set by a rule', () => {
+      const myExamplePatient = new Instance('MyExample');
+      myExamplePatient.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('id');
+      fixedValRule.fixedValue = 'PatientA';
+      myExamplePatient.rules.push(fixedValRule);
+      const exported = exportInstance(myExamplePatient);
+      const expectedInstanceDefinition = new InstanceDefinition();
+      expectedInstanceDefinition.resourceType = 'Patient';
+      expectedInstanceDefinition.instanceName = 'MyExample';
+      expectedInstanceDefinition.id = 'PatientA';
+      expect(exported).toEqual(expectedInstanceDefinition);
+    });
+
     // Fixing top level elements
     it('should fix top level elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('active');
