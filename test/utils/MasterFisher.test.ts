@@ -29,7 +29,10 @@ describe('MasterFisher', () => {
     doc1.profiles.get('Organization').id = 'my-org';
     doc1.profiles.get('Organization').parent =
       'http://hl7.org/fhir/StructureDefinition/Organization';
-    doc1.profiles.set('Practitioner', new Profile('Practitioner'));
+    doc1.profiles.set(
+      'Practitioner',
+      new Profile('Practitioner').withFile('Practitioner.fsh').withLocation([2, 8, 4, 28])
+    );
     doc1.profiles.get('Practitioner').id = 'my-dr';
     doc1.profiles.get('Practitioner').parent = 'Practitioner';
     const tank = new FSHTank([doc1], config);
@@ -99,6 +102,7 @@ describe('MasterFisher', () => {
     expect(loggerSpy.getLastMessage()).toMatch(
       /Circular dependency .* Practitioner < Practitioner/
     );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Practitioner\.fsh.*Line: 2 - 4\D/s);
     expect(resultMD).toEqual({
       id: 'my-dr',
       name: 'Practitioner',
