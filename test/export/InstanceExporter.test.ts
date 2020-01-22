@@ -155,11 +155,11 @@ describe('InstanceExporter', () => {
       const myExamplePatient = new Instance('MyExample');
       myExamplePatient.instanceOf = 'Patient';
       const exported = exportInstance(myExamplePatient);
-      const expectedInstanceDefinition = new InstanceDefinition();
-      expectedInstanceDefinition.resourceType = 'Patient';
-      expectedInstanceDefinition.instanceName = 'MyExample';
-      expectedInstanceDefinition.id = 'MyExample';
-      expect(exported).toEqual(expectedInstanceDefinition);
+      const expectedInstanceJSON = {
+        resourceType: 'Patient',
+        id: 'MyExample'
+      };
+      expect(exported.toJSON()).toEqual(expectedInstanceJSON);
     });
 
     it('should overwrite id if it is set by a rule', () => {
@@ -169,11 +169,11 @@ describe('InstanceExporter', () => {
       fixedValRule.fixedValue = 'PatientA';
       myExamplePatient.rules.push(fixedValRule);
       const exported = exportInstance(myExamplePatient);
-      const expectedInstanceDefinition = new InstanceDefinition();
-      expectedInstanceDefinition.resourceType = 'Patient';
-      expectedInstanceDefinition.instanceName = 'MyExample';
-      expectedInstanceDefinition.id = 'PatientA';
-      expect(exported).toEqual(expectedInstanceDefinition);
+      const expectedInstanceJSON = {
+        resourceType: 'Patient',
+        id: 'PatientA'
+      };
+      expect(exported.toJSON()).toEqual(expectedInstanceJSON);
     });
 
     // Fixing top level elements
