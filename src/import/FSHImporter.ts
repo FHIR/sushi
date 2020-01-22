@@ -45,7 +45,6 @@ import {
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
 } from '../errors';
-import flatMap from 'lodash/flatMap';
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 
@@ -101,28 +100,44 @@ export class FSHImporter extends FSHVisitor {
   }
 
   import(rawFSHes: RawFSH[]): FSHDocument[] {
+    this.allAliases = new Map();
     const docs: FSHDocument[] = [];
     const contexts: pc.DocContext[] = [];
+
+    // Preprocess the FSH files
     rawFSHes.forEach(rawFSH => {
-      docs.push(new FSHDocument(rawFSH.path));
-      contexts.push(this.parseDoc(rawFSH.content, rawFSH.path));
+      // Create and store doc for main import process
+      const doc = new FSHDocument(rawFSH.path);
+      docs.push(doc);
+
+      // Create and store context for main import process
+      const ctx = this.parseDoc(rawFSH.content, rawFSH.path);
+      contexts.push(ctx);
+
+      // Collect the aliases and store in global map
+      ctx.entity().forEach(e => {
+        if (e.alias()) {
+          const [name, value] = e
+            .alias()
+            .SEQUENCE()
+            .map(s => s.getText());
+          if (this.allAliases.has(name) && this.allAliases.get(name) !== value) {
+            logger.error(
+              `Alias ${name} cannot be redefined to ${value}; it is already defined as ${this.allAliases.get(
+                name
+              )}.`,
+              { file: doc.file ?? '', location: this.extractStartStop(e.alias()) }
+            );
+            // don't set it -- just keep the original definition
+          } else {
+            this.allAliases.set(name, value);
+            doc.aliases.set(name, value);
+          }
+        }
+      });
     });
 
-    // Import all aliases first
-    this.allAliases = new Map(
-      flatMap(
-        contexts.map((context, index) => {
-          this.currentDoc = docs[index];
-          this.currentFile = this.currentDoc.file ?? '';
-          const currentAliases = this.getAliases(context);
-          this.currentDoc = null;
-          this.currentFile = null;
-          return currentAliases;
-        }),
-        aliases => Array.from(aliases)
-      )
-    );
-
+    // Now do the main import
     contexts.forEach((context, index) => {
       this.currentDoc = docs[index];
       this.currentFile = this.currentDoc.file ?? '';
@@ -132,16 +147,6 @@ export class FSHImporter extends FSHVisitor {
     });
 
     return docs;
-  }
-
-  getAliases(ctx: pc.DocContext): Map<string, string> {
-    ctx.entity().forEach(e => {
-      if (e.alias()) {
-        this.visitAlias(e.alias());
-      }
-    });
-
-    return this.currentDoc.aliases;
   }
 
   visitDoc(ctx: pc.DocContext): void {
@@ -170,10 +175,6 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.codeSystem()) {
       this.visitCodeSystem(ctx.codeSystem());
     }
-  }
-
-  visitAlias(ctx: pc.AliasContext): void {
-    this.currentDoc.aliases.set(ctx.SEQUENCE()[0].getText(), ctx.SEQUENCE()[1].getText());
   }
 
   visitProfile(ctx: pc.ProfileContext) {
