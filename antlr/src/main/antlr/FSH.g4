@@ -1,6 +1,6 @@
 grammar FSH;
 
-doc:                entity*;
+doc:                entity* EOF;
 entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
