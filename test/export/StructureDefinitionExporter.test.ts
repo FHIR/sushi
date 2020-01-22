@@ -1196,6 +1196,18 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should log a message when exporting a package containing a sliced extension without a url', () => {
+    const profile = new Profile('Mystery').withFile('NoURL.fsh').withLocation([13, 1, 23, 28]);
+    profile.parent = 'Observation';
+
+    const rule = new ContainsRule('extension');
+    rule.items = ['mysterious'];
+    profile.rules.push(rule);
+    doc.profiles.set('Mystery', profile);
+    exporter.export();
+    expect(loggerSpy.getLastMessage()).toMatch(/File: NoURL\.fsh.*Line: 13 - 23\D/s);
+  });
+
   // toJSON
   it('should correctly generate a diff containing only changed elements', () => {
     // We already have separate tests for the differentials, so this just ensures that the

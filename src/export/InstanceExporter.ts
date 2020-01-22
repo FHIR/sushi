@@ -22,21 +22,25 @@ export class InstanceExporter {
     // All rules will be FixValueRule
     fshInstanceDef.rules.forEach(rule => {
       rule = replaceReferences(rule, this.tank, this.fisher);
-      const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
-        rule.path,
-        rule.fixedValue,
-        this.fisher
-      );
+      try {
+        const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+          rule.path,
+          rule.fixedValue,
+          this.fisher
+        );
 
-      setPropertyOnInstance(instanceDef, pathParts, fixedValue);
-      // For each part of that path, we add fixed values from the SD
-      let path = '';
-      for (const [i, pathPart] of pathParts.entries()) {
-        path += `${path ? '.' : ''}${pathPart.base}`;
-        // Add back non-numeric (slice) brackets
-        pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
-        const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
-        this.setFixedValuesForDirectChildren(element, pathParts.slice(0, i + 1), instanceDef);
+        setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+        // For each part of that path, we add fixed values from the SD
+        let path = '';
+        for (const [i, pathPart] of pathParts.entries()) {
+          path += `${path ? '.' : ''}${pathPart.base}`;
+          // Add back non-numeric (slice) brackets
+          pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
+          const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
+          this.setFixedValuesForDirectChildren(element, pathParts.slice(0, i + 1), instanceDef);
+        }
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
       }
     });
 

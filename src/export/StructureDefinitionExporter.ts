@@ -224,7 +224,7 @@ export class StructureDefinitionExporter implements Fishable {
       try {
         this.exportStructDef(sd);
       } catch (e) {
-        logger.error(e.message, e.sourceInfo);
+        logger.error(e.message, e.sourceInfo || sd.sourceInfo);
       }
     });
     return this.pkg;
