@@ -24,6 +24,8 @@ Usage: sushi <path-to-fsh-defs> [options]
 
 Options:
   -o, --out <out>  the path to the output folder (default: "build/input/resources")
+  -d, --debug      output extra debugging information
+  -v, --version    print SUSHI version
   -h, --help       output usage information
 ```
 
