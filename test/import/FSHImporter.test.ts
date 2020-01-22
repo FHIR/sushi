@@ -43,6 +43,20 @@ describe('FSHImporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Space\.fsh.*Line: 2\D/s);
   });
 
+  it('should recover from extraneous input errors from antlr', () => {
+    const input = `
+    OOPS!
+
+    Profile: Foo
+    Parent: FooDad
+    `;
+    const result = importSingleText(input, 'Extra.fsh');
+    const profile = result.profiles.get('Foo');
+    expect(profile.name).toBe('Foo');
+    expect(profile.parent).toBe('FooDad');
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Extra\.fsh.*Line: 2\D/s);
+  });
+
   it('should parse escaped double-quote and backslash characters in strings', () => {
     const input = `
     Profile: Escape
