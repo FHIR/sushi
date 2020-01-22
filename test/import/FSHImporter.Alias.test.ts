@@ -73,7 +73,7 @@ describe('FSHImporter', () => {
       );
     });
 
-    it('should not report an error when the same alias is defined twice w/ different values in different files', () => {
+    it('should not report an error when the same alias is defined multiple times w/ the same values', () => {
       const input = `
       Alias: USCoreRace = http://hl7.org/fhir/us/core/StructureDefinition/us-core-race
       Alias: USCoreRace = http://hl7.org/fhir/us/core/StructureDefinition/us-core-race
