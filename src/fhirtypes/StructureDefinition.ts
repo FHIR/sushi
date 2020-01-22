@@ -218,7 +218,7 @@ export class StructureDefinition {
 
       // After getting matches based on the 'base' part, we now filter according to 'brackets'
       if (pathPart.brackets) {
-        const sliceElement = this.findMatchingSlice(pathPart, matchingElements);
+        const sliceElement = this.findMatchingSlice(pathPart, matchingElements, fisher);
         if (sliceElement) {
           matchingElements = [sliceElement, ...sliceElement.children()];
         } else {
@@ -508,12 +508,24 @@ export class StructureDefinition {
    * @param {ElementDefinition[]} elements - The set of elements to search through
    * @returns {ElementDefinition} - The sliceElement if found, else undefined
    */
-  private findMatchingSlice(pathPart: PathPart, elements: ElementDefinition[]): ElementDefinition {
+  private findMatchingSlice(
+    pathPart: PathPart,
+    elements: ElementDefinition[],
+    fisher: Fishable
+  ): ElementDefinition {
+    let matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    if (!matchingSlice && pathPart.brackets?.length === 1) {
+      // If we don't find a match, search predefined extensions for a match
+      const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
+      if (sliceDefinition?.url) {
+        matchingSlice = elements.find(e => e.type?.[0].profile?.[0] === sliceDefinition.url);
+      }
+    }
     // NOTE: This function will assume the 'brackets' field contains information about slices. Even
     // if you search for foo[sliceName][refName], this will try to find a re-slice
     // sliceName/refName. To find the matching element for foo[sliceName][refName], you must
     // use the findMatchingRef function. Be aware of this ambiguity in the bracket path syntax.
-    return elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    return matchingSlice;
   }
 
   /**

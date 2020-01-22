@@ -1,8 +1,8 @@
 import { InstanceExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Instance, Profile, FshCode, FshReference } from '../../src/fshtypes';
-import { FixedValueRule } from '../../src/fshtypes/rules';
+import { Instance, Profile, FshCode, FshReference, Extension } from '../../src/fshtypes';
+import { FixedValueRule, ContainsRule } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import path from 'path';
@@ -488,6 +488,37 @@ describe('InstanceExporter', () => {
         { url: 'type', valueCoding: { system: 'bar' } },
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'level', valueCoding: { system: 'baz' } }
+      ]);
+    });
+
+    it('should fix a sliced extension element that is referred to by name', () => {
+      const fooExtension = new Extension('FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = ['FooExtension'];
+      patientProf.rules.push(containsRule);
+      const barRule = new FixedValueRule('extension[FooExtension].valueString');
+      barRule.fixedValue = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
+      ]);
+    });
+
+    it('should fix a sliced extension element that is referred to by aliased url', () => {
+      const fooExtension = new Extension('FooExtension');
+      doc.aliases.set('FooAlias', 'http://example.com/StructureDefinition/FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = ['FooExtension'];
+      patientProf.rules.push(containsRule);
+      const barRule = new FixedValueRule('extension[FooAlias].valueString');
+      barRule.fixedValue = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
       ]);
     });
 

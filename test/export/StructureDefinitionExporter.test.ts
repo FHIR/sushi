@@ -119,6 +119,9 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.title).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
+    expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
+      'http://example.com/StructureDefinition/foo'
+    );
     expect(exported.version).toBe('0.0.1');
     // NOTE: For now, we always set context to everything, but this will be user-specified in
     // the future
@@ -145,6 +148,9 @@ describe('StructureDefinitionExporter', () => {
       'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.'
     );
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
+    expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
+      'http://example.com/StructureDefinition/Foo'
+    );
     expect(exported.version).toBe('0.0.1');
     // NOTE: For now, we always set context to everything, but this will be user-specified in
     // the future
