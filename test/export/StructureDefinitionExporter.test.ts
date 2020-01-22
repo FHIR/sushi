@@ -815,7 +815,9 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should log a warning message when we detect a circular dependency that causes an incomplete parent', () => {
-    const profile1 = new Profile('FooQuantity');
+    const profile1 = new Profile('FooQuantity')
+      .withFile('FooQuantity.fsh')
+      .withLocation([6, 7, 11, 33]);
     profile1.parent = 'BarQuantity';
     doc.profiles.set(profile1.name, profile1);
 
@@ -843,6 +845,7 @@ describe('StructureDefinitionExporter', () => {
     expect(lastLog.message).toMatch(
       /The definition of FooQuantity may be incomplete .* BarQuantity/
     );
+    expect(lastLog.message).toMatch(/File: FooQuantity\.fsh.*Line: 6 - 11\D/s);
   });
 
   it('should not apply an incorrect OnlyRule', () => {
@@ -1202,6 +1205,18 @@ describe('StructureDefinitionExporter', () => {
     }).toThrow(
       'The slice foo on extension must reference an existing extension, or fix a url if the extension is defined inline.'
     );
+  });
+
+  it('should log a message when exporting a package containing a sliced extension without a url', () => {
+    const profile = new Profile('Mystery').withFile('NoURL.fsh').withLocation([13, 1, 23, 28]);
+    profile.parent = 'Observation';
+
+    const rule = new ContainsRule('extension');
+    rule.items = ['mysterious'];
+    profile.rules.push(rule);
+    doc.profiles.set('Mystery', profile);
+    exporter.export();
+    expect(loggerSpy.getLastMessage()).toMatch(/File: NoURL\.fsh.*Line: 13 - 23\D/s);
   });
 
   // toJSON

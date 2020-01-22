@@ -237,7 +237,9 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('active');
       instanceFixedValRule.fixedValue = false;
       instance.rules.push(instanceFixedValRule);
-      expect(() => exportInstance(instance)).toThrow(
+      const exported = exportInstance(instance);
+      expect(exported.active).toBe(true);
+      expect(loggerSpy.getLastMessage()).toMatch(
         'Cannot fix false to this element; a different boolean is already fixed: true'
       );
     });
@@ -251,7 +253,12 @@ describe('InstanceExporter', () => {
       const instanceFixedFshCode = new FshCode('bar', 'http://bar.com');
       instanceFixedValRule.fixedValue = instanceFixedFshCode;
       instance.rules.push(instanceFixedValRule);
-      expect(() => exportInstance(instance)).toThrow(
+      const exported = exportInstance(instance);
+      expect(exported.maritalStatus.coding[0]).toEqual({
+        code: 'foo',
+        system: 'http://foo.com'
+      });
+      expect(loggerSpy.getLastMessage()).toMatch(
         'Cannot fix http://bar.com#bar to this element; a different code is already fixed: http://foo.com#foo.'
       );
     });
@@ -505,6 +512,39 @@ describe('InstanceExporter', () => {
 
     it.skip('should fix sliced elements on a sliced primitive', () => {
       /* Need example of sliced primitive */
+    });
+  });
+
+  describe('#export', () => {
+    it('should still apply valid rules if one fails', () => {
+      const instance = new Instance('UnmeasurableAttribute');
+      instance.instanceOf = 'Patient';
+      const impossibleRule = new FixedValueRule('impossible');
+      impossibleRule.fixedValue = 'unmeasurable';
+      instance.rules.push(impossibleRule);
+      const possibleRule = new FixedValueRule('identifier.value');
+      possibleRule.fixedValue = 'Pascal';
+      instance.rules.push(possibleRule);
+      doc.instances.set(instance.name, instance);
+
+      const exported = exporter.export().instances;
+      expect(exported.length).toBe(1);
+      expect(exported[0].identifier[0].value).toBe('Pascal');
+    });
+
+    it('should log a message when the path for a fixed value is not found', () => {
+      const instance = new Instance('UnmeasurableAttribute');
+      instance.instanceOf = 'Patient';
+      const impossibleRule = new FixedValueRule('impossible')
+        .withFile('Unmeasurable.fsh')
+        .withLocation([3, 8, 3, 28]);
+      impossibleRule.fixedValue = 'unmeasurable';
+      instance.rules.push(impossibleRule);
+      doc.instances.set(instance.name, instance);
+
+      const exported = exporter.export().instances;
+      expect(exported.length).toBe(1);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Unmeasurable\.fsh.*Line: 3\D/s);
     });
   });
 });

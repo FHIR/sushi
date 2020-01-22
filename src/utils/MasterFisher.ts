@@ -90,7 +90,10 @@ export class MasterFisher implements Fishable {
             if (fhirMeta) {
               message += `\n  If the parent ${parentResult.name} is intended to refer to the FHIR resource, use its URL: ${fhirMeta.url}`;
             }
-            logger.error(message);
+            logger.error(
+              message,
+              fishable instanceof FSHTank ? fishable.fish(parent)?.sourceInfo : undefined
+            );
             return;
           }
           history.push(parentResult);
