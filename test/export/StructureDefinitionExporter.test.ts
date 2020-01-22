@@ -88,6 +88,14 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.derivation).toBe('constraint');
   });
 
+  it('should remove the base-level extensions from the parent resource', () => {
+    const profile = new Profile('Foo');
+    doc.profiles.set(profile.name, profile);
+    exporter.exportStructDef(profile);
+    const exported = pkg.profiles[0];
+    expect(exported.extension).toBeUndefined();
+  });
+
   it('should throw ParentNotDefinedError when parent resource is not found', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Bar';
