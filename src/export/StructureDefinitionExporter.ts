@@ -47,6 +47,9 @@ export class StructureDefinitionExporter implements Fishable {
     if (fshDefinition instanceof Profile) {
       structDef.derivation = 'constraint';
     } else if (fshDefinition instanceof Extension) {
+      // Automatically set url.fixedUri on Extensions
+      const url = structDef.findElement('Extension.url');
+      url.fixedUri = structDef.url;
       structDef.derivation = 'constraint';
       if (structDef.context == null) {
         // NOTE: For now, we always set context to everything, but this will be user-specified

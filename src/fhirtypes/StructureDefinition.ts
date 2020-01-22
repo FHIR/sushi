@@ -517,7 +517,9 @@ export class StructureDefinition {
     if (!matchingSlice && pathPart.brackets?.length === 1) {
       // If we don't find a match, search predefined extensions for a match
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
-      matchingSlice = elements.find(e => e.type?.[0].profile?.[0] === sliceDefinition?.url);
+      if (sliceDefinition?.url) {
+        matchingSlice = elements.find(e => e.type?.[0].profile?.[0] === sliceDefinition.url);
+      }
     }
     // NOTE: This function will assume the 'brackets' field contains information about slices. Even
     // if you search for foo[sliceName][refName], this will try to find a re-slice
