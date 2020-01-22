@@ -59,6 +59,8 @@ export class StructureDefinitionExporter implements Fishable {
         ];
       }
     }
+    // Remove the base-level extensions as they may not be valid in this context
+    delete structDef.extension;
   }
 
   /**
