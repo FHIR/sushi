@@ -191,7 +191,8 @@ export class StructureDefinitionExporter implements Fishable {
       logger.warn(
         `The definition of ${fshDefinition.name} may be incomplete because there is a circular ` +
           `dependency with its parent ${parentName} causing the parent to be used before the ` +
-          'parent has been fully processed.'
+          'parent has been fully processed.',
+        fshDefinition.sourceInfo
       );
     }
 
@@ -224,7 +225,7 @@ export class StructureDefinitionExporter implements Fishable {
       try {
         this.exportStructDef(sd);
       } catch (e) {
-        logger.error(e.message, e.sourceInfo);
+        logger.error(e.message, e.sourceInfo || sd.sourceInfo);
       }
     });
     return this.pkg;
