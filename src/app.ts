@@ -24,6 +24,7 @@ async function app() {
       path.join('.', 'build', 'input', 'resources')
     )
     .option('-d, --debug', 'output extra debugging information')
+    .version(getVersion(), '-v, --version', 'print SUSHI version')
     .arguments('<path-to-fsh-defs>')
     .action(function(pathToFshDefs) {
       input = pathToFshDefs;
@@ -117,4 +118,13 @@ async function app() {
   CodeSystems: ${outPackage.codeSystems.length}
   Errors:      ${stats.numError}
   Warnings:    ${stats.numWarn}`);
+}
+
+function getVersion(): string {
+  const packageJSONPath = path.join(__dirname, '..', 'package.json');
+  if (fs.existsSync(packageJSONPath)) {
+    const packageJSON = fs.readJSONSync(packageJSONPath);
+    return `v${packageJSON.version}`;
+  }
+  return 'unknown';
 }
