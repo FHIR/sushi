@@ -26,7 +26,7 @@ class LoggerSpy {
   }
 
   getMessageAtIndex(index: number): string {
-    return this.getLogAtIndex(index).message;
+    return this.getLogAtIndex(index)?.message;
   }
 
   getFirstMessage(): string {
@@ -35,6 +35,10 @@ class LoggerSpy {
 
   getLastMessage(): string {
     return this.getMessageAtIndex(-1);
+  }
+
+  reset(): void {
+    this.mockWriter.mockReset();
   }
 }
 
