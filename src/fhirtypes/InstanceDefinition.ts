@@ -10,6 +10,7 @@ export class InstanceDefinition {
   resourceType: string;
   instanceName: string;
   id?: string;
+  meta?: any;
   [key: string]: any; // Allow any key value pair on InstanceDefinition due to the high number of potential properties that can be set on a FHIR instance
 
   /**

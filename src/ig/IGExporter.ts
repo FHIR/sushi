@@ -5,7 +5,7 @@ import sortBy from 'lodash/sortBy';
 import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
 import { Package } from '../export';
 import { ContactDetail, ImplementationGuide } from '../fhirtypes';
-import { logger } from '../utils/FSHLogger';
+import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 
 /**
@@ -209,7 +209,9 @@ export class IGExporter {
             reference: `${instance.resourceType}/${instance.id ?? instance.instanceName}`
           },
           name: instance.getFileName().slice(0, -5), // Slice off the .json of the file name
-          exampleBoolean: true
+          exampleCanonical:
+            instance.meta?.profile?.[0] ??
+            this.fhirDefs.fishForMetadata(instance.resourceType, Type.Resource, Type.Type)?.url
         });
       }
     );
