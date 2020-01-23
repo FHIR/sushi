@@ -1,5 +1,5 @@
 import { FSHTank } from '../import/FSHTank';
-import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
+import { StructureDefinition, InstanceDefinition, ElementDefinition } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { logger, Fishable, Type } from '../utils';
 import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
@@ -37,7 +37,19 @@ export class InstanceExporter {
           // Add back non-numeric (slice) brackets
           pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
           const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
-          this.setFixedValuesForDirectChildren(element, pathParts.slice(0, i + 1), instanceDef);
+          // Reconstruct the part of the rule's path that we just got the element for
+          let rulePathPart = rule.path
+            .split('.')
+            .slice(0, i + 1)
+            .join('.');
+          rulePathPart += '.';
+
+          this.setFixedValuesForDirectChildren(
+            element,
+            rulePathPart,
+            instanceDef,
+            instanceOfStructureDefinition
+          );
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
@@ -47,8 +59,9 @@ export class InstanceExporter {
     // Fix values from the SD for all elements at the top level of the SD
     this.setFixedValuesForDirectChildren(
       instanceOfStructureDefinition.findElement(instanceDef.resourceType),
-      [],
-      instanceDef
+      '',
+      instanceDef,
+      instanceOfStructureDefinition
     );
 
     // Remove all _sliceName fields
@@ -76,8 +89,9 @@ export class InstanceExporter {
    */
   private setFixedValuesForDirectChildren(
     element: ElementDefinition,
-    existingPath: PathPart[],
-    instanceDef: InstanceDefinition
+    existingPath: string,
+    instanceDef: InstanceDefinition,
+    instanceOfStructureDefinition: StructureDefinition
   ) {
     const directChildren = element.children(true);
     for (const child of directChildren) {
@@ -87,17 +101,17 @@ export class InstanceExporter {
       );
       if (fixedValueKey) {
         // Get the end of the child path, this is the part that differs from existingPath
-        const childPathPart = {
-          base: child
-            .diffId()
-            .split('.')
-            .slice(-1)[0]
-        };
-        setPropertyOnInstance(
-          instanceDef,
-          [...existingPath, childPathPart],
-          child[fixedValueKey as keyof ElementDefinition]
+        const childPathPart = child
+          .diffId()
+          .split('.')
+          .slice(-1)[0];
+
+        const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+          existingPath + childPathPart,
+          child[fixedValueKey as keyof ElementDefinition],
+          this.fisher
         );
+        setPropertyOnInstance(instanceDef, pathParts, fixedValue);
       }
     }
   }
@@ -143,14 +157,12 @@ export class InstanceExporter {
    * @returns {Package}
    */
   export(): Package {
-    for (const doc of this.tank.docs) {
-      for (const instance of doc.instances.values()) {
-        try {
-          const instanceDef = this.exportInstance(instance);
-          this.pkg.instances.push(instanceDef);
-        } catch (e) {
-          logger.error(e.message, e.sourceInfo);
-        }
+    for (const instance of this.tank.getAllInstances()) {
+      try {
+        const instanceDef = this.exportInstance(instance);
+        this.pkg.instances.push(instanceDef);
+      } catch (e) {
+        logger.error(e.message, e.sourceInfo);
       }
     }
     return this.pkg;

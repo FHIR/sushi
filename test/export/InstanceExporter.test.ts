@@ -2,7 +2,7 @@ import { InstanceExporter, Package, StructureDefinitionExporter } from '../../sr
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Instance, Profile, FshCode, FshReference, Extension } from '../../src/fshtypes';
-import { FixedValueRule, ContainsRule } from '../../src/fshtypes/rules';
+import { FixedValueRule, ContainsRule, CardRule } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import path from 'path';
@@ -185,6 +185,30 @@ describe('InstanceExporter', () => {
       expect(exported.active).toEqual(true);
     });
 
+    it('should fix top level elements to an array even if constrained on the Structure Definition', () => {
+      const condition = new Profile('TestCondition');
+      condition.parent = 'Condition';
+      doc.profiles.set(condition.name, condition);
+      const conditionInstance = new Instance('Bar');
+      conditionInstance.instanceOf = 'TestCondition';
+      doc.instances.set(conditionInstance.name, conditionInstance);
+      const fixedValRule = new FixedValueRule('category');
+      const fixedFshCode = new FshCode('foo', 'http://foo.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      condition.rules.push(fixedValRule);
+      const exported = exportInstance(conditionInstance);
+      expect(exported.category).toEqual([
+        {
+          coding: [
+            {
+              code: 'foo',
+              system: 'http://foo.com'
+            }
+          ]
+        }
+      ]);
+    });
+
     it('should fix top level elements that are fixed by a pattern on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
@@ -299,6 +323,26 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const exported = exportInstance(instance);
       expect(exported.communication).toBeUndefined();
+    });
+
+    it('should fix a nested element that has parents defined in the instance and fixed on the SD to an array even if constrained', () => {
+      const cardRule = new CardRule('communication');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      const fixedValRule = new FixedValueRule('contact.relationship');
+      fixedValRule.fixedValue = new FshCode('mother');
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('contact.gender');
+      instanceFixedValRule.fixedValue = new FshCode('foo');
+      instance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(instance);
+      expect(exported.contact).toEqual([
+        {
+          gender: 'foo',
+          relationship: [{ coding: [{ code: 'mother' }] }]
+        }
+      ]);
     });
 
     // TODO: The fixValue functions should be updated to not fix a value when a parent element sets
