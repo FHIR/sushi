@@ -376,6 +376,40 @@ describe('ElementDefinition', () => {
       );
     });
 
+    // Fixing xhtml
+
+    it('should fix a string to an xhtml', () => {
+      const narrativeDiv = patient.findElementByPath('text.div', fisher);
+      narrativeDiv.fixString('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+      expect(narrativeDiv.fixedXhtml).toBe(
+        '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
+      );
+    });
+
+    it('should throw ValueAlreadyFixedError when fixing an already fixed xhtml', () => {
+      const narrativeDiv = patient.findElementByPath('text.div', fisher);
+      narrativeDiv.fixString('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+      expect(narrativeDiv.fixedXhtml).toBe(
+        '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
+      );
+      expect(() => {
+        narrativeDiv.fixString(
+          '<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>'
+        );
+      }).toThrow(
+        'Cannot fix <div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div> to this element; a different xhtml is already fixed: <div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
+      );
+    });
+
+    it('should throw MismatchedTypeError when fixing to a value that is not valid xhtml', () => {
+      const narrativeDiv = patient.findElementByPath('text.div', fisher);
+      expect(() => {
+        narrativeDiv.fixString('This is no good');
+      }).toThrow(
+        'Cannot fix string value: This is no good. Value does not match element type: xhtml'
+      );
+    });
+
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {

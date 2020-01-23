@@ -1,4 +1,5 @@
 import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
+import sax = require('sax');
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCode, FshRatio, FshQuantity, FshReference } from '../fshtypes';
@@ -137,6 +138,7 @@ export class ElementDefinition {
   fixedId: string;
   fixedMarkdown: string;
   fixedUuid: string;
+  fixedXhtml: string;
   fixedBoolean: boolean;
   fixedDecimal: number;
   fixedInteger: number;
@@ -989,6 +991,12 @@ export class ElementDefinition {
       this.fixedMarkdown = value;
     } else if (type === 'uuid' && this.checkIfFixable(value, this.fixedUuid, type)) {
       this.fixedUuid = value;
+    } else if (
+      type == 'xhtml' &&
+      sax.parser(true).write(value).error == null &&
+      this.checkIfFixable(value, this.fixedXhtml, type)
+    ) {
+      this.fixedXhtml = value;
     } else {
       throw new MismatchedTypeError('string', value, type);
     }
