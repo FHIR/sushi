@@ -993,12 +993,20 @@ export class ElementDefinition {
       this.fixedUuid = value;
     } else if (
       type == 'xhtml' &&
-      sax.parser(true).write(value).error == null &&
+      this.checkXhtml(value) &&
       this.checkIfFixable(value, this.fixedXhtml, type)
     ) {
       this.fixedXhtml = value;
     } else {
       throw new MismatchedTypeError('string', value, type);
+    }
+  }
+
+  private checkXhtml(value: string): boolean {
+    try {
+      return sax.parser(true).write(value).error == null;
+    } catch (ex) {
+      return false;
     }
   }
 
