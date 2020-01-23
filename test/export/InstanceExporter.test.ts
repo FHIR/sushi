@@ -326,7 +326,7 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix a nested element that has parents defined in the instance and fixed on the SD to an array even if constrained', () => {
-      const cardRule = new CardRule('communication');
+      const cardRule = new CardRule('contact');
       cardRule.min = 1;
       cardRule.max = '1';
       patient.rules.push(cardRule);

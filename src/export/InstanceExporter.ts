@@ -84,7 +84,7 @@ export class InstanceExporter {
    * Given an ElementDefinition, set fixed values for the direct children of that element
    * according to the ElementDefinitions of the children
    * @param {ElementDefinition} element - The element whose children we will fix
-   * @param {PathPart[]} existingPath - The path to the element whose children we will fix
+   * @param {string} existingPath - The path to the element whose children we will fix
    * @param {InstanceDefinition} instanceDef - The InstanceDefinition to fix values on
    */
   private setFixedValuesForDirectChildren(
