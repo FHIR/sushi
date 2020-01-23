@@ -18,11 +18,7 @@ async function app() {
   program
     .name('sushi')
     .usage('<path-to-fsh-defs> [options]')
-    .option(
-      '-o, --out <out>',
-      'the path to the output folder',
-      path.join('.', 'build', 'input', 'resources')
-    )
+    .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
     .option('-d, --debug', 'output extra debugging information')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .arguments('<path-to-fsh-defs>')
@@ -83,8 +79,11 @@ async function app() {
 
   fs.ensureDirSync(program.out);
 
+  const resourceDir = path.join(program.out, 'input', 'resources');
+  fs.ensureDirSync(resourceDir);
+
   fs.writeFileSync(
-    path.join(program.out, 'package.json'),
+    path.join(resourceDir, 'package.json'),
     JSON.stringify(outPackage.config, null, 2),
     'utf8'
   );
@@ -103,7 +102,7 @@ async function app() {
       ...outPackage.codeSystems
     ]) {
       fs.writeFileSync(
-        path.join(program.out, sd.getFileName()),
+        path.join(resourceDir, sd.getFileName()),
         JSON.stringify(sd.toJSON(), null, 2),
         'utf8'
       );
