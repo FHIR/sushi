@@ -188,6 +188,10 @@ describe('InstanceExporter', () => {
     it('should fix top level elements to an array even if constrained on the Structure Definition', () => {
       const condition = new Profile('TestCondition');
       condition.parent = 'Condition';
+      const cardRule = new CardRule('category');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      condition.rules.push(cardRule);
       doc.profiles.set(condition.name, condition);
       const conditionInstance = new Instance('Bar');
       conditionInstance.instanceOf = 'TestCondition';
