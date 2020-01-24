@@ -4,7 +4,7 @@ import ini from 'ini';
 import sortBy from 'lodash/sortBy';
 import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
 import { Package } from '../export';
-import { ContactDetail, ImplementationGuide } from '../fhirtypes';
+import { ContactDetail, ImplementationGuide, ImplementationGuideDefinitionResource } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 
@@ -204,15 +204,19 @@ export class IGExporter {
       instance => {
         const instancePath = path.join(igPath, 'input', 'resources', instance.getFileName());
         outputJSONSync(instancePath, instance.toJSON(), { spaces: 2 });
-        this.ig.definition.resource.push({
+        const resource: ImplementationGuideDefinitionResource = {
           reference: {
             reference: `${instance.resourceType}/${instance.id ?? instance.instanceName}`
           },
-          name: instance.getFileName().slice(0, -5), // Slice off the .json of the file name
-          exampleCanonical:
-            instance.meta?.profile?.[0] ??
-            this.fhirDefs.fishForMetadata(instance.resourceType, Type.Resource, Type.Type)?.url
-        });
+          name: instance.getFileName().slice(0, -5) // Slice off the .json of the file name
+        };
+        const exampleUrl = instance.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
+        if (exampleUrl) {
+          resource.exampleCanonical = exampleUrl;
+        } else {
+          resource.exampleBoolean = true;
+        }
+        this.ig.definition.resource.push(resource);
       }
     );
     sortBy(this.pkg.valueSets, valueSet => valueSet.name).forEach(valueSet => {
