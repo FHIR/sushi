@@ -7,6 +7,7 @@ import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
 import { getArrayIndex, setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type } from '../utils/Fishable';
+import { FHIRId } from './primitiveTypes';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -19,7 +20,7 @@ import { Fishable, Type } from '../utils/Fishable';
  * @see {@link http://hl7.org/fhir/R4/structuredefinition.html|FHIR StructureDefinition}
  */
 export class StructureDefinition {
-  id: string;
+  id: FHIRId;
   meta: Meta;
   implicitRules: string;
   language: string;

@@ -2,6 +2,7 @@ import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem } from '../../src/fshtypes';
 import { FshConcept } from '../../src/fshtypes/FshConcept';
+import { loggerSpy } from '../testhelpers';
 
 describe('CodeSystemExporter', () => {
   let doc: FSHDocument;
@@ -118,5 +119,30 @@ describe('CodeSystemExporter', () => {
         }
       ]
     });
+  });
+
+  it('should log a message when the code system has an invalid id', () => {
+    const codeSystem = new FshCodeSystem('StrangeSystem')
+      .withFile('Strange.fsh')
+      .withLocation([2, 4, 6, 23]);
+    codeSystem.id = 'Is this allowed?';
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].id).toBe('Is this allowed?');
+    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Strange\.fsh.*Line: 2 - 6\D/s);
+  });
+
+  it('should log a message when the code system has an invalid name', () => {
+    const codeSystem = new FshCodeSystem('Strange.Code.System')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('Strange.Code.System');
+    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR name/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D/s);
   });
 });

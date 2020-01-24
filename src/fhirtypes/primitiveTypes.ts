@@ -1,4 +1,4 @@
-import { InvalidDateTimeError } from '../errors/InvalidDateTimeError';
+import { InvalidDateTimeError, InvalidIdError } from '../errors';
 
 /**
  * Represents the FHIR primitive type dateTime.
@@ -13,5 +13,23 @@ const dateTimeRegex = /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1
 export function validateFHIRDateTime(dateTime: FHIRDateTime): void {
   if (!dateTimeRegex.test(dateTime)) {
     throw new InvalidDateTimeError(dateTime);
+  }
+}
+
+/**
+ * Represents the FHIR primitive type id.
+ * An id is a string between 1 and 64 characters long and contains only uppercase letter,
+ * lowercase letter, numeral, '-', and '.' characters.
+ *
+ * @see {@link http://hl7.org/fhir/R4/datatypes.html#id}
+ */
+
+export type FHIRId = string;
+
+const idRegex = /^[A-Za-z0-9\-\.]{1,64}$/;
+
+export function validateFHIRId(id: FHIRId): void {
+  if (!idRegex.test(id)) {
+    throw new InvalidIdError(id);
   }
 }

@@ -85,6 +85,31 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should log a message when the value set has an invalid id', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([3, 7, 7, 12]);
+    valueSet.id = 'Delicious!';
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].id).toBe('Delicious!');
+    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Breakfast\.fsh.*Line: 3 - 7\D/s);
+  });
+
+  it('should log a message when the value set has an invalid name', () => {
+    const valueSet = new FshValueSet('All-you-can-eat')
+      .withFile('Breakfast.fsh')
+      .withLocation([2, 4, 8, 23]);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('All-you-can-eat');
+    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR name/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D/s);
+  });
+
   it('should export each value set once, even if export is called more than once', () => {
     const breakfast = new FshValueSet('BreakfastVS');
     doc.valueSets.set(breakfast.name, breakfast);

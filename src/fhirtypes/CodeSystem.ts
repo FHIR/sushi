@@ -2,13 +2,14 @@ import { Meta } from './specialTypes';
 import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
+import { FHIRId } from './primitiveTypes';
 
 /**
  * Class representing a FHIR R4 CodeSystem
  * @see {@link https://www.hl7.org/fhir/codesystem.html}
  */
 export class CodeSystem {
-  id?: string;
+  id?: FHIRId;
   meta?: Meta;
   implicitRules?: string;
   language?: string;

@@ -1,5 +1,6 @@
 import cloneDeep = require('lodash/cloneDeep');
 import { Meta } from './specialTypes';
+import { FHIRId } from './primitiveTypes';
 
 /**
  * A class representing a FHIR Instance.
@@ -10,8 +11,8 @@ import { Meta } from './specialTypes';
 export class InstanceDefinition {
   resourceType: string;
   instanceName: string;
-  id?: string;
   meta?: Meta;
+  id?: FHIRId;
   [key: string]: any; // Allow any key value pair on InstanceDefinition due to the high number of potential properties that can be set on a FHIR instance
 
   /**

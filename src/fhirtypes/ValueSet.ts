@@ -4,6 +4,7 @@ import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { cloneDeep } from 'lodash';
+import { FHIRId } from './primitiveTypes';
 
 /**
  * Class representing a FHIR R4 ValueSet.
@@ -12,7 +13,7 @@ import { cloneDeep } from 'lodash';
  */
 
 export class ValueSet {
-  id: string;
+  id: FHIRId;
   meta: Meta;
   implicitRules: string;
   language: string;

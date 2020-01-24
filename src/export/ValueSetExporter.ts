@@ -1,4 +1,9 @@
-import { ValueSet, ValueSetComposeIncludeOrExclude, ValueSetComposeConcept } from '../fhirtypes';
+import {
+  ValueSet,
+  ValueSetComposeIncludeOrExclude,
+  ValueSetComposeConcept,
+  validateFHIRId
+} from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import {
   FshValueSet,
@@ -12,6 +17,7 @@ import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError } from '../errors';
 import { Package } from '.';
 import { MasterFisher, Type } from '../utils';
+import { validateFHIRName } from '../fhirtypes/common';
 
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
@@ -19,6 +25,16 @@ export class ValueSetExporter {
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.name = fshDefinition.name;
     valueSet.id = fshDefinition.id;
+    try {
+      validateFHIRName(valueSet.name);
+    } catch (ex) {
+      logger.error(ex.message, fshDefinition.sourceInfo);
+    }
+    try {
+      validateFHIRId(valueSet.id);
+    } catch (ex) {
+      logger.error(ex.message, fshDefinition.sourceInfo);
+    }
     if (fshDefinition.title) {
       valueSet.title = fshDefinition.title;
     }

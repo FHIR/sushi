@@ -192,6 +192,27 @@ describe('StructureDefinitionExporter', () => {
     }).toThrow('Parent Bar not found for Foo');
   });
 
+  it('should log a message when the structure definition has an invalid id', () => {
+    const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
+    profile.id = 'will_not_work';
+    doc.profiles.set(profile.name, profile);
+    exporter.exportStructDef(profile);
+    const exported = pkg.profiles[0];
+    expect(exported.id).toBe('will_not_work');
+    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 1 - 4\D/s);
+  });
+
+  it('should log a message when the structure definition has an invalid name', () => {
+    const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+    doc.profiles.set(profile.name, profile);
+    exporter.exportStructDef(profile);
+    const exported = pkg.profiles[0];
+    expect(exported.name).toBe('Not-good');
+    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR name/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D/s);
+  });
+
   // Rules
   it('should emit an error and continue when the path is not found', () => {
     const profile = new Profile('Foo');

@@ -23,6 +23,7 @@ import {
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
+import { FHIRId } from './primitiveTypes';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -98,7 +99,7 @@ export class ElementDefinitionType {
  * @see {@link http://hl7.org/fhir/R4/elementdefinition.html}
  */
 export class ElementDefinition {
-  private _id: string;
+  private _id: FHIRId;
   path: string;
   extension: any[];
   modifierExtension: any[];

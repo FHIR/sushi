@@ -4,6 +4,7 @@ import { FshReference, Instance } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import cloneDeep = require('lodash/cloneDeep');
+import { InvalidNameError } from '../errors/InvalidNameError';
 
 /**
  * This function sets an instance property of an SD or ED if possible
@@ -146,7 +147,8 @@ export function replaceReferences(
   return clone ?? rule;
 }
 
-/* Returns the sliceName for a set of pathParts
+/**
+ * Returns the sliceName for a set of pathParts
  * @param {PathPart} pathPart - The part of the path to get a sliceName for
  * @returns {string} The slicenName for the path part
  */
@@ -176,3 +178,24 @@ export function replaceField(
     }
   }
 }
+
+/**
+ * Checks if the provided string matches the regular expression specified
+ * in the invariant for "name" properties. A name must be between 1 and 255 characters long,
+ * begin with an uppercase letter, and contain only uppercase letter, lowercase letter,
+ * numeral, and '_' characters.
+ *
+ * @see {@link http://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.name}
+ * @see {@link http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.name}
+ * @see {@link http://hl7.org/fhir/R4/codesystem-definitions.html#CodeSystem.name}
+ * @param {string} name - The name to check against the name invariant
+ * @throws {InvalidNameError} when the name does not match the regular expression
+ */
+
+export function validateFHIRName(name: string): void {
+  if (!nameRegex.test(name)) {
+    throw new InvalidNameError(name);
+  }
+}
+
+const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
