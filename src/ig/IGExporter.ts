@@ -4,7 +4,11 @@ import ini from 'ini';
 import sortBy from 'lodash/sortBy';
 import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
 import { Package } from '../export';
-import { ContactDetail, ImplementationGuide, ImplementationGuideDefinitionResource } from '../fhirtypes';
+import {
+  ContactDetail,
+  ImplementationGuide,
+  ImplementationGuideDefinitionResource
+} from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 
