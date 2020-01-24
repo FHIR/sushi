@@ -195,7 +195,7 @@ describe('IGExporter', () => {
                 reference: 'Patient/example'
               },
               name: 'Patient-example',
-              exampleCanonical: 'http://hl7.org/fhir/StructureDefinition/Patient'
+              exampleBoolean: true
             },
             {
               reference: {
