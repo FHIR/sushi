@@ -106,12 +106,16 @@ export class InstanceExporter {
           .split('.')
           .slice(-1)[0];
 
-        const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
-          existingPath + childPathPart,
-          child[fixedValueKey as keyof ElementDefinition],
-          this.fisher
-        );
-        setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+        try {
+          const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+            existingPath + childPathPart,
+            child[fixedValueKey as keyof ElementDefinition],
+            this.fisher
+          );
+          setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+        } catch (e) {
+          logger.error(e.message);
+        }
       }
     }
   }
