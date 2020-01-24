@@ -83,7 +83,7 @@ async function app() {
   fs.ensureDirSync(resourceDir);
 
   fs.writeFileSync(
-    path.join(resourceDir, 'package.json'),
+    path.join(program.out, 'package.json'),
     JSON.stringify(outPackage.config, null, 2),
     'utf8'
   );
