@@ -170,4 +170,4 @@ fragment WS: [ \t\r\n\f];
 // IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);
 BLOCK_COMMENT:      '/*' .*? '*/' -> skip;
-LINE_COMMENT:       '//' ~[\r\n]* -> skip;
+LINE_COMMENT:       '//' .*? [\r\n] -> skip;
