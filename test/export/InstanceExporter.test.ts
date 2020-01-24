@@ -2,7 +2,7 @@ import { InstanceExporter, Package, StructureDefinitionExporter } from '../../sr
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { Instance, Profile, FshCode, FshReference, Extension } from '../../src/fshtypes';
-import { FixedValueRule, ContainsRule, CardRule } from '../../src/fshtypes/rules';
+import { FixedValueRule, ContainsRule, CardRule, OnlyRule } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import path from 'path';
@@ -221,6 +221,32 @@ describe('InstanceExporter', () => {
       const exported = exportInstance(instance);
       expect(exported.maritalStatus).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
+      });
+    });
+
+    it('should fix a value onto a elements that are fixed by a pattern on the Structure Definition', () => {
+      const observation = new Profile('TestObservation');
+      observation.parent = 'Observation';
+      doc.profiles.set(observation.name, observation);
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'Quantity' }];
+      observation.rules.push(onlyRule); // * value[x] only Quantity
+      const fixedValRule = new FixedValueRule('valueQuantity');
+      const fixedFshCode = new FshCode('foo', 'http://foo.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      observation.rules.push(fixedValRule); // * valueQuantity = foo.com#foo
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'TestObservation';
+      const fixedQuantityValue = new FixedValueRule('valueQuantity.value');
+      fixedQuantityValue.fixedValue = 100;
+      observationInstance.rules.push(fixedQuantityValue); // * valueQuantity.value = 100
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.valueQuantity).toEqual({
+        code: 'foo',
+        system: 'http://foo.com',
+        value: 100
       });
     });
 

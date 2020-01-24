@@ -19,6 +19,14 @@ export class InstanceExporter {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
+    // Fix values from the SD for all elements at the top level of the SD
+    this.setFixedValuesForDirectChildren(
+      instanceOfStructureDefinition.findElement(instanceDef.resourceType),
+      '',
+      instanceDef,
+      instanceOfStructureDefinition
+    );
+
     // All rules will be FixValueRule
     fshInstanceDef.rules.forEach(rule => {
       rule = replaceReferences(rule, this.tank, this.fisher);
@@ -29,7 +37,6 @@ export class InstanceExporter {
           this.fisher
         );
 
-        setPropertyOnInstance(instanceDef, pathParts, fixedValue);
         // For each part of that path, we add fixed values from the SD
         let path = '';
         for (const [i, pathPart] of pathParts.entries()) {
@@ -51,18 +58,13 @@ export class InstanceExporter {
             instanceOfStructureDefinition
           );
         }
+
+        // Fix value fom the rule
+        setPropertyOnInstance(instanceDef, pathParts, fixedValue);
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
     });
-
-    // Fix values from the SD for all elements at the top level of the SD
-    this.setFixedValuesForDirectChildren(
-      instanceOfStructureDefinition.findElement(instanceDef.resourceType),
-      '',
-      instanceDef,
-      instanceOfStructureDefinition
-    );
 
     // Remove all _sliceName fields
     replaceField(
@@ -86,6 +88,7 @@ export class InstanceExporter {
    * @param {ElementDefinition} element - The element whose children we will fix
    * @param {string} existingPath - The path to the element whose children we will fix
    * @param {InstanceDefinition} instanceDef - The InstanceDefinition to fix values on
+   * @param {StructureDefinition} instanceOfStructureDefinition - The structure definition the instance instantiates
    */
   private setFixedValuesForDirectChildren(
     element: ElementDefinition,
