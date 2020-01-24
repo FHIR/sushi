@@ -119,7 +119,10 @@ export class StructureDefinition {
       const currentId = this.elements[i].id;
       if (element.id.startsWith(`${currentId}.`) || element.id.startsWith(`${currentId}:`)) {
         lastMatchId = currentId;
-      } else if (!currentId.startsWith(lastMatchId)) {
+      } else if (
+        !currentId.startsWith(`${lastMatchId}.`) &&
+        !currentId.startsWith(`${lastMatchId}:`)
+      ) {
         break;
       }
     }
