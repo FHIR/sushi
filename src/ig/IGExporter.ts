@@ -102,19 +102,27 @@ export class IGExporter {
     // Add the dependencies
     if (this.pkg.config.dependencies) {
       const igs = this.fhirDefs.allImplementationGuides();
-      for (const key of Object.keys(this.pkg.config.dependencies)) {
-        if (key === 'hl7.fhir.r4.core') {
+      for (const depId of Object.keys(this.pkg.config.dependencies)) {
+        if (depId === 'hl7.fhir.r4.core') {
           continue;
         }
+        const depVersion = this.pkg.config.dependencies[depId];
+        // find the matching IG by id (for "current"/"dev" version) or id and version (for specific version)
         const depIG = igs.find(
-          ig => ig.packageId === key && ig.version == this.pkg.config.dependencies[key]
+          ig =>
+            ig.packageId === depId &&
+            (ig.version === depVersion || 'current' === depVersion || 'dev' === depVersion)
         );
-        if (depIG) {
+        if (depIG && depIG.url) {
           this.ig.dependsOn.push({
-            uri: `${depIG.url}|${depIG.version}`,
-            packageId: depIG.packageId,
-            version: depIG.version
+            uri: `${depIG.url}`,
+            packageId: depId,
+            version: depVersion
           });
+        } else {
+          logger.error(
+            `Failed to add ${depId}:${depVersion} to ImplementationGuide instance.  Could not determine its canonical URL from the FHIR cache.`
+          );
         }
       }
       if (this.ig.dependsOn.length === 0) {
