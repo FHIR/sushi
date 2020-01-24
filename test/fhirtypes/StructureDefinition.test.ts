@@ -139,6 +139,27 @@ describe('StructureDefinition', () => {
       expect(observation.elements[3].id).toBe('Observation.meta.id');
     });
 
+    it('should add an element in the right place even with substrings involved', () => {
+      // Tests bug reported here: https://github.com/FHIR/sushi/issues/122
+      observation.addElement(new ElementDefinition('Observation.component:FooBefore'));
+      observation.addElement(new ElementDefinition('Observation.component:Foo'));
+      observation.addElement(new ElementDefinition('Observation.component:FooAfter'));
+      observation.addElement(new ElementDefinition('Observation.component:Foo.id'));
+      observation.addElement(new ElementDefinition('Observation.component:FooAfter.id'));
+      observation.addElement(new ElementDefinition('Observation.component:FooBefore.id'));
+      expect(observation.elements).toHaveLength(56);
+      const getIdx = (id: string) => {
+        return observation.elements.findIndex(e => e.id === id);
+      };
+      expect(getIdx('Observation.component')).toBe(41);
+      expect(getIdx('Observation.component:FooBefore')).toBe(50);
+      expect(getIdx('Observation.component:FooBefore.id')).toBe(51);
+      expect(getIdx('Observation.component:Foo')).toBe(52);
+      expect(getIdx('Observation.component:Foo.id')).toBe(53);
+      expect(getIdx('Observation.component:FooAfter')).toBe(54);
+      expect(getIdx('Observation.component:FooAfter.id')).toBe(55);
+    });
+
     it('should add explicit choice element in the right place', () => {
       observation.addElement(new ElementDefinition('Observation.value[x]:valueQuantity'));
       expect(observation.elements).toHaveLength(51);

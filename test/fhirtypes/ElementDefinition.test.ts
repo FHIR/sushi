@@ -363,6 +363,112 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should add children in the right location when one slicename is a substring of another', () => {
+      // Tests bug reported here: https://github.com/FHIR/sushi/issues/122
+      const numOriginalElements = observation.elements.length;
+      const component = observation.elements.find(e => e.path === 'Observation.component');
+      component.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'code' }]
+      };
+      // Set up the slices first
+      const fooSlice = component.addSlice('FooSlice');
+      const fooSliceBar = component.addSlice('FooSliceBar');
+      // Then unfold them
+      const newFooSliceElements = fooSlice.unfold(fisher);
+      expect(newFooSliceElements).toHaveLength(8);
+      expect(newFooSliceElements[0].id).toBe('Observation.component:FooSlice.id');
+      expect(newFooSliceElements[1].id).toBe('Observation.component:FooSlice.extension');
+      expect(newFooSliceElements[2].id).toBe('Observation.component:FooSlice.modifierExtension');
+      expect(newFooSliceElements[3].id).toBe('Observation.component:FooSlice.code');
+      expect(newFooSliceElements[4].id).toBe('Observation.component:FooSlice.value[x]');
+      expect(newFooSliceElements[5].id).toBe('Observation.component:FooSlice.dataAbsentReason');
+      expect(newFooSliceElements[6].id).toBe('Observation.component:FooSlice.interpretation');
+      expect(newFooSliceElements[7].id).toBe('Observation.component:FooSlice.referenceRange');
+      const newFooSliceBarElements = fooSliceBar.unfold(fisher);
+      expect(newFooSliceBarElements).toHaveLength(8);
+      expect(newFooSliceBarElements[0].id).toBe('Observation.component:FooSliceBar.id');
+      expect(newFooSliceBarElements[1].id).toBe('Observation.component:FooSliceBar.extension');
+      expect(newFooSliceBarElements[2].id).toBe(
+        'Observation.component:FooSliceBar.modifierExtension'
+      );
+      expect(newFooSliceBarElements[3].id).toBe('Observation.component:FooSliceBar.code');
+      expect(newFooSliceBarElements[4].id).toBe('Observation.component:FooSliceBar.value[x]');
+      expect(newFooSliceBarElements[5].id).toBe(
+        'Observation.component:FooSliceBar.dataAbsentReason'
+      );
+      expect(newFooSliceBarElements[6].id).toBe('Observation.component:FooSliceBar.interpretation');
+      expect(newFooSliceBarElements[7].id).toBe('Observation.component:FooSliceBar.referenceRange');
+      expect(observation.elements).toHaveLength(numOriginalElements + 18);
+      // Then check they are in right order, starting with plain old Observation.component
+      const componentIdx = observation.elements.findIndex(e => e.id === 'Observation.component');
+      expect(observation.elements[componentIdx + 1].id).toBe('Observation.component.id');
+      expect(observation.elements[componentIdx + 2].id).toBe('Observation.component.extension');
+      expect(observation.elements[componentIdx + 3].id).toBe(
+        'Observation.component.modifierExtension'
+      );
+      expect(observation.elements[componentIdx + 4].id).toBe('Observation.component.code');
+      expect(observation.elements[componentIdx + 5].id).toBe('Observation.component.value[x]');
+      expect(observation.elements[componentIdx + 6].id).toBe(
+        'Observation.component.dataAbsentReason'
+      );
+      expect(observation.elements[componentIdx + 7].id).toBe(
+        'Observation.component.interpretation'
+      );
+      expect(observation.elements[componentIdx + 8].id).toBe(
+        'Observation.component.referenceRange'
+      );
+      expect(observation.elements[componentIdx + 9].id).toBe('Observation.component:FooSlice');
+      expect(observation.elements[componentIdx + 10].id).toBe('Observation.component:FooSlice.id');
+      expect(observation.elements[componentIdx + 11].id).toBe(
+        'Observation.component:FooSlice.extension'
+      );
+      expect(observation.elements[componentIdx + 12].id).toBe(
+        'Observation.component:FooSlice.modifierExtension'
+      );
+      expect(observation.elements[componentIdx + 13].id).toBe(
+        'Observation.component:FooSlice.code'
+      );
+      expect(observation.elements[componentIdx + 14].id).toBe(
+        'Observation.component:FooSlice.value[x]'
+      );
+      expect(observation.elements[componentIdx + 15].id).toBe(
+        'Observation.component:FooSlice.dataAbsentReason'
+      );
+      expect(observation.elements[componentIdx + 16].id).toBe(
+        'Observation.component:FooSlice.interpretation'
+      );
+      expect(observation.elements[componentIdx + 17].id).toBe(
+        'Observation.component:FooSlice.referenceRange'
+      );
+      expect(observation.elements[componentIdx + 18].id).toBe('Observation.component:FooSliceBar');
+      expect(observation.elements[componentIdx + 19].id).toBe(
+        'Observation.component:FooSliceBar.id'
+      );
+      expect(observation.elements[componentIdx + 20].id).toBe(
+        'Observation.component:FooSliceBar.extension'
+      );
+      expect(observation.elements[componentIdx + 21].id).toBe(
+        'Observation.component:FooSliceBar.modifierExtension'
+      );
+      expect(observation.elements[componentIdx + 22].id).toBe(
+        'Observation.component:FooSliceBar.code'
+      );
+      expect(observation.elements[componentIdx + 23].id).toBe(
+        'Observation.component:FooSliceBar.value[x]'
+      );
+      expect(observation.elements[componentIdx + 24].id).toBe(
+        'Observation.component:FooSliceBar.dataAbsentReason'
+      );
+      expect(observation.elements[componentIdx + 25].id).toBe(
+        'Observation.component:FooSliceBar.interpretation'
+      );
+      expect(observation.elements[componentIdx + 26].id).toBe(
+        'Observation.component:FooSliceBar.referenceRange'
+      );
+    });
+
     it('should not add any children when an element has multiple types', () => {
       const numOriginalElements = observation.elements.length;
       const valueIdx = observation.elements.findIndex(e => e.path === 'Observation.value[x]');
