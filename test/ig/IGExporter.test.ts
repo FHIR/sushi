@@ -146,10 +146,17 @@ describe('IGExporter', () => {
         license: 'CC0-1.0',
         fhirVersion: ['4.0.1'],
         dependsOn: [
+          // USCore tests that it works with a package dependency w/ a specific version
           {
-            uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core|3.1.0',
+            uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
             packageId: 'hl7.fhir.us.core',
             version: '3.1.0'
+          },
+          // VHDir tests that it works with a package dependency w/ "current"
+          {
+            uri: 'http://hl7.org/fhir/uv/vhdir/ImplementationGuide/hl7.core.uv.vhdir',
+            packageId: 'hl7.fhir.uv.vhdir',
+            version: 'current'
           }
         ],
         definition: {
