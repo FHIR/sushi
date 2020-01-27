@@ -7,7 +7,6 @@ import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
 import { getArrayIndex, setPropertyOnDefinitionInstance, HasName, HasId } from './common';
 import { Fishable, Type } from '../utils/Fishable';
-import { FHIRId } from './primitiveTypes';
 import { applyMixins } from '../utils';
 
 /**
@@ -21,7 +20,7 @@ import { applyMixins } from '../utils';
  * @see {@link http://hl7.org/fhir/R4/structuredefinition.html|FHIR StructureDefinition}
  */
 export class StructureDefinition {
-  id: FHIRId;
+  // id: FHIRId; // provided by HasId mixin
   meta: Meta;
   implicitRules: string;
   language: string;
@@ -32,7 +31,7 @@ export class StructureDefinition {
   url: string;
   identifier: Identifier[];
   version: string;
-  name: string;
+  // name: string; // provided by HasName mixin
   title: string;
   status: string;
   experimental: boolean;

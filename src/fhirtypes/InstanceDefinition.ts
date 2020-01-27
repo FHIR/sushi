@@ -1,6 +1,5 @@
 import cloneDeep = require('lodash/cloneDeep');
 import { Meta } from './specialTypes';
-import { FHIRId } from './primitiveTypes';
 import { HasId } from './common';
 import { applyMixins } from '../utils';
 
@@ -13,7 +12,7 @@ import { applyMixins } from '../utils';
 export class InstanceDefinition {
   resourceType: string;
   instanceName: string;
-  id?: FHIRId;
+  // id?: FHIRId; // provided by HasId mixin
   meta?: Meta;
   [key: string]: any; // Allow any key value pair on InstanceDefinition due to the high number of potential properties that can be set on a FHIR instance
 
