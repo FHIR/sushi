@@ -121,6 +121,177 @@ describe('StructureDefinition', () => {
         min: 1
       });
     });
+
+    it('should properly serialize snapshot and differential for constrained choice type with constraints on specific choices', () => {
+      // constrain value[x] to only a Quantity or string and give each its own short
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.sliceIt('type', '$this', false, 'open');
+      valueX.constrainType([{ type: 'Quantity' }, { type: 'string' }], fisher);
+      const valueQuantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      valueQuantity.short = 'the quantity choice';
+      const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
+      valueString.short = 'the string choice';
+
+      const json = observation.toJSON();
+      // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
+      const valueXSnapshot = json.snapshot.element[21];
+      expect(valueXSnapshot.id).toBe('Observation.value[x]');
+      expect(valueXSnapshot.path).toBe('Observation.value[x]');
+      expect(valueXSnapshot.type).toEqual([{ code: 'Quantity' }, { code: 'string' }]);
+      expect(valueXSnapshot.slicing).toEqual({
+        discriminator: [{ type: 'type', path: '$this' }],
+        ordered: false,
+        rules: 'open'
+      });
+      const valueQuantitySnapshot = json.snapshot.element[22];
+      expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
+      expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
+      expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
+      expect(valueQuantitySnapshot.short).toBe('the quantity choice');
+      const valueStringSnapshot = json.snapshot.element[23];
+      expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringSnapshot.path).toBe('Observation.value[x]');
+      expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
+      expect(valueStringSnapshot.sliceName).toEqual('valueString');
+      expect(valueStringSnapshot.short).toBe('the string choice');
+      // then check that differential has value[x] and shortcut syntax valueQuantity and valueString
+      expect(json.differential.element).toHaveLength(3);
+      const valueXDiff = json.differential.element[0];
+      expect(valueXDiff).toEqual({
+        id: 'Observation.value[x]',
+        path: 'Observation.value[x]',
+        type: [{ code: 'Quantity' }, { code: 'string' }],
+        slicing: {
+          discriminator: [{ type: 'type', path: '$this' }],
+          ordered: false,
+          rules: 'open'
+        }
+      });
+      const valueQuantityDiff = json.differential.element[1];
+      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
+      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantitySnapshot.short).toBe('the quantity choice');
+      const valueStringDiff = json.differential.element[2];
+      expect(valueStringDiff.id).toBe('Observation.valueString');
+      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
+      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringSnapshot.short).toBe('the string choice');
+    });
+
+    it('should properly serialize snapshot and differential for unconstrained choice type with constraints on specific choices', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.sliceIt('type', '$this', false, 'open');
+      // note: NOT constraining value[x] types.  Just adding specific elements for valueQuantity and valueString.
+      const valueQuantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      valueQuantity.short = 'the quantity choice';
+      const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
+      valueString.short = 'the string choice';
+
+      const json = observation.toJSON();
+      // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
+      const valueXSnapshot = json.snapshot.element[21];
+      expect(valueXSnapshot.id).toBe('Observation.value[x]');
+      expect(valueXSnapshot.path).toBe('Observation.value[x]');
+      expect(valueXSnapshot.type).toHaveLength(11);
+      expect(valueXSnapshot.slicing).toEqual({
+        discriminator: [{ type: 'type', path: '$this' }],
+        ordered: false,
+        rules: 'open'
+      });
+      const valueQuantitySnapshot = json.snapshot.element[22];
+      expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
+      expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
+      expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
+      expect(valueQuantitySnapshot.short).toBe('the quantity choice');
+      const valueStringSnapshot = json.snapshot.element[23];
+      expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringSnapshot.path).toBe('Observation.value[x]');
+      expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
+      expect(valueStringSnapshot.sliceName).toEqual('valueString');
+      expect(valueStringSnapshot.short).toBe('the string choice');
+      // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
+      expect(json.differential.element).toHaveLength(2);
+      const valueQuantityDiff = json.differential.element[0];
+      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
+      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantitySnapshot.short).toBe('the quantity choice');
+      const valueStringDiff = json.differential.element[1];
+      expect(valueStringDiff.id).toBe('Observation.valueString');
+      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
+      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringSnapshot.short).toBe('the string choice');
+    });
+
+    it('should properly serialize snapshot and differential for choice type with non-type constraint and with constraints on specific choices', () => {
+      // This is the same test as above, but we add a non-type constraint on value[x] to make sure it doesn't get
+      // blindly thrown away just because it doesn't constrain the types
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.short = 'a choice of many things';
+      valueX.sliceIt('type', '$this', false, 'open');
+      // note: NOT constraining value[x] types.  Just adding specific elements for valueQuantity and valueString.
+      const valueQuantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      valueQuantity.short = 'the quantity choice';
+      const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
+      valueString.short = 'the string choice';
+
+      const json = observation.toJSON();
+      // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
+      const valueXSnapshot = json.snapshot.element[21];
+      expect(valueXSnapshot.id).toBe('Observation.value[x]');
+      expect(valueXSnapshot.path).toBe('Observation.value[x]');
+      expect(valueXSnapshot.type).toHaveLength(11);
+      expect(valueXSnapshot.short).toBe('a choice of many things');
+      expect(valueXSnapshot.slicing).toEqual({
+        discriminator: [{ type: 'type', path: '$this' }],
+        ordered: false,
+        rules: 'open'
+      });
+      const valueQuantitySnapshot = json.snapshot.element[22];
+      expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
+      expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
+      expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
+      expect(valueQuantitySnapshot.short).toBe('the quantity choice');
+      const valueStringSnapshot = json.snapshot.element[23];
+      expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringSnapshot.path).toBe('Observation.value[x]');
+      expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
+      expect(valueStringSnapshot.sliceName).toEqual('valueString');
+      expect(valueStringSnapshot.short).toBe('the string choice');
+      // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
+      expect(json.differential.element).toHaveLength(3);
+      const valueXDiff = json.differential.element[0];
+      expect(valueXDiff).toEqual({
+        id: 'Observation.value[x]',
+        path: 'Observation.value[x]',
+        slicing: {
+          discriminator: [{ type: 'type', path: '$this' }],
+          ordered: false,
+          rules: 'open'
+        },
+        short: 'a choice of many things'
+      });
+      const valueQuantityDiff = json.differential.element[1];
+      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
+      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantitySnapshot.short).toBe('the quantity choice');
+      const valueStringDiff = json.differential.element[2];
+      expect(valueStringDiff.id).toBe('Observation.valueString');
+      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
+      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringSnapshot.short).toBe('the string choice');
+    });
   });
 
   describe('#newElement', () => {
