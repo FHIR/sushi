@@ -314,8 +314,14 @@ export class ElementDefinition {
         diff[prop] = cloneDeep(this[prop]);
       }
     }
-    // Path gets set automatically when setting id
+    // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
+    // NOTE: The path also gets set automatically when setting id
     diff.id = diff.diffId();
+    // If the snapshot is a choice (e.g., value[x]), but the diff is a specific choice (e.g., valueString), then
+    // remove the slicename property from the diff (it is implied and not required in the diff)
+    if (this.path.endsWith('[x]') && !diff.path.endsWith('[x]')) {
+      delete diff.sliceName;
+    }
     return diff;
   }
 
