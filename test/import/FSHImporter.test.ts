@@ -114,4 +114,25 @@ describe('FSHImporter', () => {
     expect(results[1].profiles.size).toBe(0);
     expect(results[1].extensions.size).toBe(0);
   });
+
+  it('should allow a FSH document with a line comment at EOF without newline', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    //Comment`;
+    const result = importSingleText(input);
+    expect(result.profiles.size).toBe(1);
+  });
+
+  it('should allow a FSH document with a block comment at EOF without newline', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    /*
+    Comment
+    Comment
+    */`;
+    const result = importSingleText(input);
+    expect(result.profiles.size).toBe(1);
+  });
 });
