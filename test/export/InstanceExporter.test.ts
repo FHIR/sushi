@@ -268,6 +268,33 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should fix a value onto slice elements that are fixed by a pattern on the Structure Definition', () => {
+      const resprate = new Profile('TestResprate');
+      resprate.parent = 'resprate';
+      doc.profiles.set(resprate.name, resprate);
+      const containsRule = new ContainsRule('category');
+      containsRule.items = ['niceSlice'];
+      resprate.rules.push(containsRule); // * identifier contains niceSlice
+      const fixedValRule = new FixedValueRule('category[niceSlice]');
+      const fixedFshCode = new FshCode('rice', 'http://spice.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      resprate.rules.push(fixedValRule); // * category[niceSlice] = http://spice.com#rice
+      const resprateInstance = new Instance('myResprate');
+      resprateInstance.instanceOf = 'TestResprate';
+      doc.instances.set(resprateInstance.name, resprateInstance);
+      const exported = exportInstance(resprateInstance);
+      expect(exported.category).toEqual([
+        {
+          coding: [
+            {
+              code: 'rice',
+              system: 'http://spice.com'
+            }
+          ]
+        }
+      ]);
+    });
+
     it('should fix top level choice elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('deceasedBoolean');
       fixedValRule.fixedValue = true;
