@@ -1,26 +1,15 @@
 import { FSHTank } from '../import/FSHTank';
-import { CodeSystem, CodeSystemConcept, validateFHIRId } from '../fhirtypes';
+import { CodeSystem, CodeSystemConcept } from '../fhirtypes';
 import { FshCodeSystem } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { Package } from '.';
-import { validateFHIRName } from '../fhirtypes/common';
 
 export class CodeSystemExporter {
   constructor(private readonly tank: FSHTank, private readonly pkg: Package) {}
 
   private setMetadata(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
-    codeSystem.name = fshDefinition.name;
-    codeSystem.id = fshDefinition.id;
-    try {
-      validateFHIRName(codeSystem.name);
-    } catch (ex) {
-      logger.error(ex.message, fshDefinition.sourceInfo);
-    }
-    try {
-      validateFHIRId(codeSystem.id);
-    } catch (ex) {
-      logger.error(ex.message, fshDefinition.sourceInfo);
-    }
+    codeSystem.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    codeSystem.setId(fshDefinition.id, fshDefinition.sourceInfo);
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
     // Version is set to value provided in config, will be overriden if reset by rules

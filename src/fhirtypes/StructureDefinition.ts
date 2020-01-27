@@ -5,9 +5,10 @@ import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
-import { getArrayIndex, setPropertyOnDefinitionInstance } from './common';
+import { getArrayIndex, setPropertyOnDefinitionInstance, HasName, HasId } from './common';
 import { Fishable, Type } from '../utils/Fishable';
 import { FHIRId } from './primitiveTypes';
+import { applyMixins } from '../utils';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -583,6 +584,9 @@ export class StructureDefinition {
     return;
   }
 }
+
+export interface StructureDefinition extends HasName, HasId {}
+applyMixins(StructureDefinition, [HasName, HasId]);
 
 export type StructureDefinitionMapping = {
   identity: string;

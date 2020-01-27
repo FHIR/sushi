@@ -5,6 +5,8 @@ import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './data
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { cloneDeep } from 'lodash';
 import { FHIRId } from './primitiveTypes';
+import { HasName, HasId } from './common';
+import { applyMixins } from '../utils';
 
 /**
  * Class representing a FHIR R4 ValueSet.
@@ -58,6 +60,9 @@ export class ValueSet {
     };
   }
 }
+
+export interface ValueSet extends HasName, HasId {}
+applyMixins(ValueSet, [HasName, HasId]);
 
 export type ValueSetCompose = {
   lockedDate?: string;

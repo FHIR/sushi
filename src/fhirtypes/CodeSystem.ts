@@ -3,6 +3,8 @@ import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { FHIRId } from './primitiveTypes';
+import { HasName, HasId } from './common';
+import { applyMixins } from '../utils';
 
 /**
  * Class representing a FHIR R4 CodeSystem
@@ -63,6 +65,9 @@ export class CodeSystem {
     };
   }
 }
+
+export interface CodeSystem extends HasId, HasName {}
+applyMixins(CodeSystem, [HasId, HasName]);
 
 export type CodeSystemFilter = {
   code: string;

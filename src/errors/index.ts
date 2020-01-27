@@ -10,8 +10,6 @@ export * from './CodeSystemDuplicateCodeError';
 export * from './DisableFlagError';
 export * from './InvalidCardinalityError';
 export * from './InvalidDateTimeError';
-export * from './InvalidIdError';
-export * from './InvalidNameError';
 export * from './InvalidPeriodError';
 export * from './InvalidRangeValueError';
 export * from './InvalidTypeError';

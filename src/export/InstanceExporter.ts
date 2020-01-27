@@ -1,11 +1,5 @@
 import { FSHTank } from '../import/FSHTank';
-import {
-  StructureDefinition,
-  InstanceDefinition,
-  ElementDefinition,
-  PathPart,
-  validateFHIRId
-} from '../fhirtypes';
+import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { logger, Fishable, Type } from '../utils';
 import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
@@ -139,11 +133,7 @@ export class InstanceExporter {
     }
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
-    try {
-      validateFHIRId(instanceDef.id);
-    } catch (ex) {
-      logger.error(ex.message, fshDefinition.sourceInfo);
-    }
+    instanceDef.validateId(fshDefinition.sourceInfo);
     return instanceDef;
   }
 

@@ -1,4 +1,4 @@
-import { InvalidDateTimeError, InvalidIdError } from '../errors';
+import { InvalidDateTimeError } from '../errors';
 
 /**
  * Represents the FHIR primitive type dateTime.
@@ -23,13 +23,6 @@ export function validateFHIRDateTime(dateTime: FHIRDateTime): void {
  *
  * @see {@link http://hl7.org/fhir/R4/datatypes.html#id}
  */
-
 export type FHIRId = string;
 
-const idRegex = /^[A-Za-z0-9\-\.]{1,64}$/;
-
-export function validateFHIRId(id: FHIRId): void {
-  if (!idRegex.test(id)) {
-    throw new InvalidIdError(id);
-  }
-}
+export const idRegex = /^[A-Za-z0-9\-\.]{1,64}$/;

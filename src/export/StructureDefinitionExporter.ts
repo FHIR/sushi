@@ -1,8 +1,4 @@
-import {
-  StructureDefinition,
-  ElementDefinitionBindingStrength,
-  validateFHIRId
-} from '../fhirtypes';
+import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirtypes';
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError, InvalidExtensionSliceError } from '../errors';
@@ -16,7 +12,7 @@ import {
   CaretValueRule
 } from '../fshtypes/rules';
 import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
-import { replaceReferences, validateFHIRName } from '../fhirtypes/common';
+import { replaceReferences } from '../fhirtypes/common';
 import { Package } from './Package';
 
 /**
@@ -36,18 +32,8 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
   private setMetadata(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
-    structDef.name = fshDefinition.name;
-    structDef.id = fshDefinition.id;
-    try {
-      validateFHIRName(structDef.name);
-    } catch (ex) {
-      logger.error(ex.message, fshDefinition.sourceInfo);
-    }
-    try {
-      validateFHIRId(structDef.id);
-    } catch (ex) {
-      logger.error(ex.message, fshDefinition.sourceInfo);
-    }
+    structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    structDef.setId(fshDefinition.id, fshDefinition.sourceInfo);
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
     // Version is set to value provided in config, will be overriden if reset by rules
