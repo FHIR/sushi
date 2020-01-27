@@ -67,7 +67,8 @@ async function app() {
     .filter(file => file.endsWith('.fsh'))
     .map(file => {
       const filePath = path.resolve(input, file);
-      const fileContent = fs.readFileSync(filePath, 'utf8');
+      let fileContent = fs.readFileSync(filePath, 'utf8');
+      if (!fileContent.endsWith('\n')) fileContent += '\n';
       return new RawFSH(fileContent, filePath);
     });
 
