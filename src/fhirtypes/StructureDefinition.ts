@@ -1,6 +1,10 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
-import { ElementDefinition, ElementDefinitionType } from './ElementDefinition';
+import {
+  ElementDefinition,
+  ElementDefinitionType,
+  ElementDefinitionSlicing
+} from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
@@ -314,6 +318,29 @@ export class StructureDefinition {
     j.differential = {
       element: this.elements.filter(e => e.hasDiff()).map(e => e.calculateDiff().toJSON())
     };
+
+    // Post-process the differential to remove any choice[x] elements if the only thing they do is establish the type
+    // slicing.  In this case, the type slicing can be inferred and does not need to be explicitly added.
+    // See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+    j.differential.element = j.differential.element.filter(
+      (e: { id: string; path: string; slicing: ElementDefinitionSlicing }) => {
+        return (
+          // not a choice, or
+          !e.id.endsWith('[x]') ||
+          // is a choice but not one whose only diff is the standard type slicing
+          !(
+            Object.keys(e).length === 3 &&
+            e.id &&
+            e.path &&
+            e.slicing?.discriminator?.length === 1 &&
+            e.slicing.discriminator[0].type === 'type' &&
+            e.slicing.discriminator[0].path === '$this' &&
+            e.slicing.rules === 'open' &&
+            (e.slicing.ordered == null || e.slicing.ordered === false)
+          )
+        );
+      }
+    );
 
     // If the StructureDefinition is in progress, we want to persist that in the JSON so that when
     // the Fisher retrieves it from a package and converts to JSON, the inProgress state will be

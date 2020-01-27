@@ -244,11 +244,14 @@ describe('ElementDefinition', () => {
       valueX.sliceIt('type', '$this', false, 'open');
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       const diff = valueString.calculateDiff();
+      // snapshot should retain formal syntax and slicename
       expect(valueString.id).toBe('Observation.value[x]:valueString');
       expect(valueString.path).toBe('Observation.value[x]');
+      expect(valueString.sliceName).toBe('valueString');
+      // differential should use shortcut syntax and remove slicename
       expect(diff.id).toBe('Observation.valueString');
       expect(diff.path).toBe('Observation.valueString');
-      expect(Object.keys(diff.toJSON()).length).toBe(Object.keys(valueString.toJSON()).length);
+      expect(diff.sliceName).toBeUndefined();
     });
   });
 
