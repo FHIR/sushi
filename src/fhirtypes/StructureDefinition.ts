@@ -9,8 +9,9 @@ import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
-import { getArrayIndex, setPropertyOnDefinitionInstance } from './common';
+import { getArrayIndex, setPropertyOnDefinitionInstance, HasName, HasId } from './common';
 import { Fishable, Type } from '../utils/Fishable';
+import { applyMixins } from '../utils';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -23,7 +24,7 @@ import { Fishable, Type } from '../utils/Fishable';
  * @see {@link http://hl7.org/fhir/R4/structuredefinition.html|FHIR StructureDefinition}
  */
 export class StructureDefinition {
-  id: string;
+  // id: FHIRId; // provided by HasId mixin
   meta: Meta;
   implicitRules: string;
   language: string;
@@ -34,7 +35,7 @@ export class StructureDefinition {
   url: string;
   identifier: Identifier[];
   version: string;
-  name: string;
+  // name: string; // provided by HasName mixin
   title: string;
   status: string;
   experimental: boolean;
@@ -609,6 +610,9 @@ export class StructureDefinition {
     return;
   }
 }
+
+export interface StructureDefinition extends HasName, HasId {}
+applyMixins(StructureDefinition, [HasName, HasId]);
 
 export type StructureDefinitionMapping = {
   identity: string;

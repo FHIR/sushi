@@ -8,8 +8,8 @@ export class CodeSystemExporter {
   constructor(private readonly tank: FSHTank, private readonly pkg: Package) {}
 
   private setMetadata(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
-    codeSystem.name = fshDefinition.name;
-    codeSystem.id = fshDefinition.id;
+    codeSystem.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    codeSystem.setId(fshDefinition.id, fshDefinition.sourceInfo);
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
     // Version is set to value provided in config, will be overriden if reset by rules

@@ -154,7 +154,7 @@ export class InstanceExporter {
     }
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
-
+    instanceDef.validateId(fshDefinition.sourceInfo);
     return instanceDef;
   }
 

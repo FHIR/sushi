@@ -176,6 +176,24 @@ describe('InstanceExporter', () => {
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
     });
 
+    it('should log a message when the instance has an invalid id', () => {
+      const myExamplePatient = new Instance('MyExample')
+        .withFile('Some.fsh')
+        .withLocation([3, 6, 6, 45]);
+      myExamplePatient.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('id');
+      fixedValRule.fixedValue = 'Some Patient';
+      myExamplePatient.rules.push(fixedValRule);
+      const exported = exportInstance(myExamplePatient);
+      const expectedInstanceJSON = {
+        resourceType: 'Patient',
+        id: 'Some Patient'
+      };
+      expect(exported.toJSON()).toEqual(expectedInstanceJSON);
+      expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Some\.fsh.*Line: 3 - 6\D/s);
+    });
+
     // Fixing top level elements
     it('should fix top level elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('active');

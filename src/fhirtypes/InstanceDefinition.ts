@@ -1,5 +1,7 @@
 import cloneDeep = require('lodash/cloneDeep');
 import { Meta } from './specialTypes';
+import { HasId } from './common';
+import { applyMixins } from '../utils';
 
 /**
  * A class representing a FHIR Instance.
@@ -10,7 +12,7 @@ import { Meta } from './specialTypes';
 export class InstanceDefinition {
   resourceType: string;
   instanceName: string;
-  id?: string;
+  // id?: FHIRId; // provided by HasId mixin
   meta?: Meta;
   [key: string]: any; // Allow any key value pair on InstanceDefinition due to the high number of potential properties that can be set on a FHIR instance
 
@@ -36,3 +38,7 @@ export class InstanceDefinition {
     return instanceDefinition;
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface InstanceDefinition extends HasId {}
+applyMixins(InstanceDefinition, [HasId]);

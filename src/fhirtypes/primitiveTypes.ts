@@ -1,4 +1,4 @@
-import { InvalidDateTimeError } from '../errors/InvalidDateTimeError';
+import { InvalidDateTimeError } from '../errors';
 
 /**
  * Represents the FHIR primitive type dateTime.
@@ -15,3 +15,14 @@ export function validateFHIRDateTime(dateTime: FHIRDateTime): void {
     throw new InvalidDateTimeError(dateTime);
   }
 }
+
+/**
+ * Represents the FHIR primitive type id.
+ * An id is a string between 1 and 64 characters long and contains only uppercase letter,
+ * lowercase letter, numeral, '-', and '.' characters.
+ *
+ * @see {@link http://hl7.org/fhir/R4/datatypes.html#id}
+ */
+export type FHIRId = string;
+
+export const idRegex = /^[A-Za-z0-9\-\.]{1,64}$/;

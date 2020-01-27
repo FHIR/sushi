@@ -17,8 +17,8 @@ export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
 
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
-    valueSet.name = fshDefinition.name;
-    valueSet.id = fshDefinition.id;
+    valueSet.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    valueSet.setId(fshDefinition.id, fshDefinition.sourceInfo);
     if (fshDefinition.title) {
       valueSet.title = fshDefinition.title;
     }

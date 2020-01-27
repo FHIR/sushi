@@ -4,6 +4,8 @@ import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { cloneDeep } from 'lodash';
+import { HasName, HasId } from './common';
+import { applyMixins } from '../utils';
 
 /**
  * Class representing a FHIR R4 ValueSet.
@@ -12,7 +14,7 @@ import { cloneDeep } from 'lodash';
  */
 
 export class ValueSet {
-  id: string;
+  // id: FHIRId; // provided by HasId mixin
   meta: Meta;
   implicitRules: string;
   language: string;
@@ -23,7 +25,7 @@ export class ValueSet {
   url: string;
   identifier: Identifier[];
   version: string;
-  name: string;
+  // name: string; // provided by HasName mixin
   title: string;
   status = 'active';
   experimental: boolean;
@@ -57,6 +59,9 @@ export class ValueSet {
     };
   }
 }
+
+export interface ValueSet extends HasName, HasId {}
+applyMixins(ValueSet, [HasName, HasId]);
 
 export type ValueSetCompose = {
   lockedDate?: string;

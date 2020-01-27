@@ -32,8 +32,8 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
   private setMetadata(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
-    structDef.name = fshDefinition.name;
-    structDef.id = fshDefinition.id;
+    structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    structDef.setId(fshDefinition.id, fshDefinition.sourceInfo);
     if (fshDefinition.title) structDef.title = fshDefinition.title;
     if (fshDefinition.description) structDef.description = fshDefinition.description;
     // Version is set to value provided in config, will be overriden if reset by rules

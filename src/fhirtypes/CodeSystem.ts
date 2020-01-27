@@ -2,13 +2,15 @@ import { Meta } from './specialTypes';
 import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
+import { HasName, HasId } from './common';
+import { applyMixins } from '../utils';
 
 /**
  * Class representing a FHIR R4 CodeSystem
  * @see {@link https://www.hl7.org/fhir/codesystem.html}
  */
 export class CodeSystem {
-  id?: string;
+  // id?: FHIRId; // provided by HasId mixin
   meta?: Meta;
   implicitRules?: string;
   language?: string;
@@ -19,7 +21,7 @@ export class CodeSystem {
   url?: string;
   identifier?: Identifier[];
   version?: string;
-  name?: string;
+  // name?: string; // provided by HasName mixin
   title?: string;
   status = 'active';
   experimental?: boolean;
@@ -62,6 +64,9 @@ export class CodeSystem {
     };
   }
 }
+
+export interface CodeSystem extends HasId, HasName {}
+applyMixins(CodeSystem, [HasId, HasName]);
 
 export type CodeSystemFilter = {
   code: string;

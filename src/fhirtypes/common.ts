@@ -1,9 +1,11 @@
 import { StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
 import { FixedValueRule } from '../fshtypes/rules';
-import { FshReference, Instance } from '../fshtypes';
+import { FshReference, Instance, SourceInfo } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import cloneDeep = require('lodash/cloneDeep');
+import { logger } from '../utils';
+import { FHIRId, idRegex } from './primitiveTypes';
 
 /**
  * This function sets an instance property of an SD or ED if possible
@@ -146,7 +148,8 @@ export function replaceReferences(
   return clone ?? rule;
 }
 
-/* Returns the sliceName for a set of pathParts
+/**
+ * Returns the sliceName for a set of pathParts
  * @param {PathPart} pathPart - The part of the path to get a sliceName for
  * @returns {string} The slicenName for the path part
  */
@@ -173,6 +176,66 @@ export function replaceField(
       replaceFn(object, prop);
     } else if (typeof object[prop] === 'object') {
       replaceField(object[prop], matchFn, replaceFn);
+    }
+  }
+}
+
+const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
+
+export class HasName {
+  name?: string;
+  /**
+   * Set the name and check if it matches the regular expression specified
+   * in the invariant for "name" properties. A name must be between 1 and 255 characters long,
+   * begin with an uppercase letter, and contain only uppercase letter, lowercase letter,
+   * numeral, and '_' characters.
+   * If the string does not match, log an error.
+   *
+   * @see {@link http://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.name}
+   * @see {@link http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.name}
+   * @see {@link http://hl7.org/fhir/R4/codesystem-definitions.html#CodeSystem.name}
+   * @param {string} name - The name to check against the name invariant
+   * @param {SourceInfo} sourceInfo - The FSH file and location that specified the name
+   */
+  setName(name: string, sourceInfo: SourceInfo) {
+    this.name = name;
+    if (!nameRegex.test(name)) {
+      logger.error(
+        `The string "${name}" does not represent a valid FHIR name. Valid names start with an upper-case ASCII letter ('A'..'Z') followed by any combination of of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.`,
+        sourceInfo
+      );
+    }
+  }
+}
+
+export class HasId {
+  id?: FHIRId;
+  /**
+   * Set the id and check if it matches the regular expression specified
+   * in the definition of the "id" type.
+   * If the FHIRId does not match, log an error.
+   *
+   * @param id - The new id to set
+   * @param sourceInfo - The FSH file and location that specified the id
+   */
+  setId(id: FHIRId, sourceInfo: SourceInfo) {
+    this.id = id;
+    this.validateId(sourceInfo);
+  }
+
+  /**
+   * Check if the current id matches the regular expression specified
+   * in the definition of the "id" type.
+   * If the FHIRId does not match, log an error.
+   *
+   * @param sourceInfo - The FSH file and location that specified the id
+   */
+  validateId(sourceInfo: SourceInfo) {
+    if (!idRegex.test(this.id)) {
+      logger.error(
+        `The string "${this.id}" does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
+        sourceInfo
+      );
     }
   }
 }
