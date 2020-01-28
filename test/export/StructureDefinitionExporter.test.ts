@@ -144,6 +144,20 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.derivation).toBe('constraint');
   });
 
+  it('should allow metadata to be overwritten with caret rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'status';
+    rule.value = new FshCode('active');
+    profile.rules.push(rule);
+    doc.profiles.set(profile.name, profile);
+    exporter.exportStructDef(profile);
+    const exported = pkg.profiles[0];
+    expect(exported.name).toBe('Foo');
+    expect(exported.status).toBe('active');
+  });
+
   it('should throw ParentNotDefinedError when parent resource is not found', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Bar';
@@ -267,6 +281,31 @@ describe('StructureDefinitionExporter', () => {
       {
         type: 'element',
         expression: 'Patient'
+      }
+    ]);
+  });
+
+  it('should allow metadata to be overwritten with caret rule', () => {
+    const extension = new Extension('Foo');
+    const rule1 = new CaretValueRule('');
+    rule1.caretPath = 'status';
+    rule1.value = new FshCode('active');
+    const rule2 = new CaretValueRule('');
+    rule2.caretPath = 'context[0].type';
+    rule2.value = new FshCode('element');
+    const rule3 = new CaretValueRule('');
+    rule3.caretPath = 'context[0].expression';
+    rule3.value = 'Observation';
+    extension.rules.push(rule1, rule2, rule3);
+    doc.extensions.set(extension.name, extension);
+    exporter.exportStructDef(extension);
+    const exported = pkg.extensions[0];
+    expect(exported.name).toBe('Foo');
+    expect(exported.status).toBe('active');
+    expect(exported.context).toEqual([
+      {
+        type: 'element',
+        expression: 'Observation'
       }
     ]);
   });
