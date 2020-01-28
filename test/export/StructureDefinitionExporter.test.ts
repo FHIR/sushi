@@ -91,7 +91,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.version).toBe('0.0.1'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
-    expect(exported.status).toBe('active'); // always active
+    expect(exported.status).toBe('draft'); // always active
     expect(exported.experimental).toBeUndefined();
     expect(exported.date).toBeUndefined();
     expect(exported.publisher).toBeUndefined();
@@ -197,7 +197,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.version).toBe('0.0.1'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
-    expect(exported.status).toBe('active'); // always active
+    expect(exported.status).toBe('draft'); // always active
     expect(exported.experimental).toBeUndefined();
     expect(exported.date).toBeUndefined();
     expect(exported.publisher).toBeUndefined();

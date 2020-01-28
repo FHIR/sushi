@@ -23,7 +23,7 @@ export class CodeSystem {
   version?: string;
   // name?: string; // provided by HasName mixin
   title?: string;
-  status = 'active';
+  status: 'draft' | 'active' | 'retired' | 'unknown' = 'draft';
   experimental?: boolean;
   date?: string;
   publisher?: string;
@@ -38,7 +38,7 @@ export class CodeSystem {
   hierarchyMeaning?: string;
   compositional?: boolean;
   versionNeeded?: boolean;
-  content = 'complete';
+  content: 'not-present' | 'example' | 'fragment' | 'complete' | 'supplement' = 'complete';
   supplements?: string;
   count?: number;
   filter?: CodeSystemFilter[];

@@ -28,16 +28,16 @@ export class StructureDefinitionExporter implements Fishable {
 
   /**
    * Sets the metadata for the StructureDefinition.  This includes clearing metadata that was copied from the parent
-   * but may not be relevant to the child StructureDefinition.
+   * that may not be relevant to the child StructureDefinition.  Overall approach was discussed on Zulip.  This
+   * function represents implementation of that approach plus setting extra metadata provided by FSH.
+   * This essentially aligns closely with the approach that Forge uses (ensuring some consistency across tools).
+   * @see {@link https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Bad.20links.20on.20Detailed.20Description.20tab/near/186766845}
    * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
   private setMetadata(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
-    // following general approach outlined here:
-    // https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Bad.20links.20on.20Detailed.20Description.20tab/near/186460459
-
     // First save the original URL, as that is the URL we'll want to set as the baseDefinition
-    const parentURL = structDef.url;
+    const baseURL = structDef.url;
 
     // Now set/clear elements in order of their appearance in Resource/DomainResource/StructureDefinition definitions
     structDef.setId(fshDefinition.id, fshDefinition.sourceInfo);
@@ -45,7 +45,7 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.implicitRules;
     delete structDef.language;
     delete structDef.text;
-    // keep structDef.contained since existing elements may refer to contained items (although not likely)
+    delete structDef.contained;
     delete structDef.extension; // see https://github.com/FHIR/sushi/issues/116
     delete structDef.modifierExtension;
     structDef.url = `${this.tank.config.canonical}/StructureDefinition/${structDef.id}`;
@@ -57,7 +57,7 @@ export class StructureDefinitionExporter implements Fishable {
     } else {
       delete structDef.title;
     }
-    structDef.status = 'active'; // it's 1..1 so we have to set it to something; can be overridden w/ rule
+    structDef.status = 'draft'; // it's 1..1 so we have to set it to something; can be overridden w/ rule
     delete structDef.experimental;
     delete structDef.date;
     delete structDef.publisher;
@@ -79,7 +79,7 @@ export class StructureDefinitionExporter implements Fishable {
     // keep context, assuming context is still valid for child extensions
     // keep contextInvariant, assuming context is still valid for child extensions
     // keep type since this should not change for profiles or extensions
-    structDef.baseDefinition = parentURL;
+    structDef.baseDefinition = baseURL;
     structDef.derivation = 'constraint'; // always constraint since SUSHI only supports profiles/extensions right now
 
     if (fshDefinition instanceof Extension) {
