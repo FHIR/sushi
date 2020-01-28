@@ -52,7 +52,7 @@ describe('StructureDefinitionExporter', () => {
   });
 
   // Profile
-  it('should set all metadata for a profile', () => {
+  it('should set all user-provided metadata for a profile', () => {
     const profile = new Profile('Foo');
     profile.id = 'foo';
     profile.parent = 'Observation';
@@ -69,7 +69,63 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.version).toBe('0.0.1');
     expect(exported.type).toBe('Observation');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
-    expect(exported.derivation).toBe('constraint');
+  });
+
+  it('should properly set/clear all metadata properties for a profile', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set(profile.name, profile);
+    exporter.exportStructDef(profile);
+    const exported = pkg.profiles[0];
+
+    expect(exported.id).toBe('Foo'); // defaulted from user-provided name
+    expect(exported.meta).toBeUndefined();
+    expect(exported.implicitRules).toBeUndefined();
+    expect(exported.language).toBeUndefined();
+    expect(exported.text).toBeUndefined();
+    expect(exported.contained).toBeUndefined; // inherited from Observation
+    expect(exported.extension).toBeUndefined();
+    expect(exported.modifierExtension).toBeUndefined();
+    expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
+    expect(exported.identifier).toBeUndefined();
+    expect(exported.version).toBe('0.0.1'); // provided by config
+    expect(exported.name).toBe('Foo'); // provided by user
+    expect(exported.title).toBeUndefined();
+    expect(exported.status).toBe('active'); // always active
+    expect(exported.experimental).toBeUndefined();
+    expect(exported.date).toBeUndefined();
+    expect(exported.publisher).toBeUndefined();
+    expect(exported.contact).toBeUndefined();
+    expect(exported.description).toBeUndefined();
+    expect(exported.useContext).toBeUndefined();
+    expect(exported.jurisdiction).toBeUndefined();
+    expect(exported.purpose).toBeUndefined();
+    expect(exported.copyright).toBeUndefined();
+    expect(exported.keyword).toBeUndefined();
+    expect(exported.fhirVersion).toBe('4.0.1'); // Inherited from Observation
+    expect(exported.mapping).toEqual([
+      { identity: 'workflow', uri: 'http://hl7.org/fhir/workflow', name: 'Workflow Pattern' },
+      {
+        identity: 'sct-concept',
+        uri: 'http://snomed.info/conceptdomain',
+        name: 'SNOMED CT Concept Domain Binding'
+      },
+      { identity: 'v2', uri: 'http://hl7.org/v2', name: 'HL7 v2 Mapping' },
+      { identity: 'rim', uri: 'http://hl7.org/v3', name: 'RIM Mapping' },
+      { identity: 'w5', uri: 'http://hl7.org/fhir/fivews', name: 'FiveWs Pattern Mapping' },
+      {
+        identity: 'sct-attr',
+        uri: 'http://snomed.org/attributebinding',
+        name: 'SNOMED CT Attribute Binding'
+      }
+    ]); // inherited from Observation
+    expect(exported.kind).toBe('resource'); // inherited from Observation
+    expect(exported.abstract).toBe(false); // always abstract
+    expect(exported.context).toBeUndefined; // inherited from Observation
+    expect(exported.contextInvariant).toBeUndefined; // inherited from Observation
+    expect(exported.type).toBe('Observation'); // inherited from Observation
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation'); // url for Observation
+    expect(exported.derivation).toBe('constraint'); // always constraint
   });
 
   it('should not overwrite metadata that is not given for a profile', () => {
@@ -80,20 +136,12 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
-    expect(exported.description).toBe('This is the base resource type for everything.');
+    expect(exported.description).toBeUndefined();
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
     expect(exported.version).toBe('0.0.1');
     expect(exported.type).toBe('Resource');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
     expect(exported.derivation).toBe('constraint');
-  });
-
-  it('should remove the base-level extensions from the parent resource', () => {
-    const profile = new Profile('Foo');
-    doc.profiles.set(profile.name, profile);
-    exporter.exportStructDef(profile);
-    const exported = pkg.profiles[0];
-    expect(exported.extension).toBeUndefined();
   });
 
   it('should throw ParentNotDefinedError when parent resource is not found', () => {
@@ -106,7 +154,7 @@ describe('StructureDefinitionExporter', () => {
   });
 
   // Extension
-  it('should set all metadata for an extension', () => {
+  it('should set all user-provided metadata for an extension', () => {
     const extension = new Extension('Foo');
     extension.id = 'foo';
     extension.title = 'Foo Profile';
@@ -119,21 +167,66 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.title).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
+    expect(exported.version).toBe('0.0.1');
+    expect(exported.type).toBe('Extension');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
+
+    // Check that Extension.url is correctly fixed
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
       'http://example.com/StructureDefinition/foo'
     );
-    expect(exported.version).toBe('0.0.1');
-    // NOTE: For now, we always set context to everything, but this will be user-specified in
-    // the future
-    expect(exported.context).toEqual([
-      {
-        type: 'element',
-        expression: 'Element'
-      }
-    ]);
-    expect(exported.type).toBe('Extension');
-    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
-    expect(exported.derivation).toBe('constraint');
+  });
+
+  it('should properly set/clear all metadata properties for an extension', () => {
+    const extension = new Extension('Foo');
+    extension.parent = 'patient-mothersMaidenName';
+    doc.profiles.set(extension.name, extension);
+    exporter.exportStructDef(extension);
+    const exported = pkg.extensions[0];
+
+    expect(exported.id).toBe('Foo'); // defaulted from user-provided name
+    expect(exported.meta).toBeUndefined();
+    expect(exported.implicitRules).toBeUndefined();
+    expect(exported.language).toBeUndefined();
+    expect(exported.text).toBeUndefined();
+    expect(exported.contained).toBeUndefined; // inherited from patient-mothersMaidenName
+    expect(exported.extension).toBeUndefined();
+    expect(exported.modifierExtension).toBeUndefined();
+    expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
+    expect(exported.identifier).toBeUndefined();
+    expect(exported.version).toBe('0.0.1'); // provided by config
+    expect(exported.name).toBe('Foo'); // provided by user
+    expect(exported.title).toBeUndefined();
+    expect(exported.status).toBe('active'); // always active
+    expect(exported.experimental).toBeUndefined();
+    expect(exported.date).toBeUndefined();
+    expect(exported.publisher).toBeUndefined();
+    expect(exported.contact).toBeUndefined();
+    expect(exported.description).toBeUndefined();
+    expect(exported.useContext).toBeUndefined();
+    expect(exported.jurisdiction).toBeUndefined();
+    expect(exported.purpose).toBeUndefined();
+    expect(exported.copyright).toBeUndefined();
+    expect(exported.keyword).toBeUndefined();
+    expect(exported.fhirVersion).toBe('4.0.1'); // Inherited from patient-mothersMaidenName
+    expect(exported.mapping).toEqual([
+      { identity: 'v2', uri: 'http://hl7.org/v2', name: 'HL7 v2 Mapping' },
+      { identity: 'rim', uri: 'http://hl7.org/v3', name: 'RIM Mapping' }
+    ]); // inherited from patient-mothersMaidenName
+    expect(exported.kind).toBe('complex-type'); // inherited from patient-mothersMaidenName
+    expect(exported.abstract).toBe(false); // always abstract
+    expect(exported.context).toEqual([{ type: 'element', expression: 'Patient' }]); // inherited from patient-mothersMaidenName
+    expect(exported.contextInvariant).toBeUndefined; // inherited from patient-mothersMaidenName
+    expect(exported.type).toBe('Extension'); // inherited from patient-mothersMaidenName
+    expect(exported.baseDefinition).toBe(
+      'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+    ); // url for patient-mothersMaidenName
+    expect(exported.derivation).toBe('constraint'); // always constraint
+
+    // Check that Extension.url is correctly fixed
+    expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
+      'http://example.com/StructureDefinition/Foo'
+    );
   });
 
   it('should not overwrite metadata that is not given for an extension', () => {
@@ -144,16 +237,11 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
-    expect(exported.description).toBe(
-      'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.'
-    );
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
       'http://example.com/StructureDefinition/Foo'
     );
     expect(exported.version).toBe('0.0.1');
-    // NOTE: For now, we always set context to everything, but this will be user-specified in
-    // the future
     expect(exported.context).toEqual([
       {
         type: 'element',
@@ -1212,9 +1300,8 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
-    expect(sd.description).toBe(baseStructDef.description);
+    expect(sd.description).toBeUndefined();
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 
