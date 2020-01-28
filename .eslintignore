@@ -3,7 +3,7 @@
 # build artefacts
 dist/*
 coverage/*
-build/*
+build*/*
 # data definition files
 **/*.d.ts
 # 3rd party libs
