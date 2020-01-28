@@ -71,9 +71,14 @@ export function setPropertyOnInstance(
           if (j < current[key].length && j === index && current[key][index] == null) {
             current[key][index] = {};
           } else if (j >= current[key].length) {
-            // _sliceName is used to later differentiate which slice an element represents
-            const arrayFiller = sliceName ? { _sliceName: sliceName } : null;
-            current[key].push(j === index ? {} : arrayFiller);
+            if (sliceName) {
+              // _sliceName is used to later differentiate which slice an element represents
+              current[key].push({ _sliceName: sliceName });
+            } else if (j === index) {
+              current[key].push({});
+            } else {
+              current[key].push(null);
+            }
           }
         }
         // If it isn't the last element, move on, if it is, set the value
@@ -83,7 +88,11 @@ export function setPropertyOnInstance(
             current._sliceName = sliceName;
           }
         } else {
-          current[key][index] = fixedValue;
+          if (typeof fixedValue === 'object') {
+            Object.assign(current[key][index], fixedValue);
+          } else {
+            current[key][index] = fixedValue;
+          }
         }
       } else {
         // If it isn't the last element, move on, if it is, set the value
