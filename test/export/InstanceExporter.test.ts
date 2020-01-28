@@ -598,6 +598,21 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should fix a sliced extension element that is referred to by url', () => {
+      const fooExtension = new Extension('FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = ['FooExtension'];
+      patientProf.rules.push(containsRule);
+      const barRule = new FixedValueRule('extension[http://example.com/StructureDefinition/FooExtension].valueString');
+      barRule.fixedValue = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
+      ]);
+    });
+
     it('should fix a sliced extension element that is referred to by aliased url', () => {
       const fooExtension = new Extension('FooExtension');
       doc.aliases.set('FooAlias', 'http://example.com/StructureDefinition/FooExtension');

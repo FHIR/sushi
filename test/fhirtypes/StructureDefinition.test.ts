@@ -349,9 +349,11 @@ describe('StructureDefinition', () => {
   describe('#findElementByPath', () => {
     let respRate: StructureDefinition;
     let lipidProfile: StructureDefinition;
+    let clinicalDocument: StructureDefinition;
     beforeEach(() => {
       respRate = fisher.fishForStructureDefinition('resprate');
       lipidProfile = fisher.fishForStructureDefinition('lipidprofile');
+      clinicalDocument = fisher.fishForStructureDefinition('clinicaldocument');
     });
 
     // Simple paths (no brackets)
@@ -434,6 +436,17 @@ describe('StructureDefinition', () => {
       // component.referenceRange does not have a type, this test verifies that this does not cause a crash
       const componentFooSlice = observation.findElementByPath('component[FooSlice]', fisher);
       expect(componentFooSlice).toBeUndefined();
+    });
+
+    it('should find a child of a sliced element by path with URL', () => {
+      const originalLength = clinicalDocument.elements.length;
+      const valueString = clinicalDocument.findElementByPath(
+        'extension[http://hl7.org/fhir/StructureDefinition/composition-clinicaldocument-versionNumber].valueString',
+        fisher
+      );
+      expect(valueString).toBeDefined();
+      expect(valueString.id).toBe('Composition.extension:versionNumber.value[x]:valueString');
+      expect(clinicalDocument.elements.length).toBe(originalLength + 5);
     });
 
     // Choices
