@@ -196,11 +196,25 @@ describe('InstanceExporter', () => {
 
     // Fixing top level elements
     it('should fix top level elements that are fixed on the Structure Definition', () => {
+      const cardRule = new CardRule('active');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
       const exported = exportInstance(instance);
       expect(exported.active).toEqual(true);
+    });
+
+    it('should not fix optional elements that are fixed on the Structure Definition', () => {
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      patient.rules.push(fixedValRule);
+      const exported = exportInstance(instance);
+      expect(exported.active).toBeUndefined();
+      expect(loggerSpy.getLastMessage()).toMatch(
+        'Element Patient.active is optional with min cardinality 0, so fixed value for optional element is not set on instance Bar'
+      );
     });
 
     it('should fix top level elements to an array even if constrained on the Structure Definition', () => {
@@ -232,6 +246,9 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix top level elements that are fixed by a pattern on the Structure Definition', () => {
+      const cardRule = new CardRule('maritalStatus');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
       const fixedValRule = new FixedValueRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
@@ -242,7 +259,7 @@ describe('InstanceExporter', () => {
       });
     });
 
-    it('should fix a value onto a elements that are fixed by a pattern on the Structure Definition', () => {
+    it('should fix a value onto an element that are fixed by a pattern on the Structure Definition', () => {
       const observation = new Profile('TestObservation');
       observation.parent = 'Observation';
       doc.profiles.set(observation.name, observation);
@@ -253,6 +270,9 @@ describe('InstanceExporter', () => {
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
       observation.rules.push(fixedValRule); // * valueQuantity = foo.com#foo
+      const cardRule = new CardRule('valueQuantity');
+      cardRule.min = 1;
+      observation.rules.push(cardRule); // * valueQuantity 1..1
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'TestObservation';
       const fixedQuantityValue = new FixedValueRule('valueQuantity.value');
@@ -268,10 +288,44 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should fix a value onto slice elements that are fixed by a pattern on the Structure Definition', () => {
+      const resprate = new Profile('TestResprate');
+      resprate.parent = 'resprate';
+      doc.profiles.set(resprate.name, resprate);
+      const containsRule = new ContainsRule('category');
+      containsRule.items = ['niceSlice'];
+      resprate.rules.push(containsRule); // * identifier contains niceSlice
+      const cardRule = new CardRule('category[niceSlice]');
+      cardRule.min = 1;
+      cardRule.max = '*';
+      resprate.rules.push(cardRule); // * category[niceSlice] 1..*
+      const fixedValRule = new FixedValueRule('category[niceSlice]');
+      const fixedFshCode = new FshCode('rice', 'http://spice.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      resprate.rules.push(fixedValRule); // * category[niceSlice] = http://spice.com#rice
+      const resprateInstance = new Instance('myResprate');
+      resprateInstance.instanceOf = 'TestResprate';
+      doc.instances.set(resprateInstance.name, resprateInstance);
+      const exported = exportInstance(resprateInstance);
+      expect(exported.category).toEqual([
+        {
+          coding: [
+            {
+              code: 'rice',
+              system: 'http://spice.com'
+            }
+          ]
+        }
+      ]);
+    });
+
     it('should fix top level choice elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('deceasedBoolean');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
+      const cardRule = new CardRule('deceasedBoolean');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
       const exported = exportInstance(instance);
       expect(exported.deceasedBoolean).toBe(true);
     });
@@ -306,6 +360,9 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
+      const cardRule = new CardRule('active');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
       const instanceFixedValRule = new FixedValueRule('active');
       instanceFixedValRule.fixedValue = false;
       instance.rules.push(instanceFixedValRule);
@@ -321,6 +378,9 @@ describe('InstanceExporter', () => {
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
       patient.rules.push(fixedValRule);
+      const cardRule = new CardRule('maritalStatus');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
       const instanceFixedValRule = new FixedValueRule('maritalStatus');
       const instanceFixedFshCode = new FshCode('bar', 'http://bar.com');
       instanceFixedValRule.fixedValue = instanceFixedFshCode;
@@ -337,6 +397,9 @@ describe('InstanceExporter', () => {
 
     // Nested elements
     it('should fix a nested element that has parents defined in the instance and is fixed on the Structure Definition', () => {
+      const cardRule = new CardRule('communication.preferred');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
       const fixedValRule = new FixedValueRule('communication.preferred');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
@@ -351,6 +414,9 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix a nested element that has parents and children defined in the instance and is fixed on the Structure Definition', () => {
+      const cardRule = new CardRule('communication.language.text');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
       const fixedValRule = new FixedValueRule('communication.language.text');
       fixedValRule.fixedValue = 'foo';
       patient.rules.push(fixedValRule);
@@ -378,6 +444,10 @@ describe('InstanceExporter', () => {
       cardRule.min = 1;
       cardRule.max = '1';
       patient.rules.push(cardRule);
+      const cardRuleRelationship = new CardRule('contact.relationship');
+      cardRuleRelationship.min = 1;
+      cardRuleRelationship.max = '*';
+      patient.rules.push(cardRuleRelationship);
       const fixedValRule = new FixedValueRule('contact.relationship');
       fixedValRule.fixedValue = new FshCode('mother');
       patient.rules.push(fixedValRule);
