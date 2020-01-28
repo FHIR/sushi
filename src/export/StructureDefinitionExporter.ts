@@ -27,33 +27,70 @@ export class StructureDefinitionExporter implements Fishable {
   ) {}
 
   /**
-   * Sets the metadata for the StructureDefinition
+   * Sets the metadata for the StructureDefinition.  This includes clearing metadata that was copied from the parent
+   * that may not be relevant to the child StructureDefinition.  Overall approach was discussed on Zulip.  This
+   * function represents implementation of that approach plus setting extra metadata provided by FSH.
+   * This essentially aligns closely with the approach that Forge uses (ensuring some consistency across tools).
+   * @see {@link https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Bad.20links.20on.20Detailed.20Description.20tab/near/186766845}
    * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
   private setMetadata(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
-    structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    // First save the original URL, as that is the URL we'll want to set as the baseDefinition
+    const baseURL = structDef.url;
+
+    // Now set/clear elements in order of their appearance in Resource/DomainResource/StructureDefinition definitions
     structDef.setId(fshDefinition.id, fshDefinition.sourceInfo);
-    if (fshDefinition.title) structDef.title = fshDefinition.title;
-    if (fshDefinition.description) structDef.description = fshDefinition.description;
-    // Version is set to value provided in config, will be overriden if reset by rules
-    structDef.version = this.tank.config.version;
-    // Assuming the starting StructureDefinition was a clone of the parent,
-    // set the baseDefinition to the parent url before re-assiging the url
-    structDef.baseDefinition = structDef.url;
-    // Now re-assign the URL based on canonical and id
+    delete structDef.meta;
+    delete structDef.implicitRules;
+    delete structDef.language;
+    delete structDef.text;
+    delete structDef.contained;
+    delete structDef.extension; // see https://github.com/FHIR/sushi/issues/116
+    delete structDef.modifierExtension;
     structDef.url = `${this.tank.config.canonical}/StructureDefinition/${structDef.id}`;
-    // Set the derivation as appropriate
-    if (fshDefinition instanceof Profile) {
-      structDef.derivation = 'constraint';
-    } else if (fshDefinition instanceof Extension) {
+    delete structDef.identifier;
+    structDef.version = this.tank.config.version; // can be overridden using a rule
+    structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    if (fshDefinition.title) {
+      structDef.title = fshDefinition.title;
+    } else {
+      delete structDef.title;
+    }
+    structDef.status = 'draft'; // it's 1..1 so we have to set it to something; can be overridden w/ rule
+    delete structDef.experimental;
+    delete structDef.date;
+    delete structDef.publisher;
+    delete structDef.contact;
+    if (fshDefinition.description) {
+      structDef.description = fshDefinition.description;
+    } else {
+      delete structDef.description;
+    }
+    delete structDef.useContext;
+    delete structDef.jurisdiction;
+    delete structDef.purpose;
+    delete structDef.copyright;
+    delete structDef.keyword;
+    // keep structDef.fhirVersion as that ought not change from parent to child
+    // keep mapping since existing elements refer to the mapping and we're not removing those
+    // keep kind since it should not change
+    structDef.abstract = false; // always reset to false, assuming most children of abstracts aren't abstract
+    // keep context, assuming context is still valid for child extensions
+    // keep contextInvariant, assuming context is still valid for child extensions
+    // keep type since this should not change for profiles or extensions
+    structDef.baseDefinition = baseURL;
+    structDef.derivation = 'constraint'; // always constraint since SUSHI only supports profiles/extensions right now
+
+    if (fshDefinition instanceof Extension) {
       // Automatically set url.fixedUri on Extensions
       const url = structDef.findElement('Extension.url');
       url.fixedUri = structDef.url;
-      structDef.derivation = 'constraint';
       if (structDef.context == null) {
-        // NOTE: For now, we always set context to everything, but this will be user-specified
-        // in the future
+        // Set context to everything by default, but users can override w/ rules, e.g.
+        // ^context[0].type = #element
+        // ^context[0].expression = "Patient"
+        // TODO: Consider introducing metadata keywords for this
         structDef.context = [
           {
             type: 'element',
@@ -62,8 +99,6 @@ export class StructureDefinitionExporter implements Fishable {
         ];
       }
     }
-    // Remove the base-level extensions as they may not be valid in this context
-    delete structDef.extension;
   }
 
   /**
