@@ -111,6 +111,7 @@ export class FSHImporter extends FSHVisitor {
       docs.push(doc);
 
       // Create and store context for main import process
+      if (!rawFSH.content.endsWith('\n')) rawFSH.content += '\n';
       const ctx = this.parseDoc(rawFSH.content, rawFSH.path);
       contexts.push(ctx);
 
