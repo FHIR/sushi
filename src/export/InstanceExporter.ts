@@ -102,7 +102,7 @@ export class InstanceExporter {
       const fixedValueKey = Object.keys(child).find(
         k => k.startsWith('fixed') || k.startsWith('pattern')
       );
-      if (fixedValueKey) {
+      if (fixedValueKey && child.min > 0) {
         // Get the end of the child path, this is the part that differs from existingPath
         const childPath = child
           .diffId()
@@ -126,6 +126,10 @@ export class InstanceExporter {
         } catch (e) {
           logger.error(e.message);
         }
+      } else if (fixedValueKey) {
+        logger.debug(
+          `Element ${child.id} is optional with min cardinality 0, so fixed value for optional element is not set on instance ${instanceDef.instanceName}`
+        );
       }
     }
   }
