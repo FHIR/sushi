@@ -604,7 +604,9 @@ describe('InstanceExporter', () => {
       const containsRule = new ContainsRule('extension');
       containsRule.items = ['FooExtension'];
       patientProf.rules.push(containsRule);
-      const barRule = new FixedValueRule('extension[http://example.com/StructureDefinition/FooExtension].valueString');
+      const barRule = new FixedValueRule(
+        'extension[http://example.com/StructureDefinition/FooExtension].valueString'
+      );
       barRule.fixedValue = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
