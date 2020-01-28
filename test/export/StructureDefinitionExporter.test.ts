@@ -83,7 +83,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.implicitRules).toBeUndefined();
     expect(exported.language).toBeUndefined();
     expect(exported.text).toBeUndefined();
-    expect(exported.contained).toBeUndefined; // inherited from Observation
+    expect(exported.contained).toBeUndefined(); // inherited from Observation
     expect(exported.extension).toBeUndefined();
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
@@ -121,8 +121,8 @@ describe('StructureDefinitionExporter', () => {
     ]); // inherited from Observation
     expect(exported.kind).toBe('resource'); // inherited from Observation
     expect(exported.abstract).toBe(false); // always abstract
-    expect(exported.context).toBeUndefined; // inherited from Observation
-    expect(exported.contextInvariant).toBeUndefined; // inherited from Observation
+    expect(exported.context).toBeUndefined(); // inherited from Observation
+    expect(exported.contextInvariant).toBeUndefined(); // inherited from Observation
     expect(exported.type).toBe('Observation'); // inherited from Observation
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation'); // url for Observation
     expect(exported.derivation).toBe('constraint'); // always constraint
@@ -189,7 +189,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.implicitRules).toBeUndefined();
     expect(exported.language).toBeUndefined();
     expect(exported.text).toBeUndefined();
-    expect(exported.contained).toBeUndefined; // inherited from patient-mothersMaidenName
+    expect(exported.contained).toBeUndefined(); // inherited from patient-mothersMaidenName
     expect(exported.extension).toBeUndefined();
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
@@ -216,7 +216,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.kind).toBe('complex-type'); // inherited from patient-mothersMaidenName
     expect(exported.abstract).toBe(false); // always abstract
     expect(exported.context).toEqual([{ type: 'element', expression: 'Patient' }]); // inherited from patient-mothersMaidenName
-    expect(exported.contextInvariant).toBeUndefined; // inherited from patient-mothersMaidenName
+    expect(exported.contextInvariant).toBeUndefined(); // inherited from patient-mothersMaidenName
     expect(exported.type).toBe('Extension'); // inherited from patient-mothersMaidenName
     expect(exported.baseDefinition).toBe(
       'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
