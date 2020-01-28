@@ -111,7 +111,13 @@ export class FSHImporter extends FSHVisitor {
       docs.push(doc);
 
       // Create and store context for main import process
-      const ctx = this.parseDoc(rawFSH.content, rawFSH.path);
+      // We are appending a newline to the file content if there is not one there already.
+      // This is being done because we discovered a syntax error that occurs if a comments
+      // ends a file, and there is no newline after it. Comments are only tokenized in our
+      // grammar if a newline follows it. In order to prevent this error from occurring,
+      // we add a newline to the content before we parse it so comments at EOF can be tokenized.
+      const content = rawFSH.content.endsWith('\n') ? rawFSH.content : rawFSH.content + '\n';
+      const ctx = this.parseDoc(content, rawFSH.path);
       contexts.push(ctx);
 
       // Collect the aliases and store in global map
