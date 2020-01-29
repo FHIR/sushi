@@ -95,7 +95,18 @@ export class IGExporter {
               generation: 'markdown'
             }
           ]
-        }
+        },
+        // Parameter apparently required by IG Publisher (as of Jan 29, 2020)
+        parameter: [
+          {
+            code: 'copyrightyear',
+            value: `${new Date().getFullYear()}+` // TODO: Make this configurable
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build' // TODO: Make this configurable
+          }
+        ]
       }
     };
 
