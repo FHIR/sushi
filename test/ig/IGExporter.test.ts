@@ -223,7 +223,17 @@ describe('IGExporter', () => {
                 generation: 'markdown'
               }
             ]
-          }
+          },
+          parameter: [
+            {
+              code: 'copyrightyear',
+              value: `${new Date().getFullYear()}+`
+            },
+            {
+              code: 'releaselabel',
+              value: 'CI Build'
+            }
+          ]
         }
       });
     });
