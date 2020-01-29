@@ -470,7 +470,7 @@ export class StructureDefinition {
    */
   private parseFSHPath(fshPath: string): PathPart[] {
     const pathParts: PathPart[] = [];
-    const splitPath = fshPath.split('.');
+    const splitPath = fshPath.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
     for (const pathPart of splitPath) {
       const splitPathPart = pathPart.split('[');
       if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {

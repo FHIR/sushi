@@ -46,7 +46,7 @@ export class InstanceExporter {
           const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
           // Reconstruct the part of the rule's path that we just got the element for
           let rulePathPart = rule.path
-            .split('.')
+            .split(/\.(?![^\[]*\])/g) // match a period that isn't within square brackets
             .slice(0, i + 1)
             .join('.');
           rulePathPart += '.';
