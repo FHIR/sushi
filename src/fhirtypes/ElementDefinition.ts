@@ -1,5 +1,6 @@
 import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
 import sax = require('sax');
+import { minify } from 'html-minifier';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCode, FshRatio, FshQuantity, FshReference } from '../fshtypes';
@@ -1002,7 +1003,7 @@ export class ElementDefinition {
       this.checkXhtml(value) &&
       this.checkIfFixable(value, this.fixedXhtml, type)
     ) {
-      this.fixedXhtml = value;
+      this.fixedXhtml = minify(value, { collapseWhitespace: true });
     } else {
       throw new MismatchedTypeError('string', value, type);
     }

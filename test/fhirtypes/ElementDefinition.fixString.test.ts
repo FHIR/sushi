@@ -386,6 +386,22 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should fix a string to an xhtml and collapse whitespace', () => {
+      const narrativeDiv = patient.findElementByPath('text.div', fisher);
+      narrativeDiv.fixString(
+        `<div xmlns="http://www.w3.org/1999/xhtml">
+
+        Twas     brillig
+        and the   slithy             toves
+
+        
+        </div>`
+      );
+      expect(narrativeDiv.fixedXhtml).toBe(
+        '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig and the slithy toves</div>'
+      );
+    });
+
     it('should throw ValueAlreadyFixedError when fixing an already fixed xhtml', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       narrativeDiv.fixString('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
