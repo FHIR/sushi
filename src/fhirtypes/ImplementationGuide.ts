@@ -8,7 +8,7 @@ export type ImplementationGuide = {
   version?: string;
   name: string;
   title?: string;
-  status: 'active' | 'active' | 'retired' | 'unknown';
+  status: 'draft' | 'active' | 'retired' | 'unknown';
   experimental?: boolean;
   date?: string;
   publisher?: string;
