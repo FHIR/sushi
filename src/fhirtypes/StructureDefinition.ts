@@ -315,8 +315,16 @@ export class StructureDefinition {
 
     // Now handle snapshot and differential
     j.snapshot = { element: this.elements.map(e => e.toJSON()) };
+
+    const differentialElements = this.elements
+      .filter(e => e.hasDiff())
+      .map(e => e.calculateDiff().toJSON());
+
     j.differential = {
-      element: this.elements.filter(e => e.hasDiff()).map(e => e.calculateDiff().toJSON())
+      element:
+        differentialElements.length > 0
+          ? differentialElements
+          : [{ id: 'Observation', path: 'Observation' }]
     };
 
     // Post-process the differential to remove any choice[x] elements if the only thing they do is establish the type

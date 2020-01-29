@@ -122,6 +122,11 @@ describe('StructureDefinition', () => {
       });
     });
 
+    it('should reflect basic differential for structure definitions with no changes', () => {
+      const json = observation.toJSON();
+      expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
+    });
+
     it('should properly serialize snapshot and differential for constrained choice type with constraints on specific choices', () => {
       // constrain value[x] to only a Quantity or string and give each its own short
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
