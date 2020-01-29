@@ -60,7 +60,7 @@ export class IGExporter {
       // name must be alphanumeric (allowing underscore as well)
       name: (config.title ?? config.name).replace(/[^A-Za-z0-9_]/g, ''),
       title: config.title ?? config.name,
-      status: 'draft', // TODO: make user-configurable
+      status: 'active', // TODO: make user-configurable
       publisher: config.author,
       contact: config.maintainers?.map(m => {
         const contact: ContactDetail = {};

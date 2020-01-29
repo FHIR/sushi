@@ -32,7 +32,7 @@ describe('CodeSystemExporter', () => {
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
-      status: 'draft',
+      status: 'active',
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       version: '0.0.1'
@@ -50,7 +50,7 @@ describe('CodeSystemExporter', () => {
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
       id: 'CodeSystem1',
-      status: 'draft',
+      status: 'active',
       content: 'complete',
       url: 'http://example.com/CodeSystem/CodeSystem1',
       title: 'My Fancy Code System',
@@ -79,7 +79,7 @@ describe('CodeSystemExporter', () => {
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
-      status: 'draft',
+      status: 'active',
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       version: '0.0.1',
@@ -102,7 +102,7 @@ describe('CodeSystemExporter', () => {
     expect(exported[0]).toEqual({
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
-      status: 'draft',
+      status: 'active',
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       version: '0.0.1',
