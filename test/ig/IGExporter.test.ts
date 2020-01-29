@@ -128,7 +128,7 @@ describe('IGExporter', () => {
         version: '0.1.0',
         name: 'FSHTestIG',
         title: 'FSH Test IG',
-        status: 'draft',
+        status: 'active',
         publisher: 'James Tuna',
         contact: [
           {
