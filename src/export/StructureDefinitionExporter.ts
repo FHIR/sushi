@@ -57,7 +57,7 @@ export class StructureDefinitionExporter implements Fishable {
     } else {
       delete structDef.title;
     }
-    structDef.status = 'draft'; // it's 1..1 so we have to set it to something; can be overridden w/ rule
+    structDef.status = 'active'; // it's 1..1 so we have to set it to something; can be overridden w/ rule
     delete structDef.experimental;
     delete structDef.date;
     delete structDef.publisher;

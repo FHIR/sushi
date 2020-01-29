@@ -7,7 +7,8 @@ import {
   FshCode,
   FshReference,
   Instance,
-  FshValueSet
+  FshValueSet,
+  FshCodeSystem
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -91,7 +92,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.version).toBe('0.0.1'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
-    expect(exported.status).toBe('draft'); // always active
+    expect(exported.status).toBe('active'); // always active
     expect(exported.experimental).toBeUndefined();
     expect(exported.date).toBeUndefined();
     expect(exported.publisher).toBeUndefined();
@@ -211,7 +212,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.version).toBe('0.0.1'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
-    expect(exported.status).toBe('draft'); // always active
+    expect(exported.status).toBe('active'); // always active
     expect(exported.experimental).toBeUndefined();
     expect(exported.date).toBeUndefined();
     expect(exported.publisher).toBeUndefined();
@@ -1066,6 +1067,27 @@ describe('StructureDefinitionExporter', () => {
     expect(fixedSubject.patternReference).toEqual({
       reference: 'Patient/bar-id'
     });
+  });
+
+  it('should apply a Code FixedValueRule and replace the local code system name with its url', () => {
+    const profile = new Profile('LightObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('valueCodeableConcept');
+    rule.fixedValue = new FshCode('bright', 'Visible');
+    profile.rules.push(rule);
+
+    const visibleSystem = new FshCodeSystem('Visible');
+    doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+    expect(fixedElement.patternCodeableConcept.coding).toEqual([
+      {
+        code: 'bright',
+        system: 'http://example.com/CodeSystem/Visible'
+      }
+    ]);
   });
 
   it('should not apply an incorrect FixedValueRule', () => {

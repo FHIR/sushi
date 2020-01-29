@@ -1,6 +1,6 @@
 import { StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
 import { FixedValueRule } from '../fshtypes/rules';
-import { FshReference, Instance, SourceInfo } from '../fshtypes';
+import { FshReference, Instance, SourceInfo, FshCode } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import cloneDeep = require('lodash/cloneDeep');
@@ -123,9 +123,10 @@ export function getArrayIndex(pathPart: PathPart): number {
 }
 
 /**
- * Replaces references to instances by the correct path to that instance
+ * Replaces references to instances by the correct path to that instance.
+ * Replaces references to local code systems by the url for that code system.
  * @param {FixedValueRule} rule - The rule to replace references on
- * @param {FSHTank} tank - The tank holding the instances
+ * @param {FSHTank} tank - The tank holding the instances and code systems
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  * @returns {FixedValueRule} a clone of the rule if replacing is done, otherwise the original rule
  */
@@ -152,6 +153,14 @@ export function replaceReferences(
       clone = cloneDeep(rule);
       const fv = clone.fixedValue as FshReference;
       fv.reference = `${instanceMeta.sdType}/${id}`;
+    }
+  } else if (rule.fixedValue instanceof FshCode) {
+    const codeSystem = tank.fish(rule.fixedValue.system, Type.CodeSystem);
+    const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
+    if (codeSystem && codeSystemMeta) {
+      clone = cloneDeep(rule);
+      const fv = clone.fixedValue as FshCode;
+      fv.system = codeSystemMeta.url;
     }
   }
   return clone ?? rule;

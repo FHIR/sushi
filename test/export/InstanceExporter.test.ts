@@ -1,7 +1,14 @@
 import { InstanceExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Instance, Profile, FshCode, FshReference, Extension } from '../../src/fshtypes';
+import {
+  Instance,
+  Profile,
+  FshCode,
+  FshReference,
+  Extension,
+  FshCodeSystem
+} from '../../src/fshtypes';
 import { FixedValueRule, ContainsRule, CardRule, OnlyRule } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
@@ -556,6 +563,45 @@ describe('InstanceExporter', () => {
       expect(exported.managingOrganization).toEqual({
         reference: 'http://example.com'
       });
+    });
+
+    // Fixing codes from local systems
+    it('should fix a code to a top level element while replacing the local code system name with its url', () => {
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const fixedCodeRule = new FixedValueRule('code');
+      fixedCodeRule.fixedValue = new FshCode('bright', 'Visible');
+      brightInstance.rules.push(fixedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+      const exported = exportInstance(brightInstance);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://example.com/CodeSystem/Visible'
+        }
+      ]);
+    });
+
+    it('should fix a code to a nested element while replacing the local code system name with its url', () => {
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const fixedCodeRule = new FixedValueRule('component[0].code');
+      fixedCodeRule.fixedValue = new FshCode('bright', 'Visible');
+      brightInstance.rules.push(fixedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+      const exported = exportInstance(brightInstance);
+      expect(exported.component[0].code.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://example.com/CodeSystem/Visible'
+        }
+      ]);
     });
 
     // Sliced elements
