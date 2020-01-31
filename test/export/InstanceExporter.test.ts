@@ -470,6 +470,115 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    // Fixing with pattern[x]
+    it('should fix a nested element that is fixed by pattern[x] from a parent on the SD', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus.coding');
+      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].version');
+      instanceFixedValRule.fixedValue = '1.2.3';
+      instance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(instance);
+      expect(exported.maritalStatus).toEqual({
+        coding: [
+          {
+            code: 'foo',
+            system: 'http://foo.com',
+            version: '1.2.3'
+          }
+        ]
+      });
+    });
+
+    it('should fix multiple nested elements that are fixed by pattern[x] from a parent on the SD', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus.coding');
+      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].version');
+      instanceFixedValRule.fixedValue = '1.2.3';
+      instance.rules.push(instanceFixedValRule);
+      const instanceFixedValRule2 = new FixedValueRule('maritalStatus.coding[1].version');
+      instanceFixedValRule2.fixedValue = '3.2.1';
+      instance.rules.push(instanceFixedValRule2);
+      const exported = exportInstance(instance);
+      expect(exported.maritalStatus).toEqual({
+        coding: [
+          {
+            code: 'foo',
+            system: 'http://foo.com',
+            version: '1.2.3'
+          },
+          {
+            code: 'foo',
+            system: 'http://foo.com',
+            version: '3.2.1'
+          }
+        ]
+      });
+    });
+
+    it('should fix a nested element that is fixed by array pattern[x] from a parent on the SD', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus');
+      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].version');
+      instanceFixedValRule.fixedValue = '1.2.3';
+      instance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(instance);
+      expect(exported.maritalStatus).toEqual({
+        coding: [
+          {
+            code: 'foo',
+            system: 'http://foo.com',
+            version: '1.2.3'
+          }
+        ]
+      });
+    });
+
+    it('should fix multiple nested elements that are fixed by array pattern[x] from a parent on the SD', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus');
+      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule1 = new FixedValueRule('maritalStatus.coding[0].version');
+      instanceFixedValRule1.fixedValue = '1.2.3';
+      instance.rules.push(instanceFixedValRule1);
+      const instanceFixedValRule2 = new FixedValueRule('maritalStatus.coding[1].version');
+      instanceFixedValRule2.fixedValue = '3.2.1';
+      instance.rules.push(instanceFixedValRule2);
+      const exported = exportInstance(instance);
+      expect(exported.maritalStatus).toEqual({
+        coding: [
+          {
+            code: 'foo',
+            system: 'http://foo.com',
+            version: '1.2.3'
+          },
+          {
+            version: '3.2.1'
+          }
+        ]
+      });
+    });
+
+    it('should fix cardinality 1..n elements that are fixed by array pattern[x] from a parent on the SD', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus');
+      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      patient.rules.push(fixedValRule);
+      const cardRule = new CardRule('maritalStatus');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
+      const exported = exportInstance(instance);
+      expect(exported.maritalStatus).toEqual({
+        coding: [
+          {
+            code: 'foo',
+            system: 'http://foo.com'
+          }
+        ]
+      });
+    });
+
     // TODO: The fixValue functions should be updated to not fix a value when a parent element sets
     // the value to something different using a pattern
     it.skip('should not fix an element to a value different than a parent pattern value on the Structure Definition', () => {
