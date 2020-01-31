@@ -139,4 +139,60 @@ describe('FSHImporter', () => {
     expect(result.profiles.size).toBe(1);
     expect(loggerSpy.getAllLogs().length).toBe(0);
   });
+
+  it('should adjust indentation of multi-line strings that include blank lines', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    Description: """
+    SUSHI stands for:
+      SUSHI
+      Unshortens
+      Short
+      Hand
+      Inputs
+
+    Recursive acronyms are very popular these days.
+    """`;
+    const expectedDescription = [
+      'SUSHI stands for:',
+      '  SUSHI',
+      '  Unshortens',
+      '  Short',
+      '  Hand',
+      '  Inputs',
+      '',
+      'Recursive acronyms are very popular these days.'
+    ].join('\n');
+    const result = importSingleText(input);
+    const profile = result.profiles.get('ObservationProfile');
+    expect(profile.description).toBe(expectedDescription);
+  });
+
+  it('should parse multi-line strings with CRLF line breaks', () => {
+    const input = [
+      'Profile: ObservationProfile',
+      'Parent: Observation',
+      'Description: """',
+      'Line endings',
+      'are always',
+      'troublesome.',
+      '"""'
+    ].join('\r\n');
+    const expectedDescription = ['Line endings', 'are always', 'troublesome.'].join('\n');
+    const result = importSingleText(input);
+    const profile = result.profiles.get('ObservationProfile');
+    expect(profile.description).toBe(expectedDescription);
+  });
+
+  it('should parse multi-line strings that only occupy one line', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    Description: """Descriptions come in only one size."""
+    `;
+    const result = importSingleText(input);
+    const profile = result.profiles.get('ObservationProfile');
+    expect(profile.description).toBe('Descriptions come in only one size.');
+  });
 });
