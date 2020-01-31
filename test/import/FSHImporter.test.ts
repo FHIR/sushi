@@ -169,6 +169,35 @@ describe('FSHImporter', () => {
     expect(profile.description).toBe(expectedDescription);
   });
 
+  it('should truncate whitespace lines in multi-line strings', () => {
+    const input = `
+    Profile: StaircaseObservation
+    Parent: Observation
+    Description: """
+    This
+      Description
+      
+        Looks
+          Like
+          
+            A
+              Staircase
+                """`;
+    const expectedDescription = [
+      'This',
+      '  Description',
+      '',
+      '    Looks',
+      '      Like',
+      '',
+      '        A',
+      '          Staircase'
+    ].join('\n');
+    const result = importSingleText(input);
+    const profile = result.profiles.get('StaircaseObservation');
+    expect(profile.description).toBe(expectedDescription);
+  });
+
   it('should parse multi-line strings with CRLF line breaks', () => {
     const input = [
       'Profile: ObservationProfile',
