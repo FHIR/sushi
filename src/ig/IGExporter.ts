@@ -105,6 +105,10 @@ export class IGExporter {
           {
             code: 'releaselabel',
             value: 'CI Build' // TODO: Make this configurable
+          },
+          {
+            code: 'show-inherited-invariants',
+            value: 'false' // TODO: Make this configurable
           }
         ]
       }

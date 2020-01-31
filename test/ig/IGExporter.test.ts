@@ -232,6 +232,10 @@ describe('IGExporter', () => {
             {
               code: 'releaselabel',
               value: 'CI Build'
+            },
+            {
+              code: 'show-inherited-invariants',
+              value: 'false'
             }
           ]
         }
