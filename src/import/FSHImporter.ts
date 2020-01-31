@@ -1041,30 +1041,39 @@ export class FSHImporter extends FSHVisitor {
 
   /**
    * Multiline strings receive special handling:
-   * - if the first line contains only a newline, toss it
+   * - if the first line contains only whitespace (including newline), toss it
    * - if the last line contains only whitespace (including newline), toss it
-   * - for all other lines, detect the shortest number of leading spaces and always trim that off;
+   * - if another line contains only whitespace, truncate it
+   * - for all other non-whitespace lines, detect the shortest number of leading spaces and always trim that off;
    *   this allows authors to indent a whole block of text, but not have it indented in the output.
    */
   private extractMultilineString(mlStringCtx: ParserRuleContext): string {
     let mlstr = mlStringCtx.getText();
 
-    // first remove leading/trailing """ and leading newline (if applicable)
-    mlstr = mlstr.slice(mlstr[3] === '\n' ? 4 : 3, -3);
+    // remove leading/trailing """
+    mlstr = mlstr.slice(3, -3);
 
     // split into lines so we can process them to determine what leading spaces to trim
-    const lines = mlstr.split('\n');
+    let lines = mlstr.split(/\r?\n/);
+
+    // if the first line is only whitespace, remove it
+    if (lines[0].search(/\S/) === -1) {
+      lines.shift();
+    }
 
     // if the last line is only whitespace, remove it
-    if (lines[lines.length - 1].search(/\S/) === -1) {
+    if (lines.length > 0 && lines[lines.length - 1].search(/\S/) === -1) {
       lines.pop();
     }
+
+    lines = lines.map(l => (/^\s*$/.test(l) ? '' : l));
 
     // find the minimum number of spaces before the first char (ignore zero-length lines)
     let minSpaces = 0;
     lines.forEach(line => {
       const firstNonSpace = line.search(/\S|$/);
-      if (firstNonSpace > 0 && (minSpaces === 0 || firstNonSpace < minSpaces)) {
+      const lineIsEmpty = /^$/.test(line);
+      if (!lineIsEmpty && firstNonSpace > 0 && (minSpaces === 0 || firstNonSpace < minSpaces)) {
         minSpaces = firstNonSpace;
       }
     });
