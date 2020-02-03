@@ -101,4 +101,27 @@ describe('ElementDefinition', () => {
       });
     });
   });
+  describe('#fixedByParent', () => {
+    it('should find a pattern value from the parent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo'));
+      const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
+      const patternValue = statusReasonCoding.fixedByParent();
+      expect(patternValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should not find a pattern value from the parent when none is present', () => {
+      const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
+      const patternValue = statusReasonCoding.fixedByParent();
+      expect(patternValue).toBeUndefined();
+    });
+
+    it('should return undefined when being run on the root element', () => {
+      const root = medicationRequest.elements.find(e => e.id === 'MedicationRequest');
+      const patternValue = root.fixedByParent();
+      expect(patternValue).toBeUndefined();
+    });
+  });
 });

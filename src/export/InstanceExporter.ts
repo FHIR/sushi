@@ -20,18 +20,19 @@ export class InstanceExporter {
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
     // Fix values from the SD for all elements at the top level of the SD
-    this.setFixedValuesForDirectChildren(
+    this.setFixedValuesFromStructureDefinition(
       instanceOfStructureDefinition.findElement(instanceDef.resourceType),
       '',
       instanceDef,
       instanceOfStructureDefinition
     );
 
-    // All rules will be FixValueRule
-    fshInstanceDef.rules.forEach(rule => {
-      rule = replaceReferences(rule, this.tank, this.fisher);
+    const rules = fshInstanceDef.rules.map(r => replaceReferences(r, this.tank, this.fisher));
+
+    // Fix all values from the SD that are exposed when processing the instance rules
+    rules.forEach(rule => {
       try {
-        const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+        const validated = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
           rule.fixedValue,
           this.fisher
@@ -39,7 +40,7 @@ export class InstanceExporter {
 
         // For each part of that path, we add fixed values from the SD
         let path = '';
-        for (const [i, pathPart] of pathParts.entries()) {
+        for (const [i, pathPart] of validated.pathParts.entries()) {
           path += `${path ? '.' : ''}${pathPart.base}`;
           // Add back non-numeric (slice) brackets
           pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
@@ -51,14 +52,26 @@ export class InstanceExporter {
             .join('.');
           rulePathPart += '.';
 
-          this.setFixedValuesForDirectChildren(
+          this.setFixedValuesFromStructureDefinition(
             element,
             rulePathPart,
             instanceDef,
             instanceOfStructureDefinition
           );
         }
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
+      }
+    });
 
+    // Fix all values explicitly set in the instance rules (all rules will be FixValueRule)
+    rules.forEach(rule => {
+      try {
+        const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+          rule.path,
+          rule.fixedValue,
+          this.fisher
+        );
         // Fix value fom the rule
         setPropertyOnInstance(instanceDef, pathParts, fixedValue);
       } catch (e) {
@@ -90,45 +103,53 @@ export class InstanceExporter {
    * @param {InstanceDefinition} instanceDef - The InstanceDefinition to fix values on
    * @param {StructureDefinition} instanceOfStructureDefinition - The structure definition the instance instantiates
    */
-  private setFixedValuesForDirectChildren(
+  private setFixedValuesFromStructureDefinition(
     element: ElementDefinition,
     existingPath: string,
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ) {
-    const directChildren = element.children(true);
-    for (const child of directChildren) {
+    // We will fix values on the element, or direct children
+    const fixableElements = [element, ...element.children(true)];
+    for (const fixableElement of fixableElements) {
       // Fixed values may be specified by the fixed[x] or pattern[x] fields
-      const fixedValueKey = Object.keys(child).find(
+      const fixedValueKey = Object.keys(fixableElement).find(
         k => k.startsWith('fixed') || k.startsWith('pattern')
       );
-      if (fixedValueKey && child.min > 0) {
-        // Get the end of the child path, this is the part that differs from existingPath
-        const childPath = child
-          .diffId()
-          .split('.')
-          .slice(-1)[0];
+      // Fixed value can come from fixed[x] or pattern[x] directly on element, or via pattern[x] on parent
+      const foundFixedValue =
+        fixableElement[fixedValueKey as keyof ElementDefinition] ?? fixableElement.fixedByParent();
+      // We only fix the value if the element is the original element, or it is a direct child with card 1..n
+      if (foundFixedValue && (fixableElement.id === element.id || fixableElement.min > 0)) {
+        // Get the end of the path, this is the part that differs from existingPath
+        let fixablePath = fixableElement.diffId().replace(`${element.diffId()}`, '');
+        // If the fixableElement is a child of the original element, we must remove prefixed '.' from path
+        if (fixablePath.startsWith('.')) fixablePath = fixablePath.slice(1);
+
         // Turn FHIR slicing (element:slicName/resliceName) into FSH slicing (element[sliceName][resliceName])
-        const colonSplitPath = childPath.split(':');
-        let fshChildPath = colonSplitPath[0];
+        const colonSplitPath = fixablePath.split(':');
+        let fshElementPath = colonSplitPath[0];
         const slicePathSection = colonSplitPath[1];
         const sliceNames = slicePathSection?.split('/');
         sliceNames?.forEach(s => {
-          fshChildPath += `[${s}]`;
+          fshElementPath += `[${s}]`;
         });
+        // Fix the value if we validly can
         try {
           const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
-            existingPath + fshChildPath,
-            child[fixedValueKey as keyof ElementDefinition],
+            // fshElementPath is '' when the fixableElement is the original element, trailing '.' on this path must be removed
+            // Otherwise add the child path to existing path
+            fshElementPath === '' ? existingPath.slice(0, -1) : existingPath + fshElementPath,
+            foundFixedValue,
             this.fisher
           );
           setPropertyOnInstance(instanceDef, pathParts, fixedValue);
         } catch (e) {
           logger.error(e.message);
         }
-      } else if (fixedValueKey) {
+      } else if (foundFixedValue) {
         logger.debug(
-          `Element ${child.id} is optional with min cardinality 0, so fixed value for optional element is not set on instance ${instanceDef.instanceName}`
+          `Element ${fixableElement.id} is optional with min cardinality 0, so fixed value for optional element is not set on instance ${instanceDef.instanceName}`
         );
       }
     }
