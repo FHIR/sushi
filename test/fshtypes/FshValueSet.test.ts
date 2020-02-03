@@ -10,6 +10,7 @@ describe('ValueSet', () => {
       expect(vs.title).toBeUndefined();
       expect(vs.description).toBeUndefined();
       expect(vs.components).toBeEmpty();
+      expect(vs.rules).toBeEmpty();
     });
   });
 });

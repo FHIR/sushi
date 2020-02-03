@@ -1,6 +1,7 @@
 import {
   assertValueSetConceptComponent,
-  assertValueSetFilterComponent
+  assertValueSetFilterComponent,
+  assertCaretValueRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode, VsOperator } from '../../src/fshtypes';
@@ -775,6 +776,32 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], undefined, ['OtherZooVS'], []);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+      });
+    });
+
+    describe('#ValueSetCaretValueRule', () => {
+      it('should parse a value set that uses a CaretValueRule', () => {
+        const input = `
+          ValueSet: ZooVS
+          * ^publisher = "foo"
+          `;
+        const result = importSingleText(input);
+        const valueSet = result.valueSets.get('ZooVS');
+        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo');
+      });
+
+      it('should parse a value set that uses CaretValueRules alongside components', () => {
+        const input = `
+        ValueSet: SimpleVS
+        * ZOO#bear
+        * ^publisher = "foo"
+        `;
+        const result = importSingleText(input, 'Simple.fsh');
+        const valueSet = result.valueSets.get('SimpleVS');
+        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+          new FshCode('bear', 'ZOO').withLocation([3, 11, 3, 18]).withFile('Simple.fsh')
+        ]);
+        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo');
       });
     });
   });

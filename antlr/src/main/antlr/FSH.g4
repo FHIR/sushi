@@ -16,7 +16,7 @@ instanceMetadata:   instanceOf | title;
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
 
-valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsComponent*;
+valueSet:           KW_VALUESET SEQUENCE vsMetadata* (caretValueRule | vsComponent)*;
 vsMetadata:         id | title | description;
 codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* concept*;
 csMetadata:         id | title | description;
