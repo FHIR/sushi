@@ -109,18 +109,21 @@ export class InstanceExporter {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ) {
-    // We will fix values on the element, or its direct 1..n children
+    // We will fix values on the element, or direct children
     const fixableElements = [element, ...element.children(true)];
     for (const fixableElement of fixableElements) {
       // Fixed values may be specified by the fixed[x] or pattern[x] fields
       const fixedValueKey = Object.keys(fixableElement).find(
         k => k.startsWith('fixed') || k.startsWith('pattern')
       );
+      // Fixed value can come from fixed[x] or pattern[x] directly on element, or via pattern[x] on parent
       const foundFixedValue =
         fixableElement[fixedValueKey as keyof ElementDefinition] ?? fixableElement.fixedByParent();
+      // We only fix the value if the element is the original element, or it is a direct child with card 1..n
       if (foundFixedValue && (fixableElement.id === element.id || fixableElement.min > 0)) {
         // Get the end of the path, this is the part that differs from existingPath
         let fixablePath = fixableElement.diffId().replace(`${element.diffId()}`, '');
+        // If the fixableElement is a child of the original element, we must remove prefixed '.' from path
         if (fixablePath.startsWith('.')) fixablePath = fixablePath.slice(1);
 
         // Turn FHIR slicing (element:slicName/resliceName) into FSH slicing (element[sliceName][resliceName])
@@ -134,6 +137,8 @@ export class InstanceExporter {
         // Fix the value if we validly can
         try {
           const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+            // fshElementPath is '' when the fixableElement is the original element, trailing '.' on this path must be removed
+            // Otherwise add the child path to existing path
             fshElementPath === '' ? existingPath.slice(0, -1) : existingPath + fshElementPath,
             foundFixedValue,
             this.fisher
