@@ -27,9 +27,10 @@ export class InstanceExporter {
       instanceOfStructureDefinition
     );
 
-    // Fix all values from the SD
-    fshInstanceDef.rules.forEach(rule => {
-      rule = replaceReferences(rule, this.tank, this.fisher);
+    const rules = fshInstanceDef.rules.map(r => replaceReferences(r, this.tank, this.fisher));
+
+    // Fix all values from the SD that are exposed when processing the instance rules
+    rules.forEach(rule => {
       try {
         const validated = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
@@ -63,9 +64,8 @@ export class InstanceExporter {
       }
     });
 
-    // All rules will be FixValueRule
-    fshInstanceDef.rules.forEach(rule => {
-      rule = replaceReferences(rule, this.tank, this.fisher);
+    // Fix all values explicitly set in the instance rules (all rules will be FixValueRule)
+    rules.forEach(rule => {
       try {
         const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
