@@ -38,7 +38,8 @@ export class IGExporter {
     this.initIG();
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
-    this.checkForOtherPageContent();
+    this.addOtherPageContent(outPath);
+    this.addImages(outPath);
     this.addResources(outPath);
     this.addImplementationGuide(outPath);
     this.addIgIni(outPath);
@@ -195,18 +196,43 @@ export class IGExporter {
   }
 
   /**
-   * SUSHI doesn't yet support authors adding additional pages beyond index.md.  If we detect
-   * additional pages, we need to log an error.
+   * Adds additional pages beyond index.md that are defined by the user.
+   * Only add formats that are supported by the IG template
    */
-  private checkForOtherPageContent() {
+  private addOtherPageContent(igPath: string) {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
     if (fs.existsSync(inputPageContentPath)) {
-      const pages = fs.readdirSync(inputPageContentPath);
-      if (pages.length > 1 || (pages.length === 1 && pages[0] !== 'index.md')) {
-        logger.error('SUSHI does not yet support custom pagecontent other than index.md.', {
-          file: inputPageContentPath
-        });
-      }
+      const pages = fs
+        .readdirSync(inputPageContentPath)
+        .filter(page => page !== 'index.md')
+        .sort(); // Sorts alphabetically
+
+      pages.forEach(page => {
+        if (page.endsWith('.md') || page.endsWith('.xml')) {
+          // It is a valid page, so we will include it in input/pagecontent and add to IG definition
+          const fileName = page.slice(0, page.lastIndexOf('.'));
+          const fileType = page.slice(page.lastIndexOf('.') + 1);
+          const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
+          fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', page));
+          this.ig.definition.page.page.push({
+            nameUrl: `${fileName}.html`,
+            title: `${fileName}`,
+            generation: fileType === 'md' ? 'markdown' : 'html'
+          });
+        } else {
+          logger.error(`The following page is in an invalid file format: ${page}.`, {
+            file: inputPageContentPath
+          });
+        }
+      });
+    }
+  }
+
+  private addImages(igPath: string) {
+    // If the user provided additional image files, include them
+    const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
+    if (fs.existsSync(inputImagesPath)) {
+      fs.copySync(inputImagesPath, path.join(igPath, 'input', 'images'));
     }
   }
 

@@ -364,6 +364,40 @@ describe('IGExporter', () => {
       const content = fs.readFileSync(indexPath, 'utf8');
       expect(content).toMatch('My special index page.');
     });
+
+    it('should include additional user-provided pages of valid file type', () => {
+      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+
+      // File contents get copied over
+      const otherFilePath = path.join(pageContentPath, 'other.md');
+      const content = fs.readFileSync(otherFilePath, 'utf8');
+      expect(content).toMatch('My other now-supported-page.');
+
+      // File information added to pages list in IG
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'FSH Test IG',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'other.html',
+          title: 'other',
+          generation: 'markdown'
+        }
+      ]);
+    });
+
+    it('should include user-provided images', () => {
+      const imagesPath = path.join(tempOut, 'input', 'images');
+      expect(fs.existsSync(imagesPath)).toBeTruthy();
+      const imageFileNames = fs.readdirSync(imagesPath);
+      expect(imageFileNames).toEqual(['Shorty.png']);
+    });
   });
 
   describe('#invalid-data-ig', () => {
@@ -417,10 +451,10 @@ describe('IGExporter', () => {
       expect(content.IG.excludeMaps).toEqual('Yes');
     });
 
-    it('should log an error if the user attempted to add more pages', () => {
+    it('should log an error if the user attempted to add pages of an invalid file type', () => {
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-6)).toMatch(
-        /SUSHI does not yet support custom pagecontent other than index\.md\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
+        /The following page is in an invalid file format: bad\.html\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
 
