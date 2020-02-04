@@ -285,14 +285,15 @@ export class FSHImporter extends FSHVisitor {
     const valueSet = new FshValueSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent());
+    this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent(), ctx.caretValueRule());
     this.currentDoc.valueSets.set(valueSet.name, valueSet);
   }
 
   private parseValueSet(
     valueSet: FshValueSet,
     metaCtx: pc.VsMetadataContext[] = [],
-    componentCtx: pc.VsComponentContext[] = []
+    componentCtx: pc.VsComponentContext[] = [],
+    caretValueRuleCtx: pc.CaretValueRuleContext[] = []
   ) {
     const seenPairs: Map<VsMetadataKey, string> = new Map();
     metaCtx
@@ -342,6 +343,17 @@ export class FSHImporter extends FSHVisitor {
           valueSet.components.push(vsComponent);
         }
       });
+    caretValueRuleCtx.forEach(caretValueRule => {
+      const rule = this.visitCaretValueRule(caretValueRule);
+      if (rule.path) {
+        logger.error(
+          'Caret rule on ValueSet cannot contain path before ^, skipping rule.',
+          rule.sourceInfo
+        );
+      } else {
+        valueSet.rules.push(this.visitCaretValueRule(caretValueRule));
+      }
+    });
   }
 
   visitCodeSystem(ctx: pc.CodeSystemContext) {
