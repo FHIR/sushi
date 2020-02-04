@@ -451,10 +451,16 @@ describe('IGExporter', () => {
       expect(content.IG.excludeMaps).toEqual('Yes');
     });
 
-    it('should log an error if the user attempted to add pages of an invalid file type', () => {
+    it('should add pages of an invalid file type but log a warning', () => {
+      // Check that pages were added
+      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+      const imageFileNames = fs.readdirSync(pageContentPath);
+      expect(imageFileNames).toContain('bad.html');
+
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-6)).toMatch(
-        /The following page is in an invalid file format: bad\.html\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
+        /Files not in the supported file types \(\.md and \.xml\) were detected\. These files will be copied over without any processing\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
 

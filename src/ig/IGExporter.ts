@@ -209,24 +209,31 @@ export class IGExporter {
         .filter(page => page !== 'index.md')
         .sort(); // Sorts alphabetically
 
+      let invalidFileTypeIncluded = false;
       pages.forEach(page => {
+        // All user defined pages are included in input/pagecontent
+        const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
+        fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', page));
         if (page.endsWith('.md') || page.endsWith('.xml')) {
-          // It is a valid page, so we will include it in input/pagecontent and add to IG definition
+          // If it is a valid file type, we will also add it to IG definition
           const fileName = page.slice(0, page.lastIndexOf('.'));
           const fileType = page.slice(page.lastIndexOf('.') + 1);
-          const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
-          fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', page));
           this.ig.definition.page.page.push({
             nameUrl: `${fileName}.html`,
             title: `${fileName}`,
             generation: fileType === 'md' ? 'markdown' : 'html'
           });
         } else {
-          logger.error(`The following page is in an invalid file format: ${page}.`, {
-            file: inputPageContentPath
-          });
+          invalidFileTypeIncluded = true;
         }
       });
+      if (invalidFileTypeIncluded) {
+        const errorString =
+          'Files not in the supported file types (.md and .xml) were detected. These files will be copied over without any processing.';
+        logger.warn(errorString, {
+          file: inputPageContentPath
+        });
+      }
     }
   }
 
