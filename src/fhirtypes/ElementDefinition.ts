@@ -1533,8 +1533,7 @@ export class ElementDefinition {
 
   /**
    * Creates a new slice on the element.
-   * TODO: Should we clone the entire original element or only parts?
-   * TODO: Handle re-slicing
+   * TODO: Handle re-slicing?
    * @see {@link http://hl7.org/fhir/R4/profiling.html#slicing}
    * @param {string} name - the name of the new slice
    * @param { ElementDefinitionType } [type] - the type of the new slice; if undefined it copies over this element's types
@@ -1547,6 +1546,10 @@ export class ElementDefinition {
     const slice = this.clone(true);
     delete slice.slicing;
     slice.id = `${this.id}:${name}`;
+
+    // Capture the original so that the differential only contains changes from this point on.
+    slice.captureOriginal();
+
     slice.sliceName = name;
     // When we slice, we do not inherit min cardinality, but rather make it 0
     // Allows multiple slices to be defined without violating cardinality of sliced element
@@ -1555,8 +1558,6 @@ export class ElementDefinition {
     slice.min = 0;
     if (type) {
       slice.type = [type];
-    } else {
-      slice.type = cloneDeep(this.type);
     }
     this.structDef.addElement(slice);
     return slice;
