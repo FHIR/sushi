@@ -40,12 +40,16 @@ export class CodeSystemExporter {
   }
 
   export(): Package {
-    for (const cs of this.tank.getAllCodeSystems()) {
+    const codeSystems = this.tank.getAllCodeSystems();
+    for (const cs of codeSystems) {
       try {
         this.exportCodeSystem(cs);
       } catch (e) {
         logger.error(e.message, cs.sourceInfo);
       }
+    }
+    if (codeSystems.length > 0) {
+      logger.info('Finished exporting FSH for FHIR code systems.');
     }
     return this.pkg;
   }

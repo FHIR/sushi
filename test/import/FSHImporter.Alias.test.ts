@@ -45,7 +45,7 @@ describe('FSHImporter', () => {
       expect(result.aliases.get('USCoreRace')).toBe(
         'http://hl7.org/fhir/us/core/ValueSet/omb-race-category'
       );
-      expect(loggerSpy.getLastMessage()).toMatch(
+      expect(loggerSpy.getLastMessage('error')).toMatch(
         /Alias USCoreRace cannot be redefined to http:\/\/hl7.org\/fhir\/us\/core\/StructureDefinition\/us-core-race; it is already defined as http:\/\/hl7.org\/fhir\/us\/core\/ValueSet\/omb-race-category\..*Line: 3\D/s
       );
     });
@@ -68,7 +68,7 @@ describe('FSHImporter', () => {
         'http://hl7.org/fhir/us/core/ValueSet/omb-race-category'
       );
       expect(results[1].aliases.size).toBe(0);
-      expect(loggerSpy.getLastMessage()).toMatch(
+      expect(loggerSpy.getLastMessage('error')).toMatch(
         /Alias USCoreRace cannot be redefined to http:\/\/hl7.org\/fhir\/us\/core\/StructureDefinition\/us-core-race; it is already defined as http:\/\/hl7.org\/fhir\/us\/core\/ValueSet\/omb-race-category\..*File: Alias2\.fsh.*Line: 2\D/s
       );
     });
@@ -95,7 +95,7 @@ describe('FSHImporter', () => {
       expect(results[1].aliases.get('USCoreRace')).toBe(
         'http://hl7.org/fhir/us/core/StructureDefinition/us-core-race'
       );
-      expect(loggerSpy.getLastLog()).toBeUndefined();
+      expect(loggerSpy.getAllLogs('error').length).toBe(0);
     });
 
     it('should translate an alias when the alias is defined before its use', () => {

@@ -142,6 +142,7 @@ export class FSHImporter extends FSHVisitor {
         }
       });
     });
+    logger.info('FSH import: Finished preprocessing documents and collecting aliases.');
 
     // Now do the main import
     contexts.forEach((context, index) => {
@@ -151,6 +152,7 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = null;
       this.currentFile = null;
     });
+    logger.info('FSH import: Finished processing all documents.');
 
     return docs;
   }

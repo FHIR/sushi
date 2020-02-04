@@ -962,11 +962,9 @@ describe('StructureDefinitionExporter', () => {
 
     withDebugLogging(() => exporter.export());
 
-    const lastLog = loggerSpy.getLastLog();
-    expect(lastLog.level).toMatch(/debug/);
-    expect(lastLog.message).toMatch(/Warning: Circular .* BarQuantity and FooQuantity/);
-
-    expect(loggerSpy.getLastMessage()).toMatch(/Warning: Circular .* BarQuantity and FooQuantity/);
+    expect(loggerSpy.getLastMessage('debug')).toMatch(
+      /Warning: Circular .* BarQuantity and FooQuantity/
+    );
   });
 
   it('should log a warning message when we detect a circular dependency that causes an incomplete parent', () => {
@@ -995,12 +993,9 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.export();
 
-    const lastLog = loggerSpy.getLastLog();
-    expect(lastLog.level).toMatch(/warn/);
-    expect(lastLog.message).toMatch(
-      /The definition of FooQuantity may be incomplete .* BarQuantity/
-    );
-    expect(lastLog.message).toMatch(/File: FooQuantity\.fsh.*Line: 6 - 11\D/s);
+    const lastMessage = loggerSpy.getLastMessage('warn');
+    expect(lastMessage).toMatch(/The definition of FooQuantity may be incomplete .* BarQuantity/);
+    expect(lastMessage).toMatch(/File: FooQuantity\.fsh.*Line: 6 - 11\D/s);
   });
 
   it('should not apply an incorrect OnlyRule', () => {
@@ -1391,7 +1386,7 @@ describe('StructureDefinitionExporter', () => {
     profile.rules.push(rule);
     doc.profiles.set('Mystery', profile);
     exporter.export();
-    expect(loggerSpy.getLastMessage()).toMatch(/File: NoURL\.fsh.*Line: 13 - 23\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoURL\.fsh.*Line: 13 - 23\D/s);
   });
 
   // toJSON

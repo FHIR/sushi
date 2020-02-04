@@ -121,9 +121,9 @@ describe('FSHImporter', () => {
         Description: "Lions and tigers and bears!"
         `;
         importSingleText(input, 'Zoo.fsh');
-        expect(loggerSpy.getMessageAtIndex(-3)).toMatch(/File: Zoo\.fsh.*Line: 6\D/s);
-        expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Zoo\.fsh.*Line: 7\D/s);
-        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 8\D/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Zoo\.fsh.*Line: 6\D/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 7\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 8\D/s);
       });
     });
     describe('#concept', () => {
@@ -248,7 +248,7 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.concepts.length).toBe(1);
-        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 4\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 4\D/s);
       });
 
       it('should log an error when a concept includes a system declaration', () => {
@@ -266,8 +266,8 @@ describe('FSHImporter', () => {
         expect(codeSystem.concepts[0].code).toBe('goat');
         expect(codeSystem.concepts[1].code).toBe('bat');
         expect(codeSystem.concepts[2].code).toBe('jackalope');
-        expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Zoo\.fsh.*Line: 4\D/s);
-        expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 5\D/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 4\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 5\D/s);
       });
     });
   });

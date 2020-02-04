@@ -175,13 +175,17 @@ export class InstanceExporter {
    * @returns {Package}
    */
   export(): Package {
-    for (const instance of this.tank.getAllInstances()) {
+    const instances = this.tank.getAllInstances();
+    for (const instance of instances) {
       try {
         const instanceDef = this.exportInstance(instance);
         this.pkg.instances.push(instanceDef);
       } catch (e) {
         logger.error(e.message, e.sourceInfo);
       }
+    }
+    if (instances.length > 0) {
+      logger.info('Finished exporting FSH for FHIR instances.');
     }
     return this.pkg;
   }

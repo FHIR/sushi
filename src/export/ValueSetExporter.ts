@@ -90,12 +90,16 @@ export class ValueSetExporter {
   }
 
   export(): Package {
-    for (const valueSet of this.tank.getAllValueSets()) {
+    const valueSets = this.tank.getAllValueSets();
+    for (const valueSet of valueSets) {
       try {
         this.exportValueSet(valueSet);
       } catch (e) {
         logger.error(e.message, valueSet.sourceInfo);
       }
+    }
+    if (valueSets.length > 0) {
+      logger.info('Finished exporting FSH for FHIR value sets.');
     }
     return this.pkg;
   }

@@ -72,10 +72,12 @@ async function app() {
     });
 
   const docs = importText(rawFSHes);
+  logger.info('Finished importing FSH text.');
 
   const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);
   const outPackage = exportFHIR(tank, defs);
+  logger.info('Finished converting FSH to FHIR resources.');
 
   fs.ensureDirSync(program.out);
 
@@ -93,6 +95,7 @@ async function app() {
   if (fs.existsSync(igDataPath)) {
     const igExporter = new IGExporter(outPackage, defs, igDataPath);
     igExporter.export(program.out);
+    logger.info('Finished exporting FHIR resources as JSON for implementation guide.');
   } else {
     for (const sd of [
       ...outPackage.profiles,
@@ -107,6 +110,7 @@ async function app() {
         'utf8'
       );
     }
+    logger.info('Finished exporting FHIR resources as JSON.');
   }
 
   logger.info(`

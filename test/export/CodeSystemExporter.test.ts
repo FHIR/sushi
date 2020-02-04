@@ -130,8 +130,8 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0].id).toBe('Is this allowed?');
-    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Strange\.fsh.*Line: 2 - 6\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 2 - 6\D/s);
   });
 
   it('should log a message when the code system has an invalid name', () => {
@@ -142,7 +142,7 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Strange.Code.System');
-    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR name/s);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR name/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D/s);
   });
 });
