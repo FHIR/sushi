@@ -343,9 +343,17 @@ export class FSHImporter extends FSHVisitor {
           valueSet.components.push(vsComponent);
         }
       });
-    caretValueRuleCtx.forEach(caretValueRule =>
-      valueSet.rules.push(this.visitCaretValueRule(caretValueRule))
-    );
+    caretValueRuleCtx.forEach(caretValueRule => {
+      const rule = this.visitCaretValueRule(caretValueRule);
+      if (rule.path) {
+        logger.error(
+          'Caret rule on ValueSet cannot contain path before ^, skipping rule.',
+          rule.sourceInfo
+        );
+      } else {
+        valueSet.rules.push(this.visitCaretValueRule(caretValueRule));
+      }
+    });
   }
 
   visitCodeSystem(ctx: pc.CodeSystemContext) {

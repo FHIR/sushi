@@ -803,6 +803,17 @@ describe('FSHImporter', () => {
         ]);
         assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo');
       });
+
+      it('should log an error when a CaretValueRule contains a path before ^', () => {
+        const input = `
+        ValueSet: SimpleVS
+        * mypath ^publisher = "foo"
+        `;
+        const result = importSingleText(input, 'Simple.fsh');
+        const valueSet = result.valueSets.get('SimpleVS');
+        expect(valueSet.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Simple\.fsh.*Line: 3\D/s);
+      });
     });
   });
 });
