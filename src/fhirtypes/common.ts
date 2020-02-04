@@ -1,4 +1,11 @@
-import { StructureDefinition, PathPart, ElementDefinition, InstanceDefinition, ValueSet } from '.';
+import {
+  StructureDefinition,
+  PathPart,
+  ElementDefinition,
+  InstanceDefinition,
+  ValueSet,
+  CodeSystem
+} from '.';
 import { FixedValueRule } from '../fshtypes/rules';
 import { FshReference, Instance, SourceInfo, FshCode } from '../fshtypes';
 import { FSHTank } from '../import';
@@ -26,7 +33,7 @@ export function setPropertyOnDefinitionInstance(
 }
 
 export function setPropertyOnInstance(
-  instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet,
+  instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
   fixedValue: any
 ): void {
