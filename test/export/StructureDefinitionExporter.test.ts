@@ -1453,6 +1453,104 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should correctly generate a diff containing only changed elements when elements are sliced', () => {
+    // We already have separate tests for the differentials, so this just ensures that the
+    // StructureDefinition captures originals at the right time to produce the most correct
+    // differentials
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    // Create some rules to slice component
+    // * component ^slicing.discriminator[0].type = #pattern
+    // * component ^slicing.discriminator[0].path = "code"
+    // * component ^slicing.rules = #open
+    // * component ^comment = "BP comment"
+    // * component contains SystolicBP 0..1 and DiastolicBP 0..1
+    // * component[SystolicBP].code = LOINC#8480-6
+    // * component[SystolicBP].value[x] only Quantity
+    // * component[DiastolicBP].code = LOINC#8462-4
+    // * component[DiastolicBP].value[x] only Quantity
+    const ruleA = new CaretValueRule('component');
+    ruleA.caretPath = 'slicing.discriminator[0].type';
+    ruleA.value = new FshCode('pattern');
+    const ruleB = new CaretValueRule('component');
+    ruleB.caretPath = 'slicing.discriminator[0].path';
+    ruleB.value = 'code';
+    const ruleC = new CaretValueRule('component');
+    ruleC.caretPath = 'slicing.rules';
+    ruleC.value = new FshCode('open');
+    const ruleD = new CaretValueRule('component');
+    ruleD.caretPath = 'comment';
+    ruleD.value = 'BP comment';
+    const rule1 = new ContainsRule('component');
+    rule1.items = ['SystolicBP', 'DiastolicBP'];
+    const rule2 = new CardRule('component[SystolicBP]');
+    rule2.max = '1';
+    const rule3 = new FixedValueRule('component[SystolicBP].code');
+    rule3.fixedValue = new FshCode('8480-6', 'http://loinc.org');
+    const rule4 = new OnlyRule('component[SystolicBP].value[x]');
+    rule4.types = [{ type: 'Quantity' }];
+    const rule5 = new CardRule('component[DiastolicBP]');
+    rule5.max = '1';
+    const rule6 = new FixedValueRule('component[DiastolicBP].code');
+    rule6.fixedValue = new FshCode('8462-4', 'http://loinc.org');
+    const rule7 = new OnlyRule('component[DiastolicBP].value[x]');
+    rule7.types = [{ type: 'Quantity' }];
+    profile.rules.push(ruleA, ruleB, ruleC, ruleD, rule1, rule2, rule3, rule4, rule5, rule6, rule7);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const json = sd.toJSON();
+
+    const diffs = json.differential.element;
+    expect(diffs).toHaveLength(7);
+    expect(diffs[0]).toEqual({
+      id: 'Observation.component',
+      path: 'Observation.component',
+      slicing: {
+        discriminator: [{ type: 'pattern', path: 'code' }],
+        rules: 'open'
+      },
+      comment: 'BP comment'
+    });
+    expect(diffs[1]).toEqual({
+      id: 'Observation.component:SystolicBP',
+      path: 'Observation.component',
+      sliceName: 'SystolicBP',
+      max: '1'
+    });
+    expect(diffs[2]).toEqual({
+      id: 'Observation.component:SystolicBP.code',
+      path: 'Observation.component.code',
+      patternCodeableConcept: {
+        coding: [{ code: '8480-6', system: 'http://loinc.org' }]
+      }
+    });
+    expect(diffs[3]).toEqual({
+      id: 'Observation.component:SystolicBP.value[x]',
+      path: 'Observation.component.value[x]',
+      type: [{ code: 'Quantity' }]
+    });
+    expect(diffs[4]).toEqual({
+      id: 'Observation.component:DiastolicBP',
+      path: 'Observation.component',
+      sliceName: 'DiastolicBP',
+      max: '1'
+    });
+    expect(diffs[5]).toEqual({
+      id: 'Observation.component:DiastolicBP.code',
+      path: 'Observation.component.code',
+      patternCodeableConcept: {
+        coding: [{ code: '8462-4', system: 'http://loinc.org' }]
+      }
+    });
+    expect(diffs[6]).toEqual({
+      id: 'Observation.component:DiastolicBP.value[x]',
+      path: 'Observation.component.value[x]',
+      type: [{ code: 'Quantity' }]
+    });
+  });
+
   // No duplicate structure definitions exported
   it('should not export duplicate structure definitions', () => {
     const profile = new Profile('Foo');
