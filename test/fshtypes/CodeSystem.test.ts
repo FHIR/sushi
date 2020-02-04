@@ -10,6 +10,7 @@ describe('CodeSystem', () => {
       expect(cs.title).toBeUndefined();
       expect(cs.description).toBeUndefined();
       expect(cs.concepts).toBeEmpty();
+      expect(cs.rules).toBeEmpty();
     });
   });
 });

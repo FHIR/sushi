@@ -1,4 +1,5 @@
 import { importSingleText } from '../testhelpers/importSingleText';
+import { assertCaretValueRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
@@ -268,6 +269,42 @@ describe('FSHImporter', () => {
         expect(codeSystem.concepts[2].code).toBe('jackalope');
         expect(loggerSpy.getMessageAtIndex(-2)).toMatch(/File: Zoo\.fsh.*Line: 4\D/s);
         expect(loggerSpy.getLastMessage()).toMatch(/File: Zoo\.fsh.*Line: 5\D/s);
+      });
+    });
+
+    describe('#CaretValueRule', () => {
+      it('should parse a code system that uses a CaretValueRule', () => {
+        const input = `
+          CodeSystem: ZOO
+          * ^publisher = "Matt"
+          `;
+        const result = importSingleText(input);
+        const codeSystem = result.codeSystems.get('ZOO');
+        assertCaretValueRule(codeSystem.rules[0], '', 'publisher', 'Matt');
+      });
+
+      it('should parse a code system that uses CaretValueRules alongside concepts', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #lion
+        * ^publisher = "Damon"
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.concepts[0].code).toBe('lion');
+        expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
+        assertCaretValueRule(codeSystem.rules[0], '', 'publisher', 'Damon');
+      });
+
+      it('should log an error when a CaretValueRule contains a path before ^', () => {
+        const input = `
+        CodeSystem: ZOO
+        * somepath ^publisher = "Marky Mark"
+        `;
+        const result = importSingleText(input, 'Simple.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage()).toMatch(/File: Simple\.fsh.*Line: 3\D/s);
       });
     });
   });
