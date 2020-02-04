@@ -198,6 +198,8 @@ export class IGExporter {
   /**
    * Adds additional pages beyond index.md that are defined by the user.
    * Only add formats that are supported by the IG template
+   *
+   * @param igPath {string} - the path where the IG is exported to
    */
   private addOtherPageContent(igPath: string) {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
@@ -228,6 +230,11 @@ export class IGExporter {
     }
   }
 
+  /**
+   * Adds any user provided images that can be referenced directly in other pages
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
   private addImages(igPath: string) {
     // If the user provided additional image files, include them
     const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
