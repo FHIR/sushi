@@ -64,9 +64,11 @@ export type ImplementationGuideDefinitionPage = {
   nameUrl?: string;
   nameReference?: Reference;
   title: string;
-  generation: 'html' | 'markdown' | 'xml' | 'generated';
+  generation: ImplementationGuideDefinitionPageGeneration;
   page?: ImplementationGuideDefinitionPage[];
 };
+
+export type ImplementationGuideDefinitionPageGeneration = 'html' | 'markdown' | 'xml' | 'generated';
 
 export type ImplementationGuideDefinitionParameter = {
   code: string;

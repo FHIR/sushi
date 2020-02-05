@@ -363,6 +363,16 @@ describe('IGExporter', () => {
       expect(fs.existsSync(indexPath)).toBeTruthy();
       const content = fs.readFileSync(indexPath, 'utf8');
       expect(content).toMatch('My special index page.');
+
+      // Checks that the index.md file is added to IG definition
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toContainEqual({
+        nameUrl: 'index.html',
+        title: 'FSH Test IG',
+        generation: 'markdown'
+      });
     });
 
     it('should include additional user-provided pages of valid file type', () => {
@@ -403,6 +413,46 @@ describe('IGExporter', () => {
       expect(fs.existsSync(imagesPath)).toBeTruthy();
       const imageFileNames = fs.readdirSync(imagesPath);
       expect(imageFileNames).toEqual(['Shorty.png']);
+    });
+  });
+
+  describe('#customized-ig-with-index-xml', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-index-xml');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should use the user-provided index.xml if it exists', () => {
+      const indexPath = path.join(tempOut, 'input', 'pagecontent', 'index.xml');
+      expect(fs.existsSync(indexPath)).toBeTruthy();
+      const content = fs.readFileSync(indexPath, 'utf8');
+      expect(content).toContain('An index file in XML');
+
+      // Checks that the index.xml file is added to IG definition
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'FSH Test IG',
+          generation: 'html'
+        }
+      ]);
     });
   });
 

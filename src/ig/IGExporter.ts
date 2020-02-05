@@ -7,7 +7,8 @@ import { Package } from '../export';
 import {
   ContactDetail,
   ImplementationGuide,
-  ImplementationGuideDefinitionResource
+  ImplementationGuideDefinitionResource,
+  ImplementationGuideDefinitionPageGeneration
 } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -89,13 +90,7 @@ export class IGExporter {
           nameUrl: 'toc.html',
           title: 'Table of Contents',
           generation: 'html',
-          page: [
-            {
-              nameUrl: 'index.html',
-              title: config.title ?? config.name,
-              generation: 'markdown'
-            }
-          ]
+          page: [] // index.[md|html] is required and added later
         },
         // Parameter apparently required by IG Publisher (as of Jan 29, 2020)
         parameter: [
@@ -184,15 +179,27 @@ export class IGExporter {
     ensureDirSync(path.join(igPath, 'input', 'pagecontent'));
 
     // If the user provided an index.md file, use that
-    const inputIndexPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
-    if (fs.existsSync(inputIndexPath)) {
-      fs.copySync(inputIndexPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+    const inputIndexMarkdownPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
+    const inputIndexXMLPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.xml');
+    let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
+    if (fs.existsSync(inputIndexMarkdownPath)) {
+      fs.copySync(inputIndexMarkdownPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+    } else if (fs.existsSync(inputIndexXMLPath)) {
+      fs.copySync(inputIndexXMLPath, path.join(igPath, 'input', 'pagecontent', 'index.xml'));
+      generation = 'html';
     } else {
       outputFileSync(
         path.join(igPath, 'input', 'pagecontent', 'index.md'),
         this.pkg.config.description ?? ''
       );
     }
+
+    // Add user-provided or generated index file to IG definition
+    this.ig.definition.page.page.push({
+      nameUrl: 'index.html',
+      title: this.ig.title,
+      generation
+    });
   }
 
   /**
@@ -207,7 +214,7 @@ export class IGExporter {
     if (fs.existsSync(inputPageContentPath)) {
       const pages = fs
         .readdirSync(inputPageContentPath)
-        .filter(page => page !== 'index.md')
+        .filter(page => page !== 'index.md' && page !== 'index.xml')
         .sort(); // Sorts alphabetically
 
       let invalidFileTypeIncluded = false;
