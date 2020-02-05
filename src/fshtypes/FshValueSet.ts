@@ -1,5 +1,6 @@
 import { FshEntity } from './FshEntity';
 import { ValueSetComponent } from './ValueSetComponent';
+import { CaretValueRule } from './rules';
 
 /**
  * For more information about the composition of a ValueSet,
@@ -10,10 +11,12 @@ export class FshValueSet extends FshEntity {
   title?: string;
   description?: string;
   components: ValueSetComponent[];
+  rules: CaretValueRule[];
 
   constructor(public name: string) {
     super();
     this.id = name;
     this.components = [];
+    this.rules = [];
   }
 }

@@ -2,11 +2,25 @@ import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem } from '../../src/fshtypes';
 import { FshConcept } from '../../src/fshtypes/FshConcept';
+import { CaretValueRule } from '../../src/fshtypes/rules';
+import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
+import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import path from 'path';
 
 describe('CodeSystemExporter', () => {
+  let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let exporter: CodeSystemExporter;
+
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
+  });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
@@ -16,7 +30,8 @@ describe('CodeSystemExporter', () => {
       canonical: 'http://example.com'
     });
     const pkg = new Package(input.config);
-    exporter = new CodeSystemExporter(input, pkg);
+    const fisher = new TestFisher(input, defs, pkg);
+    exporter = new CodeSystemExporter(input, pkg, fisher);
   });
 
   it('should output empty results with empty input', () => {
@@ -144,5 +159,46 @@ describe('CodeSystemExporter', () => {
     expect(exported[0].name).toBe('Strange.Code.System');
     expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR name/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D/s);
+  });
+
+  // CaretValueRules
+  it('should apply a CaretValueRule', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'publisher';
+    rule.value = 'carat';
+    codeSystem.rules.push(rule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://example.com/CodeSystem/CaretCodeSystem',
+      version: '0.0.1',
+      status: 'active',
+      publisher: 'carat'
+    });
+  });
+
+  it('should log a message when applying invalid CaretValueRule', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);
+    rule.caretPath = 'publisherz';
+    rule.value = true;
+    codeSystem.rules.push(rule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://example.com/CodeSystem/CaretCodeSystem',
+      version: '0.0.1',
+      status: 'active'
+    });
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 });

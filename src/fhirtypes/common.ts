@@ -1,4 +1,11 @@
-import { StructureDefinition, PathPart, ElementDefinition, InstanceDefinition } from '.';
+import {
+  StructureDefinition,
+  PathPart,
+  ElementDefinition,
+  InstanceDefinition,
+  ValueSet,
+  CodeSystem
+} from '.';
 import { FixedValueRule } from '../fshtypes/rules';
 import { FshReference, Instance, SourceInfo, FshCode } from '../fshtypes';
 import { FSHTank } from '../import';
@@ -20,17 +27,13 @@ export function setPropertyOnDefinitionInstance(
   value: any,
   fisher: Fishable
 ): void {
-  const structureDefinitionStructureDefinition = instance.getOwnStructureDefinition(fisher);
-  const { fixedValue, pathParts } = structureDefinitionStructureDefinition.validateValueAtPath(
-    path,
-    value,
-    fisher
-  );
+  const instanceSD = instance.getOwnStructureDefinition(fisher);
+  const { fixedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
   setPropertyOnInstance(instance, pathParts, fixedValue);
 }
 
 export function setPropertyOnInstance(
-  instance: StructureDefinition | ElementDefinition | InstanceDefinition,
+  instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
   fixedValue: any
 ): void {

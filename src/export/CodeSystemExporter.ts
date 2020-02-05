@@ -1,11 +1,18 @@
 import { FSHTank } from '../import/FSHTank';
-import { CodeSystem, CodeSystemConcept } from '../fhirtypes';
+import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
+import { setPropertyOnInstance } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
+import { CaretValueRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
+import { MasterFisher, Type } from '../utils';
 import { Package } from '.';
 
 export class CodeSystemExporter {
-  constructor(private readonly tank: FSHTank, private readonly pkg: Package) {}
+  constructor(
+    private readonly tank: FSHTank,
+    private readonly pkg: Package,
+    private fisher: MasterFisher
+  ) {}
 
   private setMetadata(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
     codeSystem.setName(fshDefinition.name, fshDefinition.sourceInfo);
@@ -28,12 +35,33 @@ export class CodeSystemExporter {
     }
   }
 
+  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]) {
+    const csStructureDefinition = StructureDefinition.fromJSON(
+      this.fisher.fishForFHIR('CodeSystem', Type.Resource)
+    );
+    for (const rule of rules) {
+      try {
+        if (rule instanceof CaretValueRule) {
+          const { fixedValue, pathParts } = csStructureDefinition.validateValueAtPath(
+            rule.caretPath,
+            rule.value,
+            this.fisher
+          );
+          setPropertyOnInstance(codeSystem, pathParts, fixedValue);
+        }
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
+      }
+    }
+  }
+
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
     if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
+    this.setCaretRules(codeSystem, fshDefinition.rules);
     this.setConcepts(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
     return codeSystem;

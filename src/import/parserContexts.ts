@@ -52,6 +52,7 @@ export interface ValueSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   vsMetadata(): VsMetadataContext[];
   vsComponent(): VsComponentContext[];
+  caretValueRule(): CaretValueRuleContext[];
 }
 
 export interface VsMetadataContext extends ParserRuleContext {
@@ -64,6 +65,7 @@ export interface CodeSystemContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   csMetadata(): CsMetadataContext[];
   concept(): ConceptContext[];
+  caretValueRule(): CaretValueRuleContext[];
 }
 
 export interface CsMetadataContext extends ParserRuleContext {

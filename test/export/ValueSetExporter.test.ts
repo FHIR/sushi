@@ -12,6 +12,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import path from 'path';
+import { CaretValueRule } from '../../src/fshtypes/rules';
 
 describe('ValueSetExporter', () => {
   let defs: FHIRDefinitions;
@@ -432,5 +433,44 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(0);
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 4\D/s);
+  });
+
+  // CaretValueRules
+  it('should apply a CaretValueRule', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'publisher';
+    rule.value = 'Carrots';
+    valueSet.rules.push(rule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
+      status: 'active',
+      publisher: 'Carrots'
+    });
+  });
+
+  it('should log a message when applying invalid CaretValueRule', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);
+    rule.caretPath = 'publisherz';
+    rule.value = true;
+    valueSet.rules.push(rule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
+      status: 'active'
+    });
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 });

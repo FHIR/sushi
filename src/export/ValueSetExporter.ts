@@ -1,4 +1,9 @@
-import { ValueSet, ValueSetComposeIncludeOrExclude, ValueSetComposeConcept } from '../fhirtypes';
+import {
+  ValueSet,
+  ValueSetComposeIncludeOrExclude,
+  ValueSetComposeConcept,
+  StructureDefinition
+} from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import {
   FshValueSet,
@@ -12,6 +17,8 @@ import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError } from '../errors';
 import { Package } from '.';
 import { MasterFisher, Type } from '../utils';
+import { CaretValueRule } from '../fshtypes/rules';
+import { setPropertyOnInstance } from '../fhirtypes/common';
 
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
@@ -79,6 +86,26 @@ export class ValueSetExporter {
     }
   }
 
+  private setCaretRules(valueSet: ValueSet, rules: CaretValueRule[]) {
+    const vsStructureDefinition = StructureDefinition.fromJSON(
+      this.fisher.fishForFHIR('ValueSet', Type.Resource)
+    );
+    for (const rule of rules) {
+      try {
+        if (rule instanceof CaretValueRule) {
+          const { fixedValue, pathParts } = vsStructureDefinition.validateValueAtPath(
+            rule.caretPath,
+            rule.value,
+            this.fisher
+          );
+          setPropertyOnInstance(valueSet, pathParts, fixedValue);
+        }
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
+      }
+    }
+  }
+
   private filterValueToString(value: ValueSetFilterValue): string {
     if (value instanceof RegExp) {
       return value.source;
@@ -110,6 +137,7 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
+    this.setCaretRules(vs, fshDefinition.rules);
     this.setCompose(vs, fshDefinition.components);
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);

@@ -43,12 +43,20 @@ async function app() {
     program.help();
   }
 
+  // Check that package.json exists
+  const packagePath = path.join(input, 'package.json');
+  if (!fs.existsSync(packagePath)) {
+    logger.error('No package.json in FSH definition folder.');
+    return;
+  }
+
+  // Parse package.json
   let config: any;
   try {
-    config = JSON.parse(fs.readFileSync(path.join(input, 'package.json'), 'utf8').toString());
-  } catch {
-    logger.error('No package.json in FSH definition folder.');
-    program.help();
+    config = fs.readJSONSync(packagePath);
+  } catch (e) {
+    logger.error(`The package.json file is not valid JSON: ${packagePath}`);
+    return;
   }
 
   // Load external dependencies
