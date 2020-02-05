@@ -220,13 +220,16 @@ export class IGExporter {
         const fileType = page.slice(page.lastIndexOf('.') + 1);
         const isSupportedFileType = fileType === 'md' || fileType === 'xml';
         const isIntroOrNotesFile = fileName.endsWith('-intro') || fileName.endsWith('-notes');
-        if (isSupportedFileType && !isIntroOrNotesFile) {
-          // If it is a valid file type and not an intro or note file, we will also add it to IG definition
-          this.ig.definition.page.page.push({
-            nameUrl: `${fileName}.html`,
-            title: `${fileName}`,
-            generation: fileType === 'md' ? 'markdown' : 'html'
-          });
+        if (isSupportedFileType) {
+          // Intro and notes files will be in supported formats but are not separate pages, so they should not be added to IG definition
+          if (!isIntroOrNotesFile) {
+            // Valid page files will be added to the IG definition
+            this.ig.definition.page.page.push({
+              nameUrl: `${fileName}.html`,
+              title: `${fileName}`,
+              generation: fileType === 'md' ? 'markdown' : 'html'
+            });
+          }
         } else {
           invalidFileTypeIncluded = true;
         }
