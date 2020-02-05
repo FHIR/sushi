@@ -1408,16 +1408,42 @@ export class ElementDefinition {
 
   /**
    * If the element has a single type, graft the type's elements into this StructureDefinition as child elements.
+   * If the element is sliced, unfold from the sliced element on the StructureDefinition
+   * If the elemnet is a content reference, unfold from the referenced element on the StructureDefintion
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition[]} the unfolded elements or an empty array if the type is multi-value or type can't
    *   be resolved.
    */
   unfold(fisher: Fishable): ElementDefinition[] {
     if (
-      this.type.length === 1 &&
-      (this.type[0].profile == null || this.type[0].profile.length <= 1)
+      (this.type?.length === 1 &&
+        (this.type?.[0].profile == null || this.type?.[0].profile.length <= 1)) ||
+      this.contentReference
     ) {
       let newElements: ElementDefinition[] = [];
+      if (this.contentReference) {
+        // If the element is a content reference, we need to unfold from the referenced element
+        // Get the original resource JSON so we unfold unconstrained reference
+        const type = this.structDef.type;
+        const json = fisher.fishForFHIR(type, Type.Resource);
+        if (json) {
+          const def = StructureDefinition.fromJSON(json);
+          // Content references start with #, slice that off to id of referenced element
+          const referencedElement = def.findElement(this.contentReference.slice(1));
+          newElements = referencedElement?.children().map(e => {
+            const eClone = e.clone();
+            eClone.id = eClone.id.replace(referencedElement.id, this.id);
+            eClone.structDef = this.structDef;
+            eClone.captureOriginal();
+            return eClone;
+          });
+          if (newElements.length > 0) {
+            // If we successfully unfolded, this element is no longer a content reference
+            this.type = referencedElement.type;
+            delete this.contentReference;
+          }
+        }
+      }
       if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();

@@ -355,10 +355,12 @@ describe('StructureDefinition', () => {
     let respRate: StructureDefinition;
     let lipidProfile: StructureDefinition;
     let clinicalDocument: StructureDefinition;
+    let valueSet: StructureDefinition;
     beforeEach(() => {
       respRate = fisher.fishForStructureDefinition('resprate');
       lipidProfile = fisher.fishForStructureDefinition('lipidprofile');
       clinicalDocument = fisher.fishForStructureDefinition('clinicaldocument');
+      valueSet = fisher.fishForStructureDefinition('ValueSet');
     });
 
     // Simple paths (no brackets)
@@ -542,6 +544,33 @@ describe('StructureDefinition', () => {
       expect(resultDisplay).toBeDefined();
       expect(resultDisplay.id).toBe('DiagnosticReport.result.display');
       expect(lipidProfile.elements.length).toBe(originalLength + 6);
+    });
+
+    // Content Reference Paths
+    it('should find a child of a content reference element by path', () => {
+      const originalLength = valueSet.elements.length;
+      // Modify system on the current ValueSet to test that we are copying from original SD
+      // not the profiled SD
+      const include = valueSet.elements.find(e => e.id === 'ValueSet.compose.include');
+      const includeSystem = valueSet.elements.find(e => e.id === 'ValueSet.compose.include.system');
+      includeSystem.short = 'This should not get copied over!';
+      const exclude = valueSet.elements.find(e => e.id === 'ValueSet.compose.exclude');
+      const excludeSystem = valueSet.findElementByPath('compose.exclude.system', fisher);
+      expect(excludeSystem).toBeDefined();
+      expect(excludeSystem.id).toBe('ValueSet.compose.exclude.system');
+      expect(excludeSystem.short).toBe('The system the codes come from');
+      expect(exclude.contentReference).toBeUndefined();
+      expect(exclude.type).toEqual(include.type);
+      expect(valueSet.elements.length).toBe(originalLength + 26);
+    });
+
+    it('should find but not unfold a content reference element by path', () => {
+      const originalLength = valueSet.elements.length;
+      const exclude = valueSet.findElementByPath('compose.exclude', fisher);
+      expect(exclude).toBeDefined();
+      expect(exclude.id).toBe('ValueSet.compose.exclude');
+      expect(exclude.contentReference).toBe('#ValueSet.compose.include');
+      expect(valueSet.elements.length).toBe(originalLength);
     });
   });
 
