@@ -198,6 +198,7 @@ export class IGExporter {
   /**
    * Adds additional pages beyond index.md that are defined by the user.
    * Only add formats that are supported by the IG template
+   * Intro and notes file contents are injected into relevant pages and should not be treated as their own page
    *
    * @param igPath {string} - the path where the IG is exported to
    */
@@ -214,10 +215,13 @@ export class IGExporter {
         // All user defined pages are included in input/pagecontent
         const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
         fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', page));
-        if (page.endsWith('.md') || page.endsWith('.xml')) {
-          // If it is a valid file type, we will also add it to IG definition
-          const fileName = page.slice(0, page.lastIndexOf('.'));
-          const fileType = page.slice(page.lastIndexOf('.') + 1);
+
+        const fileName = page.slice(0, page.lastIndexOf('.'));
+        const fileType = page.slice(page.lastIndexOf('.') + 1);
+        const isSupportedFileType = fileType === 'md' || fileType === 'xml';
+        const isIntroOrNotesFile = fileName.endsWith('-intro') || fileName.endsWith('-notes');
+        if (isSupportedFileType && !isIntroOrNotesFile) {
+          // If it is a valid file type and not an intro or note file, we will also add it to IG definition
           this.ig.definition.page.page.push({
             nameUrl: `${fileName}.html`,
             title: `${fileName}`,

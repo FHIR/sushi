@@ -369,12 +369,18 @@ describe('IGExporter', () => {
       const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
       expect(fs.existsSync(pageContentPath)).toBeTruthy();
 
-      // File contents get copied over
+      // All file contents get copied over
       const otherFilePath = path.join(pageContentPath, 'other.md');
-      const content = fs.readFileSync(otherFilePath, 'utf8');
-      expect(content).toMatch('My other now-supported-page.');
+      const otherContent = fs.readFileSync(otherFilePath, 'utf8');
+      expect(otherContent).toMatch('My other now-supported-page.');
+      const unsupportedFilePath = path.join(pageContentPath, 'unsupported.html');
+      const unsupportedContent = fs.readFileSync(unsupportedFilePath, 'utf8');
+      expect(unsupportedContent).toMatch('<p>An unsupported file type will copied over</p>');
+      const notesFilePath = path.join(pageContentPath, 'resource-notes.md');
+      const notesContent = fs.readFileSync(notesFilePath, 'utf8');
+      expect(notesContent).toContain('Some resource specific notes.');
 
-      // File information added to pages list in IG
+      // File information added to pages list in IG. Unsupported files and intro/notes files not included
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent = fs.readJSONSync(igPath);
