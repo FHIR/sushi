@@ -812,7 +812,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Simple.fsh');
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.rules).toHaveLength(0);
-        expect(loggerSpy.getLastMessage()).toMatch(/File: Simple\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D/s);
       });
     });
   });

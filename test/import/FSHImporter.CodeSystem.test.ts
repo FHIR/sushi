@@ -304,7 +304,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Simple.fsh');
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.rules).toHaveLength(0);
-        expect(loggerSpy.getLastMessage()).toMatch(/File: Simple\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D/s);
       });
     });
   });

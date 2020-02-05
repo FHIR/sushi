@@ -199,6 +199,6 @@ describe('CodeSystemExporter', () => {
       version: '0.0.1',
       status: 'active'
     });
-    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 });
