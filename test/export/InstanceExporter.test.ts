@@ -124,6 +124,7 @@ describe('InstanceExporter', () => {
     let instance: Instance;
     let patientProfInstance: Instance;
     let lipidInstance: Instance;
+    let valueSetInstance: Instance;
     beforeEach(() => {
       patient = new Profile('TestPatient');
       patient.parent = 'Patient';
@@ -140,6 +141,9 @@ describe('InstanceExporter', () => {
       lipidInstance = new Instance('Bam');
       lipidInstance.instanceOf = 'lipidprofile';
       doc.instances.set(lipidInstance.name, lipidInstance);
+      valueSetInstance = new Instance('Boom');
+      valueSetInstance.instanceOf = 'ValueSet';
+      doc.instances.set(valueSetInstance.name, valueSetInstance);
     });
 
     // Setting Metadata
@@ -877,6 +881,21 @@ describe('InstanceExporter', () => {
 
     it.skip('should fix sliced elements on a sliced primitive', () => {
       /* Need example of sliced primitive */
+    });
+
+    // Content Reference
+    it('should fix a child of a contentReference element', () => {
+      const barRule = new FixedValueRule('compose.exclude.version');
+      barRule.fixedValue = 'bar';
+      valueSetInstance.rules.push(barRule);
+      const exported = exportInstance(valueSetInstance);
+      expect(exported.compose).toEqual({
+        exclude: [
+          {
+            version: 'bar'
+          }
+        ]
+      });
     });
   });
 

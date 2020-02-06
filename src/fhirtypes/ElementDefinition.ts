@@ -1416,8 +1416,7 @@ export class ElementDefinition {
    */
   unfold(fisher: Fishable): ElementDefinition[] {
     if (
-      (this.type?.length === 1 &&
-        (this.type?.[0].profile == null || this.type?.[0].profile.length <= 1)) ||
+      (this.type?.length === 1 && (this.type[0].profile ?? []).length <= 1) ||
       this.contentReference
     ) {
       let newElements: ElementDefinition[] = [];
