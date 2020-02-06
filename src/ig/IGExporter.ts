@@ -2,6 +2,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import ini from 'ini';
 import sortBy from 'lodash/sortBy';
+import words from 'lodash/words';
+import { titleCase } from 'title-case';
 import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
 import { Package } from '../export';
 import {
@@ -233,7 +235,7 @@ export class IGExporter {
             // Valid page files will be added to the IG definition
             this.ig.definition.page.page.push({
               nameUrl: `${fileName}.html`,
-              title: `${fileName}`,
+              title: `${titleCase(words(fileName).join(' '))}`,
               generation: fileType === 'md' ? 'markdown' : 'html'
             });
           }

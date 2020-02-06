@@ -380,7 +380,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(pageContentPath)).toBeTruthy();
 
       // All file contents get copied over
-      const otherFilePath = path.join(pageContentPath, 'other.md');
+      const otherFilePath = path.join(pageContentPath, 'other-page.md');
       const otherContent = fs.readFileSync(otherFilePath, 'utf8');
       expect(otherContent).toMatch('My other now-supported-page.');
       const unsupportedFilePath = path.join(pageContentPath, 'unsupported.html');
@@ -401,8 +401,8 @@ describe('IGExporter', () => {
           generation: 'markdown'
         },
         {
-          nameUrl: 'other.html',
-          title: 'other',
+          nameUrl: 'other-page.html',
+          title: 'Other Page',
           generation: 'markdown'
         }
       ]);
