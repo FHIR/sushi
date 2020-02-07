@@ -78,7 +78,7 @@ describe('#loadDependency()', () => {
             hints: 0,
             version: '3.0.1',
             tool: '3.4.0-13844',
-            repo: 'nrdavis1/HSPCFHIRtest/bran'
+            repo: 'nrdavis1/HSPCFHIRtest/branches/oldbranch/qa.json'
           },
           {
             url: 'http://hl7.org/fhir/hspc/ImplementationGuide/hspc',
@@ -91,7 +91,7 @@ describe('#loadDependency()', () => {
             hints: 0,
             version: '3.0.1',
             tool: '3.4.0-13844',
-            repo: 'nrdavis1/HSPCFHIRtest/branches'
+            repo: 'nrdavis1/HSPCFHIRtest/branches/master/qa.json'
           }
         ];
       } else {
@@ -148,7 +148,7 @@ describe('#loadDependency()', () => {
       }
     ]);
     expect(requestSpy.mock.calls[1][0].uri).toBe(
-      'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/branches/package.tgz'
+      'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/package.tgz'
     );
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#current'));
