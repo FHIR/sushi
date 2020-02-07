@@ -64,10 +64,15 @@ async function app() {
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
   for (const dep of Object.keys(config?.dependencies ?? {})) {
     dependencyDefs.push(
-      loadDependency(dep, config.dependencies[dep], defs).catch(e => {
-        logger.error(`Failed to load ${dep}#${config.dependencies[dep]}`);
-        logger.error(e.message);
-      })
+      loadDependency(dep, config.dependencies[dep], defs)
+        .then(def => {
+          logger.info(`Loaded package ${dep}#${config.dependencies[dep]}`);
+          return def;
+        })
+        .catch(e => {
+          logger.error(`Failed to load ${dep}#${config.dependencies[dep]}`);
+          logger.error(e.message);
+        })
     );
   }
 
@@ -79,11 +84,13 @@ async function app() {
       return new RawFSH(fileContent, filePath);
     });
 
+  logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
   logger.info('Finished importing FSH text.');
 
   const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);
+  logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
   logger.info('Finished converting FSH to FHIR resources.');
 
@@ -99,6 +106,7 @@ async function app() {
   );
 
   // If ig-data exists, generate an IG, otherwise, generate resources only
+  logger.info('Exporting FHIR resources...');
   const igDataPath = path.resolve(input, 'ig-data');
   if (fs.existsSync(igDataPath)) {
     const igExporter = new IGExporter(outPackage, defs, igDataPath);
