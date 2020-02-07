@@ -319,12 +319,12 @@ export class StructureDefinition {
     const differentialElements = this.elements
       .filter(e => e.hasDiff())
       .map(e => e.calculateDiff().toJSON());
+    const defaultDifferentialElements = [
+      { id: j.snapshot.element[0].id, path: j.snapshot.element[0].path }
+    ];
 
     j.differential = {
-      element:
-        differentialElements.length > 0
-          ? differentialElements
-          : [{ id: 'Observation', path: 'Observation' }]
+      element: differentialElements.length > 0 ? differentialElements : defaultDifferentialElements
     };
 
     // Post-process the differential to remove any choice[x] elements if the only thing they do is establish the type
