@@ -69,7 +69,7 @@ describe('ExtensionExporter', () => {
     extension.parent = 'DoesNotExist';
     doc.extensions.set(extension.name, extension);
     exporter.export();
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 14 - 24\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 14 - 24\D/s);
   });
 
   it('should export extensions with FSHy parents', () => {

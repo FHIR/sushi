@@ -39,14 +39,14 @@ export class IGExporter {
   export(outPath: string) {
     ensureDirSync(outPath);
     this.initIG();
+    this.addResources(outPath);
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
     this.addOtherPageContent(outPath);
     this.addImages(outPath);
-    this.addResources(outPath);
-    this.addImplementationGuide(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
+    this.addImplementationGuide(outPath);
   }
 
   /**
@@ -186,10 +186,13 @@ export class IGExporter {
     let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
     if (fs.existsSync(inputIndexMarkdownPath)) {
       fs.copySync(inputIndexMarkdownPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+      logger.info('Copied ig-data/input/pagecontent/index.md');
     } else if (fs.existsSync(inputIndexXMLPath)) {
       fs.copySync(inputIndexXMLPath, path.join(igPath, 'input', 'pagecontent', 'index.xml'));
       generation = 'html';
+      logger.info('Copied ig-data/input/pagecontent/index.xml');
     } else {
+      logger.info('Generated default index.md.');
       outputFileSync(
         path.join(igPath, 'input', 'pagecontent', 'index.md'),
         this.pkg.config.description ?? ''
@@ -272,6 +275,8 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   private addResources(igPath: string) {
+    logger.info('Exporting FHIR resources as JSON for Implementation Guide...');
+    let count = 0;
     const sds = sortBy([...this.pkg.profiles, ...this.pkg.extensions], sd => sd.name);
     sds.forEach(sd => {
       const sdPath = path.join(igPath, 'input', 'resources', sd.getFileName());
@@ -282,6 +287,7 @@ export class IGExporter {
         description: sd.description,
         exampleBoolean: false
       });
+      count++;
     });
     sortBy(this.pkg.instances, instance => instance.id ?? instance.instanceName).forEach(
       instance => {
@@ -300,6 +306,7 @@ export class IGExporter {
           resource.exampleBoolean = true;
         }
         this.ig.definition.resource.push(resource);
+        count++;
       }
     );
     sortBy(this.pkg.valueSets, valueSet => valueSet.name).forEach(valueSet => {
@@ -310,6 +317,7 @@ export class IGExporter {
         name: valueSet.title ?? valueSet.name,
         description: valueSet.description
       });
+      count++;
     });
     sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name).forEach(codeSystem => {
       const codeSystemPath = path.join(igPath, 'input', 'resources', codeSystem.getFileName());
@@ -319,7 +327,9 @@ export class IGExporter {
         name: codeSystem.title ?? codeSystem.name,
         description: codeSystem.description
       });
+      count++;
     });
+    logger.info(`Exported ${count} FHIR resources as JSON for Implementation Guide.`);
   }
 
   /**
@@ -330,6 +340,7 @@ export class IGExporter {
   private addImplementationGuide(igPath: string): void {
     const igJsonPath = path.join(igPath, 'input', `ImplementationGuide-${this.ig.id}.json`);
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
+    logger.info(`Generated ImplementationGuide-${this.ig.id}.json`);
   }
 
   /**
@@ -353,7 +364,9 @@ export class IGExporter {
 
     // Then add properties from the user-provided ig.ini (if applicable)
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
+    let merged = false;
     if (fs.existsSync(inputIniPath)) {
+      merged = true;
       const inputIni = ini.parse(fs.readFileSync(inputIniPath, 'utf8'));
       if (Object.keys(inputIni).length > 1 || inputIni.IG == null) {
         logger.error('igi.ini file must contain an [IG] section with no other sections', {
@@ -387,6 +400,12 @@ export class IGExporter {
       path.join(igPath, 'ig.ini'),
       ini.encode(iniObj, { section: 'IG', whitespace: true })
     );
+
+    if (merged) {
+      logger.info('Merged ig-data/ig.ini w/ generated ig.ini');
+    } else {
+      logger.info('Generated default ig.ini.');
+    }
   }
 
   /**
@@ -417,6 +436,7 @@ export class IGExporter {
       }
       if (!mismatch) {
         fs.copySync(inputPackageListPath, path.join(igPath, 'package-list.json'));
+        logger.info('Copied ig-data/package-list.json.');
         return;
       }
     }
@@ -448,5 +468,6 @@ export class IGExporter {
       },
       { spaces: 2 }
     );
+    logger.info('Generated default package-list.json');
   }
 }

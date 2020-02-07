@@ -33,7 +33,7 @@ describe('FSHImporter', () => {
     Pizza: Large
     `;
     importSingleText(input, 'Pizza.fsh');
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Pizza\.fsh.*Line: 3\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Pizza\.fsh.*Line: 3\D/s);
   });
 
   it('should report extraneous input errors from antlr', () => {
@@ -42,7 +42,7 @@ describe('FSHImporter', () => {
     Parent: Spacious
     `;
     importSingleText(input, 'Space.fsh');
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Space\.fsh.*Line: 2\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Space\.fsh.*Line: 2\D/s);
   });
 
   it('should recover from extraneous input errors from antlr', () => {
@@ -56,7 +56,7 @@ describe('FSHImporter', () => {
     const profile = result.profiles.get('Foo');
     expect(profile.name).toBe('Foo');
     expect(profile.parent).toBe('FooDad');
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Extra\.fsh.*Line: 2\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Extra\.fsh.*Line: 2\D/s);
   });
 
   it('should parse escaped double-quote and backslash characters in strings', () => {
@@ -124,7 +124,7 @@ describe('FSHImporter', () => {
     //Comment`;
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
-    expect(loggerSpy.getAllLogs().length).toBe(0);
+    expect(loggerSpy.getAllLogs('error').length).toBe(0);
   });
 
   it('should allow a FSH document with a block comment at EOF without newline', () => {
@@ -137,7 +137,7 @@ describe('FSHImporter', () => {
     */`;
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
-    expect(loggerSpy.getAllLogs().length).toBe(0);
+    expect(loggerSpy.getAllLogs('error').length).toBe(0);
   });
 
   it('should adjust indentation of multi-line strings that include blank lines', () => {
@@ -223,5 +223,16 @@ describe('FSHImporter', () => {
     const result = importSingleText(input);
     const profile = result.profiles.get('ObservationProfile');
     expect(profile.description).toBe('Descriptions come in only one size.');
+  });
+
+  it('should log info messages during import', () => {
+    const input = '';
+    importSingleText(input);
+    const allLogs = loggerSpy.getAllLogs();
+    expect(allLogs.length).toBe(2);
+    expect(allLogs[0].level).toMatch(/info/);
+    expect(allLogs[0].message).toMatch(/Preprocessed/);
+    expect(allLogs[1].level).toMatch(/info/);
+    expect(allLogs[1].message).toMatch(/Imported 0 definitions/);
   });
 });

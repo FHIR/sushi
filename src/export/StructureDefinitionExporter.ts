@@ -245,13 +245,17 @@ export class StructureDefinitionExporter implements Fishable {
    * @returns {Package}
    */
   export(): Package {
-    this.tank.getAllStructureDefinitions().forEach(sd => {
+    const structureDefinitions = this.tank.getAllStructureDefinitions();
+    structureDefinitions.forEach(sd => {
       try {
         this.exportStructDef(sd);
       } catch (e) {
         logger.error(e.message, e.sourceInfo || sd.sourceInfo);
       }
     });
+    if (structureDefinitions.length > 0) {
+      logger.info(`Converted ${structureDefinitions.length} FHIR StructureDefinitions.`);
+    }
     return this.pkg;
   }
 }

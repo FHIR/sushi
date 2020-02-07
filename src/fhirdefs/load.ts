@@ -6,6 +6,7 @@ import os from 'os';
 import tar from 'tar';
 import rp from 'request-promise-native';
 import temp from 'temp';
+import { logger } from '../utils';
 
 /**
  * Loads a dependency from user FHIR cache or from online
@@ -26,7 +27,13 @@ export async function loadDependency(
   const loadPath = path.join(cachePath, fullPackageName, 'package');
   let loadedPackage: string;
   if (version != 'current') {
+    logger.info(`Checking local cache for ${fullPackageName}...`);
     loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
+    if (loadedPackage) {
+      logger.info(`Found ${fullPackageName} in local cache.`);
+    } else {
+      logger.info(`Did not find ${fullPackageName} in local cache.`);
+    }
   }
   if (!loadedPackage) {
     let packageUrl: string;
@@ -69,6 +76,7 @@ export async function loadDependency(
     const targetDirectory = path.join(cachePath, fullPackageName);
     let res;
     try {
+      logger.info(`Downloading ${fullPackageName}...`);
       res = await rp.get({
         uri: packageUrl,
         encoding: null,
@@ -79,6 +87,7 @@ export async function loadDependency(
           return body;
         }
       });
+      logger.info(`Downloaded ${fullPackageName}`);
     } catch (e) {
       e.message = `${e.statusCode} - ${e.response}`;
       throw e;

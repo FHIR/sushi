@@ -27,16 +27,16 @@ export class FHIRExporter {
       this.pkg,
       this.fisher
     );
-    this.instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
     this.valueSetExporter = new ValueSetExporter(this.tank, this.pkg, this.fisher);
     this.codeSystemExporter = new CodeSystemExporter(this.tank, this.pkg, this.fisher);
+    this.instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
   }
 
   export(): Package {
     this.structureDefinitionExporter.export();
-    this.instanceExporter.export();
     this.valueSetExporter.export();
     this.codeSystemExporter.export();
+    this.instanceExporter.export();
 
     return this.pkg;
   }

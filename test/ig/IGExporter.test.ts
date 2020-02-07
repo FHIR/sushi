@@ -478,13 +478,13 @@ describe('IGExporter', () => {
 
     it('should should log errors for invalid user-specified values in ig.ini', () => {
       // Check for log messages indicating invalid input
-      expect(loggerSpy.getMessageAtIndex(-5)).toMatch(
+      expect(loggerSpy.getMessageAtIndex(-5, 'error')).toMatch(
         /igi\.ini: sushi does not currently support overriding ig value\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]ig.ini/s
       );
-      expect(loggerSpy.getMessageAtIndex(-4)).toMatch(
+      expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(
         /igi\.ini: license value \(Apache2\.0\) does not match license declared in package\.json \(CC0-1\.0\)\.  Keeping CC0-1\.0\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]ig.ini/s
       );
-      expect(loggerSpy.getMessageAtIndex(-3)).toMatch(
+      expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(
         /igi\.ini: version value \(0\.2\.0\) does not match version declared in package\.json \(0\.1\.0\)\.  Keeping 0\.1\.0\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]ig.ini/s
       );
 
@@ -515,17 +515,17 @@ describe('IGExporter', () => {
       expect(imageFileNames).toContain('bad.html');
 
       // Check for log messages indicating invalid input
-      expect(loggerSpy.getMessageAtIndex(-6)).toMatch(
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
         /Files not in the supported file types \(\.md and \.xml\) were detected\. These files will be copied over without any processing\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
 
     it('should log an error if supplied package-list.json does not match package.json', () => {
       // Check for log messages indicating invalid input
-      expect(loggerSpy.getMessageAtIndex(-2)).toMatch(
+      expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
         /package-list\.json: package-id value \(wrong-package-id\) does not match name declared in package\.json \(sushi-test\)\.  Ignoring custom package-list\.json\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]package-list.json/s
       );
-      expect(loggerSpy.getMessageAtIndex(-1)).toMatch(
+      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
         /package-list\.json: canonical value \(wrong-canonical\) does not match canonical declared in package\.json \(http:\/\/hl7\.org\/fhir\/sushi-test\)\.  Ignoring custom package-list\.json\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]package-list.json/s
       );
 
