@@ -54,7 +54,7 @@ export async function loadDependency(
         // means to find the package at:
         //    http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz
         // See: https://chat.fhir.org/#narrow/stream/179165-committers/topic/Build.20Problem/near/187610137
-        const [org, repo] = newestPackage.repo.split('/').slice(0, 2);
+        const [org, repo] = newestPackage.repo.split('/');
         packageUrl = `${baseUrl}/${org}/${repo}/package.tgz`;
       } else {
         throw new CurrentPackageLoadError(fullPackageName);
