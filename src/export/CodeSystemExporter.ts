@@ -77,7 +77,7 @@ export class CodeSystemExporter {
       }
     }
     if (codeSystems.length > 0) {
-      logger.info('FSH Export: Finished exporting FSH for FHIR code systems.');
+      logger.info(`Converted ${codeSystems.length} FHIR CodeSystems.`);
     }
     return this.pkg;
   }

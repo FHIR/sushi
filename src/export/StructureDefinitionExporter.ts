@@ -254,7 +254,7 @@ export class StructureDefinitionExporter implements Fishable {
       }
     });
     if (structureDefinitions.length > 0) {
-      logger.info('Finished exporting FSH for FHIR structure definitions.');
+      logger.info(`Converted ${structureDefinitions.length} FHIR StructureDefinitions.`);
     }
     return this.pkg;
   }

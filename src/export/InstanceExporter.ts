@@ -206,7 +206,7 @@ export class InstanceExporter {
       }
     }
     if (instances.length > 0) {
-      logger.info('Finished exporting FSH for FHIR instances.');
+      logger.info(`Converted ${instances.length} FHIR instances.`);
     }
     return this.pkg;
   }

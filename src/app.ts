@@ -86,13 +86,11 @@ async function app() {
 
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
-  logger.info('Finished importing FSH text.');
 
   const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  logger.info('Finished converting FSH to FHIR resources.');
 
   fs.ensureDirSync(program.out);
 
@@ -106,13 +104,15 @@ async function app() {
   );
 
   // If ig-data exists, generate an IG, otherwise, generate resources only
-  logger.info('Exporting FHIR resources as JSON...');
   const igDataPath = path.resolve(input, 'ig-data');
   if (fs.existsSync(igDataPath)) {
+    logger.info('Building FHIR Implementation Guide...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath);
     igExporter.export(program.out);
-    logger.info('Finished exporting FHIR resources as JSON for implementation guide.');
+    logger.info('Built FHIR Implementation Guide; ready for IG Publisher.');
   } else {
+    logger.info('Exporting FHIR resources as JSON...');
+    let count = 0;
     for (const sd of [
       ...outPackage.profiles,
       ...outPackage.extensions,
@@ -125,8 +125,9 @@ async function app() {
         JSON.stringify(sd.toJSON(), null, 2),
         'utf8'
       );
+      count++;
     }
-    logger.info('Finished exporting FHIR resources as JSON.');
+    logger.info(`Exported ${count} FHIR resources as JSON.`);
   }
 
   logger.info(`

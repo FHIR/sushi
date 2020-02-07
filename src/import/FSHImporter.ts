@@ -142,7 +142,7 @@ export class FSHImporter extends FSHVisitor {
         }
       });
     });
-    logger.info('FSH import: Finished preprocessing documents and collecting aliases.');
+    logger.info(`Preprocessed ${docs.length} documents with ${this.allAliases.size} aliases.`);
 
     // Now do the main import
     contexts.forEach((context, index) => {
@@ -152,7 +152,14 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = null;
       this.currentFile = null;
     });
-    logger.info('FSH import: Finished processing all documents.');
+
+    let [definitions, instances] = [0, 0];
+    docs.forEach(doc => {
+      definitions +=
+        doc.codeSystems.size + doc.extensions.size + doc.profiles.size + doc.valueSets.size;
+      instances += doc.instances.size;
+    });
+    logger.info(`Imported ${definitions} definitions and ${instances} instances.`);
 
     return docs;
   }

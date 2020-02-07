@@ -231,8 +231,8 @@ describe('FSHImporter', () => {
     const allLogs = loggerSpy.getAllLogs();
     expect(allLogs.length).toBe(2);
     expect(allLogs[0].level).toMatch(/info/);
-    expect(allLogs[0].message).toMatch(/preprocessing/);
+    expect(allLogs[0].message).toMatch(/Preprocessed/);
     expect(allLogs[1].level).toMatch(/info/);
-    expect(allLogs[1].message).toMatch(/all documents/);
+    expect(allLogs[1].message).toMatch(/Imported 0 definitions/);
   });
 });

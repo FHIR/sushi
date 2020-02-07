@@ -87,7 +87,7 @@ export async function loadDependency(
           return body;
         }
       });
-      logger.info(`Finished downloading ${fullPackageName}`);
+      logger.info(`Downloaded ${fullPackageName}`);
     } catch (e) {
       e.message = `${e.statusCode} - ${e.response}`;
       throw e;

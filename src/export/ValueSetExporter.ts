@@ -126,7 +126,7 @@ export class ValueSetExporter {
       }
     }
     if (valueSets.length > 0) {
-      logger.info('Finished exporting FSH for FHIR value sets.');
+      logger.info(`Converted ${valueSets.length} FHIR ValueSets.`);
     }
     return this.pkg;
   }
