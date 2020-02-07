@@ -106,7 +106,7 @@ async function app() {
   );
 
   // If ig-data exists, generate an IG, otherwise, generate resources only
-  logger.info('Exporting FHIR resources...');
+  logger.info('Exporting FHIR resources as JSON...');
   const igDataPath = path.resolve(input, 'ig-data');
   if (fs.existsSync(igDataPath)) {
     const igExporter = new IGExporter(outPackage, defs, igDataPath);
