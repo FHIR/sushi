@@ -363,6 +363,96 @@ describe('IGExporter', () => {
       expect(fs.existsSync(indexPath)).toBeTruthy();
       const content = fs.readFileSync(indexPath, 'utf8');
       expect(content).toMatch('My special index page.');
+
+      // Checks that the index.md file is added to IG definition
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toContainEqual({
+        nameUrl: 'index.html',
+        title: 'FSH Test IG',
+        generation: 'markdown'
+      });
+    });
+
+    it('should include additional user-provided pages of valid file type', () => {
+      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+
+      // All file contents get copied over
+      const otherFilePath = path.join(pageContentPath, 'other-page.md');
+      const otherContent = fs.readFileSync(otherFilePath, 'utf8');
+      expect(otherContent).toMatch('My other now-supported-page.');
+      const unsupportedFilePath = path.join(pageContentPath, 'unsupported.html');
+      const unsupportedContent = fs.readFileSync(unsupportedFilePath, 'utf8');
+      expect(unsupportedContent).toMatch('<p>An unsupported file type will copied over</p>');
+      const notesFilePath = path.join(pageContentPath, 'resource-notes.md');
+      const notesContent = fs.readFileSync(notesFilePath, 'utf8');
+      expect(notesContent).toContain('Some resource specific notes.');
+
+      // File information added to pages list in IG. Unsupported files and intro/notes files not included
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'FSH Test IG',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'other-page.html',
+          title: 'Other Page',
+          generation: 'markdown'
+        }
+      ]);
+    });
+
+    it('should include user-provided images', () => {
+      const imagesPath = path.join(tempOut, 'input', 'images');
+      expect(fs.existsSync(imagesPath)).toBeTruthy();
+      const imageFileNames = fs.readdirSync(imagesPath);
+      expect(imageFileNames).toEqual(['Shorty.png']);
+    });
+  });
+
+  describe('#customized-ig-with-index-xml', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-index-xml');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should use the user-provided index.xml if it exists', () => {
+      const indexPath = path.join(tempOut, 'input', 'pagecontent', 'index.xml');
+      expect(fs.existsSync(indexPath)).toBeTruthy();
+      const content = fs.readFileSync(indexPath, 'utf8');
+      expect(content).toContain('An index file in XML');
+
+      // Checks that the index.xml file is added to IG definition
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'FSH Test IG',
+          generation: 'html'
+        }
+      ]);
     });
   });
 
@@ -417,10 +507,16 @@ describe('IGExporter', () => {
       expect(content.IG.excludeMaps).toEqual('Yes');
     });
 
-    it('should log an error if the user attempted to add more pages', () => {
+    it('should add pages of an invalid file type but log a warning', () => {
+      // Check that pages were added
+      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+      const imageFileNames = fs.readdirSync(pageContentPath);
+      expect(imageFileNames).toContain('bad.html');
+
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-6)).toMatch(
-        /SUSHI does not yet support custom pagecontent other than index\.md\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
+        /Files not in the supported file types \(\.md and \.xml\) were detected\. These files will be copied over without any processing\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
 

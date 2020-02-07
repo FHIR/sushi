@@ -1,7 +1,7 @@
 import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirtypes';
 import { Profile, Extension } from '../fshtypes';
 import { FSHTank } from '../import';
-import { ParentNotDefinedError, InvalidExtensionSliceError } from '../errors';
+import { ParentNotDefinedError } from '../errors';
 import {
   CardRule,
   FixedValueRule,
@@ -138,6 +138,13 @@ export class StructureDefinitionExporter implements Fishable {
                     slice.type[0].profile = [];
                   }
                   slice.type[0].profile.push(extension.url);
+                } else {
+                  // If the extension is inline, fix its url element automatically to the sliceName
+                  const urlElement = structDef.findElementByPath(
+                    `${rule.path}[${slice.sliceName}].url`,
+                    this
+                  );
+                  urlElement.fixValue(slice.sliceName);
                 }
               }
             });
@@ -158,27 +165,6 @@ export class StructureDefinitionExporter implements Fishable {
         );
       }
     }
-  }
-
-  /**
-   * Does post processing validation on the sd
-   * @param {StructureDefinition} structDef - The sd to validate
-   * @throws {InvalidExtensionSliceError} when the sd contains an extension with invalid slices
-   */
-  private validateStructureDefinition(structDef: StructureDefinition): void {
-    // Need to check that extensions define a URL correctly
-    const extensionSlices = structDef.elements.filter(
-      e => e.path.endsWith('extension') && e.sliceName
-    );
-    extensionSlices.forEach(ext => {
-      const profileUrl =
-        ext.type?.length > 0 && ext.type[0].profile?.length > 0 && ext.type[0].profile[0];
-      const urlChild = ext.children().find(c => c.id === `${ext.id}.url`);
-      // If an element is a slice of extension, it should have a url in type, or a fixedUri
-      if (!profileUrl && !urlChild?.fixedUri) {
-        throw new InvalidExtensionSliceError(ext.sliceName);
-      }
-    });
   }
 
   fishForFHIR(item: string, ...types: Type[]) {
@@ -249,8 +235,6 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     this.setRules(structDef, fshDefinition);
-    this.validateStructureDefinition(structDef);
-
     structDef.inProgress = false;
 
     return structDef;

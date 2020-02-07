@@ -1250,6 +1250,33 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should apply a ContainsRule of an inline extension to an extension element', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = ['my-inline-extension'];
+    profile.rules.push(containsRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const extensionSlice = sd.elements.find(
+      e => e.id === 'Observation.extension:my-inline-extension'
+    );
+    const extensionSliceUrl = sd.elements.find(
+      e => e.id === 'Observation.extension:my-inline-extension.url'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('my-inline-extension');
+  });
+
   it('should apply multiple ContainsRule on an element with defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';
@@ -1359,34 +1386,6 @@ describe('StructureDefinitionExporter', () => {
 
     expect(sd.description).toBeUndefined();
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
-  });
-
-  // validateStructureDefinition
-  it('should throw InvalidExtensionSliceError when an extension is sliced without providing url', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'Observation';
-
-    const rule = new ContainsRule('extension');
-    rule.items = ['foo'];
-    profile.rules.push(rule);
-
-    expect(() => {
-      exporter.exportStructDef(profile);
-    }).toThrow(
-      'The slice foo on extension must reference an existing extension, or fix a url if the extension is defined inline.'
-    );
-  });
-
-  it('should log a message when exporting a package containing a sliced extension without a url', () => {
-    const profile = new Profile('Mystery').withFile('NoURL.fsh').withLocation([13, 1, 23, 28]);
-    profile.parent = 'Observation';
-
-    const rule = new ContainsRule('extension');
-    rule.items = ['mysterious'];
-    profile.rules.push(rule);
-    doc.profiles.set('Mystery', profile);
-    exporter.export();
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoURL\.fsh.*Line: 13 - 23\D/s);
   });
 
   // toJSON

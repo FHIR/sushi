@@ -43,18 +43,26 @@ export async function loadDependency(
     } else if (version === 'current') {
       // Current packages need to be loaded using build.fhir.org
       const baseUrl = 'http://build.fhir.org/ig';
-      const res = await rp.get({ uri: `${baseUrl}/qas.json`, json: true });
+      const res: { 'package-id': string; date: string; repo: string }[] = await rp.get({
+        uri: `${baseUrl}/qas.json`,
+        json: true
+      });
       // Find matching packages and sort by date to get the most recent
       let newestPackage;
       if (res && res.length > 0) {
-        const matchingPackages = res.filter((p: any) => p['package-id'] === packageName);
-        newestPackage = matchingPackages.sort((p1: any, p2: any) => {
+        const matchingPackages = res.filter(p => p['package-id'] === packageName);
+        newestPackage = matchingPackages.sort((p1, p2) => {
           return Date.parse(p2['date']) - Date.parse(p1['date']);
         })[0];
       }
-      if (newestPackage) {
-        // Current packages are stored at build.fhir.org
-        packageUrl = `${baseUrl}/${newestPackage.repo}/package.tgz`;
+      if (newestPackage && newestPackage.repo) {
+        // Find the package based on the first two parts of the package's 'repo' property.  E.g.,
+        //   "repo": "HL7/US-Core-R4/branches/test-branch-tweak/qa.json"
+        // means to find the package at:
+        //    http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz
+        // See: https://chat.fhir.org/#narrow/stream/179165-committers/topic/Build.20Problem/near/187610137
+        const [org, repo] = newestPackage.repo.split('/');
+        packageUrl = `${baseUrl}/${org}/${repo}/package.tgz`;
       } else {
         throw new CurrentPackageLoadError(fullPackageName);
       }

@@ -68,30 +68,30 @@ describe('#loadDependency()', () => {
       if (options.uri === 'http://build.fhir.org/ig/qas.json') {
         return [
           {
-            url: 'http://hl7.org/fhir/hspc/ImplementationGuide/hspc',
-            name: 'HSPC Implementation Guide',
-            'package-id': 'hl7.fhir.hspc',
-            'ig-ver': '1.0',
-            date: 'Thu, 11 Oct, 2018 11:00:14 -0600',
-            errs: 34,
-            warnings: 10,
-            hints: 0,
-            version: '3.0.1',
-            tool: '3.4.0-13844',
-            repo: 'nrdavis1/HSPCFHIRtest/bran'
+            url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core.r4-4.0.0',
+            name: 'USCoreR4',
+            'package-id': 'hl7.fhir.us.core.r4',
+            'ig-ver': '4.0.0',
+            date: 'Sat, 18 May, 2019 01:48:14 +0000',
+            errs: 538,
+            warnings: 34,
+            hints: 202,
+            version: '4.0.0',
+            tool: '4.1.0 (3)',
+            repo: 'HL7Imposter/US-Core-R4/branches/oldbranch/qa.json'
           },
           {
-            url: 'http://hl7.org/fhir/hspc/ImplementationGuide/hspc',
-            name: 'HSPC Implementation Guide',
-            'package-id': 'hl7.fhir.hspc',
-            'ig-ver': '1.0',
-            date: 'Tue, 05 Mar, 2019 12:02:14 -0700',
-            errs: 26980,
-            warnings: 10,
-            hints: 0,
-            version: '3.0.1',
-            tool: '3.4.0-13844',
-            repo: 'nrdavis1/HSPCFHIRtest/branches'
+            url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core.r4-4.0.0',
+            name: 'USCoreR4',
+            'package-id': 'hl7.fhir.us.core.r4',
+            'ig-ver': '4.0.0',
+            date: 'Mon, 20 Jan, 2020 19:36:43 +0000',
+            errs: 1496,
+            warnings: 36,
+            hints: 228,
+            version: '4.0.0',
+            tool: '4.1.0 (3)',
+            repo: 'HL7/US-Core-R4/branches/newbranch/qa.json'
           }
         ];
       } else {
@@ -138,8 +138,8 @@ describe('#loadDependency()', () => {
   });
 
   it('should try to load the latest package from build.fhir.org when a current package version is loaded', async () => {
-    await expect(loadDependency('hl7.fhir.hspc', 'current', defs, 'foo')).rejects.toThrow(
-      'The package hl7.fhir.hspc#current could not be loaded locally or from the FHIR package registry'
+    await expect(loadDependency('hl7.fhir.us.core.r4', 'current', defs, 'foo')).rejects.toThrow(
+      'The package hl7.fhir.us.core.r4#current could not be loaded locally or from the FHIR package registry'
     );
     expect(requestSpy.mock.calls[0]).toEqual([
       {
@@ -148,10 +148,10 @@ describe('#loadDependency()', () => {
       }
     ]);
     expect(requestSpy.mock.calls[1][0].uri).toBe(
-      'http://build.fhir.org/ig/nrdavis1/HSPCFHIRtest/branches/package.tgz'
+      'http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz'
     );
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#current')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#current'));
+    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.us.core.r4#current')]);
+    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.us.core.r4#current'));
   });
 
   it('should throw CurrentPackageLoadError when a current package is not listed', async () => {

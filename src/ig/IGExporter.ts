@@ -2,12 +2,15 @@ import fs from 'fs-extra';
 import path from 'path';
 import ini from 'ini';
 import sortBy from 'lodash/sortBy';
+import words from 'lodash/words';
+import { titleCase } from 'title-case';
 import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
 import { Package } from '../export';
 import {
   ContactDetail,
   ImplementationGuide,
-  ImplementationGuideDefinitionResource
+  ImplementationGuideDefinitionResource,
+  ImplementationGuideDefinitionPageGeneration
 } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -38,7 +41,8 @@ export class IGExporter {
     this.initIG();
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
-    this.checkForOtherPageContent();
+    this.addOtherPageContent(outPath);
+    this.addImages(outPath);
     this.addResources(outPath);
     this.addImplementationGuide(outPath);
     this.addIgIni(outPath);
@@ -88,13 +92,7 @@ export class IGExporter {
           nameUrl: 'toc.html',
           title: 'Table of Contents',
           generation: 'html',
-          page: [
-            {
-              nameUrl: 'index.html',
-              title: config.title ?? config.name,
-              generation: 'markdown'
-            }
-          ]
+          page: [] // index.[md|html] is required and added later
         },
         // Parameter apparently required by IG Publisher (as of Jan 29, 2020)
         parameter: [
@@ -183,30 +181,88 @@ export class IGExporter {
     ensureDirSync(path.join(igPath, 'input', 'pagecontent'));
 
     // If the user provided an index.md file, use that
-    const inputIndexPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
-    if (fs.existsSync(inputIndexPath)) {
-      fs.copySync(inputIndexPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+    const inputIndexMarkdownPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
+    const inputIndexXMLPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.xml');
+    let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
+    if (fs.existsSync(inputIndexMarkdownPath)) {
+      fs.copySync(inputIndexMarkdownPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+    } else if (fs.existsSync(inputIndexXMLPath)) {
+      fs.copySync(inputIndexXMLPath, path.join(igPath, 'input', 'pagecontent', 'index.xml'));
+      generation = 'html';
     } else {
       outputFileSync(
         path.join(igPath, 'input', 'pagecontent', 'index.md'),
         this.pkg.config.description ?? ''
       );
     }
+
+    // Add user-provided or generated index file to IG definition
+    this.ig.definition.page.page.push({
+      nameUrl: 'index.html',
+      title: this.ig.title,
+      generation
+    });
   }
 
   /**
-   * SUSHI doesn't yet support authors adding additional pages beyond index.md.  If we detect
-   * additional pages, we need to log an error.
+   * Adds additional pages beyond index.md that are defined by the user.
+   * Only add formats that are supported by the IG template
+   * Intro and notes file contents are injected into relevant pages and should not be treated as their own page
+   *
+   * @param igPath {string} - the path where the IG is exported to
    */
-  private checkForOtherPageContent() {
+  private addOtherPageContent(igPath: string) {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
     if (fs.existsSync(inputPageContentPath)) {
-      const pages = fs.readdirSync(inputPageContentPath);
-      if (pages.length > 1 || (pages.length === 1 && pages[0] !== 'index.md')) {
-        logger.error('SUSHI does not yet support custom pagecontent other than index.md.', {
+      const pages = fs
+        .readdirSync(inputPageContentPath)
+        .filter(page => page !== 'index.md' && page !== 'index.xml')
+        .sort(); // Sorts alphabetically
+
+      let invalidFileTypeIncluded = false;
+      pages.forEach(page => {
+        // All user defined pages are included in input/pagecontent
+        const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
+        fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', page));
+
+        const fileName = page.slice(0, page.lastIndexOf('.'));
+        const fileType = page.slice(page.lastIndexOf('.') + 1);
+        const isSupportedFileType = fileType === 'md' || fileType === 'xml';
+        const isIntroOrNotesFile = fileName.endsWith('-intro') || fileName.endsWith('-notes');
+        if (isSupportedFileType) {
+          // Intro and notes files will be in supported formats but are not separate pages, so they should not be added to IG definition
+          if (!isIntroOrNotesFile) {
+            // Valid page files will be added to the IG definition
+            this.ig.definition.page.page.push({
+              nameUrl: `${fileName}.html`,
+              title: `${titleCase(words(fileName).join(' '))}`,
+              generation: fileType === 'md' ? 'markdown' : 'html'
+            });
+          }
+        } else {
+          invalidFileTypeIncluded = true;
+        }
+      });
+      if (invalidFileTypeIncluded) {
+        const errorString =
+          'Files not in the supported file types (.md and .xml) were detected. These files will be copied over without any processing.';
+        logger.warn(errorString, {
           file: inputPageContentPath
         });
       }
+    }
+  }
+
+  /**
+   * Adds any user provided images that can be referenced directly in other pages
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
+  private addImages(igPath: string) {
+    // If the user provided additional image files, include them
+    const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
+    if (fs.existsSync(inputImagesPath)) {
+      fs.copySync(inputImagesPath, path.join(igPath, 'input', 'images'));
     }
   }
 
