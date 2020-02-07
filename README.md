@@ -37,7 +37,11 @@ If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", th
 
 * `ig-data/ig.ini`: If present, the user-provided igi.ini values will be merged with SUSHI-generated ig.ini.
 * `ig-data/package-list.json`: If present, it will be used instead of a generated package-list.json.
-* `ig-data/input/pagecontent/index.md`: If present, it will provide the content for the IG's main page.
+* `ig-data/input/pagecontent/index.[md|xml]`: If present, it will provide the content for the IG's main page.
+* `ig-data/input/pagecontent/*.[md|xml]`: If present, these files will be generated as individual pages in the IG and will be present in the table of contents.
+* `ig-data/input/pagecontent/{name-of-resource-file}-[intro|notes].[md|xml]`: If present, these files will place content directly on the relevant resource page. Intro files will place content before the resource definition; notes files will place content after.
+* `ig-data/input/pagecontent/*`: If present, all other files of any type that do not match the above patterns will be copied into the IG input, but will not appear in the table of contents.
+* `ig-data/input/images/*`: If present, image files will be copied into the IG input and can be referenced by user-provided pages.
 
 After running SUSHI, change to the output folder and run the `_updatePublisher` and `_genonce` scripts.
 
