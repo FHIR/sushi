@@ -679,14 +679,14 @@ export class FSHImporter extends FSHVisitor {
   visitCode(ctx: pc.CodeContext): FshCode {
     // split on the first unescaped #
     const conceptText = ctx.CODE().getText();
-    const splitPoint = conceptText.search(/$#|[^\\]#/);
+    const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
     let system: string, code: string;
-    if (splitPoint == 0) {
+    if (splitPoint == null) {
       system = '';
       code = conceptText.slice(1);
     } else {
-      system = conceptText.slice(0, splitPoint + 1);
-      code = conceptText.slice(splitPoint + 2);
+      system = conceptText.slice(0, splitPoint.index) + splitPoint[0].slice(0, -1);
+      code = conceptText.slice(splitPoint.index + splitPoint[0].length);
     }
     system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
     if (code.startsWith('"')) {

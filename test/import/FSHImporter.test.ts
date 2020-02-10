@@ -81,14 +81,24 @@ describe('FSHImporter', () => {
     Profile: HashBrowns
     Parent: Observation
     * code = https://breakfast.com/good\\\\food\\#potatoes#hash#browns
+    * extraCode = https://lastly.com/backslash\\\\#last
+    * bonusCode = \\\\\\\\#just_backslash "Just Backslash"
     `;
     const result = importSingleText(input, 'HashBrowns.fsh');
     const profile = result.profiles.get('HashBrowns');
     const expectedCode = new FshCode('hash#browns', 'https://breakfast.com/good\\food#potatoes')
       .withLocation([4, 14, 4, 67])
       .withFile('HashBrowns.fsh');
-    expect(profile.rules).toHaveLength(1);
+    const expectedExtraCode = new FshCode('last', 'https://lastly.com/backslash\\')
+      .withLocation([5, 19, 5, 53])
+      .withFile('HashBrowns.fsh');
+    const expectedBonusCode = new FshCode('just_backslash', '\\\\', 'Just Backslash')
+      .withLocation([6, 19, 6, 54])
+      .withFile('HashBrowns.fsh');
+    expect(profile.rules).toHaveLength(3);
     assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+    assertFixedValueRule(profile.rules[1], 'extraCode', expectedExtraCode);
+    assertFixedValueRule(profile.rules[2], 'bonusCode', expectedBonusCode);
   });
 
   it('should parse a rule with an identifying integer', () => {
