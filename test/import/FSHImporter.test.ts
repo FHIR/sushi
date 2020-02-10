@@ -76,6 +76,21 @@ describe('FSHImporter', () => {
     assertFixedValueRule(profile.rules[0], 'code', expectedCode);
   });
 
+  it('should parse escaped hash and backslash characters in system identifiers in codings', () => {
+    const input = `
+    Profile: HashBrowns
+    Parent: Observation
+    * code = https://breakfast.com/good\\\\food\\#potatoes#hash#browns
+    `;
+    const result = importSingleText(input, 'HashBrowns.fsh');
+    const profile = result.profiles.get('HashBrowns');
+    const expectedCode = new FshCode('hash#browns', 'https://breakfast.com/good\\food#potatoes')
+      .withLocation([4, 14, 4, 67])
+      .withFile('HashBrowns.fsh');
+    expect(profile.rules).toHaveLength(1);
+    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+  });
+
   it('should parse a rule with an identifying integer', () => {
     const input = `
     Profile: IdentifyingInteger
