@@ -677,12 +677,18 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCode(ctx: pc.CodeContext): FshCode {
-    const conceptText = ctx
-      .CODE()
-      .getText()
-      .split('#', 2);
-    const system = conceptText[0];
-    let code = conceptText[1];
+    // split on the first unescaped #
+    const conceptText = ctx.CODE().getText();
+    const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
+    let system: string, code: string;
+    if (splitPoint == null) {
+      system = '';
+      code = conceptText.slice(1);
+    } else {
+      system = conceptText.slice(0, splitPoint.index) + splitPoint[0].slice(0, -1);
+      code = conceptText.slice(splitPoint.index + splitPoint[0].length);
+    }
+    system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
     if (code.startsWith('"')) {
       code = code
         .slice(1, code.length - 1)
