@@ -155,13 +155,23 @@ export class InstanceExporter {
     element: ElementDefinition,
     fshDefinition: Instance
   ): void {
+    // Get only direct children of the element
     const children = element.children(true);
     children.forEach(child => {
       // Get the last part of the path, A.B.C => C
       const childPathEnd = child.path.split('.').slice(-1)[0];
       let instanceChild = instance[childPathEnd];
-
-      // Recursiely validate children of the current element
+      // If the element is a choice, we will fail to find it, we need to use the choice name
+      if (!instanceChild && childPathEnd.endsWith('[x]')) {
+        const choiceSlices = children.filter(c => c.path === child.path && c.sliceName);
+        for (const choiceSlice of choiceSlices) {
+          instanceChild = instance[choiceSlice.sliceName];
+          if (instanceChild) {
+            break;
+          }
+        }
+      }
+      // Recursively validate children of the current element
       if (instanceChild?.constructor === Array) {
         // Filter so that if the child is a slice, we only count relevant slices
         instanceChild = instanceChild.filter(

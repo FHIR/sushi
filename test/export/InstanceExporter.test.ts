@@ -997,6 +997,31 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should log an error when an [x] element is not present', () => {
+      const cardRule = new CardRule('deceased[x]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      exportInstance(patientInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 1]).toMatch(
+        /Patient.deceased\[x\].*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should not log an error when an [x] element is present', () => {
+      const originalLength = loggerSpy.getAllMessages('error').length;
+      const cardRule = new CardRule('deceased[x]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      const fixedValueRule = new FixedValueRule('deceasedBoolean');
+      fixedValueRule.fixedValue = true;
+      patientInstance.rules.push(fixedValueRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error').length).toBe(originalLength);
+    });
+
     it('should log an error when a required sliced element is not present', () => {
       const fixedValueRule = new FixedValueRule('result[Cholesterol]');
       fixedValueRule.fixedValue = new FshReference('Fsh are friends');
