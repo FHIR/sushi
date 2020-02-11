@@ -28,21 +28,24 @@ describe('IGExporter', () => {
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
       pkg = new Package(config);
-      const resources = path.join(fixtures, 'resources');
-      const instances = path.join(fixtures, 'instances');
-      fs.readdirSync(resources).forEach(f => {
+      const profiles = path.join(fixtures, 'profiles');
+      fs.readdirSync(profiles).forEach(f => {
         if (f.endsWith('.json')) {
-          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(resources, f)));
-          if (sd.type === 'Extension') {
-            pkg.extensions.push(sd);
-          } else {
-            pkg.profiles.push(sd);
-          }
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(profiles, f)));
+          pkg.profiles.push(sd);
         }
       });
-      fs.readdirSync(instances).forEach(f => {
+      const extensions = path.join(fixtures, 'extensions');
+      fs.readdirSync(extensions).forEach(f => {
         if (f.endsWith('.json')) {
-          const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(instances, f)));
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(extensions, f)));
+          pkg.extensions.push(sd);
+        }
+      });
+      const examples = path.join(fixtures, 'examples');
+      fs.readdirSync(examples).forEach(f => {
+        if (f.endsWith('.json')) {
+          const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(examples, f)));
           pkg.instances.push(instanceDef);
         }
       });
@@ -72,34 +75,6 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
-    });
-
-    it('should copy over the resource files', () => {
-      const resourcesPath = path.join(tempOut, 'input', 'resources');
-      expect(fs.readdirSync(resourcesPath)).toHaveLength(6);
-      const ids = [
-        'sample-observation',
-        'sample-patient',
-        'sample-value-extension',
-        'sample-complex-extension'
-      ];
-
-      // StructureDefinitions copied
-      ids.forEach(id => {
-        const resourcePath = path.join(resourcesPath, `StructureDefinition-${id}.json`);
-        expect(fs.existsSync(resourcePath)).toBeTruthy();
-        expect(fs.readJSONSync(resourcePath).id).toEqual(id);
-      });
-
-      // Instances copied
-      const instancePath = path.join(resourcesPath, 'Patient-example.json');
-      expect(fs.existsSync(instancePath)).toBeTruthy();
-      expect(fs.readJSONSync(instancePath).id).toEqual('example');
-
-      // Code Systems copied
-      const codeSystemPath = path.join(resourcesPath, 'CodeSystem-sample-code-system.json');
-      expect(fs.existsSync(codeSystemPath)).toBeTruthy();
-      expect(fs.readJSONSync(codeSystemPath).id).toEqual('sample-code-system');
     });
 
     it('should generate an ig.ini with the correct values based on the package.json', () => {
@@ -163,15 +138,6 @@ describe('IGExporter', () => {
           resource: [
             {
               reference: {
-                reference: 'StructureDefinition/sample-complex-extension'
-              },
-              name: 'SampleComplexExtension',
-              description:
-                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
-              exampleBoolean: false
-            },
-            {
-              reference: {
                 reference: 'StructureDefinition/sample-observation'
               },
               name: 'SampleObservation',
@@ -190,6 +156,15 @@ describe('IGExporter', () => {
             },
             {
               reference: {
+                reference: 'StructureDefinition/sample-complex-extension'
+              },
+              name: 'SampleComplexExtension',
+              description:
+                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+              exampleBoolean: false
+            },
+            {
+              reference: {
                 reference: 'StructureDefinition/sample-value-extension'
               },
               name: 'SampleValueExtension',
@@ -199,17 +174,18 @@ describe('IGExporter', () => {
             },
             {
               reference: {
+                reference: 'CodeSystem/sample-code-system'
+              },
+              name: 'SampleCodeSystem',
+              description: 'A code system description',
+              exampleBoolean: false
+            },
+            {
+              reference: {
                 reference: 'Patient/example'
               },
               name: 'Patient-example',
               exampleBoolean: true
-            },
-            {
-              reference: {
-                reference: 'CodeSystem/sample-code-system'
-              },
-              name: 'SampleCodeSystem',
-              description: 'A code system description'
             }
           ],
           page: {

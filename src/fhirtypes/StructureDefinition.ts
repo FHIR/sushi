@@ -24,6 +24,7 @@ import { applyMixins } from '../utils';
  * @see {@link http://hl7.org/fhir/R4/structuredefinition.html|FHIR StructureDefinition}
  */
 export class StructureDefinition {
+  readonly resourceType = 'StructureDefinition';
   // id: FHIRId; // provided by HasId mixin
   meta: Meta;
   implicitRules: string;
@@ -303,7 +304,7 @@ export class StructureDefinition {
    * @returns {any} the FHIR JSON representation of the StructureDefinition
    */
   toJSON(): any {
-    const j: LooseStructDefJSON = { resourceType: 'StructureDefinition' };
+    const j: LooseStructDefJSON = { resourceType: this.resourceType };
     // First handle properties that are just straight translations to JSON
     for (const prop of PROPS) {
       // @ts-ignore

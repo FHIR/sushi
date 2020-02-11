@@ -1,3 +1,4 @@
+import { cloneDeep } from 'lodash';
 import { Meta } from './specialTypes';
 import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
@@ -10,6 +11,7 @@ import { applyMixins } from '../utils';
  * @see {@link https://www.hl7.org/fhir/codesystem.html}
  */
 export class CodeSystem {
+  readonly resourceType = 'CodeSystem';
   // id?: FHIRId; // provided by HasId mixin
   meta?: Meta;
   implicitRules?: string;
@@ -59,8 +61,7 @@ export class CodeSystem {
    */
   toJSON(): any {
     return {
-      resourceType: 'CodeSystem',
-      ...this
+      ...cloneDeep(this)
     };
   }
 }

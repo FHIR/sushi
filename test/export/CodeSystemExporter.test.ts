@@ -45,6 +45,7 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
       status: 'active',
@@ -63,6 +64,7 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'CodeSystem1',
       status: 'active',
@@ -92,6 +94,7 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
       status: 'active',
@@ -115,6 +118,7 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
       status: 'active',
@@ -172,6 +176,7 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
       id: 'CaretCodeSystem',
       name: 'CaretCodeSystem',
       content: 'complete',
@@ -192,6 +197,7 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
       id: 'CaretCodeSystem',
       name: 'CaretCodeSystem',
       content: 'complete',
