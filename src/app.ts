@@ -123,10 +123,10 @@ async function app() {
   // If ig-data exists, generate an IG, otherwise, generate resources only
   const igDataPath = path.resolve(input, 'ig-data');
   if (fs.existsSync(igDataPath)) {
-    logger.info('Building FHIR Implementation Guide...');
+    logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath);
     igExporter.export(program.out);
-    logger.info('Built FHIR Implementation Guide; ready for IG Publisher.');
+    logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
   }
 
   logger.info(`
