@@ -79,19 +79,6 @@ export class InstanceExporter {
       }
     });
 
-    // Remove all _sliceName fields
-    replaceField(
-      instanceDef,
-      (o, p) => p === '_sliceName',
-      (o, p) => delete o[p]
-    );
-    // Change any {} to null
-    replaceField(
-      instanceDef,
-      (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
-      (o, p) => (o[p] = null)
-    );
-
     return instanceDef;
   }
 
@@ -155,6 +142,98 @@ export class InstanceExporter {
     }
   }
 
+  /**
+   * Check that all required elements are present on an InstanceDefinition or
+   * a sub-part of an InstanceDefinition for all children of an element.
+   * An element is required if it has minimum cardinality greater than 1.
+   * @param {{[key: string]: any}} instance - The InstanceDefinition or subsection of an InstanceDefinition we are validating
+   * @param {ElementDefinition} element - The element we are trying to validate all children of
+   * @param {Instance} fshDefinition - The FSH definition that we built the original InstanceDefinition from
+   */
+  private validateRequiredChildElements(
+    instance: { [key: string]: any },
+    element: ElementDefinition,
+    fshDefinition: Instance
+  ): void {
+    // Get only direct children of the element
+    const children = element.children(true);
+    children.forEach(child => {
+      // Get the last part of the path, A.B.C => C
+      const childPathEnd = child.path.split('.').slice(-1)[0];
+      let instanceChild = instance[childPathEnd];
+      // If the element is a choice, we will fail to find it, we need to use the choice name
+      if (instanceChild == null && childPathEnd.endsWith('[x]')) {
+        const choiceSlices = children.filter(c => c.path === child.path && c.sliceName);
+        for (const choiceSlice of choiceSlices) {
+          instanceChild = instance[choiceSlice.sliceName];
+          if (instanceChild != null) {
+            break;
+          }
+        }
+      }
+      // Recursively validate children of the current element
+      if (Array.isArray(instanceChild)) {
+        // Filter so that if the child is a slice, we only count relevant slices
+        instanceChild = instanceChild.filter(
+          (arrayEl: any) => !child.sliceName || arrayEl._sliceName === child.sliceName
+        );
+        instanceChild.forEach((arrayEl: any) =>
+          this.validateRequiredChildElements(arrayEl, child, fshDefinition)
+        );
+      } else if (instanceChild != null) {
+        this.validateRequiredChildElements(instanceChild, child, fshDefinition);
+      }
+      // Log an error if:
+      // 1 - The child element is 1.., but not on the instance
+      // 2 - The child element is n..m, but it has k < n elements
+      if (
+        (child.min > 0 && instanceChild == null) ||
+        (Array.isArray(instanceChild) && instanceChild.length < child.min)
+      ) {
+        // Can't point to any specific rule, so give sourceInfo of entire instance
+        logger.error(
+          `Element ${child.id} has minimum cardinality ${child.min} but occurs ${
+            instanceChild ? instanceChild.length : 0
+          } time(s).`,
+          fshDefinition.sourceInfo
+        );
+      }
+    });
+  }
+
+  /**
+   * Check that all required elements are present on an instance
+   * @param {InstanceDefinition} instanceDef - The InstanceDefinition we are validating
+   * @param {ElementDefinition[]} elements - The elements of the StructDef that instanceDef is an instance of
+   * @param {Instance} fshDefinition - The FSH definition that we built instanceDef from
+   */
+  private validateRequiredElements(
+    instanceDef: InstanceDefinition,
+    elements: ElementDefinition[],
+    fshDefinition: Instance
+  ): void {
+    this.validateRequiredChildElements(instanceDef, elements[0], fshDefinition);
+  }
+
+  /**
+   * Cleans up temporary properties that were added to the InstanceDefinition during processing
+   * @param {InstanceDefinition} instanceDef - The InstanceDefinition to clean
+   */
+  private cleanInstance(instanceDef: InstanceDefinition): void {
+    // Remove all _sliceName fields
+    replaceField(
+      instanceDef,
+      (o, p) => p === '_sliceName',
+      (o, p) => delete o[p]
+    );
+    // Change any {} to null
+    replaceField(
+      instanceDef,
+      (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
+      (o, p) => (o[p] = null)
+    );
+  }
+
   exportInstance(fshDefinition: Instance): InstanceDefinition {
     const json = this.fisher.fishForFHIR(
       fshDefinition.instanceOf,
@@ -187,6 +266,12 @@ export class InstanceExporter {
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     instanceDef.validateId(fshDefinition.sourceInfo);
+    this.validateRequiredElements(
+      instanceDef,
+      instanceOfStructureDefinition.elements,
+      fshDefinition
+    );
+    this.cleanInstance(instanceDef);
     return instanceDef;
   }
 
