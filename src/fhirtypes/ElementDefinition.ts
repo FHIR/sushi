@@ -320,8 +320,11 @@ export class ElementDefinition {
     diff.id = diff.diffId();
     // If the snapshot is a choice (e.g., value[x]), but the diff is a specific choice (e.g., valueString), then
     // remove the slicename property from the diff (it is implied and not required in the diff)
+    // If the snapshot is not a choice, the diff needs to have a sliceName, so use the original.
     if (this.path.endsWith('[x]') && !diff.path.endsWith('[x]')) {
       delete diff.sliceName;
+    } else if (original.sliceName && diff.sliceName == null) {
+      diff.sliceName = original.sliceName;
     }
     return diff;
   }
