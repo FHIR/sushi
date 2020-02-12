@@ -94,14 +94,31 @@ async function app() {
 
   fs.ensureDirSync(program.out);
 
-  const resourceDir = path.join(program.out, 'input', 'resources');
-  fs.ensureDirSync(resourceDir);
-
   fs.writeFileSync(
     path.join(program.out, 'package.json'),
     JSON.stringify(outPackage.config, null, 2),
     'utf8'
   );
+
+  logger.info('Exporting FHIR resources as JSON...');
+  let count = 0;
+  const writeResources = (
+    folder: string,
+    resources: { getFileName: () => string; toJSON: () => any }[]
+  ) => {
+    const exportDir = path.join(program.out, 'input', folder);
+    resources.forEach(resource => {
+      fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(), {
+        spaces: 2
+      });
+      count++;
+    });
+  };
+  writeResources('profiles', outPackage.profiles);
+  writeResources('extensions', outPackage.extensions);
+  writeResources('vocabulary', [...outPackage.valueSets, ...outPackage.codeSystems]);
+  writeResources('examples', outPackage.instances);
+  logger.info(`Exported ${count} FHIR resources as JSON.`);
 
   // If ig-data exists, generate an IG, otherwise, generate resources only
   const igDataPath = path.resolve(input, 'ig-data');
@@ -110,24 +127,6 @@ async function app() {
     const igExporter = new IGExporter(outPackage, defs, igDataPath);
     igExporter.export(program.out);
     logger.info('Built FHIR Implementation Guide; ready for IG Publisher.');
-  } else {
-    logger.info('Exporting FHIR resources as JSON...');
-    let count = 0;
-    for (const sd of [
-      ...outPackage.profiles,
-      ...outPackage.extensions,
-      ...outPackage.instances,
-      ...outPackage.valueSets,
-      ...outPackage.codeSystems
-    ]) {
-      fs.writeFileSync(
-        path.join(resourceDir, sd.getFileName()),
-        JSON.stringify(sd.toJSON(), null, 2),
-        'utf8'
-      );
-      count++;
-    }
-    logger.info(`Exported ${count} FHIR resources as JSON.`);
   }
 
   logger.info(`

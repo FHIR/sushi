@@ -1545,6 +1545,42 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should include sliceName in a differential when an attribute of the slice is changed', () => {
+    const profile = new Profile('MustSlice');
+    profile.parent = 'resprate';
+    const mustCode = new FlagRule('code.coding[RespRateCode]');
+    mustCode.mustSupport = true;
+    profile.rules.push(mustCode);
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const json = sd.toJSON();
+    expect(json.differential.element).toHaveLength(1);
+    expect(json.differential.element[0]).toEqual({
+      id: 'Observation.code.coding:RespRateCode',
+      path: 'Observation.code.coding',
+      sliceName: 'RespRateCode',
+      mustSupport: true
+    });
+  });
+
+  it.skip('should not change sliceName based on a CaretValueRule', () => {
+    const profile = new Profile('NameChange');
+    profile.parent = 'resprate';
+    const sliceChange = new CaretValueRule('code.coding[RespRateCode]');
+    sliceChange.caretPath = 'sliceName';
+    sliceChange.value = 'SomeOtherCode';
+    profile.rules.push(sliceChange);
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const json = sd.toJSON();
+    expect(json.differential.element).toHaveLength(1);
+    expect(json.differential.element[0]).toEqual({
+      id: 'Observation.code.coding:RespRateCode',
+      path: 'Observation.code.coding',
+      sliceName: 'RespRateCode'
+    });
+  });
+
   // No duplicate structure definitions exported
   it('should not export duplicate structure definitions', () => {
     const profile = new Profile('Foo');
