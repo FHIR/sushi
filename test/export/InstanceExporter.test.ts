@@ -121,7 +121,7 @@ describe('InstanceExporter', () => {
   describe('#exportInstance', () => {
     let patient: Profile;
     let patientProf: Profile;
-    let instance: Instance;
+    let patientInstance: Instance;
     let patientProfInstance: Instance;
     let lipidInstance: Instance;
     let valueSetInstance: Instance;
@@ -132,13 +132,17 @@ describe('InstanceExporter', () => {
       patientProf = new Profile('TestPatientProf');
       patientProf.parent = 'patient-proficiency';
       doc.profiles.set(patientProf.name, patientProf);
-      instance = new Instance('Bar');
-      instance.instanceOf = 'TestPatient';
-      doc.instances.set(instance.name, instance);
+      patientInstance = new Instance('Bar')
+        .withFile('PatientInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      patientInstance.instanceOf = 'TestPatient';
+      doc.instances.set(patientInstance.name, patientInstance);
       patientProfInstance = new Instance('Baz');
       patientProfInstance.instanceOf = 'TestPatientProf';
       doc.instances.set(patientProfInstance.name, patientProfInstance);
-      lipidInstance = new Instance('Bam');
+      lipidInstance = new Instance('Bam')
+        .withFile('LipidInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
       lipidInstance.instanceOf = 'lipidprofile';
       doc.instances.set(lipidInstance.name, lipidInstance);
       valueSetInstance = new Instance('Boom');
@@ -148,7 +152,7 @@ describe('InstanceExporter', () => {
 
     // Setting Metadata
     it('should set meta.profile to the defining URL we are making an instance of', () => {
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.meta).toEqual({
         profile: ['http://example.com/StructureDefinition/TestPatient']
       });
@@ -213,7 +217,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.active).toEqual(true);
     });
 
@@ -221,7 +225,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.active).toBeUndefined();
       expect(loggerSpy.getLastMessage()).toMatch(
         'Element Patient.active is optional with min cardinality 0, so fixed value for optional element is not set on instance Bar'
@@ -264,7 +268,7 @@ describe('InstanceExporter', () => {
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
       patient.rules.push(fixedValRule);
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
       });
@@ -337,7 +341,7 @@ describe('InstanceExporter', () => {
       const cardRule = new CardRule('deceasedBoolean');
       cardRule.min = 1;
       patient.rules.push(cardRule);
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.deceasedBoolean).toBe(true);
     });
 
@@ -347,8 +351,8 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('active');
       instanceFixedValRule.fixedValue = true;
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.active).toEqual(true);
     });
 
@@ -360,8 +364,8 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('maritalStatus');
       const instanceFixedFshCode = new FshCode('foo', 'http://foo.com');
       instanceFixedValRule.fixedValue = instanceFixedFshCode;
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
       });
@@ -376,8 +380,8 @@ describe('InstanceExporter', () => {
       patient.rules.push(cardRule);
       const instanceFixedValRule = new FixedValueRule('active');
       instanceFixedValRule.fixedValue = false;
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.active).toBe(true);
       expect(loggerSpy.getLastMessage()).toMatch(
         'Cannot fix false to this element; a different boolean is already fixed: true'
@@ -395,8 +399,8 @@ describe('InstanceExporter', () => {
       const instanceFixedValRule = new FixedValueRule('maritalStatus');
       const instanceFixedFshCode = new FshCode('bar', 'http://bar.com');
       instanceFixedValRule.fixedValue = instanceFixedFshCode;
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus.coding[0]).toEqual({
         code: 'foo',
         system: 'http://foo.com'
@@ -416,8 +420,8 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('communication[0].language');
       instanceFixedValRule.fixedValue = new FshCode('foo');
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.communication[0]).toEqual({
         preferred: true,
         language: { coding: [{ code: 'foo' }] }
@@ -435,8 +439,8 @@ describe('InstanceExporter', () => {
         'communication[0].language.coding[0].version'
       );
       instanceFixedValRule.fixedValue = 'bar';
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.communication[0]).toEqual({
         language: { text: 'foo', coding: [{ version: 'bar' }] }
       });
@@ -446,7 +450,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new FixedValueRule('communication.preferred');
       fixedValRule.fixedValue = true;
       patient.rules.push(fixedValRule);
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.communication).toBeUndefined();
     });
 
@@ -464,8 +468,8 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('contact.gender');
       instanceFixedValRule.fixedValue = new FshCode('foo');
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.contact).toEqual([
         {
           gender: 'foo',
@@ -481,8 +485,8 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].version');
       instanceFixedValRule.fixedValue = '1.2.3';
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
         coding: [
           {
@@ -500,11 +504,11 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].version');
       instanceFixedValRule.fixedValue = '1.2.3';
-      instance.rules.push(instanceFixedValRule);
+      patientInstance.rules.push(instanceFixedValRule);
       const instanceFixedValRule2 = new FixedValueRule('maritalStatus.coding[1].version');
       instanceFixedValRule2.fixedValue = '3.2.1';
-      instance.rules.push(instanceFixedValRule2);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule2);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
         coding: [
           {
@@ -527,8 +531,8 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].version');
       instanceFixedValRule.fixedValue = '1.2.3';
-      instance.rules.push(instanceFixedValRule);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
         coding: [
           {
@@ -546,11 +550,11 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule1 = new FixedValueRule('maritalStatus.coding[0].version');
       instanceFixedValRule1.fixedValue = '1.2.3';
-      instance.rules.push(instanceFixedValRule1);
+      patientInstance.rules.push(instanceFixedValRule1);
       const instanceFixedValRule2 = new FixedValueRule('maritalStatus.coding[1].version');
       instanceFixedValRule2.fixedValue = '3.2.1';
-      instance.rules.push(instanceFixedValRule2);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(instanceFixedValRule2);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
         coding: [
           {
@@ -572,7 +576,7 @@ describe('InstanceExporter', () => {
       const cardRule = new CardRule('maritalStatus');
       cardRule.min = 1;
       patient.rules.push(cardRule);
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
         coding: [
           {
@@ -592,29 +596,29 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('maritalStatus.coding[0].system');
       instanceFixedValRule.fixedValue = 'http://bar.com';
-      instance.rules.push(instanceFixedValRule);
-      expect(() => exportInstance(instance)).toThrow();
+      patientInstance.rules.push(instanceFixedValRule);
+      expect(() => exportInstance(patientInstance)).toThrow();
     });
 
     // Fixing children of primitives
     it('should fix children of primitive values on an instance', () => {
       const fixedValRule = new FixedValueRule('active.id');
       fixedValRule.fixedValue = 'foo';
-      instance.rules.push(fixedValRule);
-      doc.instances.set(instance.name, instance);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(fixedValRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+      const exported = exportInstance(patientInstance);
       expect(exported._active.id).toBe('foo');
     });
 
     it('should fix primitive values and their children on an instance', () => {
       const fixedValRule1 = new FixedValueRule('active');
       fixedValRule1.fixedValue = true;
-      instance.rules.push(fixedValRule1);
+      patientInstance.rules.push(fixedValRule1);
       const fixedValRule2 = new FixedValueRule('active.id');
       fixedValRule2.fixedValue = 'foo';
-      instance.rules.push(fixedValRule2);
-      doc.instances.set(instance.name, instance);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(fixedValRule2);
+      doc.instances.set(patientInstance.name, patientInstance);
+      const exported = exportInstance(patientInstance);
       expect(exported.active).toBe(true);
       expect(exported._active.id).toBe('foo');
     });
@@ -622,9 +626,9 @@ describe('InstanceExporter', () => {
     it('should fix children of primitive value arrays on an instance', () => {
       const fixedValRule = new FixedValueRule('address[0].line[1].extension[0].url');
       fixedValRule.fixedValue = 'foo';
-      instance.rules.push(fixedValRule);
-      doc.instances.set(instance.name, instance);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(fixedValRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+      const exported = exportInstance(patientInstance);
       expect(exported.address.length).toBe(1);
       expect(exported.address[0]._line.length).toBe(2);
       expect(exported.address[0]._line[0]).toBeNull();
@@ -635,12 +639,12 @@ describe('InstanceExporter', () => {
     it('should fix children of primitive value arrays on an instance with out of order rules', () => {
       const fixedValRule1 = new FixedValueRule('address[0].line[1].extension[0].url');
       fixedValRule1.fixedValue = 'bar';
-      instance.rules.push(fixedValRule1);
+      patientInstance.rules.push(fixedValRule1);
       const fixedValRule2 = new FixedValueRule('address[0].line[0].extension[0].url');
       fixedValRule2.fixedValue = 'foo';
-      instance.rules.push(fixedValRule2);
-      doc.instances.set(instance.name, instance);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(fixedValRule2);
+      doc.instances.set(patientInstance.name, patientInstance);
+      const exported = exportInstance(patientInstance);
       expect(exported.address.length).toBe(1);
       expect(exported.address[0]._line.length).toBe(2);
       expect(exported.address[0]._line[0].extension.length).toBe(1);
@@ -658,10 +662,10 @@ describe('InstanceExporter', () => {
       orgInstance.rules.push(fixedIdRule);
       const fixedRefRule = new FixedValueRule('managingOrganization');
       fixedRefRule.fixedValue = new FshReference('TestOrganization');
-      instance.rules.push(fixedRefRule);
-      doc.instances.set(instance.name, instance);
+      patientInstance.rules.push(fixedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
       doc.instances.set(orgInstance.name, orgInstance);
-      const exported = exportInstance(instance);
+      const exported = exportInstance(patientInstance);
       expect(exported.managingOrganization).toEqual({
         reference: 'Organization/org-id'
       });
@@ -670,9 +674,9 @@ describe('InstanceExporter', () => {
     it('should fix a reference without replacing if the referred Instance does not exist', () => {
       const fixedRefRule = new FixedValueRule('managingOrganization');
       fixedRefRule.fixedValue = new FshReference('http://example.com');
-      instance.rules.push(fixedRefRule);
-      doc.instances.set(instance.name, instance);
-      const exported = exportInstance(instance);
+      patientInstance.rules.push(fixedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+      const exported = exportInstance(patientInstance);
       expect(exported.managingOrganization).toEqual({
         reference: 'http://example.com'
       });
@@ -896,6 +900,175 @@ describe('InstanceExporter', () => {
           }
         ]
       });
+    });
+
+    // Validating required elements
+    it('should log an error when a required element is not present', () => {
+      const cardRule = new CardRule('active');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Patient.active.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log multiple errors when multiple required elements are not present', () => {
+      const cardRule1 = new CardRule('active');
+      cardRule1.min = 1;
+      cardRule1.max = '1';
+      patient.rules.push(cardRule1);
+      const cardRule2 = new CardRule('gender');
+      cardRule2.min = 1;
+      cardRule2.max = '1';
+      patient.rules.push(cardRule2);
+      exportInstance(patientInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 2]).toMatch(
+        /Patient.active.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+      expect(messages[messages.length - 1]).toMatch(
+        /Patient.gender.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when an element required by an incomplete fixed parent is not present', () => {
+      const cardRule = new CardRule('maritalStatus.text');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      const fixedValueRule = new FixedValueRule('maritalStatus');
+      fixedValueRule.fixedValue = new FshCode('foo');
+      patientInstance.rules.push(fixedValueRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Patient.maritalStatus.text.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error for a parent only when a required parent is not present', () => {
+      const cardRule1 = new CardRule('maritalStatus.text');
+      cardRule1.min = 1;
+      cardRule1.max = '1';
+      patient.rules.push(cardRule1);
+      const cardRule2 = new CardRule('maritalStatus');
+      cardRule2.min = 1;
+      cardRule2.max = '1';
+      patient.rules.push(cardRule2);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Patient.maritalStatus.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when an array does not have all required elements', () => {
+      const cardRule = new CardRule('contact');
+      cardRule.min = 2;
+      cardRule.max = '*';
+      patient.rules.push(cardRule);
+      const fixedValueRule = new FixedValueRule('contact[0].gender');
+      fixedValueRule.fixedValue = new FshCode('F');
+      patientInstance.rules.push(fixedValueRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Patient.contact.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error multiple times for an element missing required elements in an array', () => {
+      const cardRule = new CardRule('contact.gender');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      const fixedValueRule1 = new FixedValueRule('contact[0].relationship');
+      fixedValueRule1.fixedValue = new FshCode('Looking for love');
+      patientInstance.rules.push(fixedValueRule1);
+      const fixedValueRule2 = new FixedValueRule('contact[1].relationship');
+      fixedValueRule2.fixedValue = new FshCode('Complicated');
+      patientInstance.rules.push(fixedValueRule2);
+      exportInstance(patientInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 2]).toMatch(
+        /Patient.contact.gender.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+      expect(messages[messages.length - 1]).toMatch(
+        /Patient.contact.gender.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when an [x] element is not present', () => {
+      const cardRule = new CardRule('deceased[x]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      exportInstance(patientInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 1]).toMatch(
+        /Patient.deceased\[x\].*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should not log an error when an [x] element is present', () => {
+      const originalLength = loggerSpy.getAllMessages('error').length;
+      const cardRule = new CardRule('deceased[x]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      const fixedValueRule = new FixedValueRule('deceasedBoolean');
+      fixedValueRule.fixedValue = true;
+      patientInstance.rules.push(fixedValueRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error').length).toBe(originalLength);
+    });
+
+    it('should log an error when a required sliced element is not present', () => {
+      const fixedValueRule = new FixedValueRule('result[Cholesterol]');
+      fixedValueRule.fixedValue = new FshReference('Fsh are friends');
+      lipidInstance.rules.push(fixedValueRule);
+      exportInstance(lipidInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 4]).toMatch(
+        /DiagnosticReport.status.*File: LipidInstance\.fsh.*Line: 10 - 20/s
+      );
+      expect(messages[messages.length - 3]).toMatch(
+        /DiagnosticReport.result.*File: LipidInstance\.fsh.*Line: 10 - 20/s
+      );
+      expect(messages[messages.length - 2]).toMatch(
+        /DiagnosticReport.result:Triglyceride.*File: LipidInstance\.fsh.*Line: 10 - 20/s
+      );
+      expect(messages[messages.length - 1]).toMatch(
+        /DiagnosticReport.result:HDLCholesterol.*File: LipidInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when a required element inherited from a resource is not present', () => {
+      const observationInstance = new Instance('Pow')
+        .withFile('ObservationInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+      exportInstance(observationInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 1]).toMatch(
+        /Observation.code.*File: ObservationInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when a required element inherited on a profile is not present', () => {
+      const observationProfile = new Profile('TestObservation');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const observationInstance = new Instance('Pow')
+        .withFile('ObservationInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      observationInstance.instanceOf = 'TestObservation';
+      doc.instances.set(observationInstance.name, observationInstance);
+      exportInstance(observationInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 1]).toMatch(
+        /Observation.code.*File: ObservationInstance\.fsh.*Line: 10 - 20/s
+      );
     });
   });
 
