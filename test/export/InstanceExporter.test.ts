@@ -914,7 +914,7 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it('should log multiple errors when multiple required elemenets are not present', () => {
+    it('should log multiple errors when multiple required elements are not present', () => {
       const cardRule1 = new CardRule('active');
       cardRule1.min = 1;
       cardRule1.max = '1';
@@ -933,7 +933,7 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it('should log an error when an element required by a fixed parent is not present', () => {
+    it('should log an error when an element required by an incomplete fixed parent is not present', () => {
       const cardRule = new CardRule('maritalStatus.text');
       cardRule.min = 1;
       cardRule.max = '1';
@@ -1039,6 +1039,35 @@ describe('InstanceExporter', () => {
       );
       expect(messages[messages.length - 1]).toMatch(
         /DiagnosticReport.result:HDLCholesterol.*File: LipidInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when a required element inherited from a resource is not present', () => {
+      const observationInstance = new Instance('Pow')
+        .withFile('ObservationInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+      exportInstance(observationInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 1]).toMatch(
+        /Observation.code.*File: ObservationInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when a required element inherited on a profile is not present', () => {
+      const observationProfile = new Profile('TestObservation');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const observationInstance = new Instance('Pow')
+        .withFile('ObservationInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      observationInstance.instanceOf = 'TestObservation';
+      doc.instances.set(observationInstance.name, observationInstance);
+      exportInstance(observationInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages[messages.length - 1]).toMatch(
+        /Observation.code.*File: ObservationInstance\.fsh.*Line: 10 - 20/s
       );
     });
   });

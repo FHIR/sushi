@@ -162,17 +162,17 @@ export class InstanceExporter {
       const childPathEnd = child.path.split('.').slice(-1)[0];
       let instanceChild = instance[childPathEnd];
       // If the element is a choice, we will fail to find it, we need to use the choice name
-      if (!instanceChild && childPathEnd.endsWith('[x]')) {
+      if (instanceChild == null && childPathEnd.endsWith('[x]')) {
         const choiceSlices = children.filter(c => c.path === child.path && c.sliceName);
         for (const choiceSlice of choiceSlices) {
           instanceChild = instance[choiceSlice.sliceName];
-          if (instanceChild) {
+          if (instanceChild != null) {
             break;
           }
         }
       }
       // Recursively validate children of the current element
-      if (instanceChild?.constructor === Array) {
+      if (Array.isArray(instanceChild)) {
         // Filter so that if the child is a slice, we only count relevant slices
         instanceChild = instanceChild.filter(
           (arrayEl: any) => !child.sliceName || arrayEl._sliceName === child.sliceName
@@ -180,15 +180,15 @@ export class InstanceExporter {
         instanceChild.forEach((arrayEl: any) =>
           this.validateRequiredChildElements(arrayEl, child, fshDefinition)
         );
-      } else if (instanceChild) {
+      } else if (instanceChild != null) {
         this.validateRequiredChildElements(instanceChild, child, fshDefinition);
       }
       // Log an error if:
       // 1 - The child element is 1.., but not on the instance
       // 2 - The child element is n..m, but it has k < n elements
       if (
-        (child.min > 0 && !instanceChild) ||
-        (instanceChild?.constructor === Array && instanceChild.length < child.min)
+        (child.min > 0 && instanceChild == null) ||
+        (Array.isArray(instanceChild) && instanceChild.length < child.min)
       ) {
         // Can't point to any specific rule, so give sourceInfo of entire instance
         logger.error(
