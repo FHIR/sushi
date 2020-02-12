@@ -10,7 +10,10 @@ import {
   ContactDetail,
   ImplementationGuide,
   ImplementationGuideDefinitionResource,
-  ImplementationGuideDefinitionPageGeneration
+  ImplementationGuideDefinitionPageGeneration,
+  StructureDefinition,
+  ValueSet,
+  CodeSystem
 } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -39,7 +42,7 @@ export class IGExporter {
   export(outPath: string) {
     ensureDirSync(outPath);
     this.initIG();
-    this.addResources(outPath);
+    this.addResources();
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
     this.addOtherPageContent(outPath);
@@ -271,65 +274,38 @@ export class IGExporter {
 
   /**
    * Add each of the resources from the package to the ImplementationGuide JSON file.
-   *
-   * @param igPath {string} - the path where the IG is exported to
    */
-  private addResources(igPath: string) {
-    logger.info('Exporting FHIR resources as JSON for Implementation Guide...');
-    let count = 0;
-    const sds = sortBy([...this.pkg.profiles, ...this.pkg.extensions], sd => sd.name);
-    sds.forEach(sd => {
-      const sdPath = path.join(igPath, 'input', 'resources', sd.getFileName());
-      outputJSONSync(sdPath, sd.toJSON(), { spaces: 2 });
+  private addResources() {
+    const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
+      ...sortBy(this.pkg.profiles, sd => sd.name),
+      ...sortBy(this.pkg.extensions, sd => sd.name),
+      ...sortBy(this.pkg.valueSets, valueSet => valueSet.name),
+      ...sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name)
+    ];
+    resources.forEach(r => {
       this.ig.definition.resource.push({
-        reference: { reference: `StructureDefinition/${sd.id}` },
-        name: sd.title ?? sd.name,
-        description: sd.description,
+        reference: { reference: `${r.resourceType}/${r.id}` },
+        name: r.title ?? r.name,
+        description: r.description,
         exampleBoolean: false
       });
-      count++;
     });
-    sortBy(this.pkg.instances, instance => instance.id ?? instance.instanceName).forEach(
-      instance => {
-        const instancePath = path.join(igPath, 'input', 'resources', instance.getFileName());
-        outputJSONSync(instancePath, instance.toJSON(), { spaces: 2 });
-        const resource: ImplementationGuideDefinitionResource = {
-          reference: {
-            reference: `${instance.resourceType}/${instance.id ?? instance.instanceName}`
-          },
-          name: instance.getFileName().slice(0, -5) // Slice off the .json of the file name
-        };
-        const exampleUrl = instance.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
-        if (exampleUrl) {
-          resource.exampleCanonical = exampleUrl;
-        } else {
-          resource.exampleBoolean = true;
-        }
-        this.ig.definition.resource.push(resource);
-        count++;
+    const examples = sortBy(this.pkg.instances, instance => instance.id ?? instance.instanceName);
+    examples.forEach(example => {
+      const resource: ImplementationGuideDefinitionResource = {
+        reference: {
+          reference: `${example.resourceType}/${example.id ?? example.instanceName}`
+        },
+        name: example.getFileName().slice(0, -5) // Slice off the .json of the file name
+      };
+      const exampleUrl = example.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
+      if (exampleUrl) {
+        resource.exampleCanonical = exampleUrl;
+      } else {
+        resource.exampleBoolean = true;
       }
-    );
-    sortBy(this.pkg.valueSets, valueSet => valueSet.name).forEach(valueSet => {
-      const valueSetPath = path.join(igPath, 'input', 'resources', valueSet.getFileName());
-      outputJSONSync(valueSetPath, valueSet.toJSON(), { spaces: 2 });
-      this.ig.definition.resource.push({
-        reference: { reference: `ValueSet/${valueSet.id}` },
-        name: valueSet.title ?? valueSet.name,
-        description: valueSet.description
-      });
-      count++;
+      this.ig.definition.resource.push(resource);
     });
-    sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name).forEach(codeSystem => {
-      const codeSystemPath = path.join(igPath, 'input', 'resources', codeSystem.getFileName());
-      outputJSONSync(codeSystemPath, codeSystem.toJSON(), { spaces: 2 });
-      this.ig.definition.resource.push({
-        reference: { reference: `CodeSystem/${codeSystem.id}` },
-        name: codeSystem.title ?? codeSystem.name,
-        description: codeSystem.description
-      });
-      count++;
-    });
-    logger.info(`Exported ${count} FHIR resources as JSON for Implementation Guide.`);
   }
 
   /**

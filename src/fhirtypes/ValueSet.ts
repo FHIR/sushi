@@ -14,6 +14,7 @@ import { applyMixins } from '../utils';
  */
 
 export class ValueSet {
+  readonly resourceType = 'ValueSet';
   // id: FHIRId; // provided by HasId mixin
   meta: Meta;
   implicitRules: string;
@@ -54,7 +55,6 @@ export class ValueSet {
    */
   toJSON(): any {
     return {
-      resourceType: 'ValueSet',
       ...cloneDeep(this)
     };
   }
