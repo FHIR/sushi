@@ -323,6 +323,10 @@ export class ElementDefinition {
     if (this.path.endsWith('[x]') && !diff.path.endsWith('[x]')) {
       delete diff.sliceName;
     }
+    // If the original has a sliceName, the diff must include it, even if it didn't change
+    if (original.sliceName && diff.sliceName == null) {
+      diff.sliceName = original.sliceName;
+    }
     return diff;
   }
 
