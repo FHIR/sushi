@@ -51,6 +51,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       name: 'BreakfastVS',
       id: 'BreakfastVS',
       status: 'active',
@@ -76,6 +77,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       name: 'BreakfastVS',
       id: 'BreakfastVS',
       status: 'active',
@@ -129,6 +131,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       name: 'DinnerVS',
       id: 'DinnerVS',
       status: 'active',
@@ -152,6 +155,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       name: 'DinnerVS',
       id: 'DinnerVS',
       status: 'active',
@@ -177,6 +181,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
@@ -212,6 +217,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(3);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
@@ -246,6 +252,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
@@ -280,6 +287,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'BreakfastVS',
       name: 'BreakfastVS',
       url: 'http://example.com/ValueSet/BreakfastVS',
@@ -316,6 +324,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'BreakfastVS',
       name: 'BreakfastVS',
       url: 'http://example.com/ValueSet/BreakfastVS',
@@ -352,6 +361,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'BreakfastVS',
       name: 'BreakfastVS',
       url: 'http://example.com/ValueSet/BreakfastVS',
@@ -392,6 +402,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
@@ -446,6 +457,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
@@ -465,6 +477,7 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
       url: 'http://example.com/ValueSet/DinnerVS',
