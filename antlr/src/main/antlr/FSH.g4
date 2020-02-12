@@ -11,7 +11,7 @@ sdMetadata:         parent | id | title | description;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule;
 
 instance:           KW_INSTANCE SEQUENCE instanceMetadata* fixedValueRule*;
-instanceMetadata:   instanceOf | title;
+instanceMetadata:   instanceOf | title | description;
 
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;

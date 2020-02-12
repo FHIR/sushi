@@ -80,7 +80,7 @@ describe('InstanceExporter', () => {
     doc.instances.set(instanceBar.name, instanceBar);
     const exported = exporter.export().instances;
     expect(exported.length).toBe(1);
-    expect(exported[0].instanceName).toBe('Bar');
+    expect(exported[0]._instanceMeta.name).toBe('Bar');
   });
 
   it('should log a message with source information when the parent is not found', () => {
@@ -101,7 +101,7 @@ describe('InstanceExporter', () => {
     sdExporter.export();
     const exported = exporter.export().instances;
     expect(exported.length).toBe(1); // One instance is successfully exported because profile is defined
-    expect(exported[0].instanceName).toBe('Bar');
+    expect(exported[0]._instanceMeta.name).toBe('Bar');
     expect(exported[0].resourceType).toBe('Patient');
   });
 

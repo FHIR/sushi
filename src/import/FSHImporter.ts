@@ -59,6 +59,7 @@ enum SdMetadataKey {
 enum InstanceMetadataKey {
   InstanceOf = 'InstanceOf',
   Title = 'Title',
+  Description = 'Description',
   Unknown = 'Unknown'
 }
 
@@ -280,6 +281,8 @@ export class FSHImporter extends FSHVisitor {
           instance.instanceOf = pair.value;
         } else if (pair.key === InstanceMetadataKey.Title) {
           instance.title = pair.value;
+        } else if (pair.key === InstanceMetadataKey.Description) {
+          instance.description = pair.value;
         }
       });
     if (!instance.instanceOf) {
@@ -445,6 +448,11 @@ export class FSHImporter extends FSHVisitor {
       return { key: InstanceMetadataKey.InstanceOf, value: this.visitInstanceOf(ctx.instanceOf()) };
     } else if (ctx.title()) {
       return { key: InstanceMetadataKey.Title, value: this.visitTitle(ctx.title()) };
+    } else if (ctx.description()) {
+      return {
+        key: InstanceMetadataKey.Description,
+        value: this.visitDescription(ctx.description())
+      };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
