@@ -1388,6 +1388,74 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 
+  // Extension preprocessing
+  it('should zero out Extension.value[x] when Extension.extension is used', () => {
+    const extension = new Extension('MyInferredComplexExtension');
+    extension.id = 'complex-extension';
+
+    const cardRuleForExtension = new CardRule('extension');
+    cardRuleForExtension.min = 1;
+    cardRuleForExtension.max = '*';
+    extension.rules.push(cardRuleForExtension);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+  });
+
+  it('should not zero out Extension.value[x] if Extension.extension is zeroed out', () => {
+    const extension = new Extension('MyExplicitSimpleExtension');
+    extension.id = 'simple-extension';
+
+    const cardRuleForExtension = new CardRule('extension');
+    cardRuleForExtension.min = 0;
+    cardRuleForExtension.max = '0';
+    extension.rules.push(cardRuleForExtension);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('1');
+  });
+
+  it('should zero out Extension.extension when Extension.value[x] is used', () => {
+    const extension = new Extension('MyInferredSimpleExtension');
+    extension.id = 'simple-extension';
+
+    const onlyRuleForValue = new OnlyRule('value[x]');
+    onlyRuleForValue.types = [{ type: 'string' }];
+    extension.rules.push(onlyRuleForValue);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const extensionElement = sd.findElement('Extension.extension');
+
+    expect(extensionElement.min).toEqual(0);
+    expect(extensionElement.max).toEqual('0');
+  });
+
+  it('should not zero out Extension.extension if Extension.value[x] is zeroed out', () => {
+    const extension = new Extension('MyExplicitComplexExtension');
+    extension.id = 'complex-extension';
+
+    const cardRuleForValue = new CardRule('value[x]');
+    cardRuleForValue.min = 0;
+    cardRuleForValue.max = '0';
+    extension.rules.push(cardRuleForValue);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const extensionElement = sd.findElement('Extension.extension');
+
+    expect(extensionElement.min).toEqual(0);
+    expect(extensionElement.max).toEqual('*');
+  });
+
   // toJSON
   it('should correctly generate a diff containing only changed elements', () => {
     // We already have separate tests for the differentials, so this just ensures that the
