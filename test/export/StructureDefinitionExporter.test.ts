@@ -1388,6 +1388,130 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
   });
 
+  // Extension preprocessing
+  it('should zero out Extension.value[x] when Extension.extension is used', () => {
+    const extension = new Extension('MyInferredComplexExtension');
+    extension.id = 'complex-extension';
+
+    const cardRuleForExtension = new CardRule('extension');
+    cardRuleForExtension.min = 1;
+    cardRuleForExtension.max = '*';
+    extension.rules.push(cardRuleForExtension);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+  });
+
+  it('should not zero out Extension.value[x] if Extension.extension is zeroed out', () => {
+    const extension = new Extension('MyExplicitSimpleExtension');
+    extension.id = 'simple-extension';
+
+    const cardRuleForExtension = new CardRule('extension');
+    cardRuleForExtension.min = 0;
+    cardRuleForExtension.max = '0';
+    extension.rules.push(cardRuleForExtension);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('1');
+  });
+
+  it('should log an error if Extension.extension and Extension.value[x] are both used but apply both rules', () => {
+    const extension = new Extension('MyInvalidExtension');
+    extension.id = 'my-invalid-extension';
+
+    const onlyRuleForValueX = new OnlyRule('value[x]');
+    onlyRuleForValueX.types = [{ type: 'string' }];
+    extension.rules.push(onlyRuleForValueX);
+    const containsRuleForExtension = new ContainsRule('extension')
+      .withFile('InvalidExtension.fsh')
+      .withLocation([4, 7, 4, 15]);
+    containsRuleForExtension.items = ['MySlice'];
+    extension.rules.push(containsRuleForExtension);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+    const extensionElement = sd.findElement('Extension.extension:MySlice');
+
+    // Both rules are applied but an error is logged
+    expect(valueElement.type).toEqual([new ElementDefinitionType('string')]);
+    expect(extensionElement).toBeDefined();
+    expect(extensionElement.sliceName).toEqual('MySlice');
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /Extension MyInvalidExtension cannot have both a value and sub-extensions/s
+    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidExtension\.fsh.*Line: 4\D/s);
+  });
+
+  it('should zero out Extension.extension when Extension.value[x] is used', () => {
+    const extension = new Extension('MyInferredSimpleExtension');
+    extension.id = 'simple-extension';
+
+    const onlyRuleForValue = new OnlyRule('value[x]');
+    onlyRuleForValue.types = [{ type: 'string' }];
+    extension.rules.push(onlyRuleForValue);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const extensionElement = sd.findElement('Extension.extension');
+
+    expect(extensionElement.min).toEqual(0);
+    expect(extensionElement.max).toEqual('0');
+  });
+
+  it('should not zero out Extension.extension if Extension.value[x] is zeroed out', () => {
+    const extension = new Extension('MyExplicitComplexExtension');
+    extension.id = 'complex-extension';
+
+    const cardRuleForValue = new CardRule('value[x]');
+    cardRuleForValue.min = 0;
+    cardRuleForValue.max = '0';
+    extension.rules.push(cardRuleForValue);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const extensionElement = sd.findElement('Extension.extension');
+
+    expect(extensionElement.min).toEqual(0);
+    expect(extensionElement.max).toEqual('*');
+  });
+
+  it('should log an error if Extension.value[x] is changed after Extension.extension is used', () => {
+    const extension = new Extension('MyOtherInvalidExtension');
+    extension.id = 'my-invalid-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['MySlice'];
+    extension.rules.push(containsRuleForExtension);
+    const onlyRuleForValueX = new OnlyRule('value[x]')
+      .withFile('OtherInvalidExtension.fsh')
+      .withLocation([4, 7, 4, 15]);
+    onlyRuleForValueX.types = [{ type: 'string' }];
+    extension.rules.push(onlyRuleForValueX);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const extensionElement = sd.findElement('Extension.extension:MySlice');
+    const valueElement = sd.findElement('Extension.value[x]');
+
+    // Both rules are applied but an error is logged
+    expect(extensionElement).toBeDefined();
+    expect(extensionElement.sliceName).toEqual('MySlice');
+    expect(valueElement.type).toEqual([new ElementDefinitionType('string')]);
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /Extension MyOtherInvalidExtension cannot have both a value and sub-extensions/s
+    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: OtherInvalidExtension\.fsh.*Line: 4\D/s);
+  });
+
   // toJSON
   it('should correctly generate a diff containing only changed elements', () => {
     // We already have separate tests for the differentials, so this just ensures that the

@@ -167,6 +167,52 @@ export class StructureDefinitionExporter implements Fishable {
     }
   }
 
+  /**
+   * Does any necessary preprocessing of extensions.
+   * @param {Extension} fshDefinition - The extension to do preprocessing on. It is updated directly based on processing.
+   */
+  private preprocessExtension(fshDefinition: Extension): void {
+    let hasRuleAppliedToValueX = false;
+    let hasRuleAppliedToExtension = false;
+    fshDefinition.rules.forEach(rule => {
+      if (rule.path.startsWith('extension')) {
+        if (hasRuleAppliedToValueX) {
+          logger.error(
+            `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
+            rule.sourceInfo
+          );
+        }
+        if (!(rule instanceof CardRule && rule.max === '0')) {
+          hasRuleAppliedToExtension = true;
+        }
+      } else if (rule.path.startsWith('value')) {
+        if (hasRuleAppliedToExtension) {
+          logger.error(
+            `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
+            rule.sourceInfo
+          );
+        }
+        if (!(rule instanceof CardRule && rule.max === '0')) {
+          hasRuleAppliedToValueX = true;
+        }
+      }
+    });
+
+    // If only value[x] or extension is use, constrain cardinality of the other to 0..0.
+    // If both are used, an error has been logged, but the rules will still be applied.
+    if (hasRuleAppliedToExtension && !hasRuleAppliedToValueX) {
+      const valueCardRule = new CardRule('value[x]');
+      valueCardRule.min = 0;
+      valueCardRule.max = '0';
+      fshDefinition.rules.push(valueCardRule);
+    } else if (hasRuleAppliedToValueX && !hasRuleAppliedToExtension) {
+      const extensionCardRule = new CardRule('extension');
+      extensionCardRule.min = 0;
+      extensionCardRule.max = '0';
+      fshDefinition.rules.push(extensionCardRule);
+    }
+  }
+
   fishForFHIR(item: string, ...types: Type[]) {
     let result = this.fisher.fishForFHIR(item, ...types);
     if (
@@ -230,6 +276,7 @@ export class StructureDefinitionExporter implements Fishable {
     // incomplete definitions to be used to resolve circular reference issues.
     if (structDef.type === 'Extension') {
       this.pkg.extensions.push(structDef);
+      this.preprocessExtension(fshDefinition as Extension);
     } else {
       this.pkg.profiles.push(structDef);
     }
