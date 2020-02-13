@@ -75,14 +75,14 @@ describe('Package', () => {
     pkg.codeSystems.push(codeSystem1);
     // Instance[0]: DrSue / dr-sue / Practitioner
     const instance0 = new InstanceDefinition();
-    instance0.instanceName = 'DrSue';
+    instance0._instanceMeta.name = 'DrSue';
     instance0.id = 'dr-sue';
     instance0.resourceType = 'Practitioner';
     instance0.gender = 'female';
     pkg.instances.push(instance0);
     // Instance[1]: DrBob / dr-bob / Practitioner
     const instance1 = new InstanceDefinition();
-    instance1.instanceName = 'DrBob';
+    instance1._instanceMeta.name = 'DrBob';
     instance1.id = 'dr-bob';
     instance1.meta = { profile: ['http://unreal.org/StructureDefinition/super-practitioner'] };
     instance1.resourceType = 'Practitioner';
