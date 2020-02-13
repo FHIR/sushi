@@ -100,27 +100,105 @@ describe('ElementDefinition', () => {
         display: 'bar'
       });
     });
+
+    it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern', () => {
+      const medicationForm = medication.elements.find(e => e.id === 'Medication.form');
+      medicationForm.fixValue(new FshCode('foo', 'http://thankYouForSettingMe.com'));
+      const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
+      expect(() => {
+        medicationFormCodingSystem.fixValue('http://ohManIWillNeverGetSet.sad');
+      }).toThrow(
+        'Cannot fix http://ohManIWillNeverGetSet.sad to this element; a different uri is already fixed: http://thankYouForSettingMe.com'
+      );
+    });
   });
-  describe('#fixedByParent', () => {
+
+  describe('#fixedByDirectParent', () => {
     it('should find a pattern value from the parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
       statusReason.fixValue(new FshCode('foo'));
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
-      const patternValue = statusReasonCoding.fixedByParent();
+      const patternValue = statusReasonCoding.fixedByDirectParent();
       expect(patternValue).toEqual([{ code: 'foo' }]);
     });
 
     it('should not find a pattern value from the parent when none is present', () => {
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
-      const patternValue = statusReasonCoding.fixedByParent();
+      const patternValue = statusReasonCoding.fixedByDirectParent();
       expect(patternValue).toBeUndefined();
     });
 
     it('should return undefined when being run on the root element', () => {
       const root = medicationRequest.elements.find(e => e.id === 'MedicationRequest');
-      const patternValue = root.fixedByParent();
+      const patternValue = root.fixedByDirectParent();
+      expect(patternValue).toBeUndefined();
+    });
+  });
+
+  describe('#fixedByAnyParent', () => {
+    it('should find a pattern value from a direct parent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo'));
+      const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
+      const patternValue = statusReasonCoding.fixedByAnyParent();
+      expect(patternValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should find a pattern value from a grandparent when it exists', () => {
+      const identifier = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.identifier'
+      );
+      identifier.max = '1';
+      // @ts-ignore
+      identifier.patternIdentifier = { period: { start: '2011-11-11' } };
+      const identifierPeriodStart = medicationRequest.findElementByPath(
+        'identifier.period.start',
+        fisher
+      );
+      const patternValue = identifierPeriodStart.fixedByAnyParent();
+      expect(patternValue).toBe('2011-11-11');
+    });
+
+    it('should find an array pattern value from a grandparent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo', 'bar'));
+      const statusReasonCodingSystem = medicationRequest.findElementByPath(
+        'statusReason.coding.system',
+        fisher
+      );
+      // Single element in array
+      let patternValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(patternValue).toBe('bar');
+
+      // Multiple not matching array elements
+      statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'bar' }] };
+      patternValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(patternValue).toBeUndefined();
+
+      // Multiple matching array elements
+      statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'foo' }] };
+      patternValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(patternValue).toBe('foo');
+    });
+
+    it('should not find a pattern value from the parent when none is present', () => {
+      const statusReasonCoding = medicationRequest.findElementByPath(
+        'statusReason.coding.version',
+        fisher
+      );
+      const patternValue = statusReasonCoding.fixedByAnyParent();
+      expect(patternValue).toBeUndefined();
+    });
+
+    it('should return undefined when being run on the root element', () => {
+      const root = medicationRequest.elements.find(e => e.id === 'MedicationRequest');
+      const patternValue = root.fixedByAnyParent();
       expect(patternValue).toBeUndefined();
     });
   });

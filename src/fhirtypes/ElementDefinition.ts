@@ -843,6 +843,9 @@ export class ElementDefinition {
     currentElementValue: boolean | string | number,
     elementType: string
   ): true | undefined {
+    if (currentElementValue == null) {
+      currentElementValue = this.fixedByAnyParent();
+    }
     if (currentElementValue != null && currentElementValue !== value) {
       throw new ValueAlreadyFixedError(value, elementType, currentElementValue);
     }
@@ -853,12 +856,43 @@ export class ElementDefinition {
    * Checks if an element is fixed by a pattern[x] on its direct parent
    * @returns {any} the value the element is fixed to by its parent, undefined if value is not fixed
    */
-  fixedByParent(): any {
+  fixedByDirectParent(): any {
     const parent = this.parent();
     const patternKey = parent ? Object.keys(parent).find(k => k.startsWith('pattern')) : null;
     if (patternKey) {
       const patternValue: any = parent[patternKey as keyof ElementDefinition];
       return patternValue[this.path.replace(`${parent.path}.`, '')];
+    }
+  }
+
+  /**
+   * Checks if an element is fixed by a pattern[x] on any of its parents
+   * @returns {any} the value the element is fixed to by its parent, undefined if value is not fixed
+   */
+  fixedByAnyParent(): any {
+    const parent = this.parent();
+    if (parent == null) {
+      return;
+    } else {
+      let fixedValue = this.fixedByDirectParent();
+      if (fixedValue == null) {
+        // Get the value from the parent, and index into that value
+        const parentValue = parent.fixedByAnyParent();
+        const childIndex = this.path.replace(`${parent.path}.`, '');
+        if (Array.isArray(parentValue)) {
+          // If the value is an array, there are two cases
+          // 1 - All the fixed values in the array match => return the value
+          // 2 - The fixed values in the array don't match => return undefined
+          fixedValue =
+            parentValue.every(pv => pv[childIndex] === parentValue[0][childIndex]) &&
+            parentValue.length > 0
+              ? parentValue[0][childIndex]
+              : undefined;
+        } else {
+          fixedValue = parentValue?.[childIndex];
+        }
+      }
+      return fixedValue;
     }
   }
 
