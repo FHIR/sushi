@@ -2,7 +2,6 @@ import cloneDeep = require('lodash/cloneDeep');
 import { Meta } from './specialTypes';
 import { HasId } from './common';
 import { applyMixins } from '../utils';
-import { isNull } from 'util';
 
 /**
  * A class representing a FHIR Instance.

@@ -290,7 +290,10 @@ export class IGExporter {
         exampleBoolean: false
       });
     });
-    const examples = sortBy(this.pkg.instances, instance => instance.id ?? instance.instanceName);
+    const examples = sortBy(
+      this.pkg.instances,
+      instance => instance.id ?? instance._instanceMeta.name
+    );
     examples.forEach(example => {
       const resource: ImplementationGuideDefinitionResource = {
         reference: {
