@@ -111,6 +111,15 @@ describe('ElementDefinition', () => {
         'Cannot fix http://ohManIWillNeverGetSet.sad to this element; a different uri is already fixed: http://thankYouForSettingMe.com'
       );
     });
+
+    it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern to a conflicting array', () => {
+      const medicationForm = medication.elements.find(e => e.id === 'Medication.form');
+      medicationForm.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'bar' }] };
+      const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
+      expect(() => {
+        medicationFormCodingSystem.fixValue('baz');
+      }).toThrow('Cannot fix baz to this element; a different uri is already fixed: foo,bar');
+    });
   });
 
   describe('#fixedByDirectParent', () => {
@@ -179,7 +188,7 @@ describe('ElementDefinition', () => {
       // Multiple not matching array elements
       statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'bar' }] };
       patternValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(patternValue).toBeUndefined();
+      expect(patternValue).toEqual(['foo', 'bar']);
 
       // Multiple matching array elements
       statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'foo' }] };

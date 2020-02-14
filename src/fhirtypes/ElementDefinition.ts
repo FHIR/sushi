@@ -882,12 +882,14 @@ export class ElementDefinition {
         if (Array.isArray(parentValue)) {
           // If the value is an array, there are two cases
           // 1 - All the fixed values in the array match => return the value
-          // 2 - The fixed values in the array don't match => return undefined
+          // 2 - The fixed values in the array don't match => return [val1, val2]
+          // since values do exist, but they conflict so no value should be allowed to be set
+          // and for any value [val1, val2] != value
           fixedValue =
             parentValue.every(pv => pv[childIndex] === parentValue[0][childIndex]) &&
             parentValue.length > 0
               ? parentValue[0][childIndex]
-              : undefined;
+              : parentValue.map(pv => pv[childIndex]);
         } else {
           fixedValue = parentValue?.[childIndex];
         }
