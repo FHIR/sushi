@@ -36,7 +36,7 @@ export class Package implements Fishable {
           def = this.codeSystems.find(cs => cs.id === item || cs.name === item || cs.url === item);
           break;
         case Type.Instance:
-          def = this.instances.find(i => i.id === item || i.instanceName === item);
+          def = this.instances.find(i => i.id === item || i._instanceMeta.name === item);
           break;
         case Type.Resource: // Package doesn't currently support resources
         case Type.Type: // Package doesn't currently support types
@@ -58,7 +58,7 @@ export class Package implements Fishable {
     if (result) {
       const metadata: Metadata = {
         id: result.id,
-        name: result instanceof InstanceDefinition ? result.instanceName : result.name,
+        name: result instanceof InstanceDefinition ? result._instanceMeta.name : result.name,
         url: result.url
       };
       if (result instanceof StructureDefinition) {

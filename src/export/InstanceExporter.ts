@@ -136,7 +136,7 @@ export class InstanceExporter {
         }
       } else if (foundFixedValue) {
         logger.debug(
-          `Element ${fixableElement.id} is optional with min cardinality 0, so fixed value for optional element is not set on instance ${instanceDef.instanceName}`
+          `Element ${fixableElement.id} is optional with min cardinality 0, so fixed value for optional element is not set on instance ${instanceDef._instanceMeta.name}`
         );
       }
     }
@@ -255,7 +255,13 @@ export class InstanceExporter {
 
     let instanceDef = new InstanceDefinition();
     instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
-    instanceDef.instanceName = fshDefinition.id; // This is name of the instance in the FSH
+    instanceDef._instanceMeta.name = fshDefinition.id; // This is name of the instance in the FSH
+    if (fshDefinition.title) {
+      instanceDef._instanceMeta.title = fshDefinition.title;
+    }
+    if (fshDefinition.description) {
+      instanceDef._instanceMeta.description = fshDefinition.description;
+    }
     instanceDef.id = fshDefinition.id;
 
     // Add the SD we are making an instance of to meta.profile, as long as SD is not a base FHIR resource

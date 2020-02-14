@@ -46,6 +46,11 @@ describe('IGExporter', () => {
       fs.readdirSync(examples).forEach(f => {
         if (f.endsWith('.json')) {
           const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(examples, f)));
+          // since instance meta isn't encoded in the JSON, add some here (usually done in the FSH import)
+          if (instanceDef.id === 'patient-example-two') {
+            instanceDef._instanceMeta.title = 'Another Patient Example';
+            instanceDef._instanceMeta.description = 'Another example of a Patient';
+          }
           pkg.instances.push(instanceDef);
         }
       });
@@ -182,9 +187,17 @@ describe('IGExporter', () => {
             },
             {
               reference: {
-                reference: 'Patient/example'
+                reference: 'Patient/patient-example'
               },
-              name: 'Patient-example',
+              name: 'patient-example',
+              exampleBoolean: true
+            },
+            {
+              reference: {
+                reference: 'Patient/patient-example-two'
+              },
+              name: 'Another Patient Example',
+              description: 'Another example of a Patient',
               exampleBoolean: true
             }
           ],

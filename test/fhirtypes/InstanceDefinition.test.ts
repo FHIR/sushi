@@ -31,7 +31,7 @@ describe('InstanceDefinition', () => {
 
   describe('#toJSON', () => {
     it('should round trip back to the original JSON', () => {
-      patientInstance.instanceName = 'TestName'; // If imported from FSH file, will have an instance name that is removed in toJSON
+      patientInstance._instanceMeta.name = 'TestName'; // If imported from FSH file, will have an instance name that is removed in toJSON
       const newJSON = patientInstance.toJSON();
       expect(newJSON).toEqual(patientInstanceJSON);
     });

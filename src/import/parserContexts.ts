@@ -46,6 +46,7 @@ export interface InstanceContext extends ParserRuleContext {
 export interface InstanceMetadataContext extends ParserRuleContext {
   instanceOf(): InstanceOfContext;
   title(): TitleContext;
+  description(): DescriptionContext;
 }
 
 export interface ValueSetContext extends ParserRuleContext {

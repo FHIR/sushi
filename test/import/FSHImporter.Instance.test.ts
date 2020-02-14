@@ -18,6 +18,7 @@ describe('FSHImporter', () => {
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBeUndefined();
+        expect(instance.description).toBeUndefined();
         expect(instance.rules.length).toBe(0);
         expect(instance.sourceInfo.location).toEqual({
           startLine: 2,
@@ -70,12 +71,30 @@ describe('FSHImporter', () => {
       });
     });
 
+    describe('#description', () => {
+      it('should parse an instance with a description', () => {
+        const input = `
+        Instance: MyObservation
+        InstanceOf: Observation
+        Description: "Shows an example of an Observation"
+        `;
+
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyObservation');
+        expect(instance.name).toBe('MyObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.description).toBe('Shows an example of an Observation');
+      });
+    });
+
     describe('#rules', () => {
       it('should parse an instance with fixed value rules', () => {
         const input = `
         Instance: SamplePatient
         InstanceOf: Patient
         Title: "Georgio Manos"
+        Description: "An example of a fictional patient named Georgio Manos"
         * name[0].family = "Georgio"
         * name[0].given[0] = "Manos"
         * gender = #other
@@ -84,13 +103,16 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('SamplePatient');
+        expect(instance.instanceOf).toBe('Patient');
+        expect(instance.title).toBe('Georgio Manos');
+        expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.rules.length).toBe(3);
         assertFixedValueRule(instance.rules[0], 'name[0].family', 'Georgio');
         assertFixedValueRule(instance.rules[1], 'name[0].given[0]', 'Manos');
         assertFixedValueRule(
           instance.rules[2],
           'gender',
-          new FshCode('other').withLocation([7, 20, 7, 25]).withFile('')
+          new FshCode('other').withLocation([8, 20, 8, 25]).withFile('')
         );
       });
     });
@@ -101,8 +123,10 @@ describe('FSHImporter', () => {
         Instance: MyObservation
         InstanceOf: Observation
         Title: "My Important Observation"
+        Description: "My Observation Description"
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
+        Description: "My Duplicate Observation Description"
         `;
 
         const result = importSingleText(input);
@@ -111,6 +135,7 @@ describe('FSHImporter', () => {
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBe('My Important Observation');
+        expect(instance.description).toBe('My Observation Description');
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -118,13 +143,16 @@ describe('FSHImporter', () => {
         Instance: MyObservation
         InstanceOf: Observation
         Title: "My Important Observation"
+        Description: "My Observation Description"
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
+        Description: "My Duplicate Observation Description"
         `;
 
         importSingleText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 5\D/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
       });
     });
   });

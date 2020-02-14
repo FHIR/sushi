@@ -290,13 +290,17 @@ export class IGExporter {
         exampleBoolean: false
       });
     });
-    const examples = sortBy(this.pkg.instances, instance => instance.id ?? instance.instanceName);
+    const examples = sortBy(
+      this.pkg.instances,
+      instance => instance.id ?? instance._instanceMeta.name
+    );
     examples.forEach(example => {
       const resource: ImplementationGuideDefinitionResource = {
         reference: {
-          reference: `${example.resourceType}/${example.id ?? example.instanceName}`
+          reference: `${example.resourceType}/${example.id ?? example._instanceMeta.name}`
         },
-        name: example.getFileName().slice(0, -5) // Slice off the .json of the file name
+        name: example._instanceMeta.title ?? example._instanceMeta.name,
+        description: example._instanceMeta.description
       };
       const exampleUrl = example.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
       if (exampleUrl) {
