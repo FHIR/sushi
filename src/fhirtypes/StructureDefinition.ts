@@ -412,9 +412,11 @@ export class StructureDefinition {
   ): { fixedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
     let currentPath = '';
+    let previousPath = '';
     let currentElement: ElementDefinition;
     for (const pathPart of pathParts) {
       // Construct the path up to this point
+      previousPath = currentPath;
       currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
       // If we are indexing into an array, the last bracket should be numeric
       const arrayIndex = getArrayIndex(pathPart);
@@ -426,6 +428,28 @@ export class StructureDefinition {
         pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
       }
       currentElement = this.findElementByPath(currentPath, fisher);
+      // Allow for adding extension elements to the instance that are not on the SD
+      if (!currentElement && pathPart.base === 'extension') {
+        // Get extension element (if currentPath is A.B.extension[C], get A.B.extension)
+        const extensionPath = `${previousPath ? `${previousPath}'.'` : ''}${pathPart.base}`;
+        const extensionElement = this.findElementByPath(extensionPath, fisher);
+        // Get the extension being referred to
+        const extension = fisher.fishForMetadata(pathPart.brackets[0]);
+        if (extension && extensionElement) {
+          // If the extension exists, add it as a slice to the SD so that we can fix it
+          // This function is only called by InstanceExporter on copies of SDs, not those being exported
+          if (!extensionElement.slicing) {
+            extensionElement.sliceIt('value', 'url');
+          }
+          const slice = extensionElement.addSlice(pathPart.brackets[0]);
+          if (!slice.type[0].profile) {
+            slice.type[0].profile = [];
+          }
+          slice.type[0].profile.push(extension.url);
+          // Search again for the desired element now that the extension is added
+          currentElement = this.findElementByPath(currentPath, fisher);
+        }
+      }
 
       // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
       const nonArrayElementIsBasedOnArray =

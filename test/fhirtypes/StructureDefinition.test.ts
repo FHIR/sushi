@@ -871,6 +871,28 @@ describe('StructureDefinition', () => {
       expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['2'] });
       expect(pathParts[1]).toEqual({ primitive: true, base: 'url' });
     });
+
+    it('should allow setting arbitrary defined extensions', () => {
+      const originalLength = respRate.elements.length;
+      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        'extension[patient-mothersMaidenName].value[x]',
+        'foo',
+        fisher
+      );
+      expect(fixedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'extension',
+        brackets: ['patient-mothersMaidenName', '0']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 5);
+    });
+
+    it('should not allow setting arbitrary undefined extensions', () => {
+      expect(() => {
+        respRate.validateValueAtPath('extension[fake-extension].value[x]', 'foo', fisher);
+      }).toThrow('Cannot resolve element from path: extension[fake-extension].value[x]');
+    });
   });
 
   describe('#captureOriginalElements()', () => {

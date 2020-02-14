@@ -864,6 +864,27 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should fix an extension that is defined but not present on the SD', () => {
+      const fooExtension = new Extension('FooExtension');
+      doc.aliases.set('FooAlias', 'http://example.com/StructureDefinition/FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const barRule = new FixedValueRule('extension[FooAlias].valueString');
+      barRule.fixedValue = 'bar';
+      patientInstance.rules.push(barRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
+      ]);
+    });
+
+    it('should not fix an extension that is not defined and not present on the SD', () => {
+      const barRule = new FixedValueRule('extension[FooAlias].valueString');
+      barRule.fixedValue = 'bar';
+      patientInstance.rules.push(barRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toBeUndefined();
+    });
+
     it.skip('should throw when ordered is set in the discriminator but slices arrive out of order', () => {
       const fixedValRule = new FixedValueRule('result[Triglyceride].display');
       fixedValRule.fixedValue = 'foo';
