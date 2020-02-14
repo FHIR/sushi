@@ -47,6 +47,7 @@ export class IGExporter {
     this.addIndex(outPath);
     this.addOtherPageContent(outPath);
     this.addImages(outPath);
+    this.addMenu(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
     this.addImplementationGuide(outPath);
@@ -180,7 +181,7 @@ export class IGExporter {
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addIndex(igPath: string) {
+  private addIndex(igPath: string): void {
     ensureDirSync(path.join(igPath, 'input', 'pagecontent'));
 
     // If the user provided an index.md file, use that
@@ -217,7 +218,7 @@ export class IGExporter {
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addOtherPageContent(igPath: string) {
+  private addOtherPageContent(igPath: string): void {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
     if (fs.existsSync(inputPageContentPath)) {
       const pages = fs
@@ -264,7 +265,7 @@ export class IGExporter {
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addImages(igPath: string) {
+  private addImages(igPath: string): void {
     // If the user provided additional image files, include them
     const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
     if (fs.existsSync(inputImagesPath)) {
@@ -273,9 +274,22 @@ export class IGExporter {
   }
 
   /**
+   * Adds a user provided menu.xml file if it exists
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  private addMenu(igPath: string): void {
+    // If the user provided a menu.xml file, use it. Otherwise, IG build includes one by default.
+    const menuPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+    if (fs.existsSync(menuPath)) {
+      fs.copySync(menuPath, path.join(igPath, 'input', 'includes', 'menu.xml'));
+    }
+  }
+
+  /**
    * Add each of the resources from the package to the ImplementationGuide JSON file.
    */
-  private addResources() {
+  private addResources(): void {
     const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
       ...sortBy(this.pkg.profiles, sd => sd.name),
       ...sortBy(this.pkg.extensions, sd => sd.name),

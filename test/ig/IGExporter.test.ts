@@ -267,6 +267,14 @@ describe('IGExporter', () => {
       const content = fs.readFileSync(indexPath, 'utf8');
       expect(content).toMatch('Provides a simple example of how FSH can be used to create an IG');
     });
+
+    it('should generate a default menu.xml', () => {
+      const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
+      expect(fs.existsSync(menuPath)).toBeTruthy();
+      const content = fs.readFileSync(menuPath, 'utf8');
+      expect(content).toMatch('<li><a href="index.html">IG Home</a></li>');
+      expect(content).toMatch('<li><a href="toc.html">Table of Contents</a></li>');
+    });
   });
 
   describe('#customized-ig', () => {
@@ -362,6 +370,14 @@ describe('IGExporter', () => {
         title: 'FSH Test IG',
         generation: 'markdown'
       });
+    });
+
+    it('should use the user-provided menu.xml if it exists', () => {
+      const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
+      expect(fs.existsSync(menuPath)).toBeTruthy();
+      const content = fs.readFileSync(menuPath, 'utf8');
+      expect(content).toMatch('<li><a href="index.html">My special menu</a></li>');
+      expect(content).toMatch('<li><a href="toc.html">Customized Table of Contents</a></li>');
     });
 
     it('should include additional user-provided pages of valid file type', () => {
