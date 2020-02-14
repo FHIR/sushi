@@ -47,7 +47,7 @@ export class IGExporter {
     this.addIndex(outPath);
     this.addOtherPageContent(outPath);
     this.addImages(outPath);
-    this.addMenu(outPath);
+    this.addIncludeContents(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
     this.addImplementationGuide(outPath);
@@ -274,15 +274,15 @@ export class IGExporter {
   }
 
   /**
-   * Adds a user provided menu.xml file if it exists
+   * Adds any user provided includes files
+   * A user provided menu.xml will be in this folder. If one is not provided, the static one SUSHI provides will be used.
    *
    * @param {string} igPath - the path where the IG is exported to
    */
-  private addMenu(igPath: string): void {
-    // If the user provided a menu.xml file, use it. Otherwise, IG build includes one by default.
-    const menuPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
-    if (fs.existsSync(menuPath)) {
-      fs.copySync(menuPath, path.join(igPath, 'input', 'includes', 'menu.xml'));
+  private addIncludeContents(igPath: string): void {
+    const includesPath = path.join(this.igDataPath, 'input', 'includes');
+    if (fs.existsSync(includesPath)) {
+      fs.copySync(includesPath, path.join(igPath, 'input', 'includes'));
     }
   }
 

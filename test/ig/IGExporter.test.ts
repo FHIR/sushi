@@ -380,6 +380,13 @@ describe('IGExporter', () => {
       expect(content).toMatch('<li><a href="toc.html">Customized Table of Contents</a></li>');
     });
 
+    it('should include any additional user-provided files in includes', () => {
+      const otherIncludeFilePath = path.join(tempOut, 'input', 'includes', 'other.xml');
+      expect(fs.existsSync(otherIncludeFilePath)).toBeTruthy();
+      const content = fs.readFileSync(otherIncludeFilePath, 'utf8');
+      expect(content).toMatch('<li><a href="index.html">Some other non-menu file</a></li>');
+    });
+
     it('should include additional user-provided pages of valid file type', () => {
       const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
       expect(fs.existsSync(pageContentPath)).toBeTruthy();
