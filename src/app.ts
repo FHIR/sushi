@@ -20,6 +20,7 @@ async function app() {
     .usage('<path-to-fsh-defs> [options]')
     .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
     .option('-d, --debug', 'output extra debugging information')
+    .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .arguments('<path-to-fsh-defs>')
     .action(function(pathToFshDefs) {
@@ -104,13 +105,17 @@ async function app() {
   let count = 0;
   const writeResources = (
     folder: string,
-    resources: { getFileName: () => string; toJSON: () => any }[]
+    resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
   ) => {
     const exportDir = path.join(program.out, 'input', folder);
     resources.forEach(resource => {
-      fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(), {
-        spaces: 2
-      });
+      fs.outputJSONSync(
+        path.join(exportDir, resource.getFileName()),
+        resource.toJSON(program.snapshot),
+        {
+          spaces: 2
+        }
+      );
       count++;
     });
   };
