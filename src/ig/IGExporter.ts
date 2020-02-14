@@ -224,16 +224,16 @@ export class IGExporter {
       const pages = fs
         .readdirSync(inputPageContentPath)
         .filter(page => page !== 'index.md' && page !== 'index.xml')
-        .sort(); // Sorts alphabetically
+        .sort(this.compareIgFilenames);
 
       let invalidFileTypeIncluded = false;
       pages.forEach(page => {
         // All user defined pages are included in input/pagecontent
         const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
-        fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', page));
 
-        const fileName = page.slice(0, page.lastIndexOf('.'));
+        const fileName = page.slice(0, page.lastIndexOf('.')).replace(/^\d+_/, '');
         const fileType = page.slice(page.lastIndexOf('.') + 1);
+        fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', `${fileName}.${fileType}`));
         const isSupportedFileType = fileType === 'md' || fileType === 'xml';
         const isIntroOrNotesFile = fileName.endsWith('-intro') || fileName.endsWith('-notes');
         if (isSupportedFileType) {
@@ -256,6 +256,35 @@ export class IGExporter {
         logger.warn(errorString, {
           file: inputPageContentPath
         });
+      }
+    }
+  }
+
+  /**
+   * Compares two file names, each of which may be prefixed with a number.
+   * If neither file has a prefix, compares the file names alphabetically.
+   * If one file has a prefix, that file is before the other.
+   * If both have a prefix, compares the prefixes numerically.
+   * If the prefixes are equal, resolves the tie by comparing the file names alphabetically.
+   * @param a {string} - name of the first file
+   * @param b {string} - name of the second file
+   * @returns {number} - positive when file b comes first, negative when file a comes first, zero when the file names are equal.
+   */
+  private compareIgFilenames(a: string, b: string): number {
+    const aPrefix = a.match(/^(\d+)_.*/);
+    const bPrefix = b.match(/^(\d+)_.*/);
+    if (aPrefix == null && bPrefix == null) {
+      return a.localeCompare(b);
+    } else if (aPrefix == null) {
+      return 1;
+    } else if (bPrefix == null) {
+      return -1;
+    } else {
+      const prefixComparison = parseInt(aPrefix[1]) - parseInt(bPrefix[1]);
+      if (prefixComparison == 0) {
+        return a.localeCompare(b);
+      } else {
+        return prefixComparison;
       }
     }
   }

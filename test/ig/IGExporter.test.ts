@@ -571,4 +571,98 @@ describe('IGExporter', () => {
       });
     });
   });
+
+  describe('#sorted-pages-ig', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should add user-provided pages in the user-specified order', () => {
+      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toHaveLength(9);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'FSH Test IG',
+          generation: 'html'
+        },
+        {
+          nameUrl: 'oranges.html',
+          title: 'Oranges',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'apples.html',
+          title: 'Apples',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'bananas.html',
+          title: 'Bananas',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'pears.html',
+          title: 'Pears',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'left.html',
+          title: 'Left',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'right.html',
+          title: 'Right',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'big.html',
+          title: 'Big',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'pasta.html',
+          title: 'Pasta',
+          generation: 'markdown'
+        }
+      ]);
+    });
+
+    it('should remove numeric prefixes from copied files', () => {
+      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+      const pageContentFiles = fs.readdirSync(pageContentPath);
+      expect(pageContentFiles).toHaveLength(9);
+      expect(pageContentFiles).toContain('index.xml');
+      expect(pageContentFiles).toContain('oranges.md');
+      expect(pageContentFiles).toContain('apples.md');
+      expect(pageContentFiles).toContain('bananas.md');
+      expect(pageContentFiles).toContain('pears.md');
+      expect(pageContentFiles).toContain('left.md');
+      expect(pageContentFiles).toContain('right.md');
+      expect(pageContentFiles).toContain('big.md');
+      expect(pageContentFiles).toContain('pasta.md');
+    });
+  });
 });
