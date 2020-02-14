@@ -1254,14 +1254,15 @@ export class ElementDefinition {
    */
   private fixFshCodeToCodeableConcept(code: FshCode): void {
     // Check if this is already fixed to something else
-    if (this.patternCodeableConcept) {
+    const alreadyFixedValue = this.patternCodeableConcept ?? this.fixedByAnyParent();
+    if (alreadyFixedValue) {
       const fixedToSame =
-        this.patternCodeableConcept.coding &&
-        this.patternCodeableConcept.coding.some(c => {
+        alreadyFixedValue.coding &&
+        alreadyFixedValue.coding.some((c: any) => {
           return c.code == code.code && c.system == code.system;
         });
       if (!fixedToSame) {
-        const found = this.patternCodeableConcept.coding[0];
+        const found = alreadyFixedValue.coding[0];
         throw new CodeAlreadyFixedError(new FshCode(found.code, found.system), code);
       }
       // It's already fixed, so there is nothing to do
@@ -1290,10 +1291,13 @@ export class ElementDefinition {
    */
   private fixFshCodeToCoding(code: FshCode): void {
     // Check if this is already fixed to something else
-    if (this.patternCoding) {
-      if (this.patternCoding.code != code.code || this.patternCoding.system != code.system) {
-        const found = this.patternCoding;
-        throw new CodeAlreadyFixedError(new FshCode(found.code, found.system), code);
+    const alreadyFixedValue = this.patternCoding ?? this.fixedByAnyParent();
+    if (alreadyFixedValue) {
+      if (alreadyFixedValue.code != code.code || alreadyFixedValue.system != code.system) {
+        throw new CodeAlreadyFixedError(
+          new FshCode(alreadyFixedValue.code, alreadyFixedValue.system),
+          code
+        );
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1318,10 +1322,13 @@ export class ElementDefinition {
    */
   private fixFshCodeToQuantityUnitCode(code: FshCode): void {
     // Check if this is already fixed to something else
-    if (this.patternQuantity) {
-      if (this.patternQuantity.code != code.code || this.patternQuantity.system != code.system) {
-        const found = this.patternQuantity;
-        throw new CodeAlreadyFixedError(new FshCode(found.code, found.system), code);
+    const alreadyFixedValue = this.patternQuantity ?? this.fixedByAnyParent();
+    if (alreadyFixedValue) {
+      if (alreadyFixedValue.code != code.code || alreadyFixedValue.system != code.system) {
+        throw new CodeAlreadyFixedError(
+          new FshCode(alreadyFixedValue.code, alreadyFixedValue.system),
+          code
+        );
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1345,9 +1352,10 @@ export class ElementDefinition {
    */
   private fixFshCodeToCode(code: FshCode): void {
     // Check if this is already fixed to something else
-    if (this.fixedCode) {
-      if (this.fixedCode != code.code) {
-        throw new CodeAlreadyFixedError(new FshCode(this.fixedCode), code);
+    const alreadyFixedValue = this.fixedCode ?? this.fixedByAnyParent();
+    if (alreadyFixedValue) {
+      if (alreadyFixedValue != code.code) {
+        throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1365,9 +1373,10 @@ export class ElementDefinition {
    */
   private fixFshCodeToString(code: FshCode): void {
     // Check if this is already fixed to something else
-    if (this.fixedString) {
-      if (this.fixedString != code.code) {
-        throw new CodeAlreadyFixedError(new FshCode(this.fixedString), code);
+    const alreadyFixedValue = this.fixedString ?? this.fixedByAnyParent();
+    if (alreadyFixedValue) {
+      if (alreadyFixedValue != code.code) {
+        throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
       }
       // It's already fixed, so there is nothing to do
       return;
@@ -1385,9 +1394,10 @@ export class ElementDefinition {
    */
   private fixFshCodeToUri(code: FshCode): void {
     // Check if this is already fixed to something else
-    if (this.fixedUri) {
-      if (this.fixedUri != code.code) {
-        throw new CodeAlreadyFixedError(new FshCode(this.fixedUri), code);
+    const alreadyFixedValue = this.fixedUri ?? this.fixedByAnyParent();
+    if (alreadyFixedValue) {
+      if (alreadyFixedValue != code.code) {
+        throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
       }
       // It's already fixed, so there is nothing to do
       return;
