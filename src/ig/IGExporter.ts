@@ -216,7 +216,7 @@ export class IGExporter {
    * Only add formats that are supported by the IG template
    * Intro and notes file contents are injected into relevant pages and should not be treated as their own page
    *
-   * @param igPath {string} - the path where the IG is exported to
+   * @param {string} igPath - the path where the IG is exported to
    */
   private addOtherPageContent(igPath: string): void {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
@@ -262,25 +262,11 @@ export class IGExporter {
    * Sorts and renames pages based on numeric prefixes.
    * Numeric prefixes are used for applying a sort order, but should be removed
    * from the page's name and title unless doing so would cause a name collision.
-   * 
-   * @param pages {string[]} - list of file names with extensions
-   * @returns {{
-      originalName: string;
-      prefix: number;
-      name: string;
-      title: string;
-      fileType: string;
-    } []} - sorted list of file information objects
+   *
+   * @param {string[]} pages - list of file names with extensions
+   * @returns {PageMetadata []} - sorted list of file information objects
    */
-  private organizePageContent(
-    pages: string[]
-  ): {
-    originalName: string;
-    prefix: number;
-    name: string;
-    title: string;
-    fileType: string;
-  }[] {
+  private organizePageContent(pages: string[]): PageMetadata[] {
     const pageData = pages.map(page => {
       const nameParts = page.match(/^(\d+)_(.*)/);
       let prefix: number = null;
@@ -325,14 +311,11 @@ export class IGExporter {
    * If both have a prefix, compares the prefixes numerically.
    * If the prefixes are equal, resolves the tie by comparing the file names alphabetically.
    *
-   * @param pageA { prefix: number; name: string } - name and prefix of first file
-   * @param pageB { prefix: number; name: string } - name and prefix of second file
+   * @param {PageMetadata} pageA - metadata for first file
+   * @param {PageMetadata} pageB - metadata for second file
    * @returns {number} - positive when file b comes first, negative when file a comes first, zero when the file names are equal.
    */
-  private compareIgFilenames(
-    pageA: { prefix: number; name: string },
-    pageB: { prefix: number; name: string }
-  ): number {
+  private compareIgFilenames(pageA: PageMetadata, pageB: PageMetadata): number {
     if (pageA.prefix == null && pageB.prefix == null) {
       return pageA.name.localeCompare(pageB.name);
     } else if (pageA.prefix == null) {
@@ -553,4 +536,12 @@ export class IGExporter {
     );
     logger.info('Generated default package-list.json');
   }
+}
+
+interface PageMetadata {
+  originalName: string;
+  prefix: number;
+  name: string;
+  title: string;
+  fileType: string;
 }
