@@ -303,7 +303,7 @@ export class StructureDefinition {
    * Exports the StructureDefinition to a properly formatted FHIR JSON representation.
    * @returns {any} the FHIR JSON representation of the StructureDefinition
    */
-  toJSON(): any {
+  toJSON(snapshot = true): any {
     const j: LooseStructDefJSON = { resourceType: this.resourceType };
     // First handle properties that are just straight translations to JSON
     for (const prop of PROPS) {
@@ -315,14 +315,14 @@ export class StructureDefinition {
     }
 
     // Now handle snapshot and differential
-    j.snapshot = { element: this.elements.map(e => e.toJSON()) };
+    if (snapshot) {
+      j.snapshot = { element: this.elements.map(e => e.toJSON()) };
+    }
 
     const differentialElements = this.elements
       .filter(e => e.hasDiff())
       .map(e => e.calculateDiff().toJSON());
-    const defaultDifferentialElements = [
-      { id: j.snapshot.element[0].id, path: j.snapshot.element[0].path }
-    ];
+    const defaultDifferentialElements = [{ id: this.elements[0].id, path: this.elements[0].path }];
 
     j.differential = {
       element: differentialElements.length > 0 ? differentialElements : defaultDifferentialElements
