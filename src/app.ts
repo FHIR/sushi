@@ -137,6 +137,9 @@ async function app() {
   CodeSystems: ${outPackage.codeSystems.length}
   Errors:      ${stats.numError}
   Warnings:    ${stats.numWarn}`);
+
+  const exitCode = stats.numError > 0 ? 1 : 0;
+  process.exit(exitCode);
 }
 
 function getVersion(): string {
