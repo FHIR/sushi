@@ -665,4 +665,70 @@ describe('IGExporter', () => {
       expect(pageContentFiles).toContain('pasta.md');
     });
   });
+  describe('#name-collision-ig', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should not remove numeric prefixes from page names when doing so would cause name collisions', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toHaveLength(5);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'FSH Test IG',
+          generation: 'html'
+        },
+        {
+          nameUrl: '1_rocks.html',
+          title: 'Rocks',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: '2_rocks.html',
+          title: 'Rocks',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: '3_index.html',
+          title: 'Index',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: '4_2_rocks.html',
+          title: '2 Rocks',
+          generation: 'markdown'
+        }
+      ]);
+    });
+
+    it('should not remove numeric prefixes from files when doing so would cause name collisions', () => {
+      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+      const pageContentFiles = fs.readdirSync(pageContentPath);
+      expect(pageContentFiles).toHaveLength(5);
+      expect(pageContentFiles).toContain('index.xml');
+      expect(pageContentFiles).toContain('1_rocks.md');
+      expect(pageContentFiles).toContain('2_rocks.md');
+      expect(pageContentFiles).toContain('3_index.md');
+      expect(pageContentFiles).toContain('4_2_rocks.md');
+    });
+  });
 });

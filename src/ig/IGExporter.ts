@@ -221,29 +221,27 @@ export class IGExporter {
   private addOtherPageContent(igPath: string): void {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
     if (fs.existsSync(inputPageContentPath)) {
-      const pages = fs
-        .readdirSync(inputPageContentPath)
-        .filter(page => page !== 'index.md' && page !== 'index.xml')
-        .sort(this.compareIgFilenames);
+      const organizedPages = this.organizePageContent(fs.readdirSync(inputPageContentPath));
 
       let invalidFileTypeIncluded = false;
-      pages.forEach(page => {
+      organizedPages.forEach(page => {
         // All user defined pages are included in input/pagecontent
-        const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
+        const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page.originalName);
 
-        const fileName = page.slice(0, page.lastIndexOf('.')).replace(/^\d+_/, '');
-        const fileType = page.slice(page.lastIndexOf('.') + 1);
-        fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', `${fileName}.${fileType}`));
-        const isSupportedFileType = fileType === 'md' || fileType === 'xml';
-        const isIntroOrNotesFile = fileName.endsWith('-intro') || fileName.endsWith('-notes');
+        fs.copySync(
+          pagePath,
+          path.join(igPath, 'input', 'pagecontent', `${page.name}.${page.fileType}`)
+        );
+        const isSupportedFileType = page.fileType === 'md' || page.fileType === 'xml';
+        const isIntroOrNotesFile = page.name.endsWith('-intro') || page.name.endsWith('-notes');
         if (isSupportedFileType) {
           // Intro and notes files will be in supported formats but are not separate pages, so they should not be added to IG definition
           if (!isIntroOrNotesFile) {
             // Valid page files will be added to the IG definition
             this.ig.definition.page.page.push({
-              nameUrl: `${fileName}.html`,
-              title: `${titleCase(words(fileName).join(' '))}`,
-              generation: fileType === 'md' ? 'markdown' : 'html'
+              nameUrl: `${page.name}.html`,
+              title: page.title,
+              generation: page.fileType === 'md' ? 'markdown' : 'html'
             });
           }
         } else {
@@ -261,28 +259,90 @@ export class IGExporter {
   }
 
   /**
+   * Sorts and renames pages based on numeric prefixes.
+   * Numeric prefixes are used for applying a sort order, but should be removed
+   * from the page's name and title unless doing so would cause a name collision.
+   * 
+   * @param pages {string[]} - list of file names with extensions
+   * @returns {{
+      originalName: string;
+      prefix: number;
+      name: string;
+      title: string;
+      fileType: string;
+    } []} - sorted list of file information objects
+   */
+  private organizePageContent(
+    pages: string[]
+  ): {
+    originalName: string;
+    prefix: number;
+    name: string;
+    title: string;
+    fileType: string;
+  }[] {
+    const pageData = pages.map(page => {
+      const nameParts = page.match(/^(\d+)_(.*)/);
+      let prefix: number = null;
+      let name: string;
+      if (nameParts == null) {
+        name = page.slice(0, page.lastIndexOf('.'));
+      } else {
+        prefix = parseInt(nameParts[1]);
+        name = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
+      }
+      return {
+        originalName: page,
+        prefix: prefix,
+        name: name,
+        title: titleCase(words(name).join(' ')),
+        fileType: page.slice(page.lastIndexOf('.') + 1)
+      };
+    });
+    let mightHaveDuplicates = true;
+    while (mightHaveDuplicates) {
+      mightHaveDuplicates = false;
+      pageData.forEach(page => {
+        const sameName = pageData.filter(otherPage => otherPage.name == page.name);
+        if (sameName.length > 1) {
+          mightHaveDuplicates = true;
+          sameName.forEach(matchingPage => {
+            matchingPage.name = matchingPage.originalName.slice(
+              0,
+              matchingPage.originalName.lastIndexOf('.')
+            );
+          });
+        }
+      });
+    }
+    return pageData.filter(page => page.name !== 'index').sort(this.compareIgFilenames);
+  }
+
+  /**
    * Compares two file names, each of which may be prefixed with a number.
    * If neither file has a prefix, compares the file names alphabetically.
    * If one file has a prefix, that file is before the other.
    * If both have a prefix, compares the prefixes numerically.
    * If the prefixes are equal, resolves the tie by comparing the file names alphabetically.
-   * @param a {string} - name of the first file
-   * @param b {string} - name of the second file
+   *
+   * @param pageA { prefix: number; name: string } - name and prefix of first file
+   * @param pageB { prefix: number; name: string } - name and prefix of second file
    * @returns {number} - positive when file b comes first, negative when file a comes first, zero when the file names are equal.
    */
-  private compareIgFilenames(a: string, b: string): number {
-    const aPrefix = a.match(/^(\d+)_.*/);
-    const bPrefix = b.match(/^(\d+)_.*/);
-    if (aPrefix == null && bPrefix == null) {
-      return a.localeCompare(b);
-    } else if (aPrefix == null) {
+  private compareIgFilenames(
+    pageA: { prefix: number; name: string },
+    pageB: { prefix: number; name: string }
+  ): number {
+    if (pageA.prefix == null && pageB.prefix == null) {
+      return pageA.name.localeCompare(pageB.name);
+    } else if (pageA.prefix == null) {
       return 1;
-    } else if (bPrefix == null) {
+    } else if (pageB.prefix == null) {
       return -1;
     } else {
-      const prefixComparison = parseInt(aPrefix[1]) - parseInt(bPrefix[1]);
+      const prefixComparison = pageA.prefix - pageB.prefix;
       if (prefixComparison == 0) {
-        return a.localeCompare(b);
+        return pageA.name.localeCompare(pageB.name);
       } else {
         return prefixComparison;
       }
