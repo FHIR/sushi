@@ -122,9 +122,36 @@ describe('StructureDefinition', () => {
       });
     });
 
+    it('should reflect differentials for elements that changed after capturing originals without generating snapshot', () => {
+      const code = observation.elements.find(e => e.id === 'Observation.code');
+      code.short = 'Special observation code';
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.min = 1;
+
+      const json = observation.toJSON(false);
+      expect(json.differential.element).toHaveLength(2);
+      expect(json.differential.element[0]).toEqual({
+        id: 'Observation.code',
+        path: 'Observation.code',
+        short: 'Special observation code'
+      });
+      expect(json.differential.element[1]).toEqual({
+        id: 'Observation.value[x]',
+        path: 'Observation.value[x]',
+        min: 1
+      });
+      expect(json.snapshot).toBeUndefined();
+    });
+
     it('should reflect basic differential for structure definitions with no changes', () => {
       const json = observation.toJSON();
       expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
+    });
+
+    it('should reflect basic differential for structure definitions with no changes without generating snapshot', () => {
+      const json = observation.toJSON(false);
+      expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
+      expect(json.snapshot).toBeUndefined();
     });
 
     it('should properly serialize snapshot and differential for constrained choice type with constraints on specific choices', () => {

@@ -216,34 +216,32 @@ export class IGExporter {
    * Only add formats that are supported by the IG template
    * Intro and notes file contents are injected into relevant pages and should not be treated as their own page
    *
-   * @param igPath {string} - the path where the IG is exported to
+   * @param {string} igPath - the path where the IG is exported to
    */
   private addOtherPageContent(igPath: string): void {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
     if (fs.existsSync(inputPageContentPath)) {
-      const pages = fs
-        .readdirSync(inputPageContentPath)
-        .filter(page => page !== 'index.md' && page !== 'index.xml')
-        .sort(); // Sorts alphabetically
+      const organizedPages = this.organizePageContent(fs.readdirSync(inputPageContentPath));
 
       let invalidFileTypeIncluded = false;
-      pages.forEach(page => {
+      organizedPages.forEach(page => {
         // All user defined pages are included in input/pagecontent
-        const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page);
-        fs.copySync(pagePath, path.join(igPath, 'input', 'pagecontent', page));
+        const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page.originalName);
 
-        const fileName = page.slice(0, page.lastIndexOf('.'));
-        const fileType = page.slice(page.lastIndexOf('.') + 1);
-        const isSupportedFileType = fileType === 'md' || fileType === 'xml';
-        const isIntroOrNotesFile = fileName.endsWith('-intro') || fileName.endsWith('-notes');
+        fs.copySync(
+          pagePath,
+          path.join(igPath, 'input', 'pagecontent', `${page.name}.${page.fileType}`)
+        );
+        const isSupportedFileType = page.fileType === 'md' || page.fileType === 'xml';
+        const isIntroOrNotesFile = page.name.endsWith('-intro') || page.name.endsWith('-notes');
         if (isSupportedFileType) {
           // Intro and notes files will be in supported formats but are not separate pages, so they should not be added to IG definition
           if (!isIntroOrNotesFile) {
             // Valid page files will be added to the IG definition
             this.ig.definition.page.page.push({
-              nameUrl: `${fileName}.html`,
-              title: `${titleCase(words(fileName).join(' '))}`,
-              generation: fileType === 'md' ? 'markdown' : 'html'
+              nameUrl: `${page.name}.html`,
+              title: page.title,
+              generation: page.fileType === 'md' ? 'markdown' : 'html'
             });
           }
         } else {
@@ -256,6 +254,80 @@ export class IGExporter {
         logger.warn(errorString, {
           file: inputPageContentPath
         });
+      }
+    }
+  }
+
+  /**
+   * Sorts and renames pages based on numeric prefixes.
+   * Numeric prefixes are used for applying a sort order, but should be removed
+   * from the page's name and title unless doing so would cause a name collision.
+   *
+   * @param {string[]} pages - list of file names with extensions
+   * @returns {PageMetadata []} - sorted list of file information objects
+   */
+  private organizePageContent(pages: string[]): PageMetadata[] {
+    const pageData = pages.map(page => {
+      const nameParts = page.match(/^(\d+)_(.*)/);
+      let prefix: number = null;
+      let name: string;
+      if (nameParts == null) {
+        name = page.slice(0, page.lastIndexOf('.'));
+      } else {
+        prefix = parseInt(nameParts[1]);
+        name = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
+      }
+      return {
+        originalName: page,
+        prefix: prefix,
+        name: name,
+        title: titleCase(words(name).join(' ')),
+        fileType: page.slice(page.lastIndexOf('.') + 1)
+      };
+    });
+    let mightHaveDuplicates = true;
+    while (mightHaveDuplicates) {
+      mightHaveDuplicates = false;
+      pageData.forEach(page => {
+        const sameName = pageData.filter(otherPage => otherPage.name == page.name);
+        if (sameName.length > 1) {
+          mightHaveDuplicates = true;
+          sameName.forEach(matchingPage => {
+            matchingPage.name = matchingPage.originalName.slice(
+              0,
+              matchingPage.originalName.lastIndexOf('.')
+            );
+          });
+        }
+      });
+    }
+    return pageData.filter(page => page.name !== 'index').sort(this.compareIgFilenames);
+  }
+
+  /**
+   * Compares two file names, each of which may be prefixed with a number.
+   * If neither file has a prefix, compares the file names alphabetically.
+   * If one file has a prefix, that file is before the other.
+   * If both have a prefix, compares the prefixes numerically.
+   * If the prefixes are equal, resolves the tie by comparing the file names alphabetically.
+   *
+   * @param {PageMetadata} pageA - metadata for first file
+   * @param {PageMetadata} pageB - metadata for second file
+   * @returns {number} - positive when file b comes first, negative when file a comes first, zero when the file names are equal.
+   */
+  private compareIgFilenames(pageA: PageMetadata, pageB: PageMetadata): number {
+    if (pageA.prefix == null && pageB.prefix == null) {
+      return pageA.name.localeCompare(pageB.name);
+    } else if (pageA.prefix == null) {
+      return 1;
+    } else if (pageB.prefix == null) {
+      return -1;
+    } else {
+      const prefixComparison = pageA.prefix - pageB.prefix;
+      if (prefixComparison == 0) {
+        return pageA.name.localeCompare(pageB.name);
+      } else {
+        return prefixComparison;
       }
     }
   }
@@ -464,4 +536,12 @@ export class IGExporter {
     );
     logger.info('Generated default package-list.json');
   }
+}
+
+interface PageMetadata {
+  originalName: string;
+  prefix: number;
+  name: string;
+  title: string;
+  fileType: string;
 }
