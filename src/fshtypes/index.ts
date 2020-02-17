@@ -12,3 +12,4 @@ export * from './Instance';
 export * from './Profile';
 export * from './FshValueSet';
 export * from './ValueSetComponent';
+export * from './Invariant';
