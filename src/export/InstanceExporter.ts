@@ -105,7 +105,8 @@ export class InstanceExporter {
       );
       // Fixed value can come from fixed[x] or pattern[x] directly on element, or via pattern[x] on parent
       const foundFixedValue =
-        fixableElement[fixedValueKey as keyof ElementDefinition] ?? fixableElement.fixedByParent();
+        fixableElement[fixedValueKey as keyof ElementDefinition] ??
+        fixableElement.fixedByDirectParent();
       // We only fix the value if the element is the original element, or it is a direct child with card 1..n
       if (foundFixedValue && (fixableElement.id === element.id || fixableElement.min > 0)) {
         // Get the end of the path, this is the part that differs from existingPath
