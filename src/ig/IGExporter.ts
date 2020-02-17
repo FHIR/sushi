@@ -206,7 +206,7 @@ export class IGExporter {
     // Add user-provided or generated index file to IG definition
     this.ig.definition.page.page.push({
       nameUrl: 'index.html',
-      title: this.ig.title,
+      title: 'Home',
       generation
     });
   }

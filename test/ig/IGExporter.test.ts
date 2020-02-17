@@ -208,7 +208,7 @@ describe('IGExporter', () => {
             page: [
               {
                 nameUrl: 'index.html',
-                title: 'FSH Test IG',
+                title: 'Home',
                 generation: 'markdown'
               }
             ]
@@ -367,7 +367,7 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toContainEqual({
         nameUrl: 'index.html',
-        title: 'FSH Test IG',
+        title: 'Home',
         generation: 'markdown'
       });
     });
@@ -409,7 +409,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'markdown'
         },
         {
@@ -461,7 +461,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'html'
         }
       ]);
@@ -603,7 +603,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'html'
         },
         {
@@ -693,7 +693,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'html'
         },
         {
