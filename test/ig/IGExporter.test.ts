@@ -355,6 +355,20 @@ describe('IGExporter', () => {
       });
     });
 
+    it('should reflect the user-provided copyrightyear and ballotstatus as IG parameters', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: 'copyrightyear',
+        value: '2018+'
+      });
+      expect(igContent.definition.parameter).toContainEqual({
+        code: 'releaselabel',
+        value: 'STU1'
+      });
+    });
+
     it('should use the user-provided index.md if it exists', () => {
       const indexPath = path.join(tempOut, 'input', 'pagecontent', 'index.md');
       expect(fs.existsSync(indexPath)).toBeTruthy();
