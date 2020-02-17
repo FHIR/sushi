@@ -102,11 +102,11 @@ export class IGExporter {
         parameter: [
           {
             code: 'copyrightyear',
-            value: `${new Date().getFullYear()}+` // TODO: Make this configurable
+            value: '' // Gets set when ig.ini is processed
           },
           {
             code: 'releaselabel',
-            value: 'CI Build' // TODO: Make this configurable
+            value: '' // Gets set when ig.ini is processed
           },
           {
             code: 'show-inherited-invariants',
@@ -206,7 +206,7 @@ export class IGExporter {
     // Add user-provided or generated index file to IG definition
     this.ig.definition.page.page.push({
       nameUrl: 'index.html',
-      title: this.ig.title,
+      title: 'Home',
       generation
     });
   }
@@ -460,6 +460,12 @@ export class IGExporter {
         });
       }
     }
+
+    // Update the corresponding parameters in the ImplementationGuide JSON
+    const copyrightParam = this.ig.definition.parameter.find(p => p.code === 'copyrightyear');
+    copyrightParam.value = iniObj.copyrightyear;
+    const releaseParam = this.ig.definition.parameter.find(p => p.code === 'releaselabel');
+    releaseParam.value = iniObj.ballotstatus;
 
     // Finally, write it to disk
     outputFileSync(

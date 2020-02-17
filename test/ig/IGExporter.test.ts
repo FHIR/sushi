@@ -208,7 +208,7 @@ describe('IGExporter', () => {
             page: [
               {
                 nameUrl: 'index.html',
-                title: 'FSH Test IG',
+                title: 'Home',
                 generation: 'markdown'
               }
             ]
@@ -355,6 +355,20 @@ describe('IGExporter', () => {
       });
     });
 
+    it('should reflect the user-provided copyrightyear and ballotstatus as IG parameters', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: 'copyrightyear',
+        value: '2018+'
+      });
+      expect(igContent.definition.parameter).toContainEqual({
+        code: 'releaselabel',
+        value: 'STU1'
+      });
+    });
+
     it('should use the user-provided index.md if it exists', () => {
       const indexPath = path.join(tempOut, 'input', 'pagecontent', 'index.md');
       expect(fs.existsSync(indexPath)).toBeTruthy();
@@ -367,7 +381,7 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toContainEqual({
         nameUrl: 'index.html',
-        title: 'FSH Test IG',
+        title: 'Home',
         generation: 'markdown'
       });
     });
@@ -409,7 +423,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'markdown'
         },
         {
@@ -461,7 +475,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'html'
         }
       ]);
@@ -603,7 +617,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'html'
         },
         {
@@ -693,7 +707,7 @@ describe('IGExporter', () => {
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
-          title: 'FSH Test IG',
+          title: 'Home',
           generation: 'html'
         },
         {
