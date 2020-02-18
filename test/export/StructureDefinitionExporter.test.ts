@@ -328,7 +328,7 @@ describe('StructureDefinitionExporter', () => {
     const exported = pkg.profiles[0];
     expect(exported.id).toBe('will_not_work');
     expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 1 - 4\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 1 - 4\D*/s);
   });
 
   it('should log a message when the structure definition has an invalid name', () => {
@@ -338,7 +338,7 @@ describe('StructureDefinitionExporter', () => {
     const exported = pkg.profiles[0];
     expect(exported.name).toBe('Not-good');
     expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR name/s);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
 
   // Rules
@@ -352,7 +352,7 @@ describe('StructureDefinitionExporter', () => {
     const structDef = pkg.profiles[0];
     expect(structDef).toBeDefined();
     expect(structDef.type).toBe('Resource');
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Foo\.fsh.*Line: 3 - 4\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Foo\.fsh.*Line: 3 - 4\D*/s);
   });
 
   // Card Rule
@@ -398,7 +398,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCard.max).toBe('1');
     expect(changedCard.min).toBe(1);
     expect(changedCard.max).toBe('1');
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 5\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 5\D*/s);
   });
 
   // Flag Rule
@@ -444,7 +444,7 @@ describe('StructureDefinitionExporter', () => {
     expect(baseElement.mustSupport).toBeFalsy();
     expect(changedElement.isModifier).toBe(true);
     expect(changedElement.mustSupport).toBeFalsy();
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D*/s);
   });
 
   it('should not apply a flag rule that disables mustSupport', () => {
@@ -471,7 +471,7 @@ describe('StructureDefinitionExporter', () => {
     expect(changedElement.isModifier).toBeFalsy();
     expect(changedElement.isSummary).toBe(true);
     expect(changedElement.mustSupport).toBe(true);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D*/s);
   });
 
   // Value Set Rule
@@ -549,7 +549,7 @@ describe('StructureDefinitionExporter', () => {
     const changedElement = sd.findElement('Observation.note');
     expect(baseElement.binding).toBeUndefined();
     expect(changedElement.binding).toBeUndefined();
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Codeless\.fsh.*Line: 6\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Codeless\.fsh.*Line: 6\D*/s);
   });
 
   it('should not override a binding with a less strict binding', () => {
@@ -572,7 +572,7 @@ describe('StructureDefinitionExporter', () => {
       'http://hl7.org/fhir/ValueSet/observation-category'
     );
     expect(changedElement.binding.strength).toBe('preferred');
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Strict\.fsh.*Line: 9\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Strict\.fsh.*Line: 9\D*/s);
   });
 
   // Only Rule
@@ -995,7 +995,7 @@ describe('StructureDefinitionExporter', () => {
 
     const lastMessage = loggerSpy.getLastMessage('warn');
     expect(lastMessage).toMatch(/The definition of FooQuantity may be incomplete .* BarQuantity/);
-    expect(lastMessage).toMatch(/File: FooQuantity\.fsh.*Line: 6 - 11\D/s);
+    expect(lastMessage).toMatch(/File: FooQuantity\.fsh.*Line: 6 - 11\D*/s);
   });
 
   it('should not apply an incorrect OnlyRule', () => {
@@ -1015,7 +1015,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseValue.type).toHaveLength(11);
     expect(constrainedValue.type).toHaveLength(11);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Only\.fsh.*Line: 10\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Only\.fsh.*Line: 10\D*/s);
   });
 
   // Fixed Value Rule
@@ -1102,7 +1102,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
   });
 
   // Contains Rule
@@ -1316,7 +1316,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(sd.elements.length).toBe(baseStructDef.elements.length);
     expect(barSlice).toBeUndefined();
-    expect(loggerSpy.getLastMessage()).toMatch(/File: NoSlice\.fsh.*Line: 6\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: NoSlice\.fsh.*Line: 6\D*/s);
   });
 
   // CaretValueRule
@@ -1355,7 +1355,7 @@ describe('StructureDefinitionExporter', () => {
     const baseStatus = baseStructDef.findElement('Observation.status');
 
     expect(status.short).toBe(baseStatus.short);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
 
   it('should apply a CaretValueRule on an element without a path', () => {
@@ -1385,7 +1385,7 @@ describe('StructureDefinitionExporter', () => {
     const sd = pkg.profiles[0];
 
     expect(sd.description).toBeUndefined();
-    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
 
   // Extension preprocessing
@@ -1448,7 +1448,7 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(
       /Extension MyInvalidExtension cannot have both a value and sub-extensions/s
     );
-    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidExtension\.fsh.*Line: 4\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidExtension\.fsh.*Line: 4\D*/s);
   });
 
   it('should zero out Extension.extension when Extension.value[x] is used', () => {
@@ -1509,7 +1509,7 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(
       /Extension MyOtherInvalidExtension cannot have both a value and sub-extensions/s
     );
-    expect(loggerSpy.getLastMessage()).toMatch(/File: OtherInvalidExtension\.fsh.*Line: 4\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: OtherInvalidExtension\.fsh.*Line: 4\D*/s);
   });
 
   // toJSON

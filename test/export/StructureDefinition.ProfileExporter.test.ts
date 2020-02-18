@@ -69,7 +69,7 @@ describe('ProfileExporter', () => {
     profile.parent = 'BogusParent';
     doc.profiles.set(profile.name, profile);
     exporter.export();
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
   });
 
   it('should export profiles with FSHy parents', () => {
