@@ -33,7 +33,7 @@ describe('FSHImporter', () => {
     Pizza: Large
     `;
     importSingleText(input, 'Pizza.fsh');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Pizza\.fsh.*Line: 3\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Pizza\.fsh.*Line: 3\D*/s);
   });
 
   it('should report extraneous input errors from antlr', () => {
@@ -42,7 +42,7 @@ describe('FSHImporter', () => {
     Parent: Spacious
     `;
     importSingleText(input, 'Space.fsh');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Space\.fsh.*Line: 2\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Space\.fsh.*Line: 2\D*/s);
   });
 
   it('should recover from extraneous input errors from antlr', () => {
@@ -56,7 +56,7 @@ describe('FSHImporter', () => {
     const profile = result.profiles.get('Foo');
     expect(profile.name).toBe('Foo');
     expect(profile.parent).toBe('FooDad');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Extra\.fsh.*Line: 2\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Extra\.fsh.*Line: 2\D*/s);
   });
 
   it('should parse escaped double-quote and backslash characters in strings', () => {

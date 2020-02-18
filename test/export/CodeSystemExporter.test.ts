@@ -150,7 +150,7 @@ describe('CodeSystemExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].id).toBe('Is this allowed?');
     expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 2 - 6\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 2 - 6\D*/s);
   });
 
   it('should log a message when the code system has an invalid name', () => {
@@ -162,7 +162,7 @@ describe('CodeSystemExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Strange.Code.System');
     expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR name/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
   });
 
   // CaretValueRules
@@ -205,6 +205,6 @@ describe('CodeSystemExporter', () => {
       version: '0.0.1',
       status: 'active'
     });
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
 });

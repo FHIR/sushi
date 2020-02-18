@@ -98,7 +98,7 @@ describe('ValueSetExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].id).toBe('Delicious!');
     expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 3 - 7\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 3 - 7\D*/s);
   });
 
   it('should log a message when the value set has an invalid name', () => {
@@ -110,7 +110,7 @@ describe('ValueSetExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('All-you-can-eat');
     expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR name/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D*/s);
   });
 
   it('should export each value set once, even if export is called more than once', () => {
@@ -443,7 +443,7 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(0);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 4\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 4\D*/s);
   });
 
   // CaretValueRules
@@ -484,6 +484,6 @@ describe('ValueSetExporter', () => {
       version: '0.0.1',
       status: 'active'
     });
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
 });
