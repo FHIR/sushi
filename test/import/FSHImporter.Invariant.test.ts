@@ -88,10 +88,10 @@ describe('FSHImporter', () => {
         Severity: #warning
         `;
         importSingleText(input, 'Twice.fsh');
-        expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(/File: Twice\.fsh.*Line: 7\D/s);
-        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Twice\.fsh.*Line: 8\D/s);
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Twice\.fsh.*Line: 9\D/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Twice\.fsh.*Line: 10\D/s);
+        expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(/File: Twice\.fsh.*Line: 7\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Twice\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Twice\.fsh.*Line: 9\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Twice\.fsh.*Line: 10\D*/s);
       });
 
       it('should log a warning when the severity code includes a system', () => {
@@ -106,7 +106,7 @@ describe('FSHImporter', () => {
           .withLocation([3, 19, 3, 47])
           .withFile('Unnecessary.fsh');
         expect(invariant.severity).toEqual(severityCode);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Unnecessary\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Unnecessary\.fsh.*Line: 3\D*/s);
       });
     });
   });

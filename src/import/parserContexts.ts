@@ -127,7 +127,7 @@ export interface SdRuleContext extends ParserRuleContext {
   fixedValueRule(): FixedValueRuleContext;
   containsRule(): ContainsRuleContext;
   onlyRule(): OnlyRuleContext;
-  // obeysRule(): ObeysRuleContext;
+  obeysRule(): ObeysRuleContext;
   caretValueRule(): CaretValueRuleContext;
 }
 
@@ -244,6 +244,11 @@ export interface OnlyRuleContext extends ParserRuleContext {
 export interface TargetTypeContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   reference(): ReferenceContext;
+}
+
+export interface ObeysRuleContext extends ParserRuleContext {
+  path(): PathContext;
+  SEQUENCE(): ParserRuleContext[];
 }
 
 export interface CaretValueRuleContext extends ParserRuleContext {

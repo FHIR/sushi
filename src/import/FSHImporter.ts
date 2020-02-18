@@ -35,7 +35,8 @@ import {
   FixedValueType,
   OnlyRule,
   ContainsRule,
-  CaretValueRule
+  CaretValueRule,
+  ObeysRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -636,6 +637,8 @@ export class FSHImporter extends FSHVisitor {
       return this.visitContainsRule(ctx.containsRule());
     } else if (ctx.caretValueRule()) {
       return [this.visitCaretValueRule(ctx.caretValueRule())];
+    } else if (ctx.obeysRule()) {
+      return this.visitObeysRule(ctx.obeysRule());
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -964,6 +967,19 @@ export class FSHImporter extends FSHVisitor {
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
     return caretValueRule;
+  }
+
+  visitObeysRule(ctx: pc.ObeysRuleContext): ObeysRule[] {
+    const rules: ObeysRule[] = [];
+    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
+    ctx.SEQUENCE().forEach(invariant => {
+      const obeysRule = new ObeysRule(path)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      obeysRule.invariant = invariant.getText();
+      rules.push(obeysRule);
+    });
+    return rules;
   }
 
   visitVsComponent(ctx: pc.VsComponentContext): ValueSetComponent {
