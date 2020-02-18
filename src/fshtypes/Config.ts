@@ -20,6 +20,7 @@ export type Config = {
   maintainers?: [
     {
       name: string;
+      url: string;
       email: string;
     }
   ];

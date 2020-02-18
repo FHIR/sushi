@@ -70,9 +70,9 @@ describe('FSHImporter', () => {
         Description: "A duplicate value set for testing metadata"
         `;
         importSingleText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 6\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
       });
     });
 
@@ -250,7 +250,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetConceptComponent(valueSet.components[0], undefined, undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should log an error when a concept component with a list of concepts does not have a system', () => {
@@ -264,7 +264,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetConceptComponent(valueSet.components[0], undefined, undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should log an error when a concept component has a system specified more than once', () => {
@@ -277,7 +277,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
     });
 
@@ -401,7 +401,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"=".*string/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator is-a', () => {
@@ -435,7 +435,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"is-a".*code/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Ursines\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Ursines\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator descendent-of', () => {
@@ -489,7 +489,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"descendent-of".*code/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Felines\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Felines\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator is-not-a', () => {
@@ -523,7 +523,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"is-not-a".*code/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: NonCanine\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: NonCanine\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator regex', () => {
@@ -555,7 +555,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"regex".*regex/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: MostlyDogs\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: MostlyDogs\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator in', () => {
@@ -587,7 +587,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"in".*string/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: CatDog\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: CatDog\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator not-in', () => {
@@ -619,7 +619,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"not-in".*string/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoGoose\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoGoose\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator generalizes', () => {
@@ -653,7 +653,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"generalizes".*code/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Mustelids\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Mustelids\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator exists', () => {
@@ -693,7 +693,7 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"exists".*boolean/);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses multiple filters on a single component', () => {
@@ -749,7 +749,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should log an error when a filter (other than the exists filter) has no value', () => {
@@ -762,7 +762,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should log an error when a filter component has at least one filter, but no system', () => {
@@ -775,7 +775,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.components.length).toBe(1);
         assertValueSetFilterComponent(valueSet.components[0], undefined, ['OtherZooVS'], []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
     });
 
@@ -812,7 +812,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Simple.fsh');
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.rules).toHaveLength(0);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
       });
     });
   });

@@ -115,6 +115,10 @@ describe('IGExporter', () => {
             name: 'Bill Cod',
             telecom: [
               {
+                system: 'url',
+                value: 'https://capecodfishermen.org/'
+              },
+              {
                 system: 'email',
                 value: 'cod@reef.gov'
               }

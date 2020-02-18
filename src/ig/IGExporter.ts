@@ -75,13 +75,20 @@ export class IGExporter {
         if (m.name) {
           contact.name = m.name;
         }
-        if (m.email) {
+        if (m.url) {
           contact.telecom = [
             {
-              system: 'email',
-              value: m.email
+              system: 'url',
+              value: m.url
             }
           ];
+        }
+        if (m.email) {
+          contact.telecom = contact.telecom ?? [];
+          contact.telecom.push({
+            system: 'email',
+            value: m.email
+          });
         }
         return contact;
       }),
