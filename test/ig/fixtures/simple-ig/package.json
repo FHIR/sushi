@@ -15,7 +15,8 @@
   "maintainers": [
     {
       "name": "Bill Cod",
-      "email": "cod@reef.gov"
+      "email": "cod@reef.gov",
+      "url": "https://capecodfishermen.org/"
     }
   ],
   "license": "CC0-1.0"
