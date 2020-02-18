@@ -23,7 +23,8 @@ import {
   ValueSetFilter,
   VsOperator,
   ValueSetFilterValue,
-  FshCodeSystem
+  FshCodeSystem,
+  Invariant
 } from '../fshtypes';
 import {
   Rule,
@@ -74,6 +75,14 @@ enum CsMetadataKey {
   Id = 'Id',
   Title = 'Title',
   Description = 'Description',
+  Unknown = 'Unknown'
+}
+
+enum InvariantMetadataKey {
+  Description = 'Description',
+  Expression = 'Expression',
+  XPath = 'XPath',
+  Severity = 'Severity',
   Unknown = 'Unknown'
 }
 
@@ -190,6 +199,10 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.codeSystem()) {
       this.visitCodeSystem(ctx.codeSystem());
+    }
+
+    if (ctx.invariant()) {
+      this.visitInvariant(ctx.invariant());
     }
   }
 
@@ -428,6 +441,44 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
+  visitInvariant(ctx: pc.InvariantContext) {
+    const invariant = new Invariant(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    this.parseInvariant(invariant, ctx.invariantMetadata());
+    this.currentDoc.invariants.set(invariant.name, invariant);
+  }
+
+  private parseInvariant(invariant: Invariant, metaCtx: pc.InvariantMetadataContext[] = []) {
+    const seenPairs: Map<InvariantMetadataKey, string | FshCode> = new Map();
+    metaCtx
+      .map(invariantMetadata => ({
+        ...this.visitInvariantMetadata(invariantMetadata),
+        context: invariantMetadata
+      }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === InvariantMetadataKey.Description) {
+          invariant.description = pair.value as string;
+        } else if (pair.key === InvariantMetadataKey.Expression) {
+          invariant.expression = pair.value as string;
+        } else if (pair.key === InvariantMetadataKey.Severity) {
+          invariant.severity = pair.value as FshCode;
+        } else if (pair.key === InvariantMetadataKey.XPath) {
+          invariant.xpath = pair.value as string;
+        }
+      });
+  }
+
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
@@ -479,6 +530,36 @@ export class FSHImporter extends FSHVisitor {
     return { key: CsMetadataKey.Unknown, value: ctx.getText() };
   }
 
+  visitInvariantMetadata(
+    ctx: pc.InvariantMetadataContext
+  ): { key: InvariantMetadataKey; value: string | FshCode } {
+    if (ctx.description()) {
+      return {
+        key: InvariantMetadataKey.Description,
+        value: this.visitDescription(ctx.description())
+      };
+    } else if (ctx.expression()) {
+      return {
+        key: InvariantMetadataKey.Expression,
+        value: this.visitExpression(ctx.expression())
+      };
+    } else if (ctx.xpath()) {
+      return {
+        key: InvariantMetadataKey.XPath,
+        value: this.visitXpath(ctx.xpath())
+      };
+    } else if (ctx.severity()) {
+      return {
+        key: InvariantMetadataKey.Severity,
+        value: this.visitSeverity(ctx.severity())
+      };
+    }
+    return {
+      key: InvariantMetadataKey.Unknown,
+      value: ctx.getText()
+    };
+  }
+
   visitId(ctx: pc.IdContext): string {
     return ctx.SEQUENCE().getText();
   }
@@ -502,6 +583,42 @@ export class FSHImporter extends FSHVisitor {
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
     return this.aliasAwareValue(ctx.SEQUENCE().getText());
+  }
+
+  visitExpression(ctx: pc.ExpressionContext): string {
+    return this.extractString(ctx.STRING());
+  }
+
+  visitXpath(ctx: pc.XpathContext): string {
+    return this.extractString(ctx.STRING());
+  }
+
+  visitSeverity(ctx: pc.SeverityContext): FshCode {
+    const conceptText = ctx.CODE().getText();
+    const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
+    let system: string, code: string;
+    if (splitPoint == null) {
+      system = '';
+      code = conceptText.slice(1);
+    } else {
+      system = conceptText.slice(0, splitPoint.index) + splitPoint[0].slice(0, -1);
+      code = conceptText.slice(splitPoint.index + splitPoint[0].length);
+    }
+    system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
+    if (code.startsWith('"')) {
+      code = code
+        .slice(1, code.length - 1)
+        .replace(/\\\\/g, '\\')
+        .replace(/\\"/g, '"');
+    }
+    const concept = new FshCode(code)
+      .withLocation(this.extractStartStop(ctx.CODE()))
+      .withFile(this.currentFile);
+    if (system.length > 0) {
+      logger.warn('Do not specify a system for invariant severity.', concept.sourceInfo);
+      concept.system = this.aliasAwareValue(system);
+    }
+    return concept;
   }
 
   visitSdRule(ctx: pc.SdRuleContext): Rule[] {

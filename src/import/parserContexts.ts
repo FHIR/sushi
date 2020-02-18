@@ -11,7 +11,7 @@ export interface EntityContext extends ParserRuleContext {
   instance(): InstanceContext;
   valueSet(): ValueSetContext;
   codeSystem(): CodeSystemContext;
-  //invariant(): InvariantContext;
+  invariant(): InvariantContext;
 }
 
 export interface AliasContext extends ParserRuleContext {
@@ -75,6 +75,18 @@ export interface CsMetadataContext extends ParserRuleContext {
   description(): DescriptionContext;
 }
 
+export interface InvariantContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  invariantMetadata(): InvariantMetadataContext[];
+}
+
+export interface InvariantMetadataContext extends ParserRuleContext {
+  description(): DescriptionContext;
+  expression(): ExpressionContext;
+  xpath(): XpathContext;
+  severity(): SeverityContext;
+}
+
 export interface ParentContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
 }
@@ -90,6 +102,18 @@ export interface TitleContext extends ParserRuleContext {
 export interface DescriptionContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
+}
+
+export interface ExpressionContext extends ParserRuleContext {
+  STRING(): ParserRuleContext;
+}
+
+export interface XpathContext extends ParserRuleContext {
+  STRING(): ParserRuleContext;
+}
+
+export interface SeverityContext extends ParserRuleContext {
+  CODE(): ParserRuleContext;
 }
 
 export interface InstanceOfContext extends ParserRuleContext {
