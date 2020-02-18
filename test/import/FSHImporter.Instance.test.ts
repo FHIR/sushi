@@ -50,7 +50,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'Missing.fsh');
         expect(result.instances.size).toBe(0);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Missing\.fsh.*Line: 2 - 3\D/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Missing\.fsh.*Line: 2 - 3\D*/s);
       });
     });
 
@@ -150,9 +150,9 @@ describe('FSHImporter', () => {
         `;
 
         importSingleText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 6\D/s);
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 6\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
       });
     });
   });

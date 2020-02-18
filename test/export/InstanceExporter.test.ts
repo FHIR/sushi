@@ -88,7 +88,7 @@ describe('InstanceExporter', () => {
     instance.instanceOf = 'BogusParent';
     doc.instances.set(instance.name, instance);
     exporter.export();
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
   });
 
   it('should export instances with InstanceOf FSHy profile', () => {
@@ -206,7 +206,7 @@ describe('InstanceExporter', () => {
       };
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
       expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Some\.fsh.*Line: 3 - 6\D/s);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Some\.fsh.*Line: 3 - 6\D*/s);
     });
 
     // Fixing top level elements
@@ -1122,7 +1122,7 @@ describe('InstanceExporter', () => {
 
       const exported = exporter.export().instances;
       expect(exported.length).toBe(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Unmeasurable\.fsh.*Line: 3\D/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Unmeasurable\.fsh.*Line: 3\D*/s);
     });
   });
 });

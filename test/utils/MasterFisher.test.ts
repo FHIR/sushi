@@ -102,7 +102,7 @@ describe('MasterFisher', () => {
     expect(loggerSpy.getLastMessage()).toMatch(
       /Circular dependency .* Practitioner < Practitioner/
     );
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Practitioner\.fsh.*Line: 2 - 4\D/s);
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Practitioner\.fsh.*Line: 2 - 4\D*/s);
     expect(resultMD).toEqual({
       id: 'my-dr',
       name: 'Practitioner',

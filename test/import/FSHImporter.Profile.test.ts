@@ -149,8 +149,8 @@ describe('FSHImporter', () => {
         `;
 
         importSingleText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
       });
     });
 
@@ -900,7 +900,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Obeys.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(0);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Obeys\.fsh.*Line: 4\D/s);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Obeys\.fsh.*Line: 4\D*/s);
       });
     });
   });
