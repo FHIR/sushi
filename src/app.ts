@@ -5,9 +5,9 @@ import fs from 'fs-extra';
 import program from 'commander';
 import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR } from './export';
-import { IGExporter } from './ig/IGExporter';
-import { logger, stats } from './utils/FSHLogger';
-import { loadDependency } from './fhirdefs/load';
+import { IGExporter } from './ig';
+import { logger, stats } from './utils';
+import { loadDependency } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 
 app();
@@ -18,6 +18,11 @@ async function app() {
   program
     .name('sushi')
     .usage('<path-to-fsh-defs> [options]')
+    .option(
+      '-r, --recurse-folders',
+      'recurse <path-to-fsh-defs> folder when looking for FSH definitions',
+      false
+    )
     .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
     .option('-d, --debug', 'output extra debugging information')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
@@ -38,7 +43,7 @@ async function app() {
 
   let files: string[];
   try {
-    files = fs.readdirSync(input, 'utf8');
+    files = program.recurseFolders ? getFilesRecursive(input) : fs.readdirSync(input, 'utf8');
   } catch {
     logger.error('Invalid path to FSH definition folder.');
     program.help();
@@ -154,4 +159,10 @@ function getVersion(): string {
     return `v${packageJSON.version}`;
   }
   return 'unknown';
+}
+
+function getFilesRecursive(dir: string): string[] {
+  return fs.statSync(dir).isDirectory()
+    ? [].concat(...fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f))))
+    : [dir];
 }
