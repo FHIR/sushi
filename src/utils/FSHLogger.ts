@@ -46,8 +46,8 @@ const printer = printf(info => {
       level = chalk.whiteBright.bgGreen(`${info.level} `);
       break;
     case 'warn':
-      // (255, 140, 0) = dark orange
-      level = chalk.whiteBright.bgRgb(255, 140, 0)(`${info.level} `);
+      // (179, 98, 0) = dark dark orange
+      level = chalk.whiteBright.bgRgb(179, 98, 0)(`${info.level} `);
       break;
     case 'error':
       level = chalk.whiteBright.bgRed(`${info.level}`);
