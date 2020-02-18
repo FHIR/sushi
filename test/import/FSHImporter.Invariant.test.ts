@@ -108,6 +108,19 @@ describe('FSHImporter', () => {
         expect(invariant.severity).toEqual(severityCode);
         expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Unnecessary\.fsh.*Line: 3\D*/s);
       });
+
+      it('should log an error when the severity code is invalid', () => {
+        const input = `
+        Invariant: nope-3
+        Severity: #nope
+        `;
+        const result = importSingleText(input, 'Nope.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('nope-3');
+        const severityCode = new FshCode('nope').withLocation([3, 19, 3, 23]).withFile('Nope.fsh');
+        expect(invariant.severity).toEqual(severityCode);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Nope\.fsh.*Line: 3\D*/s);
+      });
     });
   });
 });

@@ -619,6 +619,12 @@ export class FSHImporter extends FSHVisitor {
       logger.warn('Do not specify a system for invariant severity.', concept.sourceInfo);
       concept.system = this.aliasAwareValue(system);
     }
+    if (code != 'error' && code != 'warning') {
+      logger.error(
+        'Invalid invariant severity code: code must be "#error" or "#warning".',
+        concept.sourceInfo
+      );
+    }
     return concept;
   }
 
