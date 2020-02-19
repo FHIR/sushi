@@ -447,6 +447,12 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     this.parseInvariant(invariant, ctx.invariantMetadata());
+    if (invariant.description == null) {
+      logger.error(`Invariant ${invariant.name} must have a Description.`, invariant.sourceInfo);
+    }
+    if (invariant.severity == null) {
+      logger.error(`Invariant ${invariant.name} must have a Severity.`, invariant.sourceInfo);
+    }
     this.currentDoc.invariants.set(invariant.name, invariant);
   }
 

@@ -8,17 +8,22 @@ describe('FSHImporter', () => {
       it('should parse the simplest possible invariant', () => {
         const input = `
         Invariant: emp-1
+        Severity: #error
         Description: "This does not actually require anything."
         `;
         const result = importSingleText(input, 'Empty.fsh');
         expect(result.invariants.size).toBe(1);
         const invariant = result.invariants.get('emp-1');
         expect(invariant.name).toBe('emp-1');
+        const severityCode = new FshCode('error')
+          .withLocation([3, 19, 3, 24])
+          .withFile('Empty.fsh');
+        expect(invariant.severity).toEqual(severityCode);
         expect(invariant.description).toBe('This does not actually require anything.');
         expect(invariant.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 3,
+          endLine: 4,
           endColumn: 63
         });
         expect(invariant.sourceInfo.file).toBe('Empty.fsh');
@@ -94,10 +99,29 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Twice\.fsh.*Line: 10\D*/s);
       });
 
+      it('should log an error when there is no severity metadata', () => {
+        const input = `
+        Invariant: what-1
+        Description: "I don't know how important this is."
+        `;
+        importSingleText(input, 'What.fsh');
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: What\.fsh.*Line: 2\D+3\D*/s);
+      });
+
+      it('should log an error when there is no description metadata', () => {
+        const input = `
+        Invariant: bad-1
+        Severity: #warning
+        `;
+        importSingleText(input, 'Bad.fsh');
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bad\.fsh.*Line: 2\D+3\D*/s);
+      });
+
       it('should log a warning when the severity code includes a system', () => {
         const input = `
         Invariant: un-1
         Severity: https://unnecessary.org#error
+        Description: "You don't need that system."
         `;
         const result = importSingleText(input, 'Unnecessary.fsh');
         expect(result.invariants.size).toBe(1);
@@ -113,6 +137,7 @@ describe('FSHImporter', () => {
         const input = `
         Invariant: nope-3
         Severity: #nope
+        Description: "Nope is not a real severity."
         `;
         const result = importSingleText(input, 'Nope.fsh');
         expect(result.invariants.size).toBe(1);
