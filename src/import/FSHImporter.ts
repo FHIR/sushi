@@ -595,7 +595,22 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitSeverity(ctx: pc.SeverityContext): FshCode {
-    const conceptText = ctx.CODE().getText();
+    const concept = this.parseCodeLexeme(ctx.CODE().getText())
+      .withLocation(this.extractStartStop(ctx.CODE()))
+      .withFile(this.currentFile);
+    if (concept.system?.length > 0) {
+      logger.warn('Do not specify a system for invariant severity.', concept.sourceInfo);
+    }
+    if (concept.code != 'error' && concept.code != 'warning') {
+      logger.error(
+        'Invalid invariant severity code: code must be "#error" or "#warning".',
+        concept.sourceInfo
+      );
+    }
+    return concept;
+  }
+
+  private parseCodeLexeme(conceptText: string): FshCode {
     const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
     let system: string, code: string;
     if (splitPoint == null) {
@@ -612,18 +627,9 @@ export class FSHImporter extends FSHVisitor {
         .replace(/\\\\/g, '\\')
         .replace(/\\"/g, '"');
     }
-    const concept = new FshCode(code)
-      .withLocation(this.extractStartStop(ctx.CODE()))
-      .withFile(this.currentFile);
+    const concept = new FshCode(code);
     if (system.length > 0) {
-      logger.warn('Do not specify a system for invariant severity.', concept.sourceInfo);
       concept.system = this.aliasAwareValue(system);
-    }
-    if (code != 'error' && code != 'warning') {
-      logger.error(
-        'Invalid invariant severity code: code must be "#error" or "#warning".',
-        concept.sourceInfo
-      );
     }
     return concept;
   }
@@ -811,30 +817,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCode(ctx: pc.CodeContext): FshCode {
-    // split on the first unescaped #
-    const conceptText = ctx.CODE().getText();
-    const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
-    let system: string, code: string;
-    if (splitPoint == null) {
-      system = '';
-      code = conceptText.slice(1);
-    } else {
-      system = conceptText.slice(0, splitPoint.index) + splitPoint[0].slice(0, -1);
-      code = conceptText.slice(splitPoint.index + splitPoint[0].length);
-    }
-    system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
-    if (code.startsWith('"')) {
-      code = code
-        .slice(1, code.length - 1)
-        .replace(/\\\\/g, '\\')
-        .replace(/\\"/g, '"');
-    }
-    const concept = new FshCode(code)
+    const concept = this.parseCodeLexeme(ctx.CODE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (system && system.length > 0) {
-      concept.system = this.aliasAwareValue(system);
-    }
     if (ctx.STRING()) {
       concept.display = this.extractString(ctx.STRING());
     }
