@@ -18,11 +18,6 @@ async function app() {
   program
     .name('sushi')
     .usage('<path-to-fsh-defs> [options]')
-    .option(
-      '-r, --recurse-folders',
-      'recurse <path-to-fsh-defs> folder when looking for FSH definitions',
-      false
-    )
     .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
     .option('-d, --debug', 'output extra debugging information')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
@@ -43,7 +38,7 @@ async function app() {
 
   let files: string[];
   try {
-    files = program.recurseFolders ? getFilesRecursive(input) : fs.readdirSync(input, 'utf8');
+    files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');
     program.help();
@@ -162,7 +157,10 @@ function getVersion(): string {
 }
 
 function getFilesRecursive(dir: string): string[] {
-  return fs.statSync(dir).isDirectory()
-    ? [].concat(...fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f))))
-    : [dir];
+  if(fs.statSync(dir).isDirectory()) {
+    const ancestors = fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f)));
+    return [].concat(...ancestors);
+  } else {
+    return [dir];
+  }
 }
