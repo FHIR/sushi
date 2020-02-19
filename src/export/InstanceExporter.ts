@@ -128,7 +128,9 @@ export class InstanceExporter {
             // fshElementPath is '' when the fixableElement is the original element, trailing '.' on this path must be removed
             // Otherwise add the child path to existing path
             fshElementPath === '' ? existingPath.slice(0, -1) : existingPath + fshElementPath,
-            foundFixedValue,
+            // We don't actually want to validate the value, we only want to validate the path, so pass null
+            // we already know the value is valid, since we got it from the Structure Definition
+            null,
             this.fisher
           );
           setPropertyOnInstance(instanceDef, pathParts, fixedValue);
