@@ -3,7 +3,8 @@ import {
   assertFlagRule,
   assertOnlyRule,
   assertValueSetRule,
-  assertCaretValueRule
+  assertCaretValueRule,
+  assertObeysRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -188,6 +189,21 @@ describe('FSHImporter', () => {
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
         assertCaretValueRule(extension.rules[0], 'id', 'short', 'foo');
+      });
+    });
+
+    describe('#obeysRule', () => {
+      it('should parse an obeys rule with a path and multiple invariants', () => {
+        const input = `
+        Extension: SomeExtension
+        * extension obeys inv-1 and inv-2
+        `;
+
+        const result = importSingleText(input);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.rules).toHaveLength(2);
+        assertObeysRule(extension.rules[0], 'extension', 'inv-1');
+        assertObeysRule(extension.rules[1], 'extension', 'inv-2');
       });
     });
   });

@@ -8,7 +8,8 @@ import {
   OnlyRule,
   OnlyRuleType,
   ContainsRule,
-  CaretValueRule
+  CaretValueRule,
+  ObeysRule
 } from '../../src/fshtypes/rules';
 import {
   ValueSetComponent,
@@ -87,6 +88,13 @@ export function assertCaretValueRule(
   expect(caretValueRule.path).toBe(path);
   expect(caretValueRule.caretPath).toBe(caretPath);
   expect(caretValueRule.value).toEqual(value);
+}
+
+export function assertObeysRule(rule: Rule, path: string, invariant: string) {
+  expect(rule).toBeInstanceOf(ObeysRule);
+  const obeysRule = rule as ObeysRule;
+  expect(obeysRule.path).toBe(path);
+  expect(obeysRule.invariant).toBe(invariant);
 }
 
 export function assertValueSetConceptComponent(
