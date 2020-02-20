@@ -5,7 +5,8 @@ import {
   assertOnlyRule,
   assertValueSetRule,
   assertContainsRule,
-  assertCaretValueRule
+  assertCaretValueRule,
+  assertObeysRule
 } from '../testhelpers/asserts';
 import { FshCode, FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -889,9 +890,19 @@ describe('FSHImporter', () => {
     });
 
     describe('#obeysRule', () => {
-      // the current importer does not support obeys rule.
-      // this test should be removed once obeys rules are supported.
-      it('should issue a message when parsing an obeys rule', () => {
+      it('should parse an obeys rule with one invariant and no path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * obeys SomeInvariant
+        `;
+        const result = importSingleText(input, 'Obeys.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertObeysRule(profile.rules[0], '', 'SomeInvariant');
+      });
+
+      it('should parse an obeys rule with one invariant and a path', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -899,8 +910,36 @@ describe('FSHImporter', () => {
         `;
         const result = importSingleText(input, 'Obeys.fsh');
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(0);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Obeys\.fsh.*Line: 4\D*/s);
+        expect(profile.rules).toHaveLength(1);
+        assertObeysRule(profile.rules[0], 'category', 'SomeInvariant');
+      });
+
+      it('should parse an obeys rule with multiple invariants and no path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * obeys SomeInvariant and ThisInvariant and ThatInvariant
+        `;
+        const result = importSingleText(input, 'Obeys.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(3);
+        assertObeysRule(profile.rules[0], '', 'SomeInvariant');
+        assertObeysRule(profile.rules[1], '', 'ThisInvariant');
+        assertObeysRule(profile.rules[2], '', 'ThatInvariant');
+      });
+
+      it('should parse an obeys rule with multiple invariants and a path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category obeys SomeInvariant and ThisInvariant and ThatInvariant
+        `;
+        const result = importSingleText(input, 'Obeys.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(3);
+        assertObeysRule(profile.rules[0], 'category', 'SomeInvariant');
+        assertObeysRule(profile.rules[1], 'category', 'ThisInvariant');
+        assertObeysRule(profile.rules[2], 'category', 'ThatInvariant');
       });
     });
   });

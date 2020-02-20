@@ -23,7 +23,8 @@ import {
   ValueSetFilter,
   VsOperator,
   ValueSetFilterValue,
-  FshCodeSystem
+  FshCodeSystem,
+  Invariant
 } from '../fshtypes';
 import {
   Rule,
@@ -34,7 +35,8 @@ import {
   FixedValueType,
   OnlyRule,
   ContainsRule,
-  CaretValueRule
+  CaretValueRule,
+  ObeysRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -74,6 +76,14 @@ enum CsMetadataKey {
   Id = 'Id',
   Title = 'Title',
   Description = 'Description',
+  Unknown = 'Unknown'
+}
+
+enum InvariantMetadataKey {
+  Description = 'Description',
+  Expression = 'Expression',
+  XPath = 'XPath',
+  Severity = 'Severity',
   Unknown = 'Unknown'
 }
 
@@ -190,6 +200,10 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.codeSystem()) {
       this.visitCodeSystem(ctx.codeSystem());
+    }
+
+    if (ctx.invariant()) {
+      this.visitInvariant(ctx.invariant());
     }
   }
 
@@ -428,6 +442,50 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
+  visitInvariant(ctx: pc.InvariantContext) {
+    const invariant = new Invariant(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    this.parseInvariant(invariant, ctx.invariantMetadata());
+    if (invariant.description == null) {
+      logger.error(`Invariant ${invariant.name} must have a Description.`, invariant.sourceInfo);
+    }
+    if (invariant.severity == null) {
+      logger.error(`Invariant ${invariant.name} must have a Severity.`, invariant.sourceInfo);
+    }
+    this.currentDoc.invariants.set(invariant.name, invariant);
+  }
+
+  private parseInvariant(invariant: Invariant, metaCtx: pc.InvariantMetadataContext[] = []) {
+    const seenPairs: Map<InvariantMetadataKey, string | FshCode> = new Map();
+    metaCtx
+      .map(invariantMetadata => ({
+        ...this.visitInvariantMetadata(invariantMetadata),
+        context: invariantMetadata
+      }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === InvariantMetadataKey.Description) {
+          invariant.description = pair.value as string;
+        } else if (pair.key === InvariantMetadataKey.Expression) {
+          invariant.expression = pair.value as string;
+        } else if (pair.key === InvariantMetadataKey.Severity) {
+          invariant.severity = pair.value as FshCode;
+        } else if (pair.key === InvariantMetadataKey.XPath) {
+          invariant.xpath = pair.value as string;
+        }
+      });
+  }
+
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
@@ -479,6 +537,36 @@ export class FSHImporter extends FSHVisitor {
     return { key: CsMetadataKey.Unknown, value: ctx.getText() };
   }
 
+  visitInvariantMetadata(
+    ctx: pc.InvariantMetadataContext
+  ): { key: InvariantMetadataKey; value: string | FshCode } {
+    if (ctx.description()) {
+      return {
+        key: InvariantMetadataKey.Description,
+        value: this.visitDescription(ctx.description())
+      };
+    } else if (ctx.expression()) {
+      return {
+        key: InvariantMetadataKey.Expression,
+        value: this.visitExpression(ctx.expression())
+      };
+    } else if (ctx.xpath()) {
+      return {
+        key: InvariantMetadataKey.XPath,
+        value: this.visitXpath(ctx.xpath())
+      };
+    } else if (ctx.severity()) {
+      return {
+        key: InvariantMetadataKey.Severity,
+        value: this.visitSeverity(ctx.severity())
+      };
+    }
+    return {
+      key: InvariantMetadataKey.Unknown,
+      value: ctx.getText()
+    };
+  }
+
   visitId(ctx: pc.IdContext): string {
     return ctx.SEQUENCE().getText();
   }
@@ -504,6 +592,54 @@ export class FSHImporter extends FSHVisitor {
     return this.aliasAwareValue(ctx.SEQUENCE().getText());
   }
 
+  visitExpression(ctx: pc.ExpressionContext): string {
+    return this.extractString(ctx.STRING());
+  }
+
+  visitXpath(ctx: pc.XpathContext): string {
+    return this.extractString(ctx.STRING());
+  }
+
+  visitSeverity(ctx: pc.SeverityContext): FshCode {
+    const concept = this.parseCodeLexeme(ctx.CODE().getText())
+      .withLocation(this.extractStartStop(ctx.CODE()))
+      .withFile(this.currentFile);
+    if (concept.system?.length > 0) {
+      logger.warn('Do not specify a system for invariant severity.', concept.sourceInfo);
+    }
+    if (concept.code != 'error' && concept.code != 'warning') {
+      logger.error(
+        'Invalid invariant severity code: code must be "#error" or "#warning".',
+        concept.sourceInfo
+      );
+    }
+    return concept;
+  }
+
+  private parseCodeLexeme(conceptText: string): FshCode {
+    const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
+    let system: string, code: string;
+    if (splitPoint == null) {
+      system = '';
+      code = conceptText.slice(1);
+    } else {
+      system = conceptText.slice(0, splitPoint.index) + splitPoint[0].slice(0, -1);
+      code = conceptText.slice(splitPoint.index + splitPoint[0].length);
+    }
+    system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
+    if (code.startsWith('"')) {
+      code = code
+        .slice(1, code.length - 1)
+        .replace(/\\\\/g, '\\')
+        .replace(/\\"/g, '"');
+    }
+    const concept = new FshCode(code);
+    if (system.length > 0) {
+      concept.system = this.aliasAwareValue(system);
+    }
+    return concept;
+  }
+
   visitSdRule(ctx: pc.SdRuleContext): Rule[] {
     if (ctx.cardRule()) {
       return this.visitCardRule(ctx.cardRule());
@@ -519,6 +655,8 @@ export class FSHImporter extends FSHVisitor {
       return this.visitContainsRule(ctx.containsRule());
     } else if (ctx.caretValueRule()) {
       return [this.visitCaretValueRule(ctx.caretValueRule())];
+    } else if (ctx.obeysRule()) {
+      return this.visitObeysRule(ctx.obeysRule());
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -685,30 +823,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCode(ctx: pc.CodeContext): FshCode {
-    // split on the first unescaped #
-    const conceptText = ctx.CODE().getText();
-    const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
-    let system: string, code: string;
-    if (splitPoint == null) {
-      system = '';
-      code = conceptText.slice(1);
-    } else {
-      system = conceptText.slice(0, splitPoint.index) + splitPoint[0].slice(0, -1);
-      code = conceptText.slice(splitPoint.index + splitPoint[0].length);
-    }
-    system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
-    if (code.startsWith('"')) {
-      code = code
-        .slice(1, code.length - 1)
-        .replace(/\\\\/g, '\\')
-        .replace(/\\"/g, '"');
-    }
-    const concept = new FshCode(code)
+    const concept = this.parseCodeLexeme(ctx.CODE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (system && system.length > 0) {
-      concept.system = this.aliasAwareValue(system);
-    }
     if (ctx.STRING()) {
       concept.display = this.extractString(ctx.STRING());
     }
@@ -847,6 +964,19 @@ export class FSHImporter extends FSHVisitor {
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
     return caretValueRule;
+  }
+
+  visitObeysRule(ctx: pc.ObeysRuleContext): ObeysRule[] {
+    const rules: ObeysRule[] = [];
+    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
+    ctx.SEQUENCE().forEach(invariant => {
+      const obeysRule = new ObeysRule(path)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      obeysRule.invariant = invariant.getText();
+      rules.push(obeysRule);
+    });
+    return rules;
   }
 
   visitVsComponent(ctx: pc.VsComponentContext): ValueSetComponent {

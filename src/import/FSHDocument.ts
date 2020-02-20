@@ -1,4 +1,4 @@
-import { Profile, Extension, Instance, FshValueSet, FshCodeSystem } from '../fshtypes';
+import { Profile, Extension, Instance, FshValueSet, FshCodeSystem, Invariant } from '../fshtypes';
 
 export class FSHDocument {
   readonly aliases: Map<string, string>;
@@ -7,6 +7,7 @@ export class FSHDocument {
   readonly instances: Map<string, Instance>;
   readonly valueSets: Map<string, FshValueSet>;
   readonly codeSystems: Map<string, FshCodeSystem>;
+  readonly invariants: Map<string, Invariant>;
 
   constructor(public readonly file: string) {
     this.aliases = new Map();
@@ -15,5 +16,6 @@ export class FSHDocument {
     this.instances = new Map();
     this.valueSets = new Map();
     this.codeSystems = new Map();
+    this.invariants = new Map();
   }
 }
