@@ -1491,8 +1491,7 @@ export class ElementDefinition {
             delete this.contentReference;
           }
         }
-      }
-      if (this.sliceName) {
+      } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
         newElements = slicedElement.children().map(e => {

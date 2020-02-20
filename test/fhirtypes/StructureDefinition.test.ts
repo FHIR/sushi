@@ -591,6 +591,21 @@ describe('StructureDefinition', () => {
       expect(valueSet.elements.length).toBe(originalLength + 26);
     });
 
+    it('should find a child of a slice content reference by path', () => {
+      const originalLength = valueSet.elements.length;
+      const include = valueSet.elements.find(e => e.id === 'ValueSet.compose.include');
+      const exclude = valueSet.elements.find(e => e.id === 'ValueSet.compose.exclude');
+      exclude.slicing = { rules: 'open' };
+      const mySlice = exclude.addSlice('mySlice');
+      const mySliceSystem = valueSet.findElementByPath('compose.exclude[mySlice].system', fisher);
+      expect(mySliceSystem).toBeDefined();
+      expect(mySliceSystem.id).toBe('ValueSet.compose.exclude:mySlice.system');
+      expect(mySliceSystem.short).toBe('The system the codes come from');
+      expect(mySlice.contentReference).toBeUndefined();
+      expect(mySlice.type).toEqual(include.type);
+      expect(valueSet.elements.length).toBe(originalLength + 27);
+    });
+
     it('should find but not unfold a content reference element by path', () => {
       const originalLength = valueSet.elements.length;
       const exclude = valueSet.findElementByPath('compose.exclude', fisher);
