@@ -2,7 +2,12 @@ import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { logger, Fishable, Type } from '../utils';
-import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
+import {
+  setPropertyOnInstance,
+  replaceReferences,
+  replaceField,
+  splitOnPathPeriods
+} from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
 import { isEmpty, cloneDeep } from 'lodash';
@@ -46,8 +51,7 @@ export class InstanceExporter {
           pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
           const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
           // Reconstruct the part of the rule's path that we just got the element for
-          let rulePathPart = rule.path
-            .split(/\.(?![^\[]*\])/g) // match a period that isn't within square brackets
+          let rulePathPart = splitOnPathPeriods(rule.path)
             .slice(0, i + 1)
             .join('.');
           rulePathPart += '.';

@@ -1484,7 +1484,7 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionElement.max).toEqual('*');
   });
 
-  it('should log an error if Extension.value[x] is changed after Extension.extension is used', () => {
+  it('should log an error if Extension.value[x] is changed after Extension.extension is used but apply both rules', () => {
     const extension = new Extension('MyOtherInvalidExtension');
     extension.id = 'my-invalid-extension';
 
@@ -1510,6 +1510,203 @@ describe('StructureDefinitionExporter', () => {
       /Extension MyOtherInvalidExtension cannot have both a value and sub-extensions/s
     );
     expect(loggerSpy.getLastMessage()).toMatch(/File: OtherInvalidExtension\.fsh.*Line: 4\D*/s);
+  });
+
+  it('should zero out value[x] on an extension defined inline that uses extension', () => {
+    const extension = new Extension('MyExtension');
+    extension.id = 'my-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['mySlice'];
+    extension.rules.push(containsRuleForExtension); // * extension contains MySlice
+
+    const cardRule = new CardRule('extension[mySlice].extension');
+    cardRule.min = 1;
+    cardRule.max = '*';
+    extension.rules.push(cardRule); // * extension[mySlice].extension 1..* which implies extension[mySlice].value[x] 0..0
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+    const mySliceValueElement = sd.findElement('Extension.extension:mySlice.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+    expect(mySliceValueElement.min).toEqual(0);
+    expect(mySliceValueElement.max).toEqual('0');
+  });
+
+  it('should zero out extension on an extension defined inline that uses value[x]', () => {
+    const extension = new Extension('MyExtension');
+    extension.id = 'my-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['mySlice'];
+    extension.rules.push(containsRuleForExtension); // * extension contains MySlice
+
+    const fixedValueRule = new FixedValueRule('extension[mySlice].valueBoolean');
+    fixedValueRule.fixedValue = true;
+    extension.rules.push(fixedValueRule);
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+    const mySliceExtensionElement = sd.findElement('Extension.extension:mySlice.extension');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+    expect(mySliceExtensionElement.min).toEqual(0);
+    expect(mySliceExtensionElement.max).toEqual('0');
+  });
+
+  it('should not zero out extension if value[x] is zeroed out on an extension defined inline', () => {
+    const extension = new Extension('MyExtension');
+    extension.id = 'my-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['mySlice'];
+    extension.rules.push(containsRuleForExtension); // * extension contains MySlice
+
+    const cardRule = new CardRule('extension[mySlice].value[x]');
+    cardRule.min = 0;
+    cardRule.max = '0';
+    extension.rules.push(cardRule); // * extension[mySlice].value[x] 0..0 which should not change anything on extension[mySlice].extension
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+    const mySliceValueElement = sd.findElement('Extension.extension:mySlice.value[x]');
+    const mySliceExtensionElement = sd.findElement('Extension.extension:mySlice.extension');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+    expect(mySliceValueElement.min).toEqual(0);
+    expect(mySliceValueElement.max).toEqual('0');
+    expect(mySliceExtensionElement.min).toEqual(0);
+    expect(mySliceExtensionElement.max).toEqual('*'); // extension[mySlice].extension cardinality is unchanged
+  });
+
+  it('should not zero out value[x] if extension is zeroed out on an extension defined inline', () => {
+    const extension = new Extension('MyExtension');
+    extension.id = 'my-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['mySlice'];
+    extension.rules.push(containsRuleForExtension); // * extension contains MySlice
+
+    const cardRule = new CardRule('extension[mySlice].extension');
+    cardRule.min = 0;
+    cardRule.max = '0';
+    extension.rules.push(cardRule); // * extension[mySlice].extension 0..0 which should not change anything on extension[mySlice].value[x]
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+    const mySliceValueElement = sd.findElement('Extension.extension:mySlice.value[x]');
+    const mySliceExtensionElement = sd.findElement('Extension.extension:mySlice.extension');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+    expect(mySliceValueElement.min).toEqual(0);
+    expect(mySliceValueElement.max).toEqual('1'); // extension[mySlice].value[x] cardinality is unchanged
+    expect(mySliceExtensionElement.min).toEqual(0);
+    expect(mySliceExtensionElement.max).toEqual('0');
+  });
+
+  it('should log an error if extension is used after value[x] on an extension defined inline and apply both rules', () => {
+    const extension = new Extension('MyInvalidExtension');
+    extension.id = 'my-invalid-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['mySlice'];
+    extension.rules.push(containsRuleForExtension); // * extension contains MySlice
+
+    // Contradictory rules - log an error but set both
+    const valueCardRule = new CardRule('extension[mySlice].value[x]');
+    valueCardRule.min = 1;
+    valueCardRule.max = '1';
+    extension.rules.push(valueCardRule); // * extension[mySlice].value[x] 1..1
+    const extensionCardRule = new CardRule('extension[mySlice].extension')
+      .withFile('InvalidInlineExtension.fsh')
+      .withLocation([4, 7, 4, 15]);
+    extensionCardRule.min = 1;
+    extensionCardRule.max = '*';
+    extension.rules.push(extensionCardRule); // * extension[mySlice].extension 1..*
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+    const mySliceExtensionElement = sd.findElement('Extension.extension:mySlice.extension');
+    const mySliceValueElement = sd.findElement('Extension.extension:mySlice.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+    expect(mySliceExtensionElement.min).toEqual(1);
+    expect(mySliceExtensionElement.max).toEqual('*');
+    expect(mySliceValueElement.min).toEqual(1);
+    expect(mySliceValueElement.max).toEqual('1');
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /Extension MyInvalidExtension cannot have both a value and sub-extensions/s
+    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidInlineExtension\.fsh.*Line: 4\D*/s);
+  });
+
+  it('should log an error if value[x] is used after extension on an extension defined inline and apply both rules', () => {
+    const extension = new Extension('MyInvalidExtension');
+    extension.id = 'my-invalid-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['mySlice'];
+    extension.rules.push(containsRuleForExtension); // * extension contains MySlice
+
+    // Contradictory rules - log an error but set both
+    const extensionCardRule = new CardRule('extension[mySlice].extension');
+    extensionCardRule.min = 1;
+    extensionCardRule.max = '*';
+    extension.rules.push(extensionCardRule); // * extension[mySlice].extension 1..*
+    const valueCardRule = new CardRule('extension[mySlice].value[x]')
+      .withFile('InvalidInlineExtension.fsh')
+      .withLocation([5, 7, 5, 15]);
+    valueCardRule.min = 1;
+    valueCardRule.max = '1';
+    extension.rules.push(valueCardRule); // * extension[mySlice].value[x] 1..1
+
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const valueElement = sd.findElement('Extension.value[x]');
+    const mySliceExtensionElement = sd.findElement('Extension.extension:mySlice.extension');
+    const mySliceValueElement = sd.findElement('Extension.extension:mySlice.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
+    expect(mySliceExtensionElement.min).toEqual(1);
+    expect(mySliceExtensionElement.max).toEqual('*');
+    expect(mySliceValueElement.min).toEqual(1);
+    expect(mySliceValueElement.max).toEqual('1');
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /Extension MyInvalidExtension cannot have both a value and sub-extensions/s
+    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidInlineExtension\.fsh.*Line: 5\D*/s);
+  });
+
+  it('should zero out value[x] if extension is used on an extension defined inline on a profile', () => {
+    // Other combinations of inferred CardRules on profiles are covered by the extensions tests
+    const patientProfile = new Profile('MyPatient');
+    patientProfile.parent = 'Patient';
+
+    const containsRule = new ContainsRule('maritalStatus.extension');
+    containsRule.items = ['maritalSlice'];
+    const sliceCardRule = new CardRule('maritalStatus.extension[maritalSlice].extension');
+    sliceCardRule.min = 1;
+    sliceCardRule.max = '2';
+    patientProfile.rules.push(containsRule, sliceCardRule);
+
+    exporter.exportStructDef(patientProfile);
+    const sd = pkg.profiles[0];
+    const valueElement = sd.findElement('Patient.maritalStatus.extension:maritalSlice.value[x]');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('0');
   });
 
   // toJSON
@@ -1621,7 +1818,7 @@ describe('StructureDefinitionExporter', () => {
     const json = sd.toJSON();
 
     const diffs = json.differential.element;
-    expect(diffs).toHaveLength(7);
+    expect(diffs).toHaveLength(9);
     expect(diffs[0]).toEqual({
       id: 'Observation.component',
       path: 'Observation.component',
@@ -1638,31 +1835,41 @@ describe('StructureDefinitionExporter', () => {
       max: '1'
     });
     expect(diffs[2]).toEqual({
+      id: 'Observation.component:SystolicBP.extension',
+      path: 'Observation.component.extension',
+      max: '0'
+    });
+    expect(diffs[3]).toEqual({
       id: 'Observation.component:SystolicBP.code',
       path: 'Observation.component.code',
       patternCodeableConcept: {
         coding: [{ code: '8480-6', system: 'http://loinc.org' }]
       }
     });
-    expect(diffs[3]).toEqual({
+    expect(diffs[4]).toEqual({
       id: 'Observation.component:SystolicBP.value[x]',
       path: 'Observation.component.value[x]',
       type: [{ code: 'Quantity' }]
     });
-    expect(diffs[4]).toEqual({
+    expect(diffs[5]).toEqual({
       id: 'Observation.component:DiastolicBP',
       path: 'Observation.component',
       sliceName: 'DiastolicBP',
       max: '1'
     });
-    expect(diffs[5]).toEqual({
+    expect(diffs[6]).toEqual({
+      id: 'Observation.component:DiastolicBP.extension',
+      path: 'Observation.component.extension',
+      max: '0'
+    });
+    expect(diffs[7]).toEqual({
       id: 'Observation.component:DiastolicBP.code',
       path: 'Observation.component.code',
       patternCodeableConcept: {
         coding: [{ code: '8462-4', system: 'http://loinc.org' }]
       }
     });
-    expect(diffs[6]).toEqual({
+    expect(diffs[8]).toEqual({
       id: 'Observation.component:DiastolicBP.value[x]',
       path: 'Observation.component.value[x]',
       type: [{ code: 'Quantity' }]

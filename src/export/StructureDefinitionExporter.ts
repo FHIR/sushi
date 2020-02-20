@@ -12,7 +12,7 @@ import {
   CaretValueRule
 } from '../fshtypes/rules';
 import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
-import { replaceReferences } from '../fhirtypes/common';
+import { replaceReferences, splitOnPathPeriods } from '../fhirtypes/common';
 import { Package } from './Package';
 
 /**
@@ -168,48 +168,61 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   /**
-   * Does any necessary preprocessing of extensions.
+   * Does any necessary preprocessing of profiles and extensions.
    * @param {Extension} fshDefinition - The extension to do preprocessing on. It is updated directly based on processing.
    */
-  private preprocessExtension(fshDefinition: Extension): void {
-    let hasRuleAppliedToValueX = false;
-    let hasRuleAppliedToExtension = false;
+  private preprocessStructureDefinition(fshDefinition: Extension | Profile): void {
+    const inferredCardRulesMap = new Map(); // key is the rule, value is a boolean of whether it should be set
     fshDefinition.rules.forEach(rule => {
-      if (rule.path.startsWith('extension')) {
-        if (hasRuleAppliedToValueX) {
-          logger.error(
-            `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
-            rule.sourceInfo
+      const rulePathParts = splitOnPathPeriods(rule.path);
+      rulePathParts.forEach((pathPart, i) => {
+        const initialPath = rulePathParts.slice(0, i).join('.');
+        const basePath = `${initialPath}${initialPath ? '.' : ''}`;
+        if (pathPart.startsWith('extension')) {
+          const relevantContradictoryRule = `${basePath}extension`;
+          const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
+            relevantContradictoryRule
           );
-        }
-        if (!(rule instanceof CardRule && rule.max === '0')) {
-          hasRuleAppliedToExtension = true;
-        }
-      } else if (rule.path.startsWith('value')) {
-        if (hasRuleAppliedToExtension) {
-          logger.error(
-            `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
-            rule.sourceInfo
+          if (relevantContradictoryRuleMapEntry) {
+            logger.error(
+              `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
+              rule.sourceInfo
+            );
+            inferredCardRulesMap.set(relevantContradictoryRule, false);
+          } else if (!(rule instanceof CardRule && rule.max === '0')) {
+            // If we don't already have a contradiction, add new rule to infer value[x] constraints
+            const relevantRule = `${basePath}value[x]`;
+            inferredCardRulesMap.set(relevantRule, true);
+          }
+        } else if (pathPart.startsWith('value')) {
+          const relevantContradictoryRule = `${basePath}value[x]`;
+          const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
+            relevantContradictoryRule
           );
+          if (relevantContradictoryRuleMapEntry) {
+            logger.error(
+              `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
+              rule.sourceInfo
+            );
+            inferredCardRulesMap.set(relevantContradictoryRule, false);
+          } else if (!(rule instanceof CardRule && rule.max === '0')) {
+            // If we don't already have a contradiction, add new rule to infer extension constraints
+            const relevantRule = `${basePath}extension`;
+            inferredCardRulesMap.set(relevantRule, true);
+          }
         }
-        if (!(rule instanceof CardRule && rule.max === '0')) {
-          hasRuleAppliedToValueX = true;
-        }
-      }
+      });
     });
 
-    // If only value[x] or extension is use, constrain cardinality of the other to 0..0.
+    // If only value[x] or extension is used, constrain cardinality of the other to 0..0.
     // If both are used, an error has been logged, but the rules will still be applied.
-    if (hasRuleAppliedToExtension && !hasRuleAppliedToValueX) {
-      const valueCardRule = new CardRule('value[x]');
-      valueCardRule.min = 0;
-      valueCardRule.max = '0';
-      fshDefinition.rules.push(valueCardRule);
-    } else if (hasRuleAppliedToValueX && !hasRuleAppliedToExtension) {
-      const extensionCardRule = new CardRule('extension');
-      extensionCardRule.min = 0;
-      extensionCardRule.max = '0';
-      fshDefinition.rules.push(extensionCardRule);
+    for (const [rule, shouldRuleBeSet] of inferredCardRulesMap) {
+      if (shouldRuleBeSet) {
+        const inferredCardRule = new CardRule(rule);
+        inferredCardRule.min = 0;
+        inferredCardRule.max = '0';
+        fshDefinition.rules.push(inferredCardRule);
+      }
     }
   }
 
@@ -276,10 +289,11 @@ export class StructureDefinitionExporter implements Fishable {
     // incomplete definitions to be used to resolve circular reference issues.
     if (structDef.type === 'Extension') {
       this.pkg.extensions.push(structDef);
-      this.preprocessExtension(fshDefinition as Extension);
     } else {
       this.pkg.profiles.push(structDef);
     }
+
+    this.preprocessStructureDefinition(fshDefinition);
 
     this.setRules(structDef, fshDefinition);
     structDef.inProgress = false;
