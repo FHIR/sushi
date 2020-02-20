@@ -5,9 +5,9 @@ import fs from 'fs-extra';
 import program from 'commander';
 import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR } from './export';
-import { IGExporter } from './ig/IGExporter';
-import { logger, stats } from './utils/FSHLogger';
-import { loadDependency } from './fhirdefs/load';
+import { IGExporter } from './ig';
+import { logger, stats } from './utils';
+import { loadDependency } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 
 app();
@@ -38,7 +38,7 @@ async function app() {
 
   let files: string[];
   try {
-    files = fs.readdirSync(input, 'utf8');
+    files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');
     program.help();
@@ -154,4 +154,13 @@ function getVersion(): string {
     return `v${packageJSON.version}`;
   }
   return 'unknown';
+}
+
+function getFilesRecursive(dir: string): string[] {
+  if (fs.statSync(dir).isDirectory()) {
+    const ancestors = fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f)));
+    return [].concat(...ancestors);
+  } else {
+    return [dir];
+  }
 }
