@@ -11,7 +11,7 @@ export interface EntityContext extends ParserRuleContext {
   instance(): InstanceContext;
   valueSet(): ValueSetContext;
   codeSystem(): CodeSystemContext;
-  //invariant(): InvariantContext;
+  invariant(): InvariantContext;
 }
 
 export interface AliasContext extends ParserRuleContext {
@@ -75,6 +75,18 @@ export interface CsMetadataContext extends ParserRuleContext {
   description(): DescriptionContext;
 }
 
+export interface InvariantContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  invariantMetadata(): InvariantMetadataContext[];
+}
+
+export interface InvariantMetadataContext extends ParserRuleContext {
+  description(): DescriptionContext;
+  expression(): ExpressionContext;
+  xpath(): XpathContext;
+  severity(): SeverityContext;
+}
+
 export interface ParentContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
 }
@@ -92,6 +104,18 @@ export interface DescriptionContext extends ParserRuleContext {
   MULTILINE_STRING(): ParserRuleContext;
 }
 
+export interface ExpressionContext extends ParserRuleContext {
+  STRING(): ParserRuleContext;
+}
+
+export interface XpathContext extends ParserRuleContext {
+  STRING(): ParserRuleContext;
+}
+
+export interface SeverityContext extends ParserRuleContext {
+  CODE(): ParserRuleContext;
+}
+
 export interface InstanceOfContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
 }
@@ -103,7 +127,7 @@ export interface SdRuleContext extends ParserRuleContext {
   fixedValueRule(): FixedValueRuleContext;
   containsRule(): ContainsRuleContext;
   onlyRule(): OnlyRuleContext;
-  // obeysRule(): ObeysRuleContext;
+  obeysRule(): ObeysRuleContext;
   caretValueRule(): CaretValueRuleContext;
 }
 
@@ -220,6 +244,11 @@ export interface OnlyRuleContext extends ParserRuleContext {
 export interface TargetTypeContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   reference(): ReferenceContext;
+}
+
+export interface ObeysRuleContext extends ParserRuleContext {
+  path(): PathContext;
+  SEQUENCE(): ParserRuleContext[];
 }
 
 export interface CaretValueRuleContext extends ParserRuleContext {
