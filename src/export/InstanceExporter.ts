@@ -5,7 +5,7 @@ import { logger, Fishable, Type } from '../utils';
 import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
-import isEmpty from 'lodash/isEmpty';
+import { isEmpty, cloneDeep } from 'lodash';
 
 export class InstanceExporter {
   constructor(
@@ -105,7 +105,7 @@ export class InstanceExporter {
         k => k.startsWith('fixed') || k.startsWith('pattern')
       );
       // Fixed value can come from fixed[x] or pattern[x] directly on element, or via pattern[x] on parent
-      const foundFixedValue = fixableElement[fixedValueKey as keyof ElementDefinition];
+      const foundFixedValue = cloneDeep(fixableElement[fixedValueKey as keyof ElementDefinition]);
       // We only fix the value if the element is the original element, or it is a direct child with card 1..n
       if (foundFixedValue && (fixableElement.id === element.id || fixableElement.min > 0)) {
         // Get the end of the path, this is the part that differs from existingPath
@@ -123,7 +123,7 @@ export class InstanceExporter {
         });
         // Fix the value if we validly can
         try {
-          const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+          const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(
             // fshElementPath is '' when the fixableElement is the original element, trailing '.' on this path must be removed
             // Otherwise add the child path to existing path
             fshElementPath === '' ? existingPath.slice(0, -1) : existingPath + fshElementPath,
@@ -132,7 +132,7 @@ export class InstanceExporter {
             null,
             this.fisher
           );
-          setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+          setPropertyOnInstance(instanceDef, pathParts, foundFixedValue);
         } catch (e) {
           logger.error(e.message);
         }
