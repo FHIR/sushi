@@ -50,6 +50,7 @@ describe('StructureDefinitionExporter', () => {
     pkg = new Package(input.config);
     fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
+    loggerSpy.reset();
   });
 
   // Profile
@@ -1404,6 +1405,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(valueElement.min).toEqual(0);
     expect(valueElement.max).toEqual('0');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should not zero out Extension.value[x] if Extension.extension is zeroed out', () => {
@@ -1421,6 +1423,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(valueElement.min).toEqual(0);
     expect(valueElement.max).toEqual('1');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should log an error if Extension.extension and Extension.value[x] are both used but apply both rules', () => {
@@ -1449,6 +1452,7 @@ describe('StructureDefinitionExporter', () => {
       /Extension MyInvalidExtension cannot have both a value and sub-extensions/s
     );
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidExtension\.fsh.*Line: 4\D*/s);
+    expect(loggerSpy.getAllMessages()).toHaveLength(1);
   });
 
   it('should zero out Extension.extension when Extension.value[x] is used', () => {
@@ -1465,11 +1469,16 @@ describe('StructureDefinitionExporter', () => {
 
     expect(extensionElement.min).toEqual(0);
     expect(extensionElement.max).toEqual('0');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should not zero out Extension.extension if Extension.value[x] is zeroed out', () => {
     const extension = new Extension('MyExplicitComplexExtension');
     extension.id = 'complex-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['MySlice'];
+    extension.rules.push(containsRuleForExtension);
 
     const cardRuleForValue = new CardRule('value[x]');
     cardRuleForValue.min = 0;
@@ -1482,6 +1491,7 @@ describe('StructureDefinitionExporter', () => {
 
     expect(extensionElement.min).toEqual(0);
     expect(extensionElement.max).toEqual('*');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should log an error if Extension.value[x] is changed after Extension.extension is used but apply both rules', () => {
@@ -1510,6 +1520,7 @@ describe('StructureDefinitionExporter', () => {
       /Extension MyOtherInvalidExtension cannot have both a value and sub-extensions/s
     );
     expect(loggerSpy.getLastMessage()).toMatch(/File: OtherInvalidExtension\.fsh.*Line: 4\D*/s);
+    expect(loggerSpy.getAllMessages()).toHaveLength(1);
   });
 
   it('should zero out value[x] on an extension defined inline that uses extension', () => {
@@ -1534,6 +1545,7 @@ describe('StructureDefinitionExporter', () => {
     expect(valueElement.max).toEqual('0');
     expect(mySliceValueElement.min).toEqual(0);
     expect(mySliceValueElement.max).toEqual('0');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should zero out extension on an extension defined inline that uses value[x]', () => {
@@ -1557,6 +1569,7 @@ describe('StructureDefinitionExporter', () => {
     expect(valueElement.max).toEqual('0');
     expect(mySliceExtensionElement.min).toEqual(0);
     expect(mySliceExtensionElement.max).toEqual('0');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should not zero out extension if value[x] is zeroed out on an extension defined inline', () => {
@@ -1584,6 +1597,7 @@ describe('StructureDefinitionExporter', () => {
     expect(mySliceValueElement.max).toEqual('0');
     expect(mySliceExtensionElement.min).toEqual(0);
     expect(mySliceExtensionElement.max).toEqual('*'); // extension[mySlice].extension cardinality is unchanged
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should not zero out value[x] if extension is zeroed out on an extension defined inline', () => {
@@ -1611,6 +1625,7 @@ describe('StructureDefinitionExporter', () => {
     expect(mySliceValueElement.max).toEqual('1'); // extension[mySlice].value[x] cardinality is unchanged
     expect(mySliceExtensionElement.min).toEqual(0);
     expect(mySliceExtensionElement.max).toEqual('0');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   it('should log an error if extension is used after value[x] on an extension defined inline and apply both rules', () => {
@@ -1649,6 +1664,7 @@ describe('StructureDefinitionExporter', () => {
       /Extension MyInvalidExtension cannot have both a value and sub-extensions/s
     );
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidInlineExtension\.fsh.*Line: 4\D*/s);
+    expect(loggerSpy.getAllMessages()).toHaveLength(1);
   });
 
   it('should log an error if value[x] is used after extension on an extension defined inline and apply both rules', () => {
@@ -1687,6 +1703,7 @@ describe('StructureDefinitionExporter', () => {
       /Extension MyInvalidExtension cannot have both a value and sub-extensions/s
     );
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidInlineExtension\.fsh.*Line: 5\D*/s);
+    expect(loggerSpy.getAllMessages()).toHaveLength(1);
   });
 
   it('should zero out value[x] if extension is used on an extension defined inline on a profile', () => {
