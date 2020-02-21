@@ -80,7 +80,7 @@ async function app() {
   const rawFSHes = files
     .filter(file => file.endsWith('.fsh'))
     .map(file => {
-      const filePath = path.resolve(input, file);
+      const filePath = path.resolve(file);
       const fileContent = fs.readFileSync(filePath, 'utf8');
       return new RawFSH(fileContent, filePath);
     });
