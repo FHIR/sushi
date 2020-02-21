@@ -5,7 +5,7 @@ import { logger, Fishable, Type } from '../utils';
 import { setPropertyOnInstance, replaceReferences, replaceField } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
-import isEmpty from 'lodash/isEmpty';
+import { isEmpty, cloneDeep } from 'lodash';
 
 export class InstanceExporter {
   constructor(
@@ -85,6 +85,7 @@ export class InstanceExporter {
   /**
    * Given an ElementDefinition, set fixed values for the direct children of that element
    * according to the ElementDefinitions of the children
+   * This function assumes that when it is called on an element, it has alreday been called on parents of that element
    * @param {ElementDefinition} element - The element whose children we will fix
    * @param {string} existingPath - The path to the element whose children we will fix
    * @param {InstanceDefinition} instanceDef - The InstanceDefinition to fix values on
@@ -104,9 +105,7 @@ export class InstanceExporter {
         k => k.startsWith('fixed') || k.startsWith('pattern')
       );
       // Fixed value can come from fixed[x] or pattern[x] directly on element, or via pattern[x] on parent
-      const foundFixedValue =
-        fixableElement[fixedValueKey as keyof ElementDefinition] ??
-        fixableElement.fixedByDirectParent();
+      const foundFixedValue = cloneDeep(fixableElement[fixedValueKey as keyof ElementDefinition]);
       // We only fix the value if the element is the original element, or it is a direct child with card 1..n
       if (foundFixedValue && (fixableElement.id === element.id || fixableElement.min > 0)) {
         // Get the end of the path, this is the part that differs from existingPath
@@ -124,14 +123,16 @@ export class InstanceExporter {
         });
         // Fix the value if we validly can
         try {
-          const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+          const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(
             // fshElementPath is '' when the fixableElement is the original element, trailing '.' on this path must be removed
             // Otherwise add the child path to existing path
             fshElementPath === '' ? existingPath.slice(0, -1) : existingPath + fshElementPath,
-            foundFixedValue,
+            // We don't actually want to validate the value, we only want to validate the path, so pass null
+            // we already know the value is valid, since we got it from the Structure Definition
+            null,
             this.fisher
           );
-          setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+          setPropertyOnInstance(instanceDef, pathParts, foundFixedValue);
         } catch (e) {
           logger.error(e.message);
         }

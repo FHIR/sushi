@@ -221,6 +221,17 @@ describe('InstanceExporter', () => {
       expect(exported.active).toEqual(true);
     });
 
+    it('should fix top level codes that are fixed on the Structure Definition', () => {
+      const cardRule = new CardRule('gender');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
+      const fixedValRule = new FixedValueRule('gender');
+      fixedValRule.fixedValue = new FshCode('F');
+      patient.rules.push(fixedValRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.gender).toBe('F');
+    });
+
     it('should not fix optional elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
