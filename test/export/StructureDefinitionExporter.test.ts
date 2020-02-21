@@ -1777,6 +1777,29 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
+  it('should set value[x] on nested elements of a profile without zeroing extension', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+
+    const onlyRule = new OnlyRule('component.value[x]');
+    onlyRule.types = [{ type: 'string' }];
+    const cardRule = new CardRule('component.extension');
+    cardRule.min = 1;
+    cardRule.max = '1';
+    profile.rules.push(onlyRule, cardRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const componentValueElement = sd.findElement('Observation.component.value[x]');
+    const componentExtensionElement = sd.findElement('Observation.component.extension');
+
+    expect(componentValueElement.type[0]).toEqual(new ElementDefinitionType('string'));
+    expect(componentExtensionElement.min).toEqual(1);
+    expect(componentExtensionElement.max).toEqual('1');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
+  });
+
   // toJSON
   it('should correctly generate a diff containing only changed elements', () => {
     // We already have separate tests for the differentials, so this just ensures that the
@@ -1886,7 +1909,7 @@ describe('StructureDefinitionExporter', () => {
     const json = sd.toJSON();
 
     const diffs = json.differential.element;
-    expect(diffs).toHaveLength(9);
+    expect(diffs).toHaveLength(7);
     expect(diffs[0]).toEqual({
       id: 'Observation.component',
       path: 'Observation.component',
@@ -1903,41 +1926,31 @@ describe('StructureDefinitionExporter', () => {
       max: '1'
     });
     expect(diffs[2]).toEqual({
-      id: 'Observation.component:SystolicBP.extension',
-      path: 'Observation.component.extension',
-      max: '0'
-    });
-    expect(diffs[3]).toEqual({
       id: 'Observation.component:SystolicBP.code',
       path: 'Observation.component.code',
       patternCodeableConcept: {
         coding: [{ code: '8480-6', system: 'http://loinc.org' }]
       }
     });
-    expect(diffs[4]).toEqual({
+    expect(diffs[3]).toEqual({
       id: 'Observation.component:SystolicBP.value[x]',
       path: 'Observation.component.value[x]',
       type: [{ code: 'Quantity' }]
     });
-    expect(diffs[5]).toEqual({
+    expect(diffs[4]).toEqual({
       id: 'Observation.component:DiastolicBP',
       path: 'Observation.component',
       sliceName: 'DiastolicBP',
       max: '1'
     });
-    expect(diffs[6]).toEqual({
-      id: 'Observation.component:DiastolicBP.extension',
-      path: 'Observation.component.extension',
-      max: '0'
-    });
-    expect(diffs[7]).toEqual({
+    expect(diffs[5]).toEqual({
       id: 'Observation.component:DiastolicBP.code',
       path: 'Observation.component.code',
       patternCodeableConcept: {
         coding: [{ code: '8462-4', system: 'http://loinc.org' }]
       }
     });
-    expect(diffs[8]).toEqual({
+    expect(diffs[6]).toEqual({
       id: 'Observation.component:DiastolicBP.value[x]',
       path: 'Observation.component.value[x]',
       type: [{ code: 'Quantity' }]
