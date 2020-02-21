@@ -196,7 +196,7 @@ export class StructureDefinitionExporter implements Fishable {
           if (!(rule instanceof CardRule && rule.max === '0')) {
             if (relevantContradictoryRuleMapEntry) {
               logger.error(
-                `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
+                `Extension on ${fshDefinition.name} cannot have both a value and sub-extensions`,
                 rule.sourceInfo
               );
               inferredCardRulesMap.set(relevantContradictoryRule, false);
@@ -214,7 +214,7 @@ export class StructureDefinitionExporter implements Fishable {
           if (!(rule instanceof CardRule && rule.max === '0')) {
             if (relevantContradictoryRuleMapEntry) {
               logger.error(
-                `Extension ${fshDefinition.name} cannot have both a value and sub-extensions`,
+                `Extension on ${fshDefinition.name} cannot have both a value and sub-extensions`,
                 rule.sourceInfo
               );
               inferredCardRulesMap.set(relevantContradictoryRule, false);
