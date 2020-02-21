@@ -7,6 +7,7 @@ import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/El
 import { TestFisher } from '../testhelpers';
 import { FshCode } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
+import { OnlyRule } from '../../src/fshtypes/rules';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
@@ -158,7 +159,9 @@ describe('StructureDefinition', () => {
       // constrain value[x] to only a Quantity or string and give each its own short
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.sliceIt('type', '$this', false, 'open');
-      valueX.constrainType([{ type: 'Quantity' }, { type: 'string' }], fisher);
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [{ type: 'Quantity' }, { type: 'string' }];
+      valueX.constrainType(valueConstraint, fisher);
       const valueQuantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
       valueQuantity.short = 'the quantity choice';
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
