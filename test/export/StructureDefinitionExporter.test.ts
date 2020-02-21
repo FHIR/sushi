@@ -1724,6 +1724,57 @@ describe('StructureDefinitionExporter', () => {
 
     expect(valueElement.min).toEqual(0);
     expect(valueElement.max).toEqual('0');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
+  });
+
+  it('should correctly allow both extension and value[x] on profiles', () => {
+    const profile = new Profile('ExtendedObservation');
+    profile.parent = 'Observation';
+
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = ['EvidenceType'];
+    const onlyRule = new OnlyRule('value[x]');
+    onlyRule.types = [{ type: 'string' }];
+    profile.rules.push(containsRule, onlyRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const valueElement = sd.findElement('Observation.value[x]');
+    const extensionElement = sd.findElement('Observation.extension');
+
+    expect(valueElement.min).toEqual(0);
+    expect(valueElement.max).toEqual('1');
+    expect(extensionElement.min).toEqual(0);
+    expect(extensionElement.max).toEqual('*');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
+  });
+
+  it('should not add value[x] onto non-extension elements', () => {
+    const profile = new Profile('ExtendedPatient');
+    profile.parent = 'Patient';
+
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = ['PatientNote'];
+    const cardRule = new CardRule('extension[PatientNote].extension');
+    cardRule.min = 1;
+    cardRule.max = '1';
+    profile.rules.push(containsRule, cardRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const extensionElement = sd.findElement('Patient.extension');
+    const sliceExtensionElement = sd.findElement('Patient.extension:PatientNote.extension');
+    const sliceValueElement = sd.findElement('Patient.extension:PatientNote.value[x]');
+
+    expect(extensionElement.min).toEqual(0);
+    expect(extensionElement.max).toEqual('*');
+    expect(sliceExtensionElement.min).toEqual(1);
+    expect(sliceExtensionElement.max).toEqual('1');
+    expect(sliceValueElement.min).toEqual(0);
+    expect(sliceValueElement.max).toEqual('0');
+    expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
   // toJSON

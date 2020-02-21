@@ -171,14 +171,24 @@ export class StructureDefinitionExporter implements Fishable {
    * Does any necessary preprocessing of profiles and extensions.
    * @param {Extension} fshDefinition - The extension to do preprocessing on. It is updated directly based on processing.
    */
-  private preprocessStructureDefinition(fshDefinition: Extension | Profile): void {
+  private preprocessStructureDefinition(
+    fshDefinition: Extension | Profile,
+    isProfile: boolean
+  ): void {
     const inferredCardRulesMap = new Map(); // key is the rule, value is a boolean of whether it should be set
     fshDefinition.rules.forEach(rule => {
       const rulePathParts = splitOnPathPeriods(rule.path);
       rulePathParts.forEach((pathPart, i) => {
         const initialPath = rulePathParts.slice(0, i).join('.');
         const basePath = `${initialPath}${initialPath ? '.' : ''}`;
-        if (pathPart.startsWith('extension')) {
+        const previousPathPart = rulePathParts.slice(i - 1, i)[0];
+        if (
+          pathPart.startsWith('extension') &&
+          (previousPathPart?.startsWith('extension') || (!isProfile && rulePathParts.length === 1))
+        ) {
+          // If the current portion of the path starts with 'extension'
+          // and if the rule sets a value on an inline extension or sets extension directly on a FSH Extension,
+          // then check for inferred value[x] rules
           const relevantContradictoryRule = `${basePath}extension`;
           const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
             relevantContradictoryRule
@@ -196,7 +206,12 @@ export class StructureDefinitionExporter implements Fishable {
               inferredCardRulesMap.set(relevantRule, true);
             }
           }
-        } else if (pathPart.startsWith('value')) {
+        } else if (
+          pathPart.startsWith('value') &&
+          !(isProfile && rule.path.startsWith('value') && rulePathParts.length === 1)
+        ) {
+          // If the current portion of the path starts with 'value'
+          // but it is not a profile setting the root value[x], check for inferred extension rules
           const relevantContradictoryRule = `${basePath}value[x]`;
           const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
             relevantContradictoryRule
@@ -297,7 +312,7 @@ export class StructureDefinitionExporter implements Fishable {
       this.pkg.profiles.push(structDef);
     }
 
-    this.preprocessStructureDefinition(fshDefinition);
+    this.preprocessStructureDefinition(fshDefinition, structDef.type !== 'Extension');
 
     this.setRules(structDef, fshDefinition);
     structDef.inProgress = false;
