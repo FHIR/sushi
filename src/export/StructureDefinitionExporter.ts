@@ -179,16 +179,22 @@ export class StructureDefinitionExporter implements Fishable {
     fshDefinition.rules.forEach(rule => {
       const rulePathParts = splitOnPathPeriods(rule.path);
       rulePathParts.forEach((pathPart, i) => {
-        const initialPath = rulePathParts.slice(0, i).join('.');
-        const basePath = `${initialPath}${initialPath ? '.' : ''}`;
-        const previousPathPart = rulePathParts.slice(i - 1, i)[0];
+        const previousPathPart = rulePathParts[i - 1];
         // A rule is related to an extension if it is directly on a FSH defined extension or if it is defined inline on a profile or extension.
         // Check the section before the current pathPart to see if it is an inline extension.
         const isOnExtension =
           (isExtension && rulePathParts.length === 1) || previousPathPart?.startsWith('extension');
 
+        // If we are not looking at a rule on an extension, don't infer anything. Return to check the next rule.
+        if (!isOnExtension) {
+          return;
+        }
+
+        const initialPath = rulePathParts.slice(0, i).join('.');
+        const basePath = `${initialPath}${initialPath ? '.' : ''}`;
+
         // See if we can infer any rules about an extension (inline or FSH defined)
-        if (pathPart.startsWith('extension') && isOnExtension) {
+        if (pathPart.startsWith('extension')) {
           const relevantContradictoryRule = `${basePath}extension`;
           const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
             relevantContradictoryRule
@@ -210,7 +216,7 @@ export class StructureDefinitionExporter implements Fishable {
               inferredCardRulesMap.set(relevantContradictoryRule, false);
             }
           }
-        } else if (pathPart.startsWith('value') && isOnExtension) {
+        } else if (pathPart.startsWith('value')) {
           const relevantContradictoryRule = `${basePath}value[x]`;
           const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
             relevantContradictoryRule
