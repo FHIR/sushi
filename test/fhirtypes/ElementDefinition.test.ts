@@ -139,6 +139,24 @@ describe('ElementDefinition', () => {
     });
   });
 
+  describe('#getSlices', () => {
+    it('should get slices of an element', () => {
+      const component = observation.elements.find(e => e.path === 'Observation.component');
+      component.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'code' }]
+      };
+      const fooSlice = component.addSlice('FooSlice');
+      const slices = component.getSlices();
+      const newElements = fooSlice.unfold(fisher);
+      const fooSliceExtension = newElements[1];
+      expect(slices).toHaveLength(1);
+      expect(slices[0].id).toEqual('Observation.component:FooSlice');
+      expect(fooSliceExtension.getSlices()).toEqual([]);
+    });
+  });
+
   describe('#hasDiff', () => {
     it('should always show a diff for brand new elements w/ no original captured', () => {
       const newElement = new ElementDefinition('newElement');
