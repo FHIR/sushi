@@ -162,6 +162,21 @@ describe('FSHImporter', () => {
 
       Profile: ObservationProfile
       Parent: Observation
+      * code = $LOINCZ#foo
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when an aliased value set rule prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $LOINC = http://loinc.org
+
+      Profile: ObservationProfile
+      Parent: Observation
       * code from $LOINCZ
       `;
 

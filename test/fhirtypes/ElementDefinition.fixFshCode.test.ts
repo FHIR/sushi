@@ -59,6 +59,14 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(rrType);
     });
 
+    it('should throw InvalidUriError when binding with a non-URI value', () => {
+      const category = observation.elements.find(e => e.id === 'Observation.category');
+      const clone = cloneDeep(category);
+      expect(() => {
+        clone.fixFshCode(new FshCode('code', 'notAUri'));
+      }).toThrow(/notAUri/);
+    });
+
     it('should fix a code to a Coding', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       concept.unfold(fisher);

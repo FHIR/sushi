@@ -76,6 +76,14 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(instant);
     });
 
+    it('should throw InvalidUriError when binding with a non-URI value', () => {
+      const category = observation.elements.find(e => e.id === 'Observation.category');
+      const clone = cloneDeep(category);
+      expect(() => {
+        clone.bindToVS('notAUri', 'required');
+      }).toThrow(/notAUri/);
+    });
+
     it('should only allow required to be rebound with required', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(status.binding.strength).toBe('required');

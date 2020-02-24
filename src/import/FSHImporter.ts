@@ -38,7 +38,7 @@ import {
   CaretValueRule,
   ObeysRule
 } from '../fshtypes/rules';
-import { ParserRuleContext, InputStream, CommonTokenStream, Parser } from 'antlr4';
+import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
 import {
