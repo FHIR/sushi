@@ -1800,6 +1800,73 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages()).toEqual([]);
   });
 
+  it('should not set inferred 0..0 CardRules if they were set on the FSH definition', () => {
+    const extension = new Extension('MyNoInferenceExtension');
+    extension.id = 'my-extension';
+
+    const containsRuleForExtension = new ContainsRule('extension');
+    containsRuleForExtension.items = ['sliceA', 'sliceB'];
+    extension.rules.push(containsRuleForExtension); // * extension contains sliceA, sliceB
+
+    // Manually zero out value[x]/extension where appropriate
+    const sliceAExtensionCardRule = new CardRule('extension[sliceA].extension');
+    sliceAExtensionCardRule.min = 1;
+    sliceAExtensionCardRule.max = '*'; // * extension[sliceA].extension 1..*
+    const sliceAValueCardRule = new CardRule('extension[sliceA].value[x]');
+    sliceAValueCardRule.min = 0;
+    sliceAValueCardRule.max = '0'; // * extension[sliceA].value[x] 0..0
+
+    const sliceBExtensionCardRule = new CardRule('extension[sliceB].value[x]');
+    sliceBExtensionCardRule.min = 1;
+    sliceBExtensionCardRule.max = '1'; // * extension[sliceB].extension 1..1
+    const sliceBValueCardRule = new CardRule('extension[sliceB].extension');
+    sliceBValueCardRule.min = 0;
+    sliceBValueCardRule.max = '0'; // * extension[sliceB].extension 0..0
+
+    extension.rules.push(
+      sliceAExtensionCardRule,
+      sliceAValueCardRule,
+      sliceBExtensionCardRule,
+      sliceBValueCardRule
+    );
+
+    exporter.exportStructDef(extension);
+    expect(extension.rules).toHaveLength(6);
+    expect(extension.rules).toEqual([
+      {
+        sourceInfo: {},
+        path: 'extension',
+        items: ['sliceA', 'sliceB']
+      },
+      {
+        sourceInfo: {},
+        path: 'extension[sliceA].extension',
+        min: 1,
+        max: '*'
+      },
+      {
+        sourceInfo: {},
+        path: 'extension[sliceA].value[x]',
+        min: 0,
+        max: '0'
+      },
+      {
+        sourceInfo: {},
+        path: 'extension[sliceB].value[x]',
+        min: 1,
+        max: '1'
+      },
+      {
+        sourceInfo: {},
+        path: 'extension[sliceB].extension',
+        min: 0,
+        max: '0'
+      },
+      { sourceInfo: {}, path: 'value[x]', min: 0, max: '0' } // The only rule inferred
+    ]);
+    expect(loggerSpy.getAllMessages()).toHaveLength(0);
+  });
+
   // toJSON
   it('should correctly generate a diff containing only changed elements', () => {
     // We already have separate tests for the differentials, so this just ensures that the

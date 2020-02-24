@@ -205,6 +205,10 @@ export class StructureDefinitionExporter implements Fishable {
               const relevantRule = `${basePath}value[x]`;
               inferredCardRulesMap.set(relevantRule, true);
             }
+          } else {
+            if (relevantContradictoryRuleMapEntry) {
+              inferredCardRulesMap.set(relevantContradictoryRule, false);
+            }
           }
         } else if (pathPart.startsWith('value') && isOnExtension) {
           const relevantContradictoryRule = `${basePath}value[x]`;
@@ -222,6 +226,10 @@ export class StructureDefinitionExporter implements Fishable {
               // If we don't already have a contradiction, add new rule to infer extension constraints
               const relevantRule = `${basePath}extension`;
               inferredCardRulesMap.set(relevantRule, true);
+            }
+          } else {
+            if (relevantContradictoryRuleMapEntry) {
+              inferredCardRulesMap.set(relevantContradictoryRule, false);
             }
           }
         }
