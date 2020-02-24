@@ -155,5 +155,108 @@ describe('FSHImporter', () => {
       const rule = results[0].profiles.get('ObservationProfile').rules[0] as ValueSetRule;
       expect(rule.valueSet).toBe('http://loinc.org');
     });
+
+    it('should log an error when an aliased code prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $LOINC = http://loinc.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code from $LOINCZ
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when an aliased reference prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $MYPATIENT = http://hl7.org/fhir/StructureDefinition/mypatient.html
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * subject only Reference($MYPATIENTZ)
+      `;
+
+      const results = importText([new RawFSH(input, 'MyPatient.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYPATIENT.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when a fixed value rule aliased reference prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $MYPATIENT = http://hl7.org/fhir/StructureDefinition/mypatient.html
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * subject = Reference($MYPATIENTZ)
+      `;
+
+      const results = importText([new RawFSH(input, 'MyPatient.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYPATIENTZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when an only rule aliased reference prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $MYPATIENT = http://hl7.org/fhir/StructureDefinition/mypatient.html
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * subject only Reference($MYPATIENTZ)
+      `;
+
+      const results = importText([new RawFSH(input, 'MyPatient.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYPATIENTZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when a contains rule aliased extension prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $MYEXTENSION = http://hl7.org/fhir/StructureDefinition/mypatient-extension.html
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * extension contains $MYEXTENSIONZ
+      `;
+
+      const results = importText([new RawFSH(input, 'MyExtension.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYEXTENSIONZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyExtension.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when an aliased value set system prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $LOINC = http://loinc.org
+
+      ValueSet: MySet
+      * codes from system $LOINCZ
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 5\D*/s);
+    });
+
+    it('should log an error when an aliased value set prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $LOINC = http://loinc.org
+
+      ValueSet: MySet
+      * codes from valueset $LOINCZ
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 5\D*/s);
+    });
   });
 });
