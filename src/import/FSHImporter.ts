@@ -38,7 +38,7 @@ import {
   CaretValueRule,
   ObeysRule
 } from '../fshtypes/rules';
-import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
+import { ParserRuleContext, InputStream, CommonTokenStream, Parser } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
 import {
@@ -601,7 +601,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitSeverity(ctx: pc.SeverityContext): FshCode {
-    const concept = this.parseCodeLexeme(ctx.CODE().getText())
+    const concept = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
       .withLocation(this.extractStartStop(ctx.CODE()))
       .withFile(this.currentFile);
     if (concept.system?.length > 0) {
@@ -616,7 +616,7 @@ export class FSHImporter extends FSHVisitor {
     return concept;
   }
 
-  private parseCodeLexeme(conceptText: string): FshCode {
+  private parseCodeLexeme(conceptText: string, parentCtx: ParserRuleContext): FshCode {
     const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
     let system: string, code: string;
     if (splitPoint == null) {
@@ -635,7 +635,7 @@ export class FSHImporter extends FSHVisitor {
     }
     const concept = new FshCode(code);
     if (system.length > 0) {
-      concept.system = this.aliasAwareValue(system);
+      concept.system = this.aliasAwareValue(system, parentCtx);
     }
     return concept;
   }
@@ -823,7 +823,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCode(ctx: pc.CodeContext): FshCode {
-    const concept = this.parseCodeLexeme(ctx.CODE().getText())
+    const concept = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (ctx.STRING()) {
