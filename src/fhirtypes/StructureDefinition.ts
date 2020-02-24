@@ -599,9 +599,10 @@ export class StructureDefinition {
   }
 
   findObsoleteChoices(baseElement: ElementDefinition, oldTypes: ElementDefinitionType[]): string[] {
-    // first, find all the elements representing choices
+    // first, find all the elements representing choices for the same choice element
+    const baseId = baseElement.id.slice(0, baseElement.id.lastIndexOf('.'));
     const choiceElements = this.elements.filter(e => {
-      return e.path === baseElement.path;
+      return e.path === baseElement.path && e.id.startsWith(baseId);
     });
     const matchedThings: ElementDefinition[] = [];
     const desiredSliceName = baseElement.path

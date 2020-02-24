@@ -1064,6 +1064,44 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllLogs()).toHaveLength(0);
   });
 
+  it('should not log an error when a type constraint is applied to a specific slice', () => {
+    loggerSpy.reset();
+    const profile = new Profile('ConstrainedObservation');
+    profile.parent = 'Observation';
+    const slicingType = new CaretValueRule('component');
+    slicingType.caretPath = 'slicing.discriminator[0].type';
+    slicingType.value = new FshCode('pattern');
+    const slicingPath = new CaretValueRule('component');
+    slicingPath.caretPath = 'slicing.discriminator[0].path';
+    slicingPath.value = 'code';
+    const slicingRules = new CaretValueRule('component');
+    slicingRules.caretPath = 'slicing.rules';
+    slicingRules.value = new FshCode('open');
+    const componentSlices = new ContainsRule('component');
+    componentSlices.items = ['FirstSlice', 'SecondSlice'];
+    const firstType = new OnlyRule('component[FirstSlice].value[x]');
+    firstType.types = [{ type: 'Quantity' }];
+    const firstCard = new CardRule('component[FirstSlice].valueQuantity');
+    firstCard.min = 1;
+    const secondType = new OnlyRule('component[SecondSlice].value[x]');
+    secondType.types = [{ type: 'string' }];
+
+    profile.rules.push(
+      slicingType,
+      slicingPath,
+      slicingRules,
+      componentSlices,
+      firstType,
+      firstCard,
+      secondType
+    );
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    expect(sd).toBeTruthy();
+    expect(loggerSpy.getAllLogs()).toHaveLength(0);
+  });
+
   // Fixed Value Rule
   it('should apply a correct FixedValueRule', () => {
     const profile = new Profile('Foo');
