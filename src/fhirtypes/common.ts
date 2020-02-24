@@ -14,6 +14,10 @@ import cloneDeep = require('lodash/cloneDeep');
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
 
+export function splitOnPathPeriods(path: string): string[] {
+  return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
+}
+
 /**
  * This function sets an instance property of an SD or ED if possible
  * @param {StructureDefinition | ElementDefinition} - The instance to fix a value on
