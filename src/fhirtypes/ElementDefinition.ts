@@ -801,7 +801,8 @@ export class ElementDefinition {
       }
     }
 
-    if (!isUri(vsURI)) {
+    // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
+    if (!isUri(vsURI.split('|')[0])) {
       throw new InvalidUriError(vsURI);
     }
 

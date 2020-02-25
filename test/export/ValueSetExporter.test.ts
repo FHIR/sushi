@@ -201,6 +201,33 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should export a value set that includes a component from a value set with a version', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponent(true);
+    component.from = {
+      valueSets: ['http://food.org/food/ValueSet/hot-food|1.2.3']
+    };
+    valueSet.components.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            valueSet: ['http://food.org/food/ValueSet/hot-food|1.2.3']
+          }
+        ]
+      }
+    });
+  });
+
   it('should export a value set that includes a component from a named value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponent(true);

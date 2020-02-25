@@ -572,7 +572,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitParent(ctx: pc.ParentContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE().getText(), ctx.SEQUENCE());
+    return this.aliasAwareValue(ctx.SEQUENCE());
   }
 
   visitTitle(ctx: pc.TitleContext): string {
@@ -589,7 +589,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE().getText(), ctx.SEQUENCE());
+    return this.aliasAwareValue(ctx.SEQUENCE());
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {
@@ -635,7 +635,7 @@ export class FSHImporter extends FSHVisitor {
     }
     const concept = new FshCode(code);
     if (system.length > 0) {
-      concept.system = this.aliasAwareValue(system, parentCtx);
+      concept.system = this.aliasAwareValue(parentCtx, system);
     }
     return concept;
   }
@@ -754,7 +754,7 @@ export class FSHImporter extends FSHVisitor {
     const vsRule = new ValueSetRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE().getText(), ctx.SEQUENCE());
+    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     return vsRule;
   }
@@ -884,7 +884,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitReference(ctx: pc.ReferenceContext): FshReference {
     const ref = new FshReference(
-      this.aliasAwareValue(this.parseReference(ctx.REFERENCE().getText())[0], ctx.REFERENCE())
+      this.aliasAwareValue(ctx.REFERENCE(), this.parseReference(ctx.REFERENCE().getText())[0])
     )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
@@ -916,12 +916,12 @@ export class FSHImporter extends FSHVisitor {
         );
         references.forEach(r =>
           onlyRule.types.push({
-            type: this.aliasAwareValue(r, t.reference().REFERENCE()),
+            type: this.aliasAwareValue(t.reference().REFERENCE(), r),
             isReference: true
           })
         );
       } else {
-        onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE().getText(), t.SEQUENCE()) });
+        onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE()) });
       }
     });
     return onlyRule;
@@ -937,7 +937,7 @@ export class FSHImporter extends FSHVisitor {
     ctx.item().forEach(i => {
       const item = i.SEQUENCE().getText();
       containsRule.items.push(item);
-      this.validateAliasResolves(item, i.SEQUENCE());
+      this.validateAliasResolves(i.SEQUENCE());
 
       const cardRule = new CardRule(`${containsRule.path}[${item}]`)
         .withLocation(this.extractStartStop(i))
@@ -1108,25 +1108,11 @@ export class FSHImporter extends FSHVisitor {
   visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
     const from: ValueSetComponentFrom = {};
     if (ctx.vsFromSystem()) {
-      from.system = this.aliasAwareValue(
-        ctx
-          .vsFromSystem()
-          .SEQUENCE()
-          .getText(),
-        ctx.vsFromSystem().SEQUENCE()
-      );
+      from.system = this.aliasAwareValue(ctx.vsFromSystem().SEQUENCE());
     }
     if (ctx.vsFromValueset()) {
       if (ctx.vsFromValueset().SEQUENCE()) {
-        from.valueSets = [
-          this.aliasAwareValue(
-            ctx
-              .vsFromValueset()
-              .SEQUENCE()
-              .getText(),
-            ctx.vsFromValueset().SEQUENCE()
-          )
-        ];
+        from.valueSets = [this.aliasAwareValue(ctx.vsFromValueset().SEQUENCE())];
       } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
         from.valueSets = ctx
           .vsFromValueset()
@@ -1134,7 +1120,7 @@ export class FSHImporter extends FSHVisitor {
           .getText()
           .split(',')
           .map(fromVs =>
-            this.aliasAwareValue(fromVs.trim(), ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES())
+            this.aliasAwareValue(ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES(), fromVs.trim())
           );
       }
     }
@@ -1212,9 +1198,9 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  private validateAliasResolves(value: string, parentCtx: ParserRuleContext): void {
+  private validateAliasResolves(parentCtx: ParserRuleContext, value = parentCtx.getText()): void {
     const hasAlias = this.allAliases.has(value);
-    if (value.startsWith('$') && !hasAlias) {
+    if (!hasAlias && value.startsWith('$')) {
       logger.error(
         `Value ${value} does not resolve as alias, values beginning with "$" must resolve`,
         { location: this.extractStartStop(parentCtx), file: this.currentFile }
@@ -1222,8 +1208,8 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  private aliasAwareValue(value: string, parentCtx: ParserRuleContext): string {
-    this.validateAliasResolves(value, parentCtx);
+  private aliasAwareValue(parentCtx: ParserRuleContext, value = parentCtx.getText()): string {
+    this.validateAliasResolves(parentCtx, value);
     return this.allAliases.has(value) ? this.allAliases.get(value) : value;
   }
 

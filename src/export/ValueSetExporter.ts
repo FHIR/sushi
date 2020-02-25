@@ -59,7 +59,8 @@ export class ValueSetExporter {
             return this.fisher.fishForMetadata(vs, Type.ValueSet)?.url ?? vs;
           });
           composeElement.valueSet.forEach(vs => {
-            if (!isUri(vs)) {
+            // Canonical URI may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
+            if (!isUri(vs.split('|')[0])) {
               throw new InvalidUriError(vs);
             }
           });

@@ -67,6 +67,13 @@ describe('ElementDefinition', () => {
       expect(uri.binding.strength).toBe('required');
     });
 
+    it('should bind a value set with a version on a CodeableConcept', () => {
+      const concept = observation.elements.find(e => e.id === 'Observation.code');
+      concept.bindToVS('http://myvaluesets.org/myvs|1.2.3', 'required');
+      expect(concept.binding.valueSet).toBe('http://myvaluesets.org/myvs|1.2.3');
+      expect(concept.binding.strength).toBe('required');
+    });
+
     it('should throw CodedTypeNotFoundError when binding to an unsupported type', () => {
       const instant = observation.elements.find(e => e.id === 'Observation.issued');
       const clone = cloneDeep(instant);
