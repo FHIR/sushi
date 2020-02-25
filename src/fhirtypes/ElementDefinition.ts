@@ -356,6 +356,12 @@ export class ElementDefinition {
     setPropertyOnDefinitionInstance(this, path, value, fisher);
   }
 
+  getSlices() {
+    return this.structDef.elements.filter(
+      e => e.id !== this.id && e.path === this.path && e.id.startsWith(this.id)
+    );
+  }
+
   /**
    * Constrains the cardinality of this element.  Cardinality constraints can only narrow
    * cardinality.  Attempts to constrain to a wider cardinality will throw.
@@ -396,7 +402,7 @@ export class ElementDefinition {
       // Check that new max >= sum of mins of children
       this.checkSumOfSliceMins(max);
       // Check that new max >= every individual child max
-      const slices = this.structDef.elements.filter(e => e.id !== this.id && e.path === this.path);
+      const slices = this.getSlices();
       const overMaxChild = slices.find(child => child.max === '*' || parseInt(child.max) > maxInt);
       if (!isUnbounded && overMaxChild) {
         throw new InvalidMaxOfSliceError(overMaxChild.max, overMaxChild.sliceName, max);
@@ -426,9 +432,7 @@ export class ElementDefinition {
    * @throws {InvalidSumOfSliceMinsError} when the sum of mins of the slices exceeds max of sliced element
    */
   private checkSumOfSliceMins(newSlicedElementMax: string, sliceMinIncrease = 0) {
-    const slices = this.parent()
-      .children()
-      .filter(e => e.id !== this.id && e.path === this.path && !e.slicing);
+    const slices = this.getSlices();
     const sumOfMins = sliceMinIncrease + slices.reduce((prev, curr) => (prev += curr.min), 0);
     if (newSlicedElementMax !== '*' && sumOfMins > parseInt(newSlicedElementMax)) {
       throw new InvalidSumOfSliceMinsError(sumOfMins, newSlicedElementMax, this.id);

@@ -9,7 +9,13 @@ import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
-import { getArrayIndex, setPropertyOnDefinitionInstance, HasName, HasId } from './common';
+import {
+  getArrayIndex,
+  setPropertyOnDefinitionInstance,
+  HasName,
+  HasId,
+  splitOnPathPeriods
+} from './common';
 import { Fishable, Type } from '../utils/Fishable';
 import { applyMixins } from '../utils';
 
@@ -503,7 +509,7 @@ export class StructureDefinition {
    */
   private parseFSHPath(fshPath: string): PathPart[] {
     const pathParts: PathPart[] = [];
-    const splitPath = fshPath.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
+    const splitPath = splitOnPathPeriods(fshPath);
     for (const pathPart of splitPath) {
       const splitPathPart = pathPart.split('[');
       if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {
