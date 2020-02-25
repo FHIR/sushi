@@ -92,6 +92,14 @@ describe('StructureDefinition', () => {
         new ElementDefinitionType('Period')
       ]);
     });
+
+    it('should throw a MissingSnapshotError when the StructureDefinition to load is missing a snapshot', () => {
+      const noSnapshotJsonObservation = defs.fishForFHIR('Observation', Type.Resource);
+      delete noSnapshotJsonObservation.snapshot;
+      expect(() => StructureDefinition.fromJSON(noSnapshotJsonObservation)).toThrow(
+        /http:\/\/hl7.org\/fhir\/StructureDefinition\/Observation is missing snapshot/
+      );
+    });
   });
 
   describe('#toJSON', () => {
