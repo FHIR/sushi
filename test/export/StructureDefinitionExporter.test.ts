@@ -1035,9 +1035,9 @@ describe('StructureDefinitionExporter', () => {
       .withLocation([9, 12, 9, 24]);
     onlyRule.types = [{ type: 'Quantity' }, { type: 'string' }];
 
-    flagFirst.rules.push(flagRule);
-    flagFirst.rules.push(secondFlagRule);
-    flagFirst.rules.push(onlyRule);
+    flagFirst.rules.push(flagRule); // * valueCodeableConcept MS
+    flagFirst.rules.push(secondFlagRule); // * valueString MS
+    flagFirst.rules.push(onlyRule); // value[x] only Quantity or String
 
     exporter.exportStructDef(flagFirst);
     const sd = pkg.profiles[0];
@@ -1052,12 +1052,13 @@ describe('StructureDefinitionExporter', () => {
     parentProfile.parent = 'Observation';
     const flagRule = new FlagRule('valueCodeableConcept');
     flagRule.mustSupport = true;
-    parentProfile.rules.push(flagRule);
+    parentProfile.rules.push(flagRule); // * valueCodeableConcept MS
+
     const childProfile = new Profile('ChildProfile');
     childProfile.parent = 'ParentProfile';
     const onlyRule = new OnlyRule('value[x]');
     onlyRule.types = [{ type: 'Quantity' }];
-    childProfile.rules.push(onlyRule);
+    childProfile.rules.push(onlyRule); // * value[x] only Quantity
     exporter.exportStructDef(parentProfile);
     exporter.exportStructDef(childProfile);
     expect(pkg.profiles).toHaveLength(2);
@@ -1068,6 +1069,13 @@ describe('StructureDefinitionExporter', () => {
     loggerSpy.reset();
     const profile = new Profile('ConstrainedObservation');
     profile.parent = 'Observation';
+    // * component ^slicing.discriminator[0].type = #pattern
+    // * component ^slicing.discriminator[0].path = "code"
+    // * component ^slicing.rules = #open
+    // * component contains FirstSlice and SecondSlice
+    // * component[FirstSlice].value[x] only Quantity
+    // * component[FirstSlice].valueQuantity 1..1
+    // * component[SecondSlice].value[x] only string
     const slicingType = new CaretValueRule('component');
     slicingType.caretPath = 'slicing.discriminator[0].type';
     slicingType.value = new FshCode('pattern');
@@ -1083,6 +1091,7 @@ describe('StructureDefinitionExporter', () => {
     firstType.types = [{ type: 'Quantity' }];
     const firstCard = new CardRule('component[FirstSlice].valueQuantity');
     firstCard.min = 1;
+    firstCard.max = '1';
     const secondType = new OnlyRule('component[SecondSlice].value[x]');
     secondType.types = [{ type: 'string' }];
 
