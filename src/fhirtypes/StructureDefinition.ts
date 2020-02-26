@@ -8,7 +8,7 @@ import {
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { CannotResolvePathError, InvalidElementAccessError } from '../errors';
+import { CannotResolvePathError, InvalidElementAccessError, MissingSnapshotError } from '../errors';
 import {
   getArrayIndex,
   setPropertyOnDefinitionInstance,
@@ -395,6 +395,8 @@ export class StructureDefinition {
         ed.structDef = sd;
         sd.elements.push(ed);
       }
+    } else {
+      throw new MissingSnapshotError(sd.url);
     }
     // And finally add back the inProgress field if it's there
     if (json.inProgress) {
