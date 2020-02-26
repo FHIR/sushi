@@ -9,7 +9,8 @@ import {
   OnlyRule,
   ValueSetRule,
   ContainsRule,
-  CaretValueRule
+  CaretValueRule,
+  ObeysRule
 } from '../fshtypes/rules';
 import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
 import { replaceReferences, splitOnPathPeriods } from '../fhirtypes/common';
@@ -153,6 +154,16 @@ export class StructureDefinitionExporter implements Fishable {
               element.setInstancePropertyByPath(rule.caretPath, rule.value, this);
             } else {
               structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
+            }
+          } else if (rule instanceof ObeysRule) {
+            const invariant = this.tank.getAllInvariants().find(i => i.name === rule.invariant);
+            if (!invariant) {
+              logger.error(
+                `Cannot apply ${rule.invariant} constraint on ${structDef.id} because it was never defined.`,
+                rule.sourceInfo
+              );
+            } else {
+              element.applyConstraint(invariant, structDef.url);
             }
           }
         } catch (e) {

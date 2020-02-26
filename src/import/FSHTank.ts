@@ -1,5 +1,5 @@
 import { FSHDocument } from './FSHDocument';
-import { Profile, Extension, Instance, FshValueSet, FshCodeSystem } from '../fshtypes';
+import { Profile, Extension, Instance, FshValueSet, FshCodeSystem, Invariant } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
 import { Config } from '../fshtypes/Config';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
@@ -57,6 +57,14 @@ export class FSHTank implements Fishable {
    */
   public getAllCodeSystems(): FshCodeSystem[] {
     return flatMap(this.docs, doc => Array.from(doc.codeSystems.values()));
+  }
+
+  /**
+   * Gets all invariants in the tank
+   * @returns {Invariant[]}
+   */
+  public getAllInvariants(): Invariant[] {
+    return flatMap(this.docs, doc => Array.from(doc.invariants.values()));
   }
 
   /**
