@@ -1019,6 +1019,98 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Only\.fsh.*Line: 10\D*/s);
   });
 
+  it('should log an error when a type constraint implicitly removes a choice created in the current StructureDefinition', () => {
+    const flagFirst = new Profile('FlagFirst');
+    flagFirst.parent = 'Observation';
+    const flagRule = new FlagRule('valueCodeableConcept')
+      .withFile('FlagFirst.fsh')
+      .withLocation([7, 12, 7, 31]);
+    flagRule.mustSupport = true;
+    const secondFlagRule = new FlagRule('valueString')
+      .withFile('FlagFirst.fsh')
+      .withLocation([8, 12, 8, 31]);
+    secondFlagRule.mustSupport = true;
+    const onlyRule = new OnlyRule('value[x]')
+      .withFile('FlagFirst.fsh')
+      .withLocation([9, 12, 9, 24]);
+    onlyRule.types = [{ type: 'Quantity' }, { type: 'string' }];
+
+    flagFirst.rules.push(flagRule); // * valueCodeableConcept MS
+    flagFirst.rules.push(secondFlagRule); // * valueString MS
+    flagFirst.rules.push(onlyRule); // value[x] only Quantity or String
+
+    exporter.exportStructDef(flagFirst);
+    const sd = pkg.profiles[0];
+    const constrainedValue = sd.findElement('Observation.value[x]');
+    expect(constrainedValue.type).toHaveLength(2);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: FlagFirst\.fsh.*Line: 9\D*/s);
+  });
+
+  it('should not log an error when a type constraint implicitly removes a choice that has no rules applied in the current StructureDefinition', () => {
+    loggerSpy.reset();
+    const parentProfile = new Profile('ParentProfile');
+    parentProfile.parent = 'Observation';
+    const flagRule = new FlagRule('valueCodeableConcept');
+    flagRule.mustSupport = true;
+    parentProfile.rules.push(flagRule); // * valueCodeableConcept MS
+
+    const childProfile = new Profile('ChildProfile');
+    childProfile.parent = 'ParentProfile';
+    const onlyRule = new OnlyRule('value[x]');
+    onlyRule.types = [{ type: 'Quantity' }];
+    childProfile.rules.push(onlyRule); // * value[x] only Quantity
+    exporter.exportStructDef(parentProfile);
+    exporter.exportStructDef(childProfile);
+    expect(pkg.profiles).toHaveLength(2);
+    expect(loggerSpy.getAllLogs()).toHaveLength(0);
+  });
+
+  it('should not log an error when a type constraint is applied to a specific slice', () => {
+    loggerSpy.reset();
+    const profile = new Profile('ConstrainedObservation');
+    profile.parent = 'Observation';
+    // * component ^slicing.discriminator[0].type = #pattern
+    // * component ^slicing.discriminator[0].path = "code"
+    // * component ^slicing.rules = #open
+    // * component contains FirstSlice and SecondSlice
+    // * component[FirstSlice].value[x] only Quantity
+    // * component[FirstSlice].valueQuantity 1..1
+    // * component[SecondSlice].value[x] only string
+    const slicingType = new CaretValueRule('component');
+    slicingType.caretPath = 'slicing.discriminator[0].type';
+    slicingType.value = new FshCode('pattern');
+    const slicingPath = new CaretValueRule('component');
+    slicingPath.caretPath = 'slicing.discriminator[0].path';
+    slicingPath.value = 'code';
+    const slicingRules = new CaretValueRule('component');
+    slicingRules.caretPath = 'slicing.rules';
+    slicingRules.value = new FshCode('open');
+    const componentSlices = new ContainsRule('component');
+    componentSlices.items = ['FirstSlice', 'SecondSlice'];
+    const firstType = new OnlyRule('component[FirstSlice].value[x]');
+    firstType.types = [{ type: 'Quantity' }];
+    const firstCard = new CardRule('component[FirstSlice].valueQuantity');
+    firstCard.min = 1;
+    firstCard.max = '1';
+    const secondType = new OnlyRule('component[SecondSlice].value[x]');
+    secondType.types = [{ type: 'string' }];
+
+    profile.rules.push(
+      slicingType,
+      slicingPath,
+      slicingRules,
+      componentSlices,
+      firstType,
+      firstCard,
+      secondType
+    );
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    expect(sd).toBeTruthy();
+    expect(loggerSpy.getAllLogs()).toHaveLength(0);
+  });
+
   // Fixed Value Rule
   it('should apply a correct FixedValueRule', () => {
     const profile = new Profile('Foo');

@@ -5,7 +5,7 @@ import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCode, FshRatio, FshQuantity, FshReference } from '../fshtypes';
-import { FixedValueType } from '../fshtypes/rules';
+import { FixedValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
   CodedTypeNotFoundError,
@@ -461,8 +461,7 @@ export class ElementDefinition {
    * - specifying a target that does not match any of the existing type choices
    * - specifying types or a target whose definition cannot be found
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.type}
-   * @param {{ type: string; isReference?: boolean }[]} types - the set of constrained types,
-   *   identified by id/type/url strings and an optional reference flag (defaults false)
+   * @param {OnlyRule} rule - The rule specifying the types to apply
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {string} [target] - a specific target type to constrain.  If supplied, will attempt to
    *   constrain only that type without affecting other types (in a choice or reference to a choice).
@@ -470,11 +469,8 @@ export class ElementDefinition {
    * @throws {InvalidTypeError} when a passed in type or the targetType doesn't match any existing
    *   types
    */
-  constrainType(
-    types: { type: string; isReference?: boolean }[],
-    fisher: Fishable,
-    target?: string
-  ): void {
+  constrainType(rule: OnlyRule, fisher: Fishable, target?: string): void {
+    const types = rule.types;
     // Establish the target types (if applicable)
     const targetType = this.getTargetType(target, fisher);
     const targetTypes: ElementDefinitionType[] = targetType ? [targetType] : this.type;
@@ -491,6 +487,7 @@ export class ElementDefinition {
 
     // Loop through the existing element types building the new set of element types w/ constraints
     const newTypes: ElementDefinitionType[] = [];
+    const oldTypes: ElementDefinitionType[] = [];
     for (const type of this.type) {
       // If the typeMatches map doesn't have the type code at all, this means that a target was
       // specified, and this element type wasn't the target.  In this case, we want to keep it.
@@ -503,6 +500,7 @@ export class ElementDefinition {
       // element type should be filtered out of the results, so just skip to the next one.
       const matches = typeMatches.get(type.code);
       if (isEmpty(matches)) {
+        oldTypes.push(type);
         continue;
       }
 
@@ -531,6 +529,17 @@ export class ElementDefinition {
         this.applyProfiles(newType, targetType, currentMatches);
         newTypes.push(newType);
       }
+    }
+
+    // Let user know if other rules have been made obsolete
+    const obsoleteChoices = this.structDef.findObsoleteChoices(this, oldTypes);
+    if (obsoleteChoices.length > 0) {
+      logger.error(
+        `Type constraint on ${this.path} makes rules in ${
+          this.structDef.name
+        } obsolete for choices: ${obsoleteChoices.join(', ')}`,
+        rule.sourceInfo
+      );
     }
 
     // Finally, reset this element's types to the new types

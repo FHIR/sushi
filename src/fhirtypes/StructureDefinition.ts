@@ -560,7 +560,7 @@ export class StructureDefinition {
         // if we do not have a matching slice, we want to slice the first match
         const matchingXElement = matchingXElements[0];
         // If we find a matching [x] element, we need to slice it to create the child element
-        // NOTE: The spec is somewhat incosistent on handling choice slicing, we decided on this
+        // NOTE: The spec is somewhat inconsistent on handling choice slicing, we decided on this
         // approach per consistency with 4.0.1 observation-vitalsigns profiles and per this post
         // https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/.
         matchingXElement.sliceIt('type', '$this', false, 'open');
@@ -596,6 +596,29 @@ export class StructureDefinition {
     // sliceName/refName. To find the matching element for foo[sliceName][refName], you must
     // use the findMatchingRef function. Be aware of this ambiguity in the bracket path syntax.
     return matchingSlice;
+  }
+
+  findObsoleteChoices(baseElement: ElementDefinition, oldTypes: ElementDefinitionType[]): string[] {
+    // first, find all the elements representing choices for the same choice element
+    const parentId = baseElement.parent().id;
+    const choiceElements = this.elements.filter(e => {
+      return e.path === baseElement.path && e.id.startsWith(parentId);
+    });
+    const matchedThings: ElementDefinition[] = [];
+    const desiredSliceName = baseElement.path
+      .slice(baseElement.path.lastIndexOf('.') + 1)
+      .slice(0, -3);
+    // an obsolete choice is one where:
+    // 1. the choice represents a type being constrained out, and
+    // 2. a rule has been applied to that choice
+    oldTypes.forEach(oldType => {
+      matchedThings.push(
+        ...choiceElements.filter(e => {
+          return e.sliceName == `${desiredSliceName}${upperFirst(oldType.code)}` && e.hasDiff();
+        })
+      );
+    });
+    return matchedThings.map(e => e.sliceName);
   }
 
   /**
