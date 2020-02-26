@@ -1522,7 +1522,7 @@ describe('StructureDefinitionExporter', () => {
   });
 
   // ObeysRule
-  it('should apply an ObeysRule', () => {
+  it('should apply an ObeysRule at the specified path', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
     doc.profiles.set(profile.name, profile);
@@ -1534,7 +1534,7 @@ describe('StructureDefinitionExporter', () => {
 
     const rule = new ObeysRule('value[x]');
     rule.invariant = 'MyInvariant';
-    profile.rules.push(rule);
+    profile.rules.push(rule); // * value[x] obeys MyInvariant
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
@@ -1546,6 +1546,32 @@ describe('StructureDefinitionExporter', () => {
     expect(baseValueX.constraint).toHaveLength(1);
     expect(changedValueX.constraint).toHaveLength(2);
     expect(changedValueX.constraint[1].key).toEqual(invariant.name);
+  });
+
+  it('should apply an ObeysRule to the base element when not path specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set(profile.name, profile);
+
+    const invariant = new Invariant('MyInvariant');
+    invariant.description = 'My important invariant';
+    invariant.severity = new FshCode('error');
+    doc.invariants.set(invariant.name, invariant);
+
+    const rule = new ObeysRule('');
+    rule.invariant = 'MyInvariant';
+    profile.rules.push(rule); // * obeys MyInvariant
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseElement = baseStructDef.findElement('Observation');
+    const changedElement = sd.findElement('Observation');
+
+    expect(baseElement.constraint).toHaveLength(7);
+    expect(changedElement.constraint).toHaveLength(8);
+    expect(changedElement.constraint[7].key).toEqual(invariant.name);
   });
 
   it('should not apply an ObeysRule on an invariant that does not exist', () => {
