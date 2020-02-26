@@ -120,7 +120,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
           } else if (rule instanceof OnlyRule) {
             const target = structDef.getReferenceName(rule.path, element);
-            element.constrainType(rule.types, this, target);
+            element.constrainType(rule, this, target);
           } else if (rule instanceof ValueSetRule) {
             const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
             element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
