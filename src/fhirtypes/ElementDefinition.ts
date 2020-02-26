@@ -3,7 +3,7 @@ import sax = require('sax');
 import { minify } from 'html-minifier';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
-import { FshCode, FshRatio, FshQuantity, FshReference } from '../fshtypes';
+import { FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
 import { FixedValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
@@ -342,6 +342,24 @@ export class ElementDefinition {
         return i > -1 ? p.slice(i + 4) : p;
       })
       .join('.');
+  }
+
+  /**
+   * Apply invariant to the Element.constraint
+   * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.constraint}
+   * @param invariant The invariant to be applied to the constraint
+   * @param source Source URL for the constraint
+   */
+  applyConstraint(invariant: Invariant, source?: string): void {
+    const constraint: ElementDefinitionConstraint = {
+      ...(invariant.name && { key: invariant.name }),
+      ...(invariant.severity && { severity: invariant.severity.code }),
+      ...(invariant.description && { human: invariant.description }),
+      ...(invariant.expression && { expression: invariant.expression }),
+      ...(invariant.xpath && { xpath: invariant.xpath }),
+      ...(source && { source })
+    };
+    this.constraint.push(constraint);
   }
 
   /**
