@@ -486,6 +486,154 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-resources', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should copy over resource files', () => {
+      const directoryContents = new Map<string, string[]>();
+      const dirNames = [
+        'capabilities',
+        'models',
+        'operations',
+        'profiles',
+        'resources',
+        'vocabulary',
+        'examples'
+      ];
+      for (const dirName of dirNames) {
+        directoryContents.set(dirName, fs.readdirSync(path.join(tempOut, 'input', dirName)));
+      }
+      expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
+      expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
+      expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
+      expect(directoryContents.get('profiles')).toEqual([
+        'StructureDefinition-MyPatient.json',
+        'StructureDefinition-MyTitlePatient.json'
+      ]);
+      expect(directoryContents.get('resources')).toEqual(['Patient-BazPatient.json']);
+      expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
+      expect(directoryContents.get('examples')).toEqual([
+        'Patient-BarPatient.json',
+        'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
+      ]);
+    });
+
+    it('should add basic resource references to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyLM'
+        },
+        name: 'MyLM',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'OperationDefinition/MyOD'
+        },
+        name: 'MyOD',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyPatient'
+        },
+        name: 'MyPatient',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BazPatient'
+        },
+        name: 'BazPatient',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'ValueSet/MyVS'
+        },
+        name: 'MyVS',
+        exampleBoolean: false
+      });
+    });
+
+    it('should add resource references with a description to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'CapabilityStatement/MyCS'
+        },
+        name: 'MyCS',
+        description: 'Test description',
+        exampleBoolean: false
+      });
+    });
+
+    it('should add example references to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/FooPatient'
+        },
+        name: 'FooPatient',
+        exampleBoolean: true
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BarPatient'
+        },
+        name: 'BarPatient',
+        exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+      });
+    });
+
+    it('should add resource references with a title to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyTitlePatient'
+        },
+        name: 'This patient has a title',
+        exampleBoolean: false
+      });
+    });
+
+    it('should log an error for invalid input files', () => {
+      expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
+        /Invalid input file: .*InvalidFile.txt/
+      );
+    });
+
+    it('should log an error for input files missing resourceType or id', () => {
+      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
+        /.*InvalidPatient.json must define resourceType and id/
+      );
+    });
+  });
+
   describe('#invalid-data-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;

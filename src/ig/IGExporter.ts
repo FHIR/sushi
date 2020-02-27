@@ -13,7 +13,8 @@ import {
   ImplementationGuideDefinitionPageGeneration,
   StructureDefinition,
   ValueSet,
-  CodeSystem
+  CodeSystem,
+  InstanceDefinition
 } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -48,6 +49,7 @@ export class IGExporter {
     this.addOtherPageContent(outPath);
     this.addImages(outPath);
     this.addIncludeContents(outPath);
+    this.addPredefinedResources(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
     this.addImplementationGuide(outPath);
@@ -403,6 +405,76 @@ export class IGExporter {
       }
       this.ig.definition.resource.push(resource);
     });
+  }
+
+  /**
+   * Adds any user provided resource files
+   * This includes definitions in:
+   * capabilities, models, operations, profiles, resources, vocabulary, examples
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  private addPredefinedResources(igPath: string): void {
+    const pathEnds = [
+      'capabilities',
+      'models',
+      'operations',
+      'profiles',
+      'resources',
+      'vocabulary',
+      'examples' // Must come last in case examples are of other resources
+    ];
+    for (const pathEnd of pathEnds) {
+      const dirPath = path.join(this.igDataPath, 'input', pathEnd);
+      if (fs.existsSync(dirPath)) {
+        const files = fs.readdirSync(dirPath);
+        for (const file of files) {
+          let resourceJSON: InstanceDefinition;
+          try {
+            resourceJSON = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf-8').trim());
+          } catch (e) {
+            logger.error(`Invalid input file: ${path.join(dirPath, file)}`);
+            continue;
+          }
+          if (resourceJSON.resourceType == null || resourceJSON.id == null) {
+            logger.error(`Resource at ${path.join(dirPath, file)} must define resourceType and id`);
+            continue;
+          }
+          const resource: ImplementationGuideDefinitionResource = {
+            reference: {
+              reference: `${resourceJSON.resourceType}/${resourceJSON.id}`
+            },
+            name: resourceJSON.title ?? resourceJSON.id,
+            description: resourceJSON.description
+          };
+          if (pathEnd === 'examples') {
+            const exampleUrl = resourceJSON.meta?.profile?.find(
+              url =>
+                this.fhirDefs.fishForFHIR(url, Type.Profile) ?? this.pkg.fish(url, Type.Profile)
+            );
+            if (exampleUrl) {
+              resource.exampleCanonical = exampleUrl;
+            } else {
+              resource.exampleBoolean = true;
+            }
+          } else {
+            resource.exampleBoolean = false;
+          }
+          this.ig.definition.resource.push(resource);
+          // Track resources in fhirDefs in case example points to resource
+          this.fhirDefs.add(resourceJSON);
+          fs.copySync(
+            path.join(dirPath, file),
+            path.join(
+              igPath,
+              'input',
+              pathEnd,
+              `${resourceJSON.resourceType}-${resourceJSON.id}.json`
+            )
+          );
+        }
+      }
+    }
   }
 
   /**
