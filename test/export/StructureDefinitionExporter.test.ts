@@ -1370,6 +1370,44 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionSliceUrl.fixedUri).toBe('my-inline-extension');
   });
 
+  it('should apply a ContainsRule of an inline extension with a name that resolves to a non-extension type', () => {
+    // This tests the use case in https://github.com/FHIR/sushi/issues/83, which we originally thought
+    // was an issue w/ reserved words, but was actually an issue because "code" resolves to the StructureDefinition
+    // for the code type.  This test initially failed and was fixed by changing the code that handles extension
+    // slices to only look for Extension resolutions (as opposed to all types).
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = ['code'];
+    profile.rules.push(containsRule);
+
+    const onlyRule = new OnlyRule('extension[code].value[x]');
+    onlyRule.types = [{ type: 'Quantity' }];
+    profile.rules.push(onlyRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:code');
+    const extensionSliceUrl = sd.elements.find(e => e.id === 'Observation.extension:code.url');
+    const extensionSliceValueX = sd.elements.find(
+      e => e.id === 'Observation.extension:code.value[x]'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('code');
+    expect(extensionSliceValueX).toBeDefined();
+    expect(extensionSliceValueX.type).toEqual([new ElementDefinitionType('Quantity')]);
+  });
+
   it('should apply multiple ContainsRule on an element with defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';

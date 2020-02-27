@@ -132,7 +132,7 @@ export class StructureDefinitionExporter implements Fishable {
             rule.items.forEach(item => {
               const slice = element.addSlice(item);
               if (isExtension) {
-                const extension = this.fishForMetadata(item);
+                const extension = this.fishForMetadata(item, Type.Extension);
                 if (extension) {
                   if (!slice.type[0].profile) {
                     slice.type[0].profile = [];
