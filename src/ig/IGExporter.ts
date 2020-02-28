@@ -410,13 +410,14 @@ export class IGExporter {
   /**
    * Adds any user provided resource files
    * This includes definitions in:
-   * capabilities, models, operations, profiles, resources, vocabulary, examples
+   * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
    *
    * @param {string} igPath - the path where the IG is exported to
    */
   private addPredefinedResources(igPath: string): void {
     const pathEnds = [
       'capabilities',
+      'extensions',
       'models',
       'operations',
       'profiles',

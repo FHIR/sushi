@@ -508,6 +508,7 @@ describe('IGExporter', () => {
       const directoryContents = new Map<string, string[]>();
       const dirNames = [
         'capabilities',
+        'extensions',
         'models',
         'operations',
         'profiles',
@@ -520,6 +521,9 @@ describe('IGExporter', () => {
       }
       expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
       expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
+      expect(directoryContents.get('extensions')).toEqual([
+        'StructureDefinition-patient-birthPlace.json'
+      ]);
       expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
       expect(directoryContents.get('profiles')).toEqual([
         'StructureDefinition-MyPatient.json',
@@ -570,6 +574,13 @@ describe('IGExporter', () => {
           reference: 'ValueSet/MyVS'
         },
         name: 'MyVS',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/patient-birthPlace'
+        },
+        name: 'patient-birthPlace',
         exampleBoolean: false
       });
     });
