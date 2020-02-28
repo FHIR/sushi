@@ -24,7 +24,8 @@ import {
   VsOperator,
   ValueSetFilterValue,
   FshCodeSystem,
-  Invariant
+  Invariant,
+  Mixin
 } from '../fshtypes';
 import {
   Rule,
@@ -204,6 +205,10 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.invariant()) {
       this.visitInvariant(ctx.invariant());
+    }
+
+    if (ctx.mixin()) {
+      this.visitMixin(ctx.mixin());
     }
   }
 
@@ -484,6 +489,20 @@ export class FSHImporter extends FSHVisitor {
           invariant.xpath = pair.value as string;
         }
       });
+  }
+
+  visitMixin(ctx: pc.MixinContext): void {
+    const mixin = new Mixin(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    this.parseMixin(mixin, ctx.sdRule());
+    this.currentDoc.mixins.set(mixin.name, mixin);
+  }
+
+  parseMixin(mixin: Mixin, rules: pc.SdRuleContext[]) {
+    rules.forEach(sdRule => {
+      mixin.rules.push(...this.visitSdRule(sdRule));
+    });
   }
 
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
