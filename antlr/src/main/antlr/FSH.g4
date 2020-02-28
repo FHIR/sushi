@@ -7,11 +7,11 @@ alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
 profile:            KW_PROFILE SEQUENCE sdMetadata+ sdRule*;
 extension:          KW_EXTENSION SEQUENCE sdMetadata* sdRule*;
-sdMetadata:         parent | id | title | description;
+sdMetadata:         parent | id | title | description | mixins;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule;
 
 instance:           KW_INSTANCE SEQUENCE instanceMetadata* fixedValueRule*;
-instanceMetadata:   instanceOf | title | description;
+instanceMetadata:   instanceOf | title | description | mixins;
 
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
@@ -32,6 +32,7 @@ expression:         KW_EXPRESSION STRING;
 xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF SEQUENCE;
+mixins:             KW_MIXINS (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 
 
 // RULES
@@ -84,6 +85,7 @@ KW_INVARIANT:       'Invariant' WS* ':';
 KW_VALUESET:        'ValueSet' WS* ':';
 KW_CODESYSTEM:      'CodeSystem' WS* ':';
 KW_MIXIN:           'Mixin' WS* ':';
+KW_MIXINS:          'Mixins' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';
 KW_TITLE:           'Title' WS* ':';

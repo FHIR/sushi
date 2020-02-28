@@ -44,6 +44,7 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
+        Mixins: Mixin1, Mixin2, Mixin3
         `;
 
         const result = importSingleText(input);
@@ -54,11 +55,12 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3']);
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 6,
-          endColumn: 47
+          endLine: 7,
+          endColumn: 38
         });
       });
 
@@ -123,10 +125,12 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
+        Mixins: Mixin1
         Parent: DuplicateObservation
         Id: duplicate-observation-profile
         Title: "Duplicate Observation Profile"
         Description: "A duplicated profile on Observation"
+        Mixins: DuplicateMixin1
         `;
 
         const result = importSingleText(input);
@@ -136,6 +140,7 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
+        expect(profile.mixins).toEqual(['Mixin1']);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {

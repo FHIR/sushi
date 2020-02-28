@@ -56,6 +56,7 @@ enum SdMetadataKey {
   Parent = 'Parent',
   Title = 'Title',
   Description = 'Description',
+  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -63,6 +64,7 @@ enum InstanceMetadataKey {
   InstanceOf = 'InstanceOf',
   Title = 'Title',
   Description = 'Description',
+  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -233,7 +235,7 @@ export class FSHImporter extends FSHVisitor {
     metaCtx: pc.SdMetadataContext[] = [],
     ruleCtx: pc.SdRuleContext[] = []
   ): void {
-    const seenPairs: Map<SdMetadataKey, string> = new Map();
+    const seenPairs: Map<SdMetadataKey, string | string[]> = new Map();
     metaCtx
       .map(sdMeta => ({ ...this.visitSdMetadata(sdMeta), context: sdMeta }))
       .forEach(pair => {
@@ -248,13 +250,15 @@ export class FSHImporter extends FSHVisitor {
         }
         seenPairs.set(pair.key, pair.value);
         if (pair.key === SdMetadataKey.Id) {
-          def.id = pair.value;
+          def.id = pair.value as string;
         } else if (pair.key === SdMetadataKey.Parent) {
-          def.parent = pair.value;
+          def.parent = pair.value as string;
         } else if (pair.key === SdMetadataKey.Title) {
-          def.title = pair.value;
+          def.title = pair.value as string;
         } else if (pair.key === SdMetadataKey.Description) {
-          def.description = pair.value;
+          def.description = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Mixins) {
+          def.mixins = pair.value as string[];
         }
       });
     ruleCtx.forEach(sdRule => {
@@ -279,7 +283,7 @@ export class FSHImporter extends FSHVisitor {
     metaCtx: pc.InstanceMetadataContext[] = [],
     ruleCtx: pc.FixedValueRuleContext[] = []
   ): void {
-    const seenPairs: Map<InstanceMetadataKey, string> = new Map();
+    const seenPairs: Map<InstanceMetadataKey, string | string[]> = new Map();
     metaCtx
       .map(instanceMetadata => ({
         ...this.visitInstanceMetadata(instanceMetadata),
@@ -297,11 +301,13 @@ export class FSHImporter extends FSHVisitor {
         }
         seenPairs.set(pair.key, pair.value);
         if (pair.key === InstanceMetadataKey.InstanceOf) {
-          instance.instanceOf = pair.value;
+          instance.instanceOf = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Title) {
-          instance.title = pair.value;
+          instance.title = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Description) {
-          instance.description = pair.value;
+          instance.description = pair.value as string;
+        } else if (pair.key === InstanceMetadataKey.Mixins) {
+          instance.mixins = pair.value as string[];
         }
       });
     if (!instance.instanceOf) {
@@ -505,7 +511,7 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
-  visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
+  visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string | string[] } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
     } else if (ctx.parent()) {
@@ -514,13 +520,15 @@ export class FSHImporter extends FSHVisitor {
       return { key: SdMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     } else if (ctx.description()) {
       return { key: SdMetadataKey.Description, value: this.visitDescription(ctx.description()) };
+    } else if (ctx.mixins()) {
+      return { key: SdMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
   }
 
   visitInstanceMetadata(
     ctx: pc.InstanceMetadataContext
-  ): { key: InstanceMetadataKey; value: string } {
+  ): { key: InstanceMetadataKey; value: string | string[] } {
     if (ctx.instanceOf()) {
       return { key: InstanceMetadataKey.InstanceOf, value: this.visitInstanceOf(ctx.instanceOf()) };
     } else if (ctx.title()) {
@@ -530,6 +538,8 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Description,
         value: this.visitDescription(ctx.description())
       };
+    } else if (ctx.mixins()) {
+      return { key: InstanceMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -609,6 +619,17 @@ export class FSHImporter extends FSHVisitor {
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
     return this.aliasAwareValue(ctx.SEQUENCE().getText());
+  }
+
+  visitMixins(ctx: pc.MixinsContext): string[] {
+    if (ctx.COMMA_DELIMITED_SEQUENCES()) {
+      return ctx
+        .COMMA_DELIMITED_SEQUENCES()
+        .getText()
+        .split(/,\s*/);
+    } else {
+      return [ctx.SEQUENCE().getText()];
+    }
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {

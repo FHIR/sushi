@@ -227,6 +227,15 @@ FSHListener.prototype.exitInstanceOf = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#mixins.
+FSHListener.prototype.enterMixins = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#mixins.
+FSHListener.prototype.exitMixins = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#cardRule.
 FSHListener.prototype.enterCardRule = function(ctx) {
 };

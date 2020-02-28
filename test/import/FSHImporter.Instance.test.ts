@@ -88,6 +88,22 @@ describe('FSHImporter', () => {
       });
     });
 
+    describe('#mixins', () => {
+      it('should parse an instance with mixins', () => {
+        const input = `
+        Instance: MyObservation
+        InstanceOf: Observation
+        Mixins: Mixin1, Mixin2, Mixin3
+        `;
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyObservation');
+        expect(instance.name).toBe('MyObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3']);
+      });
+    });
+
     describe('#rules', () => {
       it('should parse an instance with fixed value rules', () => {
         const input = `
@@ -124,9 +140,11 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
+        Mixins: Mixin1
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
+        Mixins: DuplicateMixin1
         `;
 
         const result = importSingleText(input);
@@ -136,6 +154,7 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBe('My Important Observation');
         expect(instance.description).toBe('My Observation Description');
+        expect(instance.mixins).toEqual(['Mixin1']);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
