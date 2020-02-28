@@ -115,12 +115,6 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
-            if (element.slicing) {
-              logger.error(
-                `Fixing value on sliced element ${element.id} in ${structDef.name}`,
-                rule.sourceInfo
-              );
-            }
             element.fixValue(replacedRule.fixedValue);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);

@@ -1198,13 +1198,13 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
   });
 
-  it('should log an error when a fixed value on a child interferes with a fixed slice on the parent', () => {
+  it.skip('should log an error when a fixed value on a child interferes with a fixed slice on the parent', () => {
     // Profile: ParentWithFixedSlice
     // Parent: Observation
     // * category ^slicing.discriminator[0].type = #pattern
-    // * category ^slicing.discriminator[0].path = "code"
+    // * category ^slicing.discriminator[0].path = "$this"
     // * category ^slicing.rules = #open
-    // * category contains Lab 1..1
+    // * category contains Lab
     // * category[Lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
     const parentProfile = new Profile('ParentWithFixedSlice');
     parentProfile.parent = 'Observation';
@@ -1213,7 +1213,7 @@ describe('StructureDefinitionExporter', () => {
     slicingType.value = new FshCode('pattern');
     const slicingPath = new CaretValueRule('category');
     slicingPath.caretPath = 'slicing.discriminator[0].path';
-    slicingPath.value = 'code';
+    slicingPath.value = '$this';
     const slicingRules = new CaretValueRule('category');
     slicingRules.caretPath = 'slicing.rules';
     slicingRules.value = new FshCode('open');
@@ -1245,6 +1245,73 @@ describe('StructureDefinitionExporter', () => {
     exporter.export();
 
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: FixedSlice\.fsh.*Line: 11\D*/s);
+  });
+
+  it.skip('should not log an error when a fixed value on the root of a sliced element does not interfere with an existing slice', () => {
+    loggerSpy.reset();
+    // Profile: ObservationWithSlice
+    // Parent: Observation
+    // * category ^slicing.discriminator[0].type = #pattern
+    // * category ^slicing.discriminator[0].path = "$this"
+    // * category ^slicing.rules = #open
+    // * category = http://terminology.hl7.org/CodeSystem/observation-category#procedure
+    const profile = new Profile('ObservationWithSlice');
+    profile.parent = 'Observation';
+    const slicingType = new CaretValueRule('category');
+    slicingType.caretPath = 'slicing.discriminator[0].type';
+    slicingType.value = new FshCode('pattern');
+    const slicingPath = new CaretValueRule('category');
+    slicingPath.caretPath = 'slicing.discriminator[0].path';
+    slicingPath.value = '$this';
+    const slicingRules = new CaretValueRule('category');
+    slicingRules.caretPath = 'slicing.rules';
+    slicingRules.value = new FshCode('open');
+    const categoryValue = new FixedValueRule('category');
+    categoryValue.fixedValue = new FshCode(
+      'procedure',
+      'http://terminology.hl7.org/CodeSystem/observation-category'
+    );
+
+    profile.rules.push(slicingType, slicingPath, slicingRules, categoryValue);
+    doc.profiles.set(profile.name, profile);
+
+    exporter.export();
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it.skip('should not log an error when a value is fixed on a slice and that value is not fixed on the root', () => {
+    loggerSpy.reset();
+    // Profile: ObservationWithSlice
+    // Parent: Observation
+    // * category ^slicing.discriminator[0].type = #pattern
+    // * category ^slicing.discriminator[0].path = "$this"
+    // * category ^slicing.rules = #open
+    // * category contains Lab 1..1
+    // * category[Lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+    const profile = new Profile('ObservationWithSlice');
+    profile.parent = 'Observation';
+    const slicingType = new CaretValueRule('category');
+    slicingType.caretPath = 'slicing.discriminator[0].type';
+    slicingType.value = new FshCode('pattern');
+    const slicingPath = new CaretValueRule('category');
+    slicingPath.caretPath = 'slicing.discriminator[0].path';
+    slicingPath.value = '$this';
+    const slicingRules = new CaretValueRule('category');
+    slicingRules.caretPath = 'slicing.rules';
+    slicingRules.value = new FshCode('open');
+    const containsLab = new ContainsRule('category');
+    containsLab.items = ['Lab'];
+    const labValue = new FixedValueRule('category[Lab]');
+    labValue.fixedValue = new FshCode(
+      'laboratory',
+      'http://terminology.hl7.org/CodeSystem/observation-category'
+    );
+
+    profile.rules.push(slicingType, slicingPath, slicingRules, containsLab, labValue);
+    doc.profiles.set(profile.name, profile);
+
+    exporter.export();
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
   // Contains Rule
@@ -2006,6 +2073,81 @@ describe('StructureDefinitionExporter', () => {
       { sourceInfo: {}, path: 'value[x]', min: 0, max: '0' } // The only rule inferred
     ]);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+  });
+
+  // rules applied to slices, sliced elements, and their children
+  describe('#RulesWithSlices', () => {
+    let observationWithSlice: Profile;
+    beforeEach(() => {
+      // Profile: ObservationWithSlice
+      // Parent: Observation
+      // * component ^slicing.discriminator[0].type = #pattern
+      // * component ^slicing.discriminator[0].path = "$this"
+      // * component ^slicing.rules = #open
+      // * component contains Lab
+      // * component[Lab] 0..1
+      observationWithSlice = new Profile('ObservationWithSlice');
+      observationWithSlice.parent = 'Observation';
+      const slicingType = new CaretValueRule('component');
+      slicingType.caretPath = 'slicing.discriminator[0].type';
+      slicingType.value = new FshCode('pattern');
+      const slicingPath = new CaretValueRule('component');
+      slicingPath.caretPath = 'slicing.discriminator[0].path';
+      slicingPath.value = '$this';
+      const slicingRules = new CaretValueRule('component');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const containsLab = new ContainsRule('component');
+      containsLab.items = ['Lab'];
+      const labCard = new CardRule('component[Lab]');
+      labCard.min = 0;
+      labCard.max = '1';
+      observationWithSlice.rules.push(slicingType, slicingPath, slicingRules, containsLab, labCard);
+    });
+
+    it('should apply a CardRule that makes the cardinality of the child of a slice narrower', () => {
+      loggerSpy.reset();
+      // * component.interpretation 0..5
+      // * component[Lab].interpretation 2..2
+      const rootCard = new CardRule('component.interpretation');
+      rootCard.min = 0;
+      rootCard.max = '5';
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 2;
+      labCard.max = '2';
+
+      observationWithSlice.rules.push(rootCard, labCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.min).toBe(0);
+      expect(rootInterpretation.max).toBe('5');
+      expect(labInterpretation.min).toBe(2);
+      expect(labInterpretation.max).toBe('2');
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should not apply a CardRule that would make the cardinality of the child of a slice too wide', () => {
+      // * component[Lab].interpretation 0..9
+      // * component.interpretation 0..5 // this rule is invalid!
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.max = '9';
+      const rootCard = new CardRule('component.interpretation')
+        .withFile('Narrower.fsh')
+        .withLocation([7, 9, 7, 23]);
+      rootCard.max = '5';
+
+      observationWithSlice.rules.push(labCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      expect(sd.findElement('Observation.component.interpretation').max).toBe('*');
+      expect(sd.findElement('Observation.component:Lab.interpretation').max).toBe('9');
+      expect(loggerSpy.getLastMessage('error')).toMatch(/cannot be narrowed/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
+    });
   });
 
   // toJSON

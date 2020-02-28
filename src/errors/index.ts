@@ -23,6 +23,7 @@ export * from './SlicingNotDefinedError';
 export * from './TypeNotFoundError';
 export * from './UnitMismatchError';
 export * from './WideningCardinalityError';
+export * from './NarrowingRootCardinalityError';
 export * from './CannotResolvePathError';
 export * from './InvalidElementAccessError';
 export * from './InvalidSumOfSliceMinsError';

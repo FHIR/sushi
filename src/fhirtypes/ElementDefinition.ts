@@ -20,7 +20,8 @@ import {
   TypeNotFoundError,
   WideningCardinalityError,
   InvalidSumOfSliceMinsError,
-  InvalidMaxOfSliceError
+  InvalidMaxOfSliceError,
+  NarrowingRootCardinalityError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -407,6 +408,39 @@ export class ElementDefinition {
       }
     }
 
+    const connectedElements = this.findConnectedElements();
+    if (connectedElements.length > 0) {
+      // check to see if the card constraint would actually be a problem for the connected element
+      // that is to say, if the new card is narrower than the connected card
+      connectedElements.forEach(ce => {
+        if ((ce.min == null && min > 0) || (ce.min != null && ce.min < min)) {
+          throw new NarrowingRootCardinalityError(
+            this.path,
+            ce.id,
+            min,
+            max,
+            ce.min ?? 0,
+            ce.max ?? '*'
+          );
+        }
+        // if the connected element's max is null or *, we can't constrain the max
+        // if the connected element's max is not null and is not *, we can't make the max smaller than its max
+        if (
+          ((ce.max == null || ce.max == '*') && maxInt != null) ||
+          (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max))
+        ) {
+          throw new NarrowingRootCardinalityError(
+            this.path,
+            ce.id,
+            min,
+            max,
+            ce.min ?? 0,
+            ce.max ?? '*'
+          );
+        }
+      });
+    }
+
     // If element is a slice
     const slicedElement = this.slicedElement();
     if (slicedElement) {
@@ -419,6 +453,35 @@ export class ElementDefinition {
     }
 
     [this.min, this.max] = [min, max];
+  }
+
+  /**
+   * Tries to find all connected elements based on slicing.
+   * When an element that has children is sliced, there can be constraints on that element's children,
+   * as well as the children of any defined slices. Depending on the order that slices and rules are
+   * defined, a rule may be applied to an element after slices of that element have already been
+   * created. Therefore, to determine the full effect of that rule, the elements that are inside
+   * slices must be found. The rule's path may contain many sliced elements, so it is necessary
+   * to recursively search the StructureDefinition for ancestors of the element on the rule's path
+   * that contain slice definitions. These sliced ancestors may in turn contain child elements that
+   * match the rule's path.
+   * In summary: find elements that have the same path, but are slicier.
+   * @param {string[]} postPath The path to append to the parent in order to try to find a connected element
+   * @returns {ElementDefinition[]} The elements inside of slices whose path matches the original element
+   */
+  private findConnectedElements(postPath: string[] = []): ElementDefinition[] {
+    if (this.parent()) {
+      postPath.push(this.path.slice(this.path.lastIndexOf('.') + 1));
+      const parentSlices = this.parent().getSlices();
+      const connectedElements = parentSlices
+        .map(slice => {
+          return this.structDef.findElement(`${slice.id}.${postPath.join('.')}`);
+        })
+        .filter(e => e);
+      return connectedElements.concat(this.parent().findConnectedElements(postPath));
+    } else {
+      return [];
+    }
   }
 
   /**
