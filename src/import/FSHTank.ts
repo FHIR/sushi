@@ -83,13 +83,20 @@ export class FSHTank implements Fishable {
   fish(
     item: string,
     ...types: Type[]
-  ): Profile | Extension | FshValueSet | FshCodeSystem | Instance | undefined {
+  ): Profile | Extension | FshValueSet | FshCodeSystem | Instance | Invariant | undefined {
     // Resolve alias if necessary
     item = this.resolveAlias(item) ?? item;
 
     // No types passed in means to search ALL supported types
     if (types.length === 0) {
-      types = [Type.Profile, Type.Extension, Type.ValueSet, Type.CodeSystem, Type.Instance];
+      types = [
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem,
+        Type.Instance,
+        Type.Invariant
+      ];
     }
 
     for (const t of types) {
@@ -129,6 +136,9 @@ export class FSHTank implements Fishable {
           break;
         case Type.Instance:
           result = this.getAllInstances().find(i => i.name === item || i.id === item);
+          break;
+        case Type.Invariant:
+          result = this.getAllInvariants().find(i => i.name === item);
           break;
         case Type.Resource:
         case Type.Type:

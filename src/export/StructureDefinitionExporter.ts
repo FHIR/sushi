@@ -1,5 +1,5 @@
 import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirtypes';
-import { Profile, Extension } from '../fshtypes';
+import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
 import { ParentNotDefinedError } from '../errors';
 import {
@@ -156,7 +156,7 @@ export class StructureDefinitionExporter implements Fishable {
               structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
             }
           } else if (rule instanceof ObeysRule) {
-            const invariant = this.tank.getAllInvariants().find(i => i.name === rule.invariant);
+            const invariant = this.tank.fish(rule.invariant, Type.Invariant) as Invariant;
             if (!invariant) {
               logger.error(
                 `Cannot apply ${rule.invariant} constraint on ${structDef.id} because it was never defined.`,
