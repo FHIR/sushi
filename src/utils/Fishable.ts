@@ -4,6 +4,7 @@ export enum Type {
   ValueSet,
   CodeSystem,
   Instance,
+  Invariant,
   Resource, // NOTE: only defined in FHIR defs, not FSHTanks
   Type // NOTE: only defined in FHIR defs, not FSHTanks
 }

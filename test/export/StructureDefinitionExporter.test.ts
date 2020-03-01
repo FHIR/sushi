@@ -8,7 +8,8 @@ import {
   FshReference,
   Instance,
   FshValueSet,
-  FshCodeSystem
+  FshCodeSystem,
+  Invariant
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -17,7 +18,8 @@ import {
   ValueSetRule,
   FixedValueRule,
   ContainsRule,
-  CaretValueRule
+  CaretValueRule,
+  ObeysRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
@@ -1517,6 +1519,89 @@ describe('StructureDefinitionExporter', () => {
 
     expect(sd.description).toBeUndefined();
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
+  });
+
+  // ObeysRule
+  it('should apply an ObeysRule at the specified path', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set(profile.name, profile);
+
+    const invariant = new Invariant('MyInvariant');
+    invariant.description = 'My important invariant';
+    invariant.severity = new FshCode('error');
+    doc.invariants.set(invariant.name, invariant);
+
+    const rule = new ObeysRule('value[x]');
+    rule.invariant = 'MyInvariant';
+    profile.rules.push(rule); // * value[x] obeys MyInvariant
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseValueX = baseStructDef.findElement('Observation.value[x]');
+    const changedValueX = sd.findElement('Observation.value[x]');
+
+    expect(baseValueX.constraint).toHaveLength(1);
+    expect(changedValueX.constraint).toHaveLength(2);
+    expect(changedValueX.constraint[1].key).toEqual(invariant.name);
+  });
+
+  it('should apply an ObeysRule to the base element when not path specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set(profile.name, profile);
+
+    const invariant = new Invariant('MyInvariant');
+    invariant.description = 'My important invariant';
+    invariant.severity = new FshCode('error');
+    doc.invariants.set(invariant.name, invariant);
+
+    const rule = new ObeysRule('');
+    rule.invariant = 'MyInvariant';
+    profile.rules.push(rule); // * obeys MyInvariant
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseElement = baseStructDef.findElement('Observation');
+    const changedElement = sd.findElement('Observation');
+
+    expect(baseElement.constraint).toHaveLength(7);
+    expect(changedElement.constraint).toHaveLength(8);
+    expect(changedElement.constraint[7].key).toEqual(invariant.name);
+  });
+
+  it('should not apply an ObeysRule on an invariant that does not exist', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set(profile.name, profile);
+
+    const invariant = new Invariant('MyRealInvariant');
+    invariant.description = 'A very real invariant';
+    invariant.severity = new FshCode('error');
+    doc.invariants.set(invariant.name, invariant);
+
+    const rule = new ObeysRule('value[x]').withFile('FooProfile.fsh').withLocation([4, 7, 4, 15]);
+    rule.invariant = 'MyFakeInvariant';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseValueX = baseStructDef.findElement('Observation.value[x]');
+    const changedValueX = sd.findElement('Observation.value[x]');
+
+    expect(baseValueX.constraint).toHaveLength(1);
+    expect(changedValueX.constraint).toHaveLength(1);
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /Cannot apply MyFakeInvariant constraint on Foo because it was never defined./s
+    );
+    expect(loggerSpy.getLastMessage()).toMatch(/File: FooProfile\.fsh.*Line: 4\D*/s);
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
   });
 
   // Extension preprocessing

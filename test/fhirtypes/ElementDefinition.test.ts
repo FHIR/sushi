@@ -4,6 +4,7 @@ import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/El
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { TestFisher } from '../testhelpers';
 import { Type } from '../../src/utils/Fishable';
+import { Invariant, FshCode } from '../../src/fshtypes';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -154,6 +155,44 @@ describe('ElementDefinition', () => {
       expect(slices).toHaveLength(1);
       expect(slices[0].id).toEqual('Observation.component:FooSlice');
       expect(fooSliceExtension.getSlices()).toEqual([]);
+    });
+  });
+
+  describe('#applyConstraints', () => {
+    it('should apply a constraint based on an invariant with every field', () => {
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'An invariant with all metadata specified.';
+      invariant.expression = 'metadata.exists()';
+      invariant.xpath = 'exists(f:metadata)';
+      invariant.severity = new FshCode('error');
+
+      valueX.applyConstraint(invariant, 'http://example.org/fhir/StructureDefinition/SomeProfile');
+
+      expect(valueX.constraint).toHaveLength(2); // Adds an additional constraint
+      expect(valueX.constraint[1].key).toEqual(invariant.name);
+      expect(valueX.constraint[1]).toStrictEqual({
+        key: invariant.name,
+        severity: invariant.severity.code,
+        human: invariant.description,
+        expression: invariant.expression,
+        xpath: invariant.xpath,
+        source: 'http://example.org/fhir/StructureDefinition/SomeProfile'
+      });
+    });
+
+    it('should apply a constraint with only fields specified on the the invariant', () => {
+      const invariant = new Invariant('SimpleInvariant');
+      invariant.description = 'The simplest invariant';
+      invariant.severity = new FshCode('error');
+      valueX.applyConstraint(invariant);
+
+      expect(valueX.constraint).toHaveLength(2); // Adds an additional constraint
+      expect(valueX.constraint[1].key).toEqual(invariant.name);
+      expect(valueX.constraint[1]).toStrictEqual({
+        key: invariant.name,
+        human: invariant.description,
+        severity: invariant.severity.code
+      });
     });
   });
 
