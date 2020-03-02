@@ -2165,7 +2165,7 @@ describe('StructureDefinitionExporter', () => {
 
     it('should not apply a FlagRule on a sliced element that would invalidate flags on a slice', () => {
       // * component[Lab] MS
-      // currently, there is no FSH to explicitly set a flag to false
+      // * component MS disable // currently, there is no FSH to explicitly set a flag to false
       const labFlag = new FlagRule('component[Lab]');
       labFlag.mustSupport = true;
       const rootFlag = new FlagRule('component')
@@ -2203,9 +2203,29 @@ describe('StructureDefinitionExporter', () => {
       expect(rootInterpretation.mustSupport).toBe(true);
       expect(labInterpretation.mustSupport).toBe(true);
     });
-    it.todo(
-      'should not apply a FlagRule on the child of a sliced element that would invalidate flags on the child of a slice'
-    );
+
+    it('should not apply a FlagRule on the child of a sliced element that would invalidate flags on the child of a slice', () => {
+      // * component[Lab].interpretation MS
+      // * component.interpretation MS disable // currently, there is no FSH to explicitly set a flag to false
+      const labFlag = new FlagRule('component[Lab].interpretation');
+      labFlag.mustSupport = true;
+      const rootFlag = new FlagRule('component.interpretation')
+        .withFile('BadFlag.fsh')
+        .withLocation([8, 4, 8, 22]);
+      rootFlag.mustSupport = false;
+
+      observationWithSlice.rules.push(labFlag, rootFlag);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.mustSupport).toBeUndefined();
+      expect(labInterpretation.mustSupport).toBe(true);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Cannot disable these flags/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadFlag\.fsh.*Line: 8\D*/s);
+    });
+
     it.todo(
       'should apply a ValueSetRule on a sliced element that updates the value sets on its slices'
     );
