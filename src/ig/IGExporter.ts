@@ -44,12 +44,12 @@ export class IGExporter {
     ensureDirSync(outPath);
     this.initIG();
     this.addResources();
+    this.addPredefinedResources(outPath);
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
     this.addOtherPageContent(outPath);
     this.addImages(outPath);
     this.addIncludeContents(outPath);
-    this.addPredefinedResources(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
     this.addImplementationGuide(outPath);
@@ -380,7 +380,7 @@ export class IGExporter {
     resources.forEach(r => {
       this.ig.definition.resource.push({
         reference: { reference: `${r.resourceType}/${r.id}` },
-        name: r.title ?? r.name,
+        name: r.title ?? r.name ?? r.id,
         description: r.description,
         exampleBoolean: false
       });
@@ -411,6 +411,7 @@ export class IGExporter {
    * Adds any user provided resource files
    * This includes definitions in:
    * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
+   * Based on: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input
    *
    * @param {string} igPath - the path where the IG is exported to
    */
@@ -425,45 +426,78 @@ export class IGExporter {
       'vocabulary',
       'examples' // Must come last in case examples are of other resources
     ];
+    const predefinedFHIRDefs = new FHIRDefinitions();
     for (const pathEnd of pathEnds) {
+      let xmlFile = false;
+      let invalidFile = false;
       const dirPath = path.join(this.igDataPath, 'input', pathEnd);
       if (fs.existsSync(dirPath)) {
         const files = fs.readdirSync(dirPath);
         for (const file of files) {
           let resourceJSON: InstanceDefinition;
-          try {
-            resourceJSON = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf-8').trim());
-          } catch (e) {
-            logger.error(`Invalid input file: ${path.join(dirPath, file)}`);
+          if (file.endsWith('.json')) {
+            resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+          } else {
+            xmlFile = file.endsWith('.xml');
+            invalidFile = true;
             continue;
           }
           if (resourceJSON.resourceType == null || resourceJSON.id == null) {
-            logger.error(`Resource at ${path.join(dirPath, file)} must define resourceType and id`);
+            logger.error(
+              `Resource at ${path.join(dirPath, file)} must define resourceType and id.`
+            );
             continue;
           }
+
           const resource: ImplementationGuideDefinitionResource = {
             reference: {
               reference: `${resourceJSON.resourceType}/${resourceJSON.id}`
             },
-            name: resourceJSON.title ?? resourceJSON.id,
             description: resourceJSON.description
           };
+
           if (pathEnd === 'examples') {
             const exampleUrl = resourceJSON.meta?.profile?.find(
               url =>
-                this.fhirDefs.fishForFHIR(url, Type.Profile) ?? this.pkg.fish(url, Type.Profile)
+                this.pkg.fish(url, Type.Profile) ??
+                predefinedFHIRDefs.fishForFHIR(url, Type.Profile)
             );
             if (exampleUrl) {
               resource.exampleCanonical = exampleUrl;
             } else {
               resource.exampleBoolean = true;
             }
+            resource.name = resourceJSON.id;
           } else {
             resource.exampleBoolean = false;
+            // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
+            const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
+            const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
+            resource.name = title ?? name ?? resourceJSON.id;
           }
-          this.ig.definition.resource.push(resource);
-          // Track resources in fhirDefs in case example points to resource
-          this.fhirDefs.add(resourceJSON);
+
+          const existingIndex = this.ig.definition.resource.findIndex(
+            r => r.reference.reference === resource.reference.reference
+          );
+          if (existingIndex >= 0) {
+            if (
+              this.ig.definition.resource[existingIndex].exampleBoolean ||
+              this.ig.definition.resource[existingIndex].exampleCanonical
+            ) {
+              // If it is replacing an existing example, preserve description and name from SUSHI
+              // Allows user method for setting description/name on external example
+              const oldDescription = this.ig.definition.resource[existingIndex].description;
+              const oldName = this.ig.definition.resource[existingIndex].name;
+              if (oldDescription) resource.description = oldDescription;
+              if (oldName) resource.name = this.ig.definition.resource[existingIndex].name;
+            }
+            this.ig.definition.resource[existingIndex] = resource;
+          } else {
+            this.ig.definition.resource.push(resource);
+          }
+
+          // Track resources we are adding in case an example references an added resource
+          predefinedFHIRDefs.add(resourceJSON);
           fs.copySync(
             path.join(dirPath, file),
             path.join(
@@ -474,6 +508,13 @@ export class IGExporter {
             )
           );
         }
+      }
+      if (invalidFile) {
+        let message = `Invalid file detected in directory ${dirPath}.`;
+        if (xmlFile) {
+          message += ' XML format not supported, input FHIR definitions must be JSON.';
+        }
+        logger.error(message);
       }
     }
   }
