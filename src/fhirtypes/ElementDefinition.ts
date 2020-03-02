@@ -466,21 +466,23 @@ export class ElementDefinition {
    * that contain slice definitions. These sliced ancestors may in turn contain child elements that
    * match the rule's path.
    * In summary: find elements that have the same path, but are slicier.
-   * @param {string[]} postPath The path to append to the parent in order to try to find a connected element
-   * @returns {ElementDefinition[]} The elements inside of slices whose path matches the original element
+   * @param {string} postPath The path to append to the parent in order to try to find a connected element
+   * @returns {ElementDefinition[]} The elements at or inside of slices whose path matches the original element
    */
-  private findConnectedElements(postPath: string[] = []): ElementDefinition[] {
+  private findConnectedElements(postPath = ''): ElementDefinition[] {
+    const connectedElements = this.getSlices()
+      .map(slice => {
+        return this.structDef.findElement(`${slice.id}${postPath}`);
+      })
+      .filter(e => e);
     if (this.parent()) {
-      postPath.push(this.path.slice(this.path.lastIndexOf('.') + 1));
-      const parentSlices = this.parent().getSlices();
-      const connectedElements = parentSlices
-        .map(slice => {
-          return this.structDef.findElement(`${slice.id}.${postPath.join('.')}`);
-        })
-        .filter(e => e);
-      return connectedElements.concat(this.parent().findConnectedElements(postPath));
+      return connectedElements.concat(
+        this.parent().findConnectedElements(
+          `.${this.path.slice(this.path.lastIndexOf('.') + 1)}${postPath}`
+        )
+      );
     } else {
-      return [];
+      return connectedElements;
     }
   }
 

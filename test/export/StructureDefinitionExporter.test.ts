@@ -2148,7 +2148,20 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
     });
 
-    it.todo('should apply a FlagRule on a sliced element that updates the flags on its slices');
+    it('should apply a FlagRule on a sliced element that updates the flags on its slices', () => {
+      // * component MS
+      const rootFlag = new FlagRule('component');
+      rootFlag.mustSupport = true;
+
+      observationWithSlice.rules.push(rootFlag);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootComponent = sd.findElement('Observation.component');
+      const labComponent = sd.findElement('Observation.component:Lab');
+      expect(rootComponent.mustSupport).toBeTruthy();
+      expect(labComponent.mustSupport).toBeTruthy();
+    });
     it.todo(
       'should not apply a FlagRule on a sliced element that would invalidate flags on a slice'
     );
