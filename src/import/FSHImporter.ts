@@ -35,6 +35,7 @@ import {
   FixedValueType,
   OnlyRule,
   ContainsRule,
+  ContainsRuleItem,
   CaretValueRule,
   ObeysRule
 } from '../fshtypes/rules';
@@ -932,10 +933,20 @@ export class FSHImporter extends FSHVisitor {
 
     rules.push(containsRule);
     ctx.item().forEach(i => {
-      const item = i.SEQUENCE().getText();
+      let item: ContainsRuleItem;
+      if (i.KW_NAMED()) {
+        item = {
+          type: this.aliasAwareValue(i.SEQUENCE()[0].getText()),
+          name: i.SEQUENCE()[1].getText()
+        };
+      } else {
+        item = {
+          name: i.SEQUENCE()[0].getText()
+        };
+      }
       containsRule.items.push(item);
 
-      const cardRule = new CardRule(`${containsRule.path}[${item}]`)
+      const cardRule = new CardRule(`${containsRule.path}[${item.name}]`)
         .withLocation(this.extractStartStop(i))
         .withFile(this.currentFile);
       const card = this.parseCard(i.CARD().getText());
@@ -944,7 +955,7 @@ export class FSHImporter extends FSHVisitor {
       rules.push(cardRule);
 
       if (i.flag() && i.flag().length > 0) {
-        const flagRule = new FlagRule(`${containsRule.path}[${item}]`)
+        const flagRule = new FlagRule(`${containsRule.path}[${item.name}]`)
           .withLocation(this.extractStartStop(i))
           .withFile(this.currentFile);
         this.parseFlags(flagRule, i.flag());

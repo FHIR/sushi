@@ -1,3 +1,4 @@
+import { upperFirst } from 'lodash';
 import { StructureDefinition, ElementDefinitionBindingStrength } from '../fhirtypes';
 import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
@@ -127,28 +128,77 @@ export class StructureDefinitionExporter implements Fishable {
             element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
             const isExtension = element.type?.length === 1 && element.type[0].code === 'Extension';
-            if (isExtension && !element.slicing) {
-              element.sliceIt('value', 'url');
-            }
-            rule.items.forEach(item => {
-              const slice = element.addSlice(item);
-              if (isExtension) {
-                const extension = this.fishForMetadata(item, Type.Extension);
-                if (extension) {
+            if (isExtension) {
+              if (!element.slicing) {
+                element.sliceIt('value', 'url');
+              }
+              rule.items.forEach(item => {
+                if (item.type) {
+                  const extension = this.fishForMetadata(item.type, Type.Extension);
+                  if (extension == null) {
+                    logger.error(
+                      `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
+                      rule.sourceInfo
+                    );
+                    return;
+                  }
+                  const slice = element.addSlice(item.name);
                   if (!slice.type[0].profile) {
                     slice.type[0].profile = [];
                   }
                   slice.type[0].profile.push(extension.url);
                 } else {
+                  const external = this.fishForMetadata(item.name, Type.Extension);
+                  if (external) {
+                    // Find the corresponding card rule to assist in constructing the warning message
+                    let card = 'm..n';
+                    const cardRule = fshDefinition.rules.find(
+                      r => r instanceof CardRule && r.path === `${rule.path}[${item.name}]`
+                    );
+                    if (cardRule) {
+                      card = `${(cardRule as CardRule).min}..${(cardRule as CardRule).max}`;
+                    }
+                    // Determine the recommended alias name to assist in constructing the warning message
+                    const alias = upperFirst(external.name ?? external.id) + 'Extension';
+                    // Log a warning. This is intended to help users transitioning from SUSHI 0.9.x to SUSHI 0.10.0,
+                    // since the syntax for specifying external extensions has changed.
+                    logger.warn(
+                      `Extension with slice name '${item.name}' will be treated as an inline extension, even though ` +
+                        `the name can be resolved to an external extension definition: ${external.url}. Starting ` +
+                        'with SUSHI 0.10.0, extension slices using externally-defined extensions (as opposed to ' +
+                        'inline-defined extensions) should explicitly declare a slice name and type. If this ' +
+                        `extension slice should refer to ${external.url}, recommended practice is to define an ` +
+                        'alias:\n' +
+                        `  Alias: ${alias} = ${external.url}\n` +
+                        'then use it in the contains rule:\n' +
+                        `  ${rule.path} contains ${alias} named ${item.name} ${card}\n` +
+                        'If this extension is intended to be inlined, and not refer to the external definition ' +
+                        `${external.url}, then no action is necessary. This warning will be removed in a future ` +
+                        'version of SUSHI after authors have had time to transition.',
+                      rule.sourceInfo
+                    );
+                  }
                   // If the extension is inline, fix its url element automatically to the sliceName
+                  const slice = element.addSlice(item.name);
                   const urlElement = structDef.findElementByPath(
                     `${rule.path}[${slice.sliceName}].url`,
                     this
                   );
                   urlElement.fixValue(slice.sliceName);
                 }
-              }
-            });
+              });
+            } else {
+              // Not an extension -- just add a slice for each item
+              rule.items.forEach(item => {
+                if (item.type) {
+                  logger.error(
+                    `Cannot specify type on ${item.name} slice since ${rule.path} is not an extension path.`,
+                    rule.sourceInfo
+                  );
+                }
+                element.addSlice(item.name);
+              });
+            }
           } else if (rule instanceof CaretValueRule) {
             if (rule.path !== '') {
               element.setInstancePropertyByPath(rule.caretPath, rule.value, this);
