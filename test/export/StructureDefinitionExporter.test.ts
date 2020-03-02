@@ -1452,7 +1452,7 @@ describe('StructureDefinitionExporter', () => {
   // Since previous versions of SUSHI used the slicename as a type lookup as well, we want to issue a warning when we
   // find a rule that may have been intended to work that way (essentially, a user who has not updated their fsh).
   // We expect to remove this warning at some point since it is only needed in the transition.
-  it('should report a warning if the extension slice name resolves to an extension type and no explicit type was specified', () => {
+  it('should report a warning if the extension slice name resolves to an external extension type and no explicit type was specified', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
@@ -1485,6 +1485,48 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should report a warning if the extension slice name resolves to a FSH extension and no explicit type was specified', () => {
+    const extension = new Extension('MyFshExtension');
+    const extCardRule = new CardRule('extension');
+    extCardRule.min = 0;
+    extCardRule.max = '0';
+    extension.rules.push(extCardRule);
+    doc.extensions.set(extension.name, extension);
+
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const containsRule = new ContainsRule('extension')
+      .withFile('FSHSliceName.fsh')
+      .withLocation([6, 3, 6, 12]);
+    containsRule.items = [{ name: 'MyFshExtension' }];
+    const cardRule = new CardRule('extension[MyFshExtension]');
+    cardRule.min = 0;
+    cardRule.max = '1';
+    profile.rules.push(containsRule, cardRule);
+
+    exporter.exportStructDef(extension);
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const extensionEl = sd.elements.find(e => e.id === 'Observation.extension');
+    const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:MyFshExtension');
+    const extensionSliceUrl = sd.elements.find(
+      e => e.id === 'Observation.extension:MyFshExtension.url'
+    );
+
+    expect(extensionEl.slicing).toBeDefined();
+    expect(extensionEl.slicing.discriminator.length).toBe(1);
+    expect(extensionEl.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('MyFshExtension');
+
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /extension contains MyFshExtension named MyFshExtension 0\.\.1.*extension contains MyFshExtension named my-fsh-extension 0\.\.1.*File: FSHSliceName\.fsh.*Line: 6\D*/s
+    );
+  });
+
   it('should not report a warning if the extension slice name resolves to an extension type but explicit type was specified', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -1514,6 +1556,35 @@ describe('StructureDefinitionExporter', () => {
       )
     ]);
     expect(extensionSliceUrl).toBeUndefined();
+
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
+  it('should not report a warning if the extension slice name does not resolve to an extension type', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const containsRule = new ContainsRule('extension');
+    // maxSize is the id of a core FHIR extension
+    containsRule.items = [{ name: 'foo' }];
+    const cardRule = new CardRule('extension[foo]');
+    cardRule.min = 0;
+    cardRule.max = '1';
+    profile.rules.push(containsRule, cardRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:foo');
+    const extensionSliceUrl = sd.elements.find(e => e.id === 'Observation.extension:foo.url');
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('foo');
 
     expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
   });
