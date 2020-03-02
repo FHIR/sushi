@@ -399,7 +399,8 @@ export class IGExporter {
       if (exampleUrl) {
         resource.exampleCanonical = exampleUrl;
       } else {
-        resource.exampleBoolean = true;
+        resource.exampleBoolean =
+          example._instanceMeta.type === 'Example' || example._instanceMeta.type === undefined;
       }
       this.ig.definition.resource.push(resource);
     });

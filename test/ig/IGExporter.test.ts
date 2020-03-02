@@ -50,6 +50,10 @@ describe('IGExporter', () => {
           if (instanceDef.id === 'patient-example-two') {
             instanceDef._instanceMeta.title = 'Another Patient Example';
             instanceDef._instanceMeta.description = 'Another example of a Patient';
+            instanceDef._instanceMeta.type = 'Example';
+          }
+          if (instanceDef.id === 'capability-statement-example') {
+            instanceDef._instanceMeta.type = 'Definition';
           }
           pkg.instances.push(instanceDef);
         }
@@ -191,10 +195,17 @@ describe('IGExporter', () => {
             },
             {
               reference: {
+                reference: 'CapabilityStatement/capability-statement-example'
+              },
+              name: 'capability-statement-example',
+              exampleBoolean: false // Type set to anything but Example sets this to false
+            },
+            {
+              reference: {
                 reference: 'Patient/patient-example'
               },
               name: 'patient-example',
-              exampleBoolean: true
+              exampleBoolean: true // No defined Type on FSH file sets this to true
             },
             {
               reference: {
@@ -202,7 +213,7 @@ describe('IGExporter', () => {
               },
               name: 'Another Patient Example',
               description: 'Another example of a Patient',
-              exampleBoolean: true
+              exampleBoolean: true // Type set to Example sets this to true
             }
           ],
           page: {

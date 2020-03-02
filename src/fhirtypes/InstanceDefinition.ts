@@ -47,6 +47,7 @@ type InstanceMeta = {
   name?: string;
   title?: string;
   description?: string;
+  type?: string;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

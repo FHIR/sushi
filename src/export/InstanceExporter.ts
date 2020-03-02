@@ -268,6 +268,9 @@ export class InstanceExporter {
     if (fshDefinition.description) {
       instanceDef._instanceMeta.description = fshDefinition.description;
     }
+    if (fshDefinition.type) {
+      instanceDef._instanceMeta.type = fshDefinition.type;
+    }
     instanceDef.id = fshDefinition.id;
 
     // Add the SD we are making an instance of to meta.profile, as long as SD is not a base FHIR resource
