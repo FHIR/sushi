@@ -460,39 +460,40 @@ FSHParser.RULE_expression = 19;
 FSHParser.RULE_xpath = 20;
 FSHParser.RULE_severity = 21;
 FSHParser.RULE_instanceOf = 22;
-FSHParser.RULE_cardRule = 23;
-FSHParser.RULE_flagRule = 24;
-FSHParser.RULE_valueSetRule = 25;
-FSHParser.RULE_fixedValueRule = 26;
-FSHParser.RULE_containsRule = 27;
-FSHParser.RULE_onlyRule = 28;
-FSHParser.RULE_obeysRule = 29;
-FSHParser.RULE_caretValueRule = 30;
-FSHParser.RULE_vsComponent = 31;
-FSHParser.RULE_vsConceptComponent = 32;
-FSHParser.RULE_vsFilterComponent = 33;
-FSHParser.RULE_vsComponentFrom = 34;
-FSHParser.RULE_vsFromSystem = 35;
-FSHParser.RULE_vsFromValueset = 36;
-FSHParser.RULE_vsFilterList = 37;
-FSHParser.RULE_vsFilterDefinition = 38;
-FSHParser.RULE_vsFilterOperator = 39;
-FSHParser.RULE_vsFilterValue = 40;
-FSHParser.RULE_path = 41;
-FSHParser.RULE_paths = 42;
-FSHParser.RULE_caretPath = 43;
-FSHParser.RULE_flag = 44;
-FSHParser.RULE_strength = 45;
-FSHParser.RULE_value = 46;
-FSHParser.RULE_item = 47;
-FSHParser.RULE_code = 48;
-FSHParser.RULE_concept = 49;
-FSHParser.RULE_quantity = 50;
-FSHParser.RULE_ratio = 51;
-FSHParser.RULE_reference = 52;
-FSHParser.RULE_ratioPart = 53;
-FSHParser.RULE_bool = 54;
-FSHParser.RULE_targetType = 55;
+FSHParser.RULE_type = 23;
+FSHParser.RULE_cardRule = 24;
+FSHParser.RULE_flagRule = 25;
+FSHParser.RULE_valueSetRule = 26;
+FSHParser.RULE_fixedValueRule = 27;
+FSHParser.RULE_containsRule = 28;
+FSHParser.RULE_onlyRule = 29;
+FSHParser.RULE_obeysRule = 30;
+FSHParser.RULE_caretValueRule = 31;
+FSHParser.RULE_vsComponent = 32;
+FSHParser.RULE_vsConceptComponent = 33;
+FSHParser.RULE_vsFilterComponent = 34;
+FSHParser.RULE_vsComponentFrom = 35;
+FSHParser.RULE_vsFromSystem = 36;
+FSHParser.RULE_vsFromValueset = 37;
+FSHParser.RULE_vsFilterList = 38;
+FSHParser.RULE_vsFilterDefinition = 39;
+FSHParser.RULE_vsFilterOperator = 40;
+FSHParser.RULE_vsFilterValue = 41;
+FSHParser.RULE_path = 42;
+FSHParser.RULE_paths = 43;
+FSHParser.RULE_caretPath = 44;
+FSHParser.RULE_flag = 45;
+FSHParser.RULE_strength = 46;
+FSHParser.RULE_value = 47;
+FSHParser.RULE_item = 48;
+FSHParser.RULE_code = 49;
+FSHParser.RULE_concept = 50;
+FSHParser.RULE_quantity = 51;
+FSHParser.RULE_ratio = 52;
+FSHParser.RULE_reference = 53;
+FSHParser.RULE_ratioPart = 54;
+FSHParser.RULE_bool = 55;
+FSHParser.RULE_targetType = 56;
 
 
 function DocContext(parser, parent, invokingState) {
@@ -558,17 +559,17 @@ FSHParser.prototype.doc = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 115;
+        this.state = 117;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_ALIAS) | (1 << FSHParser.KW_PROFILE) | (1 << FSHParser.KW_EXTENSION) | (1 << FSHParser.KW_INSTANCE) | (1 << FSHParser.KW_INVARIANT) | (1 << FSHParser.KW_VALUESET) | (1 << FSHParser.KW_CODESYSTEM))) !== 0)) {
-            this.state = 112;
+            this.state = 114;
             this.entity();
-            this.state = 117;
+            this.state = 119;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
-        this.state = 118;
+        this.state = 120;
         this.match(FSHParser.EOF);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -659,42 +660,42 @@ FSHParser.prototype.entity = function() {
     var localctx = new EntityContext(this, this._ctx, this.state);
     this.enterRule(localctx, 2, FSHParser.RULE_entity);
     try {
-        this.state = 127;
+        this.state = 129;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_ALIAS:
             this.enterOuterAlt(localctx, 1);
-            this.state = 120;
+            this.state = 122;
             this.alias();
             break;
         case FSHParser.KW_PROFILE:
             this.enterOuterAlt(localctx, 2);
-            this.state = 121;
+            this.state = 123;
             this.profile();
             break;
         case FSHParser.KW_EXTENSION:
             this.enterOuterAlt(localctx, 3);
-            this.state = 122;
+            this.state = 124;
             this.extension();
             break;
         case FSHParser.KW_INVARIANT:
             this.enterOuterAlt(localctx, 4);
-            this.state = 123;
+            this.state = 125;
             this.invariant();
             break;
         case FSHParser.KW_INSTANCE:
             this.enterOuterAlt(localctx, 5);
-            this.state = 124;
+            this.state = 126;
             this.instance();
             break;
         case FSHParser.KW_VALUESET:
             this.enterOuterAlt(localctx, 6);
-            this.state = 125;
+            this.state = 127;
             this.valueSet();
             break;
         case FSHParser.KW_CODESYSTEM:
             this.enterOuterAlt(localctx, 7);
-            this.state = 126;
+            this.state = 128;
             this.codeSystem();
             break;
         default:
@@ -782,13 +783,13 @@ FSHParser.prototype.alias = function() {
     this.enterRule(localctx, 4, FSHParser.RULE_alias);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 129;
-        this.match(FSHParser.KW_ALIAS);
-        this.state = 130;
-        this.match(FSHParser.SEQUENCE);
         this.state = 131;
-        this.match(FSHParser.EQUAL);
+        this.match(FSHParser.KW_ALIAS);
         this.state = 132;
+        this.match(FSHParser.SEQUENCE);
+        this.state = 133;
+        this.match(FSHParser.EQUAL);
+        this.state = 134;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -883,27 +884,27 @@ FSHParser.prototype.profile = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 134;
+        this.state = 136;
         this.match(FSHParser.KW_PROFILE);
-        this.state = 135;
+        this.state = 137;
         this.match(FSHParser.SEQUENCE);
         this.state = 137;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         do {
-            this.state = 136;
+            this.state = 138;
             this.sdMetadata();
             this.state = 139;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         } while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_PARENT) | (1 << FSHParser.KW_ID) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION))) !== 0));
-        this.state = 144;
+        this.state = 146;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.STAR) {
-            this.state = 141;
+            this.state = 143;
             this.sdRule();
-            this.state = 146;
+            this.state = 148;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -1000,27 +1001,27 @@ FSHParser.prototype.extension = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 147;
+        this.state = 149;
         this.match(FSHParser.KW_EXTENSION);
-        this.state = 148;
+        this.state = 150;
         this.match(FSHParser.SEQUENCE);
-        this.state = 152;
+        this.state = 154;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_PARENT) | (1 << FSHParser.KW_ID) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION))) !== 0)) {
-            this.state = 149;
+            this.state = 151;
             this.sdMetadata();
-            this.state = 154;
+            this.state = 156;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
-        this.state = 158;
+        this.state = 160;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.STAR) {
-            this.state = 155;
+            this.state = 157;
             this.sdRule();
-            this.state = 160;
+            this.state = 162;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -1101,27 +1102,27 @@ FSHParser.prototype.sdMetadata = function() {
     var localctx = new SdMetadataContext(this, this._ctx, this.state);
     this.enterRule(localctx, 10, FSHParser.RULE_sdMetadata);
     try {
-        this.state = 165;
+        this.state = 167;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_PARENT:
             this.enterOuterAlt(localctx, 1);
-            this.state = 161;
+            this.state = 163;
             this.parent();
             break;
         case FSHParser.KW_ID:
             this.enterOuterAlt(localctx, 2);
-            this.state = 162;
+            this.state = 164;
             this.id();
             break;
         case FSHParser.KW_TITLE:
             this.enterOuterAlt(localctx, 3);
-            this.state = 163;
+            this.state = 165;
             this.title();
             break;
         case FSHParser.KW_DESCRIPTION:
             this.enterOuterAlt(localctx, 4);
-            this.state = 164;
+            this.state = 166;
             this.description();
             break;
         default:
@@ -1220,55 +1221,55 @@ FSHParser.prototype.sdRule = function() {
     var localctx = new SdRuleContext(this, this._ctx, this.state);
     this.enterRule(localctx, 12, FSHParser.RULE_sdRule);
     try {
-        this.state = 175;
+        this.state = 177;
         this._errHandler.sync(this);
         var la_ = this._interp.adaptivePredict(this._input,7,this._ctx);
         switch(la_) {
         case 1:
             this.enterOuterAlt(localctx, 1);
-            this.state = 167;
+            this.state = 169;
             this.cardRule();
             break;
 
         case 2:
             this.enterOuterAlt(localctx, 2);
-            this.state = 168;
+            this.state = 170;
             this.flagRule();
             break;
 
         case 3:
             this.enterOuterAlt(localctx, 3);
-            this.state = 169;
+            this.state = 171;
             this.valueSetRule();
             break;
 
         case 4:
             this.enterOuterAlt(localctx, 4);
-            this.state = 170;
+            this.state = 172;
             this.fixedValueRule();
             break;
 
         case 5:
             this.enterOuterAlt(localctx, 5);
-            this.state = 171;
+            this.state = 173;
             this.containsRule();
             break;
 
         case 6:
             this.enterOuterAlt(localctx, 6);
-            this.state = 172;
+            this.state = 174;
             this.onlyRule();
             break;
 
         case 7:
             this.enterOuterAlt(localctx, 7);
-            this.state = 173;
+            this.state = 175;
             this.obeysRule();
             break;
 
         case 8:
             this.enterOuterAlt(localctx, 8);
-            this.state = 174;
+            this.state = 176;
             this.caretValueRule();
             break;
 
@@ -1366,27 +1367,27 @@ FSHParser.prototype.instance = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 177;
+        this.state = 179;
         this.match(FSHParser.KW_INSTANCE);
-        this.state = 178;
+        this.state = 180;
         this.match(FSHParser.SEQUENCE);
-        this.state = 182;
+        this.state = 184;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
-        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_INSTANCEOF) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION))) !== 0)) {
-            this.state = 179;
+        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_INSTANCEOF) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION) | (1 << FSHParser.KW_TYPE))) !== 0)) {
+            this.state = 181;
             this.instanceMetadata();
-            this.state = 184;
+            this.state = 186;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
-        this.state = 188;
+        this.state = 190;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.STAR) {
-            this.state = 185;
+            this.state = 187;
             this.fixedValueRule();
-            this.state = 190;
+            this.state = 192;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -1433,6 +1434,10 @@ InstanceMetadataContext.prototype.description = function() {
     return this.getTypedRuleContext(DescriptionContext,0);
 };
 
+InstanceMetadataContext.prototype.type = function() {
+    return this.getTypedRuleContext(TypeContext,0);
+};
+
 InstanceMetadataContext.prototype.enterRule = function(listener) {
     if(listener instanceof FSHListener ) {
         listener.enterInstanceMetadata(this);
@@ -1463,23 +1468,28 @@ FSHParser.prototype.instanceMetadata = function() {
     var localctx = new InstanceMetadataContext(this, this._ctx, this.state);
     this.enterRule(localctx, 16, FSHParser.RULE_instanceMetadata);
     try {
-        this.state = 194;
+        this.state = 197;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_INSTANCEOF:
             this.enterOuterAlt(localctx, 1);
-            this.state = 191;
+            this.state = 193;
             this.instanceOf();
             break;
         case FSHParser.KW_TITLE:
             this.enterOuterAlt(localctx, 2);
-            this.state = 192;
+            this.state = 194;
             this.title();
             break;
         case FSHParser.KW_DESCRIPTION:
             this.enterOuterAlt(localctx, 3);
-            this.state = 193;
+            this.state = 195;
             this.description();
+            break;
+        case FSHParser.KW_TYPE:
+            this.enterOuterAlt(localctx, 4);
+            this.state = 196;
+            this.type();
             break;
         default:
             throw new antlr4.error.NoViableAltException(this);
@@ -1566,15 +1576,15 @@ FSHParser.prototype.invariant = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 196;
+        this.state = 199;
         this.match(FSHParser.KW_INVARIANT);
-        this.state = 197;
+        this.state = 200;
         this.match(FSHParser.SEQUENCE);
         this.state = 199;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         do {
-            this.state = 198;
+            this.state = 201;
             this.invariantMetadata();
             this.state = 201;
             this._errHandler.sync(this);
@@ -1657,27 +1667,27 @@ FSHParser.prototype.invariantMetadata = function() {
     var localctx = new InvariantMetadataContext(this, this._ctx, this.state);
     this.enterRule(localctx, 20, FSHParser.RULE_invariantMetadata);
     try {
-        this.state = 207;
+        this.state = 210;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_DESCRIPTION:
             this.enterOuterAlt(localctx, 1);
-            this.state = 203;
+            this.state = 206;
             this.description();
             break;
         case FSHParser.KW_EXPRESSION:
             this.enterOuterAlt(localctx, 2);
-            this.state = 204;
+            this.state = 207;
             this.expression();
             break;
         case FSHParser.KW_XPATH:
             this.enterOuterAlt(localctx, 3);
-            this.state = 205;
+            this.state = 208;
             this.xpath();
             break;
         case FSHParser.KW_SEVERITY:
             this.enterOuterAlt(localctx, 4);
-            this.state = 206;
+            this.state = 209;
             this.severity();
             break;
         default:
@@ -1787,40 +1797,40 @@ FSHParser.prototype.valueSet = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 209;
+        this.state = 212;
         this.match(FSHParser.KW_VALUESET);
-        this.state = 210;
+        this.state = 213;
         this.match(FSHParser.SEQUENCE);
-        this.state = 214;
+        this.state = 217;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_ID) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION))) !== 0)) {
-            this.state = 211;
+            this.state = 214;
             this.vsMetadata();
-            this.state = 216;
+            this.state = 219;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
-        this.state = 221;
+        this.state = 224;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.STAR) {
-            this.state = 219;
+            this.state = 222;
             this._errHandler.sync(this);
             var la_ = this._interp.adaptivePredict(this._input,14,this._ctx);
             switch(la_) {
             case 1:
-                this.state = 217;
+                this.state = 220;
                 this.caretValueRule();
                 break;
 
             case 2:
-                this.state = 218;
+                this.state = 221;
                 this.vsComponent();
                 break;
 
             }
-            this.state = 223;
+            this.state = 226;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -1897,22 +1907,22 @@ FSHParser.prototype.vsMetadata = function() {
     var localctx = new VsMetadataContext(this, this._ctx, this.state);
     this.enterRule(localctx, 24, FSHParser.RULE_vsMetadata);
     try {
-        this.state = 227;
+        this.state = 230;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_ID:
             this.enterOuterAlt(localctx, 1);
-            this.state = 224;
+            this.state = 227;
             this.id();
             break;
         case FSHParser.KW_TITLE:
             this.enterOuterAlt(localctx, 2);
-            this.state = 225;
+            this.state = 228;
             this.title();
             break;
         case FSHParser.KW_DESCRIPTION:
             this.enterOuterAlt(localctx, 3);
-            this.state = 226;
+            this.state = 229;
             this.description();
             break;
         default:
@@ -2022,40 +2032,40 @@ FSHParser.prototype.codeSystem = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 229;
+        this.state = 232;
         this.match(FSHParser.KW_CODESYSTEM);
-        this.state = 230;
+        this.state = 233;
         this.match(FSHParser.SEQUENCE);
-        this.state = 234;
+        this.state = 237;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_ID) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION))) !== 0)) {
-            this.state = 231;
+            this.state = 234;
             this.csMetadata();
-            this.state = 236;
+            this.state = 239;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
-        this.state = 241;
+        this.state = 244;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.STAR) {
-            this.state = 239;
+            this.state = 242;
             this._errHandler.sync(this);
             var la_ = this._interp.adaptivePredict(this._input,18,this._ctx);
             switch(la_) {
             case 1:
-                this.state = 237;
+                this.state = 240;
                 this.caretValueRule();
                 break;
 
             case 2:
-                this.state = 238;
+                this.state = 241;
                 this.concept();
                 break;
 
             }
-            this.state = 243;
+            this.state = 246;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -2132,22 +2142,22 @@ FSHParser.prototype.csMetadata = function() {
     var localctx = new CsMetadataContext(this, this._ctx, this.state);
     this.enterRule(localctx, 28, FSHParser.RULE_csMetadata);
     try {
-        this.state = 247;
+        this.state = 250;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_ID:
             this.enterOuterAlt(localctx, 1);
-            this.state = 244;
+            this.state = 247;
             this.id();
             break;
         case FSHParser.KW_TITLE:
             this.enterOuterAlt(localctx, 2);
-            this.state = 245;
+            this.state = 248;
             this.title();
             break;
         case FSHParser.KW_DESCRIPTION:
             this.enterOuterAlt(localctx, 3);
-            this.state = 246;
+            this.state = 249;
             this.description();
             break;
         default:
@@ -2223,9 +2233,9 @@ FSHParser.prototype.parent = function() {
     this.enterRule(localctx, 30, FSHParser.RULE_parent);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 249;
+        this.state = 252;
         this.match(FSHParser.KW_PARENT);
-        this.state = 250;
+        this.state = 253;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2297,9 +2307,9 @@ FSHParser.prototype.id = function() {
     this.enterRule(localctx, 32, FSHParser.RULE_id);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 252;
+        this.state = 255;
         this.match(FSHParser.KW_ID);
-        this.state = 253;
+        this.state = 256;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2371,9 +2381,9 @@ FSHParser.prototype.title = function() {
     this.enterRule(localctx, 34, FSHParser.RULE_title);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 255;
+        this.state = 258;
         this.match(FSHParser.KW_TITLE);
-        this.state = 256;
+        this.state = 259;
         this.match(FSHParser.STRING);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2450,9 +2460,9 @@ FSHParser.prototype.description = function() {
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 258;
+        this.state = 261;
         this.match(FSHParser.KW_DESCRIPTION);
-        this.state = 259;
+        this.state = 262;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.STRING || _la===FSHParser.MULTILINE_STRING)) {
         this._errHandler.recoverInline(this);
@@ -2531,9 +2541,9 @@ FSHParser.prototype.expression = function() {
     this.enterRule(localctx, 38, FSHParser.RULE_expression);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 261;
+        this.state = 264;
         this.match(FSHParser.KW_EXPRESSION);
-        this.state = 262;
+        this.state = 265;
         this.match(FSHParser.STRING);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2605,9 +2615,9 @@ FSHParser.prototype.xpath = function() {
     this.enterRule(localctx, 40, FSHParser.RULE_xpath);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 264;
+        this.state = 267;
         this.match(FSHParser.KW_XPATH);
-        this.state = 265;
+        this.state = 268;
         this.match(FSHParser.STRING);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2679,9 +2689,9 @@ FSHParser.prototype.severity = function() {
     this.enterRule(localctx, 42, FSHParser.RULE_severity);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 267;
+        this.state = 270;
         this.match(FSHParser.KW_SEVERITY);
-        this.state = 268;
+        this.state = 271;
         this.match(FSHParser.CODE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -2753,10 +2763,84 @@ FSHParser.prototype.instanceOf = function() {
     this.enterRule(localctx, 44, FSHParser.RULE_instanceOf);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 270;
+        this.state = 273;
         this.match(FSHParser.KW_INSTANCEOF);
-        this.state = 271;
+        this.state = 274;
         this.match(FSHParser.SEQUENCE);
+    } catch (re) {
+    	if(re instanceof antlr4.error.RecognitionException) {
+	        localctx.exception = re;
+	        this._errHandler.reportError(this, re);
+	        this._errHandler.recover(this, re);
+	    } else {
+	    	throw re;
+	    }
+    } finally {
+        this.exitRule();
+    }
+    return localctx;
+};
+
+
+function TypeContext(parser, parent, invokingState) {
+	if(parent===undefined) {
+	    parent = null;
+	}
+	if(invokingState===undefined || invokingState===null) {
+		invokingState = -1;
+	}
+	antlr4.ParserRuleContext.call(this, parent, invokingState);
+    this.parser = parser;
+    this.ruleIndex = FSHParser.RULE_type;
+    return this;
+}
+
+TypeContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+TypeContext.prototype.constructor = TypeContext;
+
+TypeContext.prototype.KW_TYPE = function() {
+    return this.getToken(FSHParser.KW_TYPE, 0);
+};
+
+TypeContext.prototype.STRING = function() {
+    return this.getToken(FSHParser.STRING, 0);
+};
+
+TypeContext.prototype.enterRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.enterType(this);
+	}
+};
+
+TypeContext.prototype.exitRule = function(listener) {
+    if(listener instanceof FSHListener ) {
+        listener.exitType(this);
+	}
+};
+
+TypeContext.prototype.accept = function(visitor) {
+    if ( visitor instanceof FSHVisitor ) {
+        return visitor.visitType(this);
+    } else {
+        return visitor.visitChildren(this);
+    }
+};
+
+
+
+
+FSHParser.TypeContext = TypeContext;
+
+FSHParser.prototype.type = function() {
+
+    var localctx = new TypeContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 46, FSHParser.RULE_type);
+    try {
+        this.enterOuterAlt(localctx, 1);
+        this.state = 276;
+        this.match(FSHParser.KW_TYPE);
+        this.state = 277;
+        this.match(FSHParser.STRING);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
 	        localctx.exception = re;
@@ -2839,23 +2923,23 @@ FSHParser.CardRuleContext = CardRuleContext;
 FSHParser.prototype.cardRule = function() {
 
     var localctx = new CardRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 46, FSHParser.RULE_cardRule);
+    this.enterRule(localctx, 48, FSHParser.RULE_cardRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 273;
-        this.match(FSHParser.STAR);
-        this.state = 274;
-        this.path();
-        this.state = 275;
-        this.match(FSHParser.CARD);
         this.state = 279;
+        this.match(FSHParser.STAR);
+        this.state = 280;
+        this.path();
+        this.state = 281;
+        this.match(FSHParser.CARD);
+        this.state = 285;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU))) !== 0)) {
-            this.state = 276;
+            this.state = 282;
             this.flag();
-            this.state = 281;
+            this.state = 287;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -2941,21 +3025,21 @@ FSHParser.FlagRuleContext = FlagRuleContext;
 FSHParser.prototype.flagRule = function() {
 
     var localctx = new FlagRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 48, FSHParser.RULE_flagRule);
+    this.enterRule(localctx, 50, FSHParser.RULE_flagRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 282;
+        this.state = 288;
         this.match(FSHParser.STAR);
-        this.state = 285;
+        this.state = 291;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.SEQUENCE:
-            this.state = 283;
+            this.state = 289;
             this.path();
             break;
         case FSHParser.COMMA_DELIMITED_SEQUENCES:
-            this.state = 284;
+            this.state = 290;
             this.paths();
             break;
         default:
@@ -2965,7 +3049,7 @@ FSHParser.prototype.flagRule = function() {
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         do {
-            this.state = 287;
+            this.state = 293;
             this.flag();
             this.state = 290;
             this._errHandler.sync(this);
@@ -3050,23 +3134,23 @@ FSHParser.ValueSetRuleContext = ValueSetRuleContext;
 FSHParser.prototype.valueSetRule = function() {
 
     var localctx = new ValueSetRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 50, FSHParser.RULE_valueSetRule);
+    this.enterRule(localctx, 52, FSHParser.RULE_valueSetRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 292;
+        this.state = 298;
         this.match(FSHParser.STAR);
-        this.state = 293;
+        this.state = 299;
         this.path();
-        this.state = 294;
+        this.state = 300;
         this.match(FSHParser.KW_FROM);
-        this.state = 295;
+        this.state = 301;
         this.match(FSHParser.SEQUENCE);
-        this.state = 297;
+        this.state = 303;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_EXAMPLE) | (1 << FSHParser.KW_PREFERRED) | (1 << FSHParser.KW_EXTENSIBLE) | (1 << FSHParser.KW_REQUIRED))) !== 0)) {
-            this.state = 296;
+            this.state = 302;
             this.strength();
         }
 
@@ -3145,16 +3229,16 @@ FSHParser.FixedValueRuleContext = FixedValueRuleContext;
 FSHParser.prototype.fixedValueRule = function() {
 
     var localctx = new FixedValueRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 52, FSHParser.RULE_fixedValueRule);
+    this.enterRule(localctx, 54, FSHParser.RULE_fixedValueRule);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 299;
+        this.state = 305;
         this.match(FSHParser.STAR);
-        this.state = 300;
+        this.state = 306;
         this.path();
-        this.state = 301;
+        this.state = 307;
         this.match(FSHParser.EQUAL);
-        this.state = 302;
+        this.state = 308;
         this.value();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -3250,27 +3334,27 @@ FSHParser.ContainsRuleContext = ContainsRuleContext;
 FSHParser.prototype.containsRule = function() {
 
     var localctx = new ContainsRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 54, FSHParser.RULE_containsRule);
+    this.enterRule(localctx, 56, FSHParser.RULE_containsRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 304;
+        this.state = 310;
         this.match(FSHParser.STAR);
-        this.state = 305;
+        this.state = 311;
         this.path();
-        this.state = 306;
-        this.match(FSHParser.KW_CONTAINS);
-        this.state = 307;
-        this.item();
         this.state = 312;
+        this.match(FSHParser.KW_CONTAINS);
+        this.state = 313;
+        this.item();
+        this.state = 318;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.KW_AND) {
-            this.state = 308;
-            this.match(FSHParser.KW_AND);
-            this.state = 309;
-            this.item();
             this.state = 314;
+            this.match(FSHParser.KW_AND);
+            this.state = 315;
+            this.item();
+            this.state = 320;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -3368,27 +3452,27 @@ FSHParser.OnlyRuleContext = OnlyRuleContext;
 FSHParser.prototype.onlyRule = function() {
 
     var localctx = new OnlyRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 56, FSHParser.RULE_onlyRule);
+    this.enterRule(localctx, 58, FSHParser.RULE_onlyRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 315;
+        this.state = 321;
         this.match(FSHParser.STAR);
-        this.state = 316;
+        this.state = 322;
         this.path();
-        this.state = 317;
-        this.match(FSHParser.KW_ONLY);
-        this.state = 318;
-        this.targetType();
         this.state = 323;
+        this.match(FSHParser.KW_ONLY);
+        this.state = 324;
+        this.targetType();
+        this.state = 329;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.KW_OR) {
-            this.state = 319;
-            this.match(FSHParser.KW_OR);
-            this.state = 320;
-            this.targetType();
             this.state = 325;
+            this.match(FSHParser.KW_OR);
+            this.state = 326;
+            this.targetType();
+            this.state = 331;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -3487,33 +3571,33 @@ FSHParser.ObeysRuleContext = ObeysRuleContext;
 FSHParser.prototype.obeysRule = function() {
 
     var localctx = new ObeysRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 58, FSHParser.RULE_obeysRule);
+    this.enterRule(localctx, 60, FSHParser.RULE_obeysRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 326;
+        this.state = 332;
         this.match(FSHParser.STAR);
-        this.state = 328;
+        this.state = 334;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(_la===FSHParser.SEQUENCE) {
-            this.state = 327;
+            this.state = 333;
             this.path();
         }
 
-        this.state = 330;
-        this.match(FSHParser.KW_OBEYS);
-        this.state = 331;
-        this.match(FSHParser.SEQUENCE);
         this.state = 336;
+        this.match(FSHParser.KW_OBEYS);
+        this.state = 337;
+        this.match(FSHParser.SEQUENCE);
+        this.state = 342;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while(_la===FSHParser.KW_AND) {
-            this.state = 332;
-            this.match(FSHParser.KW_AND);
-            this.state = 333;
-            this.match(FSHParser.SEQUENCE);
             this.state = 338;
+            this.match(FSHParser.KW_AND);
+            this.state = 339;
+            this.match(FSHParser.SEQUENCE);
+            this.state = 344;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
         }
@@ -3596,25 +3680,25 @@ FSHParser.CaretValueRuleContext = CaretValueRuleContext;
 FSHParser.prototype.caretValueRule = function() {
 
     var localctx = new CaretValueRuleContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 60, FSHParser.RULE_caretValueRule);
+    this.enterRule(localctx, 62, FSHParser.RULE_caretValueRule);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 339;
+        this.state = 345;
         this.match(FSHParser.STAR);
-        this.state = 341;
+        this.state = 347;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(_la===FSHParser.SEQUENCE) {
-            this.state = 340;
+            this.state = 346;
             this.path();
         }
 
-        this.state = 343;
+        this.state = 349;
         this.caretPath();
-        this.state = 344;
+        this.state = 350;
         this.match(FSHParser.EQUAL);
-        this.state = 345;
+        this.state = 351;
         this.value();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -3691,30 +3775,30 @@ FSHParser.VsComponentContext = VsComponentContext;
 FSHParser.prototype.vsComponent = function() {
 
     var localctx = new VsComponentContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 62, FSHParser.RULE_vsComponent);
+    this.enterRule(localctx, 64, FSHParser.RULE_vsComponent);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 347;
+        this.state = 353;
         this.match(FSHParser.STAR);
-        this.state = 349;
+        this.state = 355;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(_la===FSHParser.KW_EXCLUDE) {
-            this.state = 348;
+            this.state = 354;
             this.match(FSHParser.KW_EXCLUDE);
         }
 
-        this.state = 353;
+        this.state = 359;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.CODE:
         case FSHParser.COMMA_DELIMITED_CODES:
-            this.state = 351;
+            this.state = 357;
             this.vsConceptComponent();
             break;
         case FSHParser.KW_CODES:
-            this.state = 352;
+            this.state = 358;
             this.vsFilterComponent();
             break;
         default:
@@ -3791,30 +3875,30 @@ FSHParser.VsConceptComponentContext = VsConceptComponentContext;
 FSHParser.prototype.vsConceptComponent = function() {
 
     var localctx = new VsConceptComponentContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 64, FSHParser.RULE_vsConceptComponent);
+    this.enterRule(localctx, 66, FSHParser.RULE_vsConceptComponent);
     var _la = 0; // Token type
     try {
-        this.state = 361;
+        this.state = 367;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.CODE:
             this.enterOuterAlt(localctx, 1);
-            this.state = 355;
+            this.state = 361;
             this.code();
-            this.state = 357;
+            this.state = 363;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
             if(_la===FSHParser.KW_FROM) {
-                this.state = 356;
+                this.state = 362;
                 this.vsComponentFrom();
             }
 
             break;
         case FSHParser.COMMA_DELIMITED_CODES:
             this.enterOuterAlt(localctx, 2);
-            this.state = 359;
+            this.state = 365;
             this.match(FSHParser.COMMA_DELIMITED_CODES);
-            this.state = 360;
+            this.state = 366;
             this.vsComponentFrom();
             break;
         default:
@@ -3895,21 +3979,21 @@ FSHParser.VsFilterComponentContext = VsFilterComponentContext;
 FSHParser.prototype.vsFilterComponent = function() {
 
     var localctx = new VsFilterComponentContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 66, FSHParser.RULE_vsFilterComponent);
+    this.enterRule(localctx, 68, FSHParser.RULE_vsFilterComponent);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 363;
+        this.state = 369;
         this.match(FSHParser.KW_CODES);
-        this.state = 364;
+        this.state = 370;
         this.vsComponentFrom();
-        this.state = 367;
+        this.state = 373;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(_la===FSHParser.KW_WHERE) {
-            this.state = 365;
+            this.state = 371;
             this.match(FSHParser.KW_WHERE);
-            this.state = 366;
+            this.state = 372;
             this.vsFilterList();
         }
 
@@ -3988,39 +4072,39 @@ FSHParser.VsComponentFromContext = VsComponentFromContext;
 FSHParser.prototype.vsComponentFrom = function() {
 
     var localctx = new VsComponentFromContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 68, FSHParser.RULE_vsComponentFrom);
+    this.enterRule(localctx, 70, FSHParser.RULE_vsComponentFrom);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 369;
+        this.state = 375;
         this.match(FSHParser.KW_FROM);
-        this.state = 380;
+        this.state = 386;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.KW_SYSTEM:
-            this.state = 370;
+            this.state = 376;
             this.vsFromSystem();
-            this.state = 373;
+            this.state = 379;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
             if(_la===FSHParser.KW_AND) {
-                this.state = 371;
+                this.state = 377;
                 this.match(FSHParser.KW_AND);
-                this.state = 372;
+                this.state = 378;
                 this.vsFromValueset();
             }
 
             break;
         case FSHParser.KW_VSREFERENCE:
-            this.state = 375;
+            this.state = 381;
             this.vsFromValueset();
-            this.state = 378;
+            this.state = 384;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
             if(_la===FSHParser.KW_AND) {
-                this.state = 376;
+                this.state = 382;
                 this.match(FSHParser.KW_AND);
-                this.state = 377;
+                this.state = 383;
                 this.vsFromSystem();
             }
 
@@ -4095,12 +4179,12 @@ FSHParser.VsFromSystemContext = VsFromSystemContext;
 FSHParser.prototype.vsFromSystem = function() {
 
     var localctx = new VsFromSystemContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 70, FSHParser.RULE_vsFromSystem);
+    this.enterRule(localctx, 72, FSHParser.RULE_vsFromSystem);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 382;
+        this.state = 388;
         this.match(FSHParser.KW_SYSTEM);
-        this.state = 383;
+        this.state = 389;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -4173,13 +4257,13 @@ FSHParser.VsFromValuesetContext = VsFromValuesetContext;
 FSHParser.prototype.vsFromValueset = function() {
 
     var localctx = new VsFromValuesetContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 72, FSHParser.RULE_vsFromValueset);
+    this.enterRule(localctx, 74, FSHParser.RULE_vsFromValueset);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 385;
+        this.state = 391;
         this.match(FSHParser.KW_VSREFERENCE);
-        this.state = 386;
+        this.state = 392;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.COMMA_DELIMITED_SEQUENCES || _la===FSHParser.SEQUENCE)) {
         this._errHandler.recoverInline(this);
@@ -4270,25 +4354,25 @@ FSHParser.VsFilterListContext = VsFilterListContext;
 FSHParser.prototype.vsFilterList = function() {
 
     var localctx = new VsFilterListContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 74, FSHParser.RULE_vsFilterList);
+    this.enterRule(localctx, 76, FSHParser.RULE_vsFilterList);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 393;
+        this.state = 399;
         this._errHandler.sync(this);
         var _alt = this._interp.adaptivePredict(this._input,38,this._ctx)
         while(_alt!=2 && _alt!=antlr4.atn.ATN.INVALID_ALT_NUMBER) {
             if(_alt===1) {
-                this.state = 388;
+                this.state = 394;
                 this.vsFilterDefinition();
                 this.state = 389;
                 this.match(FSHParser.KW_AND);
             }
-            this.state = 395;
+            this.state = 401;
             this._errHandler.sync(this);
             _alt = this._interp.adaptivePredict(this._input,38,this._ctx);
         }
 
-        this.state = 396;
+        this.state = 402;
         this.vsFilterDefinition();
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -4361,15 +4445,15 @@ FSHParser.VsFilterDefinitionContext = VsFilterDefinitionContext;
 FSHParser.prototype.vsFilterDefinition = function() {
 
     var localctx = new VsFilterDefinitionContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 76, FSHParser.RULE_vsFilterDefinition);
+    this.enterRule(localctx, 78, FSHParser.RULE_vsFilterDefinition);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 398;
+        this.state = 404;
         this.match(FSHParser.SEQUENCE);
-        this.state = 399;
+        this.state = 405;
         this.vsFilterOperator();
-        this.state = 401;
+        this.state = 407;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if(((((_la - 30)) & ~0x1f) == 0 && ((1 << (_la - 30)) & ((1 << (FSHParser.KW_TRUE - 30)) | (1 << (FSHParser.KW_FALSE - 30)) | (1 << (FSHParser.STRING - 30)) | (1 << (FSHParser.CODE - 30)) | (1 << (FSHParser.REGEX - 30)))) !== 0)) {
@@ -4444,11 +4528,11 @@ FSHParser.VsFilterOperatorContext = VsFilterOperatorContext;
 FSHParser.prototype.vsFilterOperator = function() {
 
     var localctx = new VsFilterOperatorContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 78, FSHParser.RULE_vsFilterOperator);
+    this.enterRule(localctx, 80, FSHParser.RULE_vsFilterOperator);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 403;
+        this.state = 409;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.EQUAL || _la===FSHParser.SEQUENCE)) {
         this._errHandler.recoverInline(this);
@@ -4536,34 +4620,34 @@ FSHParser.VsFilterValueContext = VsFilterValueContext;
 FSHParser.prototype.vsFilterValue = function() {
 
     var localctx = new VsFilterValueContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 80, FSHParser.RULE_vsFilterValue);
+    this.enterRule(localctx, 82, FSHParser.RULE_vsFilterValue);
     try {
-        this.state = 410;
+        this.state = 416;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
         case FSHParser.CODE:
             this.enterOuterAlt(localctx, 1);
-            this.state = 405;
+            this.state = 411;
             this.code();
             break;
         case FSHParser.KW_TRUE:
             this.enterOuterAlt(localctx, 2);
-            this.state = 406;
+            this.state = 412;
             this.match(FSHParser.KW_TRUE);
             break;
         case FSHParser.KW_FALSE:
             this.enterOuterAlt(localctx, 3);
-            this.state = 407;
+            this.state = 413;
             this.match(FSHParser.KW_FALSE);
             break;
         case FSHParser.REGEX:
             this.enterOuterAlt(localctx, 4);
-            this.state = 408;
+            this.state = 414;
             this.match(FSHParser.REGEX);
             break;
         case FSHParser.STRING:
             this.enterOuterAlt(localctx, 5);
-            this.state = 409;
+            this.state = 415;
             this.match(FSHParser.STRING);
             break;
         default:
@@ -4632,10 +4716,10 @@ FSHParser.PathContext = PathContext;
 FSHParser.prototype.path = function() {
 
     var localctx = new PathContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 82, FSHParser.RULE_path);
+    this.enterRule(localctx, 84, FSHParser.RULE_path);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 412;
+        this.state = 418;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -4700,10 +4784,10 @@ FSHParser.PathsContext = PathsContext;
 FSHParser.prototype.paths = function() {
 
     var localctx = new PathsContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 84, FSHParser.RULE_paths);
+    this.enterRule(localctx, 86, FSHParser.RULE_paths);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 414;
+        this.state = 420;
         this.match(FSHParser.COMMA_DELIMITED_SEQUENCES);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -4768,10 +4852,10 @@ FSHParser.CaretPathContext = CaretPathContext;
 FSHParser.prototype.caretPath = function() {
 
     var localctx = new CaretPathContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 86, FSHParser.RULE_caretPath);
+    this.enterRule(localctx, 88, FSHParser.RULE_caretPath);
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 416;
+        this.state = 422;
         this.match(FSHParser.CARET_SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
@@ -4844,11 +4928,11 @@ FSHParser.FlagContext = FlagContext;
 FSHParser.prototype.flag = function() {
 
     var localctx = new FlagContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 88, FSHParser.RULE_flag);
+    this.enterRule(localctx, 90, FSHParser.RULE_flag);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 418;
+        this.state = 424;
         _la = this._input.LA(1);
         if(!((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU))) !== 0))) {
         this._errHandler.recoverInline(this);
@@ -4932,11 +5016,11 @@ FSHParser.StrengthContext = StrengthContext;
 FSHParser.prototype.strength = function() {
 
     var localctx = new StrengthContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 90, FSHParser.RULE_strength);
+    this.enterRule(localctx, 92, FSHParser.RULE_strength);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 420;
+        this.state = 426;
         _la = this._input.LA(1);
         if(!((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_EXAMPLE) | (1 << FSHParser.KW_PREFERRED) | (1 << FSHParser.KW_EXTENSIBLE) | (1 << FSHParser.KW_REQUIRED))) !== 0))) {
         this._errHandler.recoverInline(this);
@@ -5044,69 +5128,69 @@ FSHParser.ValueContext = ValueContext;
 FSHParser.prototype.value = function() {
 
     var localctx = new ValueContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 92, FSHParser.RULE_value);
+    this.enterRule(localctx, 94, FSHParser.RULE_value);
     try {
-        this.state = 432;
+        this.state = 438;
         this._errHandler.sync(this);
         var la_ = this._interp.adaptivePredict(this._input,41,this._ctx);
         switch(la_) {
         case 1:
             this.enterOuterAlt(localctx, 1);
-            this.state = 422;
+            this.state = 428;
             this.match(FSHParser.STRING);
             break;
 
         case 2:
             this.enterOuterAlt(localctx, 2);
-            this.state = 423;
+            this.state = 429;
             this.match(FSHParser.MULTILINE_STRING);
             break;
 
         case 3:
             this.enterOuterAlt(localctx, 3);
-            this.state = 424;
+            this.state = 430;
             this.match(FSHParser.NUMBER);
             break;
 
         case 4:
             this.enterOuterAlt(localctx, 4);
-            this.state = 425;
+            this.state = 431;
             this.match(FSHParser.DATETIME);
             break;
 
         case 5:
             this.enterOuterAlt(localctx, 5);
-            this.state = 426;
+            this.state = 432;
             this.match(FSHParser.TIME);
             break;
 
         case 6:
             this.enterOuterAlt(localctx, 6);
-            this.state = 427;
+            this.state = 433;
             this.reference();
             break;
 
         case 7:
             this.enterOuterAlt(localctx, 7);
-            this.state = 428;
+            this.state = 434;
             this.code();
             break;
 
         case 8:
             this.enterOuterAlt(localctx, 8);
-            this.state = 429;
+            this.state = 435;
             this.quantity();
             break;
 
         case 9:
             this.enterOuterAlt(localctx, 9);
-            this.state = 430;
+            this.state = 436;
             this.ratio();
             break;
 
         case 10:
             this.enterOuterAlt(localctx, 10);
-            this.state = 431;
+            this.state = 437;
             this.bool();
             break;
 
@@ -5201,11 +5285,11 @@ FSHParser.ItemContext = ItemContext;
 FSHParser.prototype.item = function() {
 
     var localctx = new ItemContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 94, FSHParser.RULE_item);
+    this.enterRule(localctx, 96, FSHParser.RULE_item);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
-        this.state = 434;
+        this.state = 440;
         this.match(FSHParser.SEQUENCE);
         this.state = 437;
         this._errHandler.sync(this);
@@ -5296,7 +5380,7 @@ FSHParser.CodeContext = CodeContext;
 FSHParser.prototype.code = function() {
 
     var localctx = new CodeContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 96, FSHParser.RULE_code);
+    this.enterRule(localctx, 98, FSHParser.RULE_code);
     try {
         this.enterOuterAlt(localctx, 1);
         this.state = 446;
@@ -5380,7 +5464,7 @@ FSHParser.ConceptContext = ConceptContext;
 FSHParser.prototype.concept = function() {
 
     var localctx = new ConceptContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 98, FSHParser.RULE_concept);
+    this.enterRule(localctx, 100, FSHParser.RULE_concept);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
@@ -5463,7 +5547,7 @@ FSHParser.QuantityContext = QuantityContext;
 FSHParser.prototype.quantity = function() {
 
     var localctx = new QuantityContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 100, FSHParser.RULE_quantity);
+    this.enterRule(localctx, 102, FSHParser.RULE_quantity);
     try {
         this.enterOuterAlt(localctx, 1);
         this.state = 455;
@@ -5544,7 +5628,7 @@ FSHParser.RatioContext = RatioContext;
 FSHParser.prototype.ratio = function() {
 
     var localctx = new RatioContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 102, FSHParser.RULE_ratio);
+    this.enterRule(localctx, 104, FSHParser.RULE_ratio);
     try {
         this.enterOuterAlt(localctx, 1);
         this.state = 458;
@@ -5620,7 +5704,7 @@ FSHParser.ReferenceContext = ReferenceContext;
 FSHParser.prototype.reference = function() {
 
     var localctx = new ReferenceContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 104, FSHParser.RULE_reference);
+    this.enterRule(localctx, 106, FSHParser.RULE_reference);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
@@ -5701,7 +5785,7 @@ FSHParser.RatioPartContext = RatioPartContext;
 FSHParser.prototype.ratioPart = function() {
 
     var localctx = new RatioPartContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 106, FSHParser.RULE_ratioPart);
+    this.enterRule(localctx, 108, FSHParser.RULE_ratioPart);
     try {
         this.state = 468;
         this._errHandler.sync(this);
@@ -5787,7 +5871,7 @@ FSHParser.BoolContext = BoolContext;
 FSHParser.prototype.bool = function() {
 
     var localctx = new BoolContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 108, FSHParser.RULE_bool);
+    this.enterRule(localctx, 110, FSHParser.RULE_bool);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
@@ -5867,7 +5951,7 @@ FSHParser.TargetTypeContext = TargetTypeContext;
 FSHParser.prototype.targetType = function() {
 
     var localctx = new TargetTypeContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 110, FSHParser.RULE_targetType);
+    this.enterRule(localctx, 112, FSHParser.RULE_targetType);
     try {
         this.state = 474;
         this._errHandler.sync(this);

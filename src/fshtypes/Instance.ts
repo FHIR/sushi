@@ -6,6 +6,7 @@ export class Instance extends FshEntity {
   title?: string;
   instanceOf: string;
   description?: string;
+  type?: string;
   rules: FixedValueRule[];
 
   constructor(public name: string) {

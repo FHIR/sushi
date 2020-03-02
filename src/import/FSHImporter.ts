@@ -63,6 +63,7 @@ enum InstanceMetadataKey {
   InstanceOf = 'InstanceOf',
   Title = 'Title',
   Description = 'Description',
+  Type = 'Type',
   Unknown = 'Unknown'
 }
 
@@ -303,6 +304,8 @@ export class FSHImporter extends FSHVisitor {
           instance.title = pair.value;
         } else if (pair.key === InstanceMetadataKey.Description) {
           instance.description = pair.value;
+        } else if (pair.key === InstanceMetadataKey.Type) {
+          instance.type = pair.value;
         }
       });
     if (!instance.instanceOf) {
@@ -517,6 +520,11 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Description,
         value: this.visitDescription(ctx.description())
       };
+    } else if (ctx.type()) {
+      return {
+        key: InstanceMetadataKey.Type,
+        value: this.visitType(ctx.type())
+      };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -596,6 +604,10 @@ export class FSHImporter extends FSHVisitor {
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
     return this.aliasAwareValue(ctx.SEQUENCE().getText());
+  }
+
+  visitType(ctx: pc.TypeContext): string {
+    return this.extractString(ctx.STRING());
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {

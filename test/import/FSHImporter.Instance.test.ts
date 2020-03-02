@@ -88,6 +88,23 @@ describe('FSHImporter', () => {
       });
     });
 
+    describe('#type', () => {
+      it('should parse an instance with a type', () => {
+        const input = `
+        Instance: MyObservation
+        InstanceOf: Observation
+        Type: "Example"
+        `;
+
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyObservation');
+        expect(instance.name).toBe('MyObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.type).toBe('Example');
+      });
+    });
+
     describe('#rules', () => {
       it('should parse an instance with fixed value rules', () => {
         const input = `
@@ -95,6 +112,7 @@ describe('FSHImporter', () => {
         InstanceOf: Patient
         Title: "Georgio Manos"
         Description: "An example of a fictional patient named Georgio Manos"
+        Type: "Example"
         * name[0].family = "Georgio"
         * name[0].given[0] = "Manos"
         * gender = #other
@@ -106,13 +124,14 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Patient');
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
+        expect(instance.type).toBe('Example');
         expect(instance.rules.length).toBe(3);
         assertFixedValueRule(instance.rules[0], 'name[0].family', 'Georgio');
         assertFixedValueRule(instance.rules[1], 'name[0].given[0]', 'Manos');
         assertFixedValueRule(
           instance.rules[2],
           'gender',
-          new FshCode('other').withLocation([8, 20, 8, 25]).withFile('')
+          new FshCode('other').withLocation([9, 20, 9, 25]).withFile('')
         );
       });
     });
@@ -124,9 +143,11 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
+        Type: "Example"
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
+        Type: "Non-example"
         `;
 
         const result = importSingleText(input);
@@ -136,6 +157,7 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBe('My Important Observation');
         expect(instance.description).toBe('My Observation Description');
+        expect(instance.type).toBe('Example');
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -144,15 +166,18 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
+        Type: "Example"
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
+        Type: "Non-example"
         `;
 
         importSingleText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 6\D*/s);
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 9\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 10\D*/s);
       });
     });
   });

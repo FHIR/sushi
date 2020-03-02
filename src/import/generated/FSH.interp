@@ -15,6 +15,7 @@ null
 null
 null
 null
+null
 '?!'
 'MS'
 'SU'
@@ -76,6 +77,7 @@ KW_DESCRIPTION
 KW_EXPRESSION
 KW_XPATH
 KW_SEVERITY
+KW_TYPE
 KW_MOD
 KW_MS
 KW_SU
@@ -144,6 +146,7 @@ expression
 xpath
 severity
 instanceOf
+type
 cardRule
 flagRule
 valueSetRule

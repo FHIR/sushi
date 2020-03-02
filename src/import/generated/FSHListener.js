@@ -218,6 +218,15 @@ FSHListener.prototype.exitInstanceOf = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#type.
+FSHListener.prototype.enterType = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#type.
+FSHListener.prototype.exitType = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#cardRule.
 FSHListener.prototype.enterCardRule = function(ctx) {
 };
