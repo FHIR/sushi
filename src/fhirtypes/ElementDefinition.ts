@@ -818,7 +818,7 @@ export class ElementDefinition {
    * @throws {DisableFlagError} when attempting to disable a flag that cannot be disabled
    */
   applyFlags(mustSupport: boolean, summary: boolean, modifier: boolean): void {
-    const disabledFlags = [];
+    const disabledFlags: string[] = [];
     if (this.mustSupport && mustSupport === false) {
       disabledFlags.push('Must Support');
     }
@@ -828,14 +828,31 @@ export class ElementDefinition {
     if (disabledFlags.length) {
       throw new DisableFlagError(disabledFlags);
     }
+
+    const connectedElements = this.findConnectedElements();
+    connectedElements.forEach(ce => {
+      if (ce.mustSupport && mustSupport === false) {
+        disabledFlags.push('Must Support');
+      }
+      if (ce.isModifier && modifier === false) {
+        disabledFlags.push('Is Modifier');
+      }
+      if (disabledFlags.length) {
+        throw new DisableFlagError(disabledFlags);
+      }
+    });
+
     if (isBoolean(mustSupport)) {
       this.mustSupport = mustSupport;
+      connectedElements.forEach(ce => (ce.mustSupport = mustSupport));
     }
     if (isBoolean(summary)) {
       this.isSummary = summary;
+      connectedElements.forEach(ce => (ce.isSummary = summary));
     }
     if (isBoolean(modifier)) {
       this.isModifier = modifier;
+      connectedElements.forEach(ce => (ce.isModifier = modifier));
     }
   }
 

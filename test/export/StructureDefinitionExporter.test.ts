@@ -2084,8 +2084,7 @@ describe('StructureDefinitionExporter', () => {
       // * component ^slicing.discriminator[0].type = #pattern
       // * component ^slicing.discriminator[0].path = "$this"
       // * component ^slicing.rules = #open
-      // * component contains Lab
-      // * component[Lab] 0..1
+      // * component contains Lab 0..1
       observationWithSlice = new Profile('ObservationWithSlice');
       observationWithSlice.parent = 'Observation';
       const slicingType = new CaretValueRule('component');
@@ -2148,6 +2147,67 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/cannot be narrowed/s);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
     });
+
+    it.todo('should apply a FlagRule on a sliced element that updates the flags on its slices');
+    it.todo(
+      'should not apply a FlagRule on a sliced element that would invalidate flags on a slice'
+    );
+    it('should apply a FlagRule on the child of a sliced element that updates the flags on the child of a slice', () => {
+      // * component[Lab].interpretation 0..1 // this forces the creation of the unfolded slice
+      // * component.interpretation MS
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 0;
+      labCard.max = '1';
+      const rootFlag = new FlagRule('component.interpretation');
+      rootFlag.mustSupport = true;
+
+      observationWithSlice.rules.push(labCard, rootFlag);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.mustSupport).toBeTruthy();
+      expect(labInterpretation.mustSupport).toBeTruthy();
+    });
+    it.todo(
+      'should not apply a FlagRule on the child of a sliced element that would invalidate flags on the child of a slice'
+    );
+    it.todo(
+      'should apply a ValueSetRule on a sliced element that updates the value sets on its slices'
+    );
+    it.todo(
+      'should not apply a ValueSetRule on a sliced element that would invalidate the value sets on a slice'
+    );
+    it.todo(
+      'should apply a FixedValueRule on a sliced element that updates the fixed value on its slices'
+    );
+    it.todo(
+      'should not apply a FixedValueRule on a sliced element that would invalidate the fixed value on a slice'
+    );
+    it.todo(
+      'should apply a ContainsRule on the child of a sliced element that updates the slices on the child of a slice'
+    );
+    it.todo(
+      'should not apply a ContainsRule on the child of a sliced element that would invalidate slices within a defined slice'
+    );
+    it.todo('should apply an OnlyRule on a sliced element that updates the types on its slices');
+    it.todo(
+      'should not apply an OnlyRule on a sliced element that would invalidate any of its slices'
+    );
+    it.todo(
+      'should apply an OnlyRule on the child of a sliced element that updates the types on the children of its slices'
+    );
+    it.todo(
+      'should not apply an OnlyRule on the child of a sliced element that would invalidate any of its slices'
+    );
+    it.todo(
+      'should apply an ObeysRule on a sliced element that updates the constraints on its slices'
+    );
+    it.todo(
+      'should apply an ObeysRule on the child of a sliced element that updates the child elements on its slices'
+    );
+    it.todo('should have some tests involving slices and CaretValueRule');
   });
 
   // toJSON
