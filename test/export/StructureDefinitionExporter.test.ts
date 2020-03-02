@@ -2159,12 +2159,32 @@ describe('StructureDefinitionExporter', () => {
       const sd = pkg.profiles[0];
       const rootComponent = sd.findElement('Observation.component');
       const labComponent = sd.findElement('Observation.component:Lab');
-      expect(rootComponent.mustSupport).toBeTruthy();
-      expect(labComponent.mustSupport).toBeTruthy();
+      expect(rootComponent.mustSupport).toBe(true);
+      expect(labComponent.mustSupport).toBe(true);
     });
-    it.todo(
-      'should not apply a FlagRule on a sliced element that would invalidate flags on a slice'
-    );
+
+    it('should not apply a FlagRule on a sliced element that would invalidate flags on a slice', () => {
+      // * component[Lab] MS
+      // currently, there is no FSH to explicitly set a flag to false
+      const labFlag = new FlagRule('component[Lab]');
+      labFlag.mustSupport = true;
+      const rootFlag = new FlagRule('component')
+        .withFile('BadFlag.fsh')
+        .withLocation([6, 10, 6, 25]);
+      rootFlag.mustSupport = false;
+
+      observationWithSlice.rules.push(labFlag, rootFlag);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootComponent = sd.findElement('Observation.component');
+      const labComponent = sd.findElement('Observation.component:Lab');
+      expect(rootComponent.mustSupport).toBeUndefined();
+      expect(labComponent.mustSupport).toBe(true);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Cannot disable these flags/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadFlag\.fsh.*Line: 6\D*/s);
+    });
+
     it('should apply a FlagRule on the child of a sliced element that updates the flags on the child of a slice', () => {
       // * component[Lab].interpretation 0..1 // this forces the creation of the unfolded slice
       // * component.interpretation MS
@@ -2180,8 +2200,8 @@ describe('StructureDefinitionExporter', () => {
       const sd = pkg.profiles[0];
       const rootInterpretation = sd.findElement('Observation.component.interpretation');
       const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
-      expect(rootInterpretation.mustSupport).toBeTruthy();
-      expect(labInterpretation.mustSupport).toBeTruthy();
+      expect(rootInterpretation.mustSupport).toBe(true);
+      expect(labInterpretation.mustSupport).toBe(true);
     });
     it.todo(
       'should not apply a FlagRule on the child of a sliced element that would invalidate flags on the child of a slice'
