@@ -234,7 +234,7 @@ export class StructureDefinitionExporter implements Fishable {
             logger.warn(
               `Extension with slice name '${item.name}' will be treated as an inline extension, even ` +
                 'though the name can be resolved to an extension defined in the FSH Tank. Starting with ' +
-                ' SUSHI 0.10.0, extension slices using standalone extensions should explicitly declare a ' +
+                'SUSHI 0.10.0, extension slices using standalone extensions should explicitly declare a ' +
                 `slice name and type. If this extension slice should refer to the ${fshMeta.name} ` +
                 `extension (${fshMeta.url}), specify both the slice name and extension name in the ` +
                 'contains rule:\n' +
