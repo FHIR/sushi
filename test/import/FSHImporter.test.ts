@@ -260,4 +260,18 @@ describe('FSHImporter', () => {
     expect(allLogs[1].level).toMatch(/info/);
     expect(allLogs[1].message).toMatch(/Imported 0 definitions/);
   });
+
+  it('should avoid crashing because of mismatched input', () => {
+    const input = `
+    Profile: "BadProfile"
+  
+    Profile: GoodProfile
+    Id: "BadId"
+    Parent: "BadParent"
+    Title: BadTitle
+    Description: BadDescription
+    `;
+    const result = importSingleText(input);
+    expect(result).toBeDefined();
+  });
 });
