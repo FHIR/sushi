@@ -1,7 +1,12 @@
 import { importSingleText } from '../testhelpers/importSingleText';
 import { assertValueSetRule, assertFixedValueRule, assertCardRule } from '../testhelpers/asserts';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
+  beforeAll(() => {
+    loggerSpy.reset();
+  });
+
   describe('Mixin', () => {
     it('should parse a Mixin with no rules', () => {
       const input = `
