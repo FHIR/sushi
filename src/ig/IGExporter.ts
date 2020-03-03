@@ -438,7 +438,7 @@ export class IGExporter {
           if (file.endsWith('.json')) {
             resourceJSON = fs.readJSONSync(path.join(dirPath, file));
           } else {
-            xmlFile = file.endsWith('.xml');
+            xmlFile = xmlFile || file.endsWith('.xml');
             invalidFile = true;
             continue;
           }
@@ -510,9 +510,9 @@ export class IGExporter {
         }
       }
       if (invalidFile) {
-        let message = `Invalid file detected in directory ${dirPath}.`;
+        let message = `Invalid file detected in directory ${dirPath}. Input FHIR definitions must be JSON.`;
         if (xmlFile) {
-          message += ' XML format not supported, input FHIR definitions must be JSON.';
+          message += ' XML format not supported.';
         }
         logger.error(message);
       }

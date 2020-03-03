@@ -503,6 +503,7 @@ describe('IGExporter', () => {
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
       pkg = new Package(config);
 
+      // Add a patient to the package that will be overwritten
       const fisher = new TestFisher(null, defs, pkg);
       const patient = fisher.fishForStructureDefinition('Patient');
       patient.id = 'MyPatient';
@@ -576,19 +577,6 @@ describe('IGExporter', () => {
         name: 'Populate Questionnaire', // Use name over ID
         exampleBoolean: false
       });
-      // Should only have one copy of MyPatient
-      expect(
-        igContent.definition.resource.filter(
-          (r: any) => r.reference.reference === 'StructureDefinition/MyPatient'
-        )
-      ).toHaveLength(1);
-      expect(igContent.definition.resource).toContainEqual({
-        reference: {
-          reference: 'StructureDefinition/MyPatient'
-        },
-        name: 'MyPatient',
-        exampleBoolean: false
-      });
       expect(igContent.definition.resource).toContainEqual({
         reference: {
           reference: 'Patient/BazPatient'
@@ -610,6 +598,26 @@ describe('IGExporter', () => {
         },
         name: 'birthPlace', // Use name over ID
         exampleBoolean: false
+      });
+    });
+
+    it('should overwrite existing resource references in the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      // Should only have one copy of MyPatient
+      expect(
+        igContent.definition.resource.filter(
+          (r: any) => r.reference.reference === 'StructureDefinition/MyPatient'
+        )
+      ).toHaveLength(1);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyPatient'
+        },
+        name: 'MyPatient',
+        exampleBoolean: false
+        // Description is overwritten to be null
       });
     });
 
