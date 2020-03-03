@@ -1,8 +1,24 @@
 import { logger, stats } from '../../src/utils/FSHLogger';
 
+// MUTE_LOGS controls whether or not logs get printed during testing.
+// Usually, we don't want logs actually printed, as they cause clutter.
+const MUTE_LOGS = true;
+
 describe('FSHLogger', () => {
+  let originalWriteFn = logger.transports[0]['write'];
+
   beforeEach(() => {
     stats.reset();
+    if (MUTE_LOGS) {
+      originalWriteFn = logger.transports[0]['write'];
+      logger.transports[0]['write'] = jest.fn(() => true);
+    }
+  });
+
+  afterEach(() => {
+    if (MUTE_LOGS) {
+      logger.transports[0]['write'] = originalWriteFn;
+    }
   });
 
   it('should store number of logger info messages', () => {
