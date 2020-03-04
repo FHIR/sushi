@@ -3,12 +3,14 @@
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
+import remove from 'lodash/remove';
 import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR } from './export';
 import { IGExporter } from './ig';
 import { logger, stats } from './utils';
 import { loadDependency } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
+import { InstanceDefinition } from './fhirtypes';
 
 app();
 
@@ -122,7 +124,17 @@ async function app() {
   writeResources('profiles', outPackage.profiles);
   writeResources('extensions', outPackage.extensions);
   writeResources('vocabulary', [...outPackage.valueSets, ...outPackage.codeSystems]);
-  writeResources('examples', outPackage.instances);
+
+  // Sort instances into appropriate directories
+  writeResources('examples', filterExampleInstances(outPackage.instances));
+  writeResources('capabilities', filterCapabilitiesInstances(outPackage.instances));
+  writeResources('vocabulary', filterVocabularyInstances(outPackage.instances));
+  writeResources('models', filterModelInstances(outPackage.instances));
+  writeResources('operations', filterOperationInstances(outPackage.instances));
+  writeResources('extensions', filterExtensionInstances(outPackage.instances));
+  writeResources('profiles', filterProfileInstances(outPackage.instances));
+  writeResources('resources', outPackage.instances); // Any instance left cannot be categorized any further so should just be in generic resources
+
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 
   // If ig-data exists, generate an IG, otherwise, generate resources only
@@ -163,4 +175,62 @@ function getFilesRecursive(dir: string): string[] {
   } else {
     return [dir];
   }
+}
+
+// NOTE: lodash/remove mutates the array passed in to remove any matches. Matches are returned.
+// See: https://lodash.com/docs/4.17.15#remove
+function filterExampleInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(
+    instances,
+    i => i._instanceMeta.usage === 'Example' || i._instanceMeta.usage === undefined
+  );
+}
+
+function filterCapabilitiesInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(
+    instances,
+    i =>
+      i.resourceType === 'CapabilityStatement' ||
+      i.resourceType === 'ImplementationGuide' ||
+      i.resourceType === 'SearchParameter' ||
+      i.resourceType === 'MessageDefinition' ||
+      i.resourceType === 'CompartmentDefinition' ||
+      i.resourceType === 'StructureMap' ||
+      i.resourceType === 'GraphDefinition' ||
+      i.resourceType === 'ExampleScenario'
+  );
+}
+
+function filterVocabularyInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(
+    instances,
+    i =>
+      i.resourceType === 'CodeSystem' ||
+      i.resourceType === 'ValueSet' ||
+      i.resourceType === 'ConceptMap' ||
+      i.resourceType === 'NamingSystem' ||
+      i.resourceType === 'TerminologyCapabilities'
+  );
+}
+
+function filterOperationInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(instances, i => i.resourceType === 'OperationDefinition');
+}
+
+function filterModelInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(instances, i => i.resourceType === 'StructureDefinition' && i.kind === 'logical');
+}
+
+function filterExtensionInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(
+    instances,
+    i => i.resourceType === 'StructureDefinition' && i.kind === 'resource' && i.type === 'Extension'
+  );
+}
+
+function filterProfileInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(
+    instances,
+    i => i.resourceType === 'StructureDefinition' && i.kind === 'resource' && i.type !== 'Extension'
+  );
 }
