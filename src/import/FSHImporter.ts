@@ -178,7 +178,12 @@ export class FSHImporter extends FSHVisitor {
 
   visitDoc(ctx: pc.DocContext): void {
     ctx.entity().forEach(e => {
-      this.visitEntity(e);
+      try {
+        this.visitEntity(e);
+      } catch (err) {
+        const sourceInfo = { location: this.extractStartStop(e), file: this.currentFile };
+        logger.error(`Error in parsing: ${err.message}`, sourceInfo);
+      }
     });
   }
 
