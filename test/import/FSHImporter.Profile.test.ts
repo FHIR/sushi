@@ -143,18 +143,19 @@ describe('FSHImporter', () => {
         expect(profile.mixins).toEqual(['Mixin1']);
       });
 
-      it('should deduplicate repeated mixins', () => {
+      it('should deduplicate repeated mixins and log a warning', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
         Mixins: Mixin1, Mixin2, Mixin1
         `;
 
-        const result = importSingleText(input);
+        const result = importSingleText(input, 'Dupe.fsh');
         expect(result.profiles.size).toBe(1);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.name).toBe('ObservationProfile');
         expect(profile.mixins).toEqual(['Mixin1', 'Mixin2']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Mixin1.*File: Dupe.fsh.*Line: 4\D*/s);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {

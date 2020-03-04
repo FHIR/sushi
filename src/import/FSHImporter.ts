@@ -627,7 +627,17 @@ export class FSHImporter extends FSHVisitor {
         .COMMA_DELIMITED_SEQUENCES()
         .getText()
         .split(/\s*,\s+/);
-      mixins = mixins.filter((m, i) => mixins.indexOf(m) === i);
+
+      mixins = mixins.filter((m, i) => {
+        const duplicated = mixins.indexOf(m) !== i;
+        if (duplicated) {
+          logger.warn(`Detected duplicated Mixin: ${m}. Ignoring duplicates.`, {
+            location: this.extractStartStop(ctx),
+            file: this.currentFile
+          });
+        }
+        return !duplicated;
+      });
       return mixins;
     } else {
       return [ctx.SEQUENCE().getText()];
