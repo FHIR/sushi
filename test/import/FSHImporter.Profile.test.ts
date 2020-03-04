@@ -143,6 +143,20 @@ describe('FSHImporter', () => {
         expect(profile.mixins).toEqual(['Mixin1']);
       });
 
+      it('should deduplicate repeated mixins', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Mixins: Mixin1, Mixin2, Mixin1
+        `;
+
+        const result = importSingleText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.name).toBe('ObservationProfile');
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2']);
+      });
+
       it('should log an error when encountering a duplicate metadata attribute', () => {
         const input = `
         Profile: ObservationProfile

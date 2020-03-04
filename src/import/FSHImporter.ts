@@ -623,10 +623,12 @@ export class FSHImporter extends FSHVisitor {
 
   visitMixins(ctx: pc.MixinsContext): string[] {
     if (ctx.COMMA_DELIMITED_SEQUENCES()) {
-      return ctx
+      let mixins = ctx
         .COMMA_DELIMITED_SEQUENCES()
         .getText()
         .split(/\s*,\s+/);
+      mixins = mixins.filter((m, i) => mixins.indexOf(m) === i);
+      return mixins;
     } else {
       return [ctx.SEQUENCE().getText()];
     }
