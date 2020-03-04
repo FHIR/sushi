@@ -261,17 +261,24 @@ describe('FSHImporter', () => {
     expect(allLogs[1].message).toMatch(/Imported 0 definitions/);
   });
 
-  it('should avoid crashing because of mismatched input', () => {
+  it('should avoid crashing and log error messages because of mismatched input', () => {
     const input = `
     Profile: "BadProfile"
   
-    Profile: GoodProfile
+    Profile: BetterProfile
     Id: "BadId"
-    Parent: "BadParent"
-    Title: BadTitle
     Description: BadDescription
     `;
-    const result = importSingleText(input);
+    const result = importSingleText(input, 'Mismatch.fsh');
+    const messages = loggerSpy.getAllMessages('error');
+    expect(messages).toHaveLength(5);
+    expect(messages[0]).toMatch(/BadProfile.*SEQUENCE.*File: Mismatch\.fsh.*Line: 2\D*/s);
+    expect(messages[1]).toMatch(/BadId.*SEQUENCE.*File: Mismatch\.fsh.*Line: 5\D*/s);
+    expect(messages[2]).toMatch(
+      /BadDescription.*{STRING, MULTILINE_STRING}.*File: Mismatch\.fsh.*Line: 6\D*/s
+    );
+    expect(messages[3]).toMatch(/Error in parsing.*File: Mismatch\.fsh.*Line: 2\D*/s);
+    expect(messages[4]).toMatch(/Error in parsing.*File: Mismatch\.fsh.*Line: 4 - 6\D*/s);
     expect(result).toBeDefined();
   });
 });
