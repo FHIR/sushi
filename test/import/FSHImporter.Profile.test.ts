@@ -814,7 +814,7 @@ describe('FSHImporter', () => {
         assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
       });
 
-      it('should parse contains rule with one item declaring a type', () => {
+      it('should parse contains rule with one item declaring an aliased type', () => {
         const input = `
         Alias: OffsetExtension = http://hl7.org/fhir/StructureDefinition/observation-timeOffset
         Profile: ObservationProfile
@@ -830,6 +830,27 @@ describe('FSHImporter', () => {
           type: 'http://hl7.org/fhir/StructureDefinition/observation-timeOffset'
         });
         assertCardRule(profile.rules[1], 'component.extension[offset]', 0, 1);
+      });
+
+      it('should parse contains rule with one item declaring an FSH extension type', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * component.extension contains ComponentExtension named compext 0..1
+
+        Extension: ComponentExtension
+        Id: component-extension
+        * value[x] only CodeableConcept
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(2);
+        assertContainsRule(profile.rules[0], 'component.extension', {
+          name: 'compext',
+          type: 'ComponentExtension'
+        });
+        assertCardRule(profile.rules[1], 'component.extension[compext]', 0, 1);
       });
 
       it('should parse contains rules with multiple items', () => {
