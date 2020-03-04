@@ -15,7 +15,7 @@ import {
   FshReference,
   TextLocation,
   Instance,
-  InstanceType,
+  InstanceUsage,
   FshValueSet,
   ValueSetComponent,
   ValueSetConceptComponent,
@@ -64,7 +64,7 @@ enum InstanceMetadataKey {
   InstanceOf = 'InstanceOf',
   Title = 'Title',
   Description = 'Description',
-  Type = 'Type',
+  Usage = 'Usage',
   Unknown = 'Unknown'
 }
 
@@ -305,8 +305,8 @@ export class FSHImporter extends FSHVisitor {
           instance.title = pair.value;
         } else if (pair.key === InstanceMetadataKey.Description) {
           instance.description = pair.value;
-        } else if (pair.key === InstanceMetadataKey.Type) {
-          instance.type = pair.value as InstanceType;
+        } else if (pair.key === InstanceMetadataKey.Usage) {
+          instance.usage = pair.value as InstanceUsage;
         }
       });
     if (!instance.instanceOf) {
@@ -521,10 +521,10 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Description,
         value: this.visitDescription(ctx.description())
       };
-    } else if (ctx.type()) {
+    } else if (ctx.usage()) {
       return {
-        key: InstanceMetadataKey.Type,
-        value: this.visitType(ctx.type())
+        key: InstanceMetadataKey.Usage,
+        value: this.visitUsage(ctx.usage())
       };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
@@ -607,20 +607,20 @@ export class FSHImporter extends FSHVisitor {
     return this.aliasAwareValue(ctx.SEQUENCE().getText());
   }
 
-  visitType(ctx: pc.TypeContext): InstanceType {
-    let instanceType = ctx.SEQUENCE().getText();
-    if (!(instanceType === 'Example' || instanceType === 'Definition')) {
+  visitUsage(ctx: pc.UsageContext): InstanceUsage {
+    let usage = ctx.SEQUENCE().getText();
+    if (!(usage === 'Example' || usage === 'Definition')) {
       const source = {
         file: this.currentFile,
         location: this.extractStartStop(ctx.SEQUENCE())
       };
       logger.error(
-        'Invalid Type. Supported types are "Example" and "Definition". Instance will be treated as an Example.',
+        'Invalid Usage. Supported usages are "Example" and "Definition". Instance will be treated as an Example.',
         source
       );
-      instanceType = 'Example';
+      usage = 'Example';
     }
-    return instanceType as InstanceType;
+    return usage as InstanceUsage;
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {

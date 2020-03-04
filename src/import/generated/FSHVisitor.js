@@ -150,8 +150,8 @@ FSHVisitor.prototype.visitInstanceOf = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#type.
-FSHVisitor.prototype.visitType = function(ctx) {
+// Visit a parse tree produced by FSHParser#usage.
+FSHVisitor.prototype.visitUsage = function(ctx) {
   return this.visitChildren(ctx);
 };
 

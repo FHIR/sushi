@@ -460,7 +460,7 @@ FSHParser.RULE_expression = 19;
 FSHParser.RULE_xpath = 20;
 FSHParser.RULE_severity = 21;
 FSHParser.RULE_instanceOf = 22;
-FSHParser.RULE_type = 23;
+FSHParser.RULE_usage = 23;
 FSHParser.RULE_cardRule = 24;
 FSHParser.RULE_flagRule = 25;
 FSHParser.RULE_valueSetRule = 26;
@@ -1374,7 +1374,7 @@ FSHParser.prototype.instance = function() {
         this.state = 184;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
-        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_INSTANCEOF) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION) | (1 << FSHParser.KW_TYPE))) !== 0)) {
+        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_INSTANCEOF) | (1 << FSHParser.KW_TITLE) | (1 << FSHParser.KW_DESCRIPTION) | (1 << FSHParser.KW_USAGE))) !== 0)) {
             this.state = 181;
             this.instanceMetadata();
             this.state = 186;
@@ -1434,8 +1434,8 @@ InstanceMetadataContext.prototype.description = function() {
     return this.getTypedRuleContext(DescriptionContext,0);
 };
 
-InstanceMetadataContext.prototype.type = function() {
-    return this.getTypedRuleContext(TypeContext,0);
+InstanceMetadataContext.prototype.usage = function() {
+    return this.getTypedRuleContext(UsageContext,0);
 };
 
 InstanceMetadataContext.prototype.enterRule = function(listener) {
@@ -1486,10 +1486,10 @@ FSHParser.prototype.instanceMetadata = function() {
             this.state = 195;
             this.description();
             break;
-        case FSHParser.KW_TYPE:
+        case FSHParser.KW_USAGE:
             this.enterOuterAlt(localctx, 4);
             this.state = 196;
-            this.type();
+            this.usage();
             break;
         default:
             throw new antlr4.error.NoViableAltException(this);
@@ -2782,7 +2782,7 @@ FSHParser.prototype.instanceOf = function() {
 };
 
 
-function TypeContext(parser, parent, invokingState) {
+function UsageContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
 	}
@@ -2791,36 +2791,36 @@ function TypeContext(parser, parent, invokingState) {
 	}
 	antlr4.ParserRuleContext.call(this, parent, invokingState);
     this.parser = parser;
-    this.ruleIndex = FSHParser.RULE_type;
+    this.ruleIndex = FSHParser.RULE_usage;
     return this;
 }
 
-TypeContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
-TypeContext.prototype.constructor = TypeContext;
+UsageContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+UsageContext.prototype.constructor = UsageContext;
 
-TypeContext.prototype.KW_TYPE = function() {
-    return this.getToken(FSHParser.KW_TYPE, 0);
+UsageContext.prototype.KW_USAGE = function() {
+    return this.getToken(FSHParser.KW_USAGE, 0);
 };
 
-TypeContext.prototype.SEQUENCE = function() {
+UsageContext.prototype.SEQUENCE = function() {
     return this.getToken(FSHParser.SEQUENCE, 0);
 };
 
-TypeContext.prototype.enterRule = function(listener) {
+UsageContext.prototype.enterRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.enterType(this);
+        listener.enterUsage(this);
 	}
 };
 
-TypeContext.prototype.exitRule = function(listener) {
+UsageContext.prototype.exitRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.exitType(this);
+        listener.exitUsage(this);
 	}
 };
 
-TypeContext.prototype.accept = function(visitor) {
+UsageContext.prototype.accept = function(visitor) {
     if ( visitor instanceof FSHVisitor ) {
-        return visitor.visitType(this);
+        return visitor.visitUsage(this);
     } else {
         return visitor.visitChildren(this);
     }
@@ -2829,16 +2829,16 @@ TypeContext.prototype.accept = function(visitor) {
 
 
 
-FSHParser.TypeContext = TypeContext;
+FSHParser.UsageContext = UsageContext;
 
-FSHParser.prototype.type = function() {
+FSHParser.prototype.usage = function() {
 
-    var localctx = new TypeContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 46, FSHParser.RULE_type);
+    var localctx = new UsageContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 46, FSHParser.RULE_usage);
     try {
         this.enterOuterAlt(localctx, 1);
         this.state = 276;
-        this.match(FSHParser.KW_TYPE);
+        this.match(FSHParser.KW_USAGE);
         this.state = 277;
         this.match(FSHParser.SEQUENCE);
     } catch (re) {

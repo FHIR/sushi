@@ -400,7 +400,7 @@ export class IGExporter {
         resource.exampleCanonical = exampleUrl;
       } else {
         resource.exampleBoolean =
-          example._instanceMeta.type === 'Example' || example._instanceMeta.type === undefined;
+          example._instanceMeta.usage === 'Example' || example._instanceMeta.usage === undefined;
       }
       this.ig.definition.resource.push(resource);
     });

@@ -50,10 +50,10 @@ describe('IGExporter', () => {
           if (instanceDef.id === 'patient-example-two') {
             instanceDef._instanceMeta.title = 'Another Patient Example';
             instanceDef._instanceMeta.description = 'Another example of a Patient';
-            instanceDef._instanceMeta.type = 'Example';
+            instanceDef._instanceMeta.usage = 'Example';
           }
           if (instanceDef.id === 'capability-statement-example') {
-            instanceDef._instanceMeta.type = 'Definition';
+            instanceDef._instanceMeta.usage = 'Definition';
           }
           pkg.instances.push(instanceDef);
         }

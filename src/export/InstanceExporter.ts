@@ -268,8 +268,8 @@ export class InstanceExporter {
     if (fshDefinition.description) {
       instanceDef._instanceMeta.description = fshDefinition.description;
     }
-    if (fshDefinition.type) {
-      instanceDef._instanceMeta.type = fshDefinition.type;
+    if (fshDefinition.usage) {
+      instanceDef._instanceMeta.usage = fshDefinition.usage;
     }
     instanceDef.id = fshDefinition.id;
 

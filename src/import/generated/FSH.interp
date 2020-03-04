@@ -77,7 +77,7 @@ KW_DESCRIPTION
 KW_EXPRESSION
 KW_XPATH
 KW_SEVERITY
-KW_TYPE
+KW_USAGE
 KW_MOD
 KW_MS
 KW_SU
@@ -146,7 +146,7 @@ expression
 xpath
 severity
 instanceOf
-type
+usage
 cardRule
 flagRule
 valueSetRule

@@ -47,7 +47,7 @@ export interface InstanceMetadataContext extends ParserRuleContext {
   instanceOf(): InstanceOfContext;
   title(): TitleContext;
   description(): DescriptionContext;
-  type(): TypeContext;
+  usage(): UsageContext;
 }
 
 export interface ValueSetContext extends ParserRuleContext {
@@ -105,7 +105,7 @@ export interface DescriptionContext extends ParserRuleContext {
   MULTILINE_STRING(): ParserRuleContext;
 }
 
-export interface TypeContext extends ParserRuleContext {
+export interface UsageContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
 }
 
