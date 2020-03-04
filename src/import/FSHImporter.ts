@@ -15,6 +15,7 @@ import {
   FshReference,
   TextLocation,
   Instance,
+  InstanceType,
   FshValueSet,
   ValueSetComponent,
   ValueSetConceptComponent,
@@ -305,7 +306,7 @@ export class FSHImporter extends FSHVisitor {
         } else if (pair.key === InstanceMetadataKey.Description) {
           instance.description = pair.value;
         } else if (pair.key === InstanceMetadataKey.Type) {
-          instance.type = pair.value;
+          instance.type = pair.value as InstanceType;
         }
       });
     if (!instance.instanceOf) {
@@ -606,8 +607,20 @@ export class FSHImporter extends FSHVisitor {
     return this.aliasAwareValue(ctx.SEQUENCE().getText());
   }
 
-  visitType(ctx: pc.TypeContext): string {
-    return this.extractString(ctx.STRING());
+  visitType(ctx: pc.TypeContext): InstanceType {
+    let instanceType = ctx.SEQUENCE().getText();
+    if (!(instanceType === 'Example' || instanceType === 'Definition')) {
+      const source = {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx.SEQUENCE())
+      };
+      logger.error(
+        'Invalid Type. Supported types are "Example" and "Definition". Instance will be treated as an Example.',
+        source
+      );
+      instanceType = 'Example';
+    }
+    return instanceType as InstanceType;
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {

@@ -93,7 +93,7 @@ describe('FSHImporter', () => {
         const input = `
         Instance: MyObservation
         InstanceOf: Observation
-        Type: "Example"
+        Type: Example
         `;
 
         const result = importSingleText(input);
@@ -112,7 +112,7 @@ describe('FSHImporter', () => {
         InstanceOf: Patient
         Title: "Georgio Manos"
         Description: "An example of a fictional patient named Georgio Manos"
-        Type: "Example"
+        Type: Example
         * name[0].family = "Georgio"
         * name[0].given[0] = "Manos"
         * gender = #other
@@ -143,11 +143,11 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
-        Type: "Example"
+        Type: Example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
-        Type: "Non-example"
+        Type: Non-example
         `;
 
         const result = importSingleText(input);
@@ -166,11 +166,11 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
-        Type: "Example"
+        Type: Example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
-        Type: "Non-example"
+        Type: Non-example
         `;
 
         importSingleText(input, 'Dupe.fsh');

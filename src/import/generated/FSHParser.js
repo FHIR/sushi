@@ -2802,8 +2802,8 @@ TypeContext.prototype.KW_TYPE = function() {
     return this.getToken(FSHParser.KW_TYPE, 0);
 };
 
-TypeContext.prototype.STRING = function() {
-    return this.getToken(FSHParser.STRING, 0);
+TypeContext.prototype.SEQUENCE = function() {
+    return this.getToken(FSHParser.SEQUENCE, 0);
 };
 
 TypeContext.prototype.enterRule = function(listener) {
@@ -2840,7 +2840,7 @@ FSHParser.prototype.type = function() {
         this.state = 276;
         this.match(FSHParser.KW_TYPE);
         this.state = 277;
-        this.match(FSHParser.STRING);
+        this.match(FSHParser.SEQUENCE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
 	        localctx.exception = re;

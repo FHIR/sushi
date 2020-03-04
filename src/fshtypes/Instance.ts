@@ -6,7 +6,7 @@ export class Instance extends FshEntity {
   title?: string;
   instanceOf: string;
   description?: string;
-  type?: string;
+  type?: InstanceType;
   rules: FixedValueRule[];
 
   constructor(public name: string) {
@@ -15,3 +15,5 @@ export class Instance extends FshEntity {
     this.rules = [];
   }
 }
+
+export type InstanceType = 'Example' | 'Definition';

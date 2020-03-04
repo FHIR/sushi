@@ -106,7 +106,7 @@ export interface DescriptionContext extends ParserRuleContext {
 }
 
 export interface TypeContext extends ParserRuleContext {
-  STRING(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
 }
 
 export interface ExpressionContext extends ParserRuleContext {

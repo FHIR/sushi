@@ -30,7 +30,7 @@ expression:         KW_EXPRESSION STRING;
 xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF SEQUENCE;
-type:               KW_TYPE STRING;
+type:               KW_TYPE SEQUENCE;
 
 
 // RULES
