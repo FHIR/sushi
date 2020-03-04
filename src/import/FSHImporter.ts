@@ -626,7 +626,7 @@ export class FSHImporter extends FSHVisitor {
       return ctx
         .COMMA_DELIMITED_SEQUENCES()
         .getText()
-        .split(/,\s*/);
+        .split(/\s*,\s+/);
     } else {
       return [ctx.SEQUENCE().getText()];
     }
@@ -717,7 +717,7 @@ export class FSHImporter extends FSHVisitor {
     return ctx
       .COMMA_DELIMITED_SEQUENCES()
       .getText()
-      .split(/,\s+/);
+      .split(/\s*,\s+/);
   }
 
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
@@ -1166,7 +1166,7 @@ export class FSHImporter extends FSHVisitor {
           .vsFromValueset()
           .COMMA_DELIMITED_SEQUENCES()
           .getText()
-          .split(',')
+          .split(/\s*,\s+/)
           .map(fromVs => this.aliasAwareValue(fromVs.trim()));
       }
     }

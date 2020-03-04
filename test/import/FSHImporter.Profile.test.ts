@@ -44,7 +44,7 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1, Mixin2, Mixin3
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
         `;
 
         const result = importSingleText(input);
@@ -55,12 +55,12 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3']);
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2,Mixin3', 'Mixin4']);
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
           endLine: 7,
-          endColumn: 38
+          endColumn: 46
         });
       });
 
@@ -258,7 +258,7 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category, value[x], component MS
+        * category , value[x], component MS
         * subject, focus ?!
         `;
 

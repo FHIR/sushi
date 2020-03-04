@@ -41,7 +41,7 @@ describe('FSHImporter', () => {
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
-        Mixins: Mixin1, Mixin2, Mixin3
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
         `;
 
         const result = importSingleText(input);
@@ -52,12 +52,12 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
-        expect(extension.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3']);
+        expect(extension.mixins).toEqual(['Mixin1', 'Mixin2,Mixin3', 'Mixin4']);
         expect(extension.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
           endLine: 7,
-          endColumn: 38
+          endColumn: 46
         });
       });
 

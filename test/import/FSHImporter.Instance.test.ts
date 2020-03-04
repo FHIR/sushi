@@ -93,14 +93,14 @@ describe('FSHImporter', () => {
         const input = `
         Instance: MyObservation
         InstanceOf: Observation
-        Mixins: Mixin1, Mixin2, Mixin3
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
         `;
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('MyObservation');
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
-        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3']);
+        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2,Mixin3', 'Mixin4']);
       });
     });
 

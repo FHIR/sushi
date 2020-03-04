@@ -21,7 +21,7 @@ vsMetadata:         id | title | description;
 codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* (caretValueRule | concept)*;
 csMetadata:         id | title | description;
 
-mixin:              KW_MIXIN SEQUENCE sdRule*;
+mixin:              KW_MIXIN SEQUENCE sdRule+;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -161,8 +161,8 @@ REGEX:              '/' ('\\/' | ~[/\r\n])+ '/';
 
 COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
 
-                        // (NON-WS     ,   WS )+ NON-WS
-COMMA_DELIMITED_SEQUENCES: (SEQUENCE COMMA WS+)+ SEQUENCE;
+                        // (NON-WS  WS  ,   WS )+ NON-WS
+COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS+)+ SEQUENCE;
 
                  // NON-WHITESPACE
 SEQUENCE:           ~[ \t\r\n\f]+;
