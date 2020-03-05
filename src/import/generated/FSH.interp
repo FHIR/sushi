@@ -70,7 +70,7 @@ KW_INSTANCEOF
 KW_INVARIANT
 KW_VALUESET
 KW_CODESYSTEM
-KW_MIXIN
+KW_RULESET
 KW_MIXINS
 KW_PARENT
 KW_ID
@@ -138,7 +138,7 @@ valueSet
 vsMetadata
 codeSystem
 csMetadata
-mixin
+ruleSet
 parent
 id
 title

@@ -25,7 +25,7 @@ import {
   ValueSetFilterValue,
   FshCodeSystem,
   Invariant,
-  Mixin
+  RuleSet
 } from '../fshtypes';
 import {
   Rule,
@@ -209,8 +209,8 @@ export class FSHImporter extends FSHVisitor {
       this.visitInvariant(ctx.invariant());
     }
 
-    if (ctx.mixin()) {
-      this.visitMixin(ctx.mixin());
+    if (ctx.ruleSet()) {
+      this.visitRuleSet(ctx.ruleSet());
     }
   }
 
@@ -497,17 +497,17 @@ export class FSHImporter extends FSHVisitor {
       });
   }
 
-  visitMixin(ctx: pc.MixinContext): void {
-    const mixin = new Mixin(ctx.SEQUENCE().getText())
+  visitRuleSet(ctx: pc.RuleSetContext): void {
+    const ruleSet = new RuleSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseMixin(mixin, ctx.sdRule());
-    this.currentDoc.mixins.set(mixin.name, mixin);
+    this.parseRuleSet(ruleSet, ctx.sdRule());
+    this.currentDoc.ruleSets.set(ruleSet.name, ruleSet);
   }
 
-  parseMixin(mixin: Mixin, rules: pc.SdRuleContext[]) {
+  parseRuleSet(ruleSet: RuleSet, rules: pc.SdRuleContext[]) {
     rules.forEach(sdRule => {
-      mixin.rules.push(...this.visitSdRule(sdRule));
+      ruleSet.rules.push(...this.visitSdRule(sdRule));
     });
   }
 

@@ -102,8 +102,8 @@ FSHVisitor.prototype.visitCsMetadata = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#mixin.
-FSHVisitor.prototype.visitMixin = function(ctx) {
+// Visit a parse tree produced by FSHParser#ruleSet.
+FSHVisitor.prototype.visitRuleSet = function(ctx) {
   return this.visitChildren(ctx);
 };
 

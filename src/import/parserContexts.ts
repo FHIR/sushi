@@ -12,7 +12,7 @@ export interface EntityContext extends ParserRuleContext {
   valueSet(): ValueSetContext;
   codeSystem(): CodeSystemContext;
   invariant(): InvariantContext;
-  mixin(): MixinContext;
+  ruleSet(): RuleSetContext;
 }
 
 export interface AliasContext extends ParserRuleContext {
@@ -90,7 +90,7 @@ export interface InvariantMetadataContext extends ParserRuleContext {
   severity(): SeverityContext;
 }
 
-export interface MixinContext extends ParserRuleContext {
+export interface RuleSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   sdRule(): SdRuleContext[];
 }

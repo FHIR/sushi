@@ -1,7 +1,7 @@
 grammar FSH;
 
 doc:                entity* EOF;
-entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | mixin;
+entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
@@ -21,7 +21,7 @@ vsMetadata:         id | title | description;
 codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* (caretValueRule | concept)*;
 csMetadata:         id | title | description;
 
-mixin:              KW_MIXIN SEQUENCE sdRule+;
+ruleSet:              KW_RULESET SEQUENCE sdRule+;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -84,7 +84,7 @@ KW_INSTANCEOF:      'InstanceOf' WS* ':';
 KW_INVARIANT:       'Invariant' WS* ':';
 KW_VALUESET:        'ValueSet' WS* ':';
 KW_CODESYSTEM:      'CodeSystem' WS* ':';
-KW_MIXIN:           'Mixin' WS* ':';
+KW_RULESET:         'RuleSet' WS* ':';
 KW_MIXINS:          'Mixins' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';

@@ -5,7 +5,7 @@ import {
   FshValueSet,
   FshCodeSystem,
   Invariant,
-  Mixin
+  RuleSet
 } from '../fshtypes';
 
 export class FSHDocument {
@@ -16,7 +16,7 @@ export class FSHDocument {
   readonly valueSets: Map<string, FshValueSet>;
   readonly codeSystems: Map<string, FshCodeSystem>;
   readonly invariants: Map<string, Invariant>;
-  readonly mixins: Map<string, Mixin>;
+  readonly ruleSets: Map<string, RuleSet>;
 
   constructor(public readonly file: string) {
     this.aliases = new Map();
@@ -26,6 +26,6 @@ export class FSHDocument {
     this.valueSets = new Map();
     this.codeSystems = new Map();
     this.invariants = new Map();
-    this.mixins = new Map();
+    this.ruleSets = new Map();
   }
 }

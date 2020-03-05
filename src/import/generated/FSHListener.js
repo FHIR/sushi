@@ -146,12 +146,12 @@ FSHListener.prototype.exitCsMetadata = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#mixin.
-FSHListener.prototype.enterMixin = function(ctx) {
+// Enter a parse tree produced by FSHParser#ruleSet.
+FSHListener.prototype.enterRuleSet = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#mixin.
-FSHListener.prototype.exitMixin = function(ctx) {
+// Exit a parse tree produced by FSHParser#ruleSet.
+FSHListener.prototype.exitRuleSet = function(ctx) {
 };
 
 

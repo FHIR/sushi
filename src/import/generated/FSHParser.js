@@ -340,7 +340,7 @@ var literalNames = [ null, null, null, null, null, null, null, null, null,
 
 var symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTANCE", 
                       "KW_INSTANCEOF", "KW_INVARIANT", "KW_VALUESET", "KW_CODESYSTEM", 
-                      "KW_MIXIN", "KW_MIXINS", "KW_PARENT", "KW_ID", "KW_TITLE", 
+                      "KW_RULESET", "KW_MIXINS", "KW_PARENT", "KW_ID", "KW_TITLE", 
                       "KW_DESCRIPTION", "KW_EXPRESSION", "KW_XPATH", "KW_SEVERITY", 
                       "KW_MOD", "KW_MS", "KW_SU", "KW_FROM", "KW_EXAMPLE", 
                       "KW_PREFERRED", "KW_EXTENSIBLE", "KW_REQUIRED", "KW_CONTAINS", 
@@ -356,7 +356,7 @@ var symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTAN
 var ruleNames =  [ "doc", "entity", "alias", "profile", "extension", "sdMetadata", 
                    "sdRule", "instance", "instanceMetadata", "invariant", 
                    "invariantMetadata", "valueSet", "vsMetadata", "codeSystem", 
-                   "csMetadata", "mixin", "parent", "id", "title", "description", 
+                   "csMetadata", "ruleSet", "parent", "id", "title", "description", 
                    "expression", "xpath", "severity", "instanceOf", "mixins", 
                    "cardRule", "flagRule", "valueSetRule", "fixedValueRule", 
                    "containsRule", "onlyRule", "obeysRule", "caretValueRule", 
@@ -394,7 +394,7 @@ FSHParser.KW_INSTANCEOF = 5;
 FSHParser.KW_INVARIANT = 6;
 FSHParser.KW_VALUESET = 7;
 FSHParser.KW_CODESYSTEM = 8;
-FSHParser.KW_MIXIN = 9;
+FSHParser.KW_RULESET = 9;
 FSHParser.KW_MIXINS = 10;
 FSHParser.KW_PARENT = 11;
 FSHParser.KW_ID = 12;
@@ -461,7 +461,7 @@ FSHParser.RULE_valueSet = 11;
 FSHParser.RULE_vsMetadata = 12;
 FSHParser.RULE_codeSystem = 13;
 FSHParser.RULE_csMetadata = 14;
-FSHParser.RULE_mixin = 15;
+FSHParser.RULE_ruleSet = 15;
 FSHParser.RULE_parent = 16;
 FSHParser.RULE_id = 17;
 FSHParser.RULE_title = 18;
@@ -572,7 +572,7 @@ FSHParser.prototype.doc = function() {
         this.state = 119;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
-        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_ALIAS) | (1 << FSHParser.KW_PROFILE) | (1 << FSHParser.KW_EXTENSION) | (1 << FSHParser.KW_INSTANCE) | (1 << FSHParser.KW_INVARIANT) | (1 << FSHParser.KW_VALUESET) | (1 << FSHParser.KW_CODESYSTEM) | (1 << FSHParser.KW_MIXIN))) !== 0)) {
+        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_ALIAS) | (1 << FSHParser.KW_PROFILE) | (1 << FSHParser.KW_EXTENSION) | (1 << FSHParser.KW_INSTANCE) | (1 << FSHParser.KW_INVARIANT) | (1 << FSHParser.KW_VALUESET) | (1 << FSHParser.KW_CODESYSTEM) | (1 << FSHParser.KW_RULESET))) !== 0)) {
             this.state = 116;
             this.entity();
             this.state = 121;
@@ -640,8 +640,8 @@ EntityContext.prototype.codeSystem = function() {
     return this.getTypedRuleContext(CodeSystemContext,0);
 };
 
-EntityContext.prototype.mixin = function() {
-    return this.getTypedRuleContext(MixinContext,0);
+EntityContext.prototype.ruleSet = function() {
+    return this.getTypedRuleContext(RuleSetContext,0);
 };
 
 EntityContext.prototype.enterRule = function(listener) {
@@ -712,10 +712,10 @@ FSHParser.prototype.entity = function() {
             this.state = 130;
             this.codeSystem();
             break;
-        case FSHParser.KW_MIXIN:
+        case FSHParser.KW_RULESET:
             this.enterOuterAlt(localctx, 8);
             this.state = 131;
-            this.mixin();
+            this.ruleSet();
             break;
         default:
             throw new antlr4.error.NoViableAltException(this);
@@ -2206,7 +2206,7 @@ FSHParser.prototype.csMetadata = function() {
 };
 
 
-function MixinContext(parser, parent, invokingState) {
+function RuleSetContext(parser, parent, invokingState) {
 	if(parent===undefined) {
 	    parent = null;
 	}
@@ -2215,22 +2215,22 @@ function MixinContext(parser, parent, invokingState) {
 	}
 	antlr4.ParserRuleContext.call(this, parent, invokingState);
     this.parser = parser;
-    this.ruleIndex = FSHParser.RULE_mixin;
+    this.ruleIndex = FSHParser.RULE_ruleSet;
     return this;
 }
 
-MixinContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
-MixinContext.prototype.constructor = MixinContext;
+RuleSetContext.prototype = Object.create(antlr4.ParserRuleContext.prototype);
+RuleSetContext.prototype.constructor = RuleSetContext;
 
-MixinContext.prototype.KW_MIXIN = function() {
-    return this.getToken(FSHParser.KW_MIXIN, 0);
+RuleSetContext.prototype.KW_RULESET = function() {
+    return this.getToken(FSHParser.KW_RULESET, 0);
 };
 
-MixinContext.prototype.SEQUENCE = function() {
+RuleSetContext.prototype.SEQUENCE = function() {
     return this.getToken(FSHParser.SEQUENCE, 0);
 };
 
-MixinContext.prototype.sdRule = function(i) {
+RuleSetContext.prototype.sdRule = function(i) {
     if(i===undefined) {
         i = null;
     }
@@ -2241,21 +2241,21 @@ MixinContext.prototype.sdRule = function(i) {
     }
 };
 
-MixinContext.prototype.enterRule = function(listener) {
+RuleSetContext.prototype.enterRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.enterMixin(this);
+        listener.enterRuleSet(this);
 	}
 };
 
-MixinContext.prototype.exitRule = function(listener) {
+RuleSetContext.prototype.exitRule = function(listener) {
     if(listener instanceof FSHListener ) {
-        listener.exitMixin(this);
+        listener.exitRuleSet(this);
 	}
 };
 
-MixinContext.prototype.accept = function(visitor) {
+RuleSetContext.prototype.accept = function(visitor) {
     if ( visitor instanceof FSHVisitor ) {
-        return visitor.visitMixin(this);
+        return visitor.visitRuleSet(this);
     } else {
         return visitor.visitChildren(this);
     }
@@ -2264,17 +2264,17 @@ MixinContext.prototype.accept = function(visitor) {
 
 
 
-FSHParser.MixinContext = MixinContext;
+FSHParser.RuleSetContext = RuleSetContext;
 
-FSHParser.prototype.mixin = function() {
+FSHParser.prototype.ruleSet = function() {
 
-    var localctx = new MixinContext(this, this._ctx, this.state);
-    this.enterRule(localctx, 30, FSHParser.RULE_mixin);
+    var localctx = new RuleSetContext(this, this._ctx, this.state);
+    this.enterRule(localctx, 30, FSHParser.RULE_ruleSet);
     var _la = 0; // Token type
     try {
         this.enterOuterAlt(localctx, 1);
         this.state = 256;
-        this.match(FSHParser.KW_MIXIN);
+        this.match(FSHParser.KW_RULESET);
         this.state = 257;
         this.match(FSHParser.SEQUENCE);
         this.state = 259; 
