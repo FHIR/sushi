@@ -185,7 +185,7 @@ describe('FSHImporter', () => {
     });
 
     describe('#containsRule', () => {
-      it('should parse contains rule with one type', () => {
+      it('should parse contains rule with one item', () => {
         const input = `
         Extension: SomeExtension
         * extension contains foo 1..1
@@ -213,6 +213,25 @@ describe('FSHImporter', () => {
         assertContainsRule(extension.rules[0], 'extension', 'code');
         assertCardRule(extension.rules[1], 'extension[code]', 1, 1);
         assertOnlyRule(extension.rules[2], 'extension[code].value[x]', { type: 'Quantity' });
+      });
+
+      it('should parse contains rule with item declaring a type', () => {
+        const input = `
+        Alias: MaxSizeExtension = http://hl7.org/fhir/StructureDefinition/maxSize
+        Extension: SomeExtension
+        * extension contains MaxSizeExtension named max 1..1
+        * extension[max].value[x] MS
+        `;
+
+        const result = importSingleText(input);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.rules).toHaveLength(3);
+        assertContainsRule(extension.rules[0], 'extension', {
+          name: 'max',
+          type: 'http://hl7.org/fhir/StructureDefinition/maxSize'
+        });
+        assertCardRule(extension.rules[1], 'extension[max]', 1, 1);
+        assertFlagRule(extension.rules[2], 'extension[max].value[x]', true, undefined, undefined);
       });
     });
 

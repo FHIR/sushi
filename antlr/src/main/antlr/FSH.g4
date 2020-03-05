@@ -21,7 +21,7 @@ vsMetadata:         id | title | description;
 codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* (caretValueRule | concept)*;
 csMetadata:         id | title | description;
 
-ruleSet:              KW_RULESET SEQUENCE sdRule+;
+ruleSet:            KW_RULESET SEQUENCE sdRule+;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -65,7 +65,7 @@ caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | code | quantity | ratio | bool ;
-item:               SEQUENCE CARD flag*;
+item:               SEQUENCE (KW_NAMED SEQUENCE)? CARD flag*;
 code:               CODE STRING?;
 concept:            STAR code STRING?;
 quantity:           NUMBER UNIT;
@@ -102,6 +102,7 @@ KW_PREFERRED:       '(' WS* 'preferred' WS* ')';
 KW_EXTENSIBLE:      '(' WS* 'extensible' WS* ')';
 KW_REQUIRED:        '(' WS* 'required' WS* ')';
 KW_CONTAINS:        'contains';
+KW_NAMED:           'named';
 KW_AND:             'and';
 KW_ONLY:            'only';
 KW_OR:              'or';

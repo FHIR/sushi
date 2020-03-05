@@ -244,7 +244,8 @@ export interface ContainsRuleContext extends ParserRuleContext {
 }
 
 export interface ItemContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext[];
+  KW_NAMED(): ParserRuleContext;
   CARD(): ParserRuleContext;
   flag(): FlagContext[];
 }
