@@ -198,14 +198,14 @@ describe('IGExporter', () => {
                 reference: 'CapabilityStatement/capability-statement-example'
               },
               name: 'capability-statement-example',
-              exampleBoolean: false // Type set to anything but Example sets this to false
+              exampleBoolean: false // Usage set to anything but Example sets this to false
             },
             {
               reference: {
                 reference: 'Patient/patient-example'
               },
               name: 'patient-example',
-              exampleBoolean: true // No defined Type on FSH file sets this to true
+              exampleBoolean: true // No defined Usage on FSH file sets this to true
             },
             {
               reference: {
@@ -213,7 +213,7 @@ describe('IGExporter', () => {
               },
               name: 'Another Patient Example',
               description: 'Another example of a Patient',
-              exampleBoolean: true // Type set to Example sets this to true
+              exampleBoolean: true // Usage set to Example sets this to true
             }
           ],
           page: {
