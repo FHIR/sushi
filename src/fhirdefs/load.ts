@@ -128,7 +128,7 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
     'profiles',
     'resources',
     'vocabulary',
-    'examples' // Must come last in case examples are of other resources
+    'examples'
   ];
   for (const pathEnd of pathEnds) {
     let xmlFile = false;
@@ -145,7 +145,11 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
           invalidFile = true;
           continue;
         }
-        defs.add(resourceJSON);
+        if (pathEnd !== 'examples') {
+          // add() will only add resources of resourceType:
+          // StructureDefinition, ValueSet, CodeSystem, or ImplementationGuide
+          defs.add(resourceJSON);
+        }
       }
     }
     if (invalidFile) {

@@ -425,7 +425,7 @@ export class IGExporter {
       'profiles',
       'resources',
       'vocabulary',
-      'examples' // Must come last in case examples are of other resources
+      'examples'
     ];
     for (const pathEnd of pathEnds) {
       const dirPath = path.join(this.igDataPath, 'input', pathEnd);
