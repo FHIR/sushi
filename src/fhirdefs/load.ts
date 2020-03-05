@@ -114,6 +114,51 @@ export async function loadDependency(
 }
 
 /**
+ * Loads custom resources defined in ig-data into FHIRDefs
+ * @param {string} input - The input path to the cli
+ * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
+ */
+export function loadCustomResources(input: string, defs: FHIRDefinitions): void {
+  // Similar code for loading custom resources exists in IGExporter.ts addPredefinedResources()
+  const pathEnds = [
+    'capabilities',
+    'extensions',
+    'models',
+    'operations',
+    'profiles',
+    'resources',
+    'vocabulary',
+    'examples' // Must come last in case examples are of other resources
+  ];
+  for (const pathEnd of pathEnds) {
+    let xmlFile = false;
+    let invalidFile = false;
+    const dirPath = path.join(input, 'ig-data', 'input', pathEnd);
+    if (fs.existsSync(dirPath)) {
+      const files = fs.readdirSync(dirPath);
+      for (const file of files) {
+        let resourceJSON: any;
+        if (file.endsWith('.json')) {
+          resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+        } else {
+          xmlFile = xmlFile || file.endsWith('.xml');
+          invalidFile = true;
+          continue;
+        }
+        defs.add(resourceJSON);
+      }
+    }
+    if (invalidFile) {
+      let message = `Invalid file detected in directory ${dirPath}. Input FHIR definitions must be JSON.`;
+      if (xmlFile) {
+        message += ' XML format not supported.';
+      }
+      logger.error(message);
+    }
+  }
+}
+
+/**
  * Loads a set of JSON files at targetPath into FHIRDefs
  * @param {string} targetPath - The path to the directory containing the JSON definitions
  * @param {string} targetPackage - The name of the package we are trying to load

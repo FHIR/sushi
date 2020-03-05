@@ -7,7 +7,7 @@ import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/f
 import { Package } from '../../src/export';
 import { Config } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
 import { TestFisher } from '../testhelpers';
 
 describe('IGExporter', () => {
@@ -502,6 +502,7 @@ describe('IGExporter', () => {
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
       const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
       pkg = new Package(config);
+      loadCustomResources(fixtures, defs);
 
       // Add a patient to the package that will be overwritten
       const fisher = new TestFisher(null, defs, pkg);
@@ -517,7 +518,7 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.name = 'StayName';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       exporter.export(tempOut);
     });
@@ -670,14 +671,8 @@ describe('IGExporter', () => {
       });
     });
 
-    it('should log an error for invalid input files', () => {
-      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
-        /Invalid file.*resources.*XML format not supported/
-      );
-    });
-
     it('should log an error for input files missing resourceType or id', () => {
-      expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
+      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
         /.*InvalidPatient.json must define resourceType and id/
       );
     });
