@@ -893,6 +893,16 @@ export class ElementDefinition {
       }
     }
 
+    const connectedElements = this.findConnectedElements();
+    connectedElements.forEach(ce => {
+      try {
+        ce.bindToVS(vsURI, strength);
+      } catch (ex) {
+        // receiving a BindingStrengthError is not a problem, because
+        // it is fine if a connected element has a stronger binding.
+      }
+    });
+
     // We're good.  Bind it.
     this.binding = {
       strength,
