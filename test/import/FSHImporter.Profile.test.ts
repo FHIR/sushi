@@ -800,7 +800,7 @@ describe('FSHImporter', () => {
     });
 
     describe('#containsRule', () => {
-      it('should parse contains rule with one type', () => {
+      it('should parse contains rule with one item', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -814,7 +814,46 @@ describe('FSHImporter', () => {
         assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
       });
 
-      it('should parse contains rules with multiple types', () => {
+      it('should parse contains rule with one item declaring an aliased type', () => {
+        const input = `
+        Alias: OffsetExtension = http://hl7.org/fhir/StructureDefinition/observation-timeOffset
+        Profile: ObservationProfile
+        Parent: Observation
+        * component.extension contains OffsetExtension named offset 0..1
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(2);
+        assertContainsRule(profile.rules[0], 'component.extension', {
+          name: 'offset',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-timeOffset'
+        });
+        assertCardRule(profile.rules[1], 'component.extension[offset]', 0, 1);
+      });
+
+      it('should parse contains rule with one item declaring an FSH extension type', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * component.extension contains ComponentExtension named compext 0..1
+
+        Extension: ComponentExtension
+        Id: component-extension
+        * value[x] only CodeableConcept
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(2);
+        assertContainsRule(profile.rules[0], 'component.extension', {
+          name: 'compext',
+          type: 'ComponentExtension'
+        });
+        assertCardRule(profile.rules[1], 'component.extension[compext]', 0, 1);
+      });
+
+      it('should parse contains rules with multiple items', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -827,6 +866,42 @@ describe('FSHImporter', () => {
         assertContainsRule(profile.rules[0], 'component', 'SystolicBP', 'DiastolicBP');
         assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
         assertCardRule(profile.rules[2], 'component[DiastolicBP]', 2, '*');
+      });
+
+      it('should parse contains rule with mutliple items, some declaring types', () => {
+        const input = `
+        Alias: FocusCodeExtension = http://hl7.org/fhir/StructureDefinition/observation-focusCode
+        Alias: PreconditionExtension = http://hl7.org/fhir/StructureDefinition/observation-precondition
+        Profile: ObservationProfile
+        Parent: Observation
+        * extension contains
+            foo 0..1 and
+            FocusCodeExtension named focus 1..1 and
+            bar 0..* and
+            PreconditionExtension named pc 1..*
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(5);
+        assertContainsRule(
+          profile.rules[0],
+          'extension',
+          'foo',
+          {
+            name: 'focus',
+            type: 'http://hl7.org/fhir/StructureDefinition/observation-focusCode'
+          },
+          'bar',
+          {
+            name: 'pc',
+            type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition'
+          }
+        );
+        assertCardRule(profile.rules[1], 'extension[foo]', 0, 1);
+        assertCardRule(profile.rules[2], 'extension[focus]', 1, 1);
+        assertCardRule(profile.rules[3], 'extension[bar]', 0, '*');
+        assertCardRule(profile.rules[4], 'extension[pc]', 1, '*');
       });
 
       it('should parse contains rules with flags', () => {
@@ -844,6 +919,25 @@ describe('FSHImporter', () => {
         assertFlagRule(profile.rules[2], 'component[SystolicBP]', true, undefined, undefined);
         assertCardRule(profile.rules[3], 'component[DiastolicBP]', 2, '*');
         assertFlagRule(profile.rules[4], 'component[DiastolicBP]', true, true, undefined);
+      });
+
+      it('should parse contains rule with item declaring a type and flags', () => {
+        const input = `
+        Alias: OffsetExtension = http://hl7.org/fhir/StructureDefinition/observation-timeOffset
+        Profile: ObservationProfile
+        Parent: Observation
+        * component.extension contains OffsetExtension named offset 0..1 MS
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(3);
+        assertContainsRule(profile.rules[0], 'component.extension', {
+          name: 'offset',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-timeOffset'
+        });
+        assertCardRule(profile.rules[1], 'component.extension[offset]', 0, 1);
+        assertFlagRule(profile.rules[2], 'component.extension[offset]', true, undefined, undefined);
       });
     });
 
