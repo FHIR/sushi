@@ -403,6 +403,18 @@ describe('IGExporter', () => {
       expect(content).toMatch('<li><a href="toc.html">Customized Table of Contents</a></li>');
     });
 
+    it('should use the user-provided ignoreWarnings.txt if it exists', () => {
+      const ignorePath = path.join(tempOut, 'input', 'ignoreWarnings.txt');
+      expect(fs.existsSync(ignorePath)).toBeTruthy();
+      const content = fs.readFileSync(ignorePath, 'utf8');
+      expect(content).toMatch(
+        'Code System URI "http://ncimeta.nci.nih.gov" is unknown so the code cannot be validated'
+      );
+      expect(content).toMatch(
+        'Code System URI "http://cancerstaging.org" is unknown so the code cannot be validated'
+      );
+    });
+
     it('should include any additional user-provided files in includes', () => {
       const otherIncludeFilePath = path.join(tempOut, 'input', 'includes', 'other.xml');
       expect(fs.existsSync(otherIncludeFilePath)).toBeTruthy();

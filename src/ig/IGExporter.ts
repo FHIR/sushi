@@ -52,6 +52,7 @@ export class IGExporter {
     this.addIncludeContents(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
+    this.addIgnoreWarningsFile(outPath);
     this.addImplementationGuide(outPath);
   }
 
@@ -364,6 +365,18 @@ export class IGExporter {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
     if (fs.existsSync(includesPath)) {
       fs.copySync(includesPath, path.join(igPath, 'input', 'includes'));
+    }
+  }
+
+  /**
+   * Adds user provided ignoreWarnings.txt file if it exists; otherwise the static one SUSHI provides will be used.
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  private addIgnoreWarningsFile(igPath: string): void {
+    const ignorePath = path.join(this.igDataPath, 'input', 'ignoreWarnings.txt');
+    if (fs.existsSync(ignorePath)) {
+      fs.copyFileSync(ignorePath, path.join(igPath, 'input', 'ignoreWarnings.txt'));
     }
   }
 
