@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
-import ini from 'ini';
 import { IGExporter } from '../../src/ig';
 import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
