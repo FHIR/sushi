@@ -319,7 +319,7 @@ describe('InstanceExporter', () => {
       resprate.parent = 'resprate';
       doc.profiles.set(resprate.name, resprate);
       const containsRule = new ContainsRule('category');
-      containsRule.items = ['niceSlice'];
+      containsRule.items = [{ name: 'niceSlice' }];
       resprate.rules.push(containsRule); // * identifier contains niceSlice
       const cardRule = new CardRule('category[niceSlice]');
       cardRule.min = 1;
@@ -831,7 +831,7 @@ describe('InstanceExporter', () => {
       const fooExtension = new Extension('FooExtension');
       doc.extensions.set(fooExtension.name, fooExtension);
       const containsRule = new ContainsRule('extension');
-      containsRule.items = ['FooExtension'];
+      containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
       patientProf.rules.push(containsRule);
       const barRule = new FixedValueRule('extension[FooExtension].valueString');
       barRule.fixedValue = 'bar';
@@ -846,7 +846,7 @@ describe('InstanceExporter', () => {
       const fooExtension = new Extension('FooExtension');
       doc.extensions.set(fooExtension.name, fooExtension);
       const containsRule = new ContainsRule('extension');
-      containsRule.items = ['FooExtension'];
+      containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
       patientProf.rules.push(containsRule);
       const barRule = new FixedValueRule(
         'extension[http://example.com/StructureDefinition/FooExtension].valueString'
@@ -864,7 +864,7 @@ describe('InstanceExporter', () => {
       doc.aliases.set('FooAlias', 'http://example.com/StructureDefinition/FooExtension');
       doc.extensions.set(fooExtension.name, fooExtension);
       const containsRule = new ContainsRule('extension');
-      containsRule.items = ['FooExtension'];
+      containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
       patientProf.rules.push(containsRule);
       const barRule = new FixedValueRule('extension[FooAlias].valueString');
       barRule.fixedValue = 'bar';
