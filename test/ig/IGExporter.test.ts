@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
+import os from 'os';
 import { IGExporter } from '../../src/ig';
 import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
@@ -87,15 +88,19 @@ describe('IGExporter', () => {
       expect(fs.existsSync(iniPath)).toBeTruthy();
       const content = fs.readFileSync(iniPath, 'utf8');
       expect(content).toEqual(
-        '[IG]\n' +
-          'ig = input/ImplementationGuide-sushi-test.json\n' +
-          'template = fhir.base.template\n' +
-          'usage-stats-opt-out = false\n' +
-          `copyrightyear = ${new Date().getFullYear()}+\n` +
-          'license = CC0-1.0\n' +
-          'version = 0.1.0\n' +
-          'ballotstatus = CI Build\n' +
-          'fhirspec = http://build.fhir.org/\n'
+        [
+          '[IG]',
+          'ig = input/ImplementationGuide-sushi-test.json',
+          'template = fhir.base.template',
+          'usage-stats-opt-out = false',
+          `copyrightyear = ${new Date().getFullYear()}+`,
+          'license = CC0-1.0',
+          'version = 0.1.0',
+          'ballotstatus = CI Build',
+          'fhirspec = http://build.fhir.org/'
+        ]
+          .map(ln => ln + os.EOL) // Windows: /r/n; Mac: /n
+          .join('')
       );
     });
 
@@ -308,19 +313,23 @@ describe('IGExporter', () => {
       expect(fs.existsSync(iniPath)).toBeTruthy();
       const content = fs.readFileSync(iniPath, 'utf8');
       expect(content).toEqual(
-        '[IG]\n' +
-          'ig = input/ImplementationGuide-sushi-test.json\n' +
-          'template = hl7.fhir.template#0.1.0\n' +
-          'usage-stats-opt-out = true\n' +
-          'copyrightyear = 2018+\n' +
-          'license = CC0-1.0\n' +
-          'version = 0.1.0\n' +
-          'ballotstatus = STU1\n' +
-          'fhirspec = http://hl7.org/fhir/R4/\n' +
-          'excludexml = Yes\n' +
-          'excludejson = Yes\n' +
-          'excludettl = Yes\n' +
-          'excludeMaps = Yes\n'
+        [
+          '[IG]',
+          'ig = input/ImplementationGuide-sushi-test.json',
+          'template = hl7.fhir.template#0.1.0',
+          'usage-stats-opt-out = true',
+          'copyrightyear = 2018+',
+          'license = CC0-1.0',
+          'version = 0.1.0',
+          'ballotstatus = STU1',
+          'fhirspec = http://hl7.org/fhir/R4/',
+          'excludexml = Yes',
+          'excludejson = Yes',
+          'excludettl = Yes',
+          'excludeMaps = Yes'
+        ]
+          .map(ln => ln + os.EOL) // Windows: /r/n; Mac: /n
+          .join('')
       );
     });
 
@@ -730,19 +739,23 @@ describe('IGExporter', () => {
       expect(fs.existsSync(iniPath)).toBeTruthy();
       const content = fs.readFileSync(iniPath, 'utf8');
       expect(content).toEqual(
-        '[IG]\n' +
-          'ig = input/ImplementationGuide-sushi-test.json\n' +
-          'template = hl7.fhir.template\n' +
-          'usage-stats-opt-out = true\n' +
-          'copyrightyear = 2018+\n' +
-          'license = CC0-1.0\n' +
-          'version = 0.1.0\n' +
-          'ballotstatus = STU1\n' +
-          'fhirspec = http://hl7.org/fhir/R4/\n' +
-          'excludexml = Yes\n' +
-          'excludejson = Yes\n' +
-          'excludettl = Yes\n' +
-          'excludeMaps = Yes\n'
+        [
+          '[IG]',
+          'ig = input/ImplementationGuide-sushi-test.json',
+          'template = hl7.fhir.template',
+          'usage-stats-opt-out = true',
+          'copyrightyear = 2018+',
+          'license = CC0-1.0',
+          'version = 0.1.0',
+          'ballotstatus = STU1',
+          'fhirspec = http://hl7.org/fhir/R4/',
+          'excludexml = Yes',
+          'excludejson = Yes',
+          'excludettl = Yes',
+          'excludeMaps = Yes'
+        ]
+          .map(ln => ln + os.EOL) // Windows: /r/n; Mac: /n
+          .join('')
       );
     });
 
