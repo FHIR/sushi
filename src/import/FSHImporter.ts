@@ -944,7 +944,7 @@ export class FSHImporter extends FSHVisitor {
       let item: ContainsRuleItem;
       if (i.KW_NAMED()) {
         item = {
-          type: this.aliasAwareValue(i.SEQUENCE()[0].getText()),
+          type: this.aliasAwareValue(i.SEQUENCE()[0], i.SEQUENCE()[0].getText()),
           name: i.SEQUENCE()[1].getText()
         };
       } else {
@@ -953,7 +953,6 @@ export class FSHImporter extends FSHVisitor {
         };
       }
       containsRule.items.push(item);
-      this.validateAliasResolves(i.SEQUENCE());
 
       const cardRule = new CardRule(`${containsRule.path}[${item.name}]`)
         .withLocation(this.extractStartStop(i))

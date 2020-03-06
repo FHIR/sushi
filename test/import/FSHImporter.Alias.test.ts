@@ -231,19 +231,34 @@ describe('FSHImporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
     });
 
-    it('should log an error when a contains rule aliased extension prefixed with $ does not resolve', () => {
+    it('should not log an error when a contains rule aliased extension prefixed with $ does not resolve', () => {
+      loggerSpy.reset();
       const input = `
       Alias: $MYEXTENSION = http://hl7.org/fhir/StructureDefinition/mypatient-extension.html
 
       Profile: ObservationProfile
       Parent: Observation
-      * extension contains $MYEXTENSIONZ
+      * extension contains $TYPO 1..1
       `;
 
       const results = importText([new RawFSH(input, 'MyExtension.fsh')]);
       expect(results.length).toBe(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYEXTENSIONZ.*\$/);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyExtension.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when an aliased contains rule type prefixed with $ does not resolve', () => {
+      const input = `
+      Alias: $EXT = http://fhir.org/extension
+
+      Profile: MyObservation
+      Parent: Observation
+      * extension contains $EXTZ named ext
+      `;
+
+      const results = importText([new RawFSH(input, 'Ext.fsh')]);
+      expect(results.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/\$EXTZ.*\$/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Ext.fsh.*Line: 6\D*/s);
     });
 
     it('should log an error when an aliased value set system prefixed with $ does not resolve', () => {

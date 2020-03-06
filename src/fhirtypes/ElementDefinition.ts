@@ -1268,7 +1268,7 @@ export class ElementDefinition {
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError('Code');
     }
-    if (code.system && !isUri(code.system)) {
+    if (code.system && !isUri(code.system.split('|')[0])) {
       throw new InvalidUriError(code.system);
     }
     const type = this.type[0].code;
