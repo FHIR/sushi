@@ -1,6 +1,7 @@
 import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
+import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
@@ -20,7 +21,8 @@ import {
   TypeNotFoundError,
   WideningCardinalityError,
   InvalidSumOfSliceMinsError,
-  InvalidMaxOfSliceError
+  InvalidMaxOfSliceError,
+  InvalidUriError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -806,6 +808,7 @@ export class ElementDefinition {
    * @param {string} strength - the strength of the binding (e.g., 'required')
    * @throws {BindingStrengthError} when the binding can't be applied because it is looser than the existing binding
    * @throws {CodedTypeNotFoundError} - when the binding can't be applied because the element is the wrong type
+   * @throws {InvalidUriError} when the value set uri is not valid
    */
   bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength): void {
     // Check if this is a valid type to be bound against
@@ -827,6 +830,11 @@ export class ElementDefinition {
       if (strengths.indexOf(strength) < strengths.indexOf(this.binding.strength)) {
         throw new BindingStrengthError(this.binding.strength, strength);
       }
+    }
+
+    // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
+    if (!isUri(vsURI.split('|')[0])) {
+      throw new InvalidUriError(vsURI);
     }
 
     // We're good.  Bind it.
@@ -1253,11 +1261,15 @@ export class ElementDefinition {
    * @param {FshCode} code - the code to fix
    * @throws {CodedTypeNotFoundError} when there is no coded type on this element
    * @throws {CodeAlreadyFixedError} where the code is already fixed to a different code
+   * @throws {InvalidUriError} when the system being fixed is not a valid uri
    */
   fixFshCode(code: FshCode): void {
     // This is the element to fix it to
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError('Code');
+    }
+    if (code.system && !isUri(code.system.split('|')[0])) {
+      throw new InvalidUriError(code.system);
     }
     const type = this.type[0].code;
     if (type === 'CodeableConcept') {

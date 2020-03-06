@@ -176,24 +176,28 @@ describe('ElementDefinition', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo', 'bar'));
+      statusReason.fixValue(new FshCode('foo', 'http://bar.com'));
       const statusReasonCodingSystem = medicationRequest.findElementByPath(
         'statusReason.coding.system',
         fisher
       );
       // Single element in array
       let patternValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(patternValue).toBe('bar');
+      expect(patternValue).toBe('http://bar.com');
 
       // Multiple not matching array elements
-      statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'bar' }] };
+      statusReason.patternCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://bar.com' }]
+      };
       patternValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(patternValue).toEqual(['foo', 'bar']);
+      expect(patternValue).toEqual(['http://foo.com', 'http://bar.com']);
 
       // Multiple matching array elements
-      statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'foo' }] };
+      statusReason.patternCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://foo.com' }]
+      };
       patternValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(patternValue).toBe('foo');
+      expect(patternValue).toBe('http://foo.com');
     });
 
     it('should not find a pattern value from the parent when none is present', () => {
