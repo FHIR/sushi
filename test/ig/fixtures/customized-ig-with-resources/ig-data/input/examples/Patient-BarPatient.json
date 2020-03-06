@@ -1,0 +1,8 @@
+{
+  "resourceType": "Patient",
+  "id": "BarPatient",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient"]
+  },
+  "name": [{ "family": "Bar" }]
+}
