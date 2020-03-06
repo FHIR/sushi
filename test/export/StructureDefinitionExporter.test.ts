@@ -1220,7 +1220,7 @@ describe('StructureDefinitionExporter', () => {
     slicingRules.caretPath = 'slicing.rules';
     slicingRules.value = new FshCode('open');
     const containsLab = new ContainsRule('category');
-    containsLab.items = ['Lab'];
+    containsLab.items = [{ name: 'Lab' }];
     const labValue = new FixedValueRule('category[Lab]');
     labValue.fixedValue = new FshCode(
       'laboratory',
@@ -1302,7 +1302,7 @@ describe('StructureDefinitionExporter', () => {
     slicingRules.caretPath = 'slicing.rules';
     slicingRules.value = new FshCode('open');
     const containsLab = new ContainsRule('category');
-    containsLab.items = ['Lab'];
+    containsLab.items = [{ name: 'Lab' }];
     const labValue = new FixedValueRule('category[Lab]');
     labValue.fixedValue = new FshCode(
       'laboratory',
@@ -2436,7 +2436,7 @@ describe('StructureDefinitionExporter', () => {
       categorySlicingRules.caretPath = 'slicing.rules';
       categorySlicingRules.value = new FshCode('open');
       const categoryContainsProcedure = new ContainsRule('category');
-      categoryContainsProcedure.items = ['Procedure'];
+      categoryContainsProcedure.items = [{ name: 'Procedure' }];
       const procedureCard = new CardRule('category[Procedure]');
       procedureCard.min = 0;
       procedureCard.max = '1';
@@ -2450,7 +2450,7 @@ describe('StructureDefinitionExporter', () => {
       componentSlicingRules.caretPath = 'slicing.rules';
       componentSlicingRules.value = new FshCode('open');
       const componentContainsLab = new ContainsRule('component');
-      componentContainsLab.items = ['Lab'];
+      componentContainsLab.items = [{ name: 'Lab' }];
       const labCard = new CardRule('component[Lab]');
       labCard.min = 0;
       labCard.max = '1';
@@ -2712,12 +2712,86 @@ describe('StructureDefinitionExporter', () => {
     it.todo(
       'should not apply an OnlyRule on the child of a sliced element that would invalidate any of its slices'
     );
-    it.todo(
-      'should apply an ObeysRule on a sliced element that updates the constraints on its slices'
-    );
-    it.todo(
-      'should apply an ObeysRule on the child of a sliced element that updates the child elements on its slices'
-    );
+
+    it('should apply an ObeysRule on a sliced element that updates the constraints on its slices', () => {
+      // * category[Procedure] obeys ShoutingRule
+      // * category obeys TalkingRule
+      // Invariant: ShoutingRule
+      // Description: "No shouting allowed."
+      // Invariant: TalkingRule
+      // Description: "Talking is prohibited."
+      const shoutingRule = new ObeysRule('category[Procedure]');
+      shoutingRule.invariant = 'shout-1';
+      const talkingRule = new ObeysRule('category');
+      talkingRule.invariant = 'talk-1';
+
+      const shoutingInvariant = new Invariant('shout-1');
+      shoutingInvariant.description = 'No shouting allowed.';
+      const talkingInvariant = new Invariant('talk-1');
+      talkingInvariant.description = 'Talking is prohibited.';
+
+      observationWithSlice.rules.push(shoutingRule, talkingRule);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      doc.invariants.set(shoutingInvariant.name, shoutingInvariant);
+      doc.invariants.set(talkingInvariant.name, talkingInvariant);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const procedureCategory = sd.findElement('Observation.category:Procedure');
+      const expectedShouting = {
+        key: 'shout-1',
+        human: 'No shouting allowed.',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      const expectedTalking = {
+        key: 'talk-1',
+        human: 'Talking is prohibited.',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      expect(rootCategory.constraint).toContainEqual(expectedTalking);
+      expect(procedureCategory.constraint).toContainEqual(expectedShouting);
+      expect(procedureCategory.constraint).toContainEqual(expectedTalking);
+    });
+
+    it('should apply an ObeysRule on the child of a sliced element that updates the child elements on its slices', () => {
+      // * component[Lab].code obeys RunningRule
+      // * component.code obeys WalkingRule
+      // Invariant: RunningRule
+      // Description: "Run as fast as you can!"
+      // Invariant: WalkingRule
+      // Description: "Walk at your own pace."
+      const runningRule = new ObeysRule('component[Lab].code');
+      runningRule.invariant = 'run-1';
+      const walkingRule = new ObeysRule('component.code');
+      walkingRule.invariant = 'walk-1';
+
+      const runningInvariant = new Invariant('run-1');
+      runningInvariant.description = 'Run as fast as you can!';
+      const walkingInvariant = new Invariant('walk-1');
+      walkingInvariant.description = 'Walk at your own pace.';
+
+      observationWithSlice.rules.push(runningRule, walkingRule);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      doc.invariants.set(runningInvariant.name, runningInvariant);
+      doc.invariants.set(walkingInvariant.name, walkingInvariant);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      const labCode = sd.findElement('Observation.component:Lab.code');
+      const expectedRunning = {
+        key: 'run-1',
+        human: 'Run as fast as you can!',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      const expectedWalking = {
+        key: 'walk-1',
+        human: 'Walk at your own pace.',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      expect(rootCode.constraint).toContainEqual(expectedWalking);
+      expect(labCode.constraint).toContainEqual(expectedRunning);
+      expect(labCode.constraint).toContainEqual(expectedWalking);
+    });
     it.todo('should have some tests involving slices and CaretValueRule');
   });
 

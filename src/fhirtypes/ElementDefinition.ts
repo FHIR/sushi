@@ -361,6 +361,7 @@ export class ElementDefinition {
       ...(source && { source })
     };
     this.constraint.push(constraint);
+    this.findConnectedElements().forEach(ce => ce.applyConstraint(invariant, source));
   }
 
   /**
