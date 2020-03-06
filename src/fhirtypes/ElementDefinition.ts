@@ -1307,7 +1307,11 @@ export class ElementDefinition {
       coding.code = code.code;
     }
     if (code.system) {
-      coding.system = code.system;
+      if (code.system.indexOf('|') > -1) {
+        [coding.system, coding.version] = code.system.split('|', 2);
+      } else {
+        coding.system = code.system;
+      }
     }
     this.patternCodeableConcept = {
       coding: [coding]
@@ -1341,7 +1345,11 @@ export class ElementDefinition {
       this.patternCoding.code = code.code;
     }
     if (code.system) {
-      this.patternCoding.system = code.system;
+      if (code.system.indexOf('|') > -1) {
+        [this.patternCoding.system, this.patternCoding.version] = code.system.split('|', 2);
+      } else {
+        this.patternCoding.system = code.system;
+      }
     }
   }
 
