@@ -447,6 +447,7 @@ export class IGExporter {
               reference: {
                 reference: `${resourceJSON.resourceType}/${resourceJSON.id}`
               },
+              name: resourceJSON.id, // will be overwritten w/ title or name where applicable
               description: resourceJSON.description
             };
 
@@ -460,13 +461,14 @@ export class IGExporter {
               } else {
                 resource.exampleBoolean = true;
               }
-              resource.name = resourceJSON.id;
             } else {
               resource.exampleBoolean = false;
               // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
               const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
               const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
-              resource.name = title ?? name ?? resourceJSON.id;
+              if (title || name) {
+                resource.name = title ?? name;
+              }
             }
 
             const existingIndex = this.ig.definition.resource.findIndex(
