@@ -7,7 +7,7 @@ import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR } from './export';
 import { IGExporter } from './ig';
 import { logger, stats } from './utils';
-import { loadDependency } from './fhirdefs';
+import { loadDependency, loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 
 app();
@@ -76,6 +76,9 @@ async function app() {
         })
     );
   }
+
+  // Load custom resources specified in ig-data folder
+  loadCustomResources(input, defs);
 
   const rawFSHes = files
     .filter(file => file.endsWith('.fsh'))

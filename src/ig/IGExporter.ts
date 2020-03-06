@@ -13,7 +13,8 @@ import {
   ImplementationGuideDefinitionPageGeneration,
   StructureDefinition,
   ValueSet,
-  CodeSystem
+  CodeSystem,
+  InstanceDefinition
 } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -43,6 +44,7 @@ export class IGExporter {
     ensureDirSync(outPath);
     this.initIG();
     this.addResources();
+    this.addPredefinedResources(outPath);
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
     this.addOtherPageContent(outPath);
@@ -378,7 +380,7 @@ export class IGExporter {
     resources.forEach(r => {
       this.ig.definition.resource.push({
         reference: { reference: `${r.resourceType}/${r.id}` },
-        name: r.title ?? r.name,
+        name: r.title ?? r.name ?? r.id,
         description: r.description,
         exampleBoolean: false
       });
@@ -403,6 +405,104 @@ export class IGExporter {
       }
       this.ig.definition.resource.push(resource);
     });
+  }
+
+  /**
+   * Adds any user provided resource files
+   * This includes definitions in:
+   * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
+   * Based on: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  private addPredefinedResources(igPath: string): void {
+    // Similar code for loading custom resources exists in load.ts loadCustomResources()
+    const pathEnds = [
+      'capabilities',
+      'extensions',
+      'models',
+      'operations',
+      'profiles',
+      'resources',
+      'vocabulary',
+      'examples'
+    ];
+    for (const pathEnd of pathEnds) {
+      const dirPath = path.join(this.igDataPath, 'input', pathEnd);
+      if (fs.existsSync(dirPath)) {
+        const files = fs.readdirSync(dirPath);
+        for (const file of files) {
+          let resourceJSON: InstanceDefinition;
+          if (file.endsWith('.json')) {
+            resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+
+            if (resourceJSON.resourceType == null || resourceJSON.id == null) {
+              logger.error(
+                `Resource at ${path.join(dirPath, file)} must define resourceType and id.`
+              );
+              continue;
+            }
+
+            const resource: ImplementationGuideDefinitionResource = {
+              reference: {
+                reference: `${resourceJSON.resourceType}/${resourceJSON.id}`
+              },
+              name: resourceJSON.id, // will be overwritten w/ title or name where applicable
+              description: resourceJSON.description
+            };
+
+            if (pathEnd === 'examples') {
+              const exampleUrl = resourceJSON.meta?.profile?.find(
+                url =>
+                  this.pkg.fish(url, Type.Profile) ?? this.fhirDefs.fishForFHIR(url, Type.Profile)
+              );
+              if (exampleUrl) {
+                resource.exampleCanonical = exampleUrl;
+              } else {
+                resource.exampleBoolean = true;
+              }
+            } else {
+              resource.exampleBoolean = false;
+              // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
+              const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
+              const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
+              if (title || name) {
+                resource.name = title ?? name;
+              }
+            }
+
+            const existingIndex = this.ig.definition.resource.findIndex(
+              r => r.reference.reference === resource.reference.reference
+            );
+            if (existingIndex >= 0) {
+              if (
+                this.ig.definition.resource[existingIndex].exampleBoolean ||
+                this.ig.definition.resource[existingIndex].exampleCanonical
+              ) {
+                // If it is replacing an existing example, preserve description and name from SUSHI
+                // Allows user method for setting description/name on external example
+                const oldDescription = this.ig.definition.resource[existingIndex].description;
+                const oldName = this.ig.definition.resource[existingIndex].name;
+                if (oldDescription) resource.description = oldDescription;
+                if (oldName) resource.name = this.ig.definition.resource[existingIndex].name;
+              }
+              this.ig.definition.resource[existingIndex] = resource;
+            } else {
+              this.ig.definition.resource.push(resource);
+            }
+            fs.copySync(
+              path.join(dirPath, file),
+              path.join(
+                igPath,
+                'input',
+                pathEnd,
+                `${resourceJSON.resourceType}-${resourceJSON.id}.json`
+              )
+            );
+          }
+        }
+      }
+    }
   }
 
   /**
