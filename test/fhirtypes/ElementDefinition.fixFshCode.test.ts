@@ -11,6 +11,7 @@ describe('ElementDefinition', () => {
   let observation: StructureDefinition;
   let fooBarCode: FshCode;
   let barFooCode: FshCode;
+  let versionedCode: FshCode;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -25,6 +26,7 @@ describe('ElementDefinition', () => {
     observation = fisher.fishForStructureDefinition('Observation');
     fooBarCode = new FshCode('bar', 'http://foo.com');
     barFooCode = new FshCode('foo', 'http://bar.com');
+    versionedCode = new FshCode('versioned', 'http://versioned.com|7.6.5');
   });
 
   describe('#fixFshCode()', () => {
@@ -33,6 +35,20 @@ describe('ElementDefinition', () => {
       concept.fixFshCode(fooBarCode);
       expect(concept.patternCodeableConcept).toEqual({
         coding: [{ code: 'bar', system: 'http://foo.com' }]
+      });
+    });
+
+    it('should fix a code with a version to a CodeableConcept', () => {
+      const concept = observation.findElementByPath('code', fisher);
+      concept.fixFshCode(versionedCode);
+      expect(concept.patternCodeableConcept).toEqual({
+        coding: [
+          {
+            code: 'versioned',
+            system: 'http://versioned.com',
+            version: '7.6.5'
+          }
+        ]
       });
     });
 
@@ -73,6 +89,16 @@ describe('ElementDefinition', () => {
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       coding.fixFshCode(fooBarCode);
       expect(coding.patternCoding).toEqual({ code: 'bar', system: 'http://foo.com' });
+    });
+
+    it('should fix a code with a version to a Coding', () => {
+      const coding = observation.findElementByPath('code.coding', fisher);
+      coding.fixFshCode(versionedCode);
+      expect(coding.patternCoding).toEqual({
+        code: 'versioned',
+        system: 'http://versioned.com',
+        version: '7.6.5'
+      });
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a Coding fixed to a different code', () => {

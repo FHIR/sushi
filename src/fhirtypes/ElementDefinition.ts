@@ -4,7 +4,7 @@ import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
-import { FshCode, FshRatio, FshQuantity, FshReference } from '../fshtypes';
+import { FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
 import { FixedValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
@@ -344,6 +344,24 @@ export class ElementDefinition {
         return i > -1 ? p.slice(i + 4) : p;
       })
       .join('.');
+  }
+
+  /**
+   * Apply invariant to the Element.constraint
+   * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.constraint}
+   * @param invariant The invariant to be applied to the constraint
+   * @param source Source URL for the constraint
+   */
+  applyConstraint(invariant: Invariant, source?: string): void {
+    const constraint: ElementDefinitionConstraint = {
+      ...(invariant.name && { key: invariant.name }),
+      ...(invariant.severity && { severity: invariant.severity.code }),
+      ...(invariant.description && { human: invariant.description }),
+      ...(invariant.expression && { expression: invariant.expression }),
+      ...(invariant.xpath && { xpath: invariant.xpath }),
+      ...(source && { source })
+    };
+    this.constraint.push(constraint);
   }
 
   /**
@@ -1301,7 +1319,11 @@ export class ElementDefinition {
       coding.code = code.code;
     }
     if (code.system) {
-      coding.system = code.system;
+      if (code.system.indexOf('|') > -1) {
+        [coding.system, coding.version] = code.system.split('|', 2);
+      } else {
+        coding.system = code.system;
+      }
     }
     this.patternCodeableConcept = {
       coding: [coding]
@@ -1335,7 +1357,11 @@ export class ElementDefinition {
       this.patternCoding.code = code.code;
     }
     if (code.system) {
-      this.patternCoding.system = code.system;
+      if (code.system.indexOf('|') > -1) {
+        [this.patternCoding.system, this.patternCoding.version] = code.system.split('|', 2);
+      } else {
+        this.patternCoding.system = code.system;
+      }
     }
   }
 
@@ -1660,98 +1686,6 @@ export class ElementDefinition {
     this.structDef.addElement(slice);
     return slice;
   }
-
-  // NOTE: These are functions we used previously but may not be needed in Sushi.
-  // Commenting out for now, but if we still don't need them by Jan 2020, delete them!
-  //
-  // /**
-  //  * Gets a Map of the slices associated with this element, where the key is the slice name and the value is the
-  //  * ElementDefinition representing the slice.  If there are no slices, it will return an empty Map.
-  //  * @returns {Map<string,ElementDefinition>} the map containing this element's slices
-  //  */
-  // getSliceMap(): Map<string, ElementDefinition> {
-  //   const sliceMap = new Map();
-  //
-  //   // Find all the slice roots, iterate them, and get their children
-  //   let re = new RegExp(`^${escapeRegExp(this.id)}:[^.]+$`);
-  //   // TODO: For now we don't support choices that themselves are in a slice (e.g., assume choice id ends with [x])
-  //   if (this.id.endsWith('[x]')) {
-  //     re = new RegExp(`^${escapeRegExp(this.id.slice(0, -3))}[A-Z][^:.]*:[^.]+$`);
-  //   }
-  //   this.structDef.elements
-  //     .filter(e => re.test(e.id))
-  //     .forEach(e => {
-  //       const name = e.sliceName;
-  //       if (name == null) {
-  //         // TODO: log an error
-  //         return;
-  //       }
-  //       sliceMap.set(name, e);
-  //     });
-  //
-  //   return sliceMap;
-  // }
-  //
-  // /**
-  //  * Replaces the the sliced element with a specific slice, removing all other slices.  If sliceNameToKeep is null or
-  //  * undefined, it removes the discriminator from this element and removes all existing slices.  If this element is
-  //  * not sliced, returns itself.
-  //  * @param {string} sliceNameToKeep - the name of the slice to keep in place of this element
-  //  * @returns {ElementDefinition} the remaining element after unslicing (usually corresponding to sliceNameToKeep)
-  //  */
-  // unSliceIt(sliceNameToKeep: string): ElementDefinition {
-  //   if (!this.slicing) {
-  //     return this;
-  //   }
-  //
-  //   // Remove all slices except the one matching sliceNameToKeep
-  //   const sliceMap = this.getSliceMap();
-  //   for (const name of sliceMap.keys()) {
-  //     if (name !== sliceNameToKeep) {
-  //       sliceMap.get(name).detach();
-  //     }
-  //   }
-  //
-  //   // If sliceNameToKeep was named and exists, detach *this* slice and return kept slice
-  //   if (sliceNameToKeep != null && sliceMap.has(sliceNameToKeep)) {
-  //     this.detach();
-  //     const keeper = sliceMap.get(sliceNameToKeep);
-  //     const oldKeeperID = keeper.id;
-  //     const keeperChildren = keeper.children();
-  //     keeper.id = keeper.id.slice(0, keeper.id.lastIndexOf(':'));
-  //     keeperChildren.forEach(c => (c.id = c.id.replace(oldKeeperID, keeper.id)));
-  //     keeper.sliceName = undefined;
-  //     return keeper;
-  //   }
-  //
-  //   // No slice to keep, so keep and return this instead
-  //   this.slicing = undefined;
-  //   return this;
-  // }
-  //
-  // /**
-  //  * Removes this element, and optionally its children, from its StructureDefinition so it is no longer recognized as an
-  //  * element of the StructureDefinition.
-  //  * @param {boolean} [detachChildren=true] - indicates if this element's children should also be detached from the
-  //  *   StructureDefinition
-  //  * @returns {ElementDefinition[]} the array of ElementDefinitions that were detached from the StructureDefinition
-  //  */
-  // detach(detachChildren: boolean = true): ElementDefinition[] {
-  //   const detached = [];
-  //   const toDetach = [this];
-  //   if (detachChildren) {
-  //     // @ts-ignore
-  //     toDetach.push(...this.children());
-  //   }
-  //   for (const el of toDetach) {
-  //     const i = this.structDef.elements.findIndex(e => e === el);
-  //     if (i !== -1) {
-  //       detached.push(el);
-  //       this.structDef.elements.splice(i, 1);
-  //     }
-  //   }
-  //   return detached;
-  // }
 
   /**
    * Clones the current ElementDefinition, optionally clearing the stored "original" (clears it by default)

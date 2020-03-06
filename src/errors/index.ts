@@ -32,3 +32,4 @@ export * from './PackageLoadError';
 export * from './DevPackageLoadError';
 export * from './CurrentPackageLoadError';
 export * from './InvalidUriError';
+export * from './MissingSnapshotError';

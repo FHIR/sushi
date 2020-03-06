@@ -8,6 +8,7 @@ import {
   OnlyRule,
   OnlyRuleType,
   ContainsRule,
+  ContainsRuleItem,
   CaretValueRule,
   ObeysRule
 } from '../../src/fshtypes/rules';
@@ -69,12 +70,17 @@ export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[
   expect(onlyRule.types).toEqual(types);
 }
 
-export function assertContainsRule(rule: Rule, path: string, ...items: string[]): void {
+export function assertContainsRule(
+  rule: Rule,
+  path: string,
+  ...items: (string | ContainsRuleItem)[]
+): void {
   expect(rule).toBeInstanceOf(ContainsRule);
   const containsRule = rule as ContainsRule;
   expect(containsRule.path).toBe(path);
 
-  expect(containsRule.items).toEqual(items);
+  const itemObjects: ContainsRuleItem[] = items.map(i => (typeof i === 'string' ? { name: i } : i));
+  expect(containsRule.items).toEqual(itemObjects);
 }
 
 export function assertCaretValueRule(

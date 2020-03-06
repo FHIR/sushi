@@ -1,7 +1,7 @@
-import { loadFromPath, loadDependency } from '../../src/fhirdefs/load';
+import { loadFromPath, loadDependency, loadCustomResources } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { Type } from '../../src/utils';
-import { TestFisher } from '../testhelpers';
+import { TestFisher, loggerSpy } from '../testhelpers';
 import path from 'path';
 import fs from 'fs-extra';
 import tar from 'tar';
@@ -184,6 +184,30 @@ describe('#loadDependency()', () => {
   it('should throw DevPackageLoadError when a dev package version is not locally present', async () => {
     await expect(loadDependency('test', 'dev', defs, 'somePath')).rejects.toThrow(
       'The package test#dev could not be loaded locally. Dev packages must be present in local cache'
+    );
+  });
+});
+
+describe('#loadCustomResources', () => {
+  let defs: FHIRDefinitions;
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    const fixtures = path.join(__dirname, '..', 'ig', 'fixtures', 'customized-ig-with-resources');
+    loadCustomResources(fixtures, defs);
+  });
+
+  it('should load custom resources', () => {
+    // Only StructureDefinitions, ValueSets, and CodeSystems are loaded in
+    expect(defs.size()).toBe(10);
+    expect(defs.allExtensions().some(e => e.id === 'patient-birthPlace')).toBeTruthy();
+    expect(defs.allProfiles().some(e => e.id === 'MyPatient')).toBeTruthy();
+    expect(defs.allProfiles().some(e => e.id === 'MyTitlePatient')).toBeTruthy();
+    expect(defs.allValueSets().some(e => e.id === 'MyVS')).toBeTruthy();
+  });
+
+  it('should log an error for invalid input files', () => {
+    expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
+      /Invalid file.*resources.*XML format not supported/
     );
   });
 });
