@@ -86,16 +86,18 @@ describe('IGExporter', () => {
     it('should generate an ig.ini with the correct values based on the package.json', () => {
       const iniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(iniPath)).toBeTruthy();
-      const content = ini.parse(fs.readFileSync(iniPath, 'utf8'));
-      expect(Object.keys(content.IG)).toHaveLength(8);
-      expect(content.IG.ig).toEqual('input/ImplementationGuide-sushi-test.json');
-      expect(content.IG.template).toEqual('fhir.base.template');
-      expect(content.IG['usage-stats-opt-out']).toBeFalsy();
-      expect(content.IG.copyrightyear).toEqual(`${new Date().getFullYear()}+`);
-      expect(content.IG.license).toEqual('CC0-1.0');
-      expect(content.IG.version).toEqual('0.1.0');
-      expect(content.IG.ballotstatus).toEqual('CI Build');
-      expect(content.IG.fhirspec).toEqual('http://build.fhir.org/');
+      const content = fs.readFileSync(iniPath, 'utf8');
+      expect(content).toEqual(
+        '[IG]\n' +
+          'ig = input/ImplementationGuide-sushi-test.json\n' +
+          'template = fhir.base.template\n' +
+          'usage-stats-opt-out = false\n' +
+          `copyrightyear = ${new Date().getFullYear()}+\n` +
+          'license = CC0-1.0\n' +
+          'version = 0.1.0\n' +
+          'ballotstatus = CI Build\n' +
+          'fhirspec = http://build.fhir.org/\n'
+      );
     });
 
     it('should generate an ImplementationGuide resource based on the package', () => {
@@ -305,20 +307,22 @@ describe('IGExporter', () => {
     it('should generate an ig.ini with user-specified values overridden', () => {
       const iniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(iniPath)).toBeTruthy();
-      const content = ini.parse(fs.readFileSync(iniPath, 'utf8'));
-      expect(Object.keys(content.IG)).toHaveLength(12);
-      expect(content.IG.ig).toEqual('input/ImplementationGuide-sushi-test.json');
-      expect(content.IG.template).toEqual('hl7.fhir.template');
-      expect(content.IG['usage-stats-opt-out']).toBeTruthy();
-      expect(content.IG.copyrightyear).toEqual('2018+');
-      expect(content.IG.license).toEqual('CC0-1.0');
-      expect(content.IG.version).toEqual('0.1.0');
-      expect(content.IG.ballotstatus).toEqual('STU1');
-      expect(content.IG.fhirspec).toEqual('http://hl7.org/fhir/R4/');
-      expect(content.IG.excludexml).toEqual('Yes');
-      expect(content.IG.excludejson).toEqual('Yes');
-      expect(content.IG.excludettl).toEqual('Yes');
-      expect(content.IG.excludeMaps).toEqual('Yes');
+      const content = fs.readFileSync(iniPath, 'utf8');
+      expect(content).toEqual(
+        '[IG]\n' +
+          'ig = input/ImplementationGuide-sushi-test.json\n' +
+          'template = hl7.fhir.template#0.1.0\n' +
+          'usage-stats-opt-out = true\n' +
+          'copyrightyear = 2018+\n' +
+          'license = CC0-1.0\n' +
+          'version = 0.1.0\n' +
+          'ballotstatus = STU1\n' +
+          'fhirspec = http://hl7.org/fhir/R4/\n' +
+          'excludexml = Yes\n' +
+          'excludejson = Yes\n' +
+          'excludettl = Yes\n' +
+          'excludeMaps = Yes\n'
+      );
     });
 
     it('should use the user-provided package-list.json when supplied', () => {
@@ -713,20 +717,22 @@ describe('IGExporter', () => {
       // And ensure that invalid inputs did not override existing values
       const iniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(iniPath)).toBeTruthy();
-      const content = ini.parse(fs.readFileSync(iniPath, 'utf8'));
-      expect(Object.keys(content.IG)).toHaveLength(12);
-      expect(content.IG.ig).toEqual('input/ImplementationGuide-sushi-test.json');
-      expect(content.IG.template).toEqual('hl7.fhir.template');
-      expect(content.IG['usage-stats-opt-out']).toBeTruthy();
-      expect(content.IG.copyrightyear).toEqual('2018+');
-      expect(content.IG.license).toEqual('CC0-1.0');
-      expect(content.IG.version).toEqual('0.1.0');
-      expect(content.IG.ballotstatus).toEqual('STU1');
-      expect(content.IG.fhirspec).toEqual('http://hl7.org/fhir/R4/');
-      expect(content.IG.excludexml).toEqual('Yes');
-      expect(content.IG.excludejson).toEqual('Yes');
-      expect(content.IG.excludettl).toEqual('Yes');
-      expect(content.IG.excludeMaps).toEqual('Yes');
+      const content = fs.readFileSync(iniPath, 'utf8');
+      expect(content).toEqual(
+        '[IG]\n' +
+          'ig = input/ImplementationGuide-sushi-test.json\n' +
+          'template = hl7.fhir.template\n' +
+          'usage-stats-opt-out = true\n' +
+          'copyrightyear = 2018+\n' +
+          'license = CC0-1.0\n' +
+          'version = 0.1.0\n' +
+          'ballotstatus = STU1\n' +
+          'fhirspec = http://hl7.org/fhir/R4/\n' +
+          'excludexml = Yes\n' +
+          'excludejson = Yes\n' +
+          'excludettl = Yes\n' +
+          'excludeMaps = Yes\n'
+      );
     });
 
     it('should add pages of an invalid file type but log a warning', () => {
