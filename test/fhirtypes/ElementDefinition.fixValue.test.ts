@@ -101,6 +101,15 @@ describe('ElementDefinition', () => {
       });
     });
 
+    it('should fix a code on a Quantity with units', () => {
+      const code = medication.findElementByPath('amount.numerator', fisher);
+      code.fixValue(new FshCode('mycode', 'https://code.com'), true);
+      expect(code.patternQuantity).toEqual({
+        system: 'https://code.com',
+        code: 'mycode'
+      });
+    });
+
     it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern', () => {
       const medicationForm = medication.elements.find(e => e.id === 'Medication.form');
       medicationForm.fixValue(new FshCode('foo', 'http://thankYouForSettingMe.com'));
@@ -119,6 +128,13 @@ describe('ElementDefinition', () => {
       expect(() => {
         medicationFormCodingSystem.fixValue('baz');
       }).toThrow('Cannot fix baz to this element; a different uri is already fixed: foo,bar');
+    });
+
+    it('should throw InvalidUnitsError when using the units keyword on a non-Quantity', () => {
+      const code = medication.elements.find(e => e.id === 'Medication.code');
+      expect(() => {
+        code.fixValue(new FshCode('mycode', 'https://code.com'), true);
+      }).toThrow(/units.*Medication.code/);
     });
   });
 
