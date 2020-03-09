@@ -183,6 +183,7 @@ export interface ValueSetRuleContext extends ParserRuleContext {
   path(): PathContext;
   SEQUENCE(): ParserRuleContext;
   strength(): StrengthContext;
+  KW_UNITS(): ParserRuleContext;
 }
 
 export interface StrengthContext extends ParserRuleContext {
@@ -195,6 +196,7 @@ export interface StrengthContext extends ParserRuleContext {
 export interface FixedValueRuleContext extends ParserRuleContext {
   path(): PathContext;
   value(): ValueContext;
+  KW_UNITS(): ParserRuleContext;
 }
 
 export interface ValueContext extends ParserRuleContext {

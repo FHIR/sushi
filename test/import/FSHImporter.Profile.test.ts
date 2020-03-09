@@ -444,7 +444,8 @@ describe('FSHImporter', () => {
           profile.rules[0],
           'valueQuantity',
           'http://unitsofmeasure.org',
-          'required'
+          'required',
+          true
         );
       });
     });
@@ -585,7 +586,7 @@ describe('FSHImporter', () => {
         const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
           .withLocation([5, 33, 5, 61])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode);
+        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode, true);
       });
 
       it('should parse fixed value Quantity rule', () => {

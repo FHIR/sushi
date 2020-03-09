@@ -12,6 +12,7 @@ export type FixedValueType =
 
 export class FixedValueRule extends Rule {
   fixedValue: FixedValueType;
+  units: boolean;
 
   constructor(path: string) {
     super(path);

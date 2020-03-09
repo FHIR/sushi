@@ -839,6 +839,7 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
+    vsRule.units = ctx.KW_UNITS() != null;
     return vsRule;
   }
 
@@ -858,6 +859,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
+    fixedValueRule.units = ctx.KW_UNITS() != null;
     return fixedValueRule;
   }
 
