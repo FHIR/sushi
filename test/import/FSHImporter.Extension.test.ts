@@ -168,6 +168,24 @@ describe('FSHImporter', () => {
           'extensible'
         );
       });
+
+      it('should parse value set rules w/ names and strength and units syntax', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        * valueCodeableConcept from ExtensionValueSet (extensible)
+        `;
+
+        const result = importSingleText(input);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertValueSetRule(
+          extension.rules[0],
+          'valueCodeableConcept',
+          'ExtensionValueSet',
+          'extensible'
+        );
+      });
     });
 
     describe('#onlyRule', () => {

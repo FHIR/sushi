@@ -428,6 +428,25 @@ describe('FSHImporter', () => {
           'required'
         );
       });
+
+      it('should parse value set rules on Quantity with units keyword', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units from http://unitsofmeasure.org
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertValueSetRule(
+          profile.rules[0],
+          'valueQuantity',
+          'http://unitsofmeasure.org',
+          'required'
+        );
+      });
     });
 
     describe('#fixedValueRule', () => {
@@ -550,6 +569,23 @@ describe('FSHImporter', () => {
           .withLocation([6, 34, 6, 80])
           .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
+      });
+
+      it('should parse fixed value FSHCode rule with units on Quantity', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units = http://unitsofmeasure.org#cGy
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
+          .withLocation([5, 33, 5, 61])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode);
       });
 
       it('should parse fixed value Quantity rule', () => {
