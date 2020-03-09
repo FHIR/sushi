@@ -6,6 +6,7 @@ export class Extension extends FshEntity {
   parent: string;
   title?: string;
   description?: string;
+  mixins?: string[];
   rules: Rule[];
 
   constructor(public name: string) {
@@ -15,6 +16,7 @@ export class Extension extends FshEntity {
     // Init the parent to 'Extension', as this is what 99% of extensions do.
     // This can still be overridden via the FSH syntax (using Parent: keyword).
     this.parent = 'Extension'; // init to 'Extension'
+    this.mixins = [];
     this.rules = [];
   }
 }

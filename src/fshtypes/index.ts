@@ -13,3 +13,4 @@ export * from './Profile';
 export * from './FshValueSet';
 export * from './ValueSetComponent';
 export * from './Invariant';
+export * from './RuleSet';

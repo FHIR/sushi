@@ -12,6 +12,7 @@ export interface EntityContext extends ParserRuleContext {
   valueSet(): ValueSetContext;
   codeSystem(): CodeSystemContext;
   invariant(): InvariantContext;
+  ruleSet(): RuleSetContext;
 }
 
 export interface AliasContext extends ParserRuleContext {
@@ -35,6 +36,7 @@ export interface SdMetadataContext extends ParserRuleContext {
   id(): IdContext;
   title(): TitleContext;
   description(): DescriptionContext;
+  mixins(): MixinsContext;
 }
 
 export interface InstanceContext extends ParserRuleContext {
@@ -47,6 +49,7 @@ export interface InstanceMetadataContext extends ParserRuleContext {
   instanceOf(): InstanceOfContext;
   title(): TitleContext;
   description(): DescriptionContext;
+  mixins(): MixinsContext;
 }
 
 export interface ValueSetContext extends ParserRuleContext {
@@ -87,6 +90,11 @@ export interface InvariantMetadataContext extends ParserRuleContext {
   severity(): SeverityContext;
 }
 
+export interface RuleSetContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  sdRule(): SdRuleContext[];
+}
+
 export interface ParentContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
 }
@@ -102,6 +110,11 @@ export interface TitleContext extends ParserRuleContext {
 export interface DescriptionContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
+}
+
+export interface MixinsContext extends ParserRuleContext {
+  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
 }
 
 export interface ExpressionContext extends ParserRuleContext {
