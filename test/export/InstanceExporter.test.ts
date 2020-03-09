@@ -1102,6 +1102,40 @@ describe('InstanceExporter', () => {
         /Observation.code.*File: ObservationInstance\.fsh.*Line: 10 - 20/s
       );
     });
+
+    it('should fix an inline resource to an instance', () => {
+      const inlineInstance = new Instance('MyInlinePatient');
+      inlineInstance.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      inlineInstance.rules.push(fixedValRule); // * active = true
+      doc.instances.set(inlineInstance.name, inlineInstance);
+
+      const inlineRule = new FixedValueRule('contained[0]');
+      inlineRule.fixedValue = 'MyInlinePatient';
+      inlineRule.isResource = true;
+      patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.contained).toEqual([
+        { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
+      ]);
+    });
+
+    it('should log an error when fixing an inline resource that does not exist to an instance', () => {
+      const inlineRule = new FixedValueRule('contained[0]')
+        .withFile('FakeInstance.fsh')
+        .withLocation([1, 2, 3, 4]);
+      inlineRule.fixedValue = 'MyFakePatient';
+      inlineRule.isResource = true;
+      patientInstance.rules.push(inlineRule); // * contained[0] = MyFakePatient
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.contained).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /MyFakePatient.*File: FakeInstance.fsh.*Line: 1 - 3\D*/s
+      );
+    });
   });
 
   describe('#export', () => {

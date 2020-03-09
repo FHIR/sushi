@@ -26,6 +26,7 @@ import {
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
+import { InstanceDefinition } from './InstanceDefinition';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -1105,6 +1106,18 @@ export class ElementDefinition {
       return sax.parser(true).write(value).error == null;
     } catch (ex) {
       return false;
+    }
+  }
+
+  checkFixResource(value: InstanceDefinition): InstanceDefinition {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError('Resource');
+    }
+    const type = this.type[0].code;
+    if (type === 'Resource') {
+      return value;
+    } else {
+      throw new MismatchedTypeError('Resource', value.id, type);
     }
   }
 
