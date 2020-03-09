@@ -15,6 +15,17 @@ const withLocation = format(info => {
     }
     delete info.location;
   }
+  if (info.appliedFile) {
+    info.message += `\n  Applied in File: ${info.appliedFile}`;
+    delete info.appliedFile;
+  }
+  if (info.appliedLocation) {
+    info.message += `\n  Applied on Line: ${info.appliedLocation.startLine}`;
+    if (info.appliedLocation.endLine !== info.appliedLocation.startLine) {
+      info.message += ` - ${info.appliedLocation.endLine}`;
+    }
+    delete info.appliedLocation;
+  }
   return info;
 });
 
