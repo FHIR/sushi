@@ -632,7 +632,7 @@ export class FSHImporter extends FSHVisitor {
       let mixins = ctx
         .COMMA_DELIMITED_SEQUENCES()
         .getText()
-        .split(/\s*,\s+/);
+        .split(/\s*,\s*/);
 
       mixins = mixins.filter((m, i) => {
         const duplicated = mixins.indexOf(m) !== i;
@@ -735,7 +735,7 @@ export class FSHImporter extends FSHVisitor {
     return ctx
       .COMMA_DELIMITED_SEQUENCES()
       .getText()
-      .split(/\s*,\s+/);
+      .split(/\s*,\s*/);
   }
 
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
@@ -1194,7 +1194,7 @@ export class FSHImporter extends FSHVisitor {
           .vsFromValueset()
           .COMMA_DELIMITED_SEQUENCES()
           .getText()
-          .split(/\s*,\s+/)
+          .split(/\s*,\s*/)
           .map(fromVs => this.aliasAwareValue(fromVs.trim()));
       }
     }

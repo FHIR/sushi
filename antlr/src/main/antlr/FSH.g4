@@ -163,7 +163,7 @@ REGEX:              '/' ('\\/' | ~[/\r\n])+ '/';
 COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
 
                         // (NON-WS  WS  ,   WS )+ NON-WS
-COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS+)+ SEQUENCE;
+COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;
 
                  // NON-WHITESPACE
 SEQUENCE:           ~[ \t\r\n\f]+;

@@ -55,7 +55,7 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2,Mixin3', 'Mixin4']);
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,

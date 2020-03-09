@@ -100,7 +100,7 @@ describe('FSHImporter', () => {
         const instance = result.instances.get('MyObservation');
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
-        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2,Mixin3', 'Mixin4']);
+        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
       });
     });
 
