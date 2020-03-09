@@ -729,6 +729,22 @@ describe('FSHImporter', () => {
           .withFile('');
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
+
+      it('should log an error and skip the rule when parsing fixed value Resource rule', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * contained[0] = SomeInstance
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Resources cannot be added inline to a Profile or Extension, skipping rule\..*Line: 5\D*/s
+        );
+      });
     });
 
     describe('#onlyRule', () => {

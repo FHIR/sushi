@@ -731,7 +731,17 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.valueSetRule()) {
       return [this.visitValueSetRule(ctx.valueSetRule())];
     } else if (ctx.fixedValueRule()) {
-      return [this.visitFixedValueRule(ctx.fixedValueRule())];
+      const rule = this.visitFixedValueRule(ctx.fixedValueRule());
+      if (rule.isResource) {
+        const sourceInfo = { location: this.extractStartStop(ctx), file: this.currentFile };
+        logger.error(
+          'Resources cannot be added inline to a Profile or Extension, skipping rule.',
+          sourceInfo
+        );
+        return [];
+      } else {
+        return [rule];
+      }
     } else if (ctx.onlyRule()) {
       return [this.visitOnlyRule(ctx.onlyRule())];
     } else if (ctx.containsRule()) {
@@ -858,10 +868,15 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
+    fixedValueRule.isResource = ctx.value().SEQUENCE() != null;
     return fixedValueRule;
   }
 
   visitValue(ctx: pc.ValueContext): FixedValueType {
+    if (ctx.SEQUENCE()) {
+      return ctx.SEQUENCE().getText();
+    }
+
     if (ctx.STRING()) {
       return this.extractString(ctx.STRING());
     }
