@@ -6,7 +6,8 @@ import {
   ValueSetConceptComponent,
   FshCode,
   VsOperator,
-  FshCodeSystem
+  FshCodeSystem,
+  ValueSetComponent
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
@@ -194,6 +195,33 @@ describe('ValueSetExporter', () => {
               'http://food.org/food/ValueSet/hot-food',
               'http://food.org/food/ValueSet/cold-food'
             ]
+          }
+        ]
+      }
+    });
+  });
+
+  it('should export a value set that includes a component from a value set with a version', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponent(true);
+    component.from = {
+      valueSets: ['http://food.org/food/ValueSet/hot-food|1.2.3']
+    };
+    valueSet.components.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://example.com/ValueSet/DinnerVS',
+      version: '0.0.1',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            valueSet: ['http://food.org/food/ValueSet/hot-food|1.2.3']
           }
         ]
       }
@@ -446,6 +474,35 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 4\D*/s);
   });
 
+  it('should log a message when a value set from system is not a URI', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([2, 8, 4, 25]);
+    const component = new ValueSetComponent(true);
+    component.from = { system: 'notAUri' };
+    valueSet.components.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /notAUri.*File: Breakfast\.fsh.*Line: 2 - 4\D*/s
+    );
+  });
+
+  it('should log a message when a value set from is not a URI', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([2, 8, 4, 25]);
+    const component = new ValueSetComponent(true);
+    component.from = { valueSets: ['notAUri'] };
+    valueSet.components.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /notAUri.*File: Breakfast\.fsh.*Line: 2 - 4\D*/s
+    );
+  });
   // CaretValueRules
   it('should apply a CaretValueRule', () => {
     const valueSet = new FshValueSet('DinnerVS');

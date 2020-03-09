@@ -1,6 +1,6 @@
 {
   "name": "fsh-sushi",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
     "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files",
@@ -50,6 +50,7 @@
     "@types/sax": "^1.2.1",
     "@types/tar": "^4.0.3",
     "@types/temp": "^0.8.34",
+    "@types/valid-url": "^1.0.2",
     "@typescript-eslint/eslint-plugin": "^2.6.1",
     "@typescript-eslint/parser": "^2.6.1",
     "acorn": "^7.1.0",
@@ -78,6 +79,7 @@
     "tar": "^5.0.5",
     "temp": "^0.9.1",
     "title-case": "^3.0.2",
+    "valid-url": "^1.0.9",
     "winston": "^3.2.1"
   }
 }
