@@ -10,6 +10,8 @@ import {
 import { InstanceDefinition } from '../../src/fhirtypes';
 
 describe('InstanceDefinitionUtils', () => {
+  let instances: InstanceDefinition[];
+
   const examplePatient = new InstanceDefinition();
   examplePatient.resourceType = 'Patient';
   examplePatient.id = 'MyPatient';
@@ -55,13 +57,6 @@ describe('InstanceDefinitionUtils', () => {
   extension.kind = 'resource';
   extension.type = 'Extension';
 
-  const extensionExampleInferred = new InstanceDefinition();
-  extensionExampleInferred.id = 'MyExtension';
-  extensionExampleInferred.resourceType = 'StructureDefinition';
-  extensionExampleInferred._instanceMeta.name = 'MyExtension';
-  extensionExampleInferred.kind = 'resource';
-  extensionExampleInferred.type = 'Extension';
-
   const profile = new InstanceDefinition();
   profile.id = 'MyProfile';
   profile.resourceType = 'StructureDefinition';
@@ -84,27 +79,25 @@ describe('InstanceDefinitionUtils', () => {
   observation._instanceMeta.name = 'MyObservation';
   observation._instanceMeta.usage = 'Definition';
 
-  const instances: InstanceDefinition[] = [
-    examplePatient,
-    capabilityStatement,
-    capabilityStatementExample,
-    valueSet,
-    operation,
-    logicalModel,
-    extension,
-    extensionExampleInferred,
-    profile,
-    primitiveSD,
-    observation
-  ];
+  beforeEach(() => {
+    // Reset instance as it is muted by the various filter functions
+    instances = [
+      examplePatient,
+      capabilityStatement,
+      capabilityStatementExample,
+      valueSet,
+      operation,
+      logicalModel,
+      extension,
+      profile,
+      primitiveSD,
+      observation
+    ];
+  });
 
   it('should filter out all example instances regardless of resourceType', () => {
     const examples = filterExampleInstances(instances);
-    expect(examples).toEqual([
-      examplePatient,
-      capabilityStatementExample,
-      extensionExampleInferred
-    ]);
+    expect(examples).toEqual([examplePatient, capabilityStatementExample]);
     expect(instances).toEqual([
       capabilityStatement,
       valueSet,
@@ -116,11 +109,13 @@ describe('InstanceDefinitionUtils', () => {
       observation
     ]);
   });
+
   describe('Non-example instances', () => {
     it('should filter out all capability instances', () => {
       const capabilities = filterCapabilitiesInstances(instances);
-      expect(capabilities).toEqual([capabilityStatement]);
+      expect(capabilities).toEqual([capabilityStatement, capabilityStatementExample]);
       expect(instances).toEqual([
+        examplePatient,
         valueSet,
         operation,
         logicalModel,
@@ -130,10 +125,14 @@ describe('InstanceDefinitionUtils', () => {
         observation
       ]);
     });
+
     it('should filter out all vocabulary instances', () => {
       const vocabulary = filterVocabularyInstances(instances);
       expect(vocabulary).toEqual([valueSet]);
       expect(instances).toEqual([
+        examplePatient,
+        capabilityStatement,
+        capabilityStatementExample,
         operation,
         logicalModel,
         extension,
@@ -142,29 +141,80 @@ describe('InstanceDefinitionUtils', () => {
         observation
       ]);
     });
+
     it('should filter out all operation instances', () => {
       const operations = filterOperationInstances(instances);
       expect(operations).toEqual([operation]);
-      expect(instances).toEqual([logicalModel, extension, profile, primitiveSD, observation]);
+      expect(instances).toEqual([
+        examplePatient,
+        capabilityStatement,
+        capabilityStatementExample,
+        valueSet,
+        logicalModel,
+        extension,
+        profile,
+        primitiveSD,
+        observation
+      ]);
     });
+
     it('should filter out all model instances', () => {
       const models = filterModelInstances(instances);
       expect(models).toEqual([logicalModel]);
-      expect(instances).toEqual([extension, profile, primitiveSD, observation]);
+      expect(instances).toEqual([
+        examplePatient,
+        capabilityStatement,
+        capabilityStatementExample,
+        valueSet,
+        operation,
+        extension,
+        profile,
+        primitiveSD,
+        observation
+      ]);
     });
+
     it('should filter out all extension instances', () => {
       const extensions = filterExtensionInstances(instances);
       expect(extensions).toEqual([extension]);
-      expect(instances).toEqual([profile, primitiveSD, observation]);
+      expect(instances).toEqual([
+        examplePatient,
+        capabilityStatement,
+        capabilityStatementExample,
+        valueSet,
+        operation,
+        logicalModel,
+        profile,
+        primitiveSD,
+        observation
+      ]);
     });
+
     it('should filter out all profile instances', () => {
       const profiles = filterProfileInstances(instances);
       expect(profiles).toEqual([profile]);
-      expect(instances).toEqual([primitiveSD, observation]);
+      expect(instances).toEqual([
+        examplePatient,
+        capabilityStatement,
+        capabilityStatementExample,
+        valueSet,
+        operation,
+        logicalModel,
+        extension,
+        primitiveSD,
+        observation
+      ]);
     });
-    it('should only have instances remaining that cannot be categorized', () => {
-      const others = instances;
-      expect(others).toEqual([primitiveSD, observation]);
+
+    it('should only have instances remaining that cannot be categorized after all other filtering is finished', () => {
+      filterExampleInstances(instances);
+      filterCapabilitiesInstances(instances);
+      filterVocabularyInstances(instances);
+      filterOperationInstances(instances);
+      filterModelInstances(instances);
+      filterExtensionInstances(instances);
+      filterProfileInstances(instances);
+      expect(instances).toEqual([primitiveSD, observation]);
     });
   });
 });

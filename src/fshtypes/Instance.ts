@@ -13,6 +13,7 @@ export class Instance extends FshEntity {
     super();
     this.id = name; // init same as name
     this.rules = [];
+    this.usage = 'Example'; // init to Example (default)
   }
 }
 

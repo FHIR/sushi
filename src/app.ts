@@ -134,7 +134,7 @@ async function app() {
   writeResources('vocabulary', [...outPackage.valueSets, ...outPackage.codeSystems]);
 
   // Sort instances into appropriate directories
-  const instances = cloneDeep(outPackage.instances);
+  const instances = cloneDeep(outPackage.instances); // Filter functions below mutate the argument, so clone what is in the package
   writeResources('examples', filterExampleInstances(instances));
   writeResources('capabilities', filterCapabilitiesInstances(instances));
   writeResources('vocabulary', filterVocabularyInstances(instances));

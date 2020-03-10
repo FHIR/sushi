@@ -55,6 +55,9 @@ describe('IGExporter', () => {
           if (instanceDef.id === 'capability-statement-example') {
             instanceDef._instanceMeta.usage = 'Definition';
           }
+          if (instanceDef.id === 'patient-example') {
+            instanceDef._instanceMeta.usage = 'Example'; // Default would be set to example in import
+          }
           pkg.instances.push(instanceDef);
         }
       });
@@ -197,8 +200,7 @@ describe('IGExporter', () => {
               reference: {
                 reference: 'CapabilityStatement/capability-statement-example'
               },
-              name: 'capability-statement-example',
-              exampleBoolean: false // Usage set to anything but Example sets this to false
+              name: 'capability-statement-example'
             },
             {
               reference: {

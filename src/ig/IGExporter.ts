@@ -383,24 +383,25 @@ export class IGExporter {
         exampleBoolean: false
       });
     });
-    const examples = sortBy(
+    const instances = sortBy(
       this.pkg.instances,
       instance => instance.id ?? instance._instanceMeta.name
     );
-    examples.forEach(example => {
+    instances.forEach(instance => {
       const resource: ImplementationGuideDefinitionResource = {
         reference: {
-          reference: `${example.resourceType}/${example.id ?? example._instanceMeta.name}`
+          reference: `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`
         },
-        name: example._instanceMeta.title ?? example._instanceMeta.name,
-        description: example._instanceMeta.description
+        name: instance._instanceMeta.title ?? instance._instanceMeta.name,
+        description: instance._instanceMeta.description
       };
-      const exampleUrl = example.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
-      if (exampleUrl) {
-        resource.exampleCanonical = exampleUrl;
-      } else {
-        resource.exampleBoolean =
-          example._instanceMeta.usage === 'Example' || example._instanceMeta.usage === undefined;
+      if (instance._instanceMeta.usage === 'Example') {
+        const exampleUrl = instance.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
+        if (exampleUrl) {
+          resource.exampleCanonical = exampleUrl;
+        } else {
+          resource.exampleBoolean = true;
+        }
       }
       this.ig.definition.resource.push(resource);
     });

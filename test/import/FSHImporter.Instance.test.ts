@@ -103,6 +103,25 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.usage).toBe('Example');
       });
+
+      it('should log an error for invalid usage and set default usage to example', () => {
+        const input = `
+        Instance: MyBadObservation
+        InstanceOf: Observation
+        Usage: BadUse
+        `;
+
+        const result = importSingleText(input, 'Bad.fsh');
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyBadObservation');
+        expect(instance.name).toBe('MyBadObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.usage).toBe('Example');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Invalid Usage. Supported usages are "Example" and "Definition". Instance will be treated as an Example./s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bad\.fsh.*Line: 4\D*/s);
+      });
     });
 
     describe('#rules', () => {
