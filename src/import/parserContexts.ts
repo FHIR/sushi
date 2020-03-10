@@ -49,6 +49,7 @@ export interface InstanceMetadataContext extends ParserRuleContext {
   instanceOf(): InstanceOfContext;
   title(): TitleContext;
   description(): DescriptionContext;
+  usage(): UsageContext;
   mixins(): MixinsContext;
 }
 
@@ -110,6 +111,10 @@ export interface TitleContext extends ParserRuleContext {
 export interface DescriptionContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
+}
+
+export interface UsageContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
 }
 
 export interface MixinsContext extends ParserRuleContext {

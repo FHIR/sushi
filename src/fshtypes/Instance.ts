@@ -6,6 +6,7 @@ export class Instance extends FshEntity {
   title?: string;
   instanceOf: string;
   description?: string;
+  usage?: InstanceUsage;
   mixins?: string[];
   rules: FixedValueRule[];
 
@@ -14,5 +15,8 @@ export class Instance extends FshEntity {
     this.id = name; // init same as name
     this.mixins = [];
     this.rules = [];
+    this.usage = 'Example'; // init to Example (default)
   }
 }
+
+export type InstanceUsage = 'Example' | 'Definition';

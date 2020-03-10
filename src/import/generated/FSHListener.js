@@ -227,6 +227,15 @@ FSHListener.prototype.exitInstanceOf = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#usage.
+FSHListener.prototype.enterUsage = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#usage.
+FSHListener.prototype.exitUsage = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#mixins.
 FSHListener.prototype.enterMixins = function(ctx) {
 };

@@ -11,7 +11,7 @@ sdMetadata:         parent | id | title | description | mixins;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule;
 
 instance:           KW_INSTANCE SEQUENCE instanceMetadata* fixedValueRule*;
-instanceMetadata:   instanceOf | title | description | mixins;
+instanceMetadata:   instanceOf | title | description | usage | mixins;
 
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
@@ -32,6 +32,7 @@ expression:         KW_EXPRESSION STRING;
 xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF SEQUENCE;
+usage:              KW_USAGE SEQUENCE;
 mixins:             KW_MIXINS (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 
 
@@ -93,6 +94,7 @@ KW_DESCRIPTION:     'Description' WS* ':';
 KW_EXPRESSION:      'Expression' WS* ':';
 KW_XPATH:           'XPath' WS* ':';
 KW_SEVERITY:        'Severity' WS* ':';
+KW_USAGE:           'Usage' WS* ':';
 KW_MOD:             '?!';
 KW_MS:              'MS';
 KW_SU:              'SU';
