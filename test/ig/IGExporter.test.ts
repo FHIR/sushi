@@ -207,7 +207,8 @@ describe('IGExporter', () => {
               reference: {
                 reference: 'CapabilityStatement/capability-statement-example'
               },
-              name: 'capability-statement-example'
+              name: 'capability-statement-example',
+              exampleBoolean: false // Not 'Example' Usages will set this to false
             },
             {
               reference: {

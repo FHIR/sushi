@@ -9,7 +9,7 @@ import { InstanceDefinition } from '../fhirtypes';
 
 /**
  *
- * @param instances - the list of InstanceDefinitions to filter. Will be mutated.
+ * @param {InstanceDefinition[]} instances - the list of InstanceDefinitions to filter. Will be mutated.
  * @returns {InstanceDefinition[]} - InstanceDefinitions that have Usage set to example
  */
 export function filterExampleInstances(instances: InstanceDefinition[]): InstanceDefinition[] {

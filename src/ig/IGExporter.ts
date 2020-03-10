@@ -417,6 +417,8 @@ export class IGExporter {
         } else {
           resource.exampleBoolean = true;
         }
+      } else {
+        resource.exampleBoolean = false;
       }
       this.ig.definition.resource.push(resource);
     });
