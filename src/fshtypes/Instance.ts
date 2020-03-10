@@ -7,11 +7,13 @@ export class Instance extends FshEntity {
   instanceOf: string;
   description?: string;
   usage?: InstanceUsage;
+  mixins?: string[];
   rules: FixedValueRule[];
 
   constructor(public name: string) {
     super();
     this.id = name; // init same as name
+    this.mixins = [];
     this.rules = [];
     this.usage = 'Example'; // init to Example (default)
   }

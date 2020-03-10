@@ -146,6 +146,15 @@ FSHListener.prototype.exitCsMetadata = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#ruleSet.
+FSHListener.prototype.enterRuleSet = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#ruleSet.
+FSHListener.prototype.exitRuleSet = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#parent.
 FSHListener.prototype.enterParent = function(ctx) {
 };
@@ -224,6 +233,15 @@ FSHListener.prototype.enterUsage = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#usage.
 FSHListener.prototype.exitUsage = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#mixins.
+FSHListener.prototype.enterMixins = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#mixins.
+FSHListener.prototype.exitMixins = function(ctx) {
 };
 
 

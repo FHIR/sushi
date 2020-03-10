@@ -25,7 +25,8 @@ import {
   VsOperator,
   ValueSetFilterValue,
   FshCodeSystem,
-  Invariant
+  Invariant,
+  RuleSet
 } from '../fshtypes';
 import {
   Rule,
@@ -57,6 +58,7 @@ enum SdMetadataKey {
   Parent = 'Parent',
   Title = 'Title',
   Description = 'Description',
+  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -65,6 +67,7 @@ enum InstanceMetadataKey {
   Title = 'Title',
   Description = 'Description',
   Usage = 'Usage',
+  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -213,6 +216,10 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.invariant()) {
       this.visitInvariant(ctx.invariant());
     }
+
+    if (ctx.ruleSet()) {
+      this.visitRuleSet(ctx.ruleSet());
+    }
   }
 
   visitProfile(ctx: pc.ProfileContext) {
@@ -236,7 +243,7 @@ export class FSHImporter extends FSHVisitor {
     metaCtx: pc.SdMetadataContext[] = [],
     ruleCtx: pc.SdRuleContext[] = []
   ): void {
-    const seenPairs: Map<SdMetadataKey, string> = new Map();
+    const seenPairs: Map<SdMetadataKey, string | string[]> = new Map();
     metaCtx
       .map(sdMeta => ({ ...this.visitSdMetadata(sdMeta), context: sdMeta }))
       .forEach(pair => {
@@ -251,13 +258,15 @@ export class FSHImporter extends FSHVisitor {
         }
         seenPairs.set(pair.key, pair.value);
         if (pair.key === SdMetadataKey.Id) {
-          def.id = pair.value;
+          def.id = pair.value as string;
         } else if (pair.key === SdMetadataKey.Parent) {
-          def.parent = pair.value;
+          def.parent = pair.value as string;
         } else if (pair.key === SdMetadataKey.Title) {
-          def.title = pair.value;
+          def.title = pair.value as string;
         } else if (pair.key === SdMetadataKey.Description) {
-          def.description = pair.value;
+          def.description = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Mixins) {
+          def.mixins = pair.value as string[];
         }
       });
     ruleCtx.forEach(sdRule => {
@@ -282,7 +291,7 @@ export class FSHImporter extends FSHVisitor {
     metaCtx: pc.InstanceMetadataContext[] = [],
     ruleCtx: pc.FixedValueRuleContext[] = []
   ): void {
-    const seenPairs: Map<InstanceMetadataKey, string> = new Map();
+    const seenPairs: Map<InstanceMetadataKey, string | string[]> = new Map();
     metaCtx
       .map(instanceMetadata => ({
         ...this.visitInstanceMetadata(instanceMetadata),
@@ -300,13 +309,15 @@ export class FSHImporter extends FSHVisitor {
         }
         seenPairs.set(pair.key, pair.value);
         if (pair.key === InstanceMetadataKey.InstanceOf) {
-          instance.instanceOf = pair.value;
+          instance.instanceOf = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Title) {
-          instance.title = pair.value;
+          instance.title = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Description) {
-          instance.description = pair.value;
+          instance.description = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Usage) {
           instance.usage = pair.value as InstanceUsage;
+        } else if (pair.key === InstanceMetadataKey.Mixins) {
+          instance.mixins = pair.value as string[];
         }
       });
     if (!instance.instanceOf) {
@@ -496,7 +507,21 @@ export class FSHImporter extends FSHVisitor {
       });
   }
 
-  visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string } {
+  visitRuleSet(ctx: pc.RuleSetContext): void {
+    const ruleSet = new RuleSet(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    this.parseRuleSet(ruleSet, ctx.sdRule());
+    this.currentDoc.ruleSets.set(ruleSet.name, ruleSet);
+  }
+
+  parseRuleSet(ruleSet: RuleSet, rules: pc.SdRuleContext[]) {
+    rules.forEach(sdRule => {
+      ruleSet.rules.push(...this.visitSdRule(sdRule));
+    });
+  }
+
+  visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string | string[] } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
     } else if (ctx.parent()) {
@@ -505,13 +530,15 @@ export class FSHImporter extends FSHVisitor {
       return { key: SdMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     } else if (ctx.description()) {
       return { key: SdMetadataKey.Description, value: this.visitDescription(ctx.description()) };
+    } else if (ctx.mixins()) {
+      return { key: SdMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
   }
 
   visitInstanceMetadata(
     ctx: pc.InstanceMetadataContext
-  ): { key: InstanceMetadataKey; value: string } {
+  ): { key: InstanceMetadataKey; value: string | string[] } {
     if (ctx.instanceOf()) {
       return { key: InstanceMetadataKey.InstanceOf, value: this.visitInstanceOf(ctx.instanceOf()) };
     } else if (ctx.title()) {
@@ -526,6 +553,8 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Usage,
         value: this.visitUsage(ctx.usage())
       };
+    } else if (ctx.mixins()) {
+      return { key: InstanceMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -587,7 +616,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitParent(ctx: pc.ParentContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE().getText());
+    return this.aliasAwareValue(ctx.SEQUENCE());
   }
 
   visitTitle(ctx: pc.TitleContext): string {
@@ -604,7 +633,30 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE().getText());
+    return this.aliasAwareValue(ctx.SEQUENCE());
+  }
+
+  visitMixins(ctx: pc.MixinsContext): string[] {
+    if (ctx.COMMA_DELIMITED_SEQUENCES()) {
+      let mixins = ctx
+        .COMMA_DELIMITED_SEQUENCES()
+        .getText()
+        .split(/\s*,\s*/);
+
+      mixins = mixins.filter((m, i) => {
+        const duplicated = mixins.indexOf(m) !== i;
+        if (duplicated) {
+          logger.warn(`Detected duplicated Mixin: ${m}. Ignoring duplicates.`, {
+            location: this.extractStartStop(ctx),
+            file: this.currentFile
+          });
+        }
+        return !duplicated;
+      });
+      return mixins;
+    } else {
+      return [ctx.SEQUENCE().getText()];
+    }
   }
 
   visitUsage(ctx: pc.UsageContext): InstanceUsage {
@@ -632,7 +684,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitSeverity(ctx: pc.SeverityContext): FshCode {
-    const concept = this.parseCodeLexeme(ctx.CODE().getText())
+    const concept = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
       .withLocation(this.extractStartStop(ctx.CODE()))
       .withFile(this.currentFile);
     if (concept.system?.length > 0) {
@@ -647,7 +699,7 @@ export class FSHImporter extends FSHVisitor {
     return concept;
   }
 
-  private parseCodeLexeme(conceptText: string): FshCode {
+  private parseCodeLexeme(conceptText: string, parentCtx: ParserRuleContext): FshCode {
     const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
     let system: string, code: string;
     if (splitPoint == null) {
@@ -666,7 +718,7 @@ export class FSHImporter extends FSHVisitor {
     }
     const concept = new FshCode(code);
     if (system.length > 0) {
-      concept.system = this.aliasAwareValue(system);
+      concept.system = this.aliasAwareValue(parentCtx, system);
     }
     return concept;
   }
@@ -708,7 +760,7 @@ export class FSHImporter extends FSHVisitor {
     return ctx
       .COMMA_DELIMITED_SEQUENCES()
       .getText()
-      .split(/,\s+/);
+      .split(/\s*,\s*/);
   }
 
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
@@ -785,7 +837,7 @@ export class FSHImporter extends FSHVisitor {
     const vsRule = new ValueSetRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE().getText());
+    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     return vsRule;
   }
@@ -854,7 +906,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCode(ctx: pc.CodeContext): FshCode {
-    const concept = this.parseCodeLexeme(ctx.CODE().getText())
+    const concept = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (ctx.STRING()) {
@@ -915,7 +967,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitReference(ctx: pc.ReferenceContext): FshReference {
     const ref = new FshReference(
-      this.aliasAwareValue(this.parseReference(ctx.REFERENCE().getText())[0])
+      this.aliasAwareValue(ctx.REFERENCE(), this.parseReference(ctx.REFERENCE().getText())[0])
     )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
@@ -946,10 +998,13 @@ export class FSHImporter extends FSHVisitor {
             .getText()
         );
         references.forEach(r =>
-          onlyRule.types.push({ type: this.aliasAwareValue(r), isReference: true })
+          onlyRule.types.push({
+            type: this.aliasAwareValue(t.reference().REFERENCE(), r),
+            isReference: true
+          })
         );
       } else {
-        onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE().getText()) });
+        onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE()) });
       }
     });
     return onlyRule;
@@ -966,7 +1021,7 @@ export class FSHImporter extends FSHVisitor {
       let item: ContainsRuleItem;
       if (i.KW_NAMED()) {
         item = {
-          type: this.aliasAwareValue(i.SEQUENCE()[0].getText()),
+          type: this.aliasAwareValue(i.SEQUENCE()[0], i.SEQUENCE()[0].getText()),
           name: i.SEQUENCE()[1].getText()
         };
       } else {
@@ -1145,30 +1200,20 @@ export class FSHImporter extends FSHVisitor {
   visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
     const from: ValueSetComponentFrom = {};
     if (ctx.vsFromSystem()) {
-      from.system = this.aliasAwareValue(
-        ctx
-          .vsFromSystem()
-          .SEQUENCE()
-          .getText()
-      );
+      from.system = this.aliasAwareValue(ctx.vsFromSystem().SEQUENCE());
     }
     if (ctx.vsFromValueset()) {
       if (ctx.vsFromValueset().SEQUENCE()) {
-        from.valueSets = [
-          this.aliasAwareValue(
-            ctx
-              .vsFromValueset()
-              .SEQUENCE()
-              .getText()
-          )
-        ];
+        from.valueSets = [this.aliasAwareValue(ctx.vsFromValueset().SEQUENCE())];
       } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
         from.valueSets = ctx
           .vsFromValueset()
           .COMMA_DELIMITED_SEQUENCES()
           .getText()
-          .split(',')
-          .map(fromVs => this.aliasAwareValue(fromVs.trim()));
+          .split(/\s*,\s*/)
+          .map(fromVs =>
+            this.aliasAwareValue(ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES(), fromVs.trim())
+          );
       }
     }
     return from;
@@ -1245,7 +1290,18 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  private aliasAwareValue(value: string): string {
+  private validateAliasResolves(parentCtx: ParserRuleContext, value = parentCtx.getText()): void {
+    const hasAlias = this.allAliases.has(value);
+    if (!hasAlias && value.startsWith('$')) {
+      logger.error(
+        `Value ${value} does not resolve as alias, values beginning with "$" must resolve`,
+        { location: this.extractStartStop(parentCtx), file: this.currentFile }
+      );
+    }
+  }
+
+  private aliasAwareValue(parentCtx: ParserRuleContext, value = parentCtx.getText()): string {
+    this.validateAliasResolves(parentCtx, value);
     return this.allAliases.has(value) ? this.allAliases.get(value) : value;
   }
 

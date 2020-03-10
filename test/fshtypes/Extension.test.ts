@@ -8,6 +8,7 @@ describe('Extension', () => {
       expect(p.name).toBe('MyExtension');
       expect(p.id).toBe('MyExtension');
       expect(p.parent).toBe('Extension');
+      expect(p.mixins).toBeEmpty();
       expect(p.rules).toBeEmpty();
     });
   });

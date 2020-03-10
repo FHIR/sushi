@@ -1,0 +1,5 @@
+{
+  "resourceType": "Patient",
+  "id": "BazPatient",
+  "name": [{ "family": "Baz" }]
+}

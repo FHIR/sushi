@@ -305,7 +305,7 @@ describe('FSHImporter', () => {
         const input = `
         ValueSet: ZooVS
         * codes from valueset FirstZooVS
-        * codes from valueset SecondZooVS, ThirdZooVS
+        * codes from valueset SecondZooVS , ThirdZooVS
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -322,7 +322,7 @@ describe('FSHImporter', () => {
           startLine: 2,
           startColumn: 9,
           endLine: 4,
-          endColumn: 53
+          endColumn: 54
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });

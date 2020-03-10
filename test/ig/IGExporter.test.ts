@@ -1,13 +1,14 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
-import ini from 'ini';
+import os from 'os';
 import { IGExporter } from '../../src/ig';
 import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Config } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
+import { TestFisher } from '../testhelpers';
 
 describe('IGExporter', () => {
   // Track temp files/folders for cleanup
@@ -92,16 +93,22 @@ describe('IGExporter', () => {
     it('should generate an ig.ini with the correct values based on the package.json', () => {
       const iniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(iniPath)).toBeTruthy();
-      const content = ini.parse(fs.readFileSync(iniPath, 'utf8'));
-      expect(Object.keys(content.IG)).toHaveLength(8);
-      expect(content.IG.ig).toEqual('input/ImplementationGuide-sushi-test.json');
-      expect(content.IG.template).toEqual('fhir.base.template');
-      expect(content.IG['usage-stats-opt-out']).toBeFalsy();
-      expect(content.IG.copyrightyear).toEqual(`${new Date().getFullYear()}+`);
-      expect(content.IG.license).toEqual('CC0-1.0');
-      expect(content.IG.version).toEqual('0.1.0');
-      expect(content.IG.ballotstatus).toEqual('CI Build');
-      expect(content.IG.fhirspec).toEqual('http://build.fhir.org/');
+      const content = fs.readFileSync(iniPath, 'utf8');
+      expect(content).toEqual(
+        [
+          '[IG]',
+          'ig = input/ImplementationGuide-sushi-test.json',
+          'template = fhir.base.template',
+          'usage-stats-opt-out = false',
+          `copyrightyear = ${new Date().getFullYear()}+`,
+          'license = CC0-1.0',
+          'version = 0.1.0',
+          'ballotstatus = CI Build',
+          'fhirspec = http://build.fhir.org/'
+        ]
+          .map(ln => ln + os.EOL) // Windows: /r/n; Mac: /n
+          .join('')
+      );
     });
 
     it('should generate an ImplementationGuide resource based on the package', () => {
@@ -317,20 +324,26 @@ describe('IGExporter', () => {
     it('should generate an ig.ini with user-specified values overridden', () => {
       const iniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(iniPath)).toBeTruthy();
-      const content = ini.parse(fs.readFileSync(iniPath, 'utf8'));
-      expect(Object.keys(content.IG)).toHaveLength(12);
-      expect(content.IG.ig).toEqual('input/ImplementationGuide-sushi-test.json');
-      expect(content.IG.template).toEqual('hl7.fhir.template');
-      expect(content.IG['usage-stats-opt-out']).toBeTruthy();
-      expect(content.IG.copyrightyear).toEqual('2018+');
-      expect(content.IG.license).toEqual('CC0-1.0');
-      expect(content.IG.version).toEqual('0.1.0');
-      expect(content.IG.ballotstatus).toEqual('STU1');
-      expect(content.IG.fhirspec).toEqual('http://hl7.org/fhir/R4/');
-      expect(content.IG.excludexml).toEqual('Yes');
-      expect(content.IG.excludejson).toEqual('Yes');
-      expect(content.IG.excludettl).toEqual('Yes');
-      expect(content.IG.excludeMaps).toEqual('Yes');
+      const content = fs.readFileSync(iniPath, 'utf8');
+      expect(content).toEqual(
+        [
+          '[IG]',
+          'ig = input/ImplementationGuide-sushi-test.json',
+          'template = hl7.fhir.template#0.1.0',
+          'usage-stats-opt-out = true',
+          'copyrightyear = 2018+',
+          'license = CC0-1.0',
+          'version = 0.1.0',
+          'ballotstatus = STU1',
+          'fhirspec = http://hl7.org/fhir/R4/',
+          'excludexml = Yes',
+          'excludejson = Yes',
+          'excludettl = Yes',
+          'excludeMaps = Yes'
+        ]
+          .map(ln => ln + os.EOL) // Windows: /r/n; Mac: /n
+          .join('')
+      );
     });
 
     it('should use the user-provided package-list.json when supplied', () => {
@@ -409,6 +422,18 @@ describe('IGExporter', () => {
       const content = fs.readFileSync(menuPath, 'utf8');
       expect(content).toMatch('<li><a href="index.html">My special menu</a></li>');
       expect(content).toMatch('<li><a href="toc.html">Customized Table of Contents</a></li>');
+    });
+
+    it('should use the user-provided ignoreWarnings.txt if it exists', () => {
+      const ignorePath = path.join(tempOut, 'input', 'ignoreWarnings.txt');
+      expect(fs.existsSync(ignorePath)).toBeTruthy();
+      const content = fs.readFileSync(ignorePath, 'utf8');
+      expect(content).toMatch(
+        'Code System URI "http://ncimeta.nci.nih.gov" is unknown so the code cannot be validated'
+      );
+      expect(content).toMatch(
+        'Code System URI "http://cancerstaging.org" is unknown so the code cannot be validated'
+      );
     });
 
     it('should include any additional user-provided files in includes', () => {
@@ -499,6 +524,198 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-resources', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+      loadCustomResources(fixtures, defs);
+
+      // Add a patient to the package that will be overwritten
+      const fisher = new TestFisher(null, defs, pkg);
+      const patient = fisher.fishForStructureDefinition('Patient');
+      patient.id = 'MyPatient';
+      patient.description = 'This should go away';
+      pkg.profiles.push(patient);
+
+      const patientInstance = new InstanceDefinition();
+      patientInstance.resourceType = 'Patient';
+      patientInstance.id = 'FooPatient';
+      patientInstance._instanceMeta.description = 'This should stay';
+      patientInstance._instanceMeta.name = 'StayName';
+      patientInstance._instanceMeta.usage = 'Example';
+      pkg.instances.push(patientInstance);
+
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should copy over resource files', () => {
+      const directoryContents = new Map<string, string[]>();
+      const dirNames = [
+        'capabilities',
+        'extensions',
+        'models',
+        'operations',
+        'profiles',
+        'resources',
+        'vocabulary',
+        'examples'
+      ];
+      for (const dirName of dirNames) {
+        directoryContents.set(dirName, fs.readdirSync(path.join(tempOut, 'input', dirName)));
+      }
+      expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
+      expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
+      expect(directoryContents.get('extensions')).toEqual([
+        'StructureDefinition-patient-birthPlace.json'
+      ]);
+      expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
+      expect(directoryContents.get('profiles')).toEqual([
+        'StructureDefinition-MyPatient.json',
+        'StructureDefinition-MyTitlePatient.json'
+      ]);
+      expect(directoryContents.get('resources')).toEqual(['Patient-BazPatient.json']);
+      expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
+      expect(directoryContents.get('examples')).toEqual([
+        'Patient-BarPatient.json',
+        'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
+      ]);
+    });
+
+    it('should add basic resource references to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyLM'
+        },
+        name: 'MyLM',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'OperationDefinition/MyOD'
+        },
+        name: 'Populate Questionnaire', // Use name over ID
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BazPatient'
+        },
+        name: 'BazPatient',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'ValueSet/MyVS'
+        },
+        // eslint-disable-next-line
+        name: "Yes/No/Don't Know", // Use name over ID
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/patient-birthPlace'
+        },
+        name: 'birthPlace', // Use name over ID
+        exampleBoolean: false
+      });
+    });
+
+    it('should overwrite existing resource references in the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      // Should only have one copy of MyPatient
+      expect(
+        igContent.definition.resource.filter(
+          (r: any) => r.reference.reference === 'StructureDefinition/MyPatient'
+        )
+      ).toHaveLength(1);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyPatient'
+        },
+        name: 'MyPatient',
+        exampleBoolean: false
+        // Description is overwritten to be null
+      });
+    });
+
+    it('should add resource references with a description to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'CapabilityStatement/MyCS'
+        },
+        name: 'Base FHIR Capability Statement (Empty)', // Use name over ID
+        description: 'Test description',
+        exampleBoolean: false
+      });
+    });
+
+    it('should add example references to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/FooPatient'
+        },
+        // Preserve description and name from SUSHI defined Instance
+        description: 'This should stay',
+        name: 'StayName',
+        exampleBoolean: true
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BarPatient'
+        },
+        name: 'BarPatient',
+        exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+      });
+    });
+
+    it('should add resource references with a title to the ImplementationGuide resource', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyTitlePatient'
+        },
+        name: 'This patient has a title',
+        exampleBoolean: false
+      });
+    });
+
+    it('should log an error for input files missing resourceType or id', () => {
+      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
+        /.*InvalidPatient.json must define resourceType and id/
+      );
+    });
+  });
+
   describe('#invalid-data-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
@@ -534,20 +751,26 @@ describe('IGExporter', () => {
       // And ensure that invalid inputs did not override existing values
       const iniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(iniPath)).toBeTruthy();
-      const content = ini.parse(fs.readFileSync(iniPath, 'utf8'));
-      expect(Object.keys(content.IG)).toHaveLength(12);
-      expect(content.IG.ig).toEqual('input/ImplementationGuide-sushi-test.json');
-      expect(content.IG.template).toEqual('hl7.fhir.template');
-      expect(content.IG['usage-stats-opt-out']).toBeTruthy();
-      expect(content.IG.copyrightyear).toEqual('2018+');
-      expect(content.IG.license).toEqual('CC0-1.0');
-      expect(content.IG.version).toEqual('0.1.0');
-      expect(content.IG.ballotstatus).toEqual('STU1');
-      expect(content.IG.fhirspec).toEqual('http://hl7.org/fhir/R4/');
-      expect(content.IG.excludexml).toEqual('Yes');
-      expect(content.IG.excludejson).toEqual('Yes');
-      expect(content.IG.excludettl).toEqual('Yes');
-      expect(content.IG.excludeMaps).toEqual('Yes');
+      const content = fs.readFileSync(iniPath, 'utf8');
+      expect(content).toEqual(
+        [
+          '[IG]',
+          'ig = input/ImplementationGuide-sushi-test.json',
+          'template = hl7.fhir.template',
+          'usage-stats-opt-out = true',
+          'copyrightyear = 2018+',
+          'license = CC0-1.0',
+          'version = 0.1.0',
+          'ballotstatus = STU1',
+          'fhirspec = http://hl7.org/fhir/R4/',
+          'excludexml = Yes',
+          'excludejson = Yes',
+          'excludettl = Yes',
+          'excludeMaps = Yes'
+        ]
+          .map(ln => ln + os.EOL) // Windows: /r/n; Mac: /n
+          .join('')
+      );
     });
 
     it('should add pages of an invalid file type but log a warning', () => {

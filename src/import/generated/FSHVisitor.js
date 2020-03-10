@@ -102,6 +102,12 @@ FSHVisitor.prototype.visitCsMetadata = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#ruleSet.
+FSHVisitor.prototype.visitRuleSet = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#parent.
 FSHVisitor.prototype.visitParent = function(ctx) {
   return this.visitChildren(ctx);
@@ -152,6 +158,12 @@ FSHVisitor.prototype.visitInstanceOf = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#usage.
 FSHVisitor.prototype.visitUsage = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#mixins.
+FSHVisitor.prototype.visitMixins = function(ctx) {
   return this.visitChildren(ctx);
 };
 
