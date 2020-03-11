@@ -1220,7 +1220,7 @@ describe('InstanceExporter', () => {
 
       exporter.exportInstance(instance);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Mixin rules applied to an instance must fix a value. Other rules are ignored/
+        /Rules applied by mixins to an instance must fix a value. Other rules are ignored/
       );
       expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
       expect(loggerSpy.getLastMessage()).toMatch(

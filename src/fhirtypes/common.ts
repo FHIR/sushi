@@ -6,7 +6,7 @@ import {
   ValueSet,
   CodeSystem
 } from '.';
-import { FixedValueRule } from '../fshtypes/rules';
+import { FixedValueRule, Rule } from '../fshtypes/rules';
 import {
   FshReference,
   Instance,
@@ -223,7 +223,8 @@ export function applyMixinRules(
   tank: FSHTank
 ): void {
   // Rules are added to beginning of rules array, so add the last mixin rules first
-  [...fshDefinition.mixins].reverse().forEach(mixinName => {
+  const mixedInRules: Rule[] = [];
+  fshDefinition.mixins.forEach(mixinName => {
     const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
     if (ruleSet) {
       ruleSet.rules.forEach(r => {
@@ -234,18 +235,19 @@ export function applyMixinRules(
       const rules = ruleSet.rules.filter(r => {
         if (fshDefinition instanceof Instance && !(r instanceof FixedValueRule)) {
           logger.error(
-            'Mixin rules applied to an instance must fix a value. Other rules are ignored.',
+            'Rules applied by mixins to an instance must fix a value. Other rules are ignored.',
             r.sourceInfo
           );
           return false;
         }
         return true;
       });
-      fshDefinition.rules = [...rules, ...fshDefinition.rules];
+      mixedInRules.push(...rules);
     } else {
-      logger.error(`Unable to find definition for Mixin ${mixinName}.`, fshDefinition.sourceInfo);
+      logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
     }
   });
+  fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
 }
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
