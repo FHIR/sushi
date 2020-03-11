@@ -51,6 +51,13 @@ describe('IGExporter', () => {
           if (instanceDef.id === 'patient-example-two') {
             instanceDef._instanceMeta.title = 'Another Patient Example';
             instanceDef._instanceMeta.description = 'Another example of a Patient';
+            instanceDef._instanceMeta.usage = 'Example';
+          }
+          if (instanceDef.id === 'capability-statement-example') {
+            instanceDef._instanceMeta.usage = 'Definition';
+          }
+          if (instanceDef.id === 'patient-example') {
+            instanceDef._instanceMeta.usage = 'Example'; // Default would be set to example in import
           }
           pkg.instances.push(instanceDef);
         }
@@ -198,10 +205,17 @@ describe('IGExporter', () => {
             },
             {
               reference: {
+                reference: 'CapabilityStatement/capability-statement-example'
+              },
+              name: 'capability-statement-example',
+              exampleBoolean: false // Not 'Example' Usages will set this to false
+            },
+            {
+              reference: {
                 reference: 'Patient/patient-example'
               },
               name: 'patient-example',
-              exampleBoolean: true
+              exampleBoolean: true // No defined Usage on FSH file sets this to true
             },
             {
               reference: {
@@ -209,7 +223,7 @@ describe('IGExporter', () => {
               },
               name: 'Another Patient Example',
               description: 'Another example of a Patient',
-              exampleBoolean: true
+              exampleBoolean: true // Usage set to Example sets this to true
             }
           ],
           page: {
@@ -540,6 +554,7 @@ describe('IGExporter', () => {
       patientInstance.id = 'FooPatient';
       patientInstance._instanceMeta.description = 'This should stay';
       patientInstance._instanceMeta.name = 'StayName';
+      patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));

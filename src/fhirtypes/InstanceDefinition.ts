@@ -2,6 +2,7 @@ import cloneDeep = require('lodash/cloneDeep');
 import { Meta } from './specialTypes';
 import { HasId } from './common';
 import { applyMixins } from '../utils';
+import { InstanceUsage } from '../fshtypes';
 
 /**
  * A class representing a FHIR Instance.
@@ -47,6 +48,7 @@ type InstanceMeta = {
   name?: string;
   title?: string;
   description?: string;
+  usage?: InstanceUsage;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

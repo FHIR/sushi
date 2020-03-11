@@ -15,6 +15,7 @@ import {
   FshReference,
   TextLocation,
   Instance,
+  InstanceUsage,
   FshValueSet,
   ValueSetComponent,
   ValueSetConceptComponent,
@@ -65,6 +66,7 @@ enum InstanceMetadataKey {
   InstanceOf = 'InstanceOf',
   Title = 'Title',
   Description = 'Description',
+  Usage = 'Usage',
   Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
@@ -312,6 +314,8 @@ export class FSHImporter extends FSHVisitor {
           instance.title = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Description) {
           instance.description = pair.value as string;
+        } else if (pair.key === InstanceMetadataKey.Usage) {
+          instance.usage = pair.value as InstanceUsage;
         } else if (pair.key === InstanceMetadataKey.Mixins) {
           instance.mixins = pair.value as string[];
         }
@@ -544,6 +548,11 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Description,
         value: this.visitDescription(ctx.description())
       };
+    } else if (ctx.usage()) {
+      return {
+        key: InstanceMetadataKey.Usage,
+        value: this.visitUsage(ctx.usage())
+      };
     } else if (ctx.mixins()) {
       return { key: InstanceMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
@@ -648,6 +657,22 @@ export class FSHImporter extends FSHVisitor {
     } else {
       return [ctx.SEQUENCE().getText()];
     }
+  }
+
+  visitUsage(ctx: pc.UsageContext): InstanceUsage {
+    let usage = ctx.SEQUENCE().getText();
+    if (!(usage === 'Example' || usage === 'Definition')) {
+      const source = {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx.SEQUENCE())
+      };
+      logger.error(
+        'Invalid Usage. Supported usages are "Example" and "Definition". Instance will be treated as an Example.',
+        source
+      );
+      usage = 'Example';
+    }
+    return usage as InstanceUsage;
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {
