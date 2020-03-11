@@ -118,7 +118,7 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.usage).toBe('Example');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Invalid Usage. Supported usages are "Example" and "Definition". Instance will be treated as an Example./s
+          /Invalid Usage. Supported usages are "Example", "Definition", and "Inline". Instance will be treated as an Example./s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bad\.fsh.*Line: 4\D*/s);
       });

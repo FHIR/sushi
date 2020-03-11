@@ -8,6 +8,15 @@ import { InstanceDefinition } from '../fhirtypes';
 // See: https://lodash.com/docs/4.17.15#remove
 
 /**
+ * Remove and return any "Inline" instances
+ * @param {InstanceDefinition[]} instances - the list of InstanceDefinitions to filter. Will be mutated.
+ * @returns {InstanceDefinition[]} - InstanceDefinitions that have Usage set to inline
+ */
+export function filterInlineInstances(instances: InstanceDefinition[]): InstanceDefinition[] {
+  return remove(instances, i => i._instanceMeta.usage === 'Inline');
+}
+
+/**
  *
  * @param {InstanceDefinition[]} instances - the list of InstanceDefinitions to filter. Will be mutated.
  * @returns {InstanceDefinition[]} - InstanceDefinitions that have Usage set to example

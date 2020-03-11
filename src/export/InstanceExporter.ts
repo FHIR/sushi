@@ -32,7 +32,8 @@ export class InstanceExporter implements Fishable {
       instanceOfStructureDefinition
     );
 
-    let rules = fshInstanceDef.rules.map(r => replaceReferences(r, this.tank, this.fisher));
+    let rules = fshInstanceDef.rules.map(r => cloneDeep(r));
+    rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
     // Convert strings in fixedValueRules to instances
     rules = rules.filter(r => {
       if (r.isResource) {
@@ -198,11 +199,11 @@ export class InstanceExporter implements Fishable {
       if (Array.isArray(instanceChild)) {
         // Filter so that if the child is a slice, we only count relevant slices
         instanceChild = instanceChild.filter(
-          (arrayEl: any) => !child.sliceName || arrayEl._sliceName === child.sliceName
+          (arrayEl: any) => !child.sliceName || arrayEl?._sliceName === child.sliceName
         );
-        instanceChild.forEach((arrayEl: any) =>
-          this.validateRequiredChildElements(arrayEl, child, fshDefinition)
-        );
+        instanceChild.forEach((arrayEl: any) => {
+          if (arrayEl != null) this.validateRequiredChildElements(arrayEl, child, fshDefinition);
+        });
       } else if (instanceChild != null) {
         this.validateRequiredChildElements(instanceChild, child, fshDefinition);
       }

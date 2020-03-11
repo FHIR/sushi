@@ -1109,6 +1109,13 @@ export class ElementDefinition {
     }
   }
 
+  /**
+   * Checks if a resource can be fixed to this element
+   * @param {InstanceDefinition} value - The resource to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {MismatchedTypeError} when the ElementDefinition is not of type Resource
+   * @returns {InstanceDefinition} the input value when it can be fixed
+   */
   checkFixResource(value: InstanceDefinition): InstanceDefinition {
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError('Resource');

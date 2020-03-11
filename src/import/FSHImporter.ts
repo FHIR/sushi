@@ -26,7 +26,8 @@ import {
   ValueSetFilterValue,
   FshCodeSystem,
   Invariant,
-  RuleSet
+  RuleSet,
+  isInstanceUsage
 } from '../fshtypes';
 import {
   Rule,
@@ -661,13 +662,13 @@ export class FSHImporter extends FSHVisitor {
 
   visitUsage(ctx: pc.UsageContext): InstanceUsage {
     let usage = ctx.SEQUENCE().getText();
-    if (!(usage === 'Example' || usage === 'Definition')) {
+    if (!isInstanceUsage(usage)) {
       const source = {
         file: this.currentFile,
         location: this.extractStartStop(ctx.SEQUENCE())
       };
       logger.error(
-        'Invalid Usage. Supported usages are "Example" and "Definition". Instance will be treated as an Example.',
+        'Invalid Usage. Supported usages are "Example", "Definition", and "Inline". Instance will be treated as an Example.',
         source
       );
       usage = 'Example';

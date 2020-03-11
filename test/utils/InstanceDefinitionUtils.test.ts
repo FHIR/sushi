@@ -5,7 +5,8 @@ import {
   filterModelInstances,
   filterOperationInstances,
   filterExtensionInstances,
-  filterProfileInstances
+  filterProfileInstances,
+  filterInlineInstances
 } from '../../src/utils';
 import { InstanceDefinition } from '../../src/fhirtypes';
 
@@ -17,6 +18,12 @@ describe('InstanceDefinitionUtils', () => {
   examplePatient.id = 'MyPatient';
   examplePatient._instanceMeta.name = 'MyPatient';
   examplePatient._instanceMeta.usage = 'Example';
+
+  const inlinePatient = new InstanceDefinition();
+  inlinePatient.resourceType = 'Patient';
+  inlinePatient.id = 'MyInlinePatient';
+  inlinePatient._instanceMeta.name = 'MyInlinePatient';
+  inlinePatient._instanceMeta.usage = 'Inline';
 
   const capabilityStatement = new InstanceDefinition();
   capabilityStatement.id = 'MyCS';
@@ -83,6 +90,7 @@ describe('InstanceDefinitionUtils', () => {
     // Reset instance as it is muted by the various filter functions
     instances = [
       examplePatient,
+      inlinePatient,
       capabilityStatement,
       capabilityStatementExample,
       valueSet,
@@ -99,6 +107,7 @@ describe('InstanceDefinitionUtils', () => {
     const examples = filterExampleInstances(instances);
     expect(examples).toEqual([examplePatient, capabilityStatementExample]);
     expect(instances).toEqual([
+      inlinePatient,
       capabilityStatement,
       valueSet,
       operation,
@@ -111,11 +120,29 @@ describe('InstanceDefinitionUtils', () => {
   });
 
   describe('Non-example instances', () => {
+    it('should filter out all "Inline" instances', () => {
+      const inlines = filterInlineInstances(instances);
+      expect(inlines).toEqual([inlinePatient]);
+      expect(instances).toEqual([
+        examplePatient,
+        capabilityStatement,
+        capabilityStatementExample,
+        valueSet,
+        operation,
+        logicalModel,
+        extension,
+        profile,
+        primitiveSD,
+        observation
+      ]);
+    });
+
     it('should filter out all capability instances', () => {
       const capabilities = filterCapabilitiesInstances(instances);
       expect(capabilities).toEqual([capabilityStatement, capabilityStatementExample]);
       expect(instances).toEqual([
         examplePatient,
+        inlinePatient,
         valueSet,
         operation,
         logicalModel,
@@ -131,6 +158,7 @@ describe('InstanceDefinitionUtils', () => {
       expect(vocabulary).toEqual([valueSet]);
       expect(instances).toEqual([
         examplePatient,
+        inlinePatient,
         capabilityStatement,
         capabilityStatementExample,
         operation,
@@ -147,6 +175,7 @@ describe('InstanceDefinitionUtils', () => {
       expect(operations).toEqual([operation]);
       expect(instances).toEqual([
         examplePatient,
+        inlinePatient,
         capabilityStatement,
         capabilityStatementExample,
         valueSet,
@@ -163,6 +192,7 @@ describe('InstanceDefinitionUtils', () => {
       expect(models).toEqual([logicalModel]);
       expect(instances).toEqual([
         examplePatient,
+        inlinePatient,
         capabilityStatement,
         capabilityStatementExample,
         valueSet,
@@ -179,6 +209,7 @@ describe('InstanceDefinitionUtils', () => {
       expect(extensions).toEqual([extension]);
       expect(instances).toEqual([
         examplePatient,
+        inlinePatient,
         capabilityStatement,
         capabilityStatementExample,
         valueSet,
@@ -195,6 +226,7 @@ describe('InstanceDefinitionUtils', () => {
       expect(profiles).toEqual([profile]);
       expect(instances).toEqual([
         examplePatient,
+        inlinePatient,
         capabilityStatement,
         capabilityStatementExample,
         valueSet,
@@ -208,6 +240,7 @@ describe('InstanceDefinitionUtils', () => {
 
     it('should only have instances remaining that cannot be categorized after all other filtering is finished', () => {
       filterExampleInstances(instances);
+      filterInlineInstances(instances);
       filterCapabilitiesInstances(instances);
       filterVocabularyInstances(instances);
       filterOperationInstances(instances);

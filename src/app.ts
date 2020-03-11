@@ -11,6 +11,7 @@ import { logger, stats } from './utils';
 import { loadDependency, loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import {
+  filterInlineInstances,
   filterExampleInstances,
   filterCapabilitiesInstances,
   filterVocabularyInstances,
@@ -138,6 +139,7 @@ async function app() {
 
   // Sort instances into appropriate directories
   const instances = cloneDeep(outPackage.instances); // Filter functions below mutate the argument, so clone what is in the package
+  filterInlineInstances(instances);
   writeResources('examples', filterExampleInstances(instances));
   writeResources('capabilities', filterCapabilitiesInstances(instances));
   writeResources('vocabulary', filterVocabularyInstances(instances));

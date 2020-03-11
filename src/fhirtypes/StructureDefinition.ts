@@ -497,6 +497,7 @@ export class StructureDefinition {
     }
     const clone = currentElement.clone();
     let fixedValue;
+    // Fixed resources cannot be fixed by pattern[x]/fixed[x], so we must set fixedValue directly
     if (value instanceof InstanceDefinition) {
       fixedValue = clone.checkFixResource(value);
     } else {
