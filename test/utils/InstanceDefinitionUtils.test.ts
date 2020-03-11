@@ -119,135 +119,133 @@ describe('InstanceDefinitionUtils', () => {
     ]);
   });
 
-  describe('Non-example instances', () => {
-    it('should filter out all "Inline" instances', () => {
-      const inlines = filterInlineInstances(instances);
-      expect(inlines).toEqual([inlinePatient]);
-      expect(instances).toEqual([
-        examplePatient,
-        capabilityStatement,
-        capabilityStatementExample,
-        valueSet,
-        operation,
-        logicalModel,
-        extension,
-        profile,
-        primitiveSD,
-        observation
-      ]);
-    });
+  it('should filter out all "Inline" instances', () => {
+    const inlines = filterInlineInstances(instances);
+    expect(inlines).toEqual([inlinePatient]);
+    expect(instances).toEqual([
+      examplePatient,
+      capabilityStatement,
+      capabilityStatementExample,
+      valueSet,
+      operation,
+      logicalModel,
+      extension,
+      profile,
+      primitiveSD,
+      observation
+    ]);
+  });
 
-    it('should filter out all capability instances', () => {
-      const capabilities = filterCapabilitiesInstances(instances);
-      expect(capabilities).toEqual([capabilityStatement, capabilityStatementExample]);
-      expect(instances).toEqual([
-        examplePatient,
-        inlinePatient,
-        valueSet,
-        operation,
-        logicalModel,
-        extension,
-        profile,
-        primitiveSD,
-        observation
-      ]);
-    });
+  it('should filter out all capability instances', () => {
+    const capabilities = filterCapabilitiesInstances(instances);
+    expect(capabilities).toEqual([capabilityStatement, capabilityStatementExample]);
+    expect(instances).toEqual([
+      examplePatient,
+      inlinePatient,
+      valueSet,
+      operation,
+      logicalModel,
+      extension,
+      profile,
+      primitiveSD,
+      observation
+    ]);
+  });
 
-    it('should filter out all vocabulary instances', () => {
-      const vocabulary = filterVocabularyInstances(instances);
-      expect(vocabulary).toEqual([valueSet]);
-      expect(instances).toEqual([
-        examplePatient,
-        inlinePatient,
-        capabilityStatement,
-        capabilityStatementExample,
-        operation,
-        logicalModel,
-        extension,
-        profile,
-        primitiveSD,
-        observation
-      ]);
-    });
+  it('should filter out all vocabulary instances', () => {
+    const vocabulary = filterVocabularyInstances(instances);
+    expect(vocabulary).toEqual([valueSet]);
+    expect(instances).toEqual([
+      examplePatient,
+      inlinePatient,
+      capabilityStatement,
+      capabilityStatementExample,
+      operation,
+      logicalModel,
+      extension,
+      profile,
+      primitiveSD,
+      observation
+    ]);
+  });
 
-    it('should filter out all operation instances', () => {
-      const operations = filterOperationInstances(instances);
-      expect(operations).toEqual([operation]);
-      expect(instances).toEqual([
-        examplePatient,
-        inlinePatient,
-        capabilityStatement,
-        capabilityStatementExample,
-        valueSet,
-        logicalModel,
-        extension,
-        profile,
-        primitiveSD,
-        observation
-      ]);
-    });
+  it('should filter out all operation instances', () => {
+    const operations = filterOperationInstances(instances);
+    expect(operations).toEqual([operation]);
+    expect(instances).toEqual([
+      examplePatient,
+      inlinePatient,
+      capabilityStatement,
+      capabilityStatementExample,
+      valueSet,
+      logicalModel,
+      extension,
+      profile,
+      primitiveSD,
+      observation
+    ]);
+  });
 
-    it('should filter out all model instances', () => {
-      const models = filterModelInstances(instances);
-      expect(models).toEqual([logicalModel]);
-      expect(instances).toEqual([
-        examplePatient,
-        inlinePatient,
-        capabilityStatement,
-        capabilityStatementExample,
-        valueSet,
-        operation,
-        extension,
-        profile,
-        primitiveSD,
-        observation
-      ]);
-    });
+  it('should filter out all model instances', () => {
+    const models = filterModelInstances(instances);
+    expect(models).toEqual([logicalModel]);
+    expect(instances).toEqual([
+      examplePatient,
+      inlinePatient,
+      capabilityStatement,
+      capabilityStatementExample,
+      valueSet,
+      operation,
+      extension,
+      profile,
+      primitiveSD,
+      observation
+    ]);
+  });
 
-    it('should filter out all extension instances', () => {
-      const extensions = filterExtensionInstances(instances);
-      expect(extensions).toEqual([extension]);
-      expect(instances).toEqual([
-        examplePatient,
-        inlinePatient,
-        capabilityStatement,
-        capabilityStatementExample,
-        valueSet,
-        operation,
-        logicalModel,
-        profile,
-        primitiveSD,
-        observation
-      ]);
-    });
+  it('should filter out all extension instances', () => {
+    const extensions = filterExtensionInstances(instances);
+    expect(extensions).toEqual([extension]);
+    expect(instances).toEqual([
+      examplePatient,
+      inlinePatient,
+      capabilityStatement,
+      capabilityStatementExample,
+      valueSet,
+      operation,
+      logicalModel,
+      profile,
+      primitiveSD,
+      observation
+    ]);
+  });
 
-    it('should filter out all profile instances', () => {
-      const profiles = filterProfileInstances(instances);
-      expect(profiles).toEqual([profile]);
-      expect(instances).toEqual([
-        examplePatient,
-        inlinePatient,
-        capabilityStatement,
-        capabilityStatementExample,
-        valueSet,
-        operation,
-        logicalModel,
-        extension,
-        primitiveSD,
-        observation
-      ]);
-    });
+  it('should filter out all profile instances', () => {
+    const profiles = filterProfileInstances(instances);
+    expect(profiles).toEqual([profile]);
+    expect(instances).toEqual([
+      examplePatient,
+      inlinePatient,
+      capabilityStatement,
+      capabilityStatementExample,
+      valueSet,
+      operation,
+      logicalModel,
+      extension,
+      primitiveSD,
+      observation
+    ]);
+  });
 
-    it('should only have instances remaining that cannot be categorized after all other filtering is finished', () => {
-      filterExampleInstances(instances);
-      filterInlineInstances(instances);
-      filterCapabilitiesInstances(instances);
-      filterVocabularyInstances(instances);
-      filterOperationInstances(instances);
-      filterModelInstances(instances);
-      filterExtensionInstances(instances);
-      filterProfileInstances(instances);
-      expect(instances).toEqual([primitiveSD, observation]);
-    });
+  it('should only have instances remaining that cannot be categorized after all other filtering is finished', () => {
+    filterExampleInstances(instances);
+    filterInlineInstances(instances);
+    filterCapabilitiesInstances(instances);
+    filterVocabularyInstances(instances);
+    filterOperationInstances(instances);
+    filterModelInstances(instances);
+    filterExtensionInstances(instances);
+    filterProfileInstances(instances);
+    expect(instances).toEqual([primitiveSD, observation]);
   });
 });

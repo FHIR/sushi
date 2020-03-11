@@ -1133,7 +1133,7 @@ describe('InstanceExporter', () => {
       const exported = exportInstance(patientInstance);
       expect(exported.contained).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /MyFakePatient.*File: FakeInstance.fsh.*Line: 1 - 3\D*/s
+        /Cannot find definition for Instance: MyFakePatient. Skipping rule.*File: FakeInstance.fsh.*Line: 1 - 3\D*/s
       );
     });
   });
