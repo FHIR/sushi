@@ -1,5 +1,13 @@
 import { FSHDocument } from './FSHDocument';
-import { Profile, Extension, Instance, FshValueSet, FshCodeSystem, Invariant } from '../fshtypes';
+import {
+  Profile,
+  Extension,
+  Instance,
+  FshValueSet,
+  FshCodeSystem,
+  Invariant,
+  RuleSet
+} from '../fshtypes';
 import flatMap from 'lodash/flatMap';
 import { Config } from '../fshtypes/Config';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
@@ -68,6 +76,14 @@ export class FSHTank implements Fishable {
   }
 
   /**
+   * Gets all ruleSets in the tank
+   * @returns {RuleSet[]}
+   */
+  public getAllRuleSets(): RuleSet[] {
+    return flatMap(this.docs, doc => Array.from(doc.ruleSets.values()));
+  }
+
+  /**
    * Finds the alias in the tank, if it exists
    * @param {string} name - The name of the alias we're looking for
    * @returns {string | undefined}
@@ -83,7 +99,15 @@ export class FSHTank implements Fishable {
   fish(
     item: string,
     ...types: Type[]
-  ): Profile | Extension | FshValueSet | FshCodeSystem | Instance | Invariant | undefined {
+  ):
+    | Profile
+    | Extension
+    | FshValueSet
+    | FshCodeSystem
+    | Instance
+    | Invariant
+    | RuleSet
+    | undefined {
     // Resolve alias if necessary
     item = this.resolveAlias(item) ?? item;
 
@@ -95,7 +119,8 @@ export class FSHTank implements Fishable {
         Type.ValueSet,
         Type.CodeSystem,
         Type.Instance,
-        Type.Invariant
+        Type.Invariant,
+        Type.RuleSet
       ];
     }
 
@@ -139,6 +164,9 @@ export class FSHTank implements Fishable {
           break;
         case Type.Invariant:
           result = this.getAllInvariants().find(i => i.name === item);
+          break;
+        case Type.RuleSet:
+          result = this.getAllRuleSets().find(r => r.name === item);
           break;
         case Type.Resource:
         case Type.Type:

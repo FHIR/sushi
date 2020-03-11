@@ -6,7 +6,8 @@ import {
   setPropertyOnInstance,
   replaceReferences,
   replaceField,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  applyMixinRules
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
@@ -278,6 +279,7 @@ export class InstanceExporter {
     if (instanceOfStructureDefinition.derivation === 'constraint') {
       instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
     }
+    applyMixinRules(fshDefinition, this.tank);
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     instanceDef.validateId(fshDefinition.sourceInfo);
