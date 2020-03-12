@@ -6,7 +6,8 @@ import {
   setPropertyOnInstance,
   replaceReferences,
   replaceField,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  applyMixinRules
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
@@ -317,6 +318,7 @@ export class InstanceExporter implements Fishable {
 
     this.pkg.instances.push(instanceDef);
 
+    applyMixinRules(fshDefinition, this.tank);
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     instanceDef.validateId(fshDefinition.sourceInfo);

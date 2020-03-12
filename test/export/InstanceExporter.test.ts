@@ -7,7 +7,8 @@ import {
   FshCode,
   FshReference,
   Extension,
-  FshCodeSystem
+  FshCodeSystem,
+  RuleSet
 } from '../../src/fshtypes';
 import { FixedValueRule, ContainsRule, CardRule, OnlyRule } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
@@ -1168,6 +1169,97 @@ describe('InstanceExporter', () => {
       const exported = exporter.export().instances;
       expect(exported.length).toBe(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Unmeasurable\.fsh.*Line: 3\D*/s);
+    });
+  });
+
+  describe('#Mixins', () => {
+    let instance: Instance;
+    let mixin: RuleSet;
+
+    beforeEach(() => {
+      instance = new Instance('Foo').withFile('Instance.fsh').withLocation([5, 6, 7, 16]);
+      instance.instanceOf = 'Patient';
+      doc.instances.set(instance.name, instance);
+
+      mixin = new RuleSet('Bar');
+      doc.ruleSets.set(mixin.name, mixin);
+      instance.mixins.push('Bar');
+    });
+
+    it('should apply rules from a single mixin', () => {
+      const rule = new FixedValueRule('active');
+      rule.fixedValue = true;
+      mixin.rules.push(rule);
+
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toBe(true);
+    });
+
+    it('should apply rules from multiple mixins in the correct order', () => {
+      const rule1 = new FixedValueRule('active');
+      rule1.fixedValue = true;
+      mixin.rules.push(rule1);
+
+      const mixin2 = new RuleSet('Baz');
+      doc.ruleSets.set(mixin2.name, mixin2);
+      const rule2 = new FixedValueRule('active');
+      rule2.fixedValue = false;
+      mixin2.rules.push(rule2);
+      instance.mixins.push('Baz');
+
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toBe(false);
+    });
+
+    it('should emit an error when the path is not found on a mixin rule', () => {
+      const rule = new FixedValueRule('activez').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      rule.fixedValue = true;
+      mixin.rules.push(rule);
+
+      exporter.exportInstance(instance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/activez/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when applying an invalid mixin rule', () => {
+      const rule = new FixedValueRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      rule.fixedValue = 'some string';
+      mixin.rules.push(rule);
+
+      exporter.exportInstance(instance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/some string/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when a mixin cannot be found', () => {
+      instance.mixins.push('Barz');
+
+      exporter.exportInstance(instance);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Instance\.fsh.*Line: 5 - 7\D*/s);
+    });
+
+    it('should emit an error when a mixin applies a non-fixed value rule', () => {
+      const rule = new CardRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      rule.min = 0;
+      rule.max = '1';
+      mixin.rules.push(rule);
+
+      exporter.exportInstance(instance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Rules applied by mixins to an instance must fix a value. Other rules are ignored/
+      );
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
     });
   });
 });

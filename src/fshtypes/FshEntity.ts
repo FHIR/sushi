@@ -22,11 +22,32 @@ export abstract class FshEntity {
     this.sourceInfo.file = file;
     return this;
   }
+
+  public withAppliedLocation(location: TextLocation | [number, number, number, number]): this {
+    if (Array.isArray(location)) {
+      this.sourceInfo.appliedLocation = {
+        startLine: location[0],
+        startColumn: location[1],
+        endLine: location[2],
+        endColumn: location[3]
+      };
+    } else {
+      this.sourceInfo.appliedLocation = location;
+    }
+    return this;
+  }
+
+  public withAppliedFile(file: string): this {
+    this.sourceInfo.appliedFile = file;
+    return this;
+  }
 }
 
 export type SourceInfo = {
   file?: string;
   location?: TextLocation;
+  appliedFile?: string;
+  appliedLocation?: TextLocation;
 };
 
 export type TextLocation = {

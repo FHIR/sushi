@@ -11,4 +11,12 @@ export class RuleSet extends FshEntity {
     super();
     this.rules = [];
   }
+
+  /**
+   * Read only property for id that just returns the name of the mixin
+   * This was added so that all types that are returned by FSHTank.fish have an id that can be accessed
+   */
+  get id() {
+    return this.name;
+  }
 }
