@@ -6,8 +6,16 @@ import {
   ValueSet,
   CodeSystem
 } from '.';
-import { FixedValueRule } from '../fshtypes/rules';
-import { FshReference, Instance, SourceInfo, FshCode } from '../fshtypes';
+import { FixedValueRule, Rule } from '../fshtypes/rules';
+import {
+  FshReference,
+  Instance,
+  SourceInfo,
+  FshCode,
+  Profile,
+  Extension,
+  RuleSet
+} from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import cloneDeep = require('lodash/cloneDeep');
@@ -203,6 +211,43 @@ export function replaceField(
       replaceField(object[prop], matchFn, replaceFn);
     }
   }
+}
+
+/**
+ * Adds Mixin rules onto a Profile, Extension, or Instance
+ * @param {Profile | Extension | Instance} fshDefinition - The definition to apply mixin rules on
+ * @param {FSHTank} tank - The FSHTank containing the fshDefinition
+ */
+export function applyMixinRules(
+  fshDefinition: Profile | Extension | Instance,
+  tank: FSHTank
+): void {
+  // Rules are added to beginning of rules array, so add the last mixin rules first
+  const mixedInRules: Rule[] = [];
+  fshDefinition.mixins.forEach(mixinName => {
+    const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
+    if (ruleSet) {
+      ruleSet.rules.forEach(r => {
+        // Record source information of Profile/Extension/Instance on which Mixin is applied
+        r.sourceInfo.appliedFile = fshDefinition.sourceInfo.file;
+        r.sourceInfo.appliedLocation = fshDefinition.sourceInfo.location;
+      });
+      const rules = ruleSet.rules.filter(r => {
+        if (fshDefinition instanceof Instance && !(r instanceof FixedValueRule)) {
+          logger.error(
+            'Rules applied by mixins to an instance must fix a value. Other rules are ignored.',
+            r.sourceInfo
+          );
+          return false;
+        }
+        return true;
+      });
+      mixedInRules.push(...rules);
+    } else {
+      logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
+    }
+  });
+  fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
 }
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;

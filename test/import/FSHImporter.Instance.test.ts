@@ -118,7 +118,7 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.usage).toBe('Example');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Invalid Usage. Supported usages are "Example" and "Definition". Instance will be treated as an Example./s
+          /Invalid Usage. Supported usages are "Example", "Definition", and "Inline". Instance will be treated as an Example./s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bad\.fsh.*Line: 4\D*/s);
       });
@@ -168,6 +168,25 @@ describe('FSHImporter', () => {
           'gender',
           new FshCode('other').withLocation([9, 20, 9, 25]).withFile('')
         );
+      });
+
+      it('should parse an instance with fixed value resource rules', () => {
+        const input = `
+        Instance: SamplePatient
+        InstanceOf: Patient
+        Title: "Georgio Manos"
+        Description: "An example of a fictional patient named Georgio Manos"
+        * contained[0] = SomeInstance
+        `;
+
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('SamplePatient');
+        expect(instance.instanceOf).toBe('Patient');
+        expect(instance.title).toBe('Georgio Manos');
+        expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
+        expect(instance.rules.length).toBe(1);
+        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
       });
     });
 

@@ -200,6 +200,7 @@ export interface FixedValueRuleContext extends ParserRuleContext {
 }
 
 export interface ValueContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
   NUMBER(): ParserRuleContext;

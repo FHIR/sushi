@@ -27,6 +27,7 @@ import {
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
+import { InstanceDefinition } from './InstanceDefinition';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -1120,6 +1121,25 @@ export class ElementDefinition {
       return sax.parser(true).write(value).error == null;
     } catch (ex) {
       return false;
+    }
+  }
+
+  /**
+   * Checks if a resource can be fixed to this element
+   * @param {InstanceDefinition} value - The resource to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {MismatchedTypeError} when the ElementDefinition is not of type Resource
+   * @returns {InstanceDefinition} the input value when it can be fixed
+   */
+  checkFixResource(value: InstanceDefinition): InstanceDefinition {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError('Resource');
+    }
+    const type = this.type[0].code;
+    if (type === 'Resource') {
+      return value;
+    } else {
+      throw new MismatchedTypeError('Resource', value.id, type);
     }
   }
 

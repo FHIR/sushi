@@ -9,7 +9,8 @@ import {
   Instance,
   FshValueSet,
   FshCodeSystem,
-  Invariant
+  Invariant,
+  RuleSet
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -2546,5 +2547,93 @@ describe('StructureDefinitionExporter', () => {
     const pkg = exporter.export();
     expect(pkg.profiles.length).toBe(1);
     expect(pkg.extensions.length).toBe(1);
+  });
+
+  describe('#Mixins', () => {
+    let profile: Profile;
+    let mixin: RuleSet;
+
+    beforeEach(() => {
+      profile = new Profile('Foo').withFile('Profile.fsh').withLocation([5, 6, 7, 16]);
+      profile.parent = 'Patient';
+      doc.profiles.set(profile.name, profile);
+
+      mixin = new RuleSet('Bar');
+      doc.ruleSets.set(mixin.name, mixin);
+      profile.mixins.push('Bar');
+    });
+
+    it('should apply rules from a single mixin', () => {
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      mixin.rules.push(nameRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      expect(sd.title).toBe('Wow fancy');
+    });
+
+    it('should apply rules from multiple mixins in the correct order', () => {
+      const nameRule1 = new CaretValueRule('');
+      nameRule1.caretPath = 'title';
+      nameRule1.value = 'Wow fancy';
+      mixin.rules.push(nameRule1);
+
+      const mixin2 = new RuleSet('Baz');
+      doc.ruleSets.set(mixin2.name, mixin2);
+      const nameRule2 = new CaretValueRule('');
+      nameRule2.caretPath = 'title';
+      nameRule2.value = 'Wow fancier title';
+      mixin2.rules.push(nameRule2);
+      profile.mixins.push('Baz');
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      expect(sd.title).toBe('Wow fancier title');
+    });
+
+    it('should emit an error when the path is not found on a mixin rule', () => {
+      const nameRule = new CaretValueRule('fakepath')
+        .withFile('Mixin.fsh')
+        .withLocation([1, 2, 3, 12]);
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      mixin.rules.push(nameRule);
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/fakepath/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Profile\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when applying an invalid mixin rule', () => {
+      const cardRule = new CardRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      cardRule.max = '2';
+      cardRule.min = 0;
+      mixin.rules.push(cardRule);
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/0\.\.2.* 0\.\.1/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Profile\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when a mixin cannot be found', () => {
+      profile.mixins.push('Barz');
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
   });
 });
