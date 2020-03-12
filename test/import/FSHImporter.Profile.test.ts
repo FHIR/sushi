@@ -193,6 +193,48 @@ describe('FSHImporter', () => {
         assertCardRule(profile.rules[2], 'component', 2, '*');
       });
 
+      it('should parse card rule with only max', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category 1..
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertCardRule(profile.rules[0], 'category', 1, ''); // Unspecified max
+      });
+
+      it('should parse card rule with only min', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category ..5
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertCardRule(profile.rules[0], 'category', NaN, '5'); // Unspecified min
+      });
+
+      it('should log an error if neither side is specified', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category ..
+        `;
+
+        const result = importSingleText(input, 'BadCard.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1); // Rule is still set and element's current cardinalities will be used at export
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Neither side of the cardinality was specified on path \"category\". A min, max, or both need to be specified.\D*/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadCard\.fsh.*Line: 4\D*/s);
+      });
+
       it('should parse card rules w/ flags', () => {
         const input = `
         Profile: ObservationProfile

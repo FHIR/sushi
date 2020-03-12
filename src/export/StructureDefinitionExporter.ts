@@ -118,6 +118,9 @@ export class StructureDefinitionExporter implements Fishable {
       if (element) {
         try {
           if (rule instanceof CardRule) {
+            // If only one side of the cardinality is set by the rule, use element's current cardinality
+            if (isNaN(rule.min)) rule.min = element.min;
+            if (rule.max === '') rule.max = element.max;
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
