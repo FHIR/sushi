@@ -1,7 +1,7 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition } from '../fhirtypes';
 import { Instance } from '../fshtypes';
-import { logger, Fishable, Type } from '../utils';
+import { logger, Fishable, Type, Metadata } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -13,7 +13,7 @@ import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
 import { isEmpty, cloneDeep } from 'lodash';
 
-export class InstanceExporter {
+export class InstanceExporter implements Fishable {
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
@@ -33,7 +33,25 @@ export class InstanceExporter {
       instanceOfStructureDefinition
     );
 
-    const rules = fshInstanceDef.rules.map(r => replaceReferences(r, this.tank, this.fisher));
+    let rules = fshInstanceDef.rules.map(r => cloneDeep(r));
+    rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
+    // Convert strings in fixedValueRules to instances
+    rules = rules.filter(r => {
+      if (r.isResource) {
+        const instance: InstanceDefinition = this.fishForFHIR(r.fixedValue as string);
+        if (instance != null) {
+          r.fixedValue = instance.toJSON();
+          return true;
+        } else {
+          logger.error(
+            `Cannot find definition for Instance: ${r.fixedValue}. Skipping rule.`,
+            r.sourceInfo
+          );
+          return false;
+        }
+      }
+      return true;
+    });
 
     // Fix all values from the SD that are exposed when processing the instance rules
     rules.forEach(rule => {
@@ -182,11 +200,11 @@ export class InstanceExporter {
       if (Array.isArray(instanceChild)) {
         // Filter so that if the child is a slice, we only count relevant slices
         instanceChild = instanceChild.filter(
-          (arrayEl: any) => !child.sliceName || arrayEl._sliceName === child.sliceName
+          (arrayEl: any) => !child.sliceName || arrayEl?._sliceName === child.sliceName
         );
-        instanceChild.forEach((arrayEl: any) =>
-          this.validateRequiredChildElements(arrayEl, child, fshDefinition)
-        );
+        instanceChild.forEach((arrayEl: any) => {
+          if (arrayEl != null) this.validateRequiredChildElements(arrayEl, child, fshDefinition);
+        });
       } else if (instanceChild != null) {
         this.validateRequiredChildElements(instanceChild, child, fshDefinition);
       }
@@ -241,6 +259,24 @@ export class InstanceExporter {
     );
   }
 
+  fishForFHIR(item: string) {
+    let result = this.fisher.fishForFHIR(item, Type.Instance);
+    if (result == null) {
+      // If we find a FSH definition, then we can export and fish for it again
+      const fshDefinition = this.tank.fish(item, Type.Instance) as Instance;
+      if (fshDefinition) {
+        this.exportInstance(fshDefinition);
+        result = this.fisher.fishForFHIR(item, Type.Instance);
+      }
+    }
+    return result;
+  }
+
+  fishForMetadata(item: string): Metadata {
+    // If it's in the tank, it can get the metadata from there (no need to export like in fishForFHIR)
+    return this.fisher.fishForMetadata(item, Type.Instance);
+  }
+
   exportInstance(fshDefinition: Instance): InstanceDefinition {
     const json = this.fisher.fishForFHIR(
       fshDefinition.instanceOf,
@@ -279,6 +315,9 @@ export class InstanceExporter {
     if (instanceOfStructureDefinition.derivation === 'constraint') {
       instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
     }
+
+    this.pkg.instances.push(instanceDef);
+
     applyMixinRules(fshDefinition, this.tank);
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
@@ -301,8 +340,7 @@ export class InstanceExporter {
     const instances = this.tank.getAllInstances();
     for (const instance of instances) {
       try {
-        const instanceDef = this.exportInstance(instance);
-        this.pkg.instances.push(instanceDef);
+        this.exportInstance(instance);
       } catch (e) {
         logger.error(e.message, e.sourceInfo);
       }

@@ -8,6 +8,7 @@ import { TestFisher } from '../testhelpers';
 import { FshCode } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
 import { OnlyRule } from '../../src/fshtypes/rules';
+import { InstanceDefinition } from '../../src/fhirtypes';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
@@ -945,6 +946,13 @@ describe('StructureDefinition', () => {
       expect(() => {
         respRate.validateValueAtPath('extension[fake-extension].value[x]', 'foo', fisher);
       }).toThrow('Cannot resolve element from path: extension[fake-extension].value[x]');
+    });
+
+    it('should allow fixing an InstanceDefinition to a resource element', () => {
+      const instanceDef = new InstanceDefinition();
+      instanceDef.resourceType = 'Patient';
+      const { fixedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
+      expect(fixedValue.resourceType).toBe('Patient');
     });
   });
 

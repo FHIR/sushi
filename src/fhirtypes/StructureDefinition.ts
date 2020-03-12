@@ -18,6 +18,7 @@ import {
 } from './common';
 import { Fishable, Type } from '../utils/Fishable';
 import { applyMixins } from '../utils';
+import { InstanceDefinition } from './InstanceDefinition';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -495,12 +496,18 @@ export class StructureDefinition {
       }
     }
     const clone = currentElement.clone();
-    // fixValue will throw if it fails
-    clone.fixValue(value);
-    // If there is a fixedValue or patternValue, find it and return it
-    const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
     let fixedValue;
-    if (key != null) fixedValue = clone[key as keyof ElementDefinition];
+    // Fixed resources cannot be fixed by pattern[x]/fixed[x], so we must set fixedValue directly
+    if (value instanceof InstanceDefinition) {
+      fixedValue = clone.checkFixResource(value);
+    } else {
+      // fixValue will throw if it fails
+      clone.fixValue(value);
+      // If there is a fixedValue or patternValue, find it and return it
+      const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
+      if (key != null) fixedValue = clone[key as keyof ElementDefinition];
+    }
+
     return { fixedValue, pathParts };
   }
 
