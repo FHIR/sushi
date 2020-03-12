@@ -103,6 +103,9 @@ describe('ElementDefinition', () => {
       expect(() => {
         clone.bindToVS('http://valueset.org', 'required', true);
       }).toThrow(/units.*Observation.category/);
+      // Units error should not stop value from still being bound
+      expect(clone.binding.valueSet).toBe('http://valueset.org');
+      expect(clone.binding.strength).toBe('required');
     });
 
     it('should only allow required to be rebound with required', () => {

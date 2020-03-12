@@ -826,9 +826,6 @@ export class ElementDefinition {
     if (isEmpty(validTypes)) {
       throw new CodedTypeNotFoundError(this.type ? this.type.map(t => t.code) : []);
     }
-    if (units && !validTypes.find(t => t.code === 'Quantity')) {
-      throw new InvalidUnitsError(this.id);
-    }
 
     // Check if this is a valid strength (if the binding.strength already exists)
     if (this.binding && this.binding.strength) {
@@ -848,6 +845,11 @@ export class ElementDefinition {
       strength,
       valueSet: vsURI
     };
+
+    // Units error should not stop binding, but must still be logged
+    if (units && !validTypes.find(t => t.code === 'Quantity')) {
+      throw new InvalidUnitsError(this.id);
+    }
   }
 
   /**
@@ -860,10 +862,6 @@ export class ElementDefinition {
    * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
   fixValue(value: FixedValueType, units = false): void {
-    const types = this.findTypesByCode('Quantity');
-    if (units && !types.find(t => t.code === 'Quantity')) {
-      throw new InvalidUnitsError(this.id);
-    }
     if (typeof value === 'boolean') {
       this.fixBoolean(value);
     } else if (typeof value === 'number') {
@@ -878,6 +876,11 @@ export class ElementDefinition {
       this.fixFshRatio(value);
     } else if (value instanceof FshReference) {
       this.fixFshReference(value);
+    }
+    // Units error should not stop fixing value, but must still be logged
+    const types = this.findTypesByCode('Quantity');
+    if (units && !types.find(t => t.code === 'Quantity')) {
+      throw new InvalidUnitsError(this.id);
     }
   }
 

@@ -590,12 +590,10 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const baseStructDef = fisher.fishForStructureDefinition('Observation');
-
     const fixedCode = sd.findElement('Observation.code');
-    const originalCode = baseStructDef.findElement('Observation.code');
 
-    expect(fixedCode.binding).toEqual(originalCode.binding); // Code remains unset
+    expect(fixedCode.binding.valueSet).toBe('http://system.com'); // Still bound
+    expect(fixedCode.binding.strength).toBe('required');
     expect(loggerSpy.getLastMessage()).toMatch(
       /units.*Observation.code.*File: Fixed\.fsh.*Line: 4\D*/s
     );
@@ -1235,7 +1233,9 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
     const fixedCode = sd.findElement('Observation.code');
-    expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
+    expect(fixedCode.patternCodeableConcept).toEqual({
+      coding: [{ system: 'http://mysystem.com', code: 'mycode' }]
+    }); // Code still set
     expect(loggerSpy.getLastMessage()).toMatch(
       /units.*Observation.code.*File: Fixed\.fsh.*Line: 4\D*/s
     );

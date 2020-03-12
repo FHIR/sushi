@@ -135,6 +135,10 @@ describe('ElementDefinition', () => {
       expect(() => {
         code.fixValue(new FshCode('mycode', 'https://code.com'), true);
       }).toThrow(/units.*Medication.code/);
+      // Units error should not stop value from still being fixed
+      expect(code.patternCodeableConcept).toEqual({
+        coding: [{ code: 'mycode', system: 'https://code.com' }]
+      });
     });
   });
 
