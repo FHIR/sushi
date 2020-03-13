@@ -74,6 +74,12 @@ describe('ElementDefinition', () => {
       expect(concept.binding.strength).toBe('required');
     });
 
+    it('should bind a value set with units on a Quantity', () => {
+      const quantity = observation.findElementByPath('valueQuantity', fisher);
+      quantity.bindToVS('http://valueset.org', 'required', true);
+      expect(quantity.binding.valueSet).toBe('http://valueset.org');
+    });
+
     it('should throw CodedTypeNotFoundError when binding to an unsupported type', () => {
       const instant = observation.elements.find(e => e.id === 'Observation.issued');
       const clone = cloneDeep(instant);
@@ -89,6 +95,17 @@ describe('ElementDefinition', () => {
       expect(() => {
         clone.bindToVS('notAUri', 'required');
       }).toThrow(/notAUri/);
+    });
+
+    it('should throw InvalidUnitsError when using the units keyword on a non-Quantity', () => {
+      const category = observation.elements.find(e => e.id === 'Observation.category');
+      const clone = cloneDeep(category);
+      expect(() => {
+        clone.bindToVS('http://valueset.org', 'required', true);
+      }).toThrow(/units.*Observation.category/);
+      // Units error should not stop value from still being bound
+      expect(clone.binding.valueSet).toBe('http://valueset.org');
+      expect(clone.binding.strength).toBe('required');
     });
 
     it('should only allow required to be rebound with required', () => {

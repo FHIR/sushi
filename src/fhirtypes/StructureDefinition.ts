@@ -411,13 +411,15 @@ export class StructureDefinition {
    * @param {string} path - The path to the ElementDefinition to fix
    * @param {any} value - The value to fix
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   * @param {boolean} units - If the value uses the units keyword
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @returns {any} - The object or value to fix
    */
   validateValueAtPath(
     path: string,
     value: any,
-    fisher: Fishable
+    fisher: Fishable,
+    units = false
   ): { fixedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
     let currentPath = '';
@@ -502,7 +504,7 @@ export class StructureDefinition {
       fixedValue = clone.checkFixResource(value);
     } else {
       // fixValue will throw if it fails
-      clone.fixValue(value);
+      clone.fixValue(value, units);
       // If there is a fixedValue or patternValue, find it and return it
       const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
       if (key != null) fixedValue = clone[key as keyof ElementDefinition];

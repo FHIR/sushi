@@ -39,8 +39,8 @@ mixins:             KW_MIXINS (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 // RULES
 cardRule:           STAR path CARD flag*;
 flagRule:           STAR (path | paths) flag+;
-valueSetRule:       STAR path KW_FROM SEQUENCE strength?;
-fixedValueRule:     STAR path EQUAL value;
+valueSetRule:       STAR path KW_UNITS? KW_FROM SEQUENCE strength?;
+fixedValueRule:     STAR path KW_UNITS? EQUAL value;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
@@ -116,6 +116,7 @@ KW_CODES:           'codes';
 KW_WHERE:           'where';
 KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
+KW_UNITS:           'units';
 
 // SYMBOLS
 EQUAL:              '=';

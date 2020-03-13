@@ -7,6 +7,7 @@ describe('FixedValueRule', () => {
       const c = new FixedValueRule('component.code');
       expect(c.path).toBe('component.code');
       expect(c.fixedValue).toBeUndefined();
+      expect(c.units).toBeUndefined();
       expect(c.isResource).toBeUndefined();
     });
   });

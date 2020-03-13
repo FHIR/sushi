@@ -93,7 +93,8 @@ export class InstanceExporter implements Fishable {
         const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
           rule.fixedValue,
-          this.fisher
+          this.fisher,
+          rule.units
         );
         // Fix value fom the rule
         setPropertyOnInstance(instanceDef, pathParts, fixedValue);

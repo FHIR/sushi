@@ -14,6 +14,7 @@ export type FixedValueType =
 
 export class FixedValueRule extends Rule {
   fixedValue: FixedValueType;
+  units: boolean;
   isResource: boolean;
 
   constructor(path: string) {
