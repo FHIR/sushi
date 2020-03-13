@@ -193,7 +193,7 @@ describe('FSHImporter', () => {
         assertCardRule(profile.rules[2], 'component', 2, '*');
       });
 
-      it('should parse card rule with only max', () => {
+      it('should parse card rule with only min', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -206,7 +206,7 @@ describe('FSHImporter', () => {
         assertCardRule(profile.rules[0], 'category', 1, ''); // Unspecified max
       });
 
-      it('should parse card rule with only min', () => {
+      it('should parse card rule with only max', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation

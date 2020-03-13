@@ -397,6 +397,10 @@ export class ElementDefinition {
    * @throws {InvalidMaxOfSliceError} when a sliced element's max is < an individual slice's max
    */
   constrainCardinality(min: number, max: string): void {
+    // If only one side of the cardinality is set by the rule, use element's current cardinality
+    if (isNaN(min)) min = this.min;
+    if (max === '') max = this.max;
+
     const isUnbounded = max === '*';
     const maxInt = !isUnbounded ? parseInt(max) : null;
 
