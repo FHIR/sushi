@@ -70,6 +70,45 @@ describe('ElementDefinition', () => {
       expect(identifier.max).toBe('2');
     });
 
+    it('should use elements current cardinality if no min specified', () => {
+      const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
+      // constrain 0..* to ..5
+      identifier.constrainCardinality(NaN, '5'); // Unspecified min
+      expect(identifier.min).toBe(0);
+      expect(identifier.max).toBe('5');
+      const issued = observation.elements.find(e => e.id === 'Observation.issued');
+      // constrain 0..1 to ..0
+      issued.constrainCardinality(NaN, '0'); // Unspecified min
+      expect(issued.min).toBe(0);
+      expect(issued.max).toBe('0');
+    });
+
+    it('should use elements current cardinality if no max specified', () => {
+      const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
+      // constrain 0..* to 2..
+      identifier.constrainCardinality(2, ''); // Unspecified max
+      expect(identifier.min).toBe(2);
+      expect(identifier.max).toBe('*');
+      const issued = observation.elements.find(e => e.id === 'Observation.issued');
+      // constrain 0..1 to 1..
+      issued.constrainCardinality(1, ''); // Unspecified max
+      expect(issued.min).toBe(1);
+      expect(issued.max).toBe('1');
+    });
+
+    it('should use elements current cardinality if no min and no max specified', () => {
+      const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
+      // constrain 0..* to ..
+      identifier.constrainCardinality(NaN, ''); // Unspecified min and max
+      expect(identifier.min).toBe(0);
+      expect(identifier.max).toBe('*');
+      const issued = observation.elements.find(e => e.id === 'Observation.issued');
+      // constrain 0..1 to ..0
+      issued.constrainCardinality(NaN, ''); // Unspecified min and max
+      expect(issued.min).toBe(0);
+      expect(issued.max).toBe('1');
+    });
+
     it('should throw InvalidCardinalityError when min > max', () => {
       const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
       const clone = cloneDeep(identifier);

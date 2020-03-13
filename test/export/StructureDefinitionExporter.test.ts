@@ -405,6 +405,118 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 5\D*/s);
   });
 
+  it('should apply a card rule with only min specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('category');
+    rule.min = 1;
+    rule.max = '';
+    profile.rules.push(rule); // * category 1..
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.category');
+    const changedCard = sd.findElement('Observation.category');
+
+    expect(baseCard.min).toBe(0);
+    expect(baseCard.max).toBe('*');
+    expect(changedCard.min).toBe(1); // Only min cardinality is updated
+    expect(changedCard.max).toBe('*'); // Max remains same as base
+  });
+
+  it('should apply a card rule with only max specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('category');
+    rule.min = NaN;
+    rule.max = '3';
+    profile.rules.push(rule); // * category ..3
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.category');
+    const changedCard = sd.findElement('Observation.category');
+
+    expect(baseCard.min).toBe(0);
+    expect(baseCard.max).toBe('*');
+    expect(changedCard.min).toBe(0); // Min cardinality remains unchanged
+    expect(changedCard.max).toBe('3'); // Only max is changed
+  });
+
+  it('should not apply an incorrect min only card rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('status').withFile('BadCard.fsh').withLocation([3, 4, 3, 11]);
+    rule.min = 0;
+    rule.max = '';
+    profile.rules.push(rule); // * status 0..
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
+    expect(baseCard.min).toBe(1);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1'); // Neither card changes
+    expect(loggerSpy.getLastMessage()).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
+  });
+
+  it('should not apply an incorrect max only card rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('status').withFile('BadCard.fsh').withLocation([3, 4, 3, 11]);
+    rule.min = NaN;
+    rule.max = '2';
+    profile.rules.push(rule); // * status ..2
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
+    expect(baseCard.min).toBe(1);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1'); // Neither card changes
+    expect(loggerSpy.getLastMessage()).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
+  });
+
+  it('should not apply a card rule with no sides specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('status').withFile('BadCard.fsh').withLocation([3, 4, 3, 11]);
+    rule.min = NaN;
+    rule.max = '';
+    profile.rules.push(rule); // * status ..
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
+    expect(baseCard.min).toBe(1);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1'); // Neither card changes. Error logged on import side.
+  });
+
   // Flag Rule
   it('should apply a valid flag rule', () => {
     const profile = new Profile('Foo');

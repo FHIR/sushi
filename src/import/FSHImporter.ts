@@ -780,7 +780,7 @@ export class FSHImporter extends FSHVisitor {
     const cardRule = new CardRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    const card = this.parseCard(ctx.CARD().getText());
+    const card = this.parseCard(ctx.CARD().getText(), cardRule);
     cardRule.min = card.min;
     cardRule.max = card.max;
     rules.push(cardRule);
@@ -795,8 +795,14 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  private parseCard(card: string): { min: number; max: string } {
+  private parseCard(card: string, rule: CardRule): { min: number; max: string } {
     const parts = card.split('..', 2);
+    if (parts[0] === '' && parts[1] === '') {
+      logger.error(
+        `Neither side of the cardinality was specified on path "${rule.path}". A min, max, or both need to be specified.`,
+        rule.sourceInfo
+      );
+    }
     return {
       min: parseInt(parts[0]),
       max: parts[1]
@@ -1052,7 +1058,7 @@ export class FSHImporter extends FSHVisitor {
       const cardRule = new CardRule(`${containsRule.path}[${item.name}]`)
         .withLocation(this.extractStartStop(i))
         .withFile(this.currentFile);
-      const card = this.parseCard(i.CARD().getText());
+      const card = this.parseCard(i.CARD().getText(), cardRule);
       cardRule.min = card.min;
       cardRule.max = card.max;
       rules.push(cardRule);
