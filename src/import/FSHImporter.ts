@@ -956,6 +956,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
+    fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
     fixedValueRule.units = ctx.KW_UNITS() != null;
     fixedValueRule.isResource = ctx.value().SEQUENCE() != null;
     return fixedValueRule;

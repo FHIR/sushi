@@ -506,6 +506,19 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'valueBoolean', true);
       });
 
+      it('should parse fixed value boolean rule with (exactly) modifier', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueBoolean = true (exactly)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertFixedValueRule(profile.rules[0], 'valueBoolean', true, true);
+      });
+
       it('should parse fixed value number rule', () => {
         const input = `
         Profile: ObservationProfile
@@ -614,6 +627,28 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
       });
 
+      it('should parse fixed value CodeableConcept rule with (exactly) modifier', () => {
+        const input = `
+        Alias: LOINC = http://loinc.org
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueCodeableConcept = LOINC#718-7 "Hemoglobin [Mass/volume] in Blood" (exactly)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedCode = new FshCode(
+          '718-7',
+          'http://loinc.org',
+          'Hemoglobin [Mass/volume] in Blood'
+        )
+          .withLocation([6, 34, 6, 80])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode, true);
+      });
+
       it('should parse fixed value FSHCode rule with units on Quantity', () => {
         const input = `
 
@@ -628,7 +663,7 @@ describe('FSHImporter', () => {
         const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
           .withLocation([5, 33, 5, 61])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode, true);
+        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode, false, true);
       });
 
       it('should parse fixed value Quantity rule', () => {

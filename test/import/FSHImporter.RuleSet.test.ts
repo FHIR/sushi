@@ -31,7 +31,7 @@ describe('FSHImporter', () => {
       const input = `
         RuleSet: RuleRuleSet
         * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
-        * active = true
+        * active = true (exactly)
         * contact 1..1
         `;
       const result = importSingleText(input, 'Rules.fsh');
@@ -50,7 +50,7 @@ describe('FSHImporter', () => {
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',
         'required'
       );
-      assertFixedValueRule(ruleSet.rules[1], 'active', true);
+      assertFixedValueRule(ruleSet.rules[1], 'active', true, true);
       assertCardRule(ruleSet.rules[2], 'contact', 1, '1');
     });
 

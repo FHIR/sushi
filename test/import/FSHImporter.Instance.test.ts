@@ -186,7 +186,7 @@ describe('FSHImporter', () => {
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.rules.length).toBe(1);
-        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
+        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, false, true);
       });
     });
 
@@ -197,7 +197,7 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
-        Mixins: Mixin1        
+        Mixins: Mixin1
         Usage: Example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"

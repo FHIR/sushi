@@ -63,6 +63,7 @@ export function assertFixedValueRule(
   rule: Rule,
   path: string,
   value: FixedValueType,
+  exactly = false,
   units = false,
   isResource = false
 ): void {
@@ -70,6 +71,7 @@ export function assertFixedValueRule(
   const fixedValueRule = rule as FixedValueRule;
   expect(fixedValueRule.path).toBe(path);
   expect(fixedValueRule.fixedValue).toEqual(value);
+  expect(fixedValueRule.exactly).toBe(exactly);
   expect(fixedValueRule.units).toBe(units);
   expect(fixedValueRule.isResource).toEqual(isResource);
 }
