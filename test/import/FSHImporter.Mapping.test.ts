@@ -77,26 +77,25 @@ describe('FSHImporter', () => {
       );
     });
 
-    it('should only apply each metadata attribute the first time it is declared', () => {
+    it('should accept and translate an alias for the Source', () => {
       const input = `
+        Alias: OBS = http://hl7.org/fhir/StructureDefinition/Observation
+      
         Mapping: MyMapping
-        Id: my-map
-        Source: Patient
-        Target: "http://some.com/mappedTo"
-        Description: "This is a description"
-        Id: my-map-2
-        Source: Patient2
-        Target: "http://some.com/mappedTo2"
-        Description: "This is a description 2"
+        Source: OBS
         `;
       const result = importSingleText(input, 'Mapping.fsh');
       expect(result.mappings.size).toBe(1);
       const mapping = result.mappings.get('MyMapping');
       expect(mapping.name).toBe('MyMapping');
-      expect(mapping.id).toBe('my-map');
-      expect(mapping.source).toBe('Patient');
-      expect(mapping.target).toBe('http://some.com/mappedTo');
-      expect(mapping.description).toBe('This is a description');
+      expect(mapping.source).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
+      expect(mapping.sourceInfo.location).toEqual({
+        startLine: 4,
+        startColumn: 9,
+        endLine: 5,
+        endColumn: 19
+      });
+      expect(mapping.sourceInfo.file).toBe('Mapping.fsh');
     });
 
     describe('#mappingRule', () => {
