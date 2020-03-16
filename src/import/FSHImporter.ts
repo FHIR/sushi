@@ -108,6 +108,9 @@ enum Flag {
   MustSupport,
   Summary,
   Modifier,
+  TrialUse,
+  Normative,
+  Draft,
   Unknown
 }
 
@@ -917,6 +920,15 @@ export class FSHImporter extends FSHVisitor {
     if (flags.includes(Flag.Modifier)) {
       flagRule.modifier = true;
     }
+    if (flags.includes(Flag.TrialUse)) {
+      flagRule.trialUse = true;
+    }
+    if (flags.includes(Flag.Normative)) {
+      flagRule.normative = true;
+    }
+    if (flags.includes(Flag.Draft)) {
+      flagRule.draft = true;
+    }
   }
 
   visitFlag(ctx: pc.FlagContext): Flag {
@@ -926,6 +938,12 @@ export class FSHImporter extends FSHVisitor {
       return Flag.Summary;
     } else if (ctx.KW_MOD()) {
       return Flag.Modifier;
+    } else if (ctx.KW_TU()) {
+      return Flag.TrialUse;
+    } else if (ctx.KW_NORMATIVE()) {
+      return Flag.Normative;
+    } else if (ctx.KW_DRAFT()) {
+      return Flag.Draft;
     }
     return Flag.Unknown;
   }
