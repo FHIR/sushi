@@ -46,7 +46,9 @@ If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", th
 * `ig-data/input/pagecontent/*`: If present, all other files of any type that do not match the above patterns will be copied into the IG input, but will not appear in the table of contents.
 * `ig-data/input/{supported-resource-input-folder}`: JSON files found in supported subfolders will be processed as additional resources in the IG, added to the IG JSON file, and copied to the corresponding locations in the IG input. This allows for a "Bring Your Own JSON" capability when you already have resources that were generated via another method. If a provided JSON file has the same URL as a FSH-defined resource, the provided JSON file will overwrite the FSH-defined one. Supported folders match those documented in the [Guidance for FHIR IG Creation](https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input): capabilities, examples, extensions, models, operations, profiles, resources, vocabulary.
 
-After running SUSHI, change to the output folder and run the `_updatePublisher` and `_genonce` scripts.
+After running SUSHI, change to the output folder and run the `_updatePublisher` script and enter `y|Y` to download latest publisher when prompted. Then run the `_genonce` or `_gencontinuous` script.
+`_genonce` will generate the IG one time. `_gencontinuous` will continuously run the `genonce` script, which will regenerate the IG with any changes that were made to the input of the IG build.
+Note that `curl` is required to run these scripts.
 
 If the input folder does not contain a sub-folder named "ig-data", then only the resources (e.g., profiles, extensions, etc.) will be generated.
 
