@@ -32,10 +32,10 @@ else
 fi
 
 if "$upgrade"; then
-	message="Overwrite $jarlocation?"
+	message="Overwrite $jarlocation? (Y/N) "
 else
 	echo Will place publisher jar here: "$jarlocation"
-	message="Ok?"
+	message="Ok? (Y/N) "
 fi
 
 read -r -p "$message" response

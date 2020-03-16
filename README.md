@@ -48,7 +48,6 @@ If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", th
 
 After running SUSHI, change to the output folder and run the `_updatePublisher` script and enter `y|Y` to download latest publisher when prompted. Then run the `_genonce` or `_gencontinuous` script.
 `_genonce` will generate the IG one time. `_gencontinuous` will continuously run the `genonce` script, which will regenerate the IG with any changes that were made to the input of the IG build.
-Note that `curl` is required to run these scripts.
 
 If the input folder does not contain a sub-folder named "ig-data", then only the resources (e.g., profiles, extensions, etc.) will be generated.
 

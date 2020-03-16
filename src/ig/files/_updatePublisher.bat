@@ -27,7 +27,7 @@ IF NOT EXIST "%input_cache_path%%publisher_jar%" (
 
 :create
 ECHO Will place publisher jar here: %input_cache_path%%publisher_jar%
-SET /p create="Ok? (Y/N)"
+SET /p create="Ok? (Y/N) "
 IF /I "%create%"=="Y" (
 	MKDIR "%input_cache_path%" 2> NUL
 	GOTO:download
@@ -35,7 +35,7 @@ IF /I "%create%"=="Y" (
 GOTO:done
 
 :upgrade
-SET /p overwrite="Overwrite %jarlocation%? (Y/N)"
+SET /p overwrite="Overwrite %jarlocation%? (Y/N) "
 IF /I "%overwrite%"=="Y" (
 	GOTO:download
 )
