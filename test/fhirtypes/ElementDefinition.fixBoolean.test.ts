@@ -29,14 +29,14 @@ describe('ElementDefinition', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
-      hoursOfOperationAllDay.fixBoolean(true);
+      hoursOfOperationAllDay.fixValue(true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixBoolean(true);
+        valueX.fixValue(true);
       }).toThrow(
         'Cannot fix boolean value on this element since this element does not have a single type'
       );
@@ -47,19 +47,19 @@ describe('ElementDefinition', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
-      hoursOfOperationAllDay.fixBoolean(true);
+      hoursOfOperationAllDay.fixValue(true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
-      hoursOfOperationAllDay.fixBoolean(true);
+      hoursOfOperationAllDay.fixValue(true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
       expect(() => {
-        hoursOfOperationAllDay.fixBoolean(false);
+        hoursOfOperationAllDay.fixValue(false);
       }).toThrow('Cannot fix false to this element; a different boolean is already fixed: true.');
     });
 
     it('should throw MismatchedTypeError when the value is fixed to a non-boolean', () => {
       const status = location.elements.find(e => e.id === 'Location.status');
       expect(() => {
-        status.fixBoolean(true);
+        status.fixValue(true);
       }).toThrow('Cannot fix boolean value: true. Value does not match element type: code');
     });
   });

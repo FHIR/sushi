@@ -2,13 +2,11 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
-import { FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let riskEvidenceSynthesis: StructureDefinition;
   let medicationRequest: StructureDefinition;
   let medication: StructureDefinition;
   let fisher: TestFisher;
@@ -22,92 +20,20 @@ describe('ElementDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
-    riskEvidenceSynthesis = fisher.fishForStructureDefinition('RiskEvidenceSynthesis');
     medicationRequest = fisher.fishForStructureDefinition('MedicationRequest');
     medication = fisher.fishForStructureDefinition('Medication');
   });
 
   describe('#fixValue', () => {
-    it('should fix a boolean', () => {
-      const doNotPerform = medicationRequest.elements.find(
-        e => e.id === 'MedicationRequest.doNotPerform'
+    // NOTE: Most fixValue tests are in separate type-specific files.  We only test outliers here.
+    it('should throw MismatchedTypeException when attempting to fix a value with an unsupported type', () => {
+      const authoredOn = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.authoredOn'
       );
-      doNotPerform.fixValue(true);
-      expect(doNotPerform.fixedBoolean).toBe(true);
-    });
-
-    it('should fix a number', () => {
-      const sampleSizeNumberOfStudies = riskEvidenceSynthesis.elements.find(
-        e => e.id === 'RiskEvidenceSynthesis.sampleSize.numberOfStudies'
-      );
-      sampleSizeNumberOfStudies.fixValue(123);
-      expect(sampleSizeNumberOfStudies.fixedInteger).toBe(123);
-    });
-
-    it('should fix a string', () => {
-      const name = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.name');
-      name.fixValue('foo');
-      expect(name.fixedString).toBe('foo');
-    });
-
-    it('should fix a FshCode', () => {
-      const status = medicationRequest.elements.find(e => e.id === 'MedicationRequest.status');
-      status.fixValue(new FshCode('foo'));
-      expect(status.fixedCode).toBe('foo');
-    });
-
-    it('should fix a FshQuantity', () => {
-      const dispenseRequestQuantity = medicationRequest.elements.find(
-        e => e.id === 'MedicationRequest.dispenseRequest.quantity'
-      );
-      dispenseRequestQuantity.fixValue(
-        new FshQuantity(1.23, new FshCode('mm', 'http://unitsofmeasure.org'))
-      );
-      expect(dispenseRequestQuantity.patternQuantity).toEqual({
-        value: 1.23,
-        code: 'mm',
-        system: 'http://unitsofmeasure.org'
-      });
-    });
-
-    it('should fix a FshRatio', () => {
-      const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(
-        new FshRatio(
-          new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
-          new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-        )
-      );
-      expect(amount.patternRatio).toEqual({
-        numerator: {
-          value: 1.2,
-          code: 'mm',
-          system: 'http://unitsofmeasure.org'
-        },
-        denominator: {
-          value: 3.4,
-          code: 'cm',
-          system: 'http://unitsofmeasure.org'
-        }
-      });
-    });
-
-    it('should fix a FshReference', () => {
-      const subject = medicationRequest.elements.find(e => e.id === 'MedicationRequest.subject');
-      subject.fixValue(new FshReference('foo', 'bar'));
-      expect(subject.patternReference).toEqual({
-        reference: 'foo',
-        display: 'bar'
-      });
-    });
-
-    it('should fix a code on a Quantity with units', () => {
-      const code = medication.findElementByPath('amount.numerator', fisher);
-      code.fixValue(new FshCode('mycode', 'https://code.com'), true);
-      expect(code.patternQuantity).toEqual({
-        system: 'https://code.com',
-        code: 'mycode'
-      });
+      expect(() => {
+        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'FixedValueType'
+        authoredOn.fixValue(new Date()); // Date is not a supported type -- only strings are allowed
+      }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
     });
 
     it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern', () => {

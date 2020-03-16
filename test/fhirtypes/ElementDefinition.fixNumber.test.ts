@@ -34,7 +34,7 @@ describe('ElementDefinition', () => {
       const riskEstimateValue = riskEvidenceSynthesis.elements.find(
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.value'
       );
-      riskEstimateValue.fixNumber(1.23);
+      riskEstimateValue.fixValue(1.23);
       expect(riskEstimateValue.fixedDecimal).toBe(1.23);
     });
 
@@ -42,7 +42,7 @@ describe('ElementDefinition', () => {
       const riskEstimateValue = riskEvidenceSynthesis.elements.find(
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.value'
       );
-      riskEstimateValue.fixNumber(123);
+      riskEstimateValue.fixValue(123);
       expect(riskEstimateValue.fixedDecimal).toBe(123);
     });
 
@@ -50,10 +50,10 @@ describe('ElementDefinition', () => {
       const riskEstimateValue = riskEvidenceSynthesis.elements.find(
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.value'
       );
-      riskEstimateValue.fixNumber(1.23);
+      riskEstimateValue.fixValue(1.23);
       expect(riskEstimateValue.fixedDecimal).toBe(1.23);
       expect(() => {
-        riskEstimateValue.fixNumber(1.24);
+        riskEstimateValue.fixValue(1.24);
       }).toThrow('Cannot fix 1.24 to this element; a different decimal is already fixed: 1.23.');
     });
 
@@ -62,7 +62,7 @@ describe('ElementDefinition', () => {
       const riskEstimateValueNumeratorCount = riskEvidenceSynthesis.elements.find(
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.numeratorCount'
       );
-      riskEstimateValueNumeratorCount.fixNumber(123);
+      riskEstimateValueNumeratorCount.fixValue(123);
       expect(riskEstimateValueNumeratorCount.fixedInteger).toBe(123);
     });
 
@@ -70,10 +70,10 @@ describe('ElementDefinition', () => {
       const riskEstimateValueNumeratorCount = riskEvidenceSynthesis.elements.find(
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.numeratorCount'
       );
-      riskEstimateValueNumeratorCount.fixNumber(123);
+      riskEstimateValueNumeratorCount.fixValue(123);
       expect(riskEstimateValueNumeratorCount.fixedInteger).toBe(123);
       expect(() => {
-        riskEstimateValueNumeratorCount.fixNumber(124);
+        riskEstimateValueNumeratorCount.fixValue(124);
       }).toThrow('Cannot fix 124 to this element; a different integer is already fixed: 123.');
     });
 
@@ -82,7 +82,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.numeratorCount'
       );
       expect(() => {
-        riskEstimateValueNumeratorCount.fixNumber(12.3);
+        riskEstimateValueNumeratorCount.fixValue(12.3);
       }).toThrow('Cannot fix number value: 12.3. Value does not match element type: integer');
     });
 
@@ -91,7 +91,7 @@ describe('ElementDefinition', () => {
       const reliableCache = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.messaging.reliableCache'
       );
-      reliableCache.fixNumber(0);
+      reliableCache.fixValue(0);
       expect(reliableCache.fixedUnsignedInt).toBe(0);
     });
 
@@ -100,7 +100,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.messaging.reliableCache'
       );
       expect(() => {
-        reliableCache.fixNumber(2.4);
+        reliableCache.fixValue(2.4);
       }).toThrow('Cannot fix number value: 2.4. Value does not match element type: unsignedInt');
     });
 
@@ -109,7 +109,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.messaging.reliableCache'
       );
       expect(() => {
-        reliableCache.fixNumber(-24);
+        reliableCache.fixValue(-24);
       }).toThrow('Cannot fix number value: -24. Value does not match element type: unsignedInt');
     });
 
@@ -117,10 +117,10 @@ describe('ElementDefinition', () => {
       const reliableCache = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.messaging.reliableCache'
       );
-      reliableCache.fixNumber(12);
+      reliableCache.fixValue(12);
       expect(reliableCache.fixedUnsignedInt).toBe(12);
       expect(() => {
-        reliableCache.fixNumber(34);
+        reliableCache.fixValue(34);
       }).toThrow('Cannot fix 34 to this element; a different unsignedInt is already fixed: 12.');
     });
 
@@ -129,7 +129,7 @@ describe('ElementDefinition', () => {
       const minutesDuration = appointment.elements.find(
         e => e.id === 'Appointment.minutesDuration'
       );
-      minutesDuration.fixNumber(12);
+      minutesDuration.fixValue(12);
       expect(minutesDuration.fixedPositiveInt).toBe(12);
     });
 
@@ -138,7 +138,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Appointment.minutesDuration'
       );
       expect(() => {
-        minutesDuration.fixNumber(1.2);
+        minutesDuration.fixValue(1.2);
       }).toThrow('Cannot fix number value: 1.2. Value does not match element type: positiveInt');
     });
 
@@ -147,7 +147,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Appointment.minutesDuration'
       );
       expect(() => {
-        minutesDuration.fixNumber(0);
+        minutesDuration.fixValue(0);
       }).toThrow('Cannot fix number value: 0. Value does not match element type: positiveInt');
     });
 
@@ -156,7 +156,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Appointment.minutesDuration'
       );
       expect(() => {
-        minutesDuration.fixNumber(-12);
+        minutesDuration.fixValue(-12);
       }).toThrow('Cannot fix number value: -12. Value does not match element type: positiveInt');
     });
 
@@ -164,10 +164,10 @@ describe('ElementDefinition', () => {
       const minutesDuration = appointment.elements.find(
         e => e.id === 'Appointment.minutesDuration'
       );
-      minutesDuration.fixNumber(12);
+      minutesDuration.fixValue(12);
       expect(minutesDuration.fixedPositiveInt).toEqual(12);
       expect(() => {
-        minutesDuration.fixNumber(34);
+        minutesDuration.fixValue(34);
       }).toThrow('Cannot fix 34 to this element; a different positiveInt is already fixed: 12.');
     });
 
@@ -175,14 +175,14 @@ describe('ElementDefinition', () => {
     it('should throw MismatchedTypeError when fixing an integer to a non-numerical value', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(() => {
-        status.fixNumber(123);
+        status.fixValue(123);
       }).toThrow('Cannot fix number value: 123. Value does not match element type: code');
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixNumber(123);
+        valueX.fixValue(123);
       }).toThrow(
         'Cannot fix number value on this element since this element does not have a single type'
       );

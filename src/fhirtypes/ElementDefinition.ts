@@ -867,24 +867,45 @@ export class ElementDefinition {
    * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
   fixValue(value: FixedValueType, units = false): void {
-    if (typeof value === 'boolean') {
-      this.fixBoolean(value);
-    } else if (typeof value === 'number') {
-      this.fixNumber(value);
-    } else if (typeof value === 'string') {
-      this.fixString(value);
-    } else if (value instanceof FshCode) {
-      this.fixFshCode(value);
-    } else if (value instanceof FshQuantity) {
-      this.fixFshQuantity(value);
-    } else if (value instanceof FshRatio) {
-      this.fixFshRatio(value);
-    } else if (value instanceof FshReference) {
-      this.fixFshReference(value);
+    let type: string = typeof value;
+    if (type === 'object' && value?.constructor?.name) {
+      // For types like FshCode, FshQuantity, etc, remove the Fsh
+      type = value.constructor.name.replace(/^Fsh/, '');
     }
+
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError(type);
+    }
+
+    switch (type) {
+      case 'boolean':
+        this.fixBoolean(value as boolean);
+        break;
+      case 'number':
+        this.fixNumber(value as number);
+        break;
+      case 'string':
+        this.fixString(value as string);
+        break;
+      case 'Code':
+        this.fixFshCode(value as FshCode);
+        break;
+      case 'Quantity':
+        this.fixFshQuantity(value as FshQuantity);
+        break;
+      case 'Ratio':
+        this.fixFshRatio(value as FshRatio);
+        break;
+      case 'Reference':
+        this.fixFshReference(value as FshReference);
+        break;
+      default:
+        throw new MismatchedTypeError(type, value, this.type[0].code);
+    }
+
     // Units error should not stop fixing value, but must still be logged
     const types = this.findTypesByCode('Quantity');
-    if (units && !types.find(t => t.code === 'Quantity')) {
+    if (units && types.length === 0) {
       throw new InvalidUnitsError(this.id);
     }
   }
@@ -966,10 +987,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {MismatchedTypeError} when the type of the ElementDefinition is not boolean
    */
-  fixBoolean(value: boolean): void {
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError(typeof value);
-    }
+  private fixBoolean(value: boolean): void {
     const type = this.type[0].code;
     if (type === 'boolean' && this.checkIfFixable(value, this.fixedBoolean, type)) {
       this.fixedBoolean = value;
@@ -987,10 +1005,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  fixNumber(value: number): void {
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError(typeof value);
-    }
+  private fixNumber(value: number): void {
     const type = this.type[0].code;
     if (type === 'decimal' && this.checkIfFixable(value, this.fixedDecimal, type)) {
       this.fixedDecimal = value;
@@ -1028,10 +1043,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  fixString(value: string): void {
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError(typeof value);
-    }
+  private fixString(value: string): void {
     const type = this.type[0].code;
     if (type === 'string' && this.checkIfFixable(value, this.fixedString, type)) {
       this.fixedString = value;
@@ -1155,10 +1167,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  fixFshQuantity(value: FshQuantity): void {
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError('Quantity');
-    }
+  private fixFshQuantity(value: FshQuantity): void {
     const type = this.type[0].code;
     if (type === 'Quantity') {
       if (this.patternQuantity) {
@@ -1198,10 +1207,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  fixFshRatio(value: FshRatio): void {
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError('Ratio');
-    }
+  private fixFshRatio(value: FshRatio): void {
     const type = this.type[0].code;
     if (type === 'Ratio') {
       if (this.patternRatio) {
@@ -1254,10 +1260,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  fixFshReference(value: FshReference): void {
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError('Reference');
-    }
+  private fixFshReference(value: FshReference): void {
     const type = this.type[0].code;
     if (type === 'Reference') {
       if (this.patternReference) {
@@ -1302,11 +1305,8 @@ export class ElementDefinition {
    * @throws {CodeAlreadyFixedError} where the code is already fixed to a different code
    * @throws {InvalidUriError} when the system being fixed is not a valid uri
    */
-  fixFshCode(code: FshCode): void {
+  private fixFshCode(code: FshCode): void {
     // This is the element to fix it to
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError('Code');
-    }
     if (code.system && !isUri(code.system.split('|')[0])) {
       throw new InvalidUriError(code.system);
     }

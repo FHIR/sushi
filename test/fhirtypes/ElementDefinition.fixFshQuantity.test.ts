@@ -32,7 +32,7 @@ describe('ElementDefinition', () => {
       const referenceRangeLow = observation.elements.find(
         e => e.id === 'Observation.referenceRange.low'
       );
-      referenceRangeLow.fixFshQuantity(fshQuantity1);
+      referenceRangeLow.fixValue(fshQuantity1);
       expect(referenceRangeLow.patternQuantity).toEqual({
         value: 1.23,
         code: 'mm',
@@ -43,7 +43,7 @@ describe('ElementDefinition', () => {
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixFshQuantity(fshQuantity1);
+        valueX.fixValue(fshQuantity1);
       }).toThrow(
         'Cannot fix Quantity value on this element since this element does not have a single type'
       );
@@ -53,9 +53,9 @@ describe('ElementDefinition', () => {
       const referenceRangeLow = observation.elements.find(
         e => e.id === 'Observation.referenceRange.low'
       );
-      referenceRangeLow.fixFshQuantity(fshQuantity1);
+      referenceRangeLow.fixValue(fshQuantity1);
       // should be able to fix a Quantity twice in the same way without issue
-      referenceRangeLow.fixFshQuantity(fshQuantity1);
+      referenceRangeLow.fixValue(fshQuantity1);
       expect(referenceRangeLow.patternQuantity).toEqual({
         value: 1.23,
         code: 'mm',
@@ -63,7 +63,7 @@ describe('ElementDefinition', () => {
       });
       // different value
       expect(() => {
-        referenceRangeLow.fixFshQuantity(fshQuantity2);
+        referenceRangeLow.fixValue(fshQuantity2);
       }).toThrow(
         // eslint-disable-next-line
         "Cannot fix 1.24 'mm' to this element; a different Quantity is already fixed: 1.23 'mm'."
@@ -74,15 +74,15 @@ describe('ElementDefinition', () => {
       const referenceRangeLow = observation.elements.find(
         e => e.id === 'Observation.referenceRange.low'
       );
-      referenceRangeLow.fixFshQuantity(new FshQuantity(1.23));
+      referenceRangeLow.fixValue(new FshQuantity(1.23));
       // should be able to fix a Quantity twice in the same way without issue
-      referenceRangeLow.fixFshQuantity(new FshQuantity(1.23));
+      referenceRangeLow.fixValue(new FshQuantity(1.23));
       expect(referenceRangeLow.patternQuantity).toEqual({
         value: 1.23
       });
       // different value
       expect(() => {
-        referenceRangeLow.fixFshQuantity(new FshQuantity(3.21));
+        referenceRangeLow.fixValue(new FshQuantity(3.21));
       }).toThrow(
         // eslint-disable-next-line
         'Cannot fix 3.21 to this element; a different Quantity is already fixed: 1.23.'
@@ -93,12 +93,12 @@ describe('ElementDefinition', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       // with units
       expect(() => {
-        status.fixFshQuantity(fshQuantity2);
+        status.fixValue(fshQuantity2);
         // eslint-disable-next-line
       }).toThrow("Cannot fix Quantity value: 1.24 'mm'. Value does not match element type: code");
       // without units
       expect(() => {
-        status.fixFshQuantity(new FshQuantity(1.24));
+        status.fixValue(new FshQuantity(1.24));
       }).toThrow('Cannot fix Quantity value: 1.24. Value does not match element type: code');
     });
   });

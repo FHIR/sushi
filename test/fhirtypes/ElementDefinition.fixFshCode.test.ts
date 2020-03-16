@@ -32,7 +32,7 @@ describe('ElementDefinition', () => {
   describe('#fixFshCode()', () => {
     it('should fix a code to a CodeableConcept', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
-      concept.fixFshCode(fooBarCode);
+      concept.fixValue(fooBarCode);
       expect(concept.patternCodeableConcept).toEqual({
         coding: [{ code: 'bar', system: 'http://foo.com' }]
       });
@@ -40,7 +40,7 @@ describe('ElementDefinition', () => {
 
     it('should fix a code with a version to a CodeableConcept', () => {
       const concept = observation.findElementByPath('code', fisher);
-      concept.fixFshCode(versionedCode);
+      concept.fixValue(versionedCode);
       expect(concept.patternCodeableConcept).toEqual({
         coding: [
           {
@@ -55,10 +55,10 @@ describe('ElementDefinition', () => {
     it('should throw CodeAlreadyFixedError when fixing a code to a CodeableConcept fixed to a different code', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       // Setup original fixed code
-      concept.fixFshCode(fooBarCode);
+      concept.fixValue(fooBarCode);
       const clone = cloneDeep(concept);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
       expect(clone).toEqual(concept);
     });
@@ -70,7 +70,7 @@ describe('ElementDefinition', () => {
       const rrType = observation.elements.find(e => e.id === 'Observation.referenceRange.type');
       const clone = cloneDeep(rrType);
       expect(() => {
-        rrType.fixFshCode(barFooCode);
+        rrType.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
       expect(clone).toEqual(rrType);
     });
@@ -79,7 +79,7 @@ describe('ElementDefinition', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
       const clone = cloneDeep(category);
       expect(() => {
-        clone.fixFshCode(new FshCode('code', 'notAUri'));
+        clone.fixValue(new FshCode('code', 'notAUri'));
       }).toThrow(/notAUri/);
     });
 
@@ -87,13 +87,13 @@ describe('ElementDefinition', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       concept.unfold(fisher);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
-      coding.fixFshCode(fooBarCode);
+      coding.fixValue(fooBarCode);
       expect(coding.patternCoding).toEqual({ code: 'bar', system: 'http://foo.com' });
     });
 
     it('should fix a code with a version to a Coding', () => {
       const coding = observation.findElementByPath('code.coding', fisher);
-      coding.fixFshCode(versionedCode);
+      coding.fixValue(versionedCode);
       expect(coding.patternCoding).toEqual({
         code: 'versioned',
         system: 'http://versioned.com',
@@ -106,10 +106,10 @@ describe('ElementDefinition', () => {
       concept.unfold(fisher);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       // Setup original fixed code
-      coding.fixFshCode(fooBarCode);
+      coding.fixValue(fooBarCode);
       const clone = cloneDeep(coding);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
       expect(clone).toEqual(coding);
     });
@@ -125,24 +125,24 @@ describe('ElementDefinition', () => {
       );
       const clone = cloneDeep(rrTypeCoding);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
       expect(clone).toEqual(rrTypeCoding);
     });
 
     it('should fix a code to a code', () => {
       const code = observation.elements.find(e => e.id === 'Observation.status');
-      code.fixFshCode(fooBarCode);
+      code.fixValue(fooBarCode);
       expect(code.fixedCode).toBe('bar');
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a code fixed to a different code', () => {
       const code = observation.elements.find(e => e.id === 'Observation.status');
       // Setup original fixed code
-      code.fixFshCode(fooBarCode);
+      code.fixValue(fooBarCode);
       const clone = cloneDeep(code);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(clone).toEqual(code);
     });
@@ -156,27 +156,27 @@ describe('ElementDefinition', () => {
         e => e.id === 'Observation.code.coding.code'
       );
       // Setup original fixed code
-      code.fixFshCode(fooBarCode);
+      code.fixValue(fooBarCode);
       const clone = cloneDeep(codeCodingCode);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(clone).toEqual(codeCodingCode);
     });
 
     it('should fix a code to a Quantity', () => {
       const quantity = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
-      quantity.fixFshCode(fooBarCode);
+      quantity.fixValue(fooBarCode);
       expect(quantity.patternQuantity).toEqual({ code: 'bar', system: 'http://foo.com' });
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a Quantity fixed to a different code', () => {
       const quantity = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
       // Setup original fixed code
-      quantity.fixFshCode(fooBarCode);
+      quantity.fixValue(fooBarCode);
       const clone = cloneDeep(quantity);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
       expect(clone).toEqual(quantity);
     });
@@ -188,24 +188,24 @@ describe('ElementDefinition', () => {
       const rrLow = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
       const clone = cloneDeep(rrLow);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
       expect(clone).toEqual(rrLow);
     });
 
     it('should fix a code to a string', () => {
       const string = observation.elements.find(e => e.id === 'Observation.referenceRange.text');
-      string.fixFshCode(fooBarCode);
+      string.fixValue(fooBarCode);
       expect(string.fixedString).toBe('bar');
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a string fixed to a different string', () => {
       const string = observation.elements.find(e => e.id === 'Observation.referenceRange.text');
       // Setup original fixed code
-      string.fixFshCode(fooBarCode);
+      string.fixValue(fooBarCode);
       const clone = cloneDeep(string);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(clone).toEqual(string);
     });
@@ -218,24 +218,24 @@ describe('ElementDefinition', () => {
       // Setup original fixed code
       const clone = cloneDeep(string);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(clone).toEqual(string);
     });
 
     it('should fix a code to a uri', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.implicitRules');
-      uri.fixFshCode(fooBarCode);
+      uri.fixValue(fooBarCode);
       expect(uri.fixedUri).toBe('bar');
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a uri fixed to a different uri', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.implicitRules');
       // Setup original fixed code
-      uri.fixFshCode(fooBarCode);
+      uri.fixValue(fooBarCode);
       const clone = cloneDeep(uri);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(clone).toEqual(uri);
     });
@@ -247,7 +247,7 @@ describe('ElementDefinition', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.referenceRange.low.system');
       const clone = cloneDeep(uri);
       expect(() => {
-        clone.fixFshCode(barFooCode);
+        clone.fixValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(clone).toEqual(uri);
     });
@@ -256,7 +256,7 @@ describe('ElementDefinition', () => {
       const instant = observation.elements.find(e => e.id === 'Observation.issued');
       const clone = cloneDeep(instant);
       expect(() => {
-        clone.fixFshCode(fooBarCode);
+        clone.fixValue(fooBarCode);
       }).toThrow(/instant/);
       expect(clone).toEqual(instant);
     });
@@ -264,7 +264,7 @@ describe('ElementDefinition', () => {
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixFshCode(fooBarCode);
+        valueX.fixValue(fooBarCode);
       }).toThrow(
         'Cannot fix Code value on this element since this element does not have a single type'
       );
