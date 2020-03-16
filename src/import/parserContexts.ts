@@ -13,6 +13,7 @@ export interface EntityContext extends ParserRuleContext {
   codeSystem(): CodeSystemContext;
   invariant(): InvariantContext;
   ruleSet(): RuleSetContext;
+  mapping(): MappingContext;
 }
 
 export interface AliasContext extends ParserRuleContext {
@@ -96,6 +97,19 @@ export interface RuleSetContext extends ParserRuleContext {
   sdRule(): SdRuleContext[];
 }
 
+export interface MappingContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  mappingMetadata(): MappingMetadataContext[];
+  mappingRule(): MappingRuleContext[];
+}
+
+export interface MappingMetadataContext extends ParserRuleContext {
+  id(): IdContext;
+  description(): DescriptionContext;
+  source(): SourceContext;
+  target(): TargetContext;
+}
+
 export interface ParentContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
 }
@@ -136,6 +150,14 @@ export interface SeverityContext extends ParserRuleContext {
 
 export interface InstanceOfContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
+}
+
+export interface SourceContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+}
+
+export interface TargetContext extends ParserRuleContext {
+  STRING(): ParserRuleContext;
 }
 
 export interface SdRuleContext extends ParserRuleContext {
@@ -279,6 +301,11 @@ export interface CaretValueRuleContext extends ParserRuleContext {
   value(): ValueContext;
 }
 
+export interface MappingRuleContext extends ParserRuleContext {
+  path(): PathContext;
+  STRING(): ParserRuleContext[];
+  CODE(): ParserRuleContext;
+}
 export interface VsComponentContext extends ParserRuleContext {
   KW_EXCLUDE(): ParserRuleContext;
   vsConceptComponent(): VsConceptComponentContext;

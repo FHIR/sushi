@@ -1,7 +1,7 @@
 grammar FSH;
 
 doc:                entity* EOF;
-entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet;
+entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | mapping;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
@@ -23,6 +23,9 @@ csMetadata:         id | title | description;
 
 ruleSet:            KW_RULESET SEQUENCE sdRule+;
 
+mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingRule*;
+mappingMetadata:    id | source | target | description;
+
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
 id:                 KW_ID SEQUENCE;
@@ -34,6 +37,8 @@ severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF SEQUENCE;
 usage:              KW_USAGE SEQUENCE;
 mixins:             KW_MIXINS (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
+source:             KW_SOURCE SEQUENCE;
+target:             KW_TARGET STRING;
 
 
 // RULES
@@ -45,6 +50,7 @@ containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
+mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR KW_EXCLUDE? ( vsConceptComponent | vsFilterComponent );
@@ -86,6 +92,7 @@ KW_INVARIANT:       'Invariant' WS* ':';
 KW_VALUESET:        'ValueSet' WS* ':';
 KW_CODESYSTEM:      'CodeSystem' WS* ':';
 KW_RULESET:         'RuleSet' WS* ':';
+KW_MAPPING:         'Mapping' WS* ':';
 KW_MIXINS:          'Mixins' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';
@@ -95,6 +102,8 @@ KW_EXPRESSION:      'Expression' WS* ':';
 KW_XPATH:           'XPath' WS* ':';
 KW_SEVERITY:        'Severity' WS* ':';
 KW_USAGE:           'Usage' WS* ':';
+KW_SOURCE:          'Source' WS* ':';
+KW_TARGET:          'Target' WS* ':';
 KW_MOD:             '?!';
 KW_MS:              'MS';
 KW_SU:              'SU';
@@ -123,6 +132,7 @@ EQUAL:              '=';
 STAR:               '*'  [0-9]*;
 COLON:              ':';
 COMMA:              ',';
+ARROW:              '->';
 
 // PATTERNS
 

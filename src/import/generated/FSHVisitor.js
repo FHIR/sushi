@@ -108,6 +108,18 @@ FSHVisitor.prototype.visitRuleSet = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#mapping.
+FSHVisitor.prototype.visitMapping = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#mappingMetadata.
+FSHVisitor.prototype.visitMappingMetadata = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#parent.
 FSHVisitor.prototype.visitParent = function(ctx) {
   return this.visitChildren(ctx);
@@ -168,6 +180,18 @@ FSHVisitor.prototype.visitMixins = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#source.
+FSHVisitor.prototype.visitSource = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#target.
+FSHVisitor.prototype.visitTarget = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#cardRule.
 FSHVisitor.prototype.visitCardRule = function(ctx) {
   return this.visitChildren(ctx);
@@ -212,6 +236,12 @@ FSHVisitor.prototype.visitObeysRule = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#caretValueRule.
 FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#mappingRule.
+FSHVisitor.prototype.visitMappingRule = function(ctx) {
   return this.visitChildren(ctx);
 };
 

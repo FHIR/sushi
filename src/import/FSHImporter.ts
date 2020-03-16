@@ -27,6 +27,7 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
+  Mapping,
   isInstanceUsage
 } from '../fshtypes';
 import {
@@ -40,7 +41,8 @@ import {
   ContainsRule,
   ContainsRuleItem,
   CaretValueRule,
-  ObeysRule
+  ObeysRule,
+  MappingRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -91,6 +93,14 @@ enum InvariantMetadataKey {
   Expression = 'Expression',
   XPath = 'XPath',
   Severity = 'Severity',
+  Unknown = 'Unknown'
+}
+
+enum MappingMetadataKey {
+  Id = 'Id',
+  Source = 'Source',
+  Target = 'Target',
+  Description = 'Description',
   Unknown = 'Unknown'
 }
 
@@ -220,6 +230,10 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.ruleSet()) {
       this.visitRuleSet(ctx.ruleSet());
+    }
+
+    if (ctx.mapping()) {
+      this.visitMapping(ctx.mapping());
     }
   }
 
@@ -522,6 +536,48 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
+  visitMapping(ctx: pc.MappingContext): void {
+    const mapping = new Mapping(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    this.parseMapping(mapping, ctx.mappingMetadata(), ctx.mappingRule());
+    this.currentDoc.mappings.set(mapping.name, mapping);
+  }
+
+  parseMapping(
+    mapping: Mapping,
+    metaCtx: pc.MappingMetadataContext[] = [],
+    ruleCtx: pc.MappingRuleContext[] = []
+  ): void {
+    const seenPairs: Map<MappingMetadataKey, string> = new Map();
+    metaCtx
+      .map(mapMeta => ({ ...this.visitMappingMetadata(mapMeta), context: mapMeta }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === MappingMetadataKey.Id) {
+          mapping.id = pair.value;
+        } else if (pair.key === MappingMetadataKey.Source) {
+          mapping.source = pair.value;
+        } else if (pair.key === MappingMetadataKey.Target) {
+          mapping.target = pair.value;
+        } else if (pair.key === MappingMetadataKey.Description) {
+          mapping.description = pair.value;
+        }
+      });
+    ruleCtx.forEach(mappingRule => {
+      mapping.rules.push(this.visitMappingRule(mappingRule));
+    });
+  }
+
   visitSdMetadata(ctx: pc.SdMetadataContext): { key: SdMetadataKey; value: string | string[] } {
     if (ctx.id()) {
       return { key: SdMetadataKey.Id, value: this.visitId(ctx.id()) };
@@ -612,6 +668,22 @@ export class FSHImporter extends FSHVisitor {
     };
   }
 
+  visitMappingMetadata(ctx: pc.MappingMetadataContext): { key: MappingMetadataKey; value: string } {
+    if (ctx.id()) {
+      return { key: MappingMetadataKey.Id, value: this.visitId(ctx.id()) };
+    } else if (ctx.source()) {
+      return { key: MappingMetadataKey.Source, value: this.visitSource(ctx.source()) };
+    } else if (ctx.target()) {
+      return { key: MappingMetadataKey.Target, value: this.visitTarget(ctx.target()) };
+    } else if (ctx.description()) {
+      return {
+        key: MappingMetadataKey.Description,
+        value: this.visitDescription(ctx.description())
+      };
+    }
+    return { key: MappingMetadataKey.Unknown, value: ctx.getText() };
+  }
+
   visitId(ctx: pc.IdContext): string {
     return ctx.SEQUENCE().getText();
   }
@@ -698,6 +770,14 @@ export class FSHImporter extends FSHVisitor {
       );
     }
     return concept;
+  }
+
+  visitSource(ctx: pc.SourceContext): string {
+    return this.aliasAwareValue(ctx.SEQUENCE());
+  }
+
+  visitTarget(ctx: pc.TargetContext): string {
+    return this.extractString(ctx.STRING());
   }
 
   private parseCodeLexeme(conceptText: string, parentCtx: ParserRuleContext): FshCode {
@@ -1097,6 +1177,29 @@ export class FSHImporter extends FSHVisitor {
       rules.push(obeysRule);
     });
     return rules;
+  }
+
+  visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {
+    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
+    const mappingRule = new MappingRule(path)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    mappingRule.map = this.extractString(ctx.STRING()[0]);
+    if (ctx.STRING().length > 1) {
+      mappingRule.comment = this.extractString(ctx.STRING()[1]);
+    }
+    if (ctx.CODE()) {
+      mappingRule.language = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
+        .withLocation(this.extractStartStop(ctx.CODE()))
+        .withFile(this.currentFile);
+      if (mappingRule.language.system?.length > 0) {
+        logger.warn(
+          'Do not specify a system for mapping language.',
+          mappingRule.language.sourceInfo
+        );
+      }
+    }
+    return mappingRule;
   }
 
   visitVsComponent(ctx: pc.VsComponentContext): ValueSetComponent {
