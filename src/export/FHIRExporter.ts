@@ -4,7 +4,8 @@ import {
   CodeSystemExporter,
   InstanceExporter,
   StructureDefinitionExporter,
-  ValueSetExporter
+  ValueSetExporter,
+  MappingExporter
 } from '.';
 import { MasterFisher } from '../utils';
 /**
@@ -17,6 +18,7 @@ export class FHIRExporter {
   private instanceExporter: InstanceExporter;
   private valueSetExporter: ValueSetExporter;
   private codeSystemExporter: CodeSystemExporter;
+  private mappingExporter: MappingExporter;
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
@@ -30,6 +32,7 @@ export class FHIRExporter {
     this.valueSetExporter = new ValueSetExporter(this.tank, this.pkg, this.fisher);
     this.codeSystemExporter = new CodeSystemExporter(this.tank, this.pkg, this.fisher);
     this.instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+    this.mappingExporter = new MappingExporter(this.tank, this.pkg, this.fisher);
   }
 
   export(): Package {
@@ -37,6 +40,7 @@ export class FHIRExporter {
     this.valueSetExporter.export();
     this.codeSystemExporter.export();
     this.instanceExporter.export();
+    this.mappingExporter.export();
 
     return this.pkg;
   }
