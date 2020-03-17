@@ -590,6 +590,104 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D*/s);
   });
 
+  it('should apply a flag rule that specifies an element is trial use', () => {
+    // Profile: HasTrial
+    // Parent: Observation
+    // * bodySite TU
+    const profile = new Profile('HasTrial');
+    profile.parent = 'Observation';
+    const flagRule = new FlagRule('bodySite');
+    flagRule.trialUse = true;
+    profile.rules.push(flagRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const bodySite = sd.findElement('Observation.bodySite');
+    expect(bodySite.extension).toHaveLength(1);
+    expect(bodySite.extension[0]).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'trial-use'
+    });
+  });
+
+  it('should apply a flag rule that specifies an element is normative', () => {
+    // Profile: HasNormative
+    // Parent: Observation
+    // * method N
+    const profile = new Profile('HasTrial');
+    profile.parent = 'Observation';
+    const flagRule = new FlagRule('method');
+    flagRule.normative = true;
+    profile.rules.push(flagRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const method = sd.findElement('Observation.method');
+    expect(method.extension).toHaveLength(1);
+    expect(method.extension[0]).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'normative'
+    });
+  });
+  it('should apply a flag rule that specifies an element is a draft', () => {
+    // Profile: HasDraft
+    // Parent: DiagnosticReport
+    // * media D
+    const profile = new Profile('HasDraft');
+    profile.parent = 'DiagnosticReport';
+    const flagRule = new FlagRule('media');
+    flagRule.draft = true;
+    profile.rules.push(flagRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const media = sd.findElement('DiagnosticReport.media');
+    expect(media.extension).toHaveLength(1);
+    expect(media.extension[0]).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'draft'
+    });
+  });
+  it('should log an error when more than one standards status flag rule is specified on an element', () => {
+    // Profile: HasDraft
+    // Parent: DiagnosticReport
+    // * media D TU
+    const profile = new Profile('HasDraft');
+    profile.parent = 'DiagnosticReport';
+    const flagRule = new FlagRule('media').withFile('MultiStatus.fsh').withLocation([3, 1, 3, 12]);
+    flagRule.draft = true;
+    flagRule.trialUse = true;
+    profile.rules.push(flagRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const media = sd.findElement('DiagnosticReport.media');
+    expect(media.extension).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: MultiStatus\.fsh.*Line: 3\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/multiple standards status/s);
+  });
+
+  it('should log an error when a standards status flag rule would change the existing standards status', () => {
+    // Profile: HasNormative
+    // Parent: Observation
+    // * focus N
+    const profile = new Profile('HasTrial');
+    profile.parent = 'Observation';
+    const flagRule = new FlagRule('focus').withFile('MultiStatus.fsh').withLocation([8, 3, 8, 14]);
+    flagRule.normative = true;
+    profile.rules.push(flagRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const focus = sd.findElement('Observation.focus');
+    expect(focus.extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'trial-use'
+    });
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: MultiStatus\.fsh.*Line: 8\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/existing standards status/s);
+  });
+
   // Value Set Rule
   it('should apply a correct value set rule to an unbound string', () => {
     const profile = new Profile('Junk');

@@ -23,7 +23,9 @@ import {
   InvalidSumOfSliceMinsError,
   InvalidMaxOfSliceError,
   InvalidUriError,
-  InvalidUnitsError
+  InvalidUnitsError,
+  ExistingStandardsStatusError,
+  MultipleStandardsStatusError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -775,12 +777,25 @@ export class ElementDefinition {
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isSummary}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isModifier}
+   * @see {@link http://hl7.org/fhir/R4/versions.html#std-process}
+   * @see {@link http://hl7.org/fhir/extension-structuredefinition-standards-status.html}
+   * @see {@link http://hl7.org/fhir/valueset-standards-status.html}
    * @param mustSupport - whether to make this element a Must Support element
    * @param summary - whether to include this element when querying for a summary
    * @param modifier - whether this element acts as a modifier on the resource
+   * @param trialUse - indicates a standards status of "Trial Use" for this element
+   * @param normative - indicates a standards status of "Normative" for this element
+   * @param draft - indicates a standards status of "Draft" for this element
    * @throws {DisableFlagError} when attempting to disable a flag that cannot be disabled
    */
-  applyFlags(mustSupport: boolean, summary: boolean, modifier: boolean): void {
+  applyFlags(
+    mustSupport: boolean,
+    summary: boolean,
+    modifier: boolean,
+    trialUse: boolean,
+    normative: boolean,
+    draft: boolean
+  ): void {
     const disabledFlags = [];
     if (this.mustSupport && mustSupport === false) {
       disabledFlags.push('Must Support');
@@ -791,6 +806,39 @@ export class ElementDefinition {
     if (disabledFlags.length) {
       throw new DisableFlagError(disabledFlags);
     }
+    let newStatusExtension: any = null;
+    const currentStatusExtension = this.extension?.find(
+      extension =>
+        extension.url ==
+        'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status'
+    );
+    if (currentStatusExtension && (trialUse || normative || draft)) {
+      throw new ExistingStandardsStatusError(this.id);
+    }
+    if (trialUse) {
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'trial-use'
+      };
+    }
+    if (normative) {
+      if (newStatusExtension) {
+        throw new MultipleStandardsStatusError(this.id);
+      }
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'normative'
+      };
+    }
+    if (draft) {
+      if (newStatusExtension) {
+        throw new MultipleStandardsStatusError(this.id);
+      }
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'draft'
+      };
+    }
     if (isBoolean(mustSupport)) {
       this.mustSupport = mustSupport;
     }
@@ -799,6 +847,13 @@ export class ElementDefinition {
     }
     if (isBoolean(modifier)) {
       this.isModifier = modifier;
+    }
+    if (newStatusExtension) {
+      if (this.extension) {
+        this.extension.push(newStatusExtension);
+      } else {
+        this.extension = [newStatusExtension];
+      }
     }
   }
 
