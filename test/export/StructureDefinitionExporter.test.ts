@@ -668,7 +668,7 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should log an error when a standards status flag rule would change the existing standards status', () => {
-    // Profile: HasNormative
+    // Profile: HasTrial
     // Parent: Observation
     // * focus N
     const profile = new Profile('HasTrial');
