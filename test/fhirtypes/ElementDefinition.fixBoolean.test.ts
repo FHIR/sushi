@@ -30,7 +30,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
       hoursOfOperationAllDay.fixValue(true);
-      expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
+      expect(hoursOfOperationAllDay.patternBoolean).toBe(true);
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
@@ -40,7 +40,7 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot fix boolean value on this element since this element does not have a single type'
       );
-      expect(valueX.fixedBoolean).toBeUndefined();
+      expect(valueX.patternBoolean).toBeUndefined();
     });
 
     it('should throw ValueAlreadyFixedError when the value is fixed to a different value', () => {
@@ -48,9 +48,9 @@ describe('ElementDefinition', () => {
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
       hoursOfOperationAllDay.fixValue(true);
-      expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
+      expect(hoursOfOperationAllDay.patternBoolean).toBe(true);
       hoursOfOperationAllDay.fixValue(true);
-      expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
+      expect(hoursOfOperationAllDay.patternBoolean).toBe(true);
       expect(() => {
         hoursOfOperationAllDay.fixValue(false);
       }).toThrow('Cannot fix false to this element; a different boolean is already fixed: true.');

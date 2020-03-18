@@ -42,13 +42,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to a string', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
       batchLotNumber.fixValue('foo bar');
-      expect(batchLotNumber.fixedString).toBe('foo bar');
+      expect(batchLotNumber.patternString).toBe('foo bar');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed string', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
       batchLotNumber.fixValue('foo bar');
-      expect(batchLotNumber.fixedString).toBe('foo bar');
+      expect(batchLotNumber.patternString).toBe('foo bar');
       expect(() => {
         batchLotNumber.fixValue('bar foo');
       }).toThrow(
@@ -60,13 +60,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to a uri', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
       url.fixValue('http://example.org');
-      expect(url.fixedUri).toBe('http://example.org');
+      expect(url.patternUri).toBe('http://example.org');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed uri', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
       url.fixValue('http://example.org');
-      expect(url.fixedUri).toBe('http://example.org');
+      expect(url.patternUri).toBe('http://example.org');
       expect(() => {
         url.fixValue('http://newexample.com');
       }).toThrow(
@@ -87,7 +87,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.implementation.url'
       );
       url.fixValue('http://example.org');
-      expect(url.fixedUrl).toBe('http://example.org');
+      expect(url.patternUrl).toBe('http://example.org');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed URL', () => {
@@ -95,7 +95,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.implementation.url'
       );
       url.fixValue('http://example.org');
-      expect(url.fixedUrl).toBe('http://example.org');
+      expect(url.patternUrl).toBe('http://example.org');
       expect(() => {
         url.fixValue('http://newexample.com');
       }).toThrow(
@@ -118,7 +118,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.instantiates'
       );
       instantiates.fixValue('http://example.org');
-      expect(instantiates.fixedCanonical).toBe('http://example.org');
+      expect(instantiates.patternCanonical).toBe('http://example.org');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed canonical', () => {
@@ -126,7 +126,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.instantiates'
       );
       instantiates.fixValue('http://example.org');
-      expect(instantiates.fixedCanonical).toBe('http://example.org');
+      expect(instantiates.patternCanonical).toBe('http://example.org');
       expect(() => {
         instantiates.fixValue('http://newexample.com');
       }).toThrow(
@@ -149,7 +149,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
       udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==');
-      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed base64Binary', () => {
@@ -157,7 +157,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
       udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==');
-      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
       expect(() => {
         udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=');
       }).toThrow(
@@ -180,13 +180,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to an instant', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
       issued.fixValue('2015-02-07T13:28:17.239+02:00');
-      expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
+      expect(issued.patternInstant).toBe('2015-02-07T13:28:17.239+02:00');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed instant', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
       issued.fixValue('2015-02-07T13:28:17.239+02:00');
-      expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
+      expect(issued.patternInstant).toBe('2015-02-07T13:28:17.239+02:00');
       expect(() => {
         issued.fixValue('2016-02-07T13:28:17.239+02:00');
       }).toThrow(
@@ -205,13 +205,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to a date', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
       birthDate.fixValue('1905-08-23');
-      expect(birthDate.fixedDate).toBe('1905-08-23');
+      expect(birthDate.patternDate).toBe('1905-08-23');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed date', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
       birthDate.fixValue('1905-08-23');
-      expect(birthDate.fixedDate).toBe('1905-08-23');
+      expect(birthDate.patternDate).toBe('1905-08-23');
       expect(() => {
         birthDate.fixValue('1905-08-24');
       }).toThrow(
@@ -232,13 +232,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to a dateTime', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
       date.fixValue('2015-02-07T13:28:17-05:00');
-      expect(date.fixedDateTime).toBe('2015-02-07T13:28:17-05:00');
+      expect(date.patternDateTime).toBe('2015-02-07T13:28:17-05:00');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed dateTime', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
       date.fixValue('1905-08-23');
-      expect(date.fixedDateTime).toBe('1905-08-23');
+      expect(date.patternDateTime).toBe('1905-08-23');
       expect(() => {
         date.fixValue('1905-08-24');
       }).toThrow(
@@ -261,7 +261,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
       hoursOfOperationClosingTime.fixValue('12:34:56');
-      expect(hoursOfOperationClosingTime.fixedTime).toBe('12:34:56');
+      expect(hoursOfOperationClosingTime.patternTime).toBe('12:34:56');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed time', () => {
@@ -269,7 +269,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
       hoursOfOperationClosingTime.fixValue('12:34:56');
-      expect(hoursOfOperationClosingTime.fixedTime).toBe('12:34:56');
+      expect(hoursOfOperationClosingTime.patternTime).toBe('12:34:56');
       expect(() => {
         hoursOfOperationClosingTime.fixValue('12:34:57');
       }).toThrow(
@@ -290,13 +290,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to an oid', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       inputValueOid.fixValue('urn:oid:1.2.3.4.5');
-      expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
+      expect(inputValueOid.patternOid).toBe('urn:oid:1.2.3.4.5');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed oid', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       inputValueOid.fixValue('urn:oid:1.2.3.4.5');
-      expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
+      expect(inputValueOid.patternOid).toBe('urn:oid:1.2.3.4.5');
       expect(() => {
         inputValueOid.fixValue('urn:oid:1.4.3.2.1');
       }).toThrow(
@@ -315,13 +315,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to an id', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       uid.fixValue('uniqueId123');
-      expect(uid.fixedId).toBe('uniqueId123');
+      expect(uid.patternId).toBe('uniqueId123');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed id', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       uid.fixValue('uniqueId123');
-      expect(uid.fixedId).toBe('uniqueId123');
+      expect(uid.patternId).toBe('uniqueId123');
       expect(() => {
         uid.fixValue('anotherUniqueId321');
       }).toThrow(
@@ -342,7 +342,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.description'
       );
       description.fixValue('`This is code`');
-      expect(description.fixedMarkdown).toBe('`This is code`');
+      expect(description.patternMarkdown).toBe('`This is code`');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed markdown', () => {
@@ -350,7 +350,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.description'
       );
       description.fixValue('some text');
-      expect(description.fixedMarkdown).toBe('some text');
+      expect(description.patternMarkdown).toBe('some text');
       expect(() => {
         description.fixValue('other text');
       }).toThrow(
@@ -362,13 +362,13 @@ describe('ElementDefinition', () => {
     it('should fix a string to a uuid', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
       inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
-      expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+      expect(inputValueUuid.patternUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed uuid', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
       inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
-      expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+      expect(inputValueUuid.patternUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(() => {
         inputValueUuid.fixValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520');
       }).toThrow(
@@ -381,7 +381,7 @@ describe('ElementDefinition', () => {
     it('should fix a string to an xhtml', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
-      expect(narrativeDiv.fixedXhtml).toBe(
+      expect(narrativeDiv.patternXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
       );
     });
@@ -397,7 +397,7 @@ describe('ElementDefinition', () => {
 
         </div>`
       );
-      expect(narrativeDiv.fixedXhtml).toBe(
+      expect(narrativeDiv.patternXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig and the slithy toves</div>'
       );
     });
@@ -405,7 +405,7 @@ describe('ElementDefinition', () => {
     it('should throw ValueAlreadyFixedError when fixing an already fixed xhtml', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
-      expect(narrativeDiv.fixedXhtml).toBe(
+      expect(narrativeDiv.patternXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
       );
       expect(() => {
@@ -433,7 +433,7 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot fix string value on this element since this element does not have a single type'
       );
-      expect(valueX.fixedString).toBeUndefined();
+      expect(valueX.patternString).toBeUndefined();
     });
   });
 });

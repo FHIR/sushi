@@ -128,33 +128,57 @@ export class ElementDefinition {
   // so we can't easily use a getter/setter.  It will be just an unspecified property.  For now.
   orderMeaning: string;
   // fixed[x] can be literally almost any field name (e.g., fixedCode, fixedFoo, etc.).
+  // pattern[x] can be literally almost any field name (e.g., patternCoding, patternFoo, etc.).
   // We'll define the ones we are using, but leave the others as unspecified properties.  For now.
   fixedCode: string;
+  patternCode: string;
   fixedString: string;
+  patternString: string;
   fixedUri: string;
+  patternUri: string;
   fixedUrl: string;
+  patternUrl: string;
   fixedCanonical: string;
+  patternCanonical: string;
   fixedInstant: string;
+  patternInstant: string;
   fixedBase64Binary: string;
+  patternBase64Binary: string;
   fixedDate: string;
+  patternDate: string;
   fixedDateTime: string;
+  patternDateTime: string;
   fixedTime: string;
+  patternTime: string;
   fixedOid: string;
+  patternOid: string;
   fixedId: string;
+  patternId: string;
   fixedMarkdown: string;
+  patternMarkdown: string;
   fixedUuid: string;
+  patternUuid: string;
   fixedXhtml: string;
+  patternXhtml: string;
   fixedBoolean: boolean;
+  patternBoolean: boolean;
   fixedDecimal: number;
+  patternDecimal: number;
   fixedInteger: number;
+  patternInteger: number;
   fixedUnsignedInt: number;
+  patternUnsignedInt: number;
   fixedPositiveInt: number;
-  // pattern[x] can be literally almost any field name (e.g., patternCode, patternFoo, etc.).
-  // We'll define the ones we are using, but leave the others as unspecified properties.  For now.
+  patternPositiveInt: number;
+  fixedCodeableConcept: CodeableConcept;
   patternCodeableConcept: CodeableConcept;
+  fixedCoding: Coding;
   patternCoding: Coding;
+  fixedQuantity: Quantity;
   patternQuantity: Quantity;
+  fixedRatio: Ratio;
   patternRatio: Ratio;
+  fixedReference: Reference;
   patternReference: Reference;
   example: ElementDefinitionExample[];
   // minValue[x] can be many different field names (e.g., minValueDate, minValueQuantity, etc.),
@@ -989,8 +1013,11 @@ export class ElementDefinition {
    */
   private fixBoolean(value: boolean): void {
     const type = this.type[0].code;
-    if (type === 'boolean' && this.checkIfFixable(value, this.fixedBoolean, type)) {
-      this.fixedBoolean = value;
+    if (
+      type === 'boolean' &&
+      this.checkIfFixable(value, this.fixedBoolean ?? this.patternBoolean, type)
+    ) {
+      this.patternBoolean = value;
     } else {
       throw new MismatchedTypeError('boolean', value, type);
     }
@@ -1007,28 +1034,31 @@ export class ElementDefinition {
    */
   private fixNumber(value: number): void {
     const type = this.type[0].code;
-    if (type === 'decimal' && this.checkIfFixable(value, this.fixedDecimal, type)) {
-      this.fixedDecimal = value;
+    if (
+      type === 'decimal' &&
+      this.checkIfFixable(value, this.fixedDecimal ?? this.patternDecimal, type)
+    ) {
+      this.patternDecimal = value;
     } else if (
       type === 'integer' &&
       Number.isInteger(value) &&
-      this.checkIfFixable(value, this.fixedInteger, type)
+      this.checkIfFixable(value, this.fixedInteger ?? this.patternInteger, type)
     ) {
-      this.fixedInteger = value;
+      this.patternInteger = value;
     } else if (
       type === 'unsignedInt' &&
       Number.isInteger(value) &&
       value >= 0 &&
-      this.checkIfFixable(value, this.fixedUnsignedInt, type)
+      this.checkIfFixable(value, this.fixedUnsignedInt ?? this.patternUnsignedInt, type)
     ) {
-      this.fixedUnsignedInt = value;
+      this.patternUnsignedInt = value;
     } else if (
       type === 'positiveInt' &&
       Number.isInteger(value) &&
       value > 0 &&
-      this.checkIfFixable(value, this.fixedPositiveInt, type)
+      this.checkIfFixable(value, this.fixedPositiveInt ?? this.patternPositiveInt, type)
     ) {
-      this.fixedPositiveInt = value;
+      this.patternPositiveInt = value;
     } else {
       throw new MismatchedTypeError('number', value, type);
     }
@@ -1045,88 +1075,94 @@ export class ElementDefinition {
    */
   private fixString(value: string): void {
     const type = this.type[0].code;
-    if (type === 'string' && this.checkIfFixable(value, this.fixedString, type)) {
-      this.fixedString = value;
+    if (
+      type === 'string' &&
+      this.checkIfFixable(value, this.fixedString ?? this.patternString, type)
+    ) {
+      this.patternString = value;
     } else if (
       type === 'uri' &&
       /^\S*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedUri, type)
+      this.checkIfFixable(value, this.fixedUri ?? this.patternUri, type)
     ) {
-      this.fixedUri = value;
+      this.patternUri = value;
     } else if (
       type === 'url' &&
       /^\S*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedUrl, type)
+      this.checkIfFixable(value, this.fixedUrl ?? this.patternUrl, type)
     ) {
-      this.fixedUrl = value;
+      this.patternUrl = value;
     } else if (
       type === 'canonical' &&
       /^\S*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedCanonical, type)
+      this.checkIfFixable(value, this.fixedCanonical ?? this.patternCanonical, type)
     ) {
-      this.fixedCanonical = value;
+      this.patternCanonical = value;
     } else if (
       type === 'base64Binary' &&
       /^(\s*([0-9a-zA-Z\+\=]){4}\s*)+$/.test(value) &&
-      this.checkIfFixable(value, this.fixedBase64Binary, type)
+      this.checkIfFixable(value, this.fixedBase64Binary ?? this.patternBase64Binary, type)
     ) {
-      this.fixedBase64Binary = value;
+      this.patternBase64Binary = value;
     } else if (
       type === 'instant' &&
       /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
         value
       ) &&
-      this.checkIfFixable(value, this.fixedInstant, type)
+      this.checkIfFixable(value, this.fixedInstant ?? this.patternInstant, type)
     ) {
-      this.fixedInstant = value;
+      this.patternInstant = value;
     } else if (
       type === 'date' &&
       /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/.test(
         value
       ) &&
-      this.checkIfFixable(value, this.fixedDate, type)
+      this.checkIfFixable(value, this.fixedDate ?? this.patternDate, type)
     ) {
-      this.fixedDate = value;
+      this.patternDate = value;
     } else if (
       type === 'dateTime' &&
       /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/.test(
         value
       ) &&
-      this.checkIfFixable(value, this.fixedDateTime, type)
+      this.checkIfFixable(value, this.fixedDateTime ?? this.patternDateTime, type)
     ) {
-      this.fixedDateTime = value;
+      this.patternDateTime = value;
     } else if (
       type === 'time' &&
       /^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$/.test(value) &&
-      this.checkIfFixable(value, this.fixedTime, type)
+      this.checkIfFixable(value, this.fixedTime ?? this.patternTime, type)
     ) {
-      this.fixedTime = value;
+      this.patternTime = value;
     } else if (
       type === 'oid' &&
       /^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$/.test(value) &&
-      this.checkIfFixable(value, this.fixedOid, type)
+      this.checkIfFixable(value, this.fixedOid ?? this.patternOid, type)
     ) {
-      this.fixedOid = value;
+      this.patternOid = value;
     } else if (
       type === 'id' &&
       /^[A-Za-z0-9\-\.]{1,64}$/.test(value) &&
-      this.checkIfFixable(value, this.fixedId, type)
+      this.checkIfFixable(value, this.fixedId ?? this.patternId, type)
     ) {
-      this.fixedId = value;
+      this.patternId = value;
     } else if (
       type === 'markdown' &&
       /^\s*(\S|\s)*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedMarkdown, type)
+      this.checkIfFixable(value, this.fixedMarkdown ?? this.patternMarkdown, type)
     ) {
-      this.fixedMarkdown = value;
-    } else if (type === 'uuid' && this.checkIfFixable(value, this.fixedUuid, type)) {
-      this.fixedUuid = value;
+      this.patternMarkdown = value;
+    } else if (
+      type === 'uuid' &&
+      this.checkIfFixable(value, this.fixedUuid ?? this.patternUuid, type)
+    ) {
+      this.patternUuid = value;
     } else if (
       type == 'xhtml' &&
       this.checkXhtml(value) &&
-      this.checkIfFixable(value, this.fixedXhtml, type)
+      this.checkIfFixable(value, this.fixedXhtml ?? this.patternXhtml, type)
     ) {
-      this.fixedXhtml = minify(value, { collapseWhitespace: true });
+      this.patternXhtml = minify(value, { collapseWhitespace: true });
     } else {
       throw new MismatchedTypeError('string', value, type);
     }
@@ -1338,6 +1374,7 @@ export class ElementDefinition {
    */
   private fixFshCodeToCodeableConcept(code: FshCode): void {
     // Check if this is already fixed to something else
+    // TODO: handle fixedCodeableConcept too
     const alreadyFixedValue = this.patternCodeableConcept ?? this.fixedByAnyParent();
     if (alreadyFixedValue) {
       const fixedToSame =
@@ -1379,6 +1416,7 @@ export class ElementDefinition {
    */
   private fixFshCodeToCoding(code: FshCode): void {
     // Check if this is already fixed to something else
+    // TODO: Handle fixedCoding too
     const alreadyFixedValue = this.patternCoding ?? this.fixedByAnyParent();
     if (alreadyFixedValue) {
       if (alreadyFixedValue.code != code.code || alreadyFixedValue.system != code.system) {
@@ -1414,6 +1452,7 @@ export class ElementDefinition {
    */
   private fixFshCodeToQuantityUnitCode(code: FshCode): void {
     // Check if this is already fixed to something else
+    // TODO: Handle fixedQuantity too
     const alreadyFixedValue = this.patternQuantity ?? this.fixedByAnyParent();
     if (alreadyFixedValue) {
       if (alreadyFixedValue.code != code.code || alreadyFixedValue.system != code.system) {
@@ -1444,7 +1483,7 @@ export class ElementDefinition {
    */
   private fixFshCodeToCode(code: FshCode): void {
     // Check if this is already fixed to something else
-    const alreadyFixedValue = this.fixedCode ?? this.fixedByAnyParent();
+    const alreadyFixedValue = this.fixedCode ?? this.patternCode ?? this.fixedByAnyParent();
     if (alreadyFixedValue) {
       if (alreadyFixedValue != code.code) {
         throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
@@ -1453,7 +1492,7 @@ export class ElementDefinition {
       return;
     }
 
-    this.fixedCode = code.code;
+    this.patternCode = code.code;
   }
 
   /**
@@ -1465,7 +1504,7 @@ export class ElementDefinition {
    */
   private fixFshCodeToString(code: FshCode): void {
     // Check if this is already fixed to something else
-    const alreadyFixedValue = this.fixedString ?? this.fixedByAnyParent();
+    const alreadyFixedValue = this.fixedString ?? this.patternString ?? this.fixedByAnyParent();
     if (alreadyFixedValue) {
       if (alreadyFixedValue != code.code) {
         throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
@@ -1474,7 +1513,7 @@ export class ElementDefinition {
       return;
     }
 
-    this.fixedString = code.code;
+    this.patternString = code.code;
   }
 
   /**
@@ -1486,7 +1525,7 @@ export class ElementDefinition {
    */
   private fixFshCodeToUri(code: FshCode): void {
     // Check if this is already fixed to something else
-    const alreadyFixedValue = this.fixedUri ?? this.fixedByAnyParent();
+    const alreadyFixedValue = this.fixedUri ?? this.patternUri ?? this.fixedByAnyParent();
     if (alreadyFixedValue) {
       if (alreadyFixedValue != code.code) {
         throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
@@ -1495,7 +1534,7 @@ export class ElementDefinition {
       return;
     }
 
-    this.fixedUri = code.code;
+    this.patternUri = code.code;
   }
 
   /**

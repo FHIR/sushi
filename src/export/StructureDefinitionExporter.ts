@@ -271,7 +271,9 @@ export class StructureDefinitionExporter implements Fishable {
           `${rule.path}[${slice.sliceName}].url`,
           this
         );
-        urlElement.fixValue(slice.sliceName);
+        // TODO: Switch back to `urlElement.fixValue(slice.sliceName, true);` when fixValue supports "exactly"
+        // urlElement.fixValue(slice.sliceName, true);
+        urlElement.fixedUri = slice.sliceName;
       }
     });
   }

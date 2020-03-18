@@ -133,7 +133,7 @@ describe('ElementDefinition', () => {
     it('should fix a code to a code', () => {
       const code = observation.elements.find(e => e.id === 'Observation.status');
       code.fixValue(fooBarCode);
-      expect(code.fixedCode).toBe('bar');
+      expect(code.patternCode).toBe('bar');
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a code fixed to a different code', () => {
@@ -196,7 +196,7 @@ describe('ElementDefinition', () => {
     it('should fix a code to a string', () => {
       const string = observation.elements.find(e => e.id === 'Observation.referenceRange.text');
       string.fixValue(fooBarCode);
-      expect(string.fixedString).toBe('bar');
+      expect(string.patternString).toBe('bar');
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a string fixed to a different string', () => {
@@ -226,7 +226,7 @@ describe('ElementDefinition', () => {
     it('should fix a code to a uri', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.implicitRules');
       uri.fixValue(fooBarCode);
-      expect(uri.fixedUri).toBe('bar');
+      expect(uri.patternUri).toBe('bar');
     });
 
     it('should throw CodeAlreadyFixedError when fixing a code to a uri fixed to a different uri', () => {

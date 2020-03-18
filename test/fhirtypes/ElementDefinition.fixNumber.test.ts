@@ -35,7 +35,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.value'
       );
       riskEstimateValue.fixValue(1.23);
-      expect(riskEstimateValue.fixedDecimal).toBe(1.23);
+      expect(riskEstimateValue.patternDecimal).toBe(1.23);
     });
 
     it('should fix an integer to a decimal', () => {
@@ -43,7 +43,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.value'
       );
       riskEstimateValue.fixValue(123);
-      expect(riskEstimateValue.fixedDecimal).toBe(123);
+      expect(riskEstimateValue.patternDecimal).toBe(123);
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed decimal', () => {
@@ -51,7 +51,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.value'
       );
       riskEstimateValue.fixValue(1.23);
-      expect(riskEstimateValue.fixedDecimal).toBe(1.23);
+      expect(riskEstimateValue.patternDecimal).toBe(1.23);
       expect(() => {
         riskEstimateValue.fixValue(1.24);
       }).toThrow('Cannot fix 1.24 to this element; a different decimal is already fixed: 1.23.');
@@ -63,7 +63,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.numeratorCount'
       );
       riskEstimateValueNumeratorCount.fixValue(123);
-      expect(riskEstimateValueNumeratorCount.fixedInteger).toBe(123);
+      expect(riskEstimateValueNumeratorCount.patternInteger).toBe(123);
     });
 
     it('should throw ValueAlreadyFixedError when fixing an already fixed integer', () => {
@@ -71,7 +71,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'RiskEvidenceSynthesis.riskEstimate.numeratorCount'
       );
       riskEstimateValueNumeratorCount.fixValue(123);
-      expect(riskEstimateValueNumeratorCount.fixedInteger).toBe(123);
+      expect(riskEstimateValueNumeratorCount.patternInteger).toBe(123);
       expect(() => {
         riskEstimateValueNumeratorCount.fixValue(124);
       }).toThrow('Cannot fix 124 to this element; a different integer is already fixed: 123.');
@@ -92,7 +92,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.messaging.reliableCache'
       );
       reliableCache.fixValue(0);
-      expect(reliableCache.fixedUnsignedInt).toBe(0);
+      expect(reliableCache.patternUnsignedInt).toBe(0);
     });
 
     it('should throw MismatchedTypeError when fixing a decimal to an unsignedInt', () => {
@@ -118,7 +118,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'CapabilityStatement.messaging.reliableCache'
       );
       reliableCache.fixValue(12);
-      expect(reliableCache.fixedUnsignedInt).toBe(12);
+      expect(reliableCache.patternUnsignedInt).toBe(12);
       expect(() => {
         reliableCache.fixValue(34);
       }).toThrow('Cannot fix 34 to this element; a different unsignedInt is already fixed: 12.');
@@ -130,7 +130,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Appointment.minutesDuration'
       );
       minutesDuration.fixValue(12);
-      expect(minutesDuration.fixedPositiveInt).toBe(12);
+      expect(minutesDuration.patternPositiveInt).toBe(12);
     });
 
     it('should throw MismatchedTypeError when fixing a decimal to a positiveInt', () => {
@@ -165,7 +165,7 @@ describe('ElementDefinition', () => {
         e => e.id === 'Appointment.minutesDuration'
       );
       minutesDuration.fixValue(12);
-      expect(minutesDuration.fixedPositiveInt).toEqual(12);
+      expect(minutesDuration.patternPositiveInt).toEqual(12);
       expect(() => {
         minutesDuration.fixValue(34);
       }).toThrow('Cannot fix 34 to this element; a different positiveInt is already fixed: 12.');
@@ -186,7 +186,7 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot fix number value on this element since this element does not have a single type'
       );
-      expect(valueX.fixedInteger).toBeUndefined();
+      expect(valueX.patternInteger).toBeUndefined();
     });
   });
 });
