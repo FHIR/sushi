@@ -24,7 +24,7 @@ csMetadata:         id | title | description;
 ruleSet:            KW_RULESET SEQUENCE sdRule+;
 
 mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingRule*;
-mappingMetadata:    id | source | target | description;
+mappingMetadata:    id | source | target | description | title;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
