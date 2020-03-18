@@ -5,6 +5,8 @@ export class InvalidMappingError extends Error implements Annotated {
     'https://www.hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition.mapping'
   ];
   constructor() {
-    super('Invalid mapping, mapping.identity and mapping.map are 1..1 and must be set.');
+    super(
+      'Invalid mapping, mapping.identity and mapping.map are 1..1 and must be set. Ensure mapping rules specify map: {path} -> {map}'
+    );
   }
 }

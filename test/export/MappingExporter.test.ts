@@ -164,6 +164,24 @@ describe('MappingExporter', () => {
       expect(exported.identity).toBe('MyMapping');
     });
 
+    it('should apply a valid mapping rule with no path', () => {
+      /**
+       * Mapping: MyMapping
+       * Source: MyObservation
+       * * status -> "Observation.otherStatus"
+       */
+      const mapRule = new MappingRule('');
+      mapRule.map = 'OtherObservation';
+      mapping.rules.push(mapRule);
+      const status = observation.elements.find(e => e.id === 'Observation');
+      const originalLength = status.mapping.length;
+      exporter.export();
+      expect(status.mapping.length).toBe(originalLength + 1);
+      const exported = status.mapping.slice(-1)[0];
+      expect(exported.map).toBe('OtherObservation');
+      expect(exported.identity).toBe('MyMapping');
+    });
+
     it('should log an error and skip rules with paths that cannot be found', () => {
       /**
        * Mapping: MyMapping
