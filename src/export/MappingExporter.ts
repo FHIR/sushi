@@ -27,7 +27,7 @@ export class MappingExporter {
     }
     structDef.mapping.push({
       identity: fshDefinition.id,
-      name: fshDefinition.name,
+      ...(fshDefinition.title && { name: fshDefinition.title }),
       ...(fshDefinition.target && { uri: fshDefinition.target }),
       ...(fshDefinition.description && { comment: fshDefinition.description })
     });

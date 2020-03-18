@@ -72,7 +72,6 @@ describe('MappingExporter', () => {
       expect(observation.mapping.length).toBe(originalLength + 1);
       const exported = observation.mapping.slice(-1)[0];
       expect(exported.identity).toBe('MyMapping');
-      expect(exported.name).toBe('MyMapping');
     });
 
     it('should export a mapping when one does not yet exist', () => {
@@ -88,7 +87,6 @@ describe('MappingExporter', () => {
       expect(observation.mapping.length).toBe(1);
       const exported = observation.mapping.slice(-1)[0];
       expect(exported.identity).toBe('MyMapping');
-      expect(exported.name).toBe('MyMapping');
     });
 
     it('should export a mapping with optional metadata', () => {
@@ -98,6 +96,7 @@ describe('MappingExporter', () => {
        * Source: MyObservation
        * Target: "http://mytarget.com"
        * Description: "Hello there"
+       * Title: "HEY THERE"
        */
       const originalLength = observation.mapping.length;
       const mapping = new Mapping('MyMapping');
@@ -105,12 +104,13 @@ describe('MappingExporter', () => {
       mapping.source = 'MyObservation';
       mapping.target = 'http://mytarget.com';
       mapping.description = 'Hello there';
+      mapping.title = 'HEY THERE';
       doc.mappings.set(mapping.name, mapping);
       exporter.export();
       expect(observation.mapping.length).toBe(originalLength + 1);
       const exported = observation.mapping.slice(-1)[0];
       expect(exported.identity).toBe('my-map');
-      expect(exported.name).toBe('MyMapping');
+      expect(exported.name).toBe('HEY THERE');
       expect(exported.uri).toBe('http://mytarget.com');
       expect(exported.comment).toBe('Hello there');
     });

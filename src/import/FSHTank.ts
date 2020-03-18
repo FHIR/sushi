@@ -180,7 +180,7 @@ export class FSHTank implements Fishable {
           result = this.getAllRuleSets().find(r => r.name === item);
           break;
         case Type.Mapping:
-          result = this.getAllMappings().find(m => m.name === item || m.id === item);
+          result = this.getAllMappings().find(m => m.name === item);
           break;
         case Type.Resource:
         case Type.Type:

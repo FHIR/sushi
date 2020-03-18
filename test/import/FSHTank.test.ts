@@ -63,8 +63,7 @@ describe('FSHTank', () => {
       expect(tank.fish('vs1').name).toBe('ValueSet1');
       expect(tank.fish('cs1').name).toBe('CodeSystem1');
       expect(tank.fish('inst1').name).toBe('Instance1');
-      expect(tank.fish('map1').name).toBe('Mapping1');
-      // not applicable for Invariant or RuleSet
+      // not applicable for Invariant or RuleSet or Mapping
     });
 
     it('should find valid fish when fishing by name for all types', () => {
@@ -281,8 +280,7 @@ describe('FSHTank', () => {
       expect(tank.fishForMetadata('vs1')).toEqual(vs1MD);
       expect(tank.fishForMetadata('cs1')).toEqual(cs1MD);
       expect(tank.fishForMetadata('inst1')).toEqual(inst1MD);
-      expect(tank.fishForMetadata('map1')).toEqual(map1MD);
-      // not applicable for Invariant or RuleSet
+      // not applicable for Invariant or RuleSet or Mapping
     });
 
     it('should find valid fish when fishing by name for all types', () => {
