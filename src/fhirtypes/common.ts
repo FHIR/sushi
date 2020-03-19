@@ -66,9 +66,15 @@ export function setPropertyOnInstance(
         if (current[key] == null) current[key] = [];
         sliceName = getSliceName(pathPart);
         if (sliceName) {
+          if (typeof fixedValue !== 'object') {
+            // When a fixedValue is a primitive but also a slice, we convert to an object so that
+            // the sliceName field can be tracked on the object. The _primitive field marks the object
+            // to later be converted back to a primitive by replaceField in cleanInstance
+            fixedValue = { fixedValue, _primitive: true };
+          }
           const sliceIndices: number[] = [];
           // Find the indices where slices are placed
-          current[key].forEach((el: any, i: number) => {
+          current[pathPart.base].forEach((el: any, i: number) => {
             if (el?._sliceName === sliceName) {
               sliceIndices.push(i);
             }
