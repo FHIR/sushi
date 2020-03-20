@@ -71,7 +71,17 @@ describe('ElementDefinition', () => {
   });
 
   describe('#fixedByDirectParent', () => {
-    it('should find a pattern value from the parent when it exists', () => {
+    it('should find a fixed[x] value from the parent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo'), true);
+      const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
+      const fixedValue = statusReasonCoding.fixedByDirectParent();
+      expect(fixedValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should find a pattern[x] value from the parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
@@ -81,7 +91,7 @@ describe('ElementDefinition', () => {
       expect(patternValue).toEqual([{ code: 'foo' }]);
     });
 
-    it('should not find a pattern value from the parent when none is present', () => {
+    it('should not find a fixed[x] or pattern[x] value from the parent when none is present', () => {
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
       const patternValue = statusReasonCoding.fixedByDirectParent();
       expect(patternValue).toBeUndefined();
@@ -95,7 +105,17 @@ describe('ElementDefinition', () => {
   });
 
   describe('#fixedByAnyParent', () => {
-    it('should find a pattern value from a direct parent when it exists', () => {
+    it('should find a fixed[x] value from a direct parent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo'), true);
+      const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
+      const fixedValue = statusReasonCoding.fixedByAnyParent();
+      expect(fixedValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should find a pattern[x] value from a direct parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
@@ -103,6 +123,21 @@ describe('ElementDefinition', () => {
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
       const patternValue = statusReasonCoding.fixedByAnyParent();
       expect(patternValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should find a fixed[x] value from a grandparent when it exists', () => {
+      const identifier = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.identifier'
+      );
+      identifier.max = '1';
+      // @ts-ignore
+      identifier.fixedIdentifier = { period: { start: '2011-11-11' } };
+      const identifierPeriodStart = medicationRequest.findElementByPath(
+        'identifier.period.start',
+        fisher
+      );
+      const fixedValue = identifierPeriodStart.fixedByAnyParent();
+      expect(fixedValue).toBe('2011-11-11');
     });
 
     it('should find a pattern value from a grandparent when it exists', () => {
@@ -118,6 +153,34 @@ describe('ElementDefinition', () => {
       );
       const patternValue = identifierPeriodStart.fixedByAnyParent();
       expect(patternValue).toBe('2011-11-11');
+    });
+
+    it('should find an array fixed[x] value from a grandparent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo', 'http://bar.com'), true);
+      const statusReasonCodingSystem = medicationRequest.findElementByPath(
+        'statusReason.coding.system',
+        fisher
+      );
+      // Single element in array
+      let fixedValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(fixedValue).toBe('http://bar.com');
+
+      // Multiple not matching array elements
+      statusReason.fixedCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://bar.com' }]
+      };
+      fixedValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(fixedValue).toEqual(['http://foo.com', 'http://bar.com']);
+
+      // Multiple matching array elements
+      statusReason.fixedCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://foo.com' }]
+      };
+      fixedValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(fixedValue).toBe('http://foo.com');
     });
 
     it('should find an array pattern value from a grandparent when it exists', () => {
@@ -148,13 +211,13 @@ describe('ElementDefinition', () => {
       expect(patternValue).toBe('http://foo.com');
     });
 
-    it('should not find a pattern value from the parent when none is present', () => {
+    it('should not find a fixed[x] or pattern[x] value from the parent when none is present', () => {
       const statusReasonCoding = medicationRequest.findElementByPath(
         'statusReason.coding.version',
         fisher
       );
-      const patternValue = statusReasonCoding.fixedByAnyParent();
-      expect(patternValue).toBeUndefined();
+      const value = statusReasonCoding.fixedByAnyParent();
+      expect(value).toBeUndefined();
     });
 
     it('should return undefined when being run on the root element', () => {

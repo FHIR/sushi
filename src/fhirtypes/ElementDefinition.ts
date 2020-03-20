@@ -986,15 +986,17 @@ export class ElementDefinition {
   }
 
   /**
-   * Checks if an element is fixed by a pattern[x] on its direct parent
+   * Checks if an element is fixed by a fixed[x] or pattern[x] on its direct parent
    * @returns {any} the value the element is fixed to by its parent, undefined if value is not fixed
    */
   fixedByDirectParent(): any {
     const parent = this.parent();
-    const patternKey = parent ? Object.keys(parent).find(k => k.startsWith('pattern')) : null;
-    if (patternKey) {
-      const patternValue: any = parent[patternKey as keyof ElementDefinition];
-      return patternValue[this.path.replace(`${parent.path}.`, '')];
+    const fixedKey = parent
+      ? Object.keys(parent).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
+      : null;
+    if (fixedKey) {
+      const fixedValue: any = parent[fixedKey as keyof ElementDefinition];
+      return fixedValue[this.path.replace(`${parent.path}.`, '')];
     }
   }
 
