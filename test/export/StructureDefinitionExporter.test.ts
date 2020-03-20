@@ -2581,7 +2581,17 @@ describe('StructureDefinitionExporter', () => {
       expect(labInterpretation.mustSupport).toBe(true);
     });
 
-    it('should apply a ValueSetRule on a sliced element that updates the bindings on its slices', () => {
+    // don't actually apply the rule to the slice, since it might be valid based on the contents of the value sets
+    // but if it's the same value set for both, _then_ we know it can't be a weaker binding, and that's what we should give a message about
+    // so this is ok:
+    // * category[Procedure] from ABC (extensible)
+    // * category from ABC (required)
+    // and it will update the strength to required
+    // this is not:
+    // * category from ABC (required)
+    // * category[Procedure] from ABC (extensible)
+
+    it('should apply ValueSetRules on a slice, then a sliced element, with different value sets', () => {
       // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
       // * category from http://example.com/ImportantObservationCodes (required)
       const procedureValueSet = new ValueSetRule('category[Procedure]');
@@ -2597,32 +2607,55 @@ describe('StructureDefinitionExporter', () => {
       const sd = pkg.profiles[0];
       const rootCategory = sd.findElement('Observation.category');
       const procedureCategory = sd.findElement('Observation.category:Procedure');
-      const expectedBinding = {
+      const importantBinding = {
         valueSet: 'http://example.com/ImportantObservationCodes',
         strength: 'required'
       };
-      expect(rootCategory.binding).toEqual(expectedBinding);
-      expect(procedureCategory.binding).toEqual(expectedBinding);
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCategory.binding).toEqual(importantBinding);
+      expect(procedureCategory.binding).toEqual(mediocreBinding);
     });
-    // don't actually apply the rule to the slice, since it might be valid based on the contents of the value sets
-    // but if it's the same value set for both, _then_ we know it can't be a weaker binding, and that's what we should give a message about
-    // so this is ok:
-    // * category[Procedure] from ABC (extensible)
-    // * category from ABC (required)
-    // and it will update the strength to required
-    // this is not:
-    // * category from ABC (required)
-    // * category[Procedure] from ABC (extensible)
 
-    it('should apply a ValueSetRule on a sliced element, but not update the bindings on the slice if those bindings are stronger', () => {
-      // * category[Procedure] from http://example.com/ImportantObservationCodes (required)
-      // * category from http://example.com/MediocreObservationCodes (extensible)
+    it('should apply ValueSetRules on a sliced element, then a slice, with different value sets', () => {
+      // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
+      // * category from http://example.com/ImportantObservationCodes (required)
       const procedureValueSet = new ValueSetRule('category[Procedure]');
-      procedureValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
-      procedureValueSet.strength = 'required';
+      procedureValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      procedureValueSet.strength = 'extensible';
       const rootValueSet = new ValueSetRule('category');
-      rootValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
-      rootValueSet.strength = 'extensible';
+      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.strength = 'required';
+
+      observationWithSlice.rules.push(rootValueSet, procedureValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const procedureCategory = sd.findElement('Observation.category:Procedure');
+      const importantBinding = {
+        valueSet: 'http://example.com/ImportantObservationCodes',
+        strength: 'required'
+      };
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCategory.binding).toEqual(importantBinding);
+      expect(procedureCategory.binding).toEqual(mediocreBinding);
+    });
+
+    it('should apply ValueSetRules on a slice, then the sliced element, with the same value set', () => {
+      // * category[Procedure] from http://example.com/RegularObservationCodes (extensible)
+      // * category from http://example.com/RegularObservationCodes (required)
+      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      procedureValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      procedureValueSet.strength = 'extensible';
+      const rootValueSet = new ValueSetRule('category');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
 
       observationWithSlice.rules.push(procedureValueSet, rootValueSet);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
@@ -2630,17 +2663,43 @@ describe('StructureDefinitionExporter', () => {
       const sd = pkg.profiles[0];
       const rootCategory = sd.findElement('Observation.category');
       const procedureCategory = sd.findElement('Observation.category:Procedure');
-      expect(rootCategory.binding).toEqual({
-        valueSet: 'http://example.com/MediocreObservationCodes',
-        strength: 'extensible'
-      });
-      expect(procedureCategory.binding).toEqual({
-        valueSet: 'http://example.com/ImportantObservationCodes',
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
         strength: 'required'
-      });
+      };
+      expect(rootCategory.binding).toEqual(regularBinding);
+      expect(procedureCategory.binding).toEqual(regularBinding);
     });
 
-    it('should apply a ValueSetRule on a child of a sliced element that updates the bindings on the child of a slice', () => {
+    it('should not apply a ValueSetRule on a sliced element that would bind it to the same value set as the root, but more weakly', () => {
+      // * category from http://example.com/RegularObservationCodes (required)
+      // * category[Procedure] from http://example.com/RegularObservationCodes (extensible)
+      const rootValueSet = new ValueSetRule('category');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+      const procedureValueSet = new ValueSetRule('category[Procedure]')
+        .withFile('Weaker.fsh')
+        .withLocation([4, 8, 4, 23]);
+      procedureValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      procedureValueSet.strength = 'extensible';
+
+      observationWithSlice.rules.push(rootValueSet, procedureValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCategory.binding).toEqual(regularBinding);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot override required binding with extensible/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 4\D*/s);
+    });
+
+    it('should apply ValueSetRules on the child of a slice, then the child of a sliced element, with different value sets', () => {
       // * component[Lab].code from http://example.com/MediocreObservationCodes (extensible)
       // * component.code from http://example.com/ImportantObservationCodes (required)
       const labValueSet = new ValueSetRule('component[Lab].code');
@@ -2656,38 +2715,47 @@ describe('StructureDefinitionExporter', () => {
       const sd = pkg.profiles[0];
       const rootCode = sd.findElement('Observation.component.code');
       const labCode = sd.findElement('Observation.component:Lab.code');
-      const expectedBinding = {
+      const importantBinding = {
         valueSet: 'http://example.com/ImportantObservationCodes',
         strength: 'required'
       };
-      expect(rootCode.binding).toEqual(expectedBinding);
-      expect(labCode.binding).toEqual(expectedBinding);
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCode.binding).toEqual(importantBinding);
+      expect(labCode.binding).toEqual(mediocreBinding);
     });
 
-    it('should apply a ValueSetRule on a child of a sliced element, but not update the bindings on the child of the slice if those bindings are stronger', () => {
-      // * component[Lab].code from http://example.com/ImportantObservationCodes (required)
-      // * component.code from http://example.com/MediocreObservationCodes (extensible)
-      const labValueSet = new ValueSetRule('component[Lab].code');
-      labValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
-      labValueSet.strength = 'required';
+    it('should apply ValueSetRules on the child of a sliced element, then the child of a slice, with different value sets', () => {
+      // * component[Lab].code MS // force creation of element
+      // * component.code from http://example.com/ImportantObservationCodes (required)
+      // * component[Lab].code from http://example.com/MediocreObservationCodes (extensible)
+      const flagRule = new FlagRule('component[Lab].code');
+      flagRule.mustSupport = true;
       const rootValueSet = new ValueSetRule('component.code');
-      rootValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
-      rootValueSet.strength = 'extensible';
+      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.strength = 'required';
+      const labValueSet = new ValueSetRule('component[Lab].code');
+      labValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      labValueSet.strength = 'extensible';
 
-      observationWithSlice.rules.push(labValueSet, rootValueSet);
+      observationWithSlice.rules.push(flagRule, rootValueSet, labValueSet);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
       exporter.export();
       const sd = pkg.profiles[0];
       const rootCode = sd.findElement('Observation.component.code');
       const labCode = sd.findElement('Observation.component:Lab.code');
-      expect(rootCode.binding).toEqual({
-        valueSet: 'http://example.com/MediocreObservationCodes',
-        strength: 'extensible'
-      });
-      expect(labCode.binding).toEqual({
+      const importantBinding = {
         valueSet: 'http://example.com/ImportantObservationCodes',
         strength: 'required'
-      });
+      };
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCode.binding).toEqual(importantBinding);
+      expect(labCode.binding).toEqual(mediocreBinding);
     });
 
     it.todo(

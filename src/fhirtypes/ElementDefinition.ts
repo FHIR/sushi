@@ -966,11 +966,13 @@ export class ElementDefinition {
 
     const connectedElements = this.findConnectedElements();
     connectedElements.forEach(ce => {
-      try {
-        ce.bindToVS(vsURI, strength);
-      } catch (ex) {
-        // receiving a BindingStrengthError on a slice is not a problem, because
-        // it is fine if the slice has a stronger binding than the list element.
+      if (vsURI == ce.binding?.valueSet) {
+        try {
+          ce.bindToVS(vsURI, strength);
+        } catch (ex) {
+          // receiving a BindingStrengthError on a slice is not a problem, because
+          // it is fine if the slice has a stronger binding than the list element.
+        }
       }
     });
     // check to make sure we are not applying an explicitly weaker binding of the same value set of a slice's list element
