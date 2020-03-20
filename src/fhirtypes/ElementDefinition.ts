@@ -21,7 +21,8 @@ import {
   WideningCardinalityError,
   InvalidSumOfSliceMinsError,
   InvalidMaxOfSliceError,
-  NarrowingRootCardinalityError
+  NarrowingRootCardinalityError,
+  SliceTypeRemovalError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -490,6 +491,7 @@ export class ElementDefinition {
    */
   private findConnectedElements(postPath = ''): ElementDefinition[] {
     const connectedElements = this.getSlices()
+      .filter(e => e.max !== '0') // we don't need zeroed-out slices
       .map(slice => {
         return this.structDef.findElement(`${slice.id}${postPath}`);
       })
@@ -585,32 +587,7 @@ export class ElementDefinition {
         oldTypes.push(type);
         continue;
       }
-
-      // In the case of an element type whose code is a supertype (e.g., 'Resource'), we need to
-      // break that up into a new set of element types corresponding to the subtypes.  For example,
-      // if a 'Resource' type is constrained to 'Condition' and 'Procedure', then in the resulting
-      // StructureDefinition, there should be element types with codes 'Condition' and 'Procedure',
-      // and no element type with the code 'Resource` any longer.  So... we create a special
-      // map to store the current subtypes (or if not applicable, just store the original type).
-      const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
-      for (const match of matches) {
-        // If the original element type is a Reference, keep it a reference, otherwise take on the
-        // input type's official type code (as represented in its StructureDefinition.type).
-        const typeString = match.code === 'Reference' ? 'Reference' : match.metadata.sdType;
-        if (!currentTypeMatches.has(typeString)) {
-          currentTypeMatches.set(typeString, []);
-        }
-        currentTypeMatches.get(typeString).push(match);
-      }
-
-      // Iterate the elements of the current type matches, creating the new type (based on the
-      // existing type) but with the constraints applied to it.
-      for (const [typeCode, currentMatches] of currentTypeMatches) {
-        const newType = cloneDeep(type);
-        newType.code = typeCode;
-        this.applyProfiles(newType, targetType, currentMatches);
-        newTypes.push(newType);
-      }
+      newTypes.push(...this.applyTypeIntersection(type, targetType, matches));
     }
 
     // Let user know if other rules have been made obsolete
@@ -622,6 +599,40 @@ export class ElementDefinition {
         } obsolete for choices: ${obsoleteChoices.join(', ')}`,
         rule.sourceInfo
       );
+    }
+
+    // new types for this element have been determined
+    // if there are any connected elements, make sure that nothing invalid will happen
+    let connectedElements = this.findConnectedElements();
+    // however, we don't need to apply this to elements representing a choice of types
+    // for example, if this is being applied to value[x], and valueString exists, we can remove the string type.
+    if (this.path.endsWith('[x]')) {
+      connectedElements = connectedElements.filter(ce => ce.id.endsWith('[x]'));
+    }
+    if (connectedElements.length > 0) {
+      // if all connected elements have a non-empty intersection, we can safely apply the rule
+      const connectedTypeChanges: Map<ElementDefinition, ElementDefinitionType[]> = new Map();
+      connectedElements.forEach(ce => {
+        const intersection = this.findTypeIntersection(newTypes, ce.type, targetType, fisher);
+        if (intersection.length > 0) {
+          connectedTypeChanges.set(ce, intersection);
+        } else {
+          const obsoleteConnections = ce.structDef.findObsoleteChoices(ce, oldTypes);
+          if (obsoleteConnections.length > 0) {
+            logger.error(
+              `Type constraint on ${rule.path} makes rules in ${
+                ce.structDef.name
+              } obsolete for choices: ${obsoleteConnections.join(', ')}`,
+              rule.sourceInfo
+            );
+          } else {
+            throw new SliceTypeRemovalError(rule.path, ce.id);
+          }
+        }
+      });
+      if (connectedElements.length == connectedTypeChanges.size) {
+        connectedTypeChanges.forEach((ceType, ce) => (ce.type = ceType));
+      }
     }
 
     // Finally, reset this element's types to the new types
@@ -825,6 +836,59 @@ export class ElementDefinition {
     }
   }
 
+  private findTypeIntersection(
+    leftTypes: ElementDefinitionType[],
+    rightTypes: ElementDefinitionType[],
+    targetType: ElementDefinitionType,
+    fisher: Fishable
+  ): ElementDefinitionType[] {
+    const intersection: ElementDefinitionType[] = [];
+    let match: ElementTypeMatchInfo;
+    leftTypes.forEach(left => {
+      const matches: ElementTypeMatchInfo[] = [];
+      try {
+        match = this.findTypeMatch({ type: left.code }, rightTypes, fisher);
+        matches.push(match);
+      } catch (ex) {
+        // it's okay if a given type doesn't have any matches.
+      }
+      intersection.push(...this.applyTypeIntersection(left, targetType, matches));
+    });
+
+    return intersection;
+  }
+
+  // In the case of an element type whose code is a supertype (e.g., 'Resource'), we need to
+  // break that up into a new set of element types corresponding to the subtypes.  For example,
+  // if a 'Resource' type is constrained to 'Condition' and 'Procedure', then in the resulting
+  // StructureDefinition, there should be element types with codes 'Condition' and 'Procedure',
+  // and no element type with the code 'Resource` any longer.  So... we create a special
+  // map to store the current subtypes (or if not applicable, just store the original type).
+  private applyTypeIntersection(
+    type: ElementDefinitionType,
+    targetType: ElementDefinitionType,
+    matches: ElementTypeMatchInfo[]
+  ) {
+    const intersection: ElementDefinitionType[] = [];
+    const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
+    for (const match of matches) {
+      // If the original element type is a Reference, keep it a reference, otherwise take on the
+      // input type's type code (as represented in its StructureDefinition.type).
+      const typeString = match.code === 'Reference' ? 'Reference' : match.metadata.sdType;
+      if (!currentTypeMatches.has(typeString)) {
+        currentTypeMatches.set(typeString, []);
+      }
+      currentTypeMatches.get(typeString).push(match);
+    }
+    for (const [typeCode, currentMatches] of currentTypeMatches) {
+      const newType = cloneDeep(type);
+      newType.code = typeCode;
+      this.applyProfiles(newType, targetType, currentMatches);
+      intersection.push(newType);
+    }
+    return intersection;
+  }
+
   /**
    * Sets flags on this element as specified in a profile or extension.
    * Don't change a flag when the incoming argument is undefined.
@@ -851,21 +915,10 @@ export class ElementDefinition {
     }
 
     const connectedElements = this.findConnectedElements();
-    connectedElements.forEach(ce => {
-      if (ce.mustSupport && mustSupport === false) {
-        disabledFlags.push('Must Support');
-      }
-      if (ce.isModifier && modifier === false) {
-        disabledFlags.push('Is Modifier');
-      }
-      if (disabledFlags.length) {
-        throw new DisableFlagError(disabledFlags);
-      }
-    });
 
     if (isBoolean(mustSupport)) {
       this.mustSupport = mustSupport;
-      connectedElements.forEach(ce => (ce.mustSupport = mustSupport));
+      connectedElements.forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
     }
     if (isBoolean(summary)) {
       this.isSummary = summary;
@@ -873,7 +926,7 @@ export class ElementDefinition {
     }
     if (isBoolean(modifier)) {
       this.isModifier = modifier;
-      connectedElements.forEach(ce => (ce.isModifier = modifier));
+      connectedElements.forEach(ce => (ce.isModifier = modifier || ce.isModifier));
     }
   }
 
@@ -903,10 +956,9 @@ export class ElementDefinition {
     if (isEmpty(validTypes)) {
       throw new CodedTypeNotFoundError(this.type ? this.type.map(t => t.code) : []);
     }
-
+    const strengths = ['example', 'preferred', 'extensible', 'required'];
     // Check if this is a valid strength (if the binding.strength already exists)
     if (this.binding && this.binding.strength) {
-      const strengths = ['example', 'preferred', 'extensible', 'required'];
       if (strengths.indexOf(strength) < strengths.indexOf(this.binding.strength)) {
         throw new BindingStrengthError(this.binding.strength, strength);
       }
@@ -917,10 +969,19 @@ export class ElementDefinition {
       try {
         ce.bindToVS(vsURI, strength);
       } catch (ex) {
-        // receiving a BindingStrengthError is not a problem, because
-        // it is fine if a connected element has a stronger binding.
+        // receiving a BindingStrengthError on a slice is not a problem, because
+        // it is fine if the slice has a stronger binding than the list element.
       }
     });
+    // check to make sure we are not applying an explicitly weaker binding of the same value set of a slice's list element
+    const listElement = this.slicedElement();
+    if (
+      listElement &&
+      listElement.binding.valueSet == vsURI &&
+      strengths.indexOf(strength) < strengths.indexOf(listElement.binding.strength)
+    ) {
+      throw new BindingStrengthError(listElement.binding.strength, strength);
+    }
 
     // We're good.  Bind it.
     this.binding = {

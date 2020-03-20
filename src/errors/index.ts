@@ -33,3 +33,4 @@ export * from './PackageLoadError';
 export * from './DevPackageLoadError';
 export * from './CurrentPackageLoadError';
 export * from './MissingSnapshotError';
+export * from './SliceTypeRemovalError';

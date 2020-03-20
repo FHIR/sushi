@@ -2470,8 +2470,8 @@ describe('StructureDefinitionExporter', () => {
 
     it('should apply a CardRule that makes the cardinality of the child of a slice narrower', () => {
       loggerSpy.reset();
-      // * component.interpretation 0..5
       // * component[Lab].interpretation 2..2
+      // * component.interpretation 0..5
       const rootCard = new CardRule('component.interpretation');
       rootCard.min = 0;
       rootCard.max = '5';
@@ -2479,7 +2479,7 @@ describe('StructureDefinitionExporter', () => {
       labCard.min = 2;
       labCard.max = '2';
 
-      observationWithSlice.rules.push(rootCard, labCard);
+      observationWithSlice.rules.push(labCard, rootCard);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
       exporter.export();
       const sd = pkg.profiles[0];
@@ -2527,14 +2527,12 @@ describe('StructureDefinitionExporter', () => {
       expect(labComponent.mustSupport).toBe(true);
     });
 
-    it('should not apply a FlagRule on a sliced element that would invalidate flags on a slice', () => {
+    it('should apply a FlagRule on a sliced element that disables a no-disable flag, but not disable the flag on the slice', () => {
       // * component[Lab] MS
-      // * component MS disable // currently, there is no FSH to explicitly set a flag to false
+      // * component ~MS // currently, there is no FSH to explicitly set a flag to false
       const labFlag = new FlagRule('component[Lab]');
       labFlag.mustSupport = true;
-      const rootFlag = new FlagRule('component')
-        .withFile('BadFlag.fsh')
-        .withLocation([6, 10, 6, 25]);
+      const rootFlag = new FlagRule('component');
       rootFlag.mustSupport = false;
 
       observationWithSlice.rules.push(labFlag, rootFlag);
@@ -2543,10 +2541,8 @@ describe('StructureDefinitionExporter', () => {
       const sd = pkg.profiles[0];
       const rootComponent = sd.findElement('Observation.component');
       const labComponent = sd.findElement('Observation.component:Lab');
-      expect(rootComponent.mustSupport).toBeUndefined();
+      expect(rootComponent.mustSupport).toBe(false);
       expect(labComponent.mustSupport).toBe(true);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Cannot disable these flags/s);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadFlag\.fsh.*Line: 6\D*/s);
     });
 
     it('should apply a FlagRule on the child of a sliced element that updates the flags on the child of a slice', () => {
@@ -2568,26 +2564,21 @@ describe('StructureDefinitionExporter', () => {
       expect(labInterpretation.mustSupport).toBe(true);
     });
 
-    it('should not apply a FlagRule on the child of a sliced element that would invalidate flags on the child of a slice', () => {
-      // * component[Lab].interpretation MS
-      // * component.interpretation MS disable // currently, there is no FSH to explicitly set a flag to false
+    it('should not apply a flag rule that would disable a must support or is modifier flag on a slice when the list has that flag', () => {
+      // * component.interpretation MS
+      // * component[Lab].interpretation ~MS
+      const rootFlag = new FlagRule('component.interpretation');
+      rootFlag.mustSupport = true;
       const labFlag = new FlagRule('component[Lab].interpretation');
-      labFlag.mustSupport = true;
-      const rootFlag = new FlagRule('component.interpretation')
-        .withFile('BadFlag.fsh')
-        .withLocation([8, 4, 8, 22]);
-      rootFlag.mustSupport = false;
-
-      observationWithSlice.rules.push(labFlag, rootFlag);
+      labFlag.mustSupport = false;
+      observationWithSlice.rules.push(rootFlag, labFlag);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
       exporter.export();
       const sd = pkg.profiles[0];
       const rootInterpretation = sd.findElement('Observation.component.interpretation');
       const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
-      expect(rootInterpretation.mustSupport).toBeUndefined();
+      expect(rootInterpretation.mustSupport).toBe(true);
       expect(labInterpretation.mustSupport).toBe(true);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Cannot disable these flags/s);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadFlag\.fsh.*Line: 8\D*/s);
     });
 
     it('should apply a ValueSetRule on a sliced element that updates the bindings on its slices', () => {
@@ -2613,6 +2604,15 @@ describe('StructureDefinitionExporter', () => {
       expect(rootCategory.binding).toEqual(expectedBinding);
       expect(procedureCategory.binding).toEqual(expectedBinding);
     });
+    // don't actually apply the rule to the slice, since it might be valid based on the contents of the value sets
+    // but if it's the same value set for both, _then_ we know it can't be a weaker binding, and that's what we should give a message about
+    // so this is ok:
+    // * category[Procedure] from ABC (extensible)
+    // * category from ABC (required)
+    // and it will update the strength to required
+    // this is not:
+    // * category from ABC (required)
+    // * category[Procedure] from ABC (extensible)
 
     it('should apply a ValueSetRule on a sliced element, but not update the bindings on the slice if those bindings are stronger', () => {
       // * category[Procedure] from http://example.com/ImportantObservationCodes (required)
@@ -2702,10 +2702,171 @@ describe('StructureDefinitionExporter', () => {
     it.todo(
       'should not apply a ContainsRule on the child of a sliced element that would invalidate slices within a defined slice'
     );
-    it.todo('should apply an OnlyRule on a sliced element that updates the types on its slices');
-    it.todo(
-      'should not apply an OnlyRule on a sliced element that would invalidate any of its slices'
-    );
+
+    it('should apply an OnlyRule on a sliced element that updates the types on its slices', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] MS // this forces the creation of the unfolded slice
+      // * component.value[x] only Quantity or Ratio
+      const labFlag = new FlagRule('component[Lab].value[x]');
+      labFlag.mustSupport = true;
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Quantity' }, { type: 'string' }];
+
+      observationWithSlice.rules.push(labFlag, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      const expectedTypeString = new ElementDefinitionType('string');
+      expect(rootValue.type).toHaveLength(2);
+      expect(rootValue.type).toContainEqual(expectedTypeQuantity);
+      expect(rootValue.type).toContainEqual(expectedTypeString);
+      expect(labValue.type).toHaveLength(2);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(labValue.type).toContainEqual(expectedTypeString);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply an OnlyRule on a sliced element that includes more types than are allowed on its slices', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] only Quantity
+      // * component.value[x] only Quantity or Ratio
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Quantity' }, { type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      const expectedTypeRatio = new ElementDefinitionType('Ratio');
+      expect(rootValue.type).toHaveLength(2);
+      expect(rootValue.type).toContainEqual(expectedTypeQuantity);
+      expect(rootValue.type).toContainEqual(expectedTypeRatio);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply an OnlyRule on a sliced element that removes types available on a slice', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] only Quantity or Ratio
+      // * component.value[x] only Quantity
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }, { type: 'Ratio' }];
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Quantity' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      expect(rootValue.type).toHaveLength(1);
+      expect(rootValue.type).toContainEqual(expectedTypeQuantity);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not apply an OnlyRule on a sliced element that would invalidate any of its slices', () => {
+      // * component[Lab].value[x] only Quantity
+      // * component.value[x] only Ratio // this would remove all types from the slice!
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      expect(rootValue.type).toHaveLength(11);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+    });
+
+    it('should apply an OnlyRule on a sliced element that would remove all types from a zeroed-out slice', () => {
+      // * component[Lab].value[x] only Quantity
+      // * component[Lab] 0..0
+      // * component.value[x] only Ratio
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const labCard = new CardRule('component[Lab]');
+      labCard.min = 0;
+      labCard.max = '0';
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, labCard, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const expectedTypeRatio = new ElementDefinitionType('Ratio');
+      expect(rootValue.type).toHaveLength(1);
+      expect(rootValue.type).toContainEqual(expectedTypeRatio);
+    });
+
+    it('should apply an OnlyRule on a sliced element that constrains the types on its slices to subtypes', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] only Quantity
+      // * component.value[x] only SimpleQuantity or Ratio
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'SimpleQuantity' }, { type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeRatio = new ElementDefinitionType('Ratio');
+      const expectedTypeSimpleQuantity = new ElementDefinitionType('Quantity').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/SimpleQuantity'
+      );
+      expect(rootValue.type).toHaveLength(2);
+      expect(rootValue.type).toContainEqual(expectedTypeRatio);
+      expect(rootValue.type).toContainEqual(expectedTypeSimpleQuantity);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeSimpleQuantity);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when a type constraint implicitly removes a choice on a sliced element', () => {
+      // * component[Lab].valueString = "Please leave"
+      // * component.value[x] only Quantity
+      const labFixedValue = new FixedValueRule('component[Lab].valueString');
+      labFixedValue.fixedValue = 'Please leave';
+      const rootOnly = new OnlyRule('component.value[x]')
+        .withFile('RemoveString.fsh')
+        .withLocation([8, 4, 8, 23]);
+      rootOnly.types = [{ type: 'Quantity' }];
+
+      observationWithSlice.rules.push(labFixedValue, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      expect(rootValue.type).toHaveLength(1);
+      expect(labValue.type).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/obsolete for choices.*valueString/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveString\.fsh.*Line: 8\D*/s);
+    });
     it.todo(
       'should apply an OnlyRule on the child of a sliced element that updates the types on the children of its slices'
     );
