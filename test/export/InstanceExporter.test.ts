@@ -418,7 +418,7 @@ describe('InstanceExporter', () => {
         system: 'http://foo.com'
       });
       expect(loggerSpy.getLastMessage()).toMatch(
-        'Cannot fix http://bar.com#bar to this element; a different code is already fixed: http://foo.com#foo.'
+        'Cannot fix http://bar.com#bar to this element; a different CodeableConcept is already fixed: {"coding":[{"code":"foo","system":"http://foo.com"}]}.'
       );
     });
 

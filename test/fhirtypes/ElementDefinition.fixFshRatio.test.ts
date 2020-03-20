@@ -97,15 +97,13 @@ describe('ElementDefinition', () => {
       expect(() => {
         amount.fixValue(differentFshRatio);
       }).toThrow(
-        // eslint-disable-next-line
-        "Cannot fix 1.3 'mm' : 3.4 'cm' to this element; a different Ratio is already fixed: 1.2 'mm' : 3.4 'cm'."
+        'Cannot fix 1.3 \'mm\' : 3.4 \'cm\' to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
       // different units
       expect(() => {
         amount.fixValue(fshRatioNoUnits);
       }).toThrow(
-        // eslint-disable-next-line
-        "Cannot fix 1.2 : 3.4 to this element; a different Ratio is already fixed: 1.2 'mm' : 3.4 'cm'."
+        'Cannot fix 1.2 : 3.4 to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
     });
 
@@ -121,7 +119,6 @@ describe('ElementDefinition', () => {
       // without units
       expect(() => {
         status.fixValue(fshRatioNoUnits);
-        // eslint-disable-next-line
       }).toThrow('Cannot fix Ratio value: 1.2 : 3.4. Value does not match element type: code');
     });
   });

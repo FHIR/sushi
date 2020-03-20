@@ -72,7 +72,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         subject.fixValue(fshReference2);
       }).toThrow(
-        'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: Reference(foo) "bar"'
+        'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: {"reference":"foo","display":"bar"}.'
       );
     });
 
@@ -83,7 +83,7 @@ describe('ElementDefinition', () => {
         reference: 'foo'
       });
       expect(() => subject.fixValue(new FshReference('bar', 'bar'))).toThrow(
-        'Cannot fix Reference(bar) "bar" to this element; a different Reference is already fixed: Reference(foo)'
+        'Cannot fix Reference(bar) "bar" to this element; a different Reference is already fixed: {"reference":"foo"}.'
       );
     });
 
@@ -99,19 +99,19 @@ describe('ElementDefinition', () => {
       expect(() => {
         subject.fixValue(new FshReference('bar'));
       }).toThrow(
-        'Cannot fix Reference(bar) to this element; a different Reference is already fixed: Reference(foo).'
+        'Cannot fix Reference(bar) to this element; a different Reference is already fixed: {"reference":"foo"}.'
       );
     });
 
     it('should throw MismatchedTypeError when the value is fixed to a non-Reference', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      // with units
+      // with display
       expect(() => {
         status.fixValue(fshReference1);
       }).toThrow(
         'Cannot fix Reference value: Reference(foo) "bar". Value does not match element type: code'
       );
-      // without units
+      // without display
       expect(() => {
         status.fixValue(new FshReference('foo'));
       }).toThrow(

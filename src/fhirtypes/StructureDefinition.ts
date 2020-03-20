@@ -505,7 +505,8 @@ export class StructureDefinition {
     } else {
       // fixValue will throw if it fails, but skip the check if value is null
       if (value != null) {
-        clone.fixValue(value, units);
+        // since we don't actually keep the clone, argument for exactly should not matter
+        clone.fixValue(value, false, units);
       }
       // If there is a fixedValue or patternValue, find it and return it
       const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));

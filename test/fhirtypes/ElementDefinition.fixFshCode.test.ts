@@ -52,18 +52,18 @@ describe('ElementDefinition', () => {
       });
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a CodeableConcept fixed to a different code', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a CodeableConcept fixed to a different code', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       // Setup original fixed code
       concept.fixValue(fooBarCode);
       const clone = cloneDeep(concept);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
       expect(clone).toEqual(concept);
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a CodeableConcept fixed to a different code by a parent', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a CodeableConcept fixed to a different code by a parent', () => {
       const rr = observation.elements.find(e => e.id === 'Observation.referenceRange');
       // @ts-ignore
       rr.patternBackboneElement = { type: { coding: [{ system: 'http://foo.com', code: 'bar' }] } };
@@ -71,7 +71,7 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(rrType);
       expect(() => {
         rrType.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
       expect(clone).toEqual(rrType);
     });
 
@@ -101,7 +101,7 @@ describe('ElementDefinition', () => {
       });
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a Coding fixed to a different code', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a Coding fixed to a different code', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       concept.unfold(fisher);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
@@ -110,11 +110,11 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(coding);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
       expect(clone).toEqual(coding);
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a Coding fixed to a different code by a parent', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a Coding fixed to a different code by a parent', () => {
       const rr = observation.elements.find(e => e.id === 'Observation.referenceRange');
       // @ts-ignore
       rr.patternBackboneElement = { type: { coding: { system: 'http://foo.com', code: 'bar' } } };
@@ -126,7 +126,7 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(rrTypeCoding);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
       expect(clone).toEqual(rrTypeCoding);
     });
 
@@ -136,18 +136,18 @@ describe('ElementDefinition', () => {
       expect(code.patternCode).toBe('bar');
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a code fixed to a different code', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a code fixed to a different code', () => {
       const code = observation.elements.find(e => e.id === 'Observation.status');
       // Setup original fixed code
       code.fixValue(fooBarCode);
       const clone = cloneDeep(code);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(clone).toEqual(code);
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a code fixed to a different code by a parent', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a code fixed to a different code by a parent', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
       code.unfold(fisher);
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
@@ -160,7 +160,7 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(codeCodingCode);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(clone).toEqual(codeCodingCode);
     });
 
@@ -170,18 +170,18 @@ describe('ElementDefinition', () => {
       expect(quantity.patternQuantity).toEqual({ code: 'bar', system: 'http://foo.com' });
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a Quantity fixed to a different code', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a Quantity fixed to a different code', () => {
       const quantity = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
       // Setup original fixed code
       quantity.fixValue(fooBarCode);
       const clone = cloneDeep(quantity);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
       expect(clone).toEqual(quantity);
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a Quantity fixed to a different code by a parent', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a Quantity fixed to a different code by a parent', () => {
       const rr = observation.elements.find(e => e.id === 'Observation.referenceRange');
       // @ts-ignore
       rr.patternBackboneElement = { low: { system: 'http://foo.com', code: 'bar' } };
@@ -189,7 +189,7 @@ describe('ElementDefinition', () => {
       const clone = cloneDeep(rrLow);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*http:\/\/foo.com#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
       expect(clone).toEqual(rrLow);
     });
 
@@ -199,18 +199,18 @@ describe('ElementDefinition', () => {
       expect(string.patternString).toBe('bar');
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a string fixed to a different string', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a string fixed to a different string', () => {
       const string = observation.elements.find(e => e.id === 'Observation.referenceRange.text');
       // Setup original fixed code
       string.fixValue(fooBarCode);
       const clone = cloneDeep(string);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(clone).toEqual(string);
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a string fixed to a different string by a parent', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a string fixed to a different string by a parent', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
       code.patternCodeableConcept = { text: 'http://foo.com#bar' };
       code.unfold(fisher);
@@ -229,18 +229,18 @@ describe('ElementDefinition', () => {
       expect(uri.patternUri).toBe('bar');
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a uri fixed to a different uri', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a uri fixed to a different uri', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.implicitRules');
       // Setup original fixed code
       uri.fixValue(fooBarCode);
       const clone = cloneDeep(uri);
       expect(() => {
         clone.fixValue(barFooCode);
-      }).toThrow(/http:\/\/bar.com#foo.*#bar/);
+      }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(clone).toEqual(uri);
     });
 
-    it('should throw CodeAlreadyFixedError when fixing a code to a uri fixed to a different uri by a parent', () => {
+    it('should throw ValueAlreadyFixedError when fixing a code to a uri fixed to a different uri by a parent', () => {
       const rrLow = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
       rrLow.patternQuantity = { system: 'http://foo.com#bar' };
       rrLow.unfold(fisher);

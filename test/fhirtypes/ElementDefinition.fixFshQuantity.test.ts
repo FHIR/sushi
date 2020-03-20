@@ -65,8 +65,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         referenceRangeLow.fixValue(fshQuantity2);
       }).toThrow(
-        // eslint-disable-next-line
-        "Cannot fix 1.24 'mm' to this element; a different Quantity is already fixed: 1.23 'mm'."
+        'Cannot fix 1.24 \'mm\' to this element; a different Quantity is already fixed: {"value":1.23,"code":"mm","system":"http://unitsofmeasure.org"}.'
       );
     });
 
@@ -84,8 +83,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         referenceRangeLow.fixValue(new FshQuantity(3.21));
       }).toThrow(
-        // eslint-disable-next-line
-        'Cannot fix 3.21 to this element; a different Quantity is already fixed: 1.23.'
+        'Cannot fix 3.21 to this element; a different Quantity is already fixed: {"value":1.23}.'
       );
     });
 

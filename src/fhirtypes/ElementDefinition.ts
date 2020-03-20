@@ -1,4 +1,4 @@
-import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
+import { isEmpty, isEqual, isMatch, cloneDeep, isBoolean, upperFirst } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -9,7 +9,6 @@ import { FixedValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
   CodedTypeNotFoundError,
-  CodeAlreadyFixedError,
   DisableFlagError,
   ValueAlreadyFixedError,
   NoSingleTypeError,
@@ -23,7 +22,8 @@ import {
   InvalidSumOfSliceMinsError,
   InvalidMaxOfSliceError,
   InvalidUriError,
-  InvalidUnitsError
+  InvalidUnitsError,
+  FixedToPatternError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -884,13 +884,14 @@ export class ElementDefinition {
   /**
    * Fixes a value to an ElementDefinition
    * @param {FixedValueType} value - The value to fix
+   * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @param {boolean} units - True if the units keyword is used on this rule
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  fixValue(value: FixedValueType, units = false): void {
+  fixValue(value: FixedValueType, exactly = false, units = false): void {
     let type: string = typeof value;
     if (type === 'object' && value?.constructor?.name) {
       // For types like FshCode, FshQuantity, etc, remove the Fsh
@@ -901,27 +902,38 @@ export class ElementDefinition {
       throw new NoSingleTypeError(type);
     }
 
+    if (!exactly) {
+      // We can't overrided fixed[x] with pattern[x] since pattern[x] is looser
+      const fixedField = Object.entries(this).find(e => e[0].startsWith('fixed') && e[1] != null);
+      if (fixedField) {
+        throw new FixedToPatternError(fixedField[0]);
+      }
+    }
+
     switch (type) {
       case 'boolean':
-        this.fixBoolean(value as boolean);
+        this.fixFHIRValue(value.toString(), value, exactly, 'boolean');
         break;
       case 'number':
-        this.fixNumber(value as number);
+        this.fixNumber(value as number, exactly);
         break;
       case 'string':
-        this.fixString(value as string);
+        this.fixString(value as string, exactly);
         break;
       case 'Code':
-        this.fixFshCode(value as FshCode);
+        this.fixFshCode(value as FshCode, exactly);
         break;
       case 'Quantity':
-        this.fixFshQuantity(value as FshQuantity);
+        value = value as FshQuantity;
+        this.fixFHIRValue(value.toString(), value.toFHIRQuantity(), exactly, 'Quantity');
         break;
       case 'Ratio':
-        this.fixFshRatio(value as FshRatio);
+        value = value as FshRatio;
+        this.fixFHIRValue(value.toString(), value.toFHIRRatio(), exactly, 'Ratio');
         break;
       case 'Reference':
-        this.fixFshReference(value as FshReference);
+        value = value as FshReference;
+        this.fixFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
       default:
         throw new MismatchedTypeError(type, value, this.type[0].code);
@@ -935,25 +947,42 @@ export class ElementDefinition {
   }
 
   /**
-   * Checks if a primitive value can be fixed
-   * @param {boolean | string | number} value - The value to fix
-   * @param {boolean | string | number} currentElementValue - The current value of the element
-   * @param {string} elementType - The type of the element as a string
+   * Checks if a complex value can be fixed and then fixes it if so. A complex value can be fixed on an element if:
+   * - the element isn't already fixed to something else (by fixed[x], pattern[x], or from a parent)
+   * - or the element is already fixed to something that is the same or a subset of the new value
+   * @param {string} fshValue - The FSH-syntax-formatted value
+   * @param {object} fhirValue - The FHIR representation of the FSH value
+   * @param {boolean} exactly - True if if fixed[x] should be used, otherwise pattern[x] is used
+   * @param {string} type - The FHIR type that is being fixed; will be used to construct fixed[x] and pattern[x] names
    * @throws {ValueAlreadyFixedError} when the currentElementValue exists and is different than the new value
-   * @returns {true | undefined} true if no value exists or the new value matches the old
+   * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private checkIfFixable(
-    value: boolean | string | number,
-    currentElementValue: boolean | string | number,
-    elementType: string
-  ): true | undefined {
-    if (currentElementValue == null) {
-      currentElementValue = this.fixedByAnyParent();
+  private fixFHIRValue(fshValue: string, fhirValue: any, exactly: boolean, type: string) {
+    if (this.type[0].code !== type) {
+      throw new MismatchedTypeError(type, fshValue, this.type[0].code);
     }
-    if (currentElementValue != null && currentElementValue !== value) {
-      throw new ValueAlreadyFixedError(value, elementType, currentElementValue);
+
+    // Find the fixed[x] and pattern[x] variables to use
+    const fixedX = `fixed${upperFirst(type)}` as keyof ElementDefinition;
+    const patternX = `pattern${upperFirst(type)}` as keyof ElementDefinition;
+
+    // Find any currently fixed values and ensure they are a subset, otherwise throw
+    const currentElementValue = this[fixedX] ?? this[patternX] ?? this.fixedByAnyParent();
+    const compareFn = typeof fhirValue === 'object' ? isMatch : isEqual;
+    if (currentElementValue != null && !compareFn(fhirValue, currentElementValue)) {
+      throw new ValueAlreadyFixedError(fshValue, type, JSON.stringify(currentElementValue));
     }
-    return true;
+
+    // If we made it this far, fix the value using fixed[x] or pattern[x] as appropriate
+    if (exactly) {
+      // @ts-ignore: Type 'any' is not assignable to type 'never'
+      this[fixedX] = fhirValue;
+      delete this[patternX];
+    } else {
+      // @ts-ignore: Type 'any' is not assignable to type 'never'
+      this[patternX] = fhirValue;
+      // NOTE: No need to delete fixed[x], as changing from fixed[x] to pattern[x] is not allowed
+    }
   }
 
   /**
@@ -1003,62 +1032,24 @@ export class ElementDefinition {
   }
 
   /**
-   * Fixes a boolean to this element.
-   * @see {@link fixValue}
-   * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
-   * @param {boolean} value - the boolean value to fix
-   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
-   * @throws {MismatchedTypeError} when the type of the ElementDefinition is not boolean
-   */
-  private fixBoolean(value: boolean): void {
-    const type = this.type[0].code;
-    if (
-      type === 'boolean' &&
-      this.checkIfFixable(value, this.fixedBoolean ?? this.patternBoolean, type)
-    ) {
-      this.patternBoolean = value;
-    } else {
-      throw new MismatchedTypeError('boolean', value, type);
-    }
-  }
-
-  /**
    * Fixes a number to this element.
    * @see {@link fixValue}
    * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
    * @param {number} value - the number value to fix
+   * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private fixNumber(value: number): void {
+  private fixNumber(value: number, exactly = false): void {
     const type = this.type[0].code;
     if (
-      type === 'decimal' &&
-      this.checkIfFixable(value, this.fixedDecimal ?? this.patternDecimal, type)
+      type === 'decimal' ||
+      (type === 'integer' && Number.isInteger(value)) ||
+      (type === 'unsignedInt' && Number.isInteger(value) && value >= 0) ||
+      (type === 'positiveInt' && Number.isInteger(value) && value > 0)
     ) {
-      this.patternDecimal = value;
-    } else if (
-      type === 'integer' &&
-      Number.isInteger(value) &&
-      this.checkIfFixable(value, this.fixedInteger ?? this.patternInteger, type)
-    ) {
-      this.patternInteger = value;
-    } else if (
-      type === 'unsignedInt' &&
-      Number.isInteger(value) &&
-      value >= 0 &&
-      this.checkIfFixable(value, this.fixedUnsignedInt ?? this.patternUnsignedInt, type)
-    ) {
-      this.patternUnsignedInt = value;
-    } else if (
-      type === 'positiveInt' &&
-      Number.isInteger(value) &&
-      value > 0 &&
-      this.checkIfFixable(value, this.fixedPositiveInt ?? this.patternPositiveInt, type)
-    ) {
-      this.patternPositiveInt = value;
+      this.fixFHIRValue(value.toString(), value, exactly, type);
     } else {
       throw new MismatchedTypeError('number', value, type);
     }
@@ -1069,100 +1060,43 @@ export class ElementDefinition {
    * @see {@link fixValue}
    * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
    * @param {string} value - the string value to fix
+   * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  private fixString(value: string): void {
+  private fixString(value: string, exactly = false): void {
     const type = this.type[0].code;
     if (
-      type === 'string' &&
-      this.checkIfFixable(value, this.fixedString ?? this.patternString, type)
+      type === 'string' ||
+      (type === 'uri' && /^\S*$/.test(value)) ||
+      (type === 'url' && /^\S*$/.test(value)) ||
+      (type === 'canonical' && /^\S*$/.test(value)) ||
+      (type === 'base64Binary' && /^(\s*([0-9a-zA-Z\+\=]){4}\s*)+$/.test(value)) ||
+      (type === 'instant' &&
+        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
+          value
+        )) ||
+      (type === 'date' &&
+        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/.test(
+          value
+        )) ||
+      (type === 'dateTime' &&
+        /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/.test(
+          value
+        )) ||
+      (type === 'time' &&
+        /^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$/.test(value)) ||
+      (type === 'oid' && /^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$/.test(value)) ||
+      (type === 'id' && /^[A-Za-z0-9\-\.]{1,64}$/.test(value)) ||
+      (type === 'markdown' && /^\s*(\S|\s)*$/.test(value)) ||
+      type === 'uuid'
     ) {
-      this.patternString = value;
-    } else if (
-      type === 'uri' &&
-      /^\S*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedUri ?? this.patternUri, type)
-    ) {
-      this.patternUri = value;
-    } else if (
-      type === 'url' &&
-      /^\S*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedUrl ?? this.patternUrl, type)
-    ) {
-      this.patternUrl = value;
-    } else if (
-      type === 'canonical' &&
-      /^\S*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedCanonical ?? this.patternCanonical, type)
-    ) {
-      this.patternCanonical = value;
-    } else if (
-      type === 'base64Binary' &&
-      /^(\s*([0-9a-zA-Z\+\=]){4}\s*)+$/.test(value) &&
-      this.checkIfFixable(value, this.fixedBase64Binary ?? this.patternBase64Binary, type)
-    ) {
-      this.patternBase64Binary = value;
-    } else if (
-      type === 'instant' &&
-      /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
-        value
-      ) &&
-      this.checkIfFixable(value, this.fixedInstant ?? this.patternInstant, type)
-    ) {
-      this.patternInstant = value;
-    } else if (
-      type === 'date' &&
-      /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/.test(
-        value
-      ) &&
-      this.checkIfFixable(value, this.fixedDate ?? this.patternDate, type)
-    ) {
-      this.patternDate = value;
-    } else if (
-      type === 'dateTime' &&
-      /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/.test(
-        value
-      ) &&
-      this.checkIfFixable(value, this.fixedDateTime ?? this.patternDateTime, type)
-    ) {
-      this.patternDateTime = value;
-    } else if (
-      type === 'time' &&
-      /^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$/.test(value) &&
-      this.checkIfFixable(value, this.fixedTime ?? this.patternTime, type)
-    ) {
-      this.patternTime = value;
-    } else if (
-      type === 'oid' &&
-      /^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$/.test(value) &&
-      this.checkIfFixable(value, this.fixedOid ?? this.patternOid, type)
-    ) {
-      this.patternOid = value;
-    } else if (
-      type === 'id' &&
-      /^[A-Za-z0-9\-\.]{1,64}$/.test(value) &&
-      this.checkIfFixable(value, this.fixedId ?? this.patternId, type)
-    ) {
-      this.patternId = value;
-    } else if (
-      type === 'markdown' &&
-      /^\s*(\S|\s)*$/.test(value) &&
-      this.checkIfFixable(value, this.fixedMarkdown ?? this.patternMarkdown, type)
-    ) {
-      this.patternMarkdown = value;
-    } else if (
-      type === 'uuid' &&
-      this.checkIfFixable(value, this.fixedUuid ?? this.patternUuid, type)
-    ) {
-      this.patternUuid = value;
-    } else if (
-      type == 'xhtml' &&
-      this.checkXhtml(value) &&
-      this.checkIfFixable(value, this.fixedXhtml ?? this.patternXhtml, type)
-    ) {
-      this.patternXhtml = minify(value, { collapseWhitespace: true });
+      this.fixFHIRValue(`"${value}"`, value, exactly, type);
+    } else if (type == 'xhtml' && this.checkXhtml(value)) {
+      this.fixFHIRValue(`"${value}"`, value, exactly, type);
+      // If we got here, the fixed value is valid. Replace the XML with a minimized version.
+      this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, { collapseWhitespace: true });
     } else {
       throw new MismatchedTypeError('string', value, type);
     }
@@ -1196,345 +1130,44 @@ export class ElementDefinition {
   }
 
   /**
-   * Fixes a Quantity to this element.
-   * @see {@link fixValue}
-   * @param {FshQuantity} value - the Quantity value to fix
-   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
-   * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
-   */
-  private fixFshQuantity(value: FshQuantity): void {
-    const type = this.type[0].code;
-    if (type === 'Quantity') {
-      if (this.patternQuantity) {
-        const found = this.patternQuantity;
-        const foundFshQuantity = new FshQuantity(
-          found.value,
-          new FshCode(found.code, found.system)
-        );
-        // Check if the new quantity matches the current
-        if (!value.equals(foundFshQuantity)) {
-          throw new ValueAlreadyFixedError(
-            value.toString(),
-            'Quantity',
-            foundFshQuantity.toString()
-          );
-        }
-        // if they do match, there is nothing to do, so return
-        return;
-      }
-      if (value.unit) {
-        // A FshCode has special support allowing it to be fixed to a Quantity
-        this.fixFshCode(value.unit);
-      } else {
-        this.patternQuantity = {};
-      }
-      this.patternQuantity.value = value.value;
-    } else {
-      throw new MismatchedTypeError('Quantity', value.toString(), type);
-    }
-  }
-
-  /**
-   * Fixes a Ratio to this element.
-   * @see {@link fixValue}
-   * @param {FshRatio} value - the Ratio value to fix
-   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
-   * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
-   */
-  private fixFshRatio(value: FshRatio): void {
-    const type = this.type[0].code;
-    if (type === 'Ratio') {
-      if (this.patternRatio) {
-        const found = this.patternRatio;
-        const foundNumerator = new FshQuantity(
-          found.numerator?.value,
-          new FshCode(found.numerator?.code, found.numerator?.system)
-        );
-        const foundDenominator = new FshQuantity(
-          found.denominator?.value,
-          new FshCode(found.denominator?.code, found.denominator?.system)
-        );
-        const foundRatio = new FshRatio(foundNumerator, foundDenominator);
-        // Check if the new ratio matches the old
-        if (!value.equals(foundRatio)) {
-          throw new ValueAlreadyFixedError(value.toString(), 'Ratio', foundRatio.toString());
-        }
-        // If they do match, there is nothing more to do, so return
-        return;
-      }
-      // There is no existing patternRatio, so create it
-      this.patternRatio = {
-        numerator: { value: value.numerator.value },
-        denominator: { value: value.denominator.value }
-      };
-      // Unit is optional, so we need to check it
-      if (value.numerator.unit) {
-        this.patternRatio.numerator.code = value.numerator.unit.code;
-        // System is optional on unit, so we need to check it
-        if (value.numerator.unit.system) {
-          this.patternRatio.numerator.system = value.numerator.unit.system;
-        }
-      }
-      if (value.denominator.unit) {
-        this.patternRatio.denominator.code = value.denominator.unit.code;
-        if (value.denominator.unit.system) {
-          this.patternRatio.denominator.system = value.denominator.unit.system;
-        }
-      }
-    } else {
-      throw new MismatchedTypeError('Ratio', value.toString(), type);
-    }
-  }
-
-  /**
-   * Fixes a Reference to this element.
-   * @see {@link fixValue}
-   * @param {FshReference} value - the Reference value to fix
-   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
-   * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
-   */
-  private fixFshReference(value: FshReference): void {
-    const type = this.type[0].code;
-    if (type === 'Reference') {
-      if (this.patternReference) {
-        const found = this.patternReference;
-        const foundFshReference = new FshReference(found.reference, found.display);
-        // Check if the new quantity matches the current
-        if (!value.equals(foundFshReference, true)) {
-          throw new ValueAlreadyFixedError(
-            value.toString(),
-            'Reference',
-            foundFshReference.toString()
-          );
-        }
-        // The original display was not set, allow it to be set if references are otherwise equal
-        if (foundFshReference.display == null) {
-          this.patternReference.display = value.display;
-        }
-        // If they do match, there is nothing to do, so return
-        return;
-      }
-      this.patternReference = { reference: value.reference };
-      if (value.display) this.patternReference.display = value.display;
-    } else {
-      throw new MismatchedTypeError('Reference', value.toString(), type);
-    }
-  }
-
-  /**
-   * Fixes a code to this element using the appropriate methodology based on the element type.
-   * - CodeableConcept: patternCodeableConcept using code and system properties
-   * - Coding: patternCoding using code and system properties
-   * - Quantity: patternQuantity using code and system properties
-   * - code: fixedCode using code property
-   * - string: fixedString using code property
-   * - uri: fixedUri using code property
+   * Fixes a code to this element, formatting it in the way the element expects for the type.
    * If the element is not a code-ish type or a different code is already fixed, it will throw.
    * TODO: Determine if it is valid to fix the code on a choice element (e.g., value[x]).
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.fixed_x_}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.pattern_x_}
    * @param {FshCode} code - the code to fix
+   * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {CodedTypeNotFoundError} when there is no coded type on this element
-   * @throws {CodeAlreadyFixedError} where the code is already fixed to a different code
+   * @throws {ValueAlreadyFixedError} when the code is already fixed to a different code
    * @throws {InvalidUriError} when the system being fixed is not a valid uri
    */
-  private fixFshCode(code: FshCode): void {
-    // This is the element to fix it to
+  private fixFshCode(code: FshCode, exactly = false): void {
     if (code.system && !isUri(code.system.split('|')[0])) {
       throw new InvalidUriError(code.system);
     }
+
     const type = this.type[0].code;
-    if (type === 'CodeableConcept') {
-      this.fixFshCodeToCodeableConcept(code);
+    if (type === 'code' || type === 'string' || type === 'uri') {
+      this.fixFHIRValue(code.toString(), code.code, exactly, type);
+    } else if (type === 'CodeableConcept') {
+      this.fixFHIRValue(code.toString(), code.toFHIRCodeableConcept(), exactly, 'CodeableConcept');
     } else if (type === 'Coding') {
-      this.fixFshCodeToCoding(code);
+      this.fixFHIRValue(code.toString(), code.toFHIRCoding(), exactly, 'Coding');
     } else if (type === 'Quantity') {
-      this.fixFshCodeToQuantityUnitCode(code);
-    } else if (type === 'code') {
-      this.fixFshCodeToCode(code);
-    } else if (type === 'string') {
-      this.fixFshCodeToString(code);
-    } else if (type === 'uri') {
-      this.fixFshCodeToUri(code);
+      // Since code only maps to part of Quantity, we want to ensure that if there are other (non-code) parts
+      // already fixed, we take them on too -- as we don't want to overwrite them with blanks.
+      const existing = this.fixedQuantity ?? this.fixedQuantity ?? this.fixedByAnyParent();
+      const quantity = code.toFHIRQuantity();
+      if (existing?.value != null) {
+        quantity.value = existing.value;
+      }
+      if (existing?.comparator != null) {
+        quantity.comparator = existing.comparator;
+      }
+      this.fixFHIRValue(code.toString(), quantity, exactly, 'Quantity');
     } else {
       throw new CodedTypeNotFoundError([type]);
     }
-  }
-
-  /**
-   * Fixes a code to this element using patternCodeableConcept.
-   * If a different code is already fixed, it will throw.
-   * TODO: Implement more robust approach to detecting existing fixed codes.
-   * @see {@link fixFshCode}
-   * @param {FshCode} code - the code to fix
-   * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
-   */
-  private fixFshCodeToCodeableConcept(code: FshCode): void {
-    // Check if this is already fixed to something else
-    // TODO: handle fixedCodeableConcept too
-    const alreadyFixedValue = this.patternCodeableConcept ?? this.fixedByAnyParent();
-    if (alreadyFixedValue) {
-      const fixedToSame =
-        alreadyFixedValue.coding &&
-        alreadyFixedValue.coding.some((c: any) => {
-          return c.code == code.code && c.system == code.system;
-        });
-      if (!fixedToSame) {
-        const found = alreadyFixedValue.coding[0];
-        throw new CodeAlreadyFixedError(new FshCode(found.code, found.system), code);
-      }
-      // It's already fixed, so there is nothing to do
-      return;
-    }
-
-    const coding: Coding = {};
-    if (code.code) {
-      coding.code = code.code;
-    }
-    if (code.system) {
-      if (code.system.indexOf('|') > -1) {
-        [coding.system, coding.version] = code.system.split('|', 2);
-      } else {
-        coding.system = code.system;
-      }
-    }
-    this.patternCodeableConcept = {
-      coding: [coding]
-    };
-  }
-
-  /**
-   * Fixes a code to this element using patternCoding.
-   * If a different code is already fixed, it will throw.
-   * TODO: Implement more robust approach to detecting existing fixed codes.
-   * @see {@link fixFshCode}
-   * @param {FshCode} code - the code to fix
-   * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
-   */
-  private fixFshCodeToCoding(code: FshCode): void {
-    // Check if this is already fixed to something else
-    // TODO: Handle fixedCoding too
-    const alreadyFixedValue = this.patternCoding ?? this.fixedByAnyParent();
-    if (alreadyFixedValue) {
-      if (alreadyFixedValue.code != code.code || alreadyFixedValue.system != code.system) {
-        throw new CodeAlreadyFixedError(
-          new FshCode(alreadyFixedValue.code, alreadyFixedValue.system),
-          code
-        );
-      }
-      // It's already fixed, so there is nothing to do
-      return;
-    }
-
-    this.patternCoding = {};
-    if (code.code) {
-      this.patternCoding.code = code.code;
-    }
-    if (code.system) {
-      if (code.system.indexOf('|') > -1) {
-        [this.patternCoding.system, this.patternCoding.version] = code.system.split('|', 2);
-      } else {
-        this.patternCoding.system = code.system;
-      }
-    }
-  }
-
-  /**
-   * Fixes a code to this element using patternQuantity (where the code represents units).
-   * If a different code is already fixed, it will throw.
-   * TODO: Implement more robust approach to detecting existing fixed codes.
-   * @see {@link fixFshCode}
-   * @param {FshCode} code - the code to fix
-   * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
-   */
-  private fixFshCodeToQuantityUnitCode(code: FshCode): void {
-    // Check if this is already fixed to something else
-    // TODO: Handle fixedQuantity too
-    const alreadyFixedValue = this.patternQuantity ?? this.fixedByAnyParent();
-    if (alreadyFixedValue) {
-      if (alreadyFixedValue.code != code.code || alreadyFixedValue.system != code.system) {
-        throw new CodeAlreadyFixedError(
-          new FshCode(alreadyFixedValue.code, alreadyFixedValue.system),
-          code
-        );
-      }
-      // It's already fixed, so there is nothing to do
-      return;
-    }
-
-    this.patternQuantity = {};
-    if (code.code) {
-      this.patternQuantity.code = code.code;
-    }
-    if (code.system) {
-      this.patternQuantity.system = code.system;
-    }
-  }
-
-  /**
-   * Fixes a code to this element using fixedCode.
-   * If a different code is already fixed, it will throw.
-   * @see {@link fixFshCode}
-   * @param {FshCode} code - the code to fix
-   * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
-   */
-  private fixFshCodeToCode(code: FshCode): void {
-    // Check if this is already fixed to something else
-    const alreadyFixedValue = this.fixedCode ?? this.patternCode ?? this.fixedByAnyParent();
-    if (alreadyFixedValue) {
-      if (alreadyFixedValue != code.code) {
-        throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
-      }
-      // It's already fixed, so there is nothing to do
-      return;
-    }
-
-    this.patternCode = code.code;
-  }
-
-  /**
-   * Fixes a code to this element using fixedString.
-   * If a different code is already fixed, it will throw.
-   * @see {@link fixFshCode}
-   * @param {FshCode} code - the code to fix
-   * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
-   */
-  private fixFshCodeToString(code: FshCode): void {
-    // Check if this is already fixed to something else
-    const alreadyFixedValue = this.fixedString ?? this.patternString ?? this.fixedByAnyParent();
-    if (alreadyFixedValue) {
-      if (alreadyFixedValue != code.code) {
-        throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
-      }
-      // It's already fixed, so there is nothing to do
-      return;
-    }
-
-    this.patternString = code.code;
-  }
-
-  /**
-   * Fixes a code to this element using fixedUri.
-   * If a different code is already fixed, it will throw.
-   * @see {@link fixFshCode}
-   * @param {FshCode} code - the code to fix
-   * @throws {CodeAlreadyFixedError} when the code is already fixed to a different code
-   */
-  private fixFshCodeToUri(code: FshCode): void {
-    // Check if this is already fixed to something else
-    const alreadyFixedValue = this.fixedUri ?? this.patternUri ?? this.fixedByAnyParent();
-    if (alreadyFixedValue) {
-      if (alreadyFixedValue != code.code) {
-        throw new CodeAlreadyFixedError(new FshCode(alreadyFixedValue), code);
-      }
-      // It's already fixed, so there is nothing to do
-      return;
-    }
-
-    this.patternUri = code.code;
   }
 
   /**

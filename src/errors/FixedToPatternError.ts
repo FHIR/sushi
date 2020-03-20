@@ -1,0 +1,13 @@
+import { Annotated } from './Annotated';
+
+export class FixedToPatternError extends Error implements Annotated {
+  specReferences = [
+    'http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.fixed_x_',
+    'http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.pattern_x_'
+  ];
+  constructor(public fixedProperty: string) {
+    super(
+      `Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using ${fixedProperty}.`
+    );
+  }
+}

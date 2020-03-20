@@ -121,7 +121,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.fixValue(replacedRule.fixedValue, replacedRule.units);
+            element.fixValue(replacedRule.fixedValue, replacedRule.exactly, replacedRule.units);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
           } else if (rule instanceof OnlyRule) {
@@ -272,8 +272,7 @@ export class StructureDefinitionExporter implements Fishable {
           this
         );
         // TODO: Switch back to `urlElement.fixValue(slice.sliceName, true);` when fixValue supports "exactly"
-        // urlElement.fixValue(slice.sliceName, true);
-        urlElement.fixedUri = slice.sliceName;
+        urlElement.fixValue(slice.sliceName, true);
       }
     });
   }

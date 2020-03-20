@@ -43,7 +43,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         medicationFormCodingSystem.fixValue('http://ohManIWillNeverGetSet.sad');
       }).toThrow(
-        'Cannot fix http://ohManIWillNeverGetSet.sad to this element; a different uri is already fixed: http://thankYouForSettingMe.com'
+        'Cannot fix "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already fixed: "http://thankYouForSettingMe.com".'
       );
     });
 
@@ -53,13 +53,15 @@ describe('ElementDefinition', () => {
       const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
       expect(() => {
         medicationFormCodingSystem.fixValue('baz');
-      }).toThrow('Cannot fix baz to this element; a different uri is already fixed: foo,bar');
+      }).toThrow(
+        'Cannot fix "baz" to this element; a different uri is already fixed: ["foo","bar"].'
+      );
     });
 
     it('should throw InvalidUnitsError when using the units keyword on a non-Quantity', () => {
       const code = medication.elements.find(e => e.id === 'Medication.code');
       expect(() => {
-        code.fixValue(new FshCode('mycode', 'https://code.com'), true);
+        code.fixValue(new FshCode('mycode', 'https://code.com'), false, true);
       }).toThrow(/units.*Medication.code/);
       // Units error should not stop value from still being fixed
       expect(code.patternCodeableConcept).toEqual({

@@ -52,7 +52,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         batchLotNumber.fixValue('bar foo');
       }).toThrow(
-        'Cannot fix bar foo to this element; a different string is already fixed: foo bar'
+        'Cannot fix "bar foo" to this element; a different string is already fixed: "foo bar".'
       );
     });
 
@@ -70,7 +70,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         url.fixValue('http://newexample.com');
       }).toThrow(
-        'Cannot fix http://newexample.com to this element; a different uri is already fixed: http://example.org'
+        'Cannot fix "http://newexample.com" to this element; a different uri is already fixed: "http://example.org".'
       );
     });
 
@@ -99,7 +99,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         url.fixValue('http://newexample.com');
       }).toThrow(
-        'Cannot fix http://newexample.com to this element; a different url is already fixed: http://example.org'
+        'Cannot fix "http://newexample.com" to this element; a different url is already fixed: "http://example.org".'
       );
     });
 
@@ -130,7 +130,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         instantiates.fixValue('http://newexample.com');
       }).toThrow(
-        'Cannot fix http://newexample.com to this element; a different canonical is already fixed: http://example.org'
+        'Cannot fix "http://newexample.com" to this element; a different canonical is already fixed: "http://example.org".'
       );
     });
 
@@ -161,7 +161,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=');
       }).toThrow(
-        'Cannot fix dGhpcyB0b28= to this element; a different base64Binary is already fixed: d293IHNvbWVvbmUgZGVjb2RlZA=='
+        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "d293IHNvbWVvbmUgZGVjb2RlZA==".'
       );
     });
 
@@ -190,7 +190,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         issued.fixValue('2016-02-07T13:28:17.239+02:00');
       }).toThrow(
-        'Cannot fix 2016-02-07T13:28:17.239+02:00 to this element; a different instant is already fixed: 2015-02-07T13:28:17.239+02:00'
+        'Cannot fix "2016-02-07T13:28:17.239+02:00" to this element; a different instant is already fixed: "2015-02-07T13:28:17.239+02:00".'
       );
     });
 
@@ -215,7 +215,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         birthDate.fixValue('1905-08-24');
       }).toThrow(
-        'Cannot fix 1905-08-24 to this element; a different date is already fixed: 1905-08-23'
+        'Cannot fix "1905-08-24" to this element; a different date is already fixed: "1905-08-23".'
       );
     });
 
@@ -242,7 +242,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         date.fixValue('1905-08-24');
       }).toThrow(
-        'Cannot fix 1905-08-24 to this element; a different dateTime is already fixed: 1905-08-23'
+        'Cannot fix "1905-08-24" to this element; a different dateTime is already fixed: "1905-08-23".'
       );
     });
 
@@ -273,7 +273,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         hoursOfOperationClosingTime.fixValue('12:34:57');
       }).toThrow(
-        'Cannot fix 12:34:57 to this element; a different time is already fixed: 12:34:56'
+        'Cannot fix "12:34:57" to this element; a different time is already fixed: "12:34:56".'
       );
     });
 
@@ -300,7 +300,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         inputValueOid.fixValue('urn:oid:1.4.3.2.1');
       }).toThrow(
-        'Cannot fix urn:oid:1.4.3.2.1 to this element; a different oid is already fixed: urn:oid:1.2.3.4.5'
+        'Cannot fix "urn:oid:1.4.3.2.1" to this element; a different oid is already fixed: "urn:oid:1.2.3.4.5".'
       );
     });
 
@@ -325,7 +325,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         uid.fixValue('anotherUniqueId321');
       }).toThrow(
-        'Cannot fix anotherUniqueId321 to this element; a different id is already fixed: uniqueId123'
+        'Cannot fix "anotherUniqueId321" to this element; a different id is already fixed: "uniqueId123".'
       );
     });
 
@@ -354,7 +354,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         description.fixValue('other text');
       }).toThrow(
-        'Cannot fix other text to this element; a different markdown is already fixed: some text'
+        'Cannot fix "other text" to this element; a different markdown is already fixed: "some text".'
       );
     });
 
@@ -372,7 +372,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         inputValueUuid.fixValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520');
       }).toThrow(
-        'Cannot fix urn:uuid:c123456d-ec9a-4326-a141-556f43239520 to this element; a different uuid is already fixed: urn:uuid:c757873d-ec9a-4326-a141-556f43239520'
+        'Cannot fix "urn:uuid:c123456d-ec9a-4326-a141-556f43239520" to this element; a different uuid is already fixed: "urn:uuid:c757873d-ec9a-4326-a141-556f43239520".'
       );
     });
 
@@ -413,7 +413,7 @@ describe('ElementDefinition', () => {
           '<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>'
         );
       }).toThrow(
-        'Cannot fix <div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div> to this element; a different xhtml is already fixed: <div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
+        'Cannot fix "<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>" to this element; a different xhtml is already fixed: "<div xmlns=\\"http://www.w3.org/1999/xhtml\\">Twas brillig</div>".'
       );
     });
 
