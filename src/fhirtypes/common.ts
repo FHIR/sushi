@@ -74,7 +74,7 @@ export function setPropertyOnInstance(
           }
           const sliceIndices: number[] = [];
           // Find the indices where slices are placed
-          current[pathPart.base].forEach((el: any, i: number) => {
+          current[pathPart.base]?.forEach((el: any, i: number) => {
             if (el?._sliceName === sliceName) {
               sliceIndices.push(i);
             }
