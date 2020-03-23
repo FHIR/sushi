@@ -101,6 +101,7 @@ enum MappingMetadataKey {
   Source = 'Source',
   Target = 'Target',
   Description = 'Description',
+  Title = 'Title',
   Unknown = 'Unknown'
 }
 
@@ -571,6 +572,8 @@ export class FSHImporter extends FSHVisitor {
           mapping.target = pair.value;
         } else if (pair.key === MappingMetadataKey.Description) {
           mapping.description = pair.value;
+        } else if (pair.key === MappingMetadataKey.Title) {
+          mapping.title = pair.value;
         }
       });
     ruleCtx.forEach(mappingRule => {
@@ -680,6 +683,8 @@ export class FSHImporter extends FSHVisitor {
         key: MappingMetadataKey.Description,
         value: this.visitDescription(ctx.description())
       };
+    } else if (ctx.title()) {
+      return { key: MappingMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     }
     return { key: MappingMetadataKey.Unknown, value: ctx.getText() };
   }
