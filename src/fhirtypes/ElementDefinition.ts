@@ -894,22 +894,25 @@ export class ElementDefinition {
   fixValue(value: FixedValueType, exactly = false, units = false): void {
     let type: string = typeof value;
     if (type === 'object' && value?.constructor?.name) {
-      // For types like FshCode, FshQuantity, etc, remove the Fsh
+      // For types like FshCode, FshQuantity, etc, remove the Fsh so we're left with the real type name
       type = value.constructor.name.replace(/^Fsh/, '');
     }
 
+    // We can only fix elements that have a single type, else it is ambiguous
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError(type);
     }
 
+    // If fixing by pattern, ensure that it's not already fixed by fixed[x], because We can't overrided
+    // fixed[x] with pattern[x] since pattern[x] is looser
     if (!exactly) {
-      // We can't overrided fixed[x] with pattern[x] since pattern[x] is looser
       const fixedField = Object.entries(this).find(e => e[0].startsWith('fixed') && e[1] != null);
       if (fixedField) {
         throw new FixedToPatternError(fixedField[0]);
       }
     }
 
+    // The approach to fixing may differ based on type...
     switch (type) {
       case 'boolean':
         this.fixFHIRValue(value.toString(), value, exactly, 'boolean');
@@ -947,12 +950,15 @@ export class ElementDefinition {
   }
 
   /**
-   * Checks if a complex value can be fixed and then fixes it if so. A complex value can be fixed on an element if:
+   * Checks if a FHIR value can be fixed and then fixes it if so. A FHIR value can be fixed on an element if:
    * - the element isn't already fixed to something else (by fixed[x], pattern[x], or from a parent)
    * - or the element is already fixed to something that is the same or a subset of the new value
-   * @param {string} fshValue - The FSH-syntax-formatted value
+   *   - e.g., you can fix { code: 'Foo', system: 'http://bar.com' } to an element already fixed to
+   *     { system: 'http://bar.com } because the new value contains the old value (with no conflicts).
+   *     This does not work the other way around, however.
+   * @param {string} fshValue - The FSH-syntax-formatted value (usually the FSH class .toString())
    * @param {object} fhirValue - The FHIR representation of the FSH value
-   * @param {boolean} exactly - True if if fixed[x] should be used, otherwise pattern[x] is used
+   * @param {boolean} exactly - Set to true if fixed[x] should be used, otherwise pattern[x] is used
    * @param {string} type - The FHIR type that is being fixed; will be used to construct fixed[x] and pattern[x] names
    * @throws {ValueAlreadyFixedError} when the currentElementValue exists and is different than the new value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
@@ -966,10 +972,12 @@ export class ElementDefinition {
     const fixedX = `fixed${upperFirst(type)}` as keyof ElementDefinition;
     const patternX = `pattern${upperFirst(type)}` as keyof ElementDefinition;
 
-    // Find any currently fixed values and ensure they are a subset, otherwise throw
+    // Find any currently fixed values
     const currentElementValue = this[fixedX] ?? this[patternX] ?? this.fixedByAnyParent();
+    // For complex types, use isMatch to check if they are a subset, otherwise use isEqual
     const compareFn = typeof fhirValue === 'object' ? isMatch : isEqual;
     if (currentElementValue != null && !compareFn(fhirValue, currentElementValue)) {
+      // It's a different value and not a compatible subset (e.g., the new value doesn't contain the old)
       throw new ValueAlreadyFixedError(fshValue, type, JSON.stringify(currentElementValue));
     }
 
@@ -1158,7 +1166,7 @@ export class ElementDefinition {
     } else if (type === 'Quantity') {
       // Since code only maps to part of Quantity, we want to ensure that if there are other (non-code) parts
       // already fixed, we take them on too -- as we don't want to overwrite them with blanks.
-      const existing = this.fixedQuantity ?? this.fixedQuantity ?? this.fixedByAnyParent();
+      const existing = this.fixedQuantity ?? this.patternQuantity ?? this.fixedByAnyParent();
       const quantity = code.toFHIRQuantity();
       if (existing?.value != null) {
         quantity.value = existing.value;
