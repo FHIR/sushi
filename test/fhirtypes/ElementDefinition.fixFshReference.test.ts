@@ -1,9 +1,9 @@
+import path from 'path';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshReference } from '../../src/fshtypes';
 import { TestFisher } from '../testhelpers';
-import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -35,6 +35,17 @@ describe('ElementDefinition', () => {
         reference: 'foo',
         display: 'bar'
       });
+      expect(subject.fixedReference).toBeUndefined();
+    });
+
+    it('should fix a FshReference to a Reference (exactly)', () => {
+      const subject = observation.elements.find(e => e.id === 'Observation.subject');
+      subject.fixValue(fshReference1, true);
+      expect(subject.fixedReference).toEqual({
+        reference: 'foo',
+        display: 'bar'
+      });
+      expect(subject.patternReference).toBeUndefined();
     });
 
     it('should fix a FshReference to a Reference allowing a more specific display', () => {
@@ -48,6 +59,21 @@ describe('ElementDefinition', () => {
         reference: 'foo',
         display: 'bar'
       });
+      expect(subject.fixedReference).toBeUndefined();
+    });
+
+    it('should fix a FshReference to a Reference allowing a more specific display (exactly)', () => {
+      const subject = observation.elements.find(e => e.id === 'Observation.subject');
+      subject.fixValue(new FshReference('foo'), true);
+      expect(subject.fixedReference).toEqual({
+        reference: 'foo'
+      });
+      subject.fixValue(new FshReference('foo', 'bar'), true);
+      expect(subject.fixedReference).toEqual({
+        reference: 'foo',
+        display: 'bar'
+      });
+      expect(subject.patternReference).toBeUndefined();
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
@@ -57,9 +83,14 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot fix Reference value on this element since this element does not have a single type'
       );
+      expect(() => {
+        valueX.fixValue(fshReference1, true);
+      }).toThrow(
+        'Cannot fix Reference value on this element since this element does not have a single type'
+      );
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value', () => {
+    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by pattern[x]', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
       subject.fixValue(fshReference1);
       // should be able to fix a Reference twice in the same way without issue
@@ -71,6 +102,28 @@ describe('ElementDefinition', () => {
       // different value
       expect(() => {
         subject.fixValue(fshReference2);
+      }).toThrow(
+        'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: {"reference":"foo","display":"bar"}.'
+      );
+      expect(() => {
+        subject.fixValue(fshReference2, true);
+      }).toThrow(
+        'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: {"reference":"foo","display":"bar"}.'
+      );
+    });
+
+    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by fixed[x]', () => {
+      const subject = observation.elements.find(e => e.id === 'Observation.subject');
+      subject.fixValue(fshReference1, true);
+      // should be able to fix a Reference twice in the same way without issue
+      subject.fixValue(fshReference1, true);
+      expect(subject.fixedReference).toEqual({
+        reference: 'foo',
+        display: 'bar'
+      });
+      // different value
+      expect(() => {
+        subject.fixValue(fshReference2, true);
       }).toThrow(
         'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: {"reference":"foo","display":"bar"}.'
       );
@@ -103,6 +156,17 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+      const subject = observation.elements.find(e => e.id === 'Observation.subject');
+      subject.fixValue(fshReference1, true);
+      // different value
+      expect(() => {
+        subject.fixValue(fshReference2);
+      }).toThrow(
+        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedReference.'
+      );
+    });
+
     it('should throw MismatchedTypeError when the value is fixed to a non-Reference', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       // with display
@@ -111,9 +175,19 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot fix Reference value: Reference(foo) "bar". Value does not match element type: code'
       );
+      expect(() => {
+        status.fixValue(fshReference1, true);
+      }).toThrow(
+        'Cannot fix Reference value: Reference(foo) "bar". Value does not match element type: code'
+      );
       // without display
       expect(() => {
         status.fixValue(new FshReference('foo'));
+      }).toThrow(
+        'Cannot fix Reference value: Reference(foo). Value does not match element type: code'
+      );
+      expect(() => {
+        status.fixValue(new FshReference('foo'), true);
       }).toThrow(
         'Cannot fix Reference value: Reference(foo). Value does not match element type: code'
       );

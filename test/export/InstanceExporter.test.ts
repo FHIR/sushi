@@ -383,6 +383,21 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should fix an element to a value that is a superset of the fixed pattern on the Structure Definition', () => {
+      const fixedValRule = new FixedValueRule('maritalStatus');
+      const fixedFshCode = new FshCode('foo', 'http://foo.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      patient.rules.push(fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('maritalStatus');
+      const instanceFixedFshCode = new FshCode('foo', 'http://foo.com', 'Foo Foo');
+      instanceFixedValRule.fixedValue = instanceFixedFshCode;
+      patientInstance.rules.push(instanceFixedValRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus).toEqual({
+        coding: [{ code: 'foo', system: 'http://foo.com', display: 'Foo Foo' }]
+      });
+    });
+
     it('should not fix an element to a value different than the fixed value on the Structure Definition', () => {
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;

@@ -1,9 +1,9 @@
+import path from 'path';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
 import { TestFisher } from '../testhelpers';
-import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -34,6 +34,10 @@ describe('ElementDefinition', () => {
         // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'FixedValueType'
         authoredOn.fixValue(new Date()); // Date is not a supported type -- only strings are allowed
       }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
+      expect(() => {
+        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'FixedValueType'
+        authoredOn.fixValue(new Date(), true); // Date is not a supported type -- only strings are allowed
+      }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
     });
 
     it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern', () => {
@@ -45,6 +49,11 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot fix "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already fixed: "http://thankYouForSettingMe.com".'
       );
+      expect(() => {
+        medicationFormCodingSystem.fixValue('http://ohManIWillNeverGetSet.sad', true);
+      }).toThrow(
+        'Cannot fix "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already fixed: "http://thankYouForSettingMe.com".'
+      );
     });
 
     it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern to a conflicting array', () => {
@@ -53,6 +62,11 @@ describe('ElementDefinition', () => {
       const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
       expect(() => {
         medicationFormCodingSystem.fixValue('baz');
+      }).toThrow(
+        'Cannot fix "baz" to this element; a different uri is already fixed: ["foo","bar"].'
+      );
+      expect(() => {
+        medicationFormCodingSystem.fixValue('baz', true);
       }).toThrow(
         'Cannot fix "baz" to this element; a different uri is already fixed: ["foo","bar"].'
       );
