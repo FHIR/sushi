@@ -1,11 +1,7 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import {
-  DisableFlagError,
-  MultipleStandardsStatusError,
-  ExistingStandardsStatusError
-} from '../../src/errors';
+import { MultipleStandardsStatusError } from '../../src/errors';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
 
@@ -38,12 +34,11 @@ describe('ElementDefinition', () => {
       expect(note.mustSupport).toBe(true);
     });
 
-    it('should allow a flag to change from falsy to explicitly false', () => {
-      const code = observation.elements.find(e => e.id === 'Observation.code');
-      expect(code.mustSupport).toBeFalsy();
-      expect(code.mustSupport).not.toBe(false);
-      code.applyFlags(false, undefined, undefined, undefined, undefined, undefined);
-      expect(code.mustSupport).toBe(false);
+    it('should not change a flag that gets false as its argument', () => {
+      const status = observation.elements.find(e => e.id === 'Observation.status');
+      expect(status.isModifier).toBe(true);
+      status.applyFlags(undefined, undefined, false, undefined, undefined, undefined);
+      expect(status.isModifier).toBe(true);
     });
 
     it('should not change a flag that gets undefined as its argument', () => {
@@ -53,33 +48,6 @@ describe('ElementDefinition', () => {
       status.applyFlags(undefined, undefined, undefined, undefined, undefined, undefined);
       expect(status.isSummary).toBe(true);
       expect(status.isModifier).toBe(true);
-    });
-
-    it('should allow isSummary to change from true to false', () => {
-      const code = observation.elements.find(e => e.id === 'Observation.status');
-      expect(code.isSummary).toBe(true);
-      code.applyFlags(undefined, false, undefined, undefined, undefined, undefined);
-      expect(code.isSummary).toBe(false);
-    });
-
-    it('should throw an error when changing mustSupport from true to false', () => {
-      const note = observation.elements.find(e => e.id === 'Observation.note');
-      expect(note.mustSupport).toBeFalsy();
-      note.applyFlags(true, undefined, undefined, undefined, undefined, undefined);
-      expect(note.mustSupport).toBe(true);
-      expect(() => {
-        note.applyFlags(false, undefined, undefined, undefined, undefined, undefined);
-      }).toThrow(DisableFlagError);
-    });
-
-    it('should throw an error when changing isModifier from true to false', () => {
-      const note = observation.elements.find(e => e.id === 'Observation.note');
-      expect(note.isModifier).toBeFalsy();
-      note.applyFlags(undefined, undefined, true, undefined, undefined, undefined);
-      expect(note.isModifier).toBe(true);
-      expect(() => {
-        note.applyFlags(undefined, undefined, false, undefined, undefined, undefined);
-      }).toThrow(DisableFlagError);
     });
 
     it('should add a standards status of trial use to an element with no standards status', () => {
@@ -112,6 +80,23 @@ describe('ElementDefinition', () => {
       });
     });
 
+    it('should change the standards status when applying a standards status to an element that already has a standards status', () => {
+      const focus = observation.elements.find(e => e.id === 'Observation.focus');
+      expect(focus.extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'trial-use'
+      });
+      focus.applyFlags(undefined, undefined, undefined, undefined, true, undefined);
+      expect(focus.extension).not.toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'trial-use'
+      });
+      expect(focus.extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'normative'
+      });
+    });
+
     it('should throw an error when applying more than one standards status to an element', () => {
       const note = observation.elements.find(e => e.id === 'Observation.note');
       expect(note.extension).toBeUndefined();
@@ -119,17 +104,6 @@ describe('ElementDefinition', () => {
         MultipleStandardsStatusError
       );
       expect(note.extension).toBeUndefined();
-    });
-
-    it('should throw an error when applying a standards status to an element that already has a standards status', () => {
-      const focus = observation.elements.find(e => e.id === 'Observation.focus');
-      expect(focus.extension).toContainEqual({
-        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
-        valueCode: 'trial-use'
-      });
-      expect(() =>
-        focus.applyFlags(undefined, undefined, undefined, undefined, true, undefined)
-      ).toThrow(ExistingStandardsStatusError);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
+import { isEmpty, isEqual, cloneDeep } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -10,7 +10,6 @@ import {
   BindingStrengthError,
   CodedTypeNotFoundError,
   CodeAlreadyFixedError,
-  DisableFlagError,
   ValueAlreadyFixedError,
   NoSingleTypeError,
   MismatchedTypeError,
@@ -24,7 +23,6 @@ import {
   InvalidMaxOfSliceError,
   InvalidUriError,
   InvalidUnitsError,
-  ExistingStandardsStatusError,
   MultipleStandardsStatusError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
@@ -771,8 +769,7 @@ export class ElementDefinition {
 
   /**
    * Sets flags on this element as specified in a profile or extension.
-   * Don't change a flag when the incoming argument is undefined.
-   * @todo Add more complete enforcement of rules regarding when these flags can change.
+   * Don't change a flag when the incoming argument is undefined or false.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isSummary}
@@ -786,7 +783,6 @@ export class ElementDefinition {
    * @param trialUse - indicates a standards status of "Trial Use" for this element
    * @param normative - indicates a standards status of "Normative" for this element
    * @param draft - indicates a standards status of "Draft" for this element
-   * @throws {DisableFlagError} when attempting to disable a flag that cannot be disabled
    */
   applyFlags(
     mustSupport: boolean,
@@ -796,25 +792,7 @@ export class ElementDefinition {
     normative: boolean,
     draft: boolean
   ): void {
-    const disabledFlags = [];
-    if (this.mustSupport && mustSupport === false) {
-      disabledFlags.push('Must Support');
-    }
-    if (this.isModifier && modifier === false) {
-      disabledFlags.push('Is Modifier');
-    }
-    if (disabledFlags.length) {
-      throw new DisableFlagError(disabledFlags);
-    }
     let newStatusExtension: any = null;
-    const currentStatusExtension = this.extension?.find(
-      extension =>
-        extension.url ==
-        'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status'
-    );
-    if (currentStatusExtension && (trialUse || normative || draft)) {
-      throw new ExistingStandardsStatusError(this.id);
-    }
     if (trialUse) {
       newStatusExtension = {
         url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
@@ -839,18 +817,27 @@ export class ElementDefinition {
         valueCode: 'draft'
       };
     }
-    if (isBoolean(mustSupport)) {
+    if (mustSupport === true) {
       this.mustSupport = mustSupport;
     }
-    if (isBoolean(summary)) {
+    if (summary === true) {
       this.isSummary = summary;
     }
-    if (isBoolean(modifier)) {
+    if (modifier === true) {
       this.isModifier = modifier;
     }
     if (newStatusExtension) {
       if (this.extension) {
-        this.extension.push(newStatusExtension);
+        const oldStatus = this.extension.findIndex(
+          extension =>
+            extension.url ==
+            'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status'
+        );
+        if (oldStatus > -1) {
+          this.extension[oldStatus] = newStatusExtension;
+        } else {
+          this.extension.push(newStatusExtension);
+        }
       } else {
         this.extension = [newStatusExtension];
       }
