@@ -6,7 +6,7 @@ import {
 } from '../fhirtypes';
 import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
-import { ParentNotDefinedError } from '../errors';
+import { ParentNotDefinedError, ParentDeclaredAsProfileNameError } from '../errors';
 import {
   CardRule,
   FixedValueRule,
@@ -397,6 +397,7 @@ export class StructureDefinitionExporter implements Fishable {
    * Exports Profile or Extension to StructureDefinition
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    * @returns {StructureDefinition}
+   * @throws {ParentDeclaredAsProfileNameError} when the Profile declares itself as the parent
    * @throws {ParentNotDefinedError} when the Profile or Extension's parent is not found
    */
   exportStructDef(fshDefinition: Profile | Extension): StructureDefinition {
@@ -408,6 +409,16 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     const parentName = fshDefinition.parent || 'Resource';
+
+    if (fshDefinition.name === fshDefinition.parent) {
+      const result = this.fishForMetadata(parentName, Type.Resource);
+      throw new ParentDeclaredAsProfileNameError(
+        fshDefinition.name,
+        fshDefinition.sourceInfo,
+        result?.url
+      );
+    }
+
     const json = this.fishForFHIR(parentName);
 
     // If we still don't have a resolution, then it's not defined
