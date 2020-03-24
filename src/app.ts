@@ -3,12 +3,23 @@
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
+import cloneDeep from 'lodash/cloneDeep';
 import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR } from './export';
 import { IGExporter } from './ig';
 import { logger, stats } from './utils';
 import { loadDependency, loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
+import {
+  filterInlineInstances,
+  filterExampleInstances,
+  filterCapabilitiesInstances,
+  filterVocabularyInstances,
+  filterModelInstances,
+  filterOperationInstances,
+  filterExtensionInstances,
+  filterProfileInstances
+} from './utils';
 
 app();
 
@@ -125,7 +136,19 @@ async function app() {
   writeResources('profiles', outPackage.profiles);
   writeResources('extensions', outPackage.extensions);
   writeResources('vocabulary', [...outPackage.valueSets, ...outPackage.codeSystems]);
-  writeResources('examples', outPackage.instances);
+
+  // Sort instances into appropriate directories
+  const instances = cloneDeep(outPackage.instances); // Filter functions below mutate the argument, so clone what is in the package
+  filterInlineInstances(instances);
+  writeResources('examples', filterExampleInstances(instances));
+  writeResources('capabilities', filterCapabilitiesInstances(instances));
+  writeResources('vocabulary', filterVocabularyInstances(instances));
+  writeResources('models', filterModelInstances(instances));
+  writeResources('operations', filterOperationInstances(instances));
+  writeResources('extensions', filterExtensionInstances(instances));
+  writeResources('profiles', filterProfileInstances(instances));
+  writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
+
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 
   // If ig-data exists, generate an IG, otherwise, generate resources only

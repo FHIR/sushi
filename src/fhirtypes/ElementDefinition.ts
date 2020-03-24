@@ -1,6 +1,7 @@
 import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
+import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
@@ -22,10 +23,16 @@ import {
   InvalidSumOfSliceMinsError,
   InvalidMaxOfSliceError,
   NarrowingRootCardinalityError,
-  SliceTypeRemovalError
+  SliceTypeRemovalError,
+  InvalidUriError,
+  InvalidUnitsError,
+  InvalidMappingError,
+  InvalidFHIRIdError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
+import { InstanceDefinition } from './InstanceDefinition';
+import { idRegex } from './primitiveTypes';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -167,7 +174,7 @@ export class ElementDefinition {
   isModifierReason: string;
   isSummary: boolean;
   binding: ElementDefinitionBinding;
-  mapping: ElementDefinitionMapping;
+  mapping: ElementDefinitionMapping[];
   structDef: StructureDefinition;
   private _original: ElementDefinition;
   private _edStructureDefinition: StructureDefinition;
@@ -396,6 +403,10 @@ export class ElementDefinition {
    * @throws {InvalidMaxOfSliceError} when a sliced element's max is < an individual slice's max
    */
   constrainCardinality(min: number, max: string): void {
+    // If only one side of the cardinality is set by the rule, use element's current cardinality
+    if (isNaN(min)) min = this.min;
+    if (max === '') max = this.max;
+
     const isUnbounded = max === '*';
     const maxInt = !isUnbounded ? parseInt(max) : null;
 
@@ -931,10 +942,13 @@ export class ElementDefinition {
    * @see {@link http://hl7.org/fhir/R4/terminologies.html#strength}
    * @param {string} vsURI - the value set URI to bind
    * @param {string} strength - the strength of the binding (e.g., 'required')
+   * @param {boolean} units - True if the units keyword is used on this rule
    * @throws {BindingStrengthError} when the binding can't be applied because it is looser than the existing binding
    * @throws {CodedTypeNotFoundError} - when the binding can't be applied because the element is the wrong type
+   * @throws {InvalidUriError} when the value set uri is not valid
+   * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength): void {
+  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength, units = false): void {
     // Check if this is a valid type to be bound against
     const validTypes = this.findTypesByCode(
       'code',
@@ -969,11 +983,14 @@ export class ElementDefinition {
     // check to make sure we are not applying an explicitly weaker binding of the same value set of a slice's list element
     const listElement = this.slicedElement();
     if (
-      listElement &&
-      listElement.binding.valueSet == vsURI &&
-      strengths.indexOf(strength) < strengths.indexOf(listElement.binding.strength)
+      listElement?.binding?.valueSet == vsURI &&
+      strengths.indexOf(strength) < strengths.indexOf(listElement?.binding?.strength)
     ) {
-      throw new BindingStrengthError(listElement.binding.strength, strength);
+      throw new BindingStrengthError(listElement?.binding?.strength, strength);
+    }
+    // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
+    if (!isUri(vsURI.split('|')[0])) {
+      throw new InvalidUriError(vsURI);
     }
 
     // We're good.  Bind it.
@@ -981,16 +998,23 @@ export class ElementDefinition {
       strength,
       valueSet: vsURI
     };
+
+    // Units error should not stop binding, but must still be logged
+    if (units && !validTypes.find(t => t.code === 'Quantity')) {
+      throw new InvalidUnitsError(this.id);
+    }
   }
 
   /**
    * Fixes a value to an ElementDefinition
    * @param {FixedValueType} value - The value to fix
+   * @param {boolean} units - True if the units keyword is used on this rule
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
+   * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  fixValue(value: FixedValueType): void {
+  fixValue(value: FixedValueType, units = false): void {
     if (typeof value === 'boolean') {
       this.fixBoolean(value);
     } else if (typeof value === 'number') {
@@ -1005,6 +1029,11 @@ export class ElementDefinition {
       this.fixFshRatio(value);
     } else if (value instanceof FshReference) {
       this.fixFshReference(value);
+    }
+    // Units error should not stop fixing value, but must still be logged
+    const types = this.findTypesByCode('Quantity');
+    if (units && !types.find(t => t.code === 'Quantity')) {
+      throw new InvalidUnitsError(this.id);
     }
   }
 
@@ -1248,6 +1277,25 @@ export class ElementDefinition {
   }
 
   /**
+   * Checks if a resource can be fixed to this element
+   * @param {InstanceDefinition} value - The resource to fix
+   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
+   * @throws {MismatchedTypeError} when the ElementDefinition is not of type Resource
+   * @returns {InstanceDefinition} the input value when it can be fixed
+   */
+  checkFixResource(value: InstanceDefinition): InstanceDefinition {
+    if (!this.hasSingleType()) {
+      throw new NoSingleTypeError('Resource');
+    }
+    const type = this.type[0].code;
+    if (type === 'Resource') {
+      return value;
+    } else {
+      throw new MismatchedTypeError('Resource', value.id, type);
+    }
+  }
+
+  /**
    * Fixes a Quantity to this element.
    * @see {@link fixValue}
    * @param {FshQuantity} value - the Quantity value to fix
@@ -1400,11 +1448,15 @@ export class ElementDefinition {
    * @param {FshCode} code - the code to fix
    * @throws {CodedTypeNotFoundError} when there is no coded type on this element
    * @throws {CodeAlreadyFixedError} where the code is already fixed to a different code
+   * @throws {InvalidUriError} when the system being fixed is not a valid uri
    */
   fixFshCode(code: FshCode): void {
     // This is the element to fix it to
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError('Code');
+    }
+    if (code.system && !isUri(code.system.split('|')[0])) {
+      throw new InvalidUriError(code.system);
     }
     const type = this.type[0].code;
     if (type === 'CodeableConcept') {
@@ -1454,7 +1506,11 @@ export class ElementDefinition {
       coding.code = code.code;
     }
     if (code.system) {
-      coding.system = code.system;
+      if (code.system.indexOf('|') > -1) {
+        [coding.system, coding.version] = code.system.split('|', 2);
+      } else {
+        coding.system = code.system;
+      }
     }
     this.patternCodeableConcept = {
       coding: [coding]
@@ -1488,7 +1544,11 @@ export class ElementDefinition {
       this.patternCoding.code = code.code;
     }
     if (code.system) {
-      this.patternCoding.system = code.system;
+      if (code.system.indexOf('|') > -1) {
+        [this.patternCoding.system, this.patternCoding.version] = code.system.split('|', 2);
+      } else {
+        this.patternCoding.system = code.system;
+      }
     }
   }
 
@@ -1593,6 +1653,31 @@ export class ElementDefinition {
   private hasSingleType() {
     const types = this.type ?? [];
     return types.length === 1;
+  }
+
+  /**
+   * Sets mapping on an element
+   * @see {@link https://www.hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition.mapping}
+   * @param {string} identity - value for mapping.identity
+   * @param {string} map - value for mapping.map
+   * @param {string} comment - value for mapping.comment
+   * @param {FshCode} language - language.code is value for mapping.language
+   * @throws {InvalidMappingError} when attempting to set mapping with identity or map undefined
+   * @throws {InvalidFHIRIdError} when setting mapping.identity to an invalid FHIR ID
+   */
+  applyMapping(identity: string, map: string, comment: string, language: FshCode): void {
+    if (identity == null || map == null) {
+      throw new InvalidMappingError();
+    }
+    if (!idRegex.test(identity)) {
+      throw new InvalidFHIRIdError(identity);
+    }
+    this.mapping.push({
+      identity,
+      map,
+      ...(comment && { comment }),
+      ...(language && { language: language.code })
+    });
   }
 
   /**

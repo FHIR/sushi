@@ -18,7 +18,7 @@ import {
   ObeysRule
 } from '../fshtypes/rules';
 import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
-import { replaceReferences, splitOnPathPeriods } from '../fhirtypes/common';
+import { replaceReferences, splitOnPathPeriods, applyMixinRules } from '../fhirtypes/common';
 import { Package } from './Package';
 
 /**
@@ -121,7 +121,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.fixValue(replacedRule.fixedValue);
+            element.fixValue(replacedRule.fixedValue, replacedRule.units);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
           } else if (rule instanceof OnlyRule) {
@@ -129,7 +129,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainType(rule, this, target);
           } else if (rule instanceof ValueSetRule) {
             const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
-            element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
+            element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength, rule.units);
           } else if (rule instanceof ContainsRule) {
             const isExtension = element.type?.length === 1 && element.type[0].code === 'Extension';
             if (isExtension) {
@@ -430,6 +430,7 @@ export class StructureDefinitionExporter implements Fishable {
       this.pkg.profiles.push(structDef);
     }
 
+    applyMixinRules(fshDefinition, this.tank);
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);

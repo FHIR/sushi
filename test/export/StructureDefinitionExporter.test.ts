@@ -9,7 +9,8 @@ import {
   Instance,
   FshValueSet,
   FshCodeSystem,
-  Invariant
+  Invariant,
+  RuleSet
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -404,6 +405,118 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 5\D*/s);
   });
 
+  it('should apply a card rule with only min specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('category');
+    rule.min = 1;
+    rule.max = '';
+    profile.rules.push(rule); // * category 1..
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.category');
+    const changedCard = sd.findElement('Observation.category');
+
+    expect(baseCard.min).toBe(0);
+    expect(baseCard.max).toBe('*');
+    expect(changedCard.min).toBe(1); // Only min cardinality is updated
+    expect(changedCard.max).toBe('*'); // Max remains same as base
+  });
+
+  it('should apply a card rule with only max specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('category');
+    rule.min = NaN;
+    rule.max = '3';
+    profile.rules.push(rule); // * category ..3
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.category');
+    const changedCard = sd.findElement('Observation.category');
+
+    expect(baseCard.min).toBe(0);
+    expect(baseCard.max).toBe('*');
+    expect(changedCard.min).toBe(0); // Min cardinality remains unchanged
+    expect(changedCard.max).toBe('3'); // Only max is changed
+  });
+
+  it('should not apply an incorrect min only card rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('status').withFile('BadCard.fsh').withLocation([3, 4, 3, 11]);
+    rule.min = 0;
+    rule.max = '';
+    profile.rules.push(rule); // * status 0..
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
+    expect(baseCard.min).toBe(1);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1'); // Neither card changes
+    expect(loggerSpy.getLastMessage()).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
+  });
+
+  it('should not apply an incorrect max only card rule', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('status').withFile('BadCard.fsh').withLocation([3, 4, 3, 11]);
+    rule.min = NaN;
+    rule.max = '2';
+    profile.rules.push(rule); // * status ..2
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
+    expect(baseCard.min).toBe(1);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1'); // Neither card changes
+    expect(loggerSpy.getLastMessage()).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
+  });
+
+  it('should not apply a card rule with no sides specified', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new CardRule('status').withFile('BadCard.fsh').withLocation([3, 4, 3, 11]);
+    rule.min = NaN;
+    rule.max = '';
+    profile.rules.push(rule); // * status ..
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const baseCard = baseStructDef.findElement('Observation.status');
+    const changedCard = sd.findElement('Observation.status');
+
+    expect(baseCard.min).toBe(1);
+    expect(baseCard.max).toBe('1');
+    expect(changedCard.min).toBe(1);
+    expect(changedCard.max).toBe('1'); // Neither card changes. Error logged on import side.
+  });
+
   // Flag Rule
   it('should apply a valid flag rule', () => {
     const profile = new Profile('Foo');
@@ -576,6 +689,27 @@ describe('StructureDefinitionExporter', () => {
     );
     expect(changedElement.binding.strength).toBe('preferred');
     expect(loggerSpy.getLastMessage()).toMatch(/File: Strict\.fsh.*Line: 9\D*/s);
+  });
+
+  it('should not apply a ValueSetRule on a non-Quantity with units keyword', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new ValueSetRule('code').withFile('Fixed.fsh').withLocation([4, 18, 4, 28]);
+    rule.valueSet = 'http://system.com';
+    rule.strength = 'required';
+    rule.units = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedCode = sd.findElement('Observation.code');
+
+    expect(fixedCode.binding.valueSet).toBe('http://system.com'); // Still bound
+    expect(fixedCode.binding.strength).toBe('required');
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /units.*Observation.code.*File: Fixed\.fsh.*Line: 4\D*/s
+    );
   });
 
   // Only Rule
@@ -1198,6 +1332,26 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
     expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
+  });
+
+  it('should not apply a FixedValueRule on a non-Quantity with units keyword', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const rule = new FixedValueRule('code').withFile('Fixed.fsh').withLocation([4, 18, 4, 28]);
+    rule.fixedValue = new FshCode('mycode', 'http://mysystem.com');
+    rule.units = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedCode = sd.findElement('Observation.code');
+    expect(fixedCode.patternCodeableConcept).toEqual({
+      coding: [{ system: 'http://mysystem.com', code: 'mycode' }]
+    }); // Code still set
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /units.*Observation.code.*File: Fixed\.fsh.*Line: 4\D*/s
+    );
   });
 
   // Contains Rule
@@ -3113,5 +3267,93 @@ describe('StructureDefinitionExporter', () => {
     const pkg = exporter.export();
     expect(pkg.profiles.length).toBe(1);
     expect(pkg.extensions.length).toBe(1);
+  });
+
+  describe('#Mixins', () => {
+    let profile: Profile;
+    let mixin: RuleSet;
+
+    beforeEach(() => {
+      profile = new Profile('Foo').withFile('Profile.fsh').withLocation([5, 6, 7, 16]);
+      profile.parent = 'Patient';
+      doc.profiles.set(profile.name, profile);
+
+      mixin = new RuleSet('Bar');
+      doc.ruleSets.set(mixin.name, mixin);
+      profile.mixins.push('Bar');
+    });
+
+    it('should apply rules from a single mixin', () => {
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      mixin.rules.push(nameRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      expect(sd.title).toBe('Wow fancy');
+    });
+
+    it('should apply rules from multiple mixins in the correct order', () => {
+      const nameRule1 = new CaretValueRule('');
+      nameRule1.caretPath = 'title';
+      nameRule1.value = 'Wow fancy';
+      mixin.rules.push(nameRule1);
+
+      const mixin2 = new RuleSet('Baz');
+      doc.ruleSets.set(mixin2.name, mixin2);
+      const nameRule2 = new CaretValueRule('');
+      nameRule2.caretPath = 'title';
+      nameRule2.value = 'Wow fancier title';
+      mixin2.rules.push(nameRule2);
+      profile.mixins.push('Baz');
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      expect(sd.title).toBe('Wow fancier title');
+    });
+
+    it('should emit an error when the path is not found on a mixin rule', () => {
+      const nameRule = new CaretValueRule('fakepath')
+        .withFile('Mixin.fsh')
+        .withLocation([1, 2, 3, 12]);
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      mixin.rules.push(nameRule);
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/fakepath/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Profile\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when applying an invalid mixin rule', () => {
+      const cardRule = new CardRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      cardRule.max = '2';
+      cardRule.min = 0;
+      mixin.rules.push(cardRule);
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/0\.\.2.* 0\.\.1/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Profile\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when a mixin cannot be found', () => {
+      profile.mixins.push('Barz');
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
   });
 });

@@ -7,9 +7,16 @@ import {
   FshCode,
   FshReference,
   Extension,
-  FshCodeSystem
+  FshCodeSystem,
+  RuleSet
 } from '../../src/fshtypes';
-import { FixedValueRule, ContainsRule, CardRule, OnlyRule } from '../../src/fshtypes/rules';
+import {
+  FixedValueRule,
+  ContainsRule,
+  CardRule,
+  OnlyRule,
+  CaretValueRule
+} from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import path from 'path';
@@ -664,6 +671,37 @@ describe('InstanceExporter', () => {
       expect(exported.address[0]._line[1].extension[0].url).toBe('bar');
     });
 
+    it('should fix children of sliced primitive arrays on an instance', () => {
+      const caretRule = new CaretValueRule('name.prefix');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('value');
+      const containsRule = new ContainsRule('name.prefix');
+      containsRule.items = [{ name: 'Dr' }];
+      const cardRule = new CardRule('name.prefix');
+      cardRule.min = 0;
+      cardRule.max = '*';
+      // * name.prefix ^slicing.discriminator.type = #value
+      // * name.prefix contains Dr 0..*
+      patient.rules.push(caretRule, containsRule, cardRule);
+      const fixedRule1 = new FixedValueRule('name[0].prefix[Dr][0]');
+      fixedRule1.fixedValue = 'Doctor';
+      const fixedRule2 = new FixedValueRule('name[0].prefix[Dr][1]');
+      fixedRule2.fixedValue = 'Mister Doctor';
+      const fixedRuleChild = new FixedValueRule('name[0].prefix[Dr][1].id');
+      fixedRuleChild.fixedValue = 'Sir Mister Doctor to you';
+      // * name[0].prefix[Dr][0] = "Doctor"
+      // * name[0].prefix[Dr][1] = "Mister Doctor"
+      // * name[0].prefix[Dr][1].id = "Sir Mister Doctor to you";
+      patientInstance.rules.push(fixedRule1, fixedRule2, fixedRuleChild);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          prefix: ['Doctor', 'Mister Doctor'],
+          _prefix: [null, { id: 'Sir Mister Doctor to you' }]
+        }
+      ]);
+    });
+
     // Fixing References
     it('should fix a reference while resolving the Instance being referred to', () => {
       const orgInstance = new Instance('TestOrganization');
@@ -741,6 +779,30 @@ describe('InstanceExporter', () => {
       expect(exported.extension).toEqual([{ url: 'level', valueCoding: { system: 'foo' } }]);
     });
 
+    it('should fix a single primitive sliced element to a value', () => {
+      const caretRule = new CaretValueRule('name.prefix');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('value');
+      const containsRule = new ContainsRule('name.prefix');
+      containsRule.items = [{ name: 'Dr' }];
+      const cardRule = new CardRule('name.prefix');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      // * name.prefix ^slicing.discriminator.type = #value
+      // * name.prefix contains Dr 1..1
+      patient.rules.push(caretRule, containsRule, cardRule);
+      const fixedRule = new FixedValueRule('name[0].prefix[Dr]');
+      fixedRule.fixedValue = 'Doctor';
+      // * name[0].prefix[Dr] = "Doctor"
+      patientInstance.rules.push(fixedRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          prefix: ['Doctor']
+        }
+      ]);
+    });
+
     it('should fix sliced elements in an array that are fixed in order', () => {
       const fooRule = new FixedValueRule('extension[type][0].valueCoding.system');
       fooRule.fixedValue = 'foo';
@@ -752,6 +814,33 @@ describe('InstanceExporter', () => {
       expect(exported.extension).toEqual([
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'type', valueCoding: { system: 'bar' } }
+      ]);
+    });
+
+    it('should fix a sliced primitive array', () => {
+      const caretRule = new CaretValueRule('name.prefix');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('value');
+      const containsRule = new ContainsRule('name.prefix');
+      containsRule.items = [{ name: 'Dr' }];
+      const cardRule = new CardRule('name.prefix');
+      cardRule.min = 0;
+      cardRule.max = '*';
+      // * name.prefix ^slicing.discriminator.type = #value
+      // * name.prefix contains Dr 0..*
+      patient.rules.push(caretRule, containsRule, cardRule);
+      const fixedRule1 = new FixedValueRule('name[0].prefix[Dr][0]');
+      fixedRule1.fixedValue = 'Doctor';
+      const fixedRule2 = new FixedValueRule('name[0].prefix[Dr][1]');
+      fixedRule2.fixedValue = 'Mister Doctor';
+      // * name[0].prefix[Dr][0] = "Doctor"
+      // * name[0].prefix[Dr][1] = "Mister Doctor"
+      patientInstance.rules.push(fixedRule1, fixedRule2);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          prefix: ['Doctor', 'Mister Doctor']
+        }
       ]);
     });
 
@@ -934,6 +1023,21 @@ describe('InstanceExporter', () => {
       });
     });
 
+    // Units keyword
+    it('should log an error when fixing to a non-Quantity with the units keyword', () => {
+      const barRule = new FixedValueRule('gender')
+        .withFile('PatientInstance.fsh')
+        .withLocation([1, 2, 3, 4]);
+      barRule.fixedValue = new FshCode('mycode', 'http:/mysystem.com');
+      barRule.units = true;
+      patientInstance.rules.push(barRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.gender).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /units.*Patient.gender.*File: PatientInstance.fsh.*Line: 1 - 3\D*/s
+      );
+    });
+
     // Validating required elements
     it('should log an error when a required element is not present', () => {
       const cardRule = new CardRule('active');
@@ -1102,6 +1206,40 @@ describe('InstanceExporter', () => {
         /Observation.code.*File: ObservationInstance\.fsh.*Line: 10 - 20/s
       );
     });
+
+    it('should fix an inline resource to an instance', () => {
+      const inlineInstance = new Instance('MyInlinePatient');
+      inlineInstance.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      inlineInstance.rules.push(fixedValRule); // * active = true
+      doc.instances.set(inlineInstance.name, inlineInstance);
+
+      const inlineRule = new FixedValueRule('contained[0]');
+      inlineRule.fixedValue = 'MyInlinePatient';
+      inlineRule.isResource = true;
+      patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.contained).toEqual([
+        { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
+      ]);
+    });
+
+    it('should log an error when fixing an inline resource that does not exist to an instance', () => {
+      const inlineRule = new FixedValueRule('contained[0]')
+        .withFile('FakeInstance.fsh')
+        .withLocation([1, 2, 3, 4]);
+      inlineRule.fixedValue = 'MyFakePatient';
+      inlineRule.isResource = true;
+      patientInstance.rules.push(inlineRule); // * contained[0] = MyFakePatient
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.contained).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot find definition for Instance: MyFakePatient. Skipping rule.*File: FakeInstance.fsh.*Line: 1 - 3\D*/s
+      );
+    });
   });
 
   describe('#export', () => {
@@ -1134,6 +1272,97 @@ describe('InstanceExporter', () => {
       const exported = exporter.export().instances;
       expect(exported.length).toBe(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Unmeasurable\.fsh.*Line: 3\D*/s);
+    });
+  });
+
+  describe('#Mixins', () => {
+    let instance: Instance;
+    let mixin: RuleSet;
+
+    beforeEach(() => {
+      instance = new Instance('Foo').withFile('Instance.fsh').withLocation([5, 6, 7, 16]);
+      instance.instanceOf = 'Patient';
+      doc.instances.set(instance.name, instance);
+
+      mixin = new RuleSet('Bar');
+      doc.ruleSets.set(mixin.name, mixin);
+      instance.mixins.push('Bar');
+    });
+
+    it('should apply rules from a single mixin', () => {
+      const rule = new FixedValueRule('active');
+      rule.fixedValue = true;
+      mixin.rules.push(rule);
+
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toBe(true);
+    });
+
+    it('should apply rules from multiple mixins in the correct order', () => {
+      const rule1 = new FixedValueRule('active');
+      rule1.fixedValue = true;
+      mixin.rules.push(rule1);
+
+      const mixin2 = new RuleSet('Baz');
+      doc.ruleSets.set(mixin2.name, mixin2);
+      const rule2 = new FixedValueRule('active');
+      rule2.fixedValue = false;
+      mixin2.rules.push(rule2);
+      instance.mixins.push('Baz');
+
+      const exported = exporter.exportInstance(instance);
+      expect(exported.active).toBe(false);
+    });
+
+    it('should emit an error when the path is not found on a mixin rule', () => {
+      const rule = new FixedValueRule('activez').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      rule.fixedValue = true;
+      mixin.rules.push(rule);
+
+      exporter.exportInstance(instance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/activez/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when applying an invalid mixin rule', () => {
+      const rule = new FixedValueRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      rule.fixedValue = 'some string';
+      mixin.rules.push(rule);
+
+      exporter.exportInstance(instance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/some string/);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+
+    it('should emit an error when a mixin cannot be found', () => {
+      instance.mixins.push('Barz');
+
+      exporter.exportInstance(instance);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Instance\.fsh.*Line: 5 - 7\D*/s);
+    });
+
+    it('should emit an error when a mixin applies a non-fixed value rule', () => {
+      const rule = new CardRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
+      rule.min = 0;
+      rule.max = '1';
+      mixin.rules.push(rule);
+
+      exporter.exportInstance(instance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Rules applied by mixins to an instance must fix a value. Other rules are ignored/
+      );
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
     });
   });
 });

@@ -146,6 +146,33 @@ FSHListener.prototype.exitCsMetadata = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#ruleSet.
+FSHListener.prototype.enterRuleSet = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#ruleSet.
+FSHListener.prototype.exitRuleSet = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#mapping.
+FSHListener.prototype.enterMapping = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#mapping.
+FSHListener.prototype.exitMapping = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#mappingMetadata.
+FSHListener.prototype.enterMappingMetadata = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#mappingMetadata.
+FSHListener.prototype.exitMappingMetadata = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#parent.
 FSHListener.prototype.enterParent = function(ctx) {
 };
@@ -218,6 +245,42 @@ FSHListener.prototype.exitInstanceOf = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#usage.
+FSHListener.prototype.enterUsage = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#usage.
+FSHListener.prototype.exitUsage = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#mixins.
+FSHListener.prototype.enterMixins = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#mixins.
+FSHListener.prototype.exitMixins = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#source.
+FSHListener.prototype.enterSource = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#source.
+FSHListener.prototype.exitSource = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#target.
+FSHListener.prototype.enterTarget = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#target.
+FSHListener.prototype.exitTarget = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#cardRule.
 FSHListener.prototype.enterCardRule = function(ctx) {
 };
@@ -287,6 +350,15 @@ FSHListener.prototype.enterCaretValueRule = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#caretValueRule.
 FSHListener.prototype.exitCaretValueRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#mappingRule.
+FSHListener.prototype.enterMappingRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#mappingRule.
+FSHListener.prototype.exitMappingRule = function(ctx) {
 };
 
 

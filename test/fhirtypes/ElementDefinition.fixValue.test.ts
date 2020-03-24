@@ -101,6 +101,15 @@ describe('ElementDefinition', () => {
       });
     });
 
+    it('should fix a code on a Quantity with units', () => {
+      const code = medication.findElementByPath('amount.numerator', fisher);
+      code.fixValue(new FshCode('mycode', 'https://code.com'), true);
+      expect(code.patternQuantity).toEqual({
+        system: 'https://code.com',
+        code: 'mycode'
+      });
+    });
+
     it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern', () => {
       const medicationForm = medication.elements.find(e => e.id === 'Medication.form');
       medicationForm.fixValue(new FshCode('foo', 'http://thankYouForSettingMe.com'));
@@ -119,6 +128,17 @@ describe('ElementDefinition', () => {
       expect(() => {
         medicationFormCodingSystem.fixValue('baz');
       }).toThrow('Cannot fix baz to this element; a different uri is already fixed: foo,bar');
+    });
+
+    it('should throw InvalidUnitsError when using the units keyword on a non-Quantity', () => {
+      const code = medication.elements.find(e => e.id === 'Medication.code');
+      expect(() => {
+        code.fixValue(new FshCode('mycode', 'https://code.com'), true);
+      }).toThrow(/units.*Medication.code/);
+      // Units error should not stop value from still being fixed
+      expect(code.patternCodeableConcept).toEqual({
+        coding: [{ code: 'mycode', system: 'https://code.com' }]
+      });
     });
   });
 
@@ -176,24 +196,28 @@ describe('ElementDefinition', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo', 'bar'));
+      statusReason.fixValue(new FshCode('foo', 'http://bar.com'));
       const statusReasonCodingSystem = medicationRequest.findElementByPath(
         'statusReason.coding.system',
         fisher
       );
       // Single element in array
       let patternValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(patternValue).toBe('bar');
+      expect(patternValue).toBe('http://bar.com');
 
       // Multiple not matching array elements
-      statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'bar' }] };
+      statusReason.patternCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://bar.com' }]
+      };
       patternValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(patternValue).toEqual(['foo', 'bar']);
+      expect(patternValue).toEqual(['http://foo.com', 'http://bar.com']);
 
       // Multiple matching array elements
-      statusReason.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'foo' }] };
+      statusReason.patternCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://foo.com' }]
+      };
       patternValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(patternValue).toBe('foo');
+      expect(patternValue).toBe('http://foo.com');
     });
 
     it('should not find a pattern value from the parent when none is present', () => {

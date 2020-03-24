@@ -7,3 +7,4 @@ export * from './ValueSetRule';
 export * from './ContainsRule';
 export * from './CaretValueRule';
 export * from './ObeysRule';
+export * from './MappingRule';

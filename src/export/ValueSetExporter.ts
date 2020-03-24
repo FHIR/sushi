@@ -14,11 +14,12 @@ import {
   ValueSetFilterValue
 } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
-import { ValueSetComposeError } from '../errors';
+import { ValueSetComposeError, InvalidUriError } from '../errors';
 import { Package } from '.';
 import { MasterFisher, Type } from '../utils';
 import { CaretValueRule } from '../fshtypes/rules';
 import { setPropertyOnInstance } from '../fhirtypes/common';
+import { isUri } from 'valid-url';
 
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
@@ -49,10 +50,19 @@ export class ValueSetExporter {
           composeElement.system =
             this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
             component.from.system;
+          if (!isUri(composeElement.system)) {
+            throw new InvalidUriError(composeElement.system);
+          }
         }
         if (component.from.valueSets) {
           composeElement.valueSet = component.from.valueSets.map(vs => {
             return this.fisher.fishForMetadata(vs, Type.ValueSet)?.url ?? vs;
+          });
+          composeElement.valueSet.forEach(vs => {
+            // Canonical URI may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
+            if (!isUri(vs.split('|')[0])) {
+              throw new InvalidUriError(vs);
+            }
           });
         }
         if (component instanceof ValueSetConceptComponent && component.concepts.length > 0) {

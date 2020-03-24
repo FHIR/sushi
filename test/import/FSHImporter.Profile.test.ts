@@ -44,6 +44,7 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
         `;
 
         const result = importSingleText(input);
@@ -54,11 +55,12 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 6,
-          endColumn: 47
+          endLine: 7,
+          endColumn: 46
         });
       });
 
@@ -123,10 +125,12 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
+        Mixins: Mixin1
         Parent: DuplicateObservation
         Id: duplicate-observation-profile
         Title: "Duplicate Observation Profile"
         Description: "A duplicated profile on Observation"
+        Mixins: DuplicateMixin1
         `;
 
         const result = importSingleText(input);
@@ -136,6 +140,22 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
+        expect(profile.mixins).toEqual(['Mixin1']);
+      });
+
+      it('should deduplicate repeated mixins and log a warning', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Mixins: Mixin1, Mixin2, Mixin1
+        `;
+
+        const result = importSingleText(input, 'Dupe.fsh');
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.name).toBe('ObservationProfile');
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Mixin1.*File: Dupe.fsh.*Line: 4\D*/s);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -171,6 +191,48 @@ describe('FSHImporter', () => {
         assertCardRule(profile.rules[0], 'category', 1, 5);
         assertCardRule(profile.rules[1], 'value[x]', 1, 1);
         assertCardRule(profile.rules[2], 'component', 2, '*');
+      });
+
+      it('should parse card rule with only min', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category 1..
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertCardRule(profile.rules[0], 'category', 1, ''); // Unspecified max
+      });
+
+      it('should parse card rule with only max', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category ..5
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertCardRule(profile.rules[0], 'category', NaN, '5'); // Unspecified min
+      });
+
+      it('should log an error if neither side is specified', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category ..
+        `;
+
+        const result = importSingleText(input, 'BadCard.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1); // Rule is still set and element's current cardinalities will be used at export
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Neither side of the cardinality was specified on path \"category\". A min, max, or both need to be specified.\D*/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadCard\.fsh.*Line: 4\D*/s);
       });
 
       it('should parse card rules w/ flags', () => {
@@ -253,7 +315,7 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category, value[x], component MS
+        * category , value[x], component MS
         * subject, focus ?!
         `;
 
@@ -408,6 +470,26 @@ describe('FSHImporter', () => {
           'required'
         );
       });
+
+      it('should parse value set rules on Quantity with units keyword', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units from http://unitsofmeasure.org
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertValueSetRule(
+          profile.rules[0],
+          'valueQuantity',
+          'http://unitsofmeasure.org',
+          'required',
+          true
+        );
+      });
     });
 
     describe('#fixedValueRule', () => {
@@ -530,6 +612,23 @@ describe('FSHImporter', () => {
           .withLocation([6, 34, 6, 80])
           .withFile('');
         assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
+      });
+
+      it('should parse fixed value FSHCode rule with units on Quantity', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units = http://unitsofmeasure.org#cGy
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
+          .withLocation([5, 33, 5, 61])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode, true);
       });
 
       it('should parse fixed value Quantity rule', () => {
@@ -708,6 +807,22 @@ describe('FSHImporter', () => {
           .withLocation([5, 21, 5, 47])
           .withFile('');
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+      });
+
+      it('should log an error and skip the rule when parsing fixed value Resource rule', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * contained[0] = SomeInstance
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Resources cannot be added inline to a Profile or Extension, skipping rule\..*Line: 5\D*/s
+        );
       });
     });
 

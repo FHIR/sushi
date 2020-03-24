@@ -10,7 +10,8 @@ import {
   ContainsRule,
   ContainsRuleItem,
   CaretValueRule,
-  ObeysRule
+  ObeysRule,
+  MappingRule
 } from '../../src/fshtypes/rules';
 import {
   ValueSetComponent,
@@ -47,20 +48,30 @@ export function assertValueSetRule(
   rule: Rule,
   path: string,
   valueSet: string,
-  strength: string
+  strength: string,
+  units = false
 ): void {
   expect(rule).toBeInstanceOf(ValueSetRule);
   const valueSetRule = rule as ValueSetRule;
   expect(valueSetRule.path).toBe(path);
   expect(valueSetRule.valueSet).toBe(valueSet);
   expect(valueSetRule.strength).toBe(strength);
+  expect(valueSetRule.units).toBe(units);
 }
 
-export function assertFixedValueRule(rule: Rule, path: string, value: FixedValueType): void {
+export function assertFixedValueRule(
+  rule: Rule,
+  path: string,
+  value: FixedValueType,
+  units = false,
+  isResource = false
+): void {
   expect(rule).toBeInstanceOf(FixedValueRule);
   const fixedValueRule = rule as FixedValueRule;
   expect(fixedValueRule.path).toBe(path);
   expect(fixedValueRule.fixedValue).toEqual(value);
+  expect(fixedValueRule.units).toBe(units);
+  expect(fixedValueRule.isResource).toEqual(isResource);
 }
 
 export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[]): void {
@@ -101,6 +112,21 @@ export function assertObeysRule(rule: Rule, path: string, invariant: string) {
   const obeysRule = rule as ObeysRule;
   expect(obeysRule.path).toBe(path);
   expect(obeysRule.invariant).toBe(invariant);
+}
+
+export function assertMappingRule(
+  rule: Rule,
+  path: string,
+  map: string,
+  comment: string,
+  language: FshCode
+) {
+  expect(rule).toBeInstanceOf(MappingRule);
+  const mappingRule = rule as MappingRule;
+  expect(mappingRule.path).toBe(path);
+  expect(mappingRule.map).toBe(map);
+  expect(mappingRule.comment).toBe(comment);
+  expect(mappingRule.language).toEqual(language);
 }
 
 export function assertValueSetConceptComponent(

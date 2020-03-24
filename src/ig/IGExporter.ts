@@ -52,6 +52,7 @@ export class IGExporter {
     this.addIncludeContents(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
+    this.addIgnoreWarningsFile(outPath);
     this.addImplementationGuide(outPath);
   }
 
@@ -368,6 +369,18 @@ export class IGExporter {
   }
 
   /**
+   * Adds user provided ignoreWarnings.txt file if it exists; otherwise the static one SUSHI provides will be used.
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  private addIgnoreWarningsFile(igPath: string): void {
+    const ignorePath = path.join(this.igDataPath, 'input', 'ignoreWarnings.txt');
+    if (fs.existsSync(ignorePath)) {
+      fs.copyFileSync(ignorePath, path.join(igPath, 'input', 'ignoreWarnings.txt'));
+    }
+  }
+
+  /**
    * Add each of the resources from the package to the ImplementationGuide JSON file.
    */
   private addResources(): void {
@@ -385,23 +398,27 @@ export class IGExporter {
         exampleBoolean: false
       });
     });
-    const examples = sortBy(
+    const instances = sortBy(
       this.pkg.instances,
       instance => instance.id ?? instance._instanceMeta.name
     );
-    examples.forEach(example => {
+    instances.forEach(instance => {
       const resource: ImplementationGuideDefinitionResource = {
         reference: {
-          reference: `${example.resourceType}/${example.id ?? example._instanceMeta.name}`
+          reference: `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`
         },
-        name: example._instanceMeta.title ?? example._instanceMeta.name,
-        description: example._instanceMeta.description
+        name: instance._instanceMeta.title ?? instance._instanceMeta.name,
+        description: instance._instanceMeta.description
       };
-      const exampleUrl = example.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
-      if (exampleUrl) {
-        resource.exampleCanonical = exampleUrl;
+      if (instance._instanceMeta.usage === 'Example') {
+        const exampleUrl = instance.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
+        if (exampleUrl) {
+          resource.exampleCanonical = exampleUrl;
+        } else {
+          resource.exampleBoolean = true;
+        }
       } else {
-        resource.exampleBoolean = true;
+        resource.exampleBoolean = false;
       }
       this.ig.definition.resource.push(resource);
     });
@@ -540,7 +557,14 @@ export class IGExporter {
     let merged = false;
     if (fs.existsSync(inputIniPath)) {
       merged = true;
-      const inputIni = ini.parse(fs.readFileSync(inputIniPath, 'utf8'));
+      let inputIniContents = fs.readFileSync(inputIniPath, 'utf8');
+      // FHIR allows templates to have versions identified using #.  E.g.,
+      //   template = hl7.fhir.template#0.1.0
+      // The ini library, however, treats # as a comment unless it is escaped.  So if it exists, we need to escape it.
+      inputIniContents = inputIniContents.replace(/^\s*template\s*=\s*[^#]+(#.+)?$/m, ($0, $1) =>
+        $1 ? $0.replace($1, `\\${$1}`) : $0
+      );
+      const inputIni = ini.parse(inputIniContents);
       if (Object.keys(inputIni).length > 1 || inputIni.IG == null) {
         logger.error('igi.ini file must contain an [IG] section with no other sections', {
           file: inputIniPath
@@ -574,11 +598,14 @@ export class IGExporter {
     const releaseParam = this.ig.definition.parameter.find(p => p.code === 'releaselabel');
     releaseParam.value = iniObj.ballotstatus;
 
-    // Finally, write it to disk
-    outputFileSync(
-      path.join(igPath, 'ig.ini'),
-      ini.encode(iniObj, { section: 'IG', whitespace: true })
+    // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
+    let outputIniContents = ini.encode(iniObj, { section: 'IG', whitespace: true });
+    outputIniContents = outputIniContents.replace(/^template\s*=\s*.+?(\\#.+)?$/m, ($0, $1) =>
+      $1 ? $0.replace($1, $1.slice(1)) : $0
     );
+
+    // Finally, write it to disk
+    outputFileSync(path.join(igPath, 'ig.ini'), outputIniContents);
 
     if (merged) {
       logger.info('Merged ig-data/ig.ini w/ generated ig.ini');

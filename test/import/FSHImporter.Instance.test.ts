@@ -88,6 +88,58 @@ describe('FSHImporter', () => {
       });
     });
 
+    describe('#usage', () => {
+      it('should parse an instance with a usage', () => {
+        const input = `
+        Instance: MyObservation
+        InstanceOf: Observation
+        Usage: Example
+        `;
+
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyObservation');
+        expect(instance.name).toBe('MyObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.usage).toBe('Example');
+      });
+
+      it('should log an error for invalid usage and set default usage to example', () => {
+        const input = `
+        Instance: MyBadObservation
+        InstanceOf: Observation
+        Usage: BadUse
+        `;
+
+        const result = importSingleText(input, 'Bad.fsh');
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyBadObservation');
+        expect(instance.name).toBe('MyBadObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.usage).toBe('Example');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Invalid Usage. Supported usages are "Example", "Definition", and "Inline". Instance will be treated as an Example./s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bad\.fsh.*Line: 4\D*/s);
+      });
+    });
+
+    describe('#mixins', () => {
+      it('should parse an instance with mixins', () => {
+        const input = `
+        Instance: MyObservation
+        InstanceOf: Observation
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
+        `;
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyObservation');
+        expect(instance.name).toBe('MyObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
+      });
+    });
+
     describe('#rules', () => {
       it('should parse an instance with fixed value rules', () => {
         const input = `
@@ -95,6 +147,7 @@ describe('FSHImporter', () => {
         InstanceOf: Patient
         Title: "Georgio Manos"
         Description: "An example of a fictional patient named Georgio Manos"
+        Usage: Example
         * name[0].family = "Georgio"
         * name[0].given[0] = "Manos"
         * gender = #other
@@ -106,14 +159,34 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Patient');
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
+        expect(instance.usage).toBe('Example');
         expect(instance.rules.length).toBe(3);
         assertFixedValueRule(instance.rules[0], 'name[0].family', 'Georgio');
         assertFixedValueRule(instance.rules[1], 'name[0].given[0]', 'Manos');
         assertFixedValueRule(
           instance.rules[2],
           'gender',
-          new FshCode('other').withLocation([8, 20, 8, 25]).withFile('')
+          new FshCode('other').withLocation([9, 20, 9, 25]).withFile('')
         );
+      });
+
+      it('should parse an instance with fixed value resource rules', () => {
+        const input = `
+        Instance: SamplePatient
+        InstanceOf: Patient
+        Title: "Georgio Manos"
+        Description: "An example of a fictional patient named Georgio Manos"
+        * contained[0] = SomeInstance
+        `;
+
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('SamplePatient');
+        expect(instance.instanceOf).toBe('Patient');
+        expect(instance.title).toBe('Georgio Manos');
+        expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
+        expect(instance.rules.length).toBe(1);
+        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
       });
     });
 
@@ -124,9 +197,13 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
+        Mixins: Mixin1        
+        Usage: Example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
+        Mixins: DuplicateMixin1
+        Usage: Non-example
         `;
 
         const result = importSingleText(input);
@@ -136,6 +213,8 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBe('My Important Observation');
         expect(instance.description).toBe('My Observation Description');
+        expect(instance.usage).toBe('Example');
+        expect(instance.mixins).toEqual(['Mixin1']);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -144,15 +223,18 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
+        Usage: Example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
+        Usage: Non-example
         `;
 
         importSingleText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 6\D*/s);
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 9\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 10\D*/s);
       });
     });
   });
