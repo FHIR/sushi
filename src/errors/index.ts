@@ -34,3 +34,5 @@ export * from './InvalidUriError';
 export * from './MissingSnapshotError';
 export * from './InvalidUnitsError';
 export * from './MultipleStandardsStatusError';
+export * from './InvalidMappingError';
+export * from './InvalidFHIRIdError';

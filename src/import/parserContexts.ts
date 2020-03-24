@@ -108,6 +108,7 @@ export interface MappingMetadataContext extends ParserRuleContext {
   description(): DescriptionContext;
   source(): SourceContext;
   target(): TargetContext;
+  title(): TitleContext;
 }
 
 export interface ParentContext extends ParserRuleContext {

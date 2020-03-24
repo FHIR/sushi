@@ -23,11 +23,14 @@ import {
   InvalidMaxOfSliceError,
   InvalidUriError,
   InvalidUnitsError,
-  MultipleStandardsStatusError
+  MultipleStandardsStatusError,
+  InvalidMappingError,
+  InvalidFHIRIdError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
+import { idRegex } from './primitiveTypes';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -169,7 +172,7 @@ export class ElementDefinition {
   isModifierReason: string;
   isSummary: boolean;
   binding: ElementDefinitionBinding;
-  mapping: ElementDefinitionMapping;
+  mapping: ElementDefinitionMapping[];
   structDef: StructureDefinition;
   private _original: ElementDefinition;
   private _edStructureDefinition: StructureDefinition;
@@ -1547,6 +1550,31 @@ export class ElementDefinition {
   private hasSingleType() {
     const types = this.type ?? [];
     return types.length === 1;
+  }
+
+  /**
+   * Sets mapping on an element
+   * @see {@link https://www.hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition.mapping}
+   * @param {string} identity - value for mapping.identity
+   * @param {string} map - value for mapping.map
+   * @param {string} comment - value for mapping.comment
+   * @param {FshCode} language - language.code is value for mapping.language
+   * @throws {InvalidMappingError} when attempting to set mapping with identity or map undefined
+   * @throws {InvalidFHIRIdError} when setting mapping.identity to an invalid FHIR ID
+   */
+  applyMapping(identity: string, map: string, comment: string, language: FshCode): void {
+    if (identity == null || map == null) {
+      throw new InvalidMappingError();
+    }
+    if (!idRegex.test(identity)) {
+      throw new InvalidFHIRIdError(identity);
+    }
+    this.mapping.push({
+      identity,
+      map,
+      ...(comment && { comment }),
+      ...(language && { language: language.code })
+    });
   }
 
   /**

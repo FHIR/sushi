@@ -34,6 +34,7 @@ describe('FSHImporter', () => {
         Source: Patient
         Target: "http://some.com/mappedTo"
         Description: "This is a description"
+        Title: "This is a title"
         `;
       const result = importSingleText(input, 'Mapping.fsh');
       expect(result.mappings.size).toBe(1);
@@ -43,11 +44,12 @@ describe('FSHImporter', () => {
       expect(mapping.source).toBe('Patient');
       expect(mapping.target).toBe('http://some.com/mappedTo');
       expect(mapping.description).toBe('This is a description');
+      expect(mapping.title).toBe('This is a title');
       expect(mapping.sourceInfo.location).toEqual({
         startLine: 2,
         startColumn: 9,
-        endLine: 6,
-        endColumn: 44
+        endLine: 7,
+        endColumn: 32
       });
       expect(mapping.sourceInfo.file).toBe('Mapping.fsh');
     });
@@ -58,10 +60,12 @@ describe('FSHImporter', () => {
         Id: my-map
         Source: Patient
         Target: "http://some.com/mappedTo"
+        Title: "This is a title"
         Description: "This is a description"
         Id: my-map-2
         Source: Patient2
         Target: "http://some.com/mappedTo2"
+        Title: "This is a title 2"
         Description: "This is a description 2"
         `;
       const result = importSingleText(input, 'Mapping.fsh');
@@ -73,7 +77,7 @@ describe('FSHImporter', () => {
       expect(mapping.target).toBe('http://some.com/mappedTo');
       expect(mapping.description).toBe('This is a description');
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /This is a description.*File: Mapping\.fsh.*Line: 10\D*/s
+        /This is a description.*File: Mapping\.fsh.*Line: 12\D*/s
       );
     });
 
