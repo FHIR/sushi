@@ -433,30 +433,20 @@ export class ElementDefinition {
       // check to see if the card constraint would actually be a problem for the connected element
       // that is to say, if the new card is narrower than the connected card
       connectedElements.forEach(ce => {
-        if ((ce.min == null && min > 0) || (ce.min != null && ce.min < min)) {
+        if (ce.min != null && ce.min < min) {
           throw new NarrowingRootCardinalityError(
             this.path,
             ce.id,
             min,
             max,
-            ce.min ?? 0,
+            ce.min,
             ce.max ?? '*'
           );
         }
         // if the connected element's max is null or *, we can't constrain the max
         // if the connected element's max is not null and is not *, we can't make the max smaller than its max
-        if (
-          ((ce.max == null || ce.max == '*') && maxInt != null) ||
-          (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max))
-        ) {
-          throw new NarrowingRootCardinalityError(
-            this.path,
-            ce.id,
-            min,
-            max,
-            ce.min ?? 0,
-            ce.max ?? '*'
-          );
+        if (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max)) {
+          throw new NarrowingRootCardinalityError(this.path, ce.id, min, max, ce.min ?? 0, ce.max);
         }
       });
     }
@@ -892,6 +882,7 @@ export class ElementDefinition {
   /**
    * Sets flags on this element as specified in a profile or extension.
    * Don't change a flag when the incoming argument is undefined.
+   * The summary flag can be disabled, but the mustSupport and modifier flags cannot.
    * @todo Add more complete enforcement of rules regarding when these flags can change.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}

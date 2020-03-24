@@ -1200,122 +1200,6 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
   });
 
-  it.skip('should log an error when a fixed value on a child interferes with a fixed slice on the parent', () => {
-    // Profile: ParentWithFixedSlice
-    // Parent: Observation
-    // * category ^slicing.discriminator[0].type = #pattern
-    // * category ^slicing.discriminator[0].path = "$this"
-    // * category ^slicing.rules = #open
-    // * category contains Lab
-    // * category[Lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
-    const parentProfile = new Profile('ParentWithFixedSlice');
-    parentProfile.parent = 'Observation';
-    const slicingType = new CaretValueRule('category');
-    slicingType.caretPath = 'slicing.discriminator[0].type';
-    slicingType.value = new FshCode('pattern');
-    const slicingPath = new CaretValueRule('category');
-    slicingPath.caretPath = 'slicing.discriminator[0].path';
-    slicingPath.value = '$this';
-    const slicingRules = new CaretValueRule('category');
-    slicingRules.caretPath = 'slicing.rules';
-    slicingRules.value = new FshCode('open');
-    const containsLab = new ContainsRule('category');
-    containsLab.items = [{ name: 'Lab' }];
-    const labValue = new FixedValueRule('category[Lab]');
-    labValue.fixedValue = new FshCode(
-      'laboratory',
-      'http://terminology.hl7.org/CodeSystem/observation-category'
-    );
-    parentProfile.rules.push(slicingType, slicingPath, slicingRules, containsLab, labValue);
-
-    // Profile: ChildWithFixedValue
-    // Parent: ParentWithFixedSlice
-    // * category = http://terminology.hl7.org/CodeSystem/observation-category#procedure
-    const childProfile = new Profile('ChildWithFixedValue');
-    childProfile.parent = 'ParentWithFixedSlice';
-    const categoryValue = new FixedValueRule('category')
-      .withFile('FixedSlice.fsh')
-      .withLocation([11, 9, 11, 25]);
-    categoryValue.fixedValue = new FshCode(
-      'procedure',
-      'http://terminology.hl7.org/CodeSystem/observation-category'
-    );
-    childProfile.rules.push(categoryValue);
-
-    doc.profiles.set(parentProfile.name, parentProfile);
-    doc.profiles.set(childProfile.name, childProfile);
-    exporter.export();
-
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: FixedSlice\.fsh.*Line: 11\D*/s);
-  });
-
-  it.skip('should not log an error when a fixed value on the root of a sliced element does not interfere with an existing slice', () => {
-    loggerSpy.reset();
-    // Profile: ObservationWithSlice
-    // Parent: Observation
-    // * category ^slicing.discriminator[0].type = #pattern
-    // * category ^slicing.discriminator[0].path = "$this"
-    // * category ^slicing.rules = #open
-    // * category = http://terminology.hl7.org/CodeSystem/observation-category#procedure
-    const profile = new Profile('ObservationWithSlice');
-    profile.parent = 'Observation';
-    const slicingType = new CaretValueRule('category');
-    slicingType.caretPath = 'slicing.discriminator[0].type';
-    slicingType.value = new FshCode('pattern');
-    const slicingPath = new CaretValueRule('category');
-    slicingPath.caretPath = 'slicing.discriminator[0].path';
-    slicingPath.value = '$this';
-    const slicingRules = new CaretValueRule('category');
-    slicingRules.caretPath = 'slicing.rules';
-    slicingRules.value = new FshCode('open');
-    const categoryValue = new FixedValueRule('category');
-    categoryValue.fixedValue = new FshCode(
-      'procedure',
-      'http://terminology.hl7.org/CodeSystem/observation-category'
-    );
-
-    profile.rules.push(slicingType, slicingPath, slicingRules, categoryValue);
-    doc.profiles.set(profile.name, profile);
-
-    exporter.export();
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-  });
-
-  it.skip('should not log an error when a value is fixed on a slice and that value is not fixed on the root', () => {
-    loggerSpy.reset();
-    // Profile: ObservationWithSlice
-    // Parent: Observation
-    // * category ^slicing.discriminator[0].type = #pattern
-    // * category ^slicing.discriminator[0].path = "$this"
-    // * category ^slicing.rules = #open
-    // * category contains Lab 1..1
-    // * category[Lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
-    const profile = new Profile('ObservationWithSlice');
-    profile.parent = 'Observation';
-    const slicingType = new CaretValueRule('category');
-    slicingType.caretPath = 'slicing.discriminator[0].type';
-    slicingType.value = new FshCode('pattern');
-    const slicingPath = new CaretValueRule('category');
-    slicingPath.caretPath = 'slicing.discriminator[0].path';
-    slicingPath.value = '$this';
-    const slicingRules = new CaretValueRule('category');
-    slicingRules.caretPath = 'slicing.rules';
-    slicingRules.value = new FshCode('open');
-    const containsLab = new ContainsRule('category');
-    containsLab.items = [{ name: 'Lab' }];
-    const labValue = new FixedValueRule('category[Lab]');
-    labValue.fixedValue = new FshCode(
-      'laboratory',
-      'http://terminology.hl7.org/CodeSystem/observation-category'
-    );
-
-    profile.rules.push(slicingType, slicingPath, slicingRules, containsLab, labValue);
-    doc.profiles.set(profile.name, profile);
-
-    exporter.export();
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-  });
-
   // Contains Rule
   it('should apply a ContainsRule on an element with defined slicing', () => {
     const profile = new Profile('Foo');
@@ -2581,16 +2465,6 @@ describe('StructureDefinitionExporter', () => {
       expect(labInterpretation.mustSupport).toBe(true);
     });
 
-    // don't actually apply the rule to the slice, since it might be valid based on the contents of the value sets
-    // but if it's the same value set for both, _then_ we know it can't be a weaker binding, and that's what we should give a message about
-    // so this is ok:
-    // * category[Procedure] from ABC (extensible)
-    // * category from ABC (required)
-    // and it will update the strength to required
-    // this is not:
-    // * category from ABC (required)
-    // * category[Procedure] from ABC (extensible)
-
     it('should apply ValueSetRules on a slice, then a sliced element, with different value sets', () => {
       // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
       // * category from http://example.com/ImportantObservationCodes (required)
@@ -2620,14 +2494,14 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should apply ValueSetRules on a sliced element, then a slice, with different value sets', () => {
-      // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
       // * category from http://example.com/ImportantObservationCodes (required)
-      const procedureValueSet = new ValueSetRule('category[Procedure]');
-      procedureValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
-      procedureValueSet.strength = 'extensible';
+      // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
       const rootValueSet = new ValueSetRule('category');
       rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
       rootValueSet.strength = 'required';
+      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      procedureValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      procedureValueSet.strength = 'extensible';
 
       observationWithSlice.rules.push(rootValueSet, procedureValueSet);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
@@ -2850,7 +2724,9 @@ describe('StructureDefinitionExporter', () => {
       // * component.value[x] only Ratio // this would remove all types from the slice!
       const labOnly = new OnlyRule('component[Lab].value[x]');
       labOnly.types = [{ type: 'Quantity' }];
-      const rootOnly = new OnlyRule('component.value[x]');
+      const rootOnly = new OnlyRule('component.value[x]')
+        .withFile('RemoveType.fsh')
+        .withLocation([12, 5, 12, 23]);
       rootOnly.types = [{ type: 'Ratio' }];
 
       observationWithSlice.rules.push(labOnly, rootOnly);
@@ -2863,6 +2739,8 @@ describe('StructureDefinitionExporter', () => {
       expect(rootValue.type).toHaveLength(11);
       expect(labValue.type).toHaveLength(1);
       expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/eliminate all types/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveType\.fsh.*Line: 12\D*/s);
     });
 
     it('should apply an OnlyRule on a sliced element that would remove all types from a zeroed-out slice', () => {
