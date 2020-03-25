@@ -541,53 +541,106 @@ describe('StructureDefinitionExporter', () => {
     expect(baseElement.isSummary).toBeFalsy();
   });
 
-  it('should not apply a flag rule that disables isModifier', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'DiagnosticReport';
-
-    const rule = new FlagRule('status').withFile('Nope.fsh').withLocation([8, 7, 8, 15]);
-    rule.modifier = false;
-    rule.mustSupport = true;
-    profile.rules.push(rule);
+  it('should apply a flag rule that specifies an element is trial use', () => {
+    // Profile: HasTrial
+    // Parent: Observation
+    // * bodySite TU
+    const profile = new Profile('HasTrial');
+    profile.parent = 'Observation';
+    const flagRule = new FlagRule('bodySite');
+    flagRule.trialUse = true;
+    profile.rules.push(flagRule);
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const baseStructDef = fisher.fishForStructureDefinition('DiagnosticReport');
-
-    const baseElement = baseStructDef.findElement('DiagnosticReport.status');
-    const changedElement = sd.findElement('DiagnosticReport.status');
-    expect(baseElement.isModifier).toBe(true);
-    expect(baseElement.mustSupport).toBeFalsy();
-    expect(changedElement.isModifier).toBe(true);
-    expect(changedElement.mustSupport).toBeFalsy();
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D*/s);
+    const bodySite = sd.findElement('Observation.bodySite');
+    expect(bodySite.extension).toHaveLength(1);
+    expect(bodySite.extension[0]).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'trial-use'
+    });
   });
 
-  it('should not apply a flag rule that disables mustSupport', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'http://hl7.org/fhir/StructureDefinition/vitalsigns';
-
-    const rule = new FlagRule('code').withFile('Nope.fsh').withLocation([8, 7, 8, 15]);
-    rule.modifier = true;
-    rule.summary = false;
-    rule.mustSupport = false;
-    profile.rules.push(rule);
+  it('should apply a flag rule that specifies an element is normative', () => {
+    // Profile: HasTrial
+    // Parent: Observation
+    // * method N
+    const profile = new Profile('HasTrial');
+    profile.parent = 'Observation';
+    const flagRule = new FlagRule('method');
+    flagRule.normative = true;
+    profile.rules.push(flagRule);
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const baseStructDef = fisher.fishForStructureDefinition(
-      'http://hl7.org/fhir/StructureDefinition/vitalsigns'
-    );
+    const method = sd.findElement('Observation.method');
+    expect(method.extension).toHaveLength(1);
+    expect(method.extension[0]).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'normative'
+    });
+  });
+  it('should apply a flag rule that specifies an element is a draft', () => {
+    // Profile: HasDraft
+    // Parent: DiagnosticReport
+    // * media D
+    const profile = new Profile('HasDraft');
+    profile.parent = 'DiagnosticReport';
+    const flagRule = new FlagRule('media');
+    flagRule.draft = true;
+    profile.rules.push(flagRule);
 
-    const baseElement = baseStructDef.findElement('Observation.code');
-    const changedElement = sd.findElement('Observation.code');
-    expect(baseElement.isModifier).toBeFalsy();
-    expect(baseElement.isSummary).toBe(true);
-    expect(baseElement.mustSupport).toBe(true);
-    expect(changedElement.isModifier).toBeFalsy();
-    expect(changedElement.isSummary).toBe(true);
-    expect(changedElement.mustSupport).toBe(true);
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Nope\.fsh.*Line: 8\D*/s);
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const media = sd.findElement('DiagnosticReport.media');
+    expect(media.extension).toHaveLength(1);
+    expect(media.extension[0]).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'draft'
+    });
+  });
+  it('should log an error when more than one standards status flag rule is specified on an element', () => {
+    // Profile: HasDraft
+    // Parent: DiagnosticReport
+    // * media D TU
+    const profile = new Profile('HasDraft');
+    profile.parent = 'DiagnosticReport';
+    const flagRule = new FlagRule('media').withFile('MultiStatus.fsh').withLocation([3, 1, 3, 12]);
+    flagRule.draft = true;
+    flagRule.trialUse = true;
+    profile.rules.push(flagRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const media = sd.findElement('DiagnosticReport.media');
+    expect(media.extension).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: MultiStatus\.fsh.*Line: 3\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/multiple standards status/s);
+  });
+
+  it('should apply a flag rule that changes the existing standards status', () => {
+    // Profile: HasTrial
+    // Parent: Observation
+    // * focus N
+    const profile = new Profile('HasTrial');
+    profile.parent = 'Observation';
+    const flagRule = new FlagRule('focus').withFile('MultiStatus.fsh').withLocation([8, 3, 8, 14]);
+    flagRule.normative = true;
+    profile.rules.push(flagRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const focus = sd.findElement('Observation.focus');
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+    const baseFocus = baseStructDef.findElement('Observation.focus');
+    expect(baseFocus.extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'trial-use'
+    });
+    expect(focus.extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+      valueCode: 'normative'
+    });
   });
 
   // Value Set Rule

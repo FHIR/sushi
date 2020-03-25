@@ -123,7 +123,14 @@ export class StructureDefinitionExporter implements Fishable {
             const replacedRule = replaceReferences(rule, this.tank, this);
             element.fixValue(replacedRule.fixedValue, replacedRule.units);
           } else if (rule instanceof FlagRule) {
-            element.applyFlags(rule.mustSupport, rule.summary, rule.modifier);
+            element.applyFlags(
+              rule.mustSupport,
+              rule.summary,
+              rule.modifier,
+              rule.trialUse,
+              rule.normative,
+              rule.draft
+            );
           } else if (rule instanceof OnlyRule) {
             const target = structDef.getReferenceName(rule.path, element);
             element.constrainType(rule, this, target);
