@@ -200,6 +200,9 @@ export interface FlagContext extends ParserRuleContext {
   KW_MOD(): ParserRuleContext;
   KW_MS(): ParserRuleContext;
   KW_SU(): ParserRuleContext;
+  KW_TU(): ParserRuleContext;
+  KW_NORMATIVE(): ParserRuleContext;
+  KW_DRAFT(): ParserRuleContext;
 }
 
 export interface ValueSetRuleContext extends ParserRuleContext {

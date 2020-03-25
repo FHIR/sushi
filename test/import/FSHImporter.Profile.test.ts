@@ -242,37 +242,127 @@ describe('FSHImporter', () => {
         * category 1..5 MS
         * value[x] 1..1 ?!
         * component 2..* SU
+        * interpretation 1..* TU
+        * note 0..11 N
+        * bodySite 1..1 D
         `;
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(6);
+        expect(profile.rules).toHaveLength(12);
         assertCardRule(profile.rules[0], 'category', 1, 5);
-        assertFlagRule(profile.rules[1], 'category', true, undefined, undefined);
+        assertFlagRule(
+          profile.rules[1],
+          'category',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
         assertCardRule(profile.rules[2], 'value[x]', 1, 1);
-        assertFlagRule(profile.rules[3], 'value[x]', undefined, undefined, true);
+        assertFlagRule(
+          profile.rules[3],
+          'value[x]',
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined
+        );
         assertCardRule(profile.rules[4], 'component', 2, '*');
-        assertFlagRule(profile.rules[5], 'component', undefined, true, undefined);
+        assertFlagRule(
+          profile.rules[5],
+          'component',
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertCardRule(profile.rules[6], 'interpretation', 1, '*');
+        assertFlagRule(
+          profile.rules[7],
+          'interpretation',
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined
+        );
+        assertCardRule(profile.rules[8], 'note', 0, '11');
+        assertFlagRule(
+          profile.rules[9],
+          'note',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertCardRule(profile.rules[10], 'bodySite', 1, '1');
+        assertFlagRule(
+          profile.rules[11],
+          'bodySite',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true
+        );
       });
 
       it('should parse card rules w/ multiple flags', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category 1..5 MS ?!
-        * value[x] 1..1 ?! SU
-        * component 2..* SU MS
+        * category 1..5 MS ?! TU
+        * value[x] 1..1 ?! SU N
+        * component 2..* SU MS D
         `;
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(6);
         assertCardRule(profile.rules[0], 'category', 1, 5);
-        assertFlagRule(profile.rules[1], 'category', true, undefined, true);
+        assertFlagRule(
+          profile.rules[1],
+          'category',
+          true,
+          undefined,
+          true,
+          true,
+          undefined,
+          undefined
+        );
         assertCardRule(profile.rules[2], 'value[x]', 1, 1);
-        assertFlagRule(profile.rules[3], 'value[x]', undefined, true, true);
+        assertFlagRule(
+          profile.rules[3],
+          'value[x]',
+          undefined,
+          true,
+          true,
+          undefined,
+          true,
+          undefined
+        );
         assertCardRule(profile.rules[4], 'component', 2, '*');
-        assertFlagRule(profile.rules[5], 'component', true, true, undefined);
+        assertFlagRule(
+          profile.rules[5],
+          'component',
+          true,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          true
+        );
       });
     });
 
@@ -284,31 +374,109 @@ describe('FSHImporter', () => {
         * category MS
         * value[x] ?!
         * component SU
+        * interpretation TU
+        * note N
+        * bodySite D
         `;
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(3);
-        assertFlagRule(profile.rules[0], 'category', true, undefined, undefined);
-        assertFlagRule(profile.rules[1], 'value[x]', undefined, undefined, true);
-        assertFlagRule(profile.rules[2], 'component', undefined, true, undefined);
+        expect(profile.rules).toHaveLength(6);
+        assertFlagRule(
+          profile.rules[0],
+          'category',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[1],
+          'value[x]',
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[2],
+          'component',
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[3],
+          'interpretation',
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[4],
+          'note',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[5],
+          'bodySite',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true
+        );
       });
 
       it('should parse single-path multi-value flag rules', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category MS ?!
-        * value[x] ?! SU
-        * component MS SU ?!
+        * category MS ?! N
+        * value[x] ?! SU D
+        * component MS SU ?! TU
         `;
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(3);
-        assertFlagRule(profile.rules[0], 'category', true, undefined, true);
-        assertFlagRule(profile.rules[1], 'value[x]', undefined, true, true);
-        assertFlagRule(profile.rules[2], 'component', true, true, true);
+        assertFlagRule(
+          profile.rules[0],
+          'category',
+          true,
+          undefined,
+          true,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[1],
+          'value[x]',
+          undefined,
+          true,
+          true,
+          undefined,
+          undefined,
+          true
+        );
+        assertFlagRule(profile.rules[2], 'component', true, true, true, true, undefined, undefined);
       });
 
       it('should parse multi-path single-value flag rules', () => {
@@ -317,34 +485,145 @@ describe('FSHImporter', () => {
         Parent: Observation
         * category , value[x], component MS
         * subject, focus ?!
+        * interpretation, note N
         `;
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(5);
-        assertFlagRule(profile.rules[0], 'category', true, undefined, undefined);
-        assertFlagRule(profile.rules[1], 'value[x]', true, undefined, undefined);
-        assertFlagRule(profile.rules[2], 'component', true, undefined, undefined);
-        assertFlagRule(profile.rules[3], 'subject', undefined, undefined, true);
-        assertFlagRule(profile.rules[4], 'focus', undefined, undefined, true);
+        expect(profile.rules).toHaveLength(7);
+        assertFlagRule(
+          profile.rules[0],
+          'category',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[1],
+          'value[x]',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[2],
+          'component',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[3],
+          'subject',
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[4],
+          'focus',
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[5],
+          'interpretation',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[6],
+          'note',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
       });
 
       it('should parse multi-path multi-value flag rules', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category, value[x], component MS SU
-        * subject, focus ?! SU
+        * category, value[x], component MS SU N
+        * subject, focus ?! SU TU
         `;
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(5);
-        assertFlagRule(profile.rules[0], 'category', true, true, undefined);
-        assertFlagRule(profile.rules[1], 'value[x]', true, true, undefined);
-        assertFlagRule(profile.rules[2], 'component', true, true, undefined);
-        assertFlagRule(profile.rules[3], 'subject', undefined, true, true);
-        assertFlagRule(profile.rules[4], 'focus', undefined, true, true);
+        assertFlagRule(
+          profile.rules[0],
+          'category',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[1],
+          'value[x]',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[2],
+          'component',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[3],
+          'subject',
+          undefined,
+          true,
+          true,
+          true,
+          undefined,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[4],
+          'focus',
+          undefined,
+          true,
+          true,
+          true,
+          undefined,
+          undefined
+        );
       });
     });
 
@@ -1023,7 +1302,7 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * component contains SystolicBP 1..1 MS and DiastolicBP 2..* MS SU
+        * component contains SystolicBP 1..1 MS D and DiastolicBP 2..* MS SU
         `;
 
         const result = importSingleText(input);
@@ -1031,9 +1310,27 @@ describe('FSHImporter', () => {
         expect(profile.rules).toHaveLength(5);
         assertContainsRule(profile.rules[0], 'component', 'SystolicBP', 'DiastolicBP');
         assertCardRule(profile.rules[1], 'component[SystolicBP]', 1, 1);
-        assertFlagRule(profile.rules[2], 'component[SystolicBP]', true, undefined, undefined);
+        assertFlagRule(
+          profile.rules[2],
+          'component[SystolicBP]',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true
+        );
         assertCardRule(profile.rules[3], 'component[DiastolicBP]', 2, '*');
-        assertFlagRule(profile.rules[4], 'component[DiastolicBP]', true, true, undefined);
+        assertFlagRule(
+          profile.rules[4],
+          'component[DiastolicBP]',
+          true,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
       });
 
       it('should parse contains rule with item declaring a type and flags', () => {
@@ -1041,7 +1338,7 @@ describe('FSHImporter', () => {
         Alias: OffsetExtension = http://hl7.org/fhir/StructureDefinition/observation-timeOffset
         Profile: ObservationProfile
         Parent: Observation
-        * component.extension contains OffsetExtension named offset 0..1 MS
+        * component.extension contains OffsetExtension named offset 0..1 MS TU
         `;
 
         const result = importSingleText(input);
@@ -1052,7 +1349,16 @@ describe('FSHImporter', () => {
           type: 'http://hl7.org/fhir/StructureDefinition/observation-timeOffset'
         });
         assertCardRule(profile.rules[1], 'component.extension[offset]', 0, 1);
-        assertFlagRule(profile.rules[2], 'component.extension[offset]', true, undefined, undefined);
+        assertFlagRule(
+          profile.rules[2],
+          'component.extension[offset]',
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined
+        );
       });
     });
 

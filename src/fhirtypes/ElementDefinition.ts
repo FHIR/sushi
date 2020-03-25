@@ -1,4 +1,4 @@
-import { isEmpty, isEqual, cloneDeep, isBoolean } from 'lodash';
+import { isEmpty, isEqual, cloneDeep } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -10,7 +10,6 @@ import {
   BindingStrengthError,
   CodedTypeNotFoundError,
   CodeAlreadyFixedError,
-  DisableFlagError,
   ValueAlreadyFixedError,
   NoSingleTypeError,
   MismatchedTypeError,
@@ -26,6 +25,7 @@ import {
   SliceTypeRemovalError,
   InvalidUriError,
   InvalidUnitsError,
+  MultipleStandardsStatusError,
   InvalidMappingError,
   InvalidFHIRIdError
 } from '../errors';
@@ -892,43 +892,83 @@ export class ElementDefinition {
 
   /**
    * Sets flags on this element as specified in a profile or extension.
-   * Don't change a flag when the incoming argument is undefined.
-   * The summary flag can be disabled, but the mustSupport and modifier flags cannot.
-   * @todo Add more complete enforcement of rules regarding when these flags can change.
+   * Don't change a flag when the incoming argument is undefined or false.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isSummary}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isModifier}
+   * @see {@link http://hl7.org/fhir/R4/versions.html#std-process}
+   * @see {@link http://hl7.org/fhir/extension-structuredefinition-standards-status.html}
+   * @see {@link http://hl7.org/fhir/valueset-standards-status.html}
    * @param mustSupport - whether to make this element a Must Support element
    * @param summary - whether to include this element when querying for a summary
    * @param modifier - whether this element acts as a modifier on the resource
-   * @throws {DisableFlagError} when attempting to disable a flag that cannot be disabled
+   * @param trialUse - indicates a standards status of "Trial Use" for this element
+   * @param normative - indicates a standards status of "Normative" for this element
+   * @param draft - indicates a standards status of "Draft" for this element
    */
-  applyFlags(mustSupport: boolean, summary: boolean, modifier: boolean): void {
-    const disabledFlags: string[] = [];
-    if (this.mustSupport && mustSupport === false) {
-      disabledFlags.push('Must Support');
+  applyFlags(
+    mustSupport: boolean,
+    summary: boolean,
+    modifier: boolean,
+    trialUse: boolean,
+    normative: boolean,
+    draft: boolean
+  ): void {
+    let newStatusExtension: any = null;
+    if (trialUse) {
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'trial-use'
+      };
     }
-    if (this.isModifier && modifier === false) {
-      disabledFlags.push('Is Modifier');
+    if (normative) {
+      if (newStatusExtension) {
+        throw new MultipleStandardsStatusError(this.id);
+      }
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'normative'
+      };
     }
-    if (disabledFlags.length) {
-      throw new DisableFlagError(disabledFlags);
+    if (draft) {
+      if (newStatusExtension) {
+        throw new MultipleStandardsStatusError(this.id);
+      }
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'draft'
+      };
     }
 
     const connectedElements = this.findConnectedElements();
-
-    if (isBoolean(mustSupport)) {
+    if (mustSupport === true) {
       this.mustSupport = mustSupport;
       connectedElements.forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
     }
-    if (isBoolean(summary)) {
+    if (summary === true) {
       this.isSummary = summary;
       connectedElements.forEach(ce => (ce.isSummary = summary));
     }
-    if (isBoolean(modifier)) {
+    if (modifier === true) {
       this.isModifier = modifier;
       connectedElements.forEach(ce => (ce.isModifier = modifier || ce.isModifier));
+    }
+    if (newStatusExtension) {
+      if (this.extension) {
+        const oldStatus = this.extension.findIndex(
+          extension =>
+            extension.url ==
+            'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status'
+        );
+        if (oldStatus > -1) {
+          this.extension[oldStatus] = newStatusExtension;
+        } else {
+          this.extension.push(newStatusExtension);
+        }
+      } else {
+        this.extension = [newStatusExtension];
+      }
     }
   }
 

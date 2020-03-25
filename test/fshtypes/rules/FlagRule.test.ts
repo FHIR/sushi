@@ -9,6 +9,9 @@ describe('FlagRule', () => {
       expect(f.mustSupport).toBeUndefined();
       expect(f.summary).toBeUndefined();
       expect(f.modifier).toBeUndefined();
+      expect(f.trialUse).toBeUndefined();
+      expect(f.normative).toBeUndefined();
+      expect(f.draft).toBeUndefined();
     });
   });
 });
