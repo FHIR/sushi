@@ -10,7 +10,13 @@ import {
   FshCodeSystem,
   RuleSet
 } from '../../src/fshtypes';
-import { FixedValueRule, ContainsRule, CardRule, OnlyRule } from '../../src/fshtypes/rules';
+import {
+  FixedValueRule,
+  ContainsRule,
+  CardRule,
+  OnlyRule,
+  CaretValueRule
+} from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import path from 'path';
@@ -680,6 +686,37 @@ describe('InstanceExporter', () => {
       expect(exported.address[0]._line[1].extension[0].url).toBe('bar');
     });
 
+    it('should fix children of sliced primitive arrays on an instance', () => {
+      const caretRule = new CaretValueRule('name.prefix');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('value');
+      const containsRule = new ContainsRule('name.prefix');
+      containsRule.items = [{ name: 'Dr' }];
+      const cardRule = new CardRule('name.prefix');
+      cardRule.min = 0;
+      cardRule.max = '*';
+      // * name.prefix ^slicing.discriminator.type = #value
+      // * name.prefix contains Dr 0..*
+      patient.rules.push(caretRule, containsRule, cardRule);
+      const fixedRule1 = new FixedValueRule('name[0].prefix[Dr][0]');
+      fixedRule1.fixedValue = 'Doctor';
+      const fixedRule2 = new FixedValueRule('name[0].prefix[Dr][1]');
+      fixedRule2.fixedValue = 'Mister Doctor';
+      const fixedRuleChild = new FixedValueRule('name[0].prefix[Dr][1].id');
+      fixedRuleChild.fixedValue = 'Sir Mister Doctor to you';
+      // * name[0].prefix[Dr][0] = "Doctor"
+      // * name[0].prefix[Dr][1] = "Mister Doctor"
+      // * name[0].prefix[Dr][1].id = "Sir Mister Doctor to you";
+      patientInstance.rules.push(fixedRule1, fixedRule2, fixedRuleChild);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          prefix: ['Doctor', 'Mister Doctor'],
+          _prefix: [null, { id: 'Sir Mister Doctor to you' }]
+        }
+      ]);
+    });
+
     // Fixing References
     it('should fix a reference while resolving the Instance being referred to', () => {
       const orgInstance = new Instance('TestOrganization');
@@ -757,6 +794,30 @@ describe('InstanceExporter', () => {
       expect(exported.extension).toEqual([{ url: 'level', valueCoding: { system: 'foo' } }]);
     });
 
+    it('should fix a single primitive sliced element to a value', () => {
+      const caretRule = new CaretValueRule('name.prefix');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('value');
+      const containsRule = new ContainsRule('name.prefix');
+      containsRule.items = [{ name: 'Dr' }];
+      const cardRule = new CardRule('name.prefix');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      // * name.prefix ^slicing.discriminator.type = #value
+      // * name.prefix contains Dr 1..1
+      patient.rules.push(caretRule, containsRule, cardRule);
+      const fixedRule = new FixedValueRule('name[0].prefix[Dr]');
+      fixedRule.fixedValue = 'Doctor';
+      // * name[0].prefix[Dr] = "Doctor"
+      patientInstance.rules.push(fixedRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          prefix: ['Doctor']
+        }
+      ]);
+    });
+
     it('should fix sliced elements in an array that are fixed in order', () => {
       const fooRule = new FixedValueRule('extension[type][0].valueCoding.system');
       fooRule.fixedValue = 'foo';
@@ -768,6 +829,33 @@ describe('InstanceExporter', () => {
       expect(exported.extension).toEqual([
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'type', valueCoding: { system: 'bar' } }
+      ]);
+    });
+
+    it('should fix a sliced primitive array', () => {
+      const caretRule = new CaretValueRule('name.prefix');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('value');
+      const containsRule = new ContainsRule('name.prefix');
+      containsRule.items = [{ name: 'Dr' }];
+      const cardRule = new CardRule('name.prefix');
+      cardRule.min = 0;
+      cardRule.max = '*';
+      // * name.prefix ^slicing.discriminator.type = #value
+      // * name.prefix contains Dr 0..*
+      patient.rules.push(caretRule, containsRule, cardRule);
+      const fixedRule1 = new FixedValueRule('name[0].prefix[Dr][0]');
+      fixedRule1.fixedValue = 'Doctor';
+      const fixedRule2 = new FixedValueRule('name[0].prefix[Dr][1]');
+      fixedRule2.fixedValue = 'Mister Doctor';
+      // * name[0].prefix[Dr][0] = "Doctor"
+      // * name[0].prefix[Dr][1] = "Mister Doctor"
+      patientInstance.rules.push(fixedRule1, fixedRule2);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          prefix: ['Doctor', 'Mister Doctor']
+        }
       ]);
     });
 

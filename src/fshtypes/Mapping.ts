@@ -9,6 +9,7 @@ export class Mapping extends FshEntity {
   source?: string;
   target?: string;
   description?: string;
+  title?: string;
   rules: MappingRule[];
 
   constructor(public name: string) {

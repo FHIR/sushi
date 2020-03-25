@@ -10,6 +10,7 @@ describe('Mapping', () => {
       expect(m.source).toBeUndefined();
       expect(m.target).toBeUndefined();
       expect(m.description).toBeUndefined();
+      expect(m.title).toBeUndefined();
       expect(m.rules).toBeEmpty();
     });
   });

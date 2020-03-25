@@ -24,7 +24,7 @@ csMetadata:         id | title | description;
 ruleSet:            KW_RULESET SEQUENCE sdRule+;
 
 mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingRule*;
-mappingMetadata:    id | source | target | description;
+mappingMetadata:    id | source | target | description | title;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -66,10 +66,10 @@ vsFilterOperator:   EQUAL | SEQUENCE;
 vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 
 // MISC
-path:               SEQUENCE;
+path:               SEQUENCE | KW_SYSTEM;
 paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
-flag:               KW_MOD | KW_MS | KW_SU;
+flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              SEQUENCE | STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | code | quantity | ratio | bool ;
 item:               SEQUENCE (KW_NAMED SEQUENCE)? CARD flag*;
@@ -107,6 +107,9 @@ KW_TARGET:          'Target' WS* ':';
 KW_MOD:             '?!';
 KW_MS:              'MS';
 KW_SU:              'SU';
+KW_TU:              'TU';
+KW_NORMATIVE:       'N';
+KW_DRAFT:           'D';
 KW_FROM:            'from';
 KW_EXAMPLE:         '(' WS* 'example' WS* ')';
 KW_PREFERRED:       '(' WS* 'preferred' WS* ')';

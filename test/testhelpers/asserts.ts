@@ -34,7 +34,10 @@ export function assertFlagRule(
   path: string,
   mustSupport: boolean,
   summary: boolean,
-  modifier: boolean
+  modifier: boolean,
+  trialUse: boolean,
+  normative: boolean,
+  draft: boolean
 ): void {
   expect(rule).toBeInstanceOf(FlagRule);
   const flagRule = rule as FlagRule;
@@ -42,6 +45,9 @@ export function assertFlagRule(
   expect(flagRule.mustSupport).toBe(mustSupport);
   expect(flagRule.summary).toBe(summary);
   expect(flagRule.modifier).toBe(modifier);
+  expect(flagRule.trialUse).toBe(trialUse);
+  expect(flagRule.normative).toBe(normative);
+  expect(flagRule.draft).toBe(draft);
 }
 
 export function assertValueSetRule(

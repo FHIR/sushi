@@ -125,7 +125,7 @@ describe('FSHImporter', () => {
         const input = `
         Extension: SomeExtension
         * extension 0..0
-        * value[x] 1..1 MS
+        * value[x] 1..1 MS N
         `;
 
         const result = importSingleText(input);
@@ -133,7 +133,16 @@ describe('FSHImporter', () => {
         expect(extension.rules).toHaveLength(3);
         assertCardRule(extension.rules[0], 'extension', 0, 0);
         assertCardRule(extension.rules[1], 'value[x]', 1, 1);
-        assertFlagRule(extension.rules[2], 'value[x]', true, undefined, undefined);
+        assertFlagRule(
+          extension.rules[2],
+          'value[x]',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
       });
     });
 
@@ -147,7 +156,16 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertFlagRule(extension.rules[0], 'extension', true, undefined, undefined);
+        assertFlagRule(
+          extension.rules[0],
+          'extension',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
       });
     });
 
@@ -247,7 +265,7 @@ describe('FSHImporter', () => {
         Alias: MaxSizeExtension = http://hl7.org/fhir/StructureDefinition/maxSize
         Extension: SomeExtension
         * extension contains MaxSizeExtension named max 1..1
-        * extension[max].value[x] MS
+        * extension[max].value[x] MS N
         `;
 
         const result = importSingleText(input);
@@ -258,7 +276,16 @@ describe('FSHImporter', () => {
           type: 'http://hl7.org/fhir/StructureDefinition/maxSize'
         });
         assertCardRule(extension.rules[1], 'extension[max]', 1, 1);
-        assertFlagRule(extension.rules[2], 'extension[max].value[x]', true, undefined, undefined);
+        assertFlagRule(
+          extension.rules[2],
+          'extension[max].value[x]',
+          true,
+          undefined,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
       });
     });
 

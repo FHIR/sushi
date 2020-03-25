@@ -1,12 +1,4 @@
-import {
-  isEmpty,
-  isEqual,
-  isMatch,
-  cloneDeep,
-  isBoolean,
-  upperFirst,
-  StringNullableChain
-} from 'lodash';
+import { isEmpty, isEqual, isMatch, cloneDeep, upperFirst } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -17,7 +9,6 @@ import { FixedValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
   CodedTypeNotFoundError,
-  DisableFlagError,
   ValueAlreadyFixedError,
   NoSingleTypeError,
   MismatchedTypeError,
@@ -31,11 +22,15 @@ import {
   InvalidMaxOfSliceError,
   InvalidUriError,
   InvalidUnitsError,
-  FixedToPatternError
+  FixedToPatternError,
+  MultipleStandardsStatusError,
+  InvalidMappingError,
+  InvalidFHIRIdError
 } from '../errors';
 import { setPropertyOnDefinitionInstance } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
+import { idRegex } from './primitiveTypes';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -201,7 +196,7 @@ export class ElementDefinition {
   isModifierReason: string;
   isSummary: boolean;
   binding: ElementDefinitionBinding;
-  mapping: ElementDefinitionMapping;
+  mapping: ElementDefinitionMapping[];
   structDef: StructureDefinition;
   private _original: ElementDefinition;
   private _edStructureDefinition: StructureDefinition;
@@ -801,36 +796,78 @@ export class ElementDefinition {
 
   /**
    * Sets flags on this element as specified in a profile or extension.
-   * Don't change a flag when the incoming argument is undefined.
-   * @todo Add more complete enforcement of rules regarding when these flags can change.
+   * Don't change a flag when the incoming argument is undefined or false.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.mustSupport}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isSummary}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isModifier}
+   * @see {@link http://hl7.org/fhir/R4/versions.html#std-process}
+   * @see {@link http://hl7.org/fhir/extension-structuredefinition-standards-status.html}
+   * @see {@link http://hl7.org/fhir/valueset-standards-status.html}
    * @param mustSupport - whether to make this element a Must Support element
    * @param summary - whether to include this element when querying for a summary
    * @param modifier - whether this element acts as a modifier on the resource
-   * @throws {DisableFlagError} when attempting to disable a flag that cannot be disabled
+   * @param trialUse - indicates a standards status of "Trial Use" for this element
+   * @param normative - indicates a standards status of "Normative" for this element
+   * @param draft - indicates a standards status of "Draft" for this element
    */
-  applyFlags(mustSupport: boolean, summary: boolean, modifier: boolean): void {
-    const disabledFlags = [];
-    if (this.mustSupport && mustSupport === false) {
-      disabledFlags.push('Must Support');
+  applyFlags(
+    mustSupport: boolean,
+    summary: boolean,
+    modifier: boolean,
+    trialUse: boolean,
+    normative: boolean,
+    draft: boolean
+  ): void {
+    let newStatusExtension: any = null;
+    if (trialUse) {
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'trial-use'
+      };
     }
-    if (this.isModifier && modifier === false) {
-      disabledFlags.push('Is Modifier');
+    if (normative) {
+      if (newStatusExtension) {
+        throw new MultipleStandardsStatusError(this.id);
+      }
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'normative'
+      };
     }
-    if (disabledFlags.length) {
-      throw new DisableFlagError(disabledFlags);
+    if (draft) {
+      if (newStatusExtension) {
+        throw new MultipleStandardsStatusError(this.id);
+      }
+      newStatusExtension = {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'draft'
+      };
     }
-    if (isBoolean(mustSupport)) {
+    if (mustSupport === true) {
       this.mustSupport = mustSupport;
     }
-    if (isBoolean(summary)) {
+    if (summary === true) {
       this.isSummary = summary;
     }
-    if (isBoolean(modifier)) {
+    if (modifier === true) {
       this.isModifier = modifier;
+    }
+    if (newStatusExtension) {
+      if (this.extension) {
+        const oldStatus = this.extension.findIndex(
+          extension =>
+            extension.url ==
+            'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status'
+        );
+        if (oldStatus > -1) {
+          this.extension[oldStatus] = newStatusExtension;
+        } else {
+          this.extension.push(newStatusExtension);
+        }
+      } else {
+        this.extension = [newStatusExtension];
+      }
     }
   }
 
@@ -1204,6 +1241,31 @@ export class ElementDefinition {
   private hasSingleType() {
     const types = this.type ?? [];
     return types.length === 1;
+  }
+
+  /**
+   * Sets mapping on an element
+   * @see {@link https://www.hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition.mapping}
+   * @param {string} identity - value for mapping.identity
+   * @param {string} map - value for mapping.map
+   * @param {string} comment - value for mapping.comment
+   * @param {FshCode} language - language.code is value for mapping.language
+   * @throws {InvalidMappingError} when attempting to set mapping with identity or map undefined
+   * @throws {InvalidFHIRIdError} when setting mapping.identity to an invalid FHIR ID
+   */
+  applyMapping(identity: string, map: string, comment: string, language: FshCode): void {
+    if (identity == null || map == null) {
+      throw new InvalidMappingError();
+    }
+    if (!idRegex.test(identity)) {
+      throw new InvalidFHIRIdError(identity);
+    }
+    this.mapping.push({
+      identity,
+      map,
+      ...(comment && { comment }),
+      ...(language && { language: language.code })
+    });
   }
 
   /**

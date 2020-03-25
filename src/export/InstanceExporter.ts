@@ -258,6 +258,13 @@ export class InstanceExporter implements Fishable {
       (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
       (o, p) => (o[p] = null)
     );
+
+    // Change back any primitives that have been converted into objects by setPropertyOnInstance
+    replaceField(
+      instanceDef,
+      (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._primitive,
+      (o, p) => (o[p] = o[p].fixedValue)
+    );
   }
 
   fishForFHIR(item: string) {

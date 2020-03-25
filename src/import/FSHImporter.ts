@@ -101,6 +101,7 @@ enum MappingMetadataKey {
   Source = 'Source',
   Target = 'Target',
   Description = 'Description',
+  Title = 'Title',
   Unknown = 'Unknown'
 }
 
@@ -108,6 +109,9 @@ enum Flag {
   MustSupport,
   Summary,
   Modifier,
+  TrialUse,
+  Normative,
+  Draft,
   Unknown
 }
 
@@ -571,6 +575,8 @@ export class FSHImporter extends FSHVisitor {
           mapping.target = pair.value;
         } else if (pair.key === MappingMetadataKey.Description) {
           mapping.description = pair.value;
+        } else if (pair.key === MappingMetadataKey.Title) {
+          mapping.title = pair.value;
         }
       });
     ruleCtx.forEach(mappingRule => {
@@ -680,6 +686,8 @@ export class FSHImporter extends FSHVisitor {
         key: MappingMetadataKey.Description,
         value: this.visitDescription(ctx.description())
       };
+    } else if (ctx.title()) {
+      return { key: MappingMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     }
     return { key: MappingMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -840,6 +848,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitPath(ctx: pc.PathContext): string {
+    if (ctx.KW_SYSTEM()) {
+      return ctx.KW_SYSTEM().getText();
+    }
     return ctx.SEQUENCE().getText();
   }
 
@@ -917,6 +928,15 @@ export class FSHImporter extends FSHVisitor {
     if (flags.includes(Flag.Modifier)) {
       flagRule.modifier = true;
     }
+    if (flags.includes(Flag.TrialUse)) {
+      flagRule.trialUse = true;
+    }
+    if (flags.includes(Flag.Normative)) {
+      flagRule.normative = true;
+    }
+    if (flags.includes(Flag.Draft)) {
+      flagRule.draft = true;
+    }
   }
 
   visitFlag(ctx: pc.FlagContext): Flag {
@@ -926,6 +946,12 @@ export class FSHImporter extends FSHVisitor {
       return Flag.Summary;
     } else if (ctx.KW_MOD()) {
       return Flag.Modifier;
+    } else if (ctx.KW_TU()) {
+      return Flag.TrialUse;
+    } else if (ctx.KW_NORMATIVE()) {
+      return Flag.Normative;
+    } else if (ctx.KW_DRAFT()) {
+      return Flag.Draft;
     }
     return Flag.Unknown;
   }
