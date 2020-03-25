@@ -172,6 +172,26 @@ describe('StructureDefinitionExporter', () => {
     }).toThrow('Parent Bar not found for Foo');
   });
 
+  it('should throw ParentDeclaredAsProfileNameError when the profile decares itself as the parent', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Foo';
+    doc.profiles.set(profile.name, profile);
+    expect(() => {
+      exporter.exportStructDef(profile);
+    }).toThrow('Profile "Foo" cannot declare itself as a Parent.');
+  });
+
+  it('should throw ParentDeclaredAsProfileNameError and suggest resource URL when the profile decares itself as the parent and it is a FHIR resource', () => {
+    const profile = new Profile('Patient');
+    profile.parent = 'Patient';
+    doc.profiles.set(profile.name, profile);
+    expect(() => {
+      exporter.exportStructDef(profile);
+    }).toThrow(
+      'Profile "Patient" cannot declare itself as a Parent. It looks like the parent is an external resource; use its URL (e.g., http://hl7.org/fhir/StructureDefinition/Patient).'
+    );
+  });
+
   // Extension
   it('should set all user-provided metadata for an extension', () => {
     const extension = new Extension('Foo');

@@ -45,7 +45,7 @@ target:             KW_TARGET STRING;
 cardRule:           STAR path CARD flag*;
 flagRule:           STAR (path | paths) flag+;
 valueSetRule:       STAR path KW_UNITS? KW_FROM SEQUENCE strength?;
-fixedValueRule:     STAR path KW_UNITS? EQUAL value;
+fixedValueRule:     STAR path KW_UNITS? EQUAL value KW_EXACTLY?;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
@@ -66,7 +66,7 @@ vsFilterOperator:   EQUAL | SEQUENCE;
 vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 
 // MISC
-path:               SEQUENCE;
+path:               SEQUENCE | KW_SYSTEM;
 paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
@@ -129,6 +129,7 @@ KW_WHERE:           'where';
 KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
 KW_UNITS:           'units';
+KW_EXACTLY:         '(' WS* 'exactly' WS* ')';
 
 // SYMBOLS
 EQUAL:              '=';

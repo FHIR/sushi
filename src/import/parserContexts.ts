@@ -174,6 +174,7 @@ export interface SdRuleContext extends ParserRuleContext {
 
 export interface PathContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
+  KW_SYSTEM(): ParserRuleContext;
 }
 
 export interface CaretPathContext extends ParserRuleContext {
@@ -223,6 +224,7 @@ export interface FixedValueRuleContext extends ParserRuleContext {
   path(): PathContext;
   value(): ValueContext;
   KW_UNITS(): ParserRuleContext;
+  KW_EXACTLY(): ParserRuleContext;
 }
 
 export interface ValueContext extends ParserRuleContext {

@@ -1,14 +1,12 @@
+import path from 'path';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
-import { FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
 import { TestFisher } from '../testhelpers';
-import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
-  let riskEvidenceSynthesis: StructureDefinition;
   let medicationRequest: StructureDefinition;
   let medication: StructureDefinition;
   let fisher: TestFisher;
@@ -22,92 +20,24 @@ describe('ElementDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
-    riskEvidenceSynthesis = fisher.fishForStructureDefinition('RiskEvidenceSynthesis');
     medicationRequest = fisher.fishForStructureDefinition('MedicationRequest');
     medication = fisher.fishForStructureDefinition('Medication');
   });
 
   describe('#fixValue', () => {
-    it('should fix a boolean', () => {
-      const doNotPerform = medicationRequest.elements.find(
-        e => e.id === 'MedicationRequest.doNotPerform'
+    // NOTE: Most fixValue tests are in separate type-specific files.  We only test outliers here.
+    it('should throw MismatchedTypeException when attempting to fix a value with an unsupported type', () => {
+      const authoredOn = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.authoredOn'
       );
-      doNotPerform.fixValue(true);
-      expect(doNotPerform.fixedBoolean).toBe(true);
-    });
-
-    it('should fix a number', () => {
-      const sampleSizeNumberOfStudies = riskEvidenceSynthesis.elements.find(
-        e => e.id === 'RiskEvidenceSynthesis.sampleSize.numberOfStudies'
-      );
-      sampleSizeNumberOfStudies.fixValue(123);
-      expect(sampleSizeNumberOfStudies.fixedInteger).toBe(123);
-    });
-
-    it('should fix a string', () => {
-      const name = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.name');
-      name.fixValue('foo');
-      expect(name.fixedString).toBe('foo');
-    });
-
-    it('should fix a FshCode', () => {
-      const status = medicationRequest.elements.find(e => e.id === 'MedicationRequest.status');
-      status.fixValue(new FshCode('foo'));
-      expect(status.fixedCode).toBe('foo');
-    });
-
-    it('should fix a FshQuantity', () => {
-      const dispenseRequestQuantity = medicationRequest.elements.find(
-        e => e.id === 'MedicationRequest.dispenseRequest.quantity'
-      );
-      dispenseRequestQuantity.fixValue(
-        new FshQuantity(1.23, new FshCode('mm', 'http://unitsofmeasure.org'))
-      );
-      expect(dispenseRequestQuantity.patternQuantity).toEqual({
-        value: 1.23,
-        code: 'mm',
-        system: 'http://unitsofmeasure.org'
-      });
-    });
-
-    it('should fix a FshRatio', () => {
-      const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(
-        new FshRatio(
-          new FshQuantity(1.2, new FshCode('mm', 'http://unitsofmeasure.org')),
-          new FshQuantity(3.4, new FshCode('cm', 'http://unitsofmeasure.org'))
-        )
-      );
-      expect(amount.patternRatio).toEqual({
-        numerator: {
-          value: 1.2,
-          code: 'mm',
-          system: 'http://unitsofmeasure.org'
-        },
-        denominator: {
-          value: 3.4,
-          code: 'cm',
-          system: 'http://unitsofmeasure.org'
-        }
-      });
-    });
-
-    it('should fix a FshReference', () => {
-      const subject = medicationRequest.elements.find(e => e.id === 'MedicationRequest.subject');
-      subject.fixValue(new FshReference('foo', 'bar'));
-      expect(subject.patternReference).toEqual({
-        reference: 'foo',
-        display: 'bar'
-      });
-    });
-
-    it('should fix a code on a Quantity with units', () => {
-      const code = medication.findElementByPath('amount.numerator', fisher);
-      code.fixValue(new FshCode('mycode', 'https://code.com'), true);
-      expect(code.patternQuantity).toEqual({
-        system: 'https://code.com',
-        code: 'mycode'
-      });
+      expect(() => {
+        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'FixedValueType'
+        authoredOn.fixValue(new Date()); // Date is not a supported type -- only strings are allowed
+      }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
+      expect(() => {
+        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'FixedValueType'
+        authoredOn.fixValue(new Date(), true); // Date is not a supported type -- only strings are allowed
+      }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
     });
 
     it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern', () => {
@@ -117,7 +47,12 @@ describe('ElementDefinition', () => {
       expect(() => {
         medicationFormCodingSystem.fixValue('http://ohManIWillNeverGetSet.sad');
       }).toThrow(
-        'Cannot fix http://ohManIWillNeverGetSet.sad to this element; a different uri is already fixed: http://thankYouForSettingMe.com'
+        'Cannot fix "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already fixed: "http://thankYouForSettingMe.com".'
+      );
+      expect(() => {
+        medicationFormCodingSystem.fixValue('http://ohManIWillNeverGetSet.sad', true);
+      }).toThrow(
+        'Cannot fix "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already fixed: "http://thankYouForSettingMe.com".'
       );
     });
 
@@ -127,13 +62,20 @@ describe('ElementDefinition', () => {
       const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
       expect(() => {
         medicationFormCodingSystem.fixValue('baz');
-      }).toThrow('Cannot fix baz to this element; a different uri is already fixed: foo,bar');
+      }).toThrow(
+        'Cannot fix "baz" to this element; a different uri is already fixed: ["foo","bar"].'
+      );
+      expect(() => {
+        medicationFormCodingSystem.fixValue('baz', true);
+      }).toThrow(
+        'Cannot fix "baz" to this element; a different uri is already fixed: ["foo","bar"].'
+      );
     });
 
     it('should throw InvalidUnitsError when using the units keyword on a non-Quantity', () => {
       const code = medication.elements.find(e => e.id === 'Medication.code');
       expect(() => {
-        code.fixValue(new FshCode('mycode', 'https://code.com'), true);
+        code.fixValue(new FshCode('mycode', 'https://code.com'), false, true);
       }).toThrow(/units.*Medication.code/);
       // Units error should not stop value from still being fixed
       expect(code.patternCodeableConcept).toEqual({
@@ -143,7 +85,17 @@ describe('ElementDefinition', () => {
   });
 
   describe('#fixedByDirectParent', () => {
-    it('should find a pattern value from the parent when it exists', () => {
+    it('should find a fixed[x] value from the parent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo'), true);
+      const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
+      const fixedValue = statusReasonCoding.fixedByDirectParent();
+      expect(fixedValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should find a pattern[x] value from the parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
@@ -153,7 +105,7 @@ describe('ElementDefinition', () => {
       expect(patternValue).toEqual([{ code: 'foo' }]);
     });
 
-    it('should not find a pattern value from the parent when none is present', () => {
+    it('should not find a fixed[x] or pattern[x] value from the parent when none is present', () => {
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
       const patternValue = statusReasonCoding.fixedByDirectParent();
       expect(patternValue).toBeUndefined();
@@ -167,7 +119,17 @@ describe('ElementDefinition', () => {
   });
 
   describe('#fixedByAnyParent', () => {
-    it('should find a pattern value from a direct parent when it exists', () => {
+    it('should find a fixed[x] value from a direct parent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo'), true);
+      const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
+      const fixedValue = statusReasonCoding.fixedByAnyParent();
+      expect(fixedValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should find a pattern[x] value from a direct parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
@@ -175,6 +137,21 @@ describe('ElementDefinition', () => {
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
       const patternValue = statusReasonCoding.fixedByAnyParent();
       expect(patternValue).toEqual([{ code: 'foo' }]);
+    });
+
+    it('should find a fixed[x] value from a grandparent when it exists', () => {
+      const identifier = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.identifier'
+      );
+      identifier.max = '1';
+      // @ts-ignore
+      identifier.fixedIdentifier = { period: { start: '2011-11-11' } };
+      const identifierPeriodStart = medicationRequest.findElementByPath(
+        'identifier.period.start',
+        fisher
+      );
+      const fixedValue = identifierPeriodStart.fixedByAnyParent();
+      expect(fixedValue).toBe('2011-11-11');
     });
 
     it('should find a pattern value from a grandparent when it exists', () => {
@@ -190,6 +167,34 @@ describe('ElementDefinition', () => {
       );
       const patternValue = identifierPeriodStart.fixedByAnyParent();
       expect(patternValue).toBe('2011-11-11');
+    });
+
+    it('should find an array fixed[x] value from a grandparent when it exists', () => {
+      const statusReason = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.statusReason'
+      );
+      statusReason.fixValue(new FshCode('foo', 'http://bar.com'), true);
+      const statusReasonCodingSystem = medicationRequest.findElementByPath(
+        'statusReason.coding.system',
+        fisher
+      );
+      // Single element in array
+      let fixedValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(fixedValue).toBe('http://bar.com');
+
+      // Multiple not matching array elements
+      statusReason.fixedCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://bar.com' }]
+      };
+      fixedValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(fixedValue).toEqual(['http://foo.com', 'http://bar.com']);
+
+      // Multiple matching array elements
+      statusReason.fixedCodeableConcept = {
+        coding: [{ system: 'http://foo.com' }, { system: 'http://foo.com' }]
+      };
+      fixedValue = statusReasonCodingSystem.fixedByAnyParent();
+      expect(fixedValue).toBe('http://foo.com');
     });
 
     it('should find an array pattern value from a grandparent when it exists', () => {
@@ -220,13 +225,13 @@ describe('ElementDefinition', () => {
       expect(patternValue).toBe('http://foo.com');
     });
 
-    it('should not find a pattern value from the parent when none is present', () => {
+    it('should not find a fixed[x] or pattern[x] value from the parent when none is present', () => {
       const statusReasonCoding = medicationRequest.findElementByPath(
         'statusReason.coding.version',
         fisher
       );
-      const patternValue = statusReasonCoding.fixedByAnyParent();
-      expect(patternValue).toBeUndefined();
+      const value = statusReasonCoding.fixedByAnyParent();
+      expect(value).toBeUndefined();
     });
 
     it('should return undefined when being run on the root element', () => {

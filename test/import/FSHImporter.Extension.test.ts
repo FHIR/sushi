@@ -5,7 +5,8 @@ import {
   assertValueSetRule,
   assertCaretValueRule,
   assertObeysRule,
-  assertContainsRule
+  assertContainsRule,
+  assertFixedValueRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -185,6 +186,32 @@ describe('FSHImporter', () => {
           'ExtensionValueSet',
           'extensible'
         );
+      });
+    });
+
+    describe('#fixedValueRule', () => {
+      it('should parse fixed value boolean rule', () => {
+        const input = `
+        Extension: SomeExtension
+        * valueBoolean = true
+        `;
+
+        const result = importSingleText(input);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertFixedValueRule(extension.rules[0], 'valueBoolean', true);
+      });
+
+      it('should parse fixed value boolean rule with (exactly) modifier', () => {
+        const input = `
+        Extension: SomeExtension
+        * valueBoolean = true (exactly)
+        `;
+
+        const result = importSingleText(input);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertFixedValueRule(extension.rules[0], 'valueBoolean', true, true);
       });
     });
 

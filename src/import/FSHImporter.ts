@@ -848,6 +848,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitPath(ctx: pc.PathContext): string {
+    if (ctx.KW_SYSTEM()) {
+      return ctx.KW_SYSTEM().getText();
+    }
     return ctx.SEQUENCE().getText();
   }
 
@@ -979,6 +982,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
+    fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
     fixedValueRule.units = ctx.KW_UNITS() != null;
     fixedValueRule.isResource = ctx.value().SEQUENCE() != null;
     return fixedValueRule;

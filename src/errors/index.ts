@@ -1,7 +1,7 @@
 export * from './Annotated';
 export * from './BindingStrengthError';
-export * from './CodeAlreadyFixedError';
 export * from './ValueAlreadyFixedError';
+export * from './FixedToPatternError';
 export * from './NoSingleTypeError';
 export * from './MismatchedTypeError';
 export * from './CodeAndSystemMismatchError';
@@ -38,3 +38,4 @@ export * from './InvalidUnitsError';
 export * from './MultipleStandardsStatusError';
 export * from './InvalidMappingError';
 export * from './InvalidFHIRIdError';
+export * from './ParentDeclaredAsProfileNameError';
