@@ -410,7 +410,7 @@ export class StructureDefinitionExporter implements Fishable {
 
     const parentName = fshDefinition.parent || 'Resource';
 
-    if (fshDefinition.name === fshDefinition.parent) {
+    if (fshDefinition.name === parentName) {
       const result = this.fishForMetadata(parentName, Type.Resource);
       throw new ParentDeclaredAsProfileNameError(
         fshDefinition.name,
