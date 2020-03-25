@@ -36,3 +36,4 @@ export * from './InvalidUnitsError';
 export * from './MultipleStandardsStatusError';
 export * from './InvalidMappingError';
 export * from './InvalidFHIRIdError';
+export * from './ParentDeclaredAsProfileNameError';
