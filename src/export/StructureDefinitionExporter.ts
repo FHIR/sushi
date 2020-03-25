@@ -121,7 +121,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.fixValue(replacedRule.fixedValue, replacedRule.units);
+            element.fixValue(replacedRule.fixedValue, replacedRule.exactly, replacedRule.units);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(
               rule.mustSupport,
@@ -278,7 +278,7 @@ export class StructureDefinitionExporter implements Fishable {
           `${rule.path}[${slice.sliceName}].url`,
           this
         );
-        urlElement.fixValue(slice.sliceName);
+        urlElement.fixValue(slice.sliceName, true);
       }
     });
   }

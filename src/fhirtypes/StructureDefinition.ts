@@ -409,7 +409,7 @@ export class StructureDefinition {
   /**
    * This function tests if it is possible to fix value to a path, but does not actually fix it
    * @param {string} path - The path to the ElementDefinition to fix
-   * @param {any} value - The value to fix
+   * @param {any} value - The value to fix; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {boolean} units - If the value uses the units keyword
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
@@ -503,8 +503,11 @@ export class StructureDefinition {
     if (value instanceof InstanceDefinition) {
       fixedValue = clone.checkFixResource(value);
     } else {
-      // fixValue will throw if it fails
-      clone.fixValue(value, units);
+      // fixValue will throw if it fails, but skip the check if value is null
+      if (value != null) {
+        // since we don't actually keep the clone, argument for exactly should not matter
+        clone.fixValue(value, false, units);
+      }
       // If there is a fixedValue or patternValue, find it and return it
       const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
       if (key != null) fixedValue = clone[key as keyof ElementDefinition];
