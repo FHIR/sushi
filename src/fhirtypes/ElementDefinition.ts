@@ -1,4 +1,12 @@
-import { isEmpty, isEqual, isMatch, cloneDeep, isBoolean, upperFirst } from 'lodash';
+import {
+  isEmpty,
+  isEqual,
+  isMatch,
+  cloneDeep,
+  isBoolean,
+  upperFirst,
+  StringNullableChain
+} from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -892,10 +900,19 @@ export class ElementDefinition {
    * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
   fixValue(value: FixedValueType, exactly = false, units = false): void {
-    let type: string = typeof value;
-    if (type === 'object' && value?.constructor?.name) {
-      // For types like FshCode, FshQuantity, etc, remove the Fsh so we're left with the real type name
-      type = value.constructor.name.replace(/^Fsh/, '');
+    let type: string;
+    if (value instanceof FshCode) {
+      type = 'Code';
+    } else if (value instanceof FshQuantity) {
+      type = 'Quantity';
+    } else if (value instanceof FshRatio) {
+      type = 'Ratio';
+    } else if (value instanceof FshReference) {
+      type = 'Reference';
+    } else if (typeof value === 'object') {
+      type = value.constructor?.name;
+    } else {
+      type = typeof value;
     }
 
     // We can only fix elements that have a single type, else it is ambiguous
