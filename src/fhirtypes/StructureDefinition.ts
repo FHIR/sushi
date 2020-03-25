@@ -251,11 +251,16 @@ export class StructureDefinition {
 
       // If there are no brackets, remove any slices that don't match exactly
       if (!pathPart.brackets) {
-        matchingElements = matchingElements.filter(
-          e =>
-            e.id.includes(`${fhirPathString}:${pathPart.base}`) ||
-            !e.id.includes(`${fhirPathString}:`)
-        );
+        // Get the end of the current fhirPath (e.g. path1.path2.path3 -> path3)
+        const pathDepth = fhirPathString.split('.').length - 1;
+        const pathEnd = fhirPathString.split('.')[pathDepth];
+        matchingElements = matchingElements.filter(e => {
+          const idEnd = e.id.split('.')[pathDepth];
+          // If matchingElement id ends with pathEnd:, then it is a slice
+          // pathPart.brackets is null, so keep nonslices (no ":" in idEnd)
+          // and choice slices since valueString is equivalent to value[x]:valueString
+          return !idEnd.includes(`${pathEnd}:`) || idEnd.includes(`${pathEnd}:${pathPart.base}`);
+        });
       }
     }
 
