@@ -29,7 +29,7 @@ import {
   InvalidMappingError,
   InvalidFHIRIdError
 } from '../errors';
-import { setPropertyOnDefinitionInstance } from './common';
+import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -401,6 +401,8 @@ export class ElementDefinition {
    * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
    * @throws {InvalidSumOfSliceMinsError} when the mins of slice elements > max of sliced element
    * @throws {InvalidMaxOfSliceError} when a sliced element's max is < an individual slice's max
+   * @throws {NarrowingRootCardinalityError} when the new cardinality on an element is narrower than
+   *   the cardinality on a connected element
    */
   constrainCardinality(min: number, max: string): void {
     // If only one side of the cardinality is set by the rule, use element's current cardinality
@@ -454,7 +456,6 @@ export class ElementDefinition {
             ce.max ?? '*'
           );
         }
-        // if the connected element's max is null or *, we can't constrain the max
         // if the connected element's max is not null and is not *, we can't make the max smaller than its max
         if (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max)) {
           throw new NarrowingRootCardinalityError(this.path, ce.id, min, max, ce.min ?? 0, ce.max);
@@ -498,10 +499,9 @@ export class ElementDefinition {
       })
       .filter(e => e);
     if (this.parent()) {
+      const [parentPath] = splitOnPathPeriods(this.path).slice(-1);
       return connectedElements.concat(
-        this.parent().findConnectedElements(
-          `.${this.path.slice(this.path.lastIndexOf('.') + 1)}${postPath}`
-        )
+        this.parent().findConnectedElements(`.${parentPath}${postPath}`)
       );
     } else {
       return connectedElements;
@@ -553,6 +553,7 @@ export class ElementDefinition {
    * @throws {TypeNotFoundError} when a passed in type's definition cannot be found
    * @throws {InvalidTypeError} when a passed in type or the targetType doesn't match any existing
    *   types
+   * @throws {SliceTypeRemovalError} when a rule would eliminate all types on a slice
    */
   constrainType(rule: OnlyRule, fisher: Fishable, target?: string): void {
     const types = rule.types;

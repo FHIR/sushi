@@ -2804,6 +2804,59 @@ describe('StructureDefinitionExporter', () => {
       expect(labCode.binding).toEqual(mediocreBinding);
     });
 
+    it('should apply ValueSetRules on the child of a slice, then the child of the sliced element, with the same value set', () => {
+      // * component[Lab].code from http://example.com/RegularObservationCodes (extensible)
+      // * component.code from http://example.com/RegularObservationCodes (required)
+      const labValueSet = new ValueSetRule('component[Lab].code');
+      labValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      labValueSet.strength = 'extensible';
+      const rootValueSet = new ValueSetRule('component.code');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+
+      observationWithSlice.rules.push(labValueSet, rootValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      const labCode = sd.findElement('Observation.component:Lab.code');
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCode.binding).toEqual(regularBinding);
+      expect(labCode.binding).toEqual(regularBinding);
+    });
+
+    it('should not apply a ValueSetRule on the child of a sliced element that would bind it to the same value set as the child of the root, but more weakly', () => {
+      // * component.code from http://example.com/RegularObservationCodes (required)
+      // * component[Lab].code from http://example.com/RegularObservationCodes (extensible)
+      const rootValueSet = new ValueSetRule('component.code');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+      const labValueSet = new ValueSetRule('component[Lab].code')
+        .withFile('Weaker.fsh')
+        .withLocation([9, 15, 9, 33]);
+      labValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      labValueSet.strength = 'extensible';
+
+      observationWithSlice.rules.push(rootValueSet, labValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      // const labCode = sd.findElement('Observation.component:Lab.code');
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCode.binding).toEqual(regularBinding);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot override required binding with extensible/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 9\D*/s);
+    });
+
     it.todo(
       'should apply a FixedValueRule on a sliced element that updates the fixed value on its slices'
     );
