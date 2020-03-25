@@ -66,7 +66,7 @@ vsFilterOperator:   EQUAL | SEQUENCE;
 vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 
 // MISC
-path:               SEQUENCE;
+path:               SEQUENCE | KW_SYSTEM;
 paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;

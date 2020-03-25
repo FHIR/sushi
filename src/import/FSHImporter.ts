@@ -848,6 +848,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitPath(ctx: pc.PathContext): string {
+    if (ctx.KW_SYSTEM()) {
+      return ctx.KW_SYSTEM().getText();
+    }
     return ctx.SEQUENCE().getText();
   }
 
