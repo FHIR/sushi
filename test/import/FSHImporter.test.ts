@@ -1,7 +1,7 @@
 import { importText, RawFSH } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
-import { assertFixedValueRule } from '../testhelpers/asserts';
+import { assertFixedValueRule, assertFlagRule } from '../testhelpers/asserts';
 import { importSingleText } from '../testhelpers/importSingleText';
 
 describe('FSHImporter', () => {
@@ -114,6 +114,101 @@ describe('FSHImporter', () => {
       .withFile('IdentifyingInteger.fsh');
     expect(profile.rules).toHaveLength(1);
     assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+  });
+
+  it('should parse a rule on an element named system', () => {
+    const input = `
+    Profile: MyOperation
+    Parent: OperationDefinition
+    * system = true
+    `;
+    const result = importSingleText(input, 'MyOperation.fsh');
+    const profile = result.profiles.get('MyOperation');
+    expect(profile.rules).toHaveLength(1);
+    assertFixedValueRule(profile.rules[0], 'system', true);
+  });
+
+  it('should parse rules on a list of paths that includes system', () => {
+    const input = `
+    Profile: TrialOperationDefinition
+    Parent: OperationDefinition
+    * system, type TU
+    * instance, system, type SU
+    * instance, system MS
+    `;
+    const result = importSingleText(input, 'TrialOperationDefinition.fsh');
+    const profile = result.profiles.get('TrialOperationDefinition');
+    expect(profile.rules).toHaveLength(7);
+    assertFlagRule(
+      profile.rules[0],
+      'system',
+      undefined,
+      undefined,
+      undefined,
+      true,
+      undefined,
+      undefined
+    );
+    assertFlagRule(
+      profile.rules[1],
+      'type',
+      undefined,
+      undefined,
+      undefined,
+      true,
+      undefined,
+      undefined
+    );
+    assertFlagRule(
+      profile.rules[2],
+      'instance',
+      undefined,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+    assertFlagRule(
+      profile.rules[3],
+      'system',
+      undefined,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+    assertFlagRule(
+      profile.rules[4],
+      'type',
+      undefined,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+    assertFlagRule(
+      profile.rules[5],
+      'instance',
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+    assertFlagRule(
+      profile.rules[6],
+      'system',
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
   });
 
   it('should allow two FSH documents', () => {
