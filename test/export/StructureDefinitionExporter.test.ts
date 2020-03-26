@@ -1987,6 +1987,32 @@ describe('StructureDefinitionExporter', () => {
     expect(changedValueX.constraint[1].key).toEqual(invariant.name);
   });
 
+  it('should apply an ObeysRule at the path which does not have a constraint', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set(profile.name, profile);
+
+    const invariant = new Invariant('MyInvariant');
+    invariant.description = 'My important invariant';
+    invariant.severity = new FshCode('error');
+    doc.invariants.set(invariant.name, invariant);
+
+    const rule = new ObeysRule('id');
+    rule.invariant = 'MyInvariant';
+    profile.rules.push(rule); // * id obeys MyInvariant
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+    const basedId = baseStructDef.findElement('Observation.id');
+    const changedId = sd.findElement('Observation.id');
+
+    expect(basedId.constraint).toBeUndefined();
+    expect(changedId.constraint).toHaveLength(1);
+    expect(changedId.constraint[0].key).toEqual(invariant.name);
+  });
+
   it('should apply an ObeysRule to the base element when not path specified', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
