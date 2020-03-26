@@ -129,7 +129,7 @@ export interface DescriptionContext extends ParserRuleContext {
 }
 
 export interface UsageContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  CODE(): ParserRuleContext;
 }
 
 export interface MixinsContext extends ParserRuleContext {

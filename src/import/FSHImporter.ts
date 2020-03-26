@@ -55,6 +55,7 @@ import {
 } from '../errors';
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
+import upperFirst from 'lodash/upperFirst';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -741,15 +742,17 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitUsage(ctx: pc.UsageContext): InstanceUsage {
-    let usage = ctx.SEQUENCE().getText();
+    const usageConcept = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
+      .withLocation(this.extractStartStop(ctx.CODE()))
+      .withFile(this.currentFile);
+    if (usageConcept.system?.length > 0) {
+      logger.warn('Do not specify a system for instance Usage.', usageConcept.sourceInfo);
+    }
+    let usage = upperFirst(usageConcept.code);
     if (!isInstanceUsage(usage)) {
-      const source = {
-        file: this.currentFile,
-        location: this.extractStartStop(ctx.SEQUENCE())
-      };
       logger.error(
-        'Invalid Usage. Supported usages are "Example", "Definition", and "Inline". Instance will be treated as an Example.',
-        source
+        'Invalid Usage. Supported usage codes are "#example", "#definition", and "#inline". Instance will be treated as an example.',
+        usageConcept.sourceInfo
       );
       usage = 'Example';
     }

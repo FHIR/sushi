@@ -35,7 +35,7 @@ expression:         KW_EXPRESSION STRING;
 xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF SEQUENCE;
-usage:              KW_USAGE SEQUENCE;
+usage:              KW_USAGE CODE;
 mixins:             KW_MIXINS (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 source:             KW_SOURCE SEQUENCE;
 target:             KW_TARGET STRING;

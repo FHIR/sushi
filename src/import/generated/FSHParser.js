@@ -232,7 +232,7 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u0002\u013e\u013f\u0007\u0014\u0002\u0002\u013f\u0140\u0007;\u0002",
     "\u0002\u01403\u0003\u0002\u0002\u0002\u0141\u0142\u0007\u0007\u0002",
     "\u0002\u0142\u0143\u0007E\u0002\u0002\u01435\u0003\u0002\u0002\u0002",
-    "\u0144\u0145\u0007\u0015\u0002\u0002\u0145\u0146\u0007E\u0002\u0002",
+    "\u0144\u0145\u0007\u0015\u0002\u0002\u0145\u0146\u0007;\u0002\u0002",
     "\u01467\u0003\u0002\u0002\u0002\u0147\u0148\u0007\r\u0002\u0002\u0148",
     "\u0149\t\u0003\u0002\u0002\u01499\u0003\u0002\u0002\u0002\u014a\u014b",
     "\u0007\u0016\u0002\u0002\u014b\u014c\u0007E\u0002\u0002\u014c;\u0003",
@@ -3242,8 +3242,8 @@ UsageContext.prototype.KW_USAGE = function() {
     return this.getToken(FSHParser.KW_USAGE, 0);
 };
 
-UsageContext.prototype.SEQUENCE = function() {
-    return this.getToken(FSHParser.SEQUENCE, 0);
+UsageContext.prototype.CODE = function() {
+    return this.getToken(FSHParser.CODE, 0);
 };
 
 UsageContext.prototype.enterRule = function(listener) {
@@ -3280,7 +3280,7 @@ FSHParser.prototype.usage = function() {
         this.state = 322;
         this.match(FSHParser.KW_USAGE);
         this.state = 323;
-        this.match(FSHParser.SEQUENCE);
+        this.match(FSHParser.CODE);
     } catch (re) {
     	if(re instanceof antlr4.error.RecognitionException) {
 	        localctx.exception = re;
