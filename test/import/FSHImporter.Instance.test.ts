@@ -93,7 +93,7 @@ describe('FSHImporter', () => {
         const input = `
         Instance: MyObservation
         InstanceOf: Observation
-        Usage: Example
+        Usage: #example
         `;
 
         const result = importSingleText(input);
@@ -108,7 +108,7 @@ describe('FSHImporter', () => {
         const input = `
         Instance: MyBadObservation
         InstanceOf: Observation
-        Usage: BadUse
+        Usage: #baduse
         `;
 
         const result = importSingleText(input, 'Bad.fsh');
@@ -118,9 +118,28 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.usage).toBe('Example');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Invalid Usage. Supported usages are "Example", "Definition", and "Inline". Instance will be treated as an Example./s
+          /Invalid Usage. Supported usage codes are "#example", "#definition", and "#inline". Instance will be treated as an example./s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bad\.fsh.*Line: 4\D*/s);
+      });
+
+      it('should log a warning if a system is specified on usage', () => {
+        const input = `
+        Instance: MyBadObservation
+        InstanceOf: Observation
+        Usage: badsystem#example
+        `;
+
+        const result = importSingleText(input, 'Bad.fsh');
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyBadObservation');
+        expect(instance.name).toBe('MyBadObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.usage).toBe('Example');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Do not specify a system for instance Usage./s
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Bad\.fsh.*Line: 4\D*/s);
       });
     });
 
@@ -147,7 +166,7 @@ describe('FSHImporter', () => {
         InstanceOf: Patient
         Title: "Georgio Manos"
         Description: "An example of a fictional patient named Georgio Manos"
-        Usage: Example
+        Usage: #example
         * name[0].family = "Georgio"
         * name[0].given[0] = "Manos"
         * gender = #other
@@ -186,7 +205,7 @@ describe('FSHImporter', () => {
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.rules.length).toBe(1);
-        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
+        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, false, true);
       });
     });
 
@@ -197,13 +216,13 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
-        Mixins: Mixin1        
-        Usage: Example
+        Mixins: Mixin1
+        Usage: #example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
         Mixins: DuplicateMixin1
-        Usage: Non-example
+        Usage: #non-example
         `;
 
         const result = importSingleText(input);
@@ -223,11 +242,11 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
-        Usage: Example
+        Usage: #example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
-        Usage: Non-example
+        Usage: #non-example
         `;
 
         importSingleText(input, 'Dupe.fsh');
