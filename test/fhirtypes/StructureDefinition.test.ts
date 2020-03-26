@@ -465,6 +465,23 @@ describe('StructureDefinition', () => {
       expect(VSCatID.id).toBe('Observation.category:VSCat.id');
     });
 
+    it('should find a root of a slicing that is a child of a slice by path', () => {
+      const VSCatCoding = respRate.findElement('Observation.category:VSCat.coding');
+      VSCatCoding.slicing = { discriminator: [{ type: 'pattern', path: '$this' }], rules: 'open' };
+      VSCatCoding.addSlice('TestSlice');
+      const testSlice = respRate.findElement('Observation.category:VSCat.coding:TestSlice');
+      expect(testSlice).toBeDefined();
+      const foundTestSlice = respRate.findElementByPath(
+        'category[VSCat].coding[TestSlice]',
+        fisher
+      );
+      const foundRoot = respRate.findElementByPath('category[VSCat].coding', fisher);
+      expect(foundTestSlice).toBeDefined();
+      expect(foundTestSlice.id).toBe('Observation.category:VSCat.coding:TestSlice');
+      expect(foundRoot).toBeDefined();
+      expect(foundRoot.id).toBe('Observation.category:VSCat.coding');
+    });
+
     it('should find a re-sliced element by path', () => {
       const jsonReslice = JSON.parse(
         fs.readFileSync(
