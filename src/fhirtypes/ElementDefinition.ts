@@ -392,7 +392,11 @@ export class ElementDefinition {
       ...(invariant.xpath && { xpath: invariant.xpath }),
       ...(source && { source })
     };
-    this.constraint.push(constraint);
+    if (this.constraint) {
+      this.constraint.push(constraint);
+    } else {
+      this.constraint = [constraint];
+    }
     this.findConnectedElements().forEach(ce => ce.applyConstraint(invariant, source));
   }
 

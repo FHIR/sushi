@@ -35,6 +35,7 @@ describe('ElementDefinition', () => {
     valueX = ElementDefinition.fromJSON(jsonValueX);
     valueId = ElementDefinition.fromJSON(jsonValueId);
     valueX.structDef = observation;
+    valueId.structDef = observation;
   });
 
   describe('#fromJSON', () => {
