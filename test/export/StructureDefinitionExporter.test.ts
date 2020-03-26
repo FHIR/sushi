@@ -2521,6 +2521,632 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
   });
 
+  // rules applied to slices, sliced elements, and their children
+  describe('#RulesWithSlices', () => {
+    let observationWithSlice: Profile;
+    beforeEach(() => {
+      // Profile: ObservationWithSlice
+      // Parent: Observation
+      // * category ^slicing.discriminator[0].type = #pattern
+      // * category ^slicing.discriminator[0].path = "$this"
+      // * category ^slicing.rules = #open
+      // * category contains Procedure 0..1
+      // * component ^slicing.discriminator[0].type = #pattern
+      // * component ^slicing.discriminator[0].path = "$this"
+      // * component ^slicing.rules = #open
+      // * component contains Lab 0..1
+      observationWithSlice = new Profile('ObservationWithSlice');
+      observationWithSlice.parent = 'Observation';
+      const categorySlicingType = new CaretValueRule('category');
+      categorySlicingType.caretPath = 'slicing.discriminator[0].type';
+      categorySlicingType.value = new FshCode('pattern');
+      const categorySlicingPath = new CaretValueRule('category');
+      categorySlicingPath.caretPath = 'slicing.discriminator[0].path';
+      categorySlicingPath.value = '$this';
+      const categorySlicingRules = new CaretValueRule('category');
+      categorySlicingRules.caretPath = 'slicing.rules';
+      categorySlicingRules.value = new FshCode('open');
+      const categoryContainsProcedure = new ContainsRule('category');
+      categoryContainsProcedure.items = [{ name: 'Procedure' }];
+      const procedureCard = new CardRule('category[Procedure]');
+      procedureCard.min = 0;
+      procedureCard.max = '1';
+      const componentSlicingType = new CaretValueRule('component');
+      componentSlicingType.caretPath = 'slicing.discriminator[0].type';
+      componentSlicingType.value = new FshCode('pattern');
+      const componentSlicingPath = new CaretValueRule('component');
+      componentSlicingPath.caretPath = 'slicing.discriminator[0].path';
+      componentSlicingPath.value = '$this';
+      const componentSlicingRules = new CaretValueRule('component');
+      componentSlicingRules.caretPath = 'slicing.rules';
+      componentSlicingRules.value = new FshCode('open');
+      const componentContainsLab = new ContainsRule('component');
+      componentContainsLab.items = [{ name: 'Lab' }];
+      const labCard = new CardRule('component[Lab]');
+      labCard.min = 0;
+      labCard.max = '1';
+      observationWithSlice.rules.push(
+        categorySlicingType,
+        categorySlicingPath,
+        categorySlicingRules,
+        categoryContainsProcedure,
+        procedureCard,
+        componentSlicingType,
+        componentSlicingPath,
+        componentSlicingRules,
+        componentContainsLab,
+        labCard
+      );
+    });
+
+    it('should apply a CardRule that makes the cardinality of the child of a slice narrower', () => {
+      loggerSpy.reset();
+      // * component[Lab].interpretation 2..2
+      // * component.interpretation 0..5
+      const rootCard = new CardRule('component.interpretation');
+      rootCard.min = 0;
+      rootCard.max = '5';
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 2;
+      labCard.max = '2';
+
+      observationWithSlice.rules.push(labCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.min).toBe(0);
+      expect(rootInterpretation.max).toBe('5');
+      expect(labInterpretation.min).toBe(2);
+      expect(labInterpretation.max).toBe('2');
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should not apply a CardRule that would make the cardinality of the child of a slice too wide', () => {
+      // * component[Lab].interpretation 0..9
+      // * component.interpretation 0..5 // this rule is invalid!
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.max = '9';
+      const rootCard = new CardRule('component.interpretation')
+        .withFile('Narrower.fsh')
+        .withLocation([7, 9, 7, 23]);
+      rootCard.max = '5';
+
+      observationWithSlice.rules.push(labCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      expect(sd.findElement('Observation.component.interpretation').max).toBe('*');
+      expect(sd.findElement('Observation.component:Lab.interpretation').max).toBe('9');
+      expect(loggerSpy.getLastMessage('error')).toMatch(/cannot be narrowed/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
+    });
+
+    it('should apply a FlagRule on a sliced element that updates the flags on its slices', () => {
+      // * component MS
+      const rootFlag = new FlagRule('component');
+      rootFlag.mustSupport = true;
+
+      observationWithSlice.rules.push(rootFlag);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootComponent = sd.findElement('Observation.component');
+      const labComponent = sd.findElement('Observation.component:Lab');
+      expect(rootComponent.mustSupport).toBe(true);
+      expect(labComponent.mustSupport).toBe(true);
+    });
+
+    it('should apply a FlagRule on the child of a sliced element that updates the flags on the child of a slice', () => {
+      // * component[Lab].interpretation 0..1 // this forces the creation of the unfolded slice
+      // * component.interpretation MS
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 0;
+      labCard.max = '1';
+      const rootFlag = new FlagRule('component.interpretation');
+      rootFlag.mustSupport = true;
+
+      observationWithSlice.rules.push(labCard, rootFlag);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.mustSupport).toBe(true);
+      expect(labInterpretation.mustSupport).toBe(true);
+    });
+
+    it('should apply ValueSetRules on a slice, then a sliced element, with different value sets', () => {
+      // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
+      // * category from http://example.com/ImportantObservationCodes (required)
+      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      procedureValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      procedureValueSet.strength = 'extensible';
+      const rootValueSet = new ValueSetRule('category');
+      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.strength = 'required';
+
+      observationWithSlice.rules.push(procedureValueSet, rootValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const procedureCategory = sd.findElement('Observation.category:Procedure');
+      const importantBinding = {
+        valueSet: 'http://example.com/ImportantObservationCodes',
+        strength: 'required'
+      };
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCategory.binding).toEqual(importantBinding);
+      expect(procedureCategory.binding).toEqual(mediocreBinding);
+    });
+
+    it('should apply ValueSetRules on a sliced element, then a slice, with different value sets', () => {
+      // * category from http://example.com/ImportantObservationCodes (required)
+      // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
+      const rootValueSet = new ValueSetRule('category');
+      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.strength = 'required';
+      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      procedureValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      procedureValueSet.strength = 'extensible';
+
+      observationWithSlice.rules.push(rootValueSet, procedureValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const procedureCategory = sd.findElement('Observation.category:Procedure');
+      const importantBinding = {
+        valueSet: 'http://example.com/ImportantObservationCodes',
+        strength: 'required'
+      };
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCategory.binding).toEqual(importantBinding);
+      expect(procedureCategory.binding).toEqual(mediocreBinding);
+    });
+
+    it('should apply ValueSetRules on a slice, then the sliced element, with the same value set', () => {
+      // * category[Procedure] from http://example.com/RegularObservationCodes (extensible)
+      // * category from http://example.com/RegularObservationCodes (required)
+      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      procedureValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      procedureValueSet.strength = 'extensible';
+      const rootValueSet = new ValueSetRule('category');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+
+      observationWithSlice.rules.push(procedureValueSet, rootValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const procedureCategory = sd.findElement('Observation.category:Procedure');
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCategory.binding).toEqual(regularBinding);
+      expect(procedureCategory.binding).toEqual(regularBinding);
+    });
+
+    it('should not apply a ValueSetRule on a sliced element that would bind it to the same value set as the root, but more weakly', () => {
+      // * category from http://example.com/RegularObservationCodes (required)
+      // * category[Procedure] from http://example.com/RegularObservationCodes (extensible)
+      const rootValueSet = new ValueSetRule('category');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+      const procedureValueSet = new ValueSetRule('category[Procedure]')
+        .withFile('Weaker.fsh')
+        .withLocation([4, 8, 4, 23]);
+      procedureValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      procedureValueSet.strength = 'extensible';
+
+      observationWithSlice.rules.push(rootValueSet, procedureValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCategory.binding).toEqual(regularBinding);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot override required binding with extensible/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 4\D*/s);
+    });
+
+    it('should apply ValueSetRules on the child of a slice, then the child of a sliced element, with different value sets', () => {
+      // * component[Lab].code from http://example.com/MediocreObservationCodes (extensible)
+      // * component.code from http://example.com/ImportantObservationCodes (required)
+      const labValueSet = new ValueSetRule('component[Lab].code');
+      labValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      labValueSet.strength = 'extensible';
+      const rootValueSet = new ValueSetRule('component.code');
+      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.strength = 'required';
+
+      observationWithSlice.rules.push(labValueSet, rootValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      const labCode = sd.findElement('Observation.component:Lab.code');
+      const importantBinding = {
+        valueSet: 'http://example.com/ImportantObservationCodes',
+        strength: 'required'
+      };
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCode.binding).toEqual(importantBinding);
+      expect(labCode.binding).toEqual(mediocreBinding);
+    });
+
+    it('should apply ValueSetRules on the child of a sliced element, then the child of a slice, with different value sets', () => {
+      // * component[Lab].code MS // force creation of element
+      // * component.code from http://example.com/ImportantObservationCodes (required)
+      // * component[Lab].code from http://example.com/MediocreObservationCodes (extensible)
+      const flagRule = new FlagRule('component[Lab].code');
+      flagRule.mustSupport = true;
+      const rootValueSet = new ValueSetRule('component.code');
+      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.strength = 'required';
+      const labValueSet = new ValueSetRule('component[Lab].code');
+      labValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      labValueSet.strength = 'extensible';
+
+      observationWithSlice.rules.push(flagRule, rootValueSet, labValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      const labCode = sd.findElement('Observation.component:Lab.code');
+      const importantBinding = {
+        valueSet: 'http://example.com/ImportantObservationCodes',
+        strength: 'required'
+      };
+      const mediocreBinding = {
+        valueSet: 'http://example.com/MediocreObservationCodes',
+        strength: 'extensible'
+      };
+      expect(rootCode.binding).toEqual(importantBinding);
+      expect(labCode.binding).toEqual(mediocreBinding);
+    });
+
+    it('should apply ValueSetRules on the child of a slice, then the child of the sliced element, with the same value set', () => {
+      // * component[Lab].code from http://example.com/RegularObservationCodes (extensible)
+      // * component.code from http://example.com/RegularObservationCodes (required)
+      const labValueSet = new ValueSetRule('component[Lab].code');
+      labValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      labValueSet.strength = 'extensible';
+      const rootValueSet = new ValueSetRule('component.code');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+
+      observationWithSlice.rules.push(labValueSet, rootValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      const labCode = sd.findElement('Observation.component:Lab.code');
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCode.binding).toEqual(regularBinding);
+      expect(labCode.binding).toEqual(regularBinding);
+    });
+
+    it('should not apply a ValueSetRule on the child of a sliced element that would bind it to the same value set as the child of the root, but more weakly', () => {
+      // * component.code from http://example.com/RegularObservationCodes (required)
+      // * component[Lab].code from http://example.com/RegularObservationCodes (extensible)
+      const rootValueSet = new ValueSetRule('component.code');
+      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+      const labValueSet = new ValueSetRule('component[Lab].code')
+        .withFile('Weaker.fsh')
+        .withLocation([9, 15, 9, 33]);
+      labValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      labValueSet.strength = 'extensible';
+
+      observationWithSlice.rules.push(rootValueSet, labValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      // const labCode = sd.findElement('Observation.component:Lab.code');
+      const regularBinding = {
+        valueSet: 'http://example.com/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCode.binding).toEqual(regularBinding);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot override required binding with extensible/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 9\D*/s);
+    });
+
+    it.todo(
+      'should apply a FixedValueRule on a sliced element that updates the fixed value on its slices'
+    );
+    it.todo(
+      'should not apply a FixedValueRule on a sliced element that would invalidate the fixed value on a slice'
+    );
+    it.todo(
+      'should apply a ContainsRule on the child of a sliced element that updates the slices on the child of a slice'
+    );
+    it.todo(
+      'should not apply a ContainsRule on the child of a sliced element that would invalidate slices within a defined slice'
+    );
+
+    it('should apply an OnlyRule on a sliced element that updates the types on its slices', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] MS // this forces the creation of the unfolded slice
+      // * component.value[x] only Quantity or Ratio
+      const labFlag = new FlagRule('component[Lab].value[x]');
+      labFlag.mustSupport = true;
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Quantity' }, { type: 'string' }];
+
+      observationWithSlice.rules.push(labFlag, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      const expectedTypeString = new ElementDefinitionType('string');
+      expect(rootValue.type).toHaveLength(2);
+      expect(rootValue.type).toContainEqual(expectedTypeQuantity);
+      expect(rootValue.type).toContainEqual(expectedTypeString);
+      expect(labValue.type).toHaveLength(2);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(labValue.type).toContainEqual(expectedTypeString);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply an OnlyRule on a sliced element that includes more types than are allowed on its slices', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] only Quantity
+      // * component.value[x] only Quantity or Ratio
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Quantity' }, { type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      const expectedTypeRatio = new ElementDefinitionType('Ratio');
+      expect(rootValue.type).toHaveLength(2);
+      expect(rootValue.type).toContainEqual(expectedTypeQuantity);
+      expect(rootValue.type).toContainEqual(expectedTypeRatio);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply an OnlyRule on a sliced element that removes types available on a slice', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] only Quantity or Ratio
+      // * component.value[x] only Quantity
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }, { type: 'Ratio' }];
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Quantity' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      expect(rootValue.type).toHaveLength(1);
+      expect(rootValue.type).toContainEqual(expectedTypeQuantity);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not apply an OnlyRule on a sliced element that would invalidate any of its slices', () => {
+      // * component[Lab].value[x] only Quantity
+      // * component.value[x] only Ratio // this would remove all types from the slice!
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const rootOnly = new OnlyRule('component.value[x]')
+        .withFile('RemoveType.fsh')
+        .withLocation([12, 5, 12, 23]);
+      rootOnly.types = [{ type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeQuantity = new ElementDefinitionType('Quantity');
+      expect(rootValue.type).toHaveLength(11);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeQuantity);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/eliminate all types/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveType\.fsh.*Line: 12\D*/s);
+    });
+
+    it('should apply an OnlyRule on a sliced element that would remove all types from a zeroed-out slice', () => {
+      // * component[Lab].value[x] only Quantity
+      // * component[Lab] 0..0
+      // * component.value[x] only Ratio
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const labCard = new CardRule('component[Lab]');
+      labCard.min = 0;
+      labCard.max = '0';
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, labCard, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const expectedTypeRatio = new ElementDefinitionType('Ratio');
+      expect(rootValue.type).toHaveLength(1);
+      expect(rootValue.type).toContainEqual(expectedTypeRatio);
+    });
+
+    it('should apply an OnlyRule on a sliced element that constrains the types on its slices to subtypes', () => {
+      loggerSpy.reset();
+      // * component[Lab].value[x] only Quantity
+      // * component.value[x] only SimpleQuantity or Ratio
+      const labOnly = new OnlyRule('component[Lab].value[x]');
+      labOnly.types = [{ type: 'Quantity' }];
+      const rootOnly = new OnlyRule('component.value[x]');
+      rootOnly.types = [{ type: 'SimpleQuantity' }, { type: 'Ratio' }];
+
+      observationWithSlice.rules.push(labOnly, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      const expectedTypeRatio = new ElementDefinitionType('Ratio');
+      const expectedTypeSimpleQuantity = new ElementDefinitionType('Quantity').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/SimpleQuantity'
+      );
+      expect(rootValue.type).toHaveLength(2);
+      expect(rootValue.type).toContainEqual(expectedTypeRatio);
+      expect(rootValue.type).toContainEqual(expectedTypeSimpleQuantity);
+      expect(labValue.type).toHaveLength(1);
+      expect(labValue.type).toContainEqual(expectedTypeSimpleQuantity);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when a type constraint implicitly removes a choice on a sliced element', () => {
+      // * component[Lab].valueString = "Please leave"
+      // * component.value[x] only Quantity
+      const labFixedValue = new FixedValueRule('component[Lab].valueString');
+      labFixedValue.fixedValue = 'Please leave';
+      const rootOnly = new OnlyRule('component.value[x]')
+        .withFile('RemoveString.fsh')
+        .withLocation([8, 4, 8, 23]);
+      rootOnly.types = [{ type: 'Quantity' }];
+
+      observationWithSlice.rules.push(labFixedValue, rootOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootValue = sd.findElement('Observation.component.value[x]');
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      expect(rootValue.type).toHaveLength(1);
+      expect(labValue.type).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/obsolete for choices.*valueString/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveString\.fsh.*Line: 8\D*/s);
+    });
+    it.todo(
+      'should apply an OnlyRule on the child of a sliced element that updates the types on the children of its slices'
+    );
+    it.todo(
+      'should not apply an OnlyRule on the child of a sliced element that would invalidate any of its slices'
+    );
+
+    it('should apply an ObeysRule on a sliced element that updates the constraints on its slices', () => {
+      // * category[Procedure] obeys ShoutingRule
+      // * category obeys TalkingRule
+      // Invariant: ShoutingRule
+      // Description: "No shouting allowed."
+      // Invariant: TalkingRule
+      // Description: "Talking is prohibited."
+      const shoutingRule = new ObeysRule('category[Procedure]');
+      shoutingRule.invariant = 'shout-1';
+      const talkingRule = new ObeysRule('category');
+      talkingRule.invariant = 'talk-1';
+
+      const shoutingInvariant = new Invariant('shout-1');
+      shoutingInvariant.description = 'No shouting allowed.';
+      const talkingInvariant = new Invariant('talk-1');
+      talkingInvariant.description = 'Talking is prohibited.';
+
+      observationWithSlice.rules.push(shoutingRule, talkingRule);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      doc.invariants.set(shoutingInvariant.name, shoutingInvariant);
+      doc.invariants.set(talkingInvariant.name, talkingInvariant);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const procedureCategory = sd.findElement('Observation.category:Procedure');
+      const expectedShouting = {
+        key: 'shout-1',
+        human: 'No shouting allowed.',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      const expectedTalking = {
+        key: 'talk-1',
+        human: 'Talking is prohibited.',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      expect(rootCategory.constraint).toContainEqual(expectedTalking);
+      expect(procedureCategory.constraint).toContainEqual(expectedShouting);
+      expect(procedureCategory.constraint).toContainEqual(expectedTalking);
+    });
+
+    it('should apply an ObeysRule on the child of a sliced element that updates the child elements on its slices', () => {
+      // * component[Lab].code obeys RunningRule
+      // * component.code obeys WalkingRule
+      // Invariant: RunningRule
+      // Description: "Run as fast as you can!"
+      // Invariant: WalkingRule
+      // Description: "Walk at your own pace."
+      const runningRule = new ObeysRule('component[Lab].code');
+      runningRule.invariant = 'run-1';
+      const walkingRule = new ObeysRule('component.code');
+      walkingRule.invariant = 'walk-1';
+
+      const runningInvariant = new Invariant('run-1');
+      runningInvariant.description = 'Run as fast as you can!';
+      const walkingInvariant = new Invariant('walk-1');
+      walkingInvariant.description = 'Walk at your own pace.';
+
+      observationWithSlice.rules.push(runningRule, walkingRule);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      doc.invariants.set(runningInvariant.name, runningInvariant);
+      doc.invariants.set(walkingInvariant.name, walkingInvariant);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCode = sd.findElement('Observation.component.code');
+      const labCode = sd.findElement('Observation.component:Lab.code');
+      const expectedRunning = {
+        key: 'run-1',
+        human: 'Run as fast as you can!',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      const expectedWalking = {
+        key: 'walk-1',
+        human: 'Walk at your own pace.',
+        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+      };
+      expect(rootCode.constraint).toContainEqual(expectedWalking);
+      expect(labCode.constraint).toContainEqual(expectedRunning);
+      expect(labCode.constraint).toContainEqual(expectedWalking);
+    });
+    it.todo('should have some tests involving slices and CaretValueRule');
+  });
+
   // toJSON
   it('should correctly generate a diff containing only changed elements', () => {
     // We already have separate tests for the differentials, so this just ensures that the
