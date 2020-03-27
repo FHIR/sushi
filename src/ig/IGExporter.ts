@@ -108,7 +108,7 @@ export class IGExporter {
           generation: 'html',
           page: [] // index.[md|html] is required and added later
         },
-        // Parameter apparently required by IG Publisher (as of Jan 29, 2020)
+        // Parameters apparently required by IG Publisher (as of Jan 29, 2020)
         parameter: [
           {
             code: 'copyrightyear',
@@ -125,6 +125,14 @@ export class IGExporter {
         ]
       }
     };
+
+    // Add the path-history, if applicable (only applies to HL7 IGs)
+    if (/^https?:\/\/hl7.org\//.test(this.pkg.config.canonical)) {
+      this.ig.definition.parameter.push({
+        code: 'path-history',
+        value: `${this.pkg.config.canonical}/history.html`
+      });
+    }
 
     // Add the dependencies
     if (this.pkg.config.dependencies) {
