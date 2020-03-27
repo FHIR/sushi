@@ -485,7 +485,7 @@ describe('IGExporter', () => {
     });
   });
 
-  describe('#customized-ig', () => {
+  describe('#customized-ig-with-local-template', () => {
     let pkg: Package;
     let exporter: IGExporter;
     let tempOut: string;
