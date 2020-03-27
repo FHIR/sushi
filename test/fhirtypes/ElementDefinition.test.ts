@@ -35,6 +35,7 @@ describe('ElementDefinition', () => {
     valueX = ElementDefinition.fromJSON(jsonValueX);
     valueId = ElementDefinition.fromJSON(jsonValueId);
     valueX.structDef = observation;
+    valueId.structDef = observation;
   });
 
   describe('#fromJSON', () => {
@@ -192,6 +193,28 @@ describe('ElementDefinition', () => {
         key: invariant.name,
         human: invariant.description,
         severity: invariant.severity.code
+      });
+    });
+
+    it('should apply a constraint to an ElementDefinition with no constraint array', () => {
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'An invariant with all metadata specified.';
+      invariant.expression = 'metadata.exists()';
+      invariant.xpath = 'exists(f:metadata)';
+      invariant.severity = new FshCode('error');
+      expect(valueId.constraint).toBeUndefined(); // constraint initially undefined
+
+      valueId.applyConstraint(invariant, 'http://example.org/fhir/StructureDefinition/SomeProfile');
+
+      expect(valueId.constraint).toHaveLength(1); // Adds an additional constraint
+      expect(valueId.constraint[0].key).toEqual(invariant.name);
+      expect(valueId.constraint[0]).toStrictEqual({
+        key: invariant.name,
+        severity: invariant.severity.code,
+        human: invariant.description,
+        expression: invariant.expression,
+        xpath: invariant.xpath,
+        source: 'http://example.org/fhir/StructureDefinition/SomeProfile'
       });
     });
   });
