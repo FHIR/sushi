@@ -561,7 +561,7 @@ export class IGExporter {
       // FHIR allows templates to have versions identified using #.  E.g.,
       //   template = hl7.fhir.template#0.1.0
       // The ini library, however, treats # as a comment unless it is escaped.  So if it exists, we need to escape it.
-      inputIniContents = inputIniContents.replace(/^\s*template\s*=\s*[^#]+(#.+)?$/m, ($0, $1) =>
+      inputIniContents = inputIniContents.replace(/^\s*template\s*=\s*[^#]*(#.+)?$/m, ($0, $1) =>
         $1 ? $0.replace($1, `\\${$1}`) : $0
       );
       const inputIni = ini.parse(inputIniContents);
@@ -600,7 +600,7 @@ export class IGExporter {
 
     // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
     let outputIniContents = ini.encode(iniObj, { section: 'IG', whitespace: true });
-    outputIniContents = outputIniContents.replace(/^template\s*=\s*.+?(\\#.+)?$/m, ($0, $1) =>
+    outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
       $1 ? $0.replace($1, $1.slice(1)) : $0
     );
 
