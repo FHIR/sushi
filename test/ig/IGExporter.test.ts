@@ -250,6 +250,10 @@ describe('IGExporter', () => {
             {
               code: 'show-inherited-invariants',
               value: 'false'
+            },
+            {
+              code: 'path-history',
+              value: 'http://hl7.org/fhir/sushi-test/history.html'
             }
           ]
         }
@@ -299,6 +303,97 @@ describe('IGExporter', () => {
       const content = fs.readFileSync(menuPath, 'utf8');
       expect(content).toMatch('<li><a href="index.html">IG Home</a></li>');
       expect(content).toMatch('<li><a href="toc.html">Table of Contents</a></li>');
+    });
+  });
+
+  describe('#non-hl7-ig', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      const fixtures = path.join(__dirname, 'fixtures', 'non-hl7-ig');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should generate an ImplementationGuide resource based on the package', () => {
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content).toEqual({
+        resourceType: 'ImplementationGuide',
+        id: 'sushi-test',
+        url: 'http://example.org/fhir/sushi-test/ImplementationGuide/sushi-test',
+        version: '0.1.0',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        status: 'active',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              {
+                system: 'url',
+                value: 'https://capecodfishermen.org/'
+              },
+              {
+                system: 'email',
+                value: 'cod@reef.gov'
+              }
+            ]
+          }
+        ],
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        packageId: 'sushi-test',
+        license: 'CC0-1.0',
+        fhirVersion: ['4.0.1'],
+        definition: {
+          resource: [],
+          page: {
+            nameUrl: 'toc.html',
+            title: 'Table of Contents',
+            generation: 'html',
+            page: [
+              {
+                nameUrl: 'index.html',
+                title: 'Home',
+                generation: 'markdown'
+              }
+            ]
+          },
+          parameter: [
+            {
+              code: 'copyrightyear',
+              value: `${new Date().getFullYear()}+`
+            },
+            {
+              code: 'releaselabel',
+              value: 'CI Build'
+            },
+            {
+              code: 'show-inherited-invariants',
+              value: 'false'
+            }
+            // NOTE: no path-history for non-hl7 IGs
+          ]
+        }
+      });
     });
   });
 
