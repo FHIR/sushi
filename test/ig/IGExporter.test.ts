@@ -580,6 +580,33 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-local-template', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-local-template');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
+      tempOut = temp.mkdirSync('sushi-test');
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should generate an ig.ini with working local-template value', () => {
+      const iniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(iniPath)).toBeTruthy();
+      const content = fs.readFileSync(iniPath, 'utf8');
+      const lines = content.split(os.EOL); // Windows: /r/n; Mac: /n
+      expect(lines[2]).toEqual('template = #local-template');
+    });
+  });
+
   describe('#customized-ig-with-index-xml', () => {
     let pkg: Package;
     let exporter: IGExporter;
