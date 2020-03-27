@@ -473,17 +473,23 @@ export class ElementDefinition {
     if (connectedElements.length > 0) {
       // check to see if the card constraint would actually be a problem for the connected element
       // that is to say, if the new card is narrower than the connected card
+      connectedElements
+        .filter(ce => !(ce.path === this.path && ce.id.startsWith(this.id)))
+        // Filter out elements that are directly slices of this, since they may have min < this.min
+        // Children of slices however must have min >= this.min
+        .forEach(ce => {
+          if (ce.min != null && ce.min < min) {
+            throw new NarrowingRootCardinalityError(
+              this.path,
+              ce.id,
+              min,
+              max,
+              ce.min,
+              ce.max ?? '*'
+            );
+          }
+        });
       connectedElements.forEach(ce => {
-        if (ce.min != null && ce.min < min) {
-          throw new NarrowingRootCardinalityError(
-            this.path,
-            ce.id,
-            min,
-            max,
-            ce.min,
-            ce.max ?? '*'
-          );
-        }
         // if the connected element's max is not null and is not *, we can't make the max smaller than its max
         if (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max)) {
           throw new NarrowingRootCardinalityError(this.path, ce.id, min, max, ce.min ?? 0, ce.max);
