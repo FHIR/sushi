@@ -260,6 +260,18 @@ describe('FSHImporter', () => {
     expect(loggerSpy.getAllLogs('error').length).toBe(0);
   });
 
+  it('should allow a FSH document with a single-line block comment', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    /* This comment is just one line */
+    Title: "Single line comment test"
+    `;
+    const result = importSingleText(input);
+    expect(result.profiles.size).toBe(1);
+    expect(loggerSpy.getAllLogs('error').length).toBe(0);
+  });
+
   it('should adjust indentation of multi-line strings that include blank lines', () => {
     const input = `
     Profile: ObservationProfile
