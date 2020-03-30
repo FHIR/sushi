@@ -2659,7 +2659,52 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
-    it('should not apply a CardRule that would make the cardinality of the child of a slice too wide', () => {
+    it('should apply a CardRule that would make the cardinality of a slice smaller than the root', () => {
+      loggerSpy.reset();
+      // component[Lab] has card 0..1
+      // * component 1..5
+
+      const rootCard = new CardRule('component')
+        .withFile('Narrower.fsh')
+        .withLocation([7, 9, 7, 23]);
+      rootCard.min = 1;
+      rootCard.max = '5';
+
+      observationWithSlice.rules.push(rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      expect(sd.findElement('Observation.component').max).toBe('5');
+      expect(sd.findElement('Observation.component').min).toBe(1);
+      expect(sd.findElement('Observation.component:Lab').min).toBe(0);
+      expect(sd.findElement('Observation.component:Lab').max).toBe('1');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not apply a CardRule that would make the cardinality of the child of a slice too small', () => {
+      loggerSpy.reset();
+      // * component[Lab].interpretation 0..4
+      // * component.interpretation 1..5 // this rule is invalid!
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.max = '4';
+      const rootCard = new CardRule('component.interpretation')
+        .withFile('Narrower.fsh')
+        .withLocation([7, 9, 7, 23]);
+      rootCard.min = 1;
+      rootCard.max = '5';
+
+      observationWithSlice.rules.push(labCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      expect(sd.findElement('Observation.component.interpretation').max).toBe('*');
+      expect(sd.findElement('Observation.component.interpretation').min).toBe(0);
+      expect(sd.findElement('Observation.component:Lab.interpretation').max).toBe('4');
+      expect(loggerSpy.getLastMessage('error')).toMatch(/cannot be narrowed/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
+    });
+
+    it('should not apply a CardRule that would make the cardinality of the child of a slice too large', () => {
       // * component[Lab].interpretation 0..9
       // * component.interpretation 0..5 // this rule is invalid!
       const labCard = new CardRule('component[Lab].interpretation');

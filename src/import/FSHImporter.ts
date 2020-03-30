@@ -1504,7 +1504,7 @@ export class FSHImporter extends FSHVisitor {
     lines.forEach(line => {
       const firstNonSpace = line.search(/\S|$/);
       const lineIsEmpty = /^$/.test(line);
-      if (!lineIsEmpty && firstNonSpace > 0 && (minSpaces === 0 || firstNonSpace < minSpaces)) {
+      if (!lineIsEmpty && firstNonSpace >= 0 && (minSpaces === 0 || firstNonSpace < minSpaces)) {
         minSpaces = firstNonSpace;
       }
     });
