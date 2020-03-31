@@ -13,6 +13,7 @@ describe('ElementDefinition', () => {
   let jsonValueX: any;
   let jsonValueId: any;
   let observation: StructureDefinition;
+  let resprate: StructureDefinition;
   let valueX: ElementDefinition;
   let valueId: ElementDefinition;
   let fisher: TestFisher;
@@ -26,12 +27,14 @@ describe('ElementDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
+    resprate = fisher.fishForStructureDefinition('resprate');
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
     jsonValueX = jsonObservation.snapshot.element[21];
     jsonValueId = jsonObservation.snapshot.element[1];
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    resprate = fisher.fishForStructureDefinition('resprate');
     valueX = ElementDefinition.fromJSON(jsonValueX);
     valueId = ElementDefinition.fromJSON(jsonValueId);
     valueX.structDef = observation;
@@ -270,6 +273,38 @@ describe('ElementDefinition', () => {
       expect(code.hasDiff()).toBeFalsy();
       expect(codeCoding.hasDiff()).toBeTruthy();
       expect(codeText.hasDiff()).toBeFalsy();
+    });
+
+    it('should detect a diff on a slice element with changed children', () => {
+      const vsCatCoding = resprate.elements.find(e => e.id === 'Observation.category:VSCat.coding');
+      const vsCat = resprate.elements.find(e => e.id === 'Observation.category:VSCat');
+      expect(vsCatCoding.hasDiff()).toBeFalsy();
+      expect(vsCat.hasDiff()).toBeFalsy();
+      vsCatCoding.min = 2;
+      expect(vsCatCoding.hasDiff()).toBeTruthy();
+      expect(vsCat.hasDiff()).toBeTruthy();
+    });
+
+    it('should detect a diff on a slice element with changed grandchildren', () => {
+      const vsCatCodingId = resprate.elements.find(
+        e => e.id === 'Observation.category:VSCat.coding.id'
+      );
+      const vsCat = resprate.elements.find(e => e.id === 'Observation.category:VSCat');
+      expect(vsCatCodingId.hasDiff()).toBeFalsy();
+      expect(vsCat.hasDiff()).toBeFalsy();
+      vsCatCodingId.short = 'id';
+      expect(vsCatCodingId.hasDiff()).toBeTruthy();
+      expect(vsCat.hasDiff()).toBeTruthy();
+    });
+
+    it('should not detect a diff on a slice element with no changed descendents', () => {
+      const vsCatCoding = resprate.elements.find(e => e.id === 'Observation.category:VSCat.coding');
+      const vsCat = resprate.elements.find(e => e.id === 'Observation.category:VSCat');
+      expect(vsCatCoding.hasDiff()).toBeFalsy();
+      expect(vsCat.hasDiff()).toBeFalsy();
+      vsCatCoding.min = 1;
+      expect(vsCatCoding.hasDiff()).toBeFalsy();
+      expect(vsCat.hasDiff()).toBeFalsy();
     });
   });
 

@@ -14,6 +14,7 @@ describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let observation: StructureDefinition;
+  let resprate: StructureDefinition;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -25,10 +26,12 @@ describe('StructureDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
+
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    resprate = fisher.fishForStructureDefinition('resprate');
   });
   describe('#fromJSON', () => {
     it('should load a resource properly', () => {
@@ -335,6 +338,49 @@ describe('StructureDefinition', () => {
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
       expect(valueStringDiff.sliceName).toBeUndefined();
       expect(valueStringSnapshot.short).toBe('the string choice');
+    });
+
+    it('should properly serialize snapshot and differential for constraints on children of slices', () => {
+      let json = resprate.toJSON();
+      const vsCatCodingOriginal = json.snapshot.element.find(
+        (e: any) => e.id === 'Observation.category:VSCat.coding'
+      );
+      const vsCatOriginal = json.snapshot.element.find(
+        (e: any) => e.id === 'Observation.category:VSCat'
+      );
+      let vsCatCoding = resprate.elements.find(
+        (e: any) => e.id === 'Observation.category:VSCat.coding'
+      );
+      vsCatCoding.short = 'Hello I am a change';
+      json = resprate.toJSON();
+      vsCatCoding = json.snapshot.element.find(
+        (e: any) => e.id === 'Observation.category:VSCat.coding'
+      );
+      const vsCat = json.snapshot.element.find((e: any) => e.id === 'Observation.category:VSCat');
+
+      // Check Observation.category:VSCat and Observation.category:VSCat.coding elements on the snapshot
+      expect(vsCatCoding.short).toBe('Hello I am a change');
+      delete vsCatCoding.short;
+      delete vsCatCodingOriginal.short;
+      expect(vsCatCoding).toEqual(vsCatCodingOriginal);
+      expect(vsCat).toEqual(vsCatOriginal);
+
+      const vsCatCodingDiff = json.differential.element.find(
+        (e: any) => e.id === 'Observation.category:VSCat.coding'
+      );
+      const vsCatDiff = json.differential.element.find(
+        (e: any) => e.id === 'Observation.category:VSCat'
+      );
+      expect(vsCatCodingDiff).toEqual({
+        id: 'Observation.category:VSCat.coding',
+        path: 'Observation.category.coding',
+        short: 'Hello I am a change'
+      });
+      expect(vsCatDiff).toEqual({
+        id: 'Observation.category:VSCat',
+        path: 'Observation.category',
+        sliceName: 'VSCat'
+      });
     });
   });
 

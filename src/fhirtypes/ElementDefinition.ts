@@ -312,17 +312,23 @@ export class ElementDefinition {
    */
   hasDiff(): boolean {
     const original = this._original ? this._original : new ElementDefinition();
-    return PROPS.some(prop => {
-      if (prop.endsWith('[x]')) {
-        const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
-        prop = Object.keys(this).find(p => re.test(p));
-        if (prop == null) {
-          prop = Object.keys(original).find(p => re.test(p));
+    return (
+      PROPS.some(prop => {
+        if (prop.endsWith('[x]')) {
+          const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
+          prop = Object.keys(this).find(p => re.test(p));
+          if (prop == null) {
+            prop = Object.keys(original).find(p => re.test(p));
+          }
         }
-      }
-      // @ts-ignore
-      return prop && !isEqual(this[prop], original[prop]);
-    });
+        // @ts-ignore
+        return prop && !isEqual(this[prop], original[prop]);
+      }) ||
+      // When a slice has children that changed, we must treat the slice as if it
+      // differs from the original. The IG Publisher requires slices with changed
+      // children to be in the differential, or the snapshot is incorrectly generated
+      (this.sliceName && this.children().some(c => c.hasDiff()))
+    );
   }
 
   /**
@@ -361,7 +367,6 @@ export class ElementDefinition {
     }
     return diff;
   }
-
   /**
    * Gets the id of an element on the differential using the shortcut syntax described here
    * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
