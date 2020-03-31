@@ -133,8 +133,8 @@ export class StructureDefinition {
       if (element.id.startsWith(`${currentId}.`) || element.id.startsWith(`${currentId}:`)) {
         lastMatchId = currentId;
       } else if (
-        !currentId.startsWith(`${lastMatchId}.`) &&
-        !currentId.startsWith(`${lastMatchId}:`)
+        (!currentId.startsWith(`${lastMatchId}.`) && !currentId.startsWith(`${lastMatchId}:`)) ||
+        (element.id.startsWith(`${lastMatchId}.`) && currentId.startsWith(`${lastMatchId}:`))
       ) {
         break;
       }

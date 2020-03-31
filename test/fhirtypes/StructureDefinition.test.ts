@@ -426,6 +426,13 @@ describe('StructureDefinition', () => {
       expect(observation.elements).toHaveLength(51);
       expect(observation.elements[22].id).toBe('Observation.value[x]:valueQuantity');
     });
+
+    it('should add children of sliced elements in the right place', () => {
+      const originalLength = resprate.elements.length;
+      resprate.addElement(new ElementDefinition('Observation.category.coding'));
+      expect(resprate.elements).toHaveLength(originalLength + 1);
+      expect(resprate.elements[14].id).toBe('Observation.category.coding');
+    });
   });
 
   describe('#findElement', () => {
