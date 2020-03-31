@@ -7,7 +7,11 @@ import {
 } from '../fhirtypes';
 import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
-import { ParentNotDefinedError, ParentDeclaredAsProfileNameError } from '../errors';
+import {
+  ParentNotDefinedError,
+  ParentDeclaredAsProfileNameError,
+  InvalidFHIRIdError
+} from '../errors';
 import {
   CardRule,
   FixedValueRule,
@@ -168,13 +172,10 @@ export class StructureDefinitionExporter implements Fishable {
                 rule.sourceInfo
               );
             } else {
-              if (!idRegex.test(invariant.name)) {
-                logger.error(
-                  `Invariant ${invariant.name} has a name which does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
-                  rule.sourceInfo
-                );
-              }
               element.applyConstraint(invariant, structDef.url);
+              if (!idRegex.test(invariant.name)) {
+                throw new InvalidFHIRIdError(invariant.name);
+              }
             }
           }
         } catch (e) {
