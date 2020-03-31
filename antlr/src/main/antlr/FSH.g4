@@ -174,7 +174,7 @@ REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)*
 CARET_SEQUENCE:     '^' ~[ \t\r\n\f]+;
 
                  // '/' EXPRESSION '/'
-REGEX:              '/' ('\\/' | ~[/\r\n])+ '/';
+REGEX:              '/' ('\\/' | ~[*/\r\n])('\\/' | ~[/\r\n])* '/';
 
 
 COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
