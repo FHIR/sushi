@@ -34,7 +34,7 @@ async function app() {
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .arguments('<path-to-fsh-defs>')
-    .action(function(pathToFshDefs) {
+    .action(function (pathToFshDefs) {
       input = pathToFshDefs;
     })
     .parse(process.argv);

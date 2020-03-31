@@ -240,9 +240,7 @@ export class StructureDefinitionExporter implements Fishable {
           if (fshMeta && fshMeta.url === external.url) {
             // For the suggestion, create an alternate slice name to consider.
             // E.g. TimeOfDay --> time-of-day, or time-of-day --> time-of-day-ext
-            let altSliceName = words(fshMeta.name)
-              .join('-')
-              .toLowerCase();
+            let altSliceName = words(fshMeta.name).join('-').toLowerCase();
             if (altSliceName === fshMeta.name) {
               altSliceName += '-ext';
             }

@@ -1125,12 +1125,7 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
       if (t.reference()) {
-        const references = this.parseReference(
-          t
-            .reference()
-            .REFERENCE()
-            .getText()
-        );
+        const references = this.parseReference(t.reference().REFERENCE().getText());
         references.forEach(r =>
           onlyRule.types.push({
             type: this.aliasAwareValue(t.reference().REFERENCE(), r),
@@ -1298,10 +1293,7 @@ export class FSHImporter extends FSHVisitor {
             const codeEnd = code.match(/\s+"/)?.index;
             if (codeEnd) {
               codePart = code.slice(0, codeEnd);
-              description = code
-                .slice(codeEnd)
-                .trim()
-                .slice(1, -1);
+              description = code.slice(codeEnd).trim().slice(1, -1);
             } else {
               codePart = code.trim();
             }
@@ -1432,12 +1424,7 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.code()) {
       return this.visitCode(ctx.code());
     } else if (ctx.REGEX()) {
-      return RegExp(
-        ctx
-          .REGEX()
-          .getText()
-          .slice(1, -1)
-      );
+      return RegExp(ctx.REGEX().getText().slice(1, -1));
     } else if (ctx.STRING()) {
       return this.extractString(ctx.STRING());
     } else if (ctx.KW_TRUE()) {
