@@ -2069,6 +2069,36 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
   });
 
+  it('should log an error when applying an ObeysRule on an invariant with an invalid id', () => {
+    // Profile: StrangeObservation
+    // Parent: Observation
+    // * category obeys strange_1
+    // Invariant: strange_1
+    // Severity: #error
+    // Description: "This is a strange one."
+
+    const profile = new Profile('StrangeObservation');
+    profile.parent = 'Observation';
+    doc.profiles.set(profile.name, profile);
+
+    const invariant = new Invariant('strange_1');
+    invariant.severity = new FshCode('error');
+    invariant.description = 'This is a strange one.';
+    doc.invariants.set(invariant.name, invariant);
+
+    const rule = new ObeysRule('category').withFile('StrangeOne.fsh').withLocation([3, 8, 3, 24]);
+    rule.invariant = 'strange_1';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const category = sd.findElement('Observation.category');
+    expect(category.constraint).toHaveLength(2);
+    expect(category.constraint[1].key).toBe(invariant.name);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: StrangeOne\.fsh.*Line: 3\D*/s);
+  });
+
   // Extension preprocessing
   it('should zero out Extension.value[x] when Extension.extension is used', () => {
     const extension = new Extension('MyInferredComplexExtension');

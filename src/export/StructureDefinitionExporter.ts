@@ -2,11 +2,16 @@ import { upperFirst, words } from 'lodash';
 import {
   StructureDefinition,
   ElementDefinition,
-  ElementDefinitionBindingStrength
+  ElementDefinitionBindingStrength,
+  idRegex
 } from '../fhirtypes';
 import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
-import { ParentNotDefinedError, ParentDeclaredAsProfileNameError } from '../errors';
+import {
+  ParentNotDefinedError,
+  ParentDeclaredAsProfileNameError,
+  InvalidFHIRIdError
+} from '../errors';
 import {
   CardRule,
   FixedValueRule,
@@ -168,6 +173,9 @@ export class StructureDefinitionExporter implements Fishable {
               );
             } else {
               element.applyConstraint(invariant, structDef.url);
+              if (!idRegex.test(invariant.name)) {
+                throw new InvalidFHIRIdError(invariant.name);
+              }
             }
           }
         } catch (e) {
