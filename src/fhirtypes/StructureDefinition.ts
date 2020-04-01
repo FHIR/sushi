@@ -616,14 +616,12 @@ export class StructureDefinition {
           const newSlice = matchingConnectedSlice.clone(false);
           newSlice.id = `${e.id}:${matchingConnectedSlice.sliceName}`;
           newSlice.structDef = this;
-          e.slicing = connectedSliceElement.slicing;
+          if (!e.slicing) e.slicing = connectedSliceElement.slicing;
           this.addElement(newSlice);
           return newSlice;
         }
       }
-    }
 
-    if (!matchingSlice && pathPart.brackets?.length === 1) {
       // If we don't find a match, search predefined extensions for a match
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
       if (sliceDefinition?.url) {
