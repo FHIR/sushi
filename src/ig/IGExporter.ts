@@ -1,10 +1,20 @@
-import fs from 'fs-extra';
 import path from 'path';
 import ini from 'ini';
-import sortBy from 'lodash/sortBy';
-import words from 'lodash/words';
+import { EOL } from 'os';
+import { sortBy, words, pad, padEnd, repeat } from 'lodash';
 import { titleCase } from 'title-case';
-import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
+import {
+  ensureDirSync,
+  copySync,
+  outputJSONSync,
+  outputFileSync,
+  chmodSync,
+  existsSync,
+  readdirSync,
+  copyFileSync,
+  readJSONSync,
+  readFileSync
+} from 'fs-extra';
 import { Package } from '../export';
 import {
   ContactDetail,
@@ -180,8 +190,8 @@ export class IGExporter {
     // To work around this, we set the necessary permissions on executable
     // scripts after copying them to the IG path.
     try {
-      fs.chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
-      fs.chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
+      chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
+      chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
     } catch (e) {
       // We don't want to fail the whole export for this, but we should log it
       logger.warn(
@@ -206,18 +216,24 @@ export class IGExporter {
     const inputIndexMarkdownPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
     const inputIndexXMLPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.xml');
     let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
-    if (fs.existsSync(inputIndexMarkdownPath)) {
-      fs.copySync(inputIndexMarkdownPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+    if (existsSync(inputIndexMarkdownPath)) {
+      copySync(inputIndexMarkdownPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
       logger.info('Copied ig-data/input/pagecontent/index.md');
-    } else if (fs.existsSync(inputIndexXMLPath)) {
-      fs.copySync(inputIndexXMLPath, path.join(igPath, 'input', 'pagecontent', 'index.xml'));
+    } else if (existsSync(inputIndexXMLPath)) {
+      copySync(inputIndexXMLPath, path.join(igPath, 'input', 'pagecontent', 'index.xml'));
       generation = 'html';
       logger.info('Copied ig-data/input/pagecontent/index.xml');
     } else {
       logger.info('Generated default index.md.');
+      const warning = warningText('{% comment %} ', ' {% endcomment %}', [
+        'This index.md file was generated from the "description" in package.json. To provide',
+        'your own index file, create an index.md or index.xml in your ig-data/input/pagecontent',
+        'folder.',
+        'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
+      ]);
       outputFileSync(
         path.join(igPath, 'input', 'pagecontent', 'index.md'),
-        this.pkg.config.description ?? ''
+        `${warning}${this.pkg.config.description ?? ''}`
       );
     }
 
@@ -238,15 +254,15 @@ export class IGExporter {
    */
   private addOtherPageContent(igPath: string): void {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
-    if (fs.existsSync(inputPageContentPath)) {
-      const organizedPages = this.organizePageContent(fs.readdirSync(inputPageContentPath));
+    if (existsSync(inputPageContentPath)) {
+      const organizedPages = this.organizePageContent(readdirSync(inputPageContentPath));
 
       let invalidFileTypeIncluded = false;
       organizedPages.forEach(page => {
         // All user defined pages are included in input/pagecontent
         const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page.originalName);
 
-        fs.copySync(
+        copySync(
           pagePath,
           path.join(igPath, 'input', 'pagecontent', `${page.name}.${page.fileType}`)
         );
@@ -358,8 +374,8 @@ export class IGExporter {
   private addImages(igPath: string): void {
     // If the user provided additional image files, include them
     const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
-    if (fs.existsSync(inputImagesPath)) {
-      fs.copySync(inputImagesPath, path.join(igPath, 'input', 'images'));
+    if (existsSync(inputImagesPath)) {
+      copySync(inputImagesPath, path.join(igPath, 'input', 'images'));
     }
   }
 
@@ -371,8 +387,8 @@ export class IGExporter {
    */
   private addIncludeContents(igPath: string): void {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
-    if (fs.existsSync(includesPath)) {
-      fs.copySync(includesPath, path.join(igPath, 'input', 'includes'));
+    if (existsSync(includesPath)) {
+      copySync(includesPath, path.join(igPath, 'input', 'includes'));
     }
   }
 
@@ -383,8 +399,8 @@ export class IGExporter {
    */
   private addIgnoreWarningsFile(igPath: string): void {
     const ignorePath = path.join(this.igDataPath, 'input', 'ignoreWarnings.txt');
-    if (fs.existsSync(ignorePath)) {
-      fs.copyFileSync(ignorePath, path.join(igPath, 'input', 'ignoreWarnings.txt'));
+    if (existsSync(ignorePath)) {
+      copyFileSync(ignorePath, path.join(igPath, 'input', 'ignoreWarnings.txt'));
     }
   }
 
@@ -454,12 +470,12 @@ export class IGExporter {
     ];
     for (const pathEnd of pathEnds) {
       const dirPath = path.join(this.igDataPath, 'input', pathEnd);
-      if (fs.existsSync(dirPath)) {
-        const files = fs.readdirSync(dirPath);
+      if (existsSync(dirPath)) {
+        const files = readdirSync(dirPath);
         for (const file of files) {
           let resourceJSON: InstanceDefinition;
           if (file.endsWith('.json')) {
-            resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+            resourceJSON = readJSONSync(path.join(dirPath, file));
 
             if (resourceJSON.resourceType == null || resourceJSON.id == null) {
               logger.error(
@@ -515,7 +531,7 @@ export class IGExporter {
             } else {
               this.ig.definition.resource.push(resource);
             }
-            fs.copySync(
+            copySync(
               path.join(dirPath, file),
               path.join(
                 igPath,
@@ -563,9 +579,9 @@ export class IGExporter {
     // Then add properties from the user-provided ig.ini (if applicable)
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     let merged = false;
-    if (fs.existsSync(inputIniPath)) {
+    if (existsSync(inputIniPath)) {
       merged = true;
-      let inputIniContents = fs.readFileSync(inputIniPath, 'utf8');
+      let inputIniContents = readFileSync(inputIniPath, 'utf8');
       // FHIR allows templates to have versions identified using #.  E.g.,
       //   template = hl7.fhir.template#0.1.0
       // The ini library, however, treats # as a comment unless it is escaped.  So if it exists, we need to escape it.
@@ -612,6 +628,22 @@ export class IGExporter {
       $1 ? $0.replace($1, $1.slice(1)) : $0
     );
 
+    // Insert the warning comment, which unfortunately cannot be on the first line due to an IG Publisher limitation
+    const extra = merged
+      ? [
+          'This ig.ini was generated by merging values from ig-data/ig.ini with a default set of values,',
+          'including values inferred from package.json (name, license, version). To affect the generation',
+          'of this file, edit values in your ig-data/ig.ini input file.'
+        ]
+      : [
+          'This ig.ini was generated using a default set of values, including values inferred from',
+          'package.json (name, license, version). To affect the generation of this file, create an ig.ini',
+          'file in your ig-data folder with the values that should be merged into this generated file.',
+          'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
+        ];
+    const iniWarning = warningText('; ', '', extra, false);
+    outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
+
     // Finally, write it to disk
     outputFileSync(path.join(igPath, 'ig.ini'), outputIniContents);
 
@@ -631,9 +663,9 @@ export class IGExporter {
   private addPackageList(igPath: string): void {
     // If the user provided an index.md file, use that
     const inputPackageListPath = path.join(this.igDataPath, 'package-list.json');
-    if (fs.existsSync(inputPackageListPath)) {
+    if (existsSync(inputPackageListPath)) {
       let mismatch = false;
-      const inputPackageList = fs.readJSONSync(inputPackageListPath);
+      const inputPackageList = readJSONSync(inputPackageListPath);
       if (inputPackageList['package-id'] !== this.pkg.config.name) {
         logger.error(
           `package-list.json: package-id value (${inputPackageList['package-id']}) does not match name declared in package.json (${this.pkg.config.name}).  Ignoring custom package-list.json.`,
@@ -649,14 +681,29 @@ export class IGExporter {
         mismatch = true;
       }
       if (!mismatch) {
-        fs.copySync(inputPackageListPath, path.join(igPath, 'package-list.json'));
+        copySync(inputPackageListPath, path.join(igPath, 'package-list.json'));
         logger.info('Copied ig-data/package-list.json.');
         return;
       }
     }
+    // TODO: It looks like Grahame is adding support for JSON5 comments in the publisher.  Consider using:
+    // https://www.npmjs.com/package/comment-json (if we want to preserve comments on input)
+    // or
+    // https://www.npmjs.com/package/strip-json-comments if we don't care about preserving comments
+    // or
+    // https://www.npmjs.com/package/json5 if we don't care about preserving comments and want to have a familiar API
+    // In the latter two libraries, for output we would need to stringify the JSON and prepend the comments
+    // as they have no way to programatically add comments.
     outputJSONSync(
       path.join(igPath, 'package-list.json'),
       {
+        '//': warningTextArray('', '', [
+          'This package-list.json was generated using default values and values inferred from',
+          'package.json (name, title, canonical, description, url, version). This is only a starter',
+          'file. IG authors should provide their own package-list.json file in the ig-data folder',
+          'and delete this comment property from it.',
+          'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#igroot'
+        ]),
         'package-id': this.pkg.config.name,
         title: this.pkg.config.title ?? this.pkg.config.name,
         canonical: this.pkg.config.canonical,
@@ -692,4 +739,38 @@ interface PageMetadata {
   name: string;
   title: string;
   fileType: string;
+}
+
+function warningText(
+  prefix: string,
+  postfix = '',
+  extra: string[] = [],
+  blankLineAfter = true
+): string {
+  const a = warningTextArray(prefix, postfix, extra);
+  a.push('');
+  if (blankLineAfter) {
+    a.push('');
+  }
+  return a.join(EOL);
+}
+
+function warningTextArray(prefix: string, postfix = '', extra: string[] = []): string[] {
+  const msgLen = Math.max(85, ...extra.map(e => e.length));
+  const a: string[] = [];
+  const msg = (text = '', center = false): void => {
+    const fn = center ? pad : padEnd;
+    a.push(`${prefix}* ${fn(text, msgLen)} *${postfix}`);
+  };
+
+  a.push(`${prefix}${repeat('*', msgLen + 4)}${postfix}`);
+  msg('WARNING: DO NOT EDIT THIS FILE', true);
+  msg();
+  msg('This file is generated by SUSHI. Any edits you make to this file will be overwritten.');
+  if (extra && extra.length > 0) {
+    msg();
+    extra.forEach(m => msg(m));
+  }
+  a.push(`${prefix}${repeat('*', msgLen + 4)}${postfix}`);
+  return a;
 }
