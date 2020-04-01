@@ -41,6 +41,8 @@ async function app() {
 
   if (program.debug) logger.level = 'debug';
 
+  logger.info(`Running SUSHI ${getVersion()}`);
+
   // Check that input folder is specified
   if (!input) {
     logger.error('Missing path to FSH definition folder.');
