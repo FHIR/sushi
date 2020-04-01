@@ -1,3 +1,6 @@
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/fhir/sushi/Lint%20and%20Test)
+![npm](https://img.shields.io/npm/v/fsh-sushi)
+
 # SUSHI (WORK IN PROGRESS)
 
 SUSHI (aka "SUSHI Unshortens Short Hand Inputs") is a reference implementation command-line interpreter/compiler for FHIR Shorthand (FSH).
