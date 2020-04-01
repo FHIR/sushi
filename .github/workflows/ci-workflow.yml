@@ -1,8 +1,21 @@
-name: Node CI
+name: Lint and Test
 
 on: [push]
 
 jobs:
+  lint:
+    name: Check tsc, lint, and prettier
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '12.x'
+    - run: npm install
+    - run: npm run lint
+    - run: npm run prettier
+      env:
+        CI: true
   test:
     name: Test on node ${{ matrix.node_version }} and ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -18,6 +31,6 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
-    - run: npm run check
+    - run: npm test
       env:
         CI: true
