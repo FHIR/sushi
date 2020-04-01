@@ -547,6 +547,17 @@ export class ElementDefinition {
     }
   }
 
+  findConnectedSliceElement(postPath = ''): ElementDefinition {
+    const slicingRoot = this.slicedElement();
+    if (slicingRoot) {
+      return this.structDef.findElement(`${slicingRoot.id}${postPath}`);
+    } else if (this.parent()) {
+      return this.parent().findConnectedSliceElement(
+        `.${this.path.split('.').slice(-1)[0]}${postPath}`
+      );
+    }
+  }
+
   /**
    * Checks if the sum of slice mins exceeds the max of sliced element, and returns
    * the sum if so.
