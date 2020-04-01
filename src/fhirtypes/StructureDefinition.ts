@@ -134,6 +134,7 @@ export class StructureDefinition {
         lastMatchId = currentId;
       } else if (
         (!currentId.startsWith(`${lastMatchId}.`) && !currentId.startsWith(`${lastMatchId}:`)) ||
+        // If element is not a slice at this level, and the currentId is a slice, break to add children before slices
         (element.id.startsWith(`${lastMatchId}.`) && currentId.startsWith(`${lastMatchId}:`))
       ) {
         break;

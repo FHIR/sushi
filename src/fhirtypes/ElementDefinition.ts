@@ -324,10 +324,10 @@ export class ElementDefinition {
         // @ts-ignore
         return prop && !isEqual(this[prop], original[prop]);
       }) ||
-      // When a slice has children that changed, we must treat the slice as if it
+      // When a slice or a sliced element has children that changed, we must treat the slice as if it
       // differs from the original. The IG Publisher requires slices with changed
       // children to be in the differential, or the snapshot is incorrectly generated
-      (this.sliceName && this.children().some(c => c.hasDiff()))
+      ((this.sliceName || this.getSlices().length > 0) && this.children().some(c => c.hasDiff()))
     );
   }
 
