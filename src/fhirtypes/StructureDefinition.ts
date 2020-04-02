@@ -605,6 +605,24 @@ export class StructureDefinition {
   ): ElementDefinition {
     let matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
     if (!matchingSlice && pathPart.brackets?.length === 1) {
+      // If the current element is a child of a slice, the match may exist on the original
+      // sliced element, search for that here
+      for (const e of elements) {
+        const connectedSliceElement = e.findConnectedSliceElement();
+        const matchingConnectedSlice = connectedSliceElement
+          ?.getSlices()
+          .find(e => e.sliceName === pathPart.brackets.join('/'));
+
+        if (matchingConnectedSlice) {
+          const newSlice = matchingConnectedSlice.clone(false);
+          newSlice.id = `${e.id}:${matchingConnectedSlice.sliceName}`;
+          newSlice.structDef = this;
+          if (!e.slicing) e.slicing = connectedSliceElement.slicing;
+          this.addElement(newSlice);
+          return newSlice;
+        }
+      }
+
       // If we don't find a match, search predefined extensions for a match
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
       if (sliceDefinition?.url) {
