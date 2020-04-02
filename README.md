@@ -34,11 +34,11 @@ Options:
 
 Additional information:
   [path-to-fsh-defs]
-    if not specified, default: "."
-    if fsh/ subdirectory present, fsh/ will be appended to [path-to-fsh-defs]
+    Default: "."
+    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]
   -o, --out <out>
-    if fsh/ subdirectory present, default: "."
-    otherwise, default: "build"
+    Default: "build"
+    If fsh/ subdirectory present, default output is one directory above fsh/
 ```
 
 # IG Generation

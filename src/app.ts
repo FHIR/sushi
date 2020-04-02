@@ -39,11 +39,11 @@ async function app() {
       console.log('');
       console.log('Additional information:');
       console.log('  [path-to-fsh-defs]');
-      console.log('    if not specified, default: "."');
-      console.log('    if fsh/ subdirectory present, fsh/ will be appended to [path-to-fsh-defs]');
+      console.log('    Default: "."');
+      console.log('    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
-      console.log('    if fsh/ subdirectory present, default: "."');
-      console.log('    otherwise, default: "build"');
+      console.log('    Default: "build"');
+      console.log('    If fsh/ subdirectory present, default output is one directory above fsh/');
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
