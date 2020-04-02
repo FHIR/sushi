@@ -84,6 +84,8 @@ describe('IGExporter', () => {
     it('should copy over the static files', () => {
       expect(fs.existsSync(path.join(tempOut, '_genonce.bat'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, '_genonce.sh'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.bat'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.sh'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
@@ -365,6 +367,43 @@ describe('IGExporter', () => {
         /\| package-list\.json \s*\| generated \| .*[\/\\]package\.json \s*\|/
       );
       expect(content).toMatch(/\| package\.json \s*\| copied \s*\| .*[\/\\]package\.json \s*\|/);
+    });
+  });
+
+  describe('#ig-publisher-context', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+
+    beforeAll(() => {
+      const defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(config);
+
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true); // set to true to indicate ig publisher context
+      tempOut = temp.mkdirSync('sushi-test');
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should not copy publisher scripts but should copy over other static files', () => {
+      expect(fs.existsSync(path.join(tempOut, '_genonce.bat'))).toBeFalsy();
+      expect(fs.existsSync(path.join(tempOut, '_genonce.sh'))).toBeFalsy();
+      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.bat'))).toBeFalsy();
+      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.sh'))).toBeFalsy();
+      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeFalsy();
+      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeFalsy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
     });
   });
 

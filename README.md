@@ -23,14 +23,22 @@ After installation, the `sushi` commandline will be available on your path:
 
 ```sh
 $ sushi --help
-Usage: sushi <path-to-fsh-defs> [options]
+Usage: sushi [path-to-fsh-defs] [options]
 
 Options:
-  -o, --out <out>  the path to the output folder (default: "build")
+  -o, --out <out>  the path to the output folder
   -d, --debug      output extra debugging information
   -s, --snapshot   generate snapshot in Structure Definition output (default: false)
   -v, --version    print SUSHI version
   -h, --help       output usage information
+
+Additional information:
+  [path-to-fsh-defs]
+    if not specified, default: "."
+    if fsh/ subdirectory present, fsh/ will be appended to [path-to-fsh-defs]
+  -o, --out <out>
+    if fsh/ subdirectory present, default: "."
+    otherwise, default: "build"
 ```
 
 # IG Generation

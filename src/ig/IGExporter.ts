@@ -11,6 +11,7 @@ import {
   outputFileSync,
   chmodSync,
   existsSync,
+  removeSync,
   readdirSync,
   readJSONSync,
   readFileSync
@@ -44,7 +45,8 @@ export class IGExporter {
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
-    private readonly igDataPath: string
+    private readonly igDataPath: string,
+    private readonly isIgPubContext: boolean = false
   ) {
     this.packagePath = path.resolve(this.igDataPath, '..', 'package.json');
     this.outputLog = new Map();
@@ -193,15 +195,27 @@ export class IGExporter {
     const inputPath = path.join(__dirname, 'files');
     this.copyAsIs(inputPath, igPath);
 
+    // If in an IG Publisher context, do not include any of the publisher scripts
+    if (this.isIgPubContext) {
+      removeSync(path.join(igPath, '_genonce.sh'));
+      removeSync(path.join(igPath, '_genonce.bat'));
+      removeSync(path.join(igPath, '_gencontinuous.sh'));
+      removeSync(path.join(igPath, '_gencontinuous.bat'));
+      removeSync(path.join(igPath, '_updatePublisher.sh'));
+      removeSync(path.join(igPath, '_updatePublisher.bat'));
+    }
+
     // On Windows, the file permissions are not always preserved. This doesn't
     // cause a problem for the Windows user, but it may cause problems for
     // Mac and Linux users who use an NPM package published by a Windows user.
     // To work around this, we set the necessary permissions on executable
     // scripts after copying them to the IG path.
     try {
-      chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
-      chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
-      chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
+      if (!this.isIgPubContext) {
+        chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
+        chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
+        chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
+      }
     } catch (e) {
       // We don't want to fail the whole export for this, but we should log it
       logger.warn(
