@@ -1930,6 +1930,24 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
 
+  it('should apply a CaretValueRule on the parent element', () => {
+    // Profile: ShortObservation
+    // Parent: Observation
+    // * . ^ short = "This one is not so tall."
+    const profile = new Profile('ShortObservation');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('.');
+    rule.caretPath = 'short';
+    rule.value = 'This one is not so tall.';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const observation = sd.findElement('Observation');
+    expect(observation.short).toBe('This one is not so tall.');
+  });
+
   it('should apply a CaretValueRule on an element without a path', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';

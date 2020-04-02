@@ -173,7 +173,7 @@ export class StructureDefinition {
   findElementByPath(path: string, fisher: Fishable): ElementDefinition {
     // If the path already exists, get it and return the match
     // If !path just return the base parent element
-    const fullPath = path ? `${this.type}.${path}` : this.type;
+    const fullPath = path && path !== '.' ? `${this.type}.${path}` : this.type;
     const match = this.elements.find(e => e.path === fullPath && !e.id.includes(':'));
     if (match != null) {
       return match;
