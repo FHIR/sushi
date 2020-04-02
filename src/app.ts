@@ -58,7 +58,7 @@ async function app() {
   // If no input folder is specified, set default to current directory
   if (!input) {
     input = path.join('.');
-    logger.info('input path defaulted to current working directory');
+    logger.info('path-to-fsh-defs defaulted to current working directory');
   }
 
   // If a fsh subdirectory is detected, we are in an IG Publisher context
@@ -69,6 +69,11 @@ async function app() {
   const shouldUseFshDir = hasFshDir && input !== fshSubdirectoryPath;
 
   const isIgPubContext = isUsingFshDir || shouldUseFshDir;
+  if (isIgPubContext) {
+    logger.info(
+      'Current FSH tank conforms to an IG Publisher context. Default input and output will be adjusted accordingly.'
+    );
+  }
 
   // Use fsh/ subdirectory if not already specified and present
   if (shouldUseFshDir) {
@@ -138,8 +143,10 @@ async function app() {
 
   let outDir = program.out;
   if (isIgPubContext && !program.out) {
-    outDir = path.join('.');
+    // When running in an IG Publisher context, default output is the parent folder of the tank
+    outDir = path.join(input, '..');
   } else if (!program.out) {
+    // Any other time, default output is just to 'build'
     outDir = path.join('.', 'build');
   }
   fs.ensureDirSync(outDir);
