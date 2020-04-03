@@ -306,6 +306,37 @@ describe('ElementDefinition', () => {
       expect(vsCatCoding.hasDiff()).toBeFalsy();
       expect(vsCat.hasDiff()).toBeFalsy();
     });
+
+    it('should detect a diff on a sliced element with changed children', () => {
+      const catCoding = resprate.findElementByPath('category.coding', fisher);
+      const cat = resprate.elements.find(e => e.id === 'Observation.category');
+      expect(catCoding.hasDiff()).toBeFalsy();
+      expect(cat.hasDiff()).toBeFalsy();
+      catCoding.min = 2;
+      expect(catCoding.hasDiff()).toBeTruthy();
+      expect(cat.hasDiff()).toBeTruthy();
+    });
+
+    it('should detect a diff on a sliced element with changed grandchildren', () => {
+      const catCodingId = resprate.findElementByPath('category.coding.id', fisher);
+      const cat = resprate.elements.find(e => e.id === 'Observation.category');
+      expect(catCodingId.hasDiff()).toBeFalsy();
+      expect(cat.hasDiff()).toBeFalsy();
+      catCodingId.short = 'id';
+      expect(catCodingId.hasDiff()).toBeTruthy();
+      expect(cat.hasDiff()).toBeTruthy();
+    });
+
+    it('should not detect a diff on a sliced element with no changed descendents', () => {
+      const vsCatCoding = resprate.elements.find(e => e.id === 'Observation.category:VSCat.coding');
+      const cat = resprate.elements.find(e => e.id === 'Observation.category');
+      expect(vsCatCoding.hasDiff()).toBeFalsy();
+      expect(cat.hasDiff()).toBeFalsy();
+      vsCatCoding.min = 2;
+      expect(vsCatCoding.hasDiff()).toBeTruthy();
+      // Changed child of slice, not of sliced element, should have no change
+      expect(cat.hasDiff()).toBeFalsy();
+    });
   });
 
   describe('#calculateDiff', () => {
