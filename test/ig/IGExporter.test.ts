@@ -351,17 +351,19 @@ describe('IGExporter', () => {
       expect(content).toMatch(/\| _updatePublisher\.bat \s*\| generated \| \s* \|/);
       expect(content).toMatch(/\| _updatePublisher\.sh \s*\| generated \| \s* \|/);
       expect(content).toMatch(
-        /\| ig\.ini \s*\| generated \| .*\/ig-data\/ig\.ini, .*\/package\.json \s*\|/
+        /\| ig\.ini \s*\| generated \| .*[\/\\]ig-data[\/\\]ig\.ini, .*[\/\\]package\.json \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/ImplementationGuide-sushi-test\.json \s*\| generated \| .*\/ig-data\/ig\.ini, .*\/package\.json, \{all input resources and pages\} \s*\|/
+        /\| input[\/\\]ImplementationGuide-sushi-test\.json \s*\| generated \| .*[\/\\]ig-data[\/\\]ig\.ini, .*[\/\\]package\.json, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input\/ignoreWarnings\.txt \s*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| input\/includes\/menu\.xml \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| input[\/\\]includes[\/\\]menu\.xml \s*\| generated \| \s* \|/);
       expect(content).toMatch(
-        /\| input\/pagecontent\/index\.md \s*\| generated \| .*\/package\.json \s*\|/
+        /\| input[\/\\]pagecontent[\/\\]index\.md \s*\| generated \| .*[\/\\]package\.json \s*\|/
       );
-      expect(content).toMatch(/\| package-list\.json \s*\| generated \| .*\/package\.json \s*\|/);
+      expect(content).toMatch(
+        /\| package-list\.json \s*\| generated \| .*[\/\\]package\.json \s*\|/
+      );
     });
   });
 
@@ -573,7 +575,7 @@ describe('IGExporter', () => {
         /\{% comment %\}.+To change the contents of this file, edit the original source file at:.+\{% endcomment %\}/
       );
       expect(content).toMatch(
-        /\{% comment %\}.+ig-data\/input\/pagecontent\/index\.md.+\{% endcomment %\}/
+        /\{% comment %\}.+ig-data[\/\\]input[\/\\]pagecontent[\/\\]index\.md.+\{% endcomment %\}/
       );
       expect(content).toMatch('My special index page.');
 
@@ -599,7 +601,7 @@ describe('IGExporter', () => {
         /\{% comment %\}.+To change the contents of this file, edit the original source file at:.+\{% endcomment %\}/
       );
       expect(content).toMatch(
-        /\{% comment %\}.+ig-data\/input\/includes\/menu\.xml.+\{% endcomment %\}/
+        /\{% comment %\}.+ig-data[\/\\]input[\/\\]includes[\/\\]menu\.xml.+\{% endcomment %\}/
       );
       expect(content).toMatch('<li><a href="index.html">My special menu</a></li>');
       expect(content).toMatch('<li><a href="toc.html">Customized Table of Contents</a></li>');
@@ -628,7 +630,7 @@ describe('IGExporter', () => {
         /\{% comment %\}.+To change the contents of this file, edit the original source file at:.+\{% endcomment %\}/
       );
       expect(content).toMatch(
-        /\{% comment %\}.+ig-data\/input\/includes\/other\.xml.+\{% endcomment %\}/
+        /\{% comment %\}.+ig-data[\/\\]input[\/\\]includes[\/\\]other\.xml.+\{% endcomment %\}/
       );
       expect(content).toMatch('<li><a href="index.html">Some other non-menu file</a></li>');
     });
@@ -647,7 +649,7 @@ describe('IGExporter', () => {
         /\{% comment %\}.+To change the contents of this file, edit the original source file at:.+\{% endcomment %\}/
       );
       expect(otherContent).toMatch(
-        /\{% comment %\}.+ig-data\/input\/pagecontent\/other-page\.md.+\{% endcomment %\}/
+        /\{% comment %\}.+ig-data[\/\\]input[\/\\]pagecontent[\/\\]other-page\.md.+\{% endcomment %\}/
       );
       expect(otherContent).toMatch('My other now-supported-page.');
       const unsupportedFilePath = path.join(pageContentPath, 'unsupported.html');
@@ -665,7 +667,7 @@ describe('IGExporter', () => {
         /\{% comment %\}.+To change the contents of this file, edit the original source file at:.+\{% endcomment %\}/
       );
       expect(notesContent).toMatch(
-        /\{% comment %\}.+ig-data\/input\/pagecontent\/resource-notes\.md.+\{% endcomment %\}/
+        /\{% comment %\}.+ig-data[\/\\]input[\/\\]pagecontent[\/\\]resource-notes\.md.+\{% endcomment %\}/
       );
       expect(notesContent).toContain('Some resource specific notes.');
 
@@ -706,37 +708,37 @@ describe('IGExporter', () => {
       expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
       expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
       expect(content).toMatch(
-        /\| ig\.ini \s*\| generated \| ..*\/ig-data\/ig\.ini, .*\/package\.json \s*\|/
+        /\| ig\.ini \s*\| generated \| ..*[\/\\]ig-data[\/\\]ig\.ini, .*[\/\\]package\.json \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/ImplementationGuide-sushi-test\.json \s*\| generated \| .*\/ig-data\/ig\.ini, .*\/package\.json, \{all input resources and pages\} \s*\|/
+        /\| input[\/\\]ImplementationGuide-sushi-test\.json \s*\| generated \| .*[\/\\]ig-data[\/\\]ig\.ini, .*[\/\\]package\.json, \{all input resources and pages\} \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/ignoreWarnings\.txt \s*\| copied \s*\| .*\/ig-data\/input\/ignoreWarnings\.txt \s*\|/
+        /\| input[\/\\]ignoreWarnings\.txt \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]ignoreWarnings\.txt \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/images\/Shorty\.png \s*\| copied \s*\| .*\/ig-data\/input\/images\/Shorty\.png \s*\|/
+        /\| input[\/\\]images[\/\\]Shorty\.png \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]images[\/\\]Shorty\.png \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/includes\/menu\.xml \s*\| copied \s*\| .*\/ig-data\/input\/includes\/menu\.xml \s*\|/
+        /\| input[\/\\]includes[\/\\]menu\.xml \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]includes[\/\\]menu\.xml \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/includes\/other\.xml \s*\| copied \s*\| .*\/ig-data\/input\/includes\/other\.xml \s*\|/
+        /\| input[\/\\]includes[\/\\]other\.xml \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]includes[\/\\]other\.xml \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/pagecontent\/index\.md \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/index\.md \s*\|/
+        /\| input[\/\\]pagecontent[\/\\]index\.md \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]pagecontent[\/\\]index\.md \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/pagecontent\/other-page\.md \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/other-page\.md \s*\|/
+        /\| input[\/\\]pagecontent[\/\\]other-page\.md \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]pagecontent[\/\\]other-page\.md \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/pagecontent\/resource-notes\.md \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/resource-notes\.md \s*\|/
+        /\| input[\/\\]pagecontent[\/\\]resource-notes\.md \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]pagecontent[\/\\]resource-notes\.md \s*\|/
       );
       expect(content).toMatch(
-        /\| input\/pagecontent\/unsupported\.html \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/unsupported\.html \s*\|/
+        /\| input[\/\\]pagecontent[\/\\]unsupported\.html \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]pagecontent[\/\\]unsupported\.html \s*\|/
       );
       expect(content).toMatch(
-        /\| package-list\.json \s*\| copied \s*\| .*\/ig-data\/package-list\.json \s*\|/
+        /\| package-list\.json \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]package-list\.json \s*\|/
       );
     });
   });
@@ -799,7 +801,7 @@ describe('IGExporter', () => {
         /\{% comment %\}.+To change the contents of this file, edit the original source file at:.+\{% endcomment %\}/
       );
       expect(content).toMatch(
-        /\{% comment %\}.+ig-data\/input\/pagecontent\/index\.xml.+\{% endcomment %\}/
+        /\{% comment %\}.+ig-data[\/\\]input[\/\\]pagecontent[\/\\]index\.xml.+\{% endcomment %\}/
       );
       expect(content).toContain('An index file in XML');
 
