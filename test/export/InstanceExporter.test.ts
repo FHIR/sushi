@@ -1241,6 +1241,31 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should only export an instance once', () => {
+      const bundleInstance = new Instance('MyBundle');
+      bundleInstance.instanceOf = 'Bundle';
+      const inlineRule = new FixedValueRule('entry[0].resource');
+      inlineRule.fixedValue = 'MyBundledPatient';
+      inlineRule.isResource = true;
+      bundleInstance.rules.push(inlineRule); // * entry[0].resource = MyBundledPatient
+      doc.instances.set(bundleInstance.name, bundleInstance);
+
+      const inlineInstance = new Instance('MyBundledPatient');
+      inlineInstance.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      inlineInstance.rules.push(fixedValRule); // * active = true
+      doc.instances.set(inlineInstance.name, inlineInstance);
+
+      const exported = exporter.export().instances;
+      const exportedBundle = exported.filter(i => i._instanceMeta.name === 'MyBundle');
+      const exportedBundledPatient = exported.filter(
+        i => i._instanceMeta.name === 'MyBundledPatient'
+      );
+      expect(exportedBundle).toHaveLength(1);
+      expect(exportedBundledPatient).toHaveLength(1);
+    });
+
     it('should log an error when fixing an inline resource that does not exist to an instance', () => {
       const inlineRule = new FixedValueRule('contained[0]')
         .withFile('FakeInstance.fsh')
