@@ -756,6 +756,10 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   private addOutputLog(igPath: string): void {
+    // Add package.json to the output log since it's actually copied outside of this process
+    // so nothing else has added it yet
+    this.updateOuputLogForCopiedPath(path.join(igPath, 'package.json'), this.packagePath);
+
     const intro = [
       '# SUSHI-GENERATED FILES #',
       '',

@@ -364,6 +364,7 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /\| package-list\.json \s*\| generated \| .*[\/\\]package\.json \s*\|/
       );
+      expect(content).toMatch(/\| package\.json \s*\| copied \s*\| .*[\/\\]package\.json \s*\|/);
     });
   });
 
@@ -740,6 +741,7 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /\| package-list\.json \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]package-list\.json \s*\|/
       );
+      expect(content).toMatch(/\| package\.json \s*\| copied \s*\| .*[\/\\]package\.json \s*\|/);
     });
   });
 
