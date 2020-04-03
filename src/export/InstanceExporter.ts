@@ -286,6 +286,10 @@ export class InstanceExporter implements Fishable {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
+    if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.id)) {
+      return;
+    }
+
     const json = this.fisher.fishForFHIR(
       fshDefinition.instanceOf,
       Type.Resource,
