@@ -758,7 +758,7 @@ export class IGExporter {
   private addOutputLog(igPath: string): void {
     // Add package.json to the output log since it's actually copied outside of this process
     // so nothing else has added it yet
-    this.updateOuputLogForCopiedPath(path.join(igPath, 'package.json'), this.packagePath);
+    this.updateOutputLogForCopiedPath(path.join(igPath, 'package.json'), this.packagePath);
 
     const intro = [
       '# SUSHI-GENERATED FILES #',
@@ -800,7 +800,7 @@ export class IGExporter {
    * SUSHI-GENERATED-FILES.md file.
    *
    * @param inputPath {string} - the input path to copy
-   * @param ouputPath {string} - the output path to copy to
+   * @param outputPath {string} - the output path to copy to
    */
   private copyAsIs(inputPath: string, outputPath: string): void {
     if (!existsSync(inputPath)) {
@@ -808,7 +808,7 @@ export class IGExporter {
     }
 
     copySync(inputPath, outputPath);
-    this.updateOuputLogForCopiedPath(outputPath, inputPath);
+    this.updateOutputLogForCopiedPath(outputPath, inputPath);
   }
 
   /**
@@ -818,7 +818,7 @@ export class IGExporter {
    * will log the output file so it can be reported in the SUSHI-GENERATED-FILES.md file.
    *
    * @param inputPath {string} - the input path to copy
-   * @param ouputPath {string} - the output path to copy to
+   * @param outputPath {string} - the output path to copy to
    */
   private copyWithWarningText(inputPath: string, outputPath: string): void {
     if (!existsSync(inputPath)) {
@@ -849,7 +849,7 @@ export class IGExporter {
 
     const content = readFileSync(inputPath, 'utf8');
     outputFileSync(outputPath, `${warningText(prefix, postfix, extra)}${content}`, 'utf8');
-    this.updateOuputLogForCopiedPath(outputPath, inputPath);
+    this.updateOutputLogForCopiedPath(outputPath, inputPath);
   }
 
   /**
@@ -860,10 +860,13 @@ export class IGExporter {
    * @param outputPath - the output path to report on in the log
    * @param inputPath - the input path that was copied to the output
    */
-  private updateOuputLogForCopiedPath(outputPath: string, inputPath: string): void {
+  private updateOutputLogForCopiedPath(outputPath: string, inputPath: string): void {
     if (existsSync(inputPath) && statSync(inputPath).isDirectory()) {
       readdirSync(inputPath).forEach(child => {
-        this.updateOuputLogForCopiedPath(path.join(outputPath, child), path.join(inputPath, child));
+        this.updateOutputLogForCopiedPath(
+          path.join(outputPath, child),
+          path.join(inputPath, child)
+        );
       });
       return;
     }
