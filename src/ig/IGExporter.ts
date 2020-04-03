@@ -1,10 +1,21 @@
-import fs from 'fs-extra';
 import path from 'path';
 import ini from 'ini';
-import sortBy from 'lodash/sortBy';
-import words from 'lodash/words';
+import { EOL } from 'os';
+import { sortBy, words, pad, padEnd, repeat, orderBy } from 'lodash';
 import { titleCase } from 'title-case';
-import { ensureDirSync, copySync, outputJSONSync, outputFileSync } from 'fs-extra';
+import {
+  statSync,
+  ensureDirSync,
+  copySync,
+  outputJSONSync,
+  outputFileSync,
+  chmodSync,
+  existsSync,
+  readdirSync,
+  readJSONSync,
+  readFileSync
+} from 'fs-extra';
+import table from 'markdown-table';
 import { Package } from '../export';
 import {
   ContactDetail,
@@ -28,11 +39,16 @@ import { FHIRDefinitions } from '../fhirdefs';
  */
 export class IGExporter {
   private ig: ImplementationGuide;
+  private readonly packagePath: string;
+  private readonly outputLog: Map<string, outputLogDetails>;
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string
-  ) {}
+  ) {
+    this.packagePath = path.resolve(this.igDataPath, '..', 'package.json');
+    this.outputLog = new Map();
+  }
 
   /**
    * Export the IG structure to the location specified by the outPath argument
@@ -54,6 +70,7 @@ export class IGExporter {
     this.addPackageList(outPath);
     this.addIgnoreWarningsFile(outPath);
     this.addImplementationGuide(outPath);
+    this.addOutputLog(outPath);
   }
 
   /**
@@ -63,6 +80,7 @@ export class IGExporter {
    */
   private initIG(): void {
     const config = this.pkg.config;
+    // TODO: Consider adding a generated file warning when the IG Publisher supports JSON5-style comments
     this.ig = {
       resourceType: 'ImplementationGuide',
       id: config.name,
@@ -172,7 +190,8 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   private addStaticFiles(igPath: string): void {
-    copySync(path.join(__dirname, 'files'), igPath);
+    const inputPath = path.join(__dirname, 'files');
+    this.copyAsIs(inputPath, igPath);
 
     // On Windows, the file permissions are not always preserved. This doesn't
     // cause a problem for the Windows user, but it may cause problems for
@@ -180,14 +199,15 @@ export class IGExporter {
     // To work around this, we set the necessary permissions on executable
     // scripts after copying them to the IG path.
     try {
-      fs.chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
-      fs.chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
+      chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
+      chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
+      chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
     } catch (e) {
       // We don't want to fail the whole export for this, but we should log it
       logger.warn(
         'Failed to set executable permissions on IG publisher scripts (_genonce.sh, ' +
-          '_updatePublisher.sh). You may need to set these permissions manually before they can ' +
-          'be executed (e.g., chmod 755 _genonce.sh).'
+          '_gencontinuous.sh, _updatePublisher.sh). You may need to set these permissions ' +
+          'manually before they can be executed (e.g., chmod 755 _genonce.sh).'
       );
     }
   }
@@ -206,19 +226,30 @@ export class IGExporter {
     const inputIndexMarkdownPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
     const inputIndexXMLPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.xml');
     let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
-    if (fs.existsSync(inputIndexMarkdownPath)) {
-      fs.copySync(inputIndexMarkdownPath, path.join(igPath, 'input', 'pagecontent', 'index.md'));
+    if (existsSync(inputIndexMarkdownPath)) {
+      this.copyWithWarningText(
+        inputIndexMarkdownPath,
+        path.join(igPath, 'input', 'pagecontent', 'index.md')
+      );
       logger.info('Copied ig-data/input/pagecontent/index.md');
-    } else if (fs.existsSync(inputIndexXMLPath)) {
-      fs.copySync(inputIndexXMLPath, path.join(igPath, 'input', 'pagecontent', 'index.xml'));
+    } else if (existsSync(inputIndexXMLPath)) {
+      this.copyWithWarningText(
+        inputIndexXMLPath,
+        path.join(igPath, 'input', 'pagecontent', 'index.xml')
+      );
       generation = 'html';
       logger.info('Copied ig-data/input/pagecontent/index.xml');
     } else {
       logger.info('Generated default index.md.');
-      outputFileSync(
-        path.join(igPath, 'input', 'pagecontent', 'index.md'),
-        this.pkg.config.description ?? ''
-      );
+      const warning = warningText('{% comment %} ', ' {% endcomment %}', [
+        'This index.md file was generated from the "description" in package.json. To provide',
+        'your own index file, create an index.md or index.xml in the ig-data/input/pagecontent',
+        'folder.',
+        'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
+      ]);
+      const outputPath = path.join(igPath, 'input', 'pagecontent', 'index.md');
+      outputFileSync(outputPath, `${warning}${this.pkg.config.description ?? ''}`);
+      this.updateOutputLog(outputPath, [this.packagePath], 'generated');
     }
 
     // Add user-provided or generated index file to IG definition
@@ -238,15 +269,15 @@ export class IGExporter {
    */
   private addOtherPageContent(igPath: string): void {
     const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
-    if (fs.existsSync(inputPageContentPath)) {
-      const organizedPages = this.organizePageContent(fs.readdirSync(inputPageContentPath));
+    if (existsSync(inputPageContentPath)) {
+      const organizedPages = this.organizePageContent(readdirSync(inputPageContentPath));
 
       let invalidFileTypeIncluded = false;
       organizedPages.forEach(page => {
         // All user defined pages are included in input/pagecontent
         const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page.originalName);
 
-        fs.copySync(
+        this.copyWithWarningText(
           pagePath,
           path.join(igPath, 'input', 'pagecontent', `${page.name}.${page.fileType}`)
         );
@@ -358,8 +389,9 @@ export class IGExporter {
   private addImages(igPath: string): void {
     // If the user provided additional image files, include them
     const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
-    if (fs.existsSync(inputImagesPath)) {
-      fs.copySync(inputImagesPath, path.join(igPath, 'input', 'images'));
+    if (existsSync(inputImagesPath)) {
+      const outputPath = path.join(igPath, 'input', 'images');
+      this.copyAsIs(inputImagesPath, outputPath);
     }
   }
 
@@ -371,8 +403,8 @@ export class IGExporter {
    */
   private addIncludeContents(igPath: string): void {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
-    if (fs.existsSync(includesPath)) {
-      fs.copySync(includesPath, path.join(igPath, 'input', 'includes'));
+    if (existsSync(includesPath)) {
+      this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'));
     }
   }
 
@@ -383,8 +415,9 @@ export class IGExporter {
    */
   private addIgnoreWarningsFile(igPath: string): void {
     const ignorePath = path.join(this.igDataPath, 'input', 'ignoreWarnings.txt');
-    if (fs.existsSync(ignorePath)) {
-      fs.copyFileSync(ignorePath, path.join(igPath, 'input', 'ignoreWarnings.txt'));
+    if (existsSync(ignorePath)) {
+      const outputPath = path.join(igPath, 'input', 'ignoreWarnings.txt');
+      this.copyAsIs(ignorePath, outputPath);
     }
   }
 
@@ -454,12 +487,12 @@ export class IGExporter {
     ];
     for (const pathEnd of pathEnds) {
       const dirPath = path.join(this.igDataPath, 'input', pathEnd);
-      if (fs.existsSync(dirPath)) {
-        const files = fs.readdirSync(dirPath);
+      if (existsSync(dirPath)) {
+        const files = readdirSync(dirPath);
         for (const file of files) {
           let resourceJSON: InstanceDefinition;
           if (file.endsWith('.json')) {
-            resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+            resourceJSON = readJSONSync(path.join(dirPath, file));
 
             if (resourceJSON.resourceType == null || resourceJSON.id == null) {
               logger.error(
@@ -515,15 +548,14 @@ export class IGExporter {
             } else {
               this.ig.definition.resource.push(resource);
             }
-            fs.copySync(
-              path.join(dirPath, file),
-              path.join(
-                igPath,
-                'input',
-                pathEnd,
-                `${resourceJSON.resourceType}-${resourceJSON.id}.json`
-              )
+            const inputPath = path.join(dirPath, file);
+            const outputPath = path.join(
+              igPath,
+              'input',
+              pathEnd,
+              `${resourceJSON.resourceType}-${resourceJSON.id}.json`
             );
+            this.copyAsIs(inputPath, outputPath);
           }
         }
       }
@@ -538,6 +570,11 @@ export class IGExporter {
   private addImplementationGuide(igPath: string): void {
     const igJsonPath = path.join(igPath, 'input', `ImplementationGuide-${this.ig.id}.json`);
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
+    this.updateOutputLog(
+      igJsonPath,
+      [this.packagePath, path.join(this.igDataPath, 'ig.ini'), '{all input resources and pages}'],
+      'generated'
+    );
     logger.info(`Generated ImplementationGuide-${this.ig.id}.json`);
   }
 
@@ -563,9 +600,9 @@ export class IGExporter {
     // Then add properties from the user-provided ig.ini (if applicable)
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     let merged = false;
-    if (fs.existsSync(inputIniPath)) {
+    if (existsSync(inputIniPath)) {
       merged = true;
-      let inputIniContents = fs.readFileSync(inputIniPath, 'utf8');
+      let inputIniContents = readFileSync(inputIniPath, 'utf8');
       // FHIR allows templates to have versions identified using #.  E.g.,
       //   template = hl7.fhir.template#0.1.0
       // The ini library, however, treats # as a comment unless it is escaped.  So if it exists, we need to escape it.
@@ -612,8 +649,26 @@ export class IGExporter {
       $1 ? $0.replace($1, $1.slice(1)) : $0
     );
 
+    // Insert the warning comment, which unfortunately cannot be on the first line due to an IG Publisher limitation
+    const extra = merged
+      ? [
+          'This ig.ini was generated by merging values from ig-data/ig.ini with a default set of values,',
+          'including values inferred from package.json (name, license, version). To affect the generation',
+          'of this file, edit values in the ig-data/ig.ini input file.'
+        ]
+      : [
+          'This ig.ini was generated using a default set of values, including values inferred from',
+          'package.json (name, license, version). To affect the generation of this file, create an ig.ini',
+          'file in the ig-data folder with the values that should be merged into this generated file.',
+          'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
+        ];
+    const iniWarning = warningText('; ', '', extra, false);
+    outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
+
     // Finally, write it to disk
-    outputFileSync(path.join(igPath, 'ig.ini'), outputIniContents);
+    const outputPath = path.join(igPath, 'ig.ini');
+    outputFileSync(outputPath, outputIniContents);
+    this.updateOutputLog(outputPath, [this.packagePath, inputIniPath], 'generated');
 
     if (merged) {
       logger.info('Merged ig-data/ig.ini w/ generated ig.ini');
@@ -631,9 +686,10 @@ export class IGExporter {
   private addPackageList(igPath: string): void {
     // If the user provided an index.md file, use that
     const inputPackageListPath = path.join(this.igDataPath, 'package-list.json');
-    if (fs.existsSync(inputPackageListPath)) {
+    const outputPath = path.join(igPath, 'package-list.json');
+    if (existsSync(inputPackageListPath)) {
       let mismatch = false;
-      const inputPackageList = fs.readJSONSync(inputPackageListPath);
+      const inputPackageList = readJSONSync(inputPackageListPath);
       if (inputPackageList['package-id'] !== this.pkg.config.name) {
         logger.error(
           `package-list.json: package-id value (${inputPackageList['package-id']}) does not match name declared in package.json (${this.pkg.config.name}).  Ignoring custom package-list.json.`,
@@ -649,14 +705,21 @@ export class IGExporter {
         mismatch = true;
       }
       if (!mismatch) {
-        fs.copySync(inputPackageListPath, path.join(igPath, 'package-list.json'));
+        this.copyAsIs(inputPackageListPath, outputPath);
         logger.info('Copied ig-data/package-list.json.');
         return;
       }
     }
     outputJSONSync(
-      path.join(igPath, 'package-list.json'),
+      outputPath,
       {
+        '//': warningTextArray('', '', [
+          'This package-list.json was generated using default values and values inferred from',
+          'package.json (name, title, canonical, description, url, version). This is only a starter',
+          'file. IG authors should provide their own package-list.json file in the ig-data folder',
+          'and delete this comment property from it.',
+          'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#igroot'
+        ]),
         'package-id': this.pkg.config.name,
         title: this.pkg.config.title ?? this.pkg.config.name,
         canonical: this.pkg.config.canonical,
@@ -683,13 +746,234 @@ export class IGExporter {
       { spaces: 2 }
     );
     logger.info('Generated default package-list.json');
+    this.updateOutputLog(outputPath, [this.packagePath], 'generated');
+  }
+
+  /**
+   * Creates and writes the SUSHI-GENERATED-FILES.md file. This file is intended to help users understand what
+   * files are created by SUSHI and how they are created.
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
+  private addOutputLog(igPath: string): void {
+    // Add package.json to the output log since it's actually copied outside of this process
+    // so nothing else has added it yet
+    this.updateOutputLogForCopiedPath(path.join(igPath, 'package.json'), this.packagePath);
+
+    const intro = [
+      '# SUSHI-GENERATED FILES #',
+      '',
+      'The following table shows all IG config files that were generated or copied by SUSHI.  The first column',
+      'represents the SUSHI-generated file. Authors should NOT edit SUSHI-generated files, else their edits will',
+      'be overwritten the next time SUSHI is run. Where applicable, the last column shows the files that are used',
+      'as input into the generated files. Authors should edit the input files in order to affect the SUSHI-generated',
+      'files.',
+      '',
+      'NOTE: This file does not currently list the FHIR resources and examples generated from .fsh files. It only',
+      'lists those files generated from project configs or the contents in the ig-data folder.',
+      '',
+      ''
+    ].join(EOL);
+
+    let rows: string[][] = [];
+    this.outputLog.forEach((details, outputPath) => {
+      // Make output paths relative to output
+      const output = path.relative(igPath, outputPath);
+      // Make input paths relative to output (except { placeholder } inputs)
+      const inputs = details.inputs
+        .map(input => (/^\{.+\}$/.test(input) ? input : path.relative(igPath, input)))
+        .sort()
+        .join(', ');
+      rows.push([output, details.action, inputs]);
+    });
+
+    rows = [
+      ['SUSHI-GENERATED FILE', 'ACTION', 'INPUT FILE(S)'],
+      ...orderBy(rows, ['1', '0'], ['desc', 'asc'])
+    ];
+
+    outputFileSync(path.join(igPath, 'SUSHI-GENERATED-FILES.md'), `${intro}${table(rows)}`, 'utf8');
+  }
+
+  /**
+   * Recursively copies one path to another, logging the output of each file so it can be reported in the
+   * SUSHI-GENERATED-FILES.md file.
+   *
+   * @param inputPath {string} - the input path to copy
+   * @param outputPath {string} - the output path to copy to
+   */
+  private copyAsIs(inputPath: string, outputPath: string): void {
+    if (!existsSync(inputPath)) {
+      return;
+    }
+
+    copySync(inputPath, outputPath);
+    this.updateOutputLogForCopiedPath(outputPath, inputPath);
+  }
+
+  /**
+   * Recursively copies input to an output location, adding a warning to the top of the each supported
+   * file indicating that it is a generated file and should not be edited directly. Only .md and .xml
+   * files will have the warning added.  All other files are copied as-is. In addition, this function
+   * will log the output file so it can be reported in the SUSHI-GENERATED-FILES.md file.
+   *
+   * @param inputPath {string} - the input path to copy
+   * @param outputPath {string} - the output path to copy to
+   */
+  private copyWithWarningText(inputPath: string, outputPath: string): void {
+    if (!existsSync(inputPath)) {
+      return;
+    }
+
+    if (statSync(inputPath).isDirectory()) {
+      readdirSync(inputPath).forEach(child => {
+        this.copyWithWarningText(path.join(inputPath, child), path.join(outputPath, child));
+      });
+      return;
+    }
+
+    // It's a file.  Add the warning text if applicable, otherwise copy as-is
+    let prefix: string, postfix: string;
+    if (inputPath.endsWith('.xml') || inputPath.endsWith('.md')) {
+      // It's a file that will be processed by Jekyll, so go ahead and use Jekyll comments
+      [prefix, postfix] = ['{% comment %} ', ' {% endcomment %}'];
+    } else {
+      this.copyAsIs(inputPath, outputPath);
+      return;
+    }
+
+    const extra = [
+      'To change the contents of this file, edit the original source file at:',
+      inputPath.slice(inputPath.indexOf('/ig-data/') + 1)
+    ];
+
+    const content = readFileSync(inputPath, 'utf8');
+    outputFileSync(outputPath, `${warningText(prefix, postfix, extra)}${content}`, 'utf8');
+    this.updateOutputLogForCopiedPath(outputPath, inputPath);
+  }
+
+  /**
+   * Updates the output log with the files that were copied from input to output. For files that come
+   * directly from SUSHI (e.g., _updatePublisher.sh), don't log the input path.  Just mark it as a
+   * generated file.
+   *
+   * @param outputPath - the output path to report on in the log
+   * @param inputPath - the input path that was copied to the output
+   */
+  private updateOutputLogForCopiedPath(outputPath: string, inputPath: string): void {
+    if (existsSync(inputPath) && statSync(inputPath).isDirectory()) {
+      readdirSync(inputPath).forEach(child => {
+        this.updateOutputLogForCopiedPath(
+          path.join(outputPath, child),
+          path.join(inputPath, child)
+        );
+      });
+      return;
+    }
+    // If the input path is actually from our SUSHI source code (e.g., a static file),
+    // change the action to generated and suppress the input path
+    if (inputPath.startsWith(__dirname)) {
+      this.updateOutputLog(outputPath, [], 'generated');
+    } else {
+      this.updateOutputLog(outputPath, [inputPath], 'copied');
+    }
+  }
+
+  /**
+   * Updates the output log for a specific output file, indicating the file (or files) that were
+   * either copied or used to generate the file. If a log already exists for the output file,
+   * it will update the log.
+   *
+   * @param output {string} - the output file to log
+   * @param inputs {List<string>} - the list of inputs used to create the file
+   * @param action {'copied'|'generated'} - how SUSHI created the file
+   */
+  private updateOutputLog(output: string, inputs: string[], action?: OutputLogAction): void {
+    if (this.outputLog.has(output)) {
+      const details = this.outputLog.get(output);
+      inputs.forEach(input => {
+        // Always use the msot recent action provided
+        if (action) {
+          details.action = action;
+        }
+        // If copied, replace the old inputs with the new ones
+        if (action === 'copied') {
+          details.inputs = inputs.slice();
+        } else if (details.inputs.indexOf(input) === -1) {
+          details.inputs.push(input);
+        }
+      });
+    } else {
+      this.outputLog.set(output, { action, inputs });
+    }
   }
 }
 
-interface PageMetadata {
+type PageMetadata = {
   originalName: string;
   prefix: number;
   name: string;
   title: string;
   fileType: string;
+};
+
+type OutputLogAction = 'copied' | 'generated';
+type outputLogDetails = {
+  action: OutputLogAction;
+  inputs: string[];
+};
+
+/**
+ * Creates a set of comments indicating that a file is generated and should not be directly edited,
+ * allowing for the comment delimiters to be passed in as well as any extra text to include.
+ *
+ * @param prefix {string} - the comment prefix to use at the start of each line (e.g., <!--)
+ * @param postfix {string} - the comment postfix to use at the end of each line (e.g., -->)
+ * @param extra {List<string>} - an array of strings, each of which is a line to include in the comment after the
+ *   standard warning text
+ * @param blankLineAfter {boolean} - whether or not to put a blank line after the comments
+ * @returns {string} representing the formatted comments
+ */
+function warningText(
+  prefix: string,
+  postfix = '',
+  extra: string[] = [],
+  blankLineAfter = true
+): string {
+  const a = warningTextArray(prefix, postfix, extra);
+  a.push('');
+  if (blankLineAfter) {
+    a.push('');
+  }
+  return a.join(EOL);
+}
+
+/**
+ * Creates a set of comments as an array of strings, each representing a line in the comments.
+ * These comments indicate that a file is generated and should not be directly edited, and this function
+ * allows for the comment delimiters to be passed in as well as any extra text to include.
+ *
+ * @param prefix {string} - the comment prefix to use at the start of each line (e.g., <!--)
+ * @param postfix {string} - the comment postfix to use at the end of each line (e.g., -->)
+ * @param extra {List<string>} - an array of strings, each of which is a line to include in the comment after the
+ *   standard warning text
+ */
+function warningTextArray(prefix: string, postfix = '', extra: string[] = []): string[] {
+  const msgLen = Math.max(85, ...extra.map(e => e.length));
+  const a: string[] = [];
+  const msg = (text = '', center = false): void => {
+    const fn = center ? pad : padEnd;
+    a.push(`${prefix}* ${fn(text, msgLen)} *${postfix}`);
+  };
+
+  a.push(`${prefix}${repeat('*', msgLen + 4)}${postfix}`);
+  msg('WARNING: DO NOT EDIT THIS FILE', true);
+  msg();
+  msg('This file is generated by SUSHI. Any edits you make to this file will be overwritten.');
+  if (extra && extra.length > 0) {
+    msg();
+    extra.forEach(m => msg(m));
+  }
+  a.push(`${prefix}${repeat('*', msgLen + 4)}${postfix}`);
+  return a;
 }

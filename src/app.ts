@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import program from 'commander';
 import cloneDeep from 'lodash/cloneDeep';
 import { importText, FSHTank, RawFSH } from './import';
-import { exportFHIR } from './export';
+import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
 import { logger, stats } from './utils';
 import { loadDependency, loadCustomResources } from './fhirdefs';
@@ -20,6 +20,8 @@ import {
   filterExtensionInstances,
   filterProfileInstances
 } from './utils';
+import { pad, padStart, sample, padEnd } from 'lodash';
+import chalk from 'chalk';
 
 app();
 
@@ -40,6 +42,8 @@ async function app() {
     .parse(process.argv);
 
   if (program.debug) logger.level = 'debug';
+
+  logger.info(`Running SUSHI ${getVersion()}`);
 
   // Check that input folder is specified
   if (!input) {
@@ -152,22 +156,18 @@ async function app() {
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 
   // If ig-data exists, generate an IG, otherwise, generate resources only
+  let isIG = false;
   const igDataPath = path.resolve(input, 'ig-data');
   if (fs.existsSync(igDataPath)) {
+    isIG = true;
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath);
     igExporter.export(program.out);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
   }
 
-  logger.info(`
-  Profiles:    ${outPackage.profiles.length}
-  Extensions:  ${outPackage.extensions.length}
-  Instances:   ${outPackage.instances.length}
-  ValueSets:   ${outPackage.valueSets.length}
-  CodeSystems: ${outPackage.codeSystems.length}
-  Errors:      ${stats.numError}
-  Warnings:    ${stats.numWarn}`);
+  console.log();
+  printResults(outPackage, isIG);
 
   const exitCode = stats.numError > 0 ? 1 : 0;
   process.exit(exitCode);
@@ -190,3 +190,66 @@ function getFilesRecursive(dir: string): string[] {
     return [dir];
   }
 }
+
+function printResults(pkg: Package, isIG: boolean) {
+  // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
+  const prNum = pad(pkg.profiles.length.toString(), 8);
+  const extnNum = pad(pkg.extensions.length.toString(), 10);
+  const vstNum = pad(pkg.valueSets.length.toString(), 9);
+  const cdsysNum = pad(pkg.codeSystems.length.toString(), 11);
+  const insNum = pad(pkg.instances.length.toString(), 9);
+  const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''}`, 13);
+  const wrNumMsg = padStart(`${stats.numWarn} Warning${stats.numWarn !== 1 ? 's' : ''}`, 12);
+  let resultStatus: ResultStatus;
+  if (stats.numError === 0 && stats.numWarn === 0) {
+    resultStatus = 'clean';
+  } else if (stats.numError > 0) {
+    resultStatus = 'errors';
+  } else {
+    resultStatus = 'warnings';
+  }
+  const aWittyMessageInvolvingABadFishPun = padEnd(sample(MESSAGE_MAP[resultStatus]), 36);
+  const clr = COLOR_MAP[resultStatus];
+
+  // NOTE: Doing some funky things w/ strings on some lines to keep overall alignment in the code
+  const results = [
+    clr('╔' + '════════════════════════ SUSHI RESULTS ══════════════════════════' + '' + '╗'),
+    clr('║') + ' ╭──────────┬────────────┬───────────┬─────────────┬───────────╮ ' + clr('║'),
+    clr('║') + ' │ Profiles │ Extensions │ ValueSets │ CodeSystems │ Instances │ ' + clr('║'),
+    clr('║') + ' ├──────────┼────────────┼───────────┼─────────────┼───────────┤ ' + clr('║'),
+    clr('║') + ` │ ${prNum} │ ${extnNum} │ ${vstNum} │ ${cdsysNum} │ ${insNum} │ ` + clr('║'),
+    clr('║') + ' ╰──────────┴────────────┴───────────┴─────────────┴───────────╯ ' + clr('║'),
+    clr('║' + '                                                                 ' + '' + '║'),
+    clr('║') + ' See SUSHI-GENERATED-FILES.md for details on generated IG files. ' + clr('║'),
+    clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
+    clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
+    clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
+  ];
+  if (!isIG) {
+    results.splice(7, 1);
+  }
+  results.forEach(r => console.log(r));
+}
+
+type ResultStatus = 'clean' | 'warnings' | 'errors';
+
+const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
+  clean: [
+    'That went swimmingly!',
+    'O-fish-ally error free!',
+    "Nice! You're totally krilling it!",
+    'Cool and So-fish-ticated!'
+  ],
+  warnings: [
+    'Not bad, but cod do batter!',
+    'Something smells fishy...',
+    'Warnings... Water those about?'
+  ],
+  errors: ['Ick! Errors!', 'Some-fin went wrong...', 'Unfor-tuna-tely, there are errors.']
+};
+
+const COLOR_MAP: { [key in ResultStatus]: chalk.Chalk } = {
+  clean: chalk.green,
+  warnings: chalk.rgb(179, 98, 0),
+  errors: chalk.red
+};
