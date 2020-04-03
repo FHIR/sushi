@@ -338,6 +338,31 @@ describe('IGExporter', () => {
       expect(content).toMatch('<li><a href="index.html">IG Home</a></li>');
       expect(content).toMatch('<li><a href="toc.html">Table of Contents</a></li>');
     });
+
+    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
+      const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
+      expect(fs.existsSync(reportPath)).toBeTruthy();
+      const content = fs.readFileSync(reportPath, 'utf8');
+      expect(content).toMatch('# SUSHI-GENERATED FILES #');
+      expect(content).toMatch(/\| _gencontinuous\.bat \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _gencontinuous\.sh \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _genonce\.bat \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _genonce\.sh \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _updatePublisher\.bat \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _updatePublisher\.sh \s*\| generated \| \s* \|/);
+      expect(content).toMatch(
+        /\| ig\.ini \s*\| generated \| .*\/ig-data\/ig\.ini, .*\/package\.json \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/ImplementationGuide-sushi-test\.json \s*\| generated \| .*\/ig-data\/ig\.ini, .*\/package\.json, \{all input resources and pages\} \s*\|/
+      );
+      expect(content).toMatch(/\| input\/ignoreWarnings\.txt \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| input\/includes\/menu\.xml \s*\| generated \| \s* \|/);
+      expect(content).toMatch(
+        /\| input\/pagecontent\/index\.md \s*\| generated \| .*\/package\.json \s*\|/
+      );
+      expect(content).toMatch(/\| package-list\.json \s*\| generated \| .*\/package\.json \s*\|/);
+    });
   });
 
   describe('#non-hl7-ig', () => {
@@ -667,6 +692,52 @@ describe('IGExporter', () => {
       expect(fs.existsSync(imagesPath)).toBeTruthy();
       const imageFileNames = fs.readdirSync(imagesPath);
       expect(imageFileNames).toEqual(['Shorty.png']);
+    });
+
+    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
+      const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
+      expect(fs.existsSync(reportPath)).toBeTruthy();
+      const content = fs.readFileSync(reportPath, 'utf8');
+      expect(content).toMatch('# SUSHI-GENERATED FILES #');
+      expect(content).toMatch(/\| _gencontinuous.bat .*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _gencontinuous.sh .*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _genonce.bat .*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _genonce.sh .*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
+      expect(content).toMatch(
+        /\| ig\.ini \s*\| generated \| ..*\/ig-data\/ig\.ini, .*\/package\.json \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/ImplementationGuide-sushi-test\.json \s*\| generated \| .*\/ig-data\/ig\.ini, .*\/package\.json, \{all input resources and pages\} \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/ignoreWarnings\.txt \s*\| copied \s*\| .*\/ig-data\/input\/ignoreWarnings\.txt \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/images\/Shorty\.png \s*\| copied \s*\| .*\/ig-data\/input\/images\/Shorty\.png \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/includes\/menu\.xml \s*\| copied \s*\| .*\/ig-data\/input\/includes\/menu\.xml \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/includes\/other\.xml \s*\| copied \s*\| .*\/ig-data\/input\/includes\/other\.xml \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/pagecontent\/index\.md \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/index\.md \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/pagecontent\/other-page\.md \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/other-page\.md \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/pagecontent\/resource-notes\.md \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/resource-notes\.md \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input\/pagecontent\/unsupported\.html \s*\| copied \s*\| .*\/ig-data\/input\/pagecontent\/unsupported\.html \s*\|/
+      );
+      expect(content).toMatch(
+        /\| package-list\.json \s*\| copied \s*\| .*\/ig-data\/package-list\.json \s*\|/
+      );
     });
   });
 
