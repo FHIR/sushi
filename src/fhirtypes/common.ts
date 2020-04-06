@@ -256,6 +256,54 @@ export function applyMixinRules(
   fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
 }
 
+/**
+ * Finds all FSH paths implied by the FSH path pointing at element. Paths are implied by array elements.
+ * For example, if foo is 2..* and bar is 2..*, and bar has a fixed value of "hello", then the rule
+ * "foo[0].baz = "hey" " implies the following:
+ * foo[0].baz = "hey"
+ * foo[0].bar[0] = "hello"
+ * foo[1].bar[0] = "hello"
+ * foo[0].bar[1] = "hello"
+ * foo[1].bar[1] = "hello"
+ * @param {ElementDefinition} element - The element that the path corresponds to
+ * @param {path} string - The FSH path to the element
+ * @returns {string[]} - All implied FSH paths by the path pointing to element
+ */
+export function getAllImpliedPaths(element: ElementDefinition, path: string): string[] {
+  const parentPaths = [];
+  const parent = element.parent();
+  if (parent) {
+    if (parent.min === 0) {
+      // If the parent has min = 0, then the path above this point has no additional implied paths
+      // so add the path to this point to the parentPaths
+      parentPaths.push(splitOnPathPeriods(path).slice(0, -1).join('.'));
+    } else {
+      // If min >= 1, the parent or its parents my have implied paths, recursively find those
+      parentPaths.push(
+        ...this.getAllImpliedPaths(parent, splitOnPathPeriods(path).slice(0, -1).join('.'))
+      );
+    }
+  } else {
+    parentPaths.push('');
+  }
+  const pathEnd = splitOnPathPeriods(path).slice(-1)[0];
+  const pathEnds = [pathEnd];
+  if (element.max === '*' || parseInt(element.max) > 1) {
+    // Index 0 element doesn't need index, since it is implied
+    for (let i = 1; i < element.min; i++) {
+      pathEnds.push(`${pathEnd}[${i}]`);
+    }
+  }
+  const finalPaths = [];
+  for (const parentPath of parentPaths) {
+    for (const pathEnd of pathEnds) {
+      // Combine the parentPaths with the pathEnds
+      finalPaths.push(`${parentPath == '' ? '' : parentPath + '.'}${pathEnd}`);
+    }
+  }
+  return finalPaths;
+}
+
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
 export class HasName {
