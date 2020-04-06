@@ -241,14 +241,15 @@ export class IGExporter {
       logger.info('Copied ig-data/input/pagecontent/index.xml');
     } else {
       logger.info('Generated default index.md.');
-      const warning = warningText('{% comment %} ', ' {% endcomment %}', [
+      const warningContent = warningText('{% comment %} ', ' {% endcomment %}', [
         'This index.md file was generated from the "description" in package.json. To provide',
         'your own index file, create an index.md or index.xml in the ig-data/input/pagecontent',
         'folder.',
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
+      const warningComment = `<!-- index.md${EOL}${warningContent}-->${EOL}`;
       const outputPath = path.join(igPath, 'input', 'pagecontent', 'index.md');
-      outputFileSync(outputPath, `${warning}${this.pkg.config.description ?? ''}`);
+      outputFileSync(outputPath, `${warningComment}${this.pkg.config.description ?? ''}`);
       this.updateOutputLog(outputPath, [this.packagePath], 'generated');
     }
 
@@ -832,23 +833,25 @@ export class IGExporter {
       return;
     }
 
-    // It's a file.  Add the warning text if applicable, otherwise copy as-is
-    let prefix: string, postfix: string;
-    if (inputPath.endsWith('.xml') || inputPath.endsWith('.md')) {
-      // It's a file that will be processed by Jekyll, so go ahead and use Jekyll comments
-      [prefix, postfix] = ['{% comment %} ', ' {% endcomment %}'];
-    } else {
+    // If it's not xml or md, just copy it as is and we're done.
+    if (!inputPath.endsWith('.md') && !inputPath.endsWith('.xml')) {
       this.copyAsIs(inputPath, outputPath);
       return;
     }
 
+    // Otherwise, it's .md or .xml
     const extra = [
       'To change the contents of this file, edit the original source file at:',
       inputPath.slice(inputPath.indexOf('/ig-data/') + 1)
     ];
-
+    // .xml files can't have bare jekyll comments at the start of the file, as they fail XML parsing,
+    // so we must surround the warning w/ XML comments.  To avoid the final HTML having just an empty
+    // XML comment tag, we add in the file name -- which is likely useful info in the source anyway;
+    // and for consistency, we do it for both .xml and .md
+    const warningContent = warningText('{% comment %} ', ' {% endcomment %}', extra, false);
+    const warningComment = `<!-- ${path.parse(outputPath).base}${EOL}${warningContent}-->${EOL}`;
     const content = readFileSync(inputPath, 'utf8');
-    outputFileSync(outputPath, `${warningText(prefix, postfix, extra)}${content}`, 'utf8');
+    outputFileSync(outputPath, `${warningComment}${content}`, 'utf8');
     this.updateOutputLogForCopiedPath(outputPath, inputPath);
   }
 
