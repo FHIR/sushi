@@ -253,7 +253,7 @@ export class IGExporter {
       logger.info('Copied ig-data/input/pagecontent/index.xml');
     } else {
       logger.info('Generated default index.md.');
-      const warning = warningText('{% comment %} ', ' {% endcomment %}', [
+      const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
         'This index.md file was generated from the "description" in package.json. To provide',
         'your own index file, create an index.md or index.xml in the ig-data/input/pagecontent',
         'folder.',
@@ -674,7 +674,7 @@ export class IGExporter {
           'file in the ig-data folder with the values that should be merged into this generated file.',
           'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
         ];
-    const iniWarning = warningText('; ', '', extra, false);
+    const iniWarning = [...warningTextArray('; ', extra), ''].join(EOL);
     outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
 
     // Finally, write it to disk
@@ -725,7 +725,7 @@ export class IGExporter {
     outputJSONSync(
       outputPath,
       {
-        '//': warningTextArray('', '', [
+        '//': warningTextArray('', [
           'This package-list.json was generated using default values and values inferred from',
           'package.json (name, title, canonical, description, url, version). This is only a starter',
           'file. IG authors should provide their own package-list.json file in the ig-data folder',
@@ -844,23 +844,29 @@ export class IGExporter {
       return;
     }
 
-    // It's a file.  Add the warning text if applicable, otherwise copy as-is
-    let prefix: string, postfix: string;
-    if (inputPath.endsWith('.xml') || inputPath.endsWith('.md')) {
-      // It's a file that will be processed by Jekyll, so go ahead and use Jekyll comments
-      [prefix, postfix] = ['{% comment %} ', ' {% endcomment %}'];
-    } else {
+    // If it's not xml or md, just copy it as is and we're done.
+    if (!inputPath.endsWith('.md') && !inputPath.endsWith('.xml')) {
       this.copyAsIs(inputPath, outputPath);
       return;
     }
 
+    // Otherwise, it's .md or .xml
     const extra = [
       'To change the contents of this file, edit the original source file at:',
-      inputPath.slice(inputPath.indexOf('/ig-data/') + 1)
+      inputPath.slice(inputPath.indexOf(`${path.sep}ig-data${path.sep}`) + 1)
     ];
-
+    // .xml files can't have bare jekyll comments at the start of the file, as they fail XML parsing,
+    // so we must surround the warning w/ XML comments.  To avoid the final HTML having just an empty
+    // XML comment tag, we add in the file name -- which is likely useful info in the source anyway;
+    // and for consistency, we do it for both .xml and .md
+    const warning = warningBlock(
+      `<!-- ${path.parse(outputPath).base} {% comment %}`,
+      '{% endcomment %} -->',
+      extra,
+      false
+    );
     const content = readFileSync(inputPath, 'utf8');
-    outputFileSync(outputPath, `${warningText(prefix, postfix, extra)}${content}`, 'utf8');
+    outputFileSync(outputPath, `${warning}${content}`, 'utf8');
     this.updateOutputLogForCopiedPath(outputPath, inputPath);
   }
 
@@ -936,24 +942,23 @@ type outputLogDetails = {
 };
 
 /**
- * Creates a set of comments indicating that a file is generated and should not be directly edited,
- * allowing for the comment delimiters to be passed in as well as any extra text to include.
+ * Creates a block of comments indicating that a file is generated and should not be directly edited,
+ * allowing for the block comment delimiters to be passed in as well as any extra text to include.
  *
- * @param prefix {string} - the comment prefix to use at the start of each line (e.g., <!--)
- * @param postfix {string} - the comment postfix to use at the end of each line (e.g., -->)
+ * @param blockPrefix {string} - the comment prefix to use at the start of the block (e.g., <!-- {% comment %})
+ * @param blockPostfix {string} - the comment postfix to use at the end of the block (e.g., {% endcomment %} -->)
  * @param extra {List<string>} - an array of strings, each of which is a line to include in the comment after the
  *   standard warning text
- * @param blankLineAfter {boolean} - whether or not to put a blank line after the comments
+ * @param blankLineAfter {boolean} - whether or not to put a blank line after the block of comments
  * @returns {string} representing the formatted comments
  */
-function warningText(
-  prefix: string,
-  postfix = '',
+function warningBlock(
+  blockPrefix = '',
+  blockPostfix = '',
   extra: string[] = [],
   blankLineAfter = true
 ): string {
-  const a = warningTextArray(prefix, postfix, extra);
-  a.push('');
+  const a = [blockPrefix, ...warningTextArray('', extra), blockPostfix, ''];
   if (blankLineAfter) {
     a.push('');
   }
@@ -966,19 +971,18 @@ function warningText(
  * allows for the comment delimiters to be passed in as well as any extra text to include.
  *
  * @param prefix {string} - the comment prefix to use at the start of each line (e.g., <!--)
- * @param postfix {string} - the comment postfix to use at the end of each line (e.g., -->)
  * @param extra {List<string>} - an array of strings, each of which is a line to include in the comment after the
  *   standard warning text
  */
-function warningTextArray(prefix: string, postfix = '', extra: string[] = []): string[] {
+function warningTextArray(prefix: string, extra: string[] = []): string[] {
   const msgLen = Math.max(85, ...extra.map(e => e.length));
   const a: string[] = [];
   const msg = (text = '', center = false): void => {
     const fn = center ? pad : padEnd;
-    a.push(`${prefix}* ${fn(text, msgLen)} *${postfix}`);
+    a.push(`${prefix}* ${fn(text, msgLen)} *`);
   };
 
-  a.push(`${prefix}${repeat('*', msgLen + 4)}${postfix}`);
+  a.push(`${prefix}${repeat('*', msgLen + 4)}`);
   msg('WARNING: DO NOT EDIT THIS FILE', true);
   msg();
   msg('This file is generated by SUSHI. Any edits you make to this file will be overwritten.');
@@ -986,6 +990,6 @@ function warningTextArray(prefix: string, postfix = '', extra: string[] = []): s
     msg();
     extra.forEach(m => msg(m));
   }
-  a.push(`${prefix}${repeat('*', msgLen + 4)}${postfix}`);
+  a.push(`${prefix}${repeat('*', msgLen + 4)}`);
   return a;
 }
