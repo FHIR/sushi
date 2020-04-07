@@ -249,6 +249,7 @@ export interface CodeContext extends ParserRuleContext {
 export interface ConceptContext extends ParserRuleContext {
   code(): CodeContext;
   STRING(): ParserRuleContext;
+  MULTILINE_STRING(): ParserRuleContext;
 }
 
 export interface QuantityContext extends ParserRuleContext {
