@@ -7,7 +7,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
-import { logger, stats } from './utils';
+import { logger, stats, Type } from './utils';
 import { loadDependency, loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import {
@@ -100,6 +100,15 @@ async function app() {
     return;
   }
 
+  const fhirR4Dependency = config.dependencies['hl7.fhir.r4.core'];
+  if (!(fhirR4Dependency && fhirR4Dependency === '4.0.1')) {
+    logger.error(
+      'The package.json must specify FHIR R4 as a dependency. Be sure to' +
+        ' add "hl7.fhir.r4.core": "4.0.1" to the dependencies list.'
+    );
+    program.help();
+  }
+
   // Load external dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
@@ -133,6 +142,16 @@ async function app() {
 
   const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);
+
+  // Check for StructureDefinition
+  const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
+  if (!(structDef && structDef.version === '4.0.1')) {
+    logger.error(
+      'StructureDefinition resource not found for 4.0.1. Your FHIR package may be corrupt.'
+    );
+    program.help();
+  }
+
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
 
