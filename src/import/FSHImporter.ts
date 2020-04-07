@@ -1062,6 +1062,8 @@ export class FSHImporter extends FSHVisitor {
     }
     if (ctx.STRING()) {
       concept.definition = this.extractString(ctx.STRING());
+    } else if (ctx.MULTILINE_STRING()) {
+      concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
     return concept;
   }
