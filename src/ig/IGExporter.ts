@@ -841,7 +841,7 @@ export class IGExporter {
     // Otherwise, it's .md or .xml
     const extra = [
       'To change the contents of this file, edit the original source file at:',
-      inputPath.slice(inputPath.indexOf('/ig-data/') + 1)
+      inputPath.slice(inputPath.indexOf(`${path.sep}ig-data${path.sep}`) + 1)
     ];
     // .xml files can't have bare jekyll comments at the start of the file, as they fail XML parsing,
     // so we must surround the warning w/ XML comments.  To avoid the final HTML having just an empty
