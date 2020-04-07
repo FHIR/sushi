@@ -11,7 +11,6 @@ import {
   outputFileSync,
   chmodSync,
   existsSync,
-  removeSync,
   readdirSync,
   readJSONSync,
   readFileSync
@@ -193,17 +192,16 @@ export class IGExporter {
    */
   private addStaticFiles(igPath: string): void {
     const inputPath = path.join(__dirname, 'files');
-    this.copyAsIs(inputPath, igPath);
-
-    // If in an IG Publisher context, do not include any of the publisher scripts
-    if (this.isIgPubContext) {
-      removeSync(path.join(igPath, '_genonce.sh'));
-      removeSync(path.join(igPath, '_genonce.bat'));
-      removeSync(path.join(igPath, '_gencontinuous.sh'));
-      removeSync(path.join(igPath, '_gencontinuous.bat'));
-      removeSync(path.join(igPath, '_updatePublisher.sh'));
-      removeSync(path.join(igPath, '_updatePublisher.bat'));
-    }
+    this.copyAsIs(inputPath, igPath, src => {
+      // If in an IG Publisher context, do not include any of the publisher scripts
+      if (this.isIgPubContext) {
+        if (path.parse(src).base.startsWith('_genonce.')) return false;
+        if (path.parse(src).base.startsWith('_gencontinuous.')) return false;
+        if (path.parse(src).base.startsWith('_updatePublisher.')) return false;
+        return true;
+      }
+      return true;
+    });
 
     // On Windows, the file permissions are not always preserved. This doesn't
     // cause a problem for the Windows user, but it may cause problems for
@@ -816,12 +814,12 @@ export class IGExporter {
    * @param inputPath {string} - the input path to copy
    * @param outputPath {string} - the output path to copy to
    */
-  private copyAsIs(inputPath: string, outputPath: string): void {
+  private copyAsIs(inputPath: string, outputPath: string, filter?: (src: string) => boolean): void {
     if (!existsSync(inputPath)) {
       return;
     }
 
-    copySync(inputPath, outputPath);
+    copySync(inputPath, outputPath, { filter });
     this.updateOutputLogForCopiedPath(outputPath, inputPath);
   }
 

@@ -57,28 +57,23 @@ async function app() {
 
   // If no input folder is specified, set default to current directory
   if (!input) {
-    input = path.join('.');
+    input = '.';
     logger.info('path-to-fsh-defs defaulted to current working directory');
   }
 
-  // If a fsh subdirectory is detected, we are in an IG Publisher context
-  const isUsingFshDir = path.parse(input).base === 'fsh';
-
-  const fshSubdirectoryPath = path.join(input, 'fsh');
-  const hasFshDir = fs.existsSync(fshSubdirectoryPath);
-  const shouldUseFshDir = hasFshDir && input !== fshSubdirectoryPath;
-
-  const isIgPubContext = isUsingFshDir || shouldUseFshDir;
-  if (isIgPubContext) {
-    logger.info(
-      'Current FSH tank conforms to an IG Publisher context. Default input and output will be adjusted accordingly.'
-    );
-  }
-
   // Use fsh/ subdirectory if not already specified and present
-  if (shouldUseFshDir) {
+  const fshSubdirectoryPath = path.join(input, 'fsh');
+  if (fs.existsSync(fshSubdirectoryPath)) {
     input = path.join(input, 'fsh');
     logger.info('fsh/ subdirectory detected and add to input path');
+  }
+
+  // If a fsh subdirectory is used, we are in an IG Publisher context
+  const isIgPubContext = path.parse(input).base === 'fsh';
+  if (isIgPubContext) {
+    logger.info(
+      'Current FSH tank conforms to an IG Publisher context. Output will be adjusted accordingly.'
+    );
   }
 
   let files: string[];
@@ -145,9 +140,11 @@ async function app() {
   if (isIgPubContext && !program.out) {
     // When running in an IG Publisher context, default output is the parent folder of the tank
     outDir = path.join(input, '..');
+    logger.info(`No output path specified. Output to ${outDir}`);
   } else if (!program.out) {
     // Any other time, default output is just to 'build'
     outDir = path.join('.', 'build');
+    logger.info(`No output path specified. Output to ${outDir}`);
   }
   fs.ensureDirSync(outDir);
 
