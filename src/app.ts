@@ -30,12 +30,22 @@ async function app() {
 
   program
     .name('sushi')
-    .usage('<path-to-fsh-defs> [options]')
-    .option('-o, --out <out>', 'the path to the output folder', path.join('.', 'build'))
+    .usage('[path-to-fsh-defs] [options]')
+    .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .version(getVersion(), '-v, --version', 'print SUSHI version')
-    .arguments('<path-to-fsh-defs>')
+    .on('--help', () => {
+      console.log('');
+      console.log('Additional information:');
+      console.log('  [path-to-fsh-defs]');
+      console.log('    Default: "."');
+      console.log('    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
+      console.log('  -o, --out <out>');
+      console.log('    Default: "build"');
+      console.log('    If fsh/ subdirectory present, default output is one directory above fsh/');
+    })
+    .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
       input = pathToFshDefs;
     })
@@ -45,10 +55,25 @@ async function app() {
 
   logger.info(`Running SUSHI ${getVersion()}`);
 
-  // Check that input folder is specified
+  // If no input folder is specified, set default to current directory
   if (!input) {
-    logger.error('Missing path to FSH definition folder.');
-    program.help();
+    input = '.';
+    logger.info('path-to-fsh-defs defaulted to current working directory');
+  }
+
+  // Use fsh/ subdirectory if not already specified and present
+  const fshSubdirectoryPath = path.join(input, 'fsh');
+  if (fs.existsSync(fshSubdirectoryPath)) {
+    input = path.join(input, 'fsh');
+    logger.info('fsh/ subdirectory detected and add to input path');
+  }
+
+  // If a fsh subdirectory is used, we are in an IG Publisher context
+  const isIgPubContext = path.parse(input).base === 'fsh';
+  if (isIgPubContext) {
+    logger.info(
+      'Current FSH tank conforms to an IG Publisher context. Output will be adjusted accordingly.'
+    );
   }
 
   let files: string[];
@@ -111,10 +136,20 @@ async function app() {
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
 
-  fs.ensureDirSync(program.out);
+  let outDir = program.out;
+  if (isIgPubContext && !program.out) {
+    // When running in an IG Publisher context, default output is the parent folder of the tank
+    outDir = path.join(input, '..');
+    logger.info(`No output path specified. Output to ${outDir}`);
+  } else if (!program.out) {
+    // Any other time, default output is just to 'build'
+    outDir = path.join('.', 'build');
+    logger.info(`No output path specified. Output to ${outDir}`);
+  }
+  fs.ensureDirSync(outDir);
 
   fs.writeFileSync(
-    path.join(program.out, 'package.json'),
+    path.join(outDir, 'package.json'),
     JSON.stringify(outPackage.config, null, 2),
     'utf8'
   );
@@ -125,7 +160,7 @@ async function app() {
     folder: string,
     resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
   ) => {
-    const exportDir = path.join(program.out, 'input', folder);
+    const exportDir = path.join(outDir, 'input', folder);
     resources.forEach(resource => {
       fs.outputJSONSync(
         path.join(exportDir, resource.getFileName()),
@@ -161,8 +196,8 @@ async function app() {
   if (fs.existsSync(igDataPath)) {
     isIG = true;
     logger.info('Assembling Implementation Guide sources...');
-    const igExporter = new IGExporter(outPackage, defs, igDataPath);
-    igExporter.export(program.out);
+    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
+    igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
   }
 
