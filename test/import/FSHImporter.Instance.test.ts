@@ -189,6 +189,23 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an instance with fixed values that are an alias', () => {
+        const input = `
+        Alias: EXAMPLE = http://example.org
+
+        Instance: PatientExample
+        InstanceOf: Patient
+        * identifier[0].system = EXAMPLE
+        `;
+
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('PatientExample');
+        expect(instance.rules).toHaveLength(1);
+        expect(instance.instanceOf).toBe('Patient');
+        assertFixedValueRule(instance.rules[0], 'identifier[0].system', 'http://example.org');
+      });
+
       it('should parse an instance with fixed value resource rules', () => {
         const input = `
         Instance: SamplePatient
