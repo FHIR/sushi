@@ -613,6 +613,30 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should not fix a deeply nested element that is fixed on the Structure Definition but does not have 1..1 parents', () => {
+      // * telecom.period 0..1 // Element is optional
+      // * telecom.period.start 1..1
+      // * telecom.period.start = "2000-07-04"
+      const periodCard = new CardRule('telecom.period');
+      periodCard.min = 0;
+      periodCard.max = '1';
+      const startCard = new CardRule('telecom.period.start');
+      startCard.min = 1;
+      startCard.max = '1';
+      const fixedValRule = new FixedValueRule('telecom.period.start');
+      fixedValRule.fixedValue = '2000-07-04';
+
+      patient.rules.push(periodCard, startCard, fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('telecom[0].system');
+      instanceFixedValRule.fixedValue = new FshCode('email');
+      patientInstance.rules.push(instanceFixedValRule); // * telecom[0].system = #email
+      const exported = exportInstance(patientInstance);
+      expect(exported.telecom[0]).toEqual({
+        system: 'email'
+        // period not included since it is 0..1
+      });
+    });
+
     // Fixing with pattern[x]
     it('should fix a nested element that is fixed by pattern[x] from a parent on the SD', () => {
       const fixedValRule = new FixedValueRule('maritalStatus.coding');
