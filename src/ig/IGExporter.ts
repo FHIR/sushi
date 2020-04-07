@@ -44,7 +44,8 @@ export class IGExporter {
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
-    private readonly igDataPath: string
+    private readonly igDataPath: string,
+    private readonly isIgPubContext: boolean = false
   ) {
     this.packagePath = path.resolve(this.igDataPath, '..', 'package.json');
     this.outputLog = new Map();
@@ -191,7 +192,16 @@ export class IGExporter {
    */
   private addStaticFiles(igPath: string): void {
     const inputPath = path.join(__dirname, 'files');
-    this.copyAsIs(inputPath, igPath);
+    this.copyAsIs(inputPath, igPath, src => {
+      // If in an IG Publisher context, do not include any of the publisher scripts
+      if (this.isIgPubContext) {
+        if (path.parse(src).base.startsWith('_genonce.')) return false;
+        if (path.parse(src).base.startsWith('_gencontinuous.')) return false;
+        if (path.parse(src).base.startsWith('_updatePublisher.')) return false;
+        return true;
+      }
+      return true;
+    });
 
     // On Windows, the file permissions are not always preserved. This doesn't
     // cause a problem for the Windows user, but it may cause problems for
@@ -199,9 +209,11 @@ export class IGExporter {
     // To work around this, we set the necessary permissions on executable
     // scripts after copying them to the IG path.
     try {
-      chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
-      chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
-      chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
+      if (!this.isIgPubContext) {
+        chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
+        chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
+        chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
+      }
     } catch (e) {
       // We don't want to fail the whole export for this, but we should log it
       logger.warn(
@@ -802,12 +814,12 @@ export class IGExporter {
    * @param inputPath {string} - the input path to copy
    * @param outputPath {string} - the output path to copy to
    */
-  private copyAsIs(inputPath: string, outputPath: string): void {
+  private copyAsIs(inputPath: string, outputPath: string, filter?: (src: string) => boolean): void {
     if (!existsSync(inputPath)) {
       return;
     }
 
-    copySync(inputPath, outputPath);
+    copySync(inputPath, outputPath, { filter });
     this.updateOutputLogForCopiedPath(outputPath, inputPath);
   }
 
