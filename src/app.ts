@@ -100,13 +100,14 @@ async function app() {
     return;
   }
 
-  const fhirR4Dependency = config.dependencies['hl7.fhir.r4.core'];
-  if (!(fhirR4Dependency && fhirR4Dependency === '4.0.1')) {
+  // Ensure FHIR R4 is added as a dependency
+  const fhirR4Dependency = config.dependencies?.['hl7.fhir.r4.core'];
+  if (fhirR4Dependency !== '4.0.1') {
     logger.error(
       'The package.json must specify FHIR R4 as a dependency. Be sure to' +
         ' add "hl7.fhir.r4.core": "4.0.1" to the dependencies list.'
     );
-    program.help();
+    return;
   }
 
   // Load external dependencies
@@ -145,11 +146,13 @@ async function app() {
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
-  if (!(structDef && structDef.version === '4.0.1')) {
+  if (structDef?.version !== '4.0.1') {
     logger.error(
-      'StructureDefinition resource not found for 4.0.1. Your FHIR package may be corrupt.'
+      'StructureDefinition resource not found for v4.0.1. The FHIR R4 package in local cache' +
+        ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
+        ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
     );
-    program.help();
+    return;
   }
 
   logger.info('Converting FSH to FHIR resources...');
