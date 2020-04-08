@@ -1123,6 +1123,21 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
+      it('should parse fixed values that are an alias', () => {
+        const input = `
+        Alias: EXAMPLE = http://example.org
+
+        Profile: PatientProfile
+        Parent: Patient
+        * identifier.system = EXAMPLE
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PatientProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertFixedValueRule(profile.rules[0], 'identifier.system', 'http://example.org');
+      });
+
       it('should log an error and skip the rule when parsing fixed value Resource rule', () => {
         const input = `
 
