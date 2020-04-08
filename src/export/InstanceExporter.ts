@@ -92,8 +92,8 @@ export class InstanceExporter implements Fishable {
           if (foundFixedValue) {
             // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
             let overlapIndex = 0;
-            element.path.split('.').forEach((p, i) => {
-              if (p === associatedEl.path.split('.')[i]) overlapIndex++;
+            element.id.split('.').forEach((p, i) => {
+              if (p === associatedEl.id.split('.')[i]) overlapIndex++;
             });
             // We must keep the relevant portion of the beginning of path to preserve sliceNames
             // and combine this with portion of the associatedEl's path that is not overlapped
