@@ -156,7 +156,7 @@ UNIT:               '\'' (~[\\'])* '\'';
 CODE:               SEQUENCE? '#' (SEQUENCE | CONCEPT_STRING);
 
 
-CONCEPT_STRING:      '"' (~[ \t\r\n\f\u00A0\\"] | '\\"' | '\\\\')+ (WS (~[ \t\r\n\f\u00A0\\"] | '\\"' | '\\\\')+)* '"';
+CONCEPT_STRING:      '"' (NONWS_STR | '\\"' | '\\\\')+ (WS (NONWS_STR | '\\"' | '\\\\')+)* '"';
 
                  //        YEAR         ( -   MONTH   ( -    DAY    ( T TIME )?)?)?
 DATETIME:           [0-9][0-9][0-9][0-9]('-'[0-9][0-9]('-'[0-9][0-9]('T' TIME)?)?)?;
@@ -171,7 +171,7 @@ CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
 REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
 
                  //  ^  NON-WHITESPACE
-CARET_SEQUENCE:     '^' ~[ \t\r\n\f\u00A0]+;
+CARET_SEQUENCE:     '^' NONWS+;
 
                  // '/' EXPRESSION '/'
 REGEX:              '/' ('\\/' | ~[*/\r\n])('\\/' | ~[/\r\n])* '/';
@@ -183,12 +183,14 @@ COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;
 
                  // NON-WHITESPACE
-SEQUENCE:           ~[ \t\r\n\f\u00A0]+;
+SEQUENCE:           NONWS+;
 
 
 
 // FRAGMENTS
 fragment WS: [ \t\r\n\f\u00A0];
+fragment NONWS: ~[ \t\r\n\f\u00A0];
+fragment NONWS_STR: ~[ \t\r\n\f\u00A0\\"];
 
 // IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);
