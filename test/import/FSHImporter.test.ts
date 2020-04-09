@@ -116,6 +116,35 @@ describe('FSHImporter', () => {
     assertFixedValueRule(profile.rules[0], 'code', expectedCode);
   });
 
+  it('should parse a rule that uses non-breaking spaces in a concept string', () => {
+    const input = `
+    Profile: NonBreakingObservation
+    Parent: Observation
+    * code = #"These\u0020are\u0020non-breaking."
+    `;
+    const result = importSingleText(input, 'NonBreaking.fsh');
+    const profile = result.profiles.get('NonBreakingObservation');
+    const expectedCode = new FshCode('These\u0020are\u0020non-breaking.')
+      .withLocation([4, 14, 4, 39])
+      .withFile('NonBreaking.fsh');
+    expect(profile.rules).toHaveLength(1);
+    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+  });
+
+  it('should log an error when a concept string starts with whitespace', () => {
+    const input = `
+    Profile: NonBreakingObservation
+    Parent: Observation
+    * code = #"\u0020Leading whitespace prohibited."
+    `;
+    const result = importSingleText(input, 'NonBreaking.fsh');
+    result.profiles.get('NonBreakingObservation');
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /extraneous input.*File: NonBreaking\.fsh.*Line: 4\D*/s
+    );
+  });
+
   it('should parse a rule on an element named system', () => {
     const input = `
     Profile: MyOperation
@@ -355,6 +384,16 @@ describe('FSHImporter', () => {
     const result = importSingleText(input);
     const profile = result.profiles.get('ObservationProfile');
     expect(profile.description).toBe('Descriptions come in only one size.');
+  });
+
+  it('should parse non-breaking space characters as whitespace', () => {
+    const input = `
+    Profile:\u00A0NonBreakingObservation
+    Parent: Observation\u00A0
+    `; // \u00A0 is the non-breaking space character
+    const result = importSingleText(input);
+    const profile = result.profiles.get('NonBreakingObservation');
+    expect(profile.parent).toBe('Observation');
   });
 
   it('should log info messages during import', () => {
