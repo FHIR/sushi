@@ -1452,6 +1452,17 @@ describe('FSHImporter', () => {
           new FshCode('bar', 'foo', 'baz').withLocation([6, 29, 6, 41]).withFile('')
         );
       });
+
+      it('should not include non-breaking spaces as part of the caret path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * status ^short\u00A0= "Non-breaking"
+        `;
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        assertCaretValueRule(profile.rules[0], 'status', 'short', 'Non-breaking');
+      });
     });
 
     describe('#obeysRule', () => {
