@@ -1450,6 +1450,20 @@ export class ElementDefinition {
   }
 
   /**
+   * Finds and returns all parent elements.  For example, the parent elements of `Foo.bar.one` are [`Foo.bar`, `Foo`].
+   * @returns {ElementDefinition[]} the array of parents, empty if no parents
+   */
+  getAllParents(): ElementDefinition[] {
+    const parents = [];
+    let parent = this.parent();
+    while (parent) {
+      parents.push(parent);
+      parent = parent.parent();
+    }
+    return parents;
+  }
+
+  /**
    * Finds and returns all child elements of this element.  For example, the children of `Foo.bar` might be the
    * elements `Foo.bar.one`, `Foo.bar.two`, and `Foo.bar.two.a`.  This will not "expand" or "unroll" elements; it
    * only returns those child elements that already exist in the structure definition.
@@ -1464,6 +1478,19 @@ export class ElementDefinition {
         (!directOnly || e.path.split('.').length === this.path.split('.').length + 1)
       );
     });
+  }
+  /**
+   * Finds and returns all fixable descendents of the element. A fixable descendent is a direct child of the
+   * element that has minimum cardinality greater than 0, and all fixable descendents of such children
+   * @returns {ElementDefinition[]} the fixable descendents of this element
+   */
+  getFixableDescendents(): ElementDefinition[] {
+    const fixableChildren = this.children(true).filter(e => e.min > 0);
+    let fixableDescendents: ElementDefinition[] = [];
+    fixableChildren.forEach(fc => {
+      fixableDescendents = fixableDescendents.concat(fc.getFixableDescendents());
+    });
+    return [...fixableChildren, ...fixableDescendents];
   }
 
   /**
