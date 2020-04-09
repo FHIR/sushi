@@ -813,6 +813,7 @@ export class IGExporter {
    *
    * @param inputPath {string} - the input path to copy
    * @param outputPath {string} - the output path to copy to
+   * @param filter {(string) => boolean} - a filter indicating the files to copy
    */
   private copyAsIs(inputPath: string, outputPath: string, filter?: (src: string) => boolean): void {
     if (!existsSync(inputPath)) {
@@ -820,7 +821,7 @@ export class IGExporter {
     }
 
     copySync(inputPath, outputPath, { filter });
-    this.updateOutputLogForCopiedPath(outputPath, inputPath);
+    this.updateOutputLogForCopiedPath(outputPath, inputPath, filter);
   }
 
   /**
@@ -877,20 +878,29 @@ export class IGExporter {
    *
    * @param outputPath - the output path to report on in the log
    * @param inputPath - the input path that was copied to the output
+   * @param filter {(string) => boolean} - a filter indicating the files to copy
    */
-  private updateOutputLogForCopiedPath(outputPath: string, inputPath: string): void {
+  private updateOutputLogForCopiedPath(
+    outputPath: string,
+    inputPath: string,
+    filter: (src: string) => boolean = () => true
+  ): void {
     if (existsSync(inputPath) && statSync(inputPath).isDirectory()) {
-      readdirSync(inputPath).forEach(child => {
-        this.updateOutputLogForCopiedPath(
-          path.join(outputPath, child),
-          path.join(inputPath, child)
-        );
-      });
+      readdirSync(inputPath)
+        .filter(filter)
+        .forEach(child => {
+          this.updateOutputLogForCopiedPath(
+            path.join(outputPath, child),
+            path.join(inputPath, child)
+          );
+        });
       return;
     }
     // If the input path is actually from our SUSHI source code (e.g., a static file),
     // change the action to generated and suppress the input path
-    if (inputPath.startsWith(__dirname)) {
+    if (!filter(inputPath)) {
+      // Filtered out.  Do nothing.
+    } else if (inputPath.startsWith(__dirname)) {
       this.updateOutputLog(outputPath, [], 'generated');
     } else {
       this.updateOutputLog(outputPath, [inputPath], 'copied');

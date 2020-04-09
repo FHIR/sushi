@@ -403,6 +403,34 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
     });
+
+    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
+      const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
+      expect(fs.existsSync(reportPath)).toBeTruthy();
+      const content = fs.readFileSync(reportPath, 'utf8');
+      expect(content).toMatch('# SUSHI-GENERATED FILES #');
+      expect(content).not.toContain('_gencontinuous.bat');
+      expect(content).not.toContain('_gencontinuous.sh');
+      expect(content).not.toContain('_genonce.bat');
+      expect(content).not.toContain('_genonce.sh');
+      expect(content).not.toContain('_updatePublisher.bat');
+      expect(content).not.toContain('_updatePublisher.sh');
+      expect(content).toMatch(
+        /\| ig\.ini \s*\| generated \| .*[\/\\]ig-data[\/\\]ig\.ini, .*[\/\\]package\.json \s*\|/
+      );
+      expect(content).toMatch(
+        /\| input[\/\\]ImplementationGuide-sushi-test\.json \s*\| generated \| .*[\/\\]ig-data[\/\\]ig\.ini, .*[\/\\]package\.json, \{all input resources and pages\} \s*\|/
+      );
+      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \| \s* \|/);
+      expect(content).toMatch(/\| input[\/\\]includes[\/\\]menu\.xml \s*\| generated \| \s* \|/);
+      expect(content).toMatch(
+        /\| input[\/\\]pagecontent[\/\\]index\.md \s*\| generated \| .*[\/\\]package\.json \s*\|/
+      );
+      expect(content).toMatch(
+        /\| package-list\.json \s*\| generated \| .*[\/\\]package\.json \s*\|/
+      );
+      expect(content).toMatch(/\| package\.json \s*\| copied \s*\| .*[\/\\]package\.json \s*\|/);
+    });
   });
 
   describe('#non-hl7-ig', () => {
