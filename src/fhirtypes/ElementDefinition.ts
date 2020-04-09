@@ -1166,6 +1166,23 @@ export class ElementDefinition {
         throw new MismatchedTypeError(type, value, this.type[0].code);
     }
 
+    // If the element is found in a discriminator.path, then we enforce that it has minimum cardinality 1
+    // since its value is fixed
+    const parentSlices = [this, ...this.getAllParents().reverse()].filter(el => el.sliceName);
+    parentSlices.forEach(parentSlice => {
+      const slicedElement = parentSlice.slicedElement();
+      if (
+        slicedElement.slicing.discriminator.some(
+          d =>
+            `${slicedElement.path}${d.path === '$this' ? '' : `.${d.path}`}` === this.path &&
+            ['value', 'pattern'].includes(d.type)
+        ) &&
+        this.min === 0
+      ) {
+        this.constrainCardinality(1, '');
+      }
+    });
+
     // Units error should not stop fixing value, but must still be logged
     const types = this.findTypesByCode('Quantity');
     if (units && types.length === 0) {
