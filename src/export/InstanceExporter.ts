@@ -1,5 +1,5 @@
 import { FSHTank } from '../import/FSHTank';
-import { StructureDefinition, InstanceDefinition, ElementDefinition } from '../fhirtypes';
+import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance } from '../fshtypes';
 import { logger, Fishable, Type, Metadata } from '../utils';
 import {
@@ -7,7 +7,8 @@ import {
   replaceReferences,
   replaceField,
   splitOnPathPeriods,
-  applyMixinRules
+  applyMixinRules,
+  getAllImpliedPaths
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
@@ -25,14 +26,6 @@ export class InstanceExporter implements Fishable {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
-    // Fix values from the SD for all elements at the top level of the SD
-    this.setFixedValuesFromStructureDefinition(
-      instanceOfStructureDefinition.findElement(instanceDef.resourceType),
-      '',
-      instanceDef,
-      instanceOfStructureDefinition
-    );
-
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r));
     rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
     // Convert strings in fixedValueRules to instances
@@ -53,41 +46,15 @@ export class InstanceExporter implements Fishable {
       return true;
     });
 
-    // Fix all values from the SD that are exposed when processing the instance rules
-    rules.forEach(rule => {
-      try {
-        const validated = instanceOfStructureDefinition.validateValueAtPath(
-          rule.path,
-          rule.fixedValue,
-          this.fisher
-        );
-
-        // For each part of that path, we add fixed values from the SD
-        let path = '';
-        for (const [i, pathPart] of validated.pathParts.entries()) {
-          path += `${path ? '.' : ''}${pathPart.base}`;
-          // Add back non-numeric (slice) brackets
-          pathPart.brackets?.forEach(b => (path += /^[-+]?\d+$/.test(b) ? '' : `[${b}]`));
-          const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
-          // Reconstruct the part of the rule's path that we just got the element for
-          let rulePathPart = splitOnPathPeriods(rule.path)
-            .slice(0, i + 1)
-            .join('.');
-          rulePathPart += '.';
-
-          this.setFixedValuesFromStructureDefinition(
-            element,
-            rulePathPart,
-            instanceDef,
-            instanceOfStructureDefinition
-          );
-        }
-      } catch (e) {
-        logger.error(e.message, rule.sourceInfo);
-      }
-    });
-
-    // Fix all values explicitly set in the instance rules (all rules will be FixValueRule)
+    // When fixing values, things happen in the order:
+    // 1 - Validate values for rules that are on the instance
+    // 2 - Determine all rules implied by the Structure Definition
+    // 3 - Set values from rules implied by the Structure Definition
+    // 4 - Set values from rules directly on the instance
+    // This order is required due to the fact that validateValueAtPath changes instanceOfStructureDefinition
+    // in certain cases that must happen before setting rules from the Structure Definition. In the future
+    // we may want to refactor validateValueAtPath, but for now things should happen in this order
+    const ruleMap: Map<string, { pathParts: PathPart[]; fixedValue: any }> = new Map();
     rules.forEach(rule => {
       try {
         const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
@@ -96,76 +63,68 @@ export class InstanceExporter implements Fishable {
           this.fisher,
           rule.units
         );
-        // Fix value fom the rule
-        setPropertyOnInstance(instanceDef, pathParts, fixedValue);
+        // Record each valid rule in a map
+        ruleMap.set(rule.path, { pathParts, fixedValue });
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
     });
 
-    return instanceDef;
-  }
+    // Record the values implied by the structure definition in sdRuleMap
+    const sdRuleMap: Map<string, any> = new Map();
+    const paths = ['', ...rules.map(rule => rule.path)];
+    paths.forEach(path => {
+      const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
+      const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, this.fisher);
+      if (element) {
+        // If an element is pointed to by a path, that means we must fix values on its parents, its own
+        // fixable descendents, and fixable descenendents of its parents. A fixable descendent is a 1..n direct child
+        // or a fixable descendent of such a child
+        const parents = element.getAllParents();
+        const associatedElements = [element, ...element.getFixableDescendents(), ...parents];
+        parents.map(p => p.getFixableDescendents()).forEach(pd => associatedElements.push(...pd));
 
-  /**
-   * Given an ElementDefinition, set fixed values for the direct children of that element
-   * according to the ElementDefinitions of the children
-   * This function assumes that when it is called on an element, it has alreday been called on parents of that element
-   * @param {ElementDefinition} element - The element whose children we will fix
-   * @param {string} existingPath - The path to the element whose children we will fix
-   * @param {InstanceDefinition} instanceDef - The InstanceDefinition to fix values on
-   * @param {StructureDefinition} instanceOfStructureDefinition - The structure definition the instance instantiates
-   */
-  private setFixedValuesFromStructureDefinition(
-    element: ElementDefinition,
-    existingPath: string,
-    instanceDef: InstanceDefinition,
-    instanceOfStructureDefinition: StructureDefinition
-  ) {
-    // We will fix values on the element, or direct children
-    const fixableElements = [element, ...element.children(true)];
-    for (const fixableElement of fixableElements) {
-      // Fixed values may be specified by the fixed[x] or pattern[x] fields
-      const fixedValueKey = Object.keys(fixableElement).find(
-        k => k.startsWith('fixed') || k.startsWith('pattern')
-      );
-      // Fixed value can come from fixed[x] or pattern[x] directly on element, or via pattern[x] on parent
-      const foundFixedValue = cloneDeep(fixableElement[fixedValueKey as keyof ElementDefinition]);
-      // We only fix the value if the element is the original element, or it is a direct child with card 1..n
-      if (foundFixedValue && (fixableElement.id === element.id || fixableElement.min > 0)) {
-        // Get the end of the path, this is the part that differs from existingPath
-        let fixablePath = fixableElement.diffId().replace(`${element.diffId()}`, '');
-        // If the fixableElement is a child of the original element, we must remove prefixed '.' from path
-        if (fixablePath.startsWith('.')) fixablePath = fixablePath.slice(1);
-
-        // Turn FHIR slicing (element:slicName/resliceName) into FSH slicing (element[sliceName][resliceName])
-        const colonSplitPath = fixablePath.split(':');
-        let fshElementPath = colonSplitPath[0];
-        const slicePathSection = colonSplitPath[1];
-        const sliceNames = slicePathSection?.split('/');
-        sliceNames?.forEach(s => {
-          fshElementPath += `[${s}]`;
-        });
-        // Fix the value if we validly can
-        try {
-          const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(
-            // fshElementPath is '' when the fixableElement is the original element, trailing '.' on this path must be removed
-            // Otherwise add the child path to existing path
-            fshElementPath === '' ? existingPath.slice(0, -1) : existingPath + fshElementPath,
-            // We don't actually want to validate the value, we only want to validate the path, so pass null
-            // we already know the value is valid, since we got it from the Structure Definition
-            null,
-            this.fisher
+        for (const associatedEl of associatedElements) {
+          const fixedValueKey = Object.keys(associatedEl).find(
+            k => k.startsWith('fixed') || k.startsWith('pattern')
           );
-          setPropertyOnInstance(instanceDef, pathParts, foundFixedValue);
-        } catch (e) {
-          logger.error(e.message);
+          const foundFixedValue = cloneDeep(associatedEl[fixedValueKey as keyof ElementDefinition]);
+          if (foundFixedValue) {
+            // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
+            let overlapIndex = 0;
+            element.id.split('.').forEach((p, i) => {
+              if (p === associatedEl.id.split('.')[i]) overlapIndex++;
+            });
+            // We must keep the relevant portion of the beginning of path to preserve sliceNames
+            // and combine this with portion of the associatedEl's path that is not overlapped
+            const pathStart = splitOnPathPeriods(path).slice(0, overlapIndex - 1);
+            const pathEnd = associatedEl
+              .diffId()
+              .split('.')
+              .slice(overlapIndex)
+              // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
+              .map(r => r.replace(/(\S):(\S+)/, (match, c1, c2) => `${c1}[${c2}]`));
+            const finalPath = [...pathStart, ...pathEnd].join('.');
+            const impliedPaths = getAllImpliedPaths(
+              associatedEl,
+              // Implied paths are found via the index free path
+              finalPath.replace(/\[[-+]?\d+\]/g, '')
+            );
+            [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundFixedValue));
+          }
         }
-      } else if (foundFixedValue) {
-        logger.debug(
-          `Element ${fixableElement.id} is optional with min cardinality 0, so fixed value for optional element is not set on instance ${instanceDef._instanceMeta.name}`
-        );
       }
-    }
+    });
+    sdRuleMap.forEach((value, path) => {
+      const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+        path,
+        null,
+        this.fisher
+      );
+      setPropertyOnInstance(instanceDef, pathParts, value);
+    });
+    ruleMap.forEach(rule => setPropertyOnInstance(instanceDef, rule.pathParts, rule.fixedValue));
+    return instanceDef;
   }
 
   /**
