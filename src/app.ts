@@ -7,7 +7,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import { importText, FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
-import { logger, stats } from './utils';
+import { logger, stats, Type } from './utils';
 import { loadDependency, loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import {
@@ -100,6 +100,16 @@ async function app() {
     return;
   }
 
+  // Ensure FHIR R4 is added as a dependency
+  const fhirR4Dependency = config.dependencies?.['hl7.fhir.r4.core'];
+  if (fhirR4Dependency !== '4.0.1') {
+    logger.error(
+      'The package.json must specify FHIR R4 as a dependency. Be sure to' +
+        ' add "hl7.fhir.r4.core": "4.0.1" to the dependencies list.'
+    );
+    return;
+  }
+
   // Load external dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
@@ -133,6 +143,18 @@ async function app() {
 
   const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);
+
+  // Check for StructureDefinition
+  const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
+  if (structDef?.version !== '4.0.1') {
+    logger.error(
+      'StructureDefinition resource not found for v4.0.1. The FHIR R4 package in local cache' +
+        ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
+        ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
+    );
+    return;
+  }
+
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
 
