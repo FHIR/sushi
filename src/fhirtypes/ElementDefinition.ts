@@ -1176,7 +1176,8 @@ export class ElementDefinition {
           d =>
             `${slicedElement.path}${d.path === '$this' ? '' : `.${d.path}`}` === this.path &&
             ['value', 'pattern'].includes(d.type)
-        )
+        ) &&
+        this.min === 0
       ) {
         this.constrainCardinality(1, '');
       }
