@@ -295,14 +295,28 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'That went swimmingly!',
     'O-fish-ally error free!',
     "Nice! You're totally krilling it!",
-    'Cool and So-fish-ticated!'
+    'Cool and So-fish-ticated!',
+    'Well hooked and landed!',
+    'You earned a PhD in Ichthyology!',
+    'You rock, lobster!',
+    'Everything is ship-shape!',
+    'Ex-clam-ation point!',
+    'Ac-clam-ations!'
   ],
   warnings: [
-    'Not bad, but cod do batter!',
+    'Not bad, but you cod do batter!',
     'Something smells fishy...',
-    'Warnings... Water those about?'
+    'Warnings... Water those about?',
+    'Looks like you are casting about.',
+    'A bit pitchy, but tuna-ble'
   ],
-  errors: ['Ick! Errors!', 'Some-fin went wrong...', 'Unfor-tuna-tely, there are errors.']
+  errors: ['Ick! Errors!', 'Some-fin went wrong...', 'Unfor-tuna-tely, there are errors.',
+'That really smelt.',
+'You spawned some errors.',
+'Just keep swimming, Dory.',
+'This is the one that got away.',
+'The documentation might be bene-fish-al'
+]
 };
 
 const COLOR_MAP: { [key in ResultStatus]: chalk.Chalk } = {
