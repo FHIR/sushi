@@ -82,6 +82,61 @@ describe('ElementDefinition', () => {
         coding: [{ code: 'mycode', system: 'https://code.com' }]
       });
     });
+
+    it('should ensure that minimum cardinality is 1 when fixing a value mentioned in a parent slice discriminator', () => {
+      const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
+      cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };
+      cat.addSlice('mouse');
+      const catMouseCodingCode = medicationRequest.findElementByPath(
+        'category[mouse].coding.code',
+        fisher
+      );
+      expect(catMouseCodingCode.min).toBe(0);
+      catMouseCodingCode.fixValue(new FshCode('cheese'));
+      expect(catMouseCodingCode.patternCode).toBe('cheese');
+      expect(catMouseCodingCode.min).toBe(1);
+    });
+
+    it('should ensure that minimum cardinality is 1 when fixing a value mentioned in a slice discriminator', () => {
+      const inUri = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.instantiatesUri'
+      );
+      inUri.slicing = { discriminator: [{ type: 'value', path: '$this' }], rules: 'open' };
+      inUri.addSlice('mouse');
+      const inUriMouse = medicationRequest.findElementByPath('instantiatesUri[mouse]', fisher);
+      expect(inUriMouse.min).toBe(0);
+      inUriMouse.fixValue('http://mice.cheese');
+      expect(inUriMouse.patternUri).toBe('http://mice.cheese');
+      expect(inUriMouse.min).toBe(1);
+    });
+
+    it('should not ensure that minimum cardinality is 1 when fixing a value not mentioned in a slice discriminator', () => {
+      const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
+      cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };
+      cat.addSlice('mouse');
+      const catMouseCodingSystem = medicationRequest.findElementByPath(
+        'category[mouse].coding.system',
+        fisher
+      );
+      expect(catMouseCodingSystem.min).toBe(0);
+      catMouseCodingSystem.fixValue('http://mice.cheese');
+      expect(catMouseCodingSystem.patternUri).toBe('http://mice.cheese');
+      expect(catMouseCodingSystem.min).toBe(0);
+    });
+
+    it('should not ensure that minimum cardinality is 1 when fixing a value mentioned in a non value/pattern discriminator', () => {
+      const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
+      cat.slicing = { discriminator: [{ type: 'exists', path: 'coding.code' }], rules: 'open' };
+      cat.addSlice('mouse');
+      const catMouseCodingCode = medicationRequest.findElementByPath(
+        'category[mouse].coding.code',
+        fisher
+      );
+      expect(catMouseCodingCode.min).toBe(0);
+      catMouseCodingCode.fixValue(new FshCode('cheese'));
+      expect(catMouseCodingCode.patternCode).toBe('cheese');
+      expect(catMouseCodingCode.min).toBe(0);
+    });
   });
 
   describe('#fixedByDirectParent', () => {
