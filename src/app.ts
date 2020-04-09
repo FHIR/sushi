@@ -310,13 +310,16 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'Looks like you are casting about.',
     'A bit pitchy, but tuna-ble'
   ],
-  errors: ['Ick! Errors!', 'Some-fin went wrong...', 'Unfor-tuna-tely, there are errors.',
-'That really smelt.',
-'You spawned some errors.',
-'Just keep swimming, Dory.',
-'This is the one that got away.',
-'The documentation might be bene-fish-al'
-]
+  errors: [
+    'Ick! Errors!',
+    'Some-fin went wrong...',
+    'Unfor-tuna-tely, there are errors.',
+    'That really smelt.',
+    'You spawned some errors.',
+    'Just keep swimming, Dory.',
+    'This is the one that got away.',
+    'The documentation might be bene-fish-al'
+  ]
 };
 
 const COLOR_MAP: { [key in ResultStatus]: chalk.Chalk } = {
