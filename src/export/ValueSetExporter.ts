@@ -50,7 +50,7 @@ export class ValueSetExporter {
           composeElement.system =
             this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
             component.from.system;
-          if (!isUri(composeElement.system)) {
+          if (!isUri(composeElement.system.split('|')[0])) {
             throw new InvalidUriError(composeElement.system);
           }
         }

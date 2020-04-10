@@ -301,6 +301,33 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should export a value set that includes a concept component where the concept system includes a version', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    const component = new ValueSetConceptComponent(true);
+    component.from = { system: 'http://food.org/food|2.0.1' };
+    component.concepts.push(new FshCode('Toast', 'http://food.org/food|2.0.1'));
+    valueSet.components.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://example.com/ValueSet/BreakfastVS',
+      version: '0.0.1',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food|2.0.1',
+            concept: [{ code: 'Toast' }]
+          }
+        ]
+      }
+    });
+  });
+
   it('should export a value set that includes a filter component with a regex filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     const component = new ValueSetFilterComponent(true);
