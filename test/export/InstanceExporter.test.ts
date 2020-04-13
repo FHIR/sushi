@@ -129,11 +129,13 @@ describe('InstanceExporter', () => {
     let patient: Profile;
     let respRate: Profile;
     let patientProf: Profile;
+    let bundle: Profile;
     let patientInstance: Instance;
     let patientProfInstance: Instance;
     let lipidInstance: Instance;
     let valueSetInstance: Instance;
     let respRateInstance: Instance;
+    let bundleInstance: Instance;
     beforeEach(() => {
       patient = new Profile('TestPatient');
       patient.parent = 'Patient';
@@ -144,6 +146,9 @@ describe('InstanceExporter', () => {
       respRate = new Profile('TestRespRate');
       respRate.parent = 'resprate';
       doc.profiles.set(respRate.name, respRate);
+      bundle = new Profile('TestBundle');
+      bundle.parent = 'Bundle';
+      doc.profiles.set(bundle.name, bundle);
       patientInstance = new Instance('Bar')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -163,6 +168,9 @@ describe('InstanceExporter', () => {
       respRateInstance = new Instance('Bang');
       respRateInstance.instanceOf = 'TestRespRate';
       doc.instances.set(respRateInstance.name, respRateInstance);
+      bundleInstance = new Instance('Pow');
+      bundleInstance.instanceOf = 'TestBundle';
+      doc.instances.set(bundleInstance.name, bundleInstance);
     });
 
     // Setting Metadata
@@ -1368,6 +1376,42 @@ describe('InstanceExporter', () => {
       expect(exported.contained).toEqual([
         { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
       ]);
+    });
+
+    it('should fix an inline resource to an instance element with a specific type', () => {
+      const inlineInstance = new Instance('MyInlinePatient');
+      inlineInstance.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      inlineInstance.rules.push(fixedValRule);
+      // * active = true
+      doc.instances.set(inlineInstance.name, inlineInstance);
+
+      const caretRule = new CaretValueRule('entry');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('value');
+      const containsRule = new ContainsRule('entry');
+      containsRule.items = [{ name: 'PatientsOnly' }];
+      const cardRule = new CardRule('entry[PatientsOnly]');
+      cardRule.min = 0;
+      cardRule.max = '1';
+      const typeRule = new OnlyRule('entry[PatientsOnly].resource');
+      typeRule.types = [{ type: 'Patient' }];
+      // * entry ^slicing.discriminator.type = #value
+      // * entry contains Patient 0..1
+      // * entry[PatientsOnly].resource only Patient
+      bundle.rules.push(caretRule, containsRule, cardRule, typeRule);
+
+      const bundleValRule = new FixedValueRule('entry[PatientsOnly].resource');
+      bundleValRule.fixedValue = 'MyInlinePatient';
+      bundleValRule.isResource = true;
+      // * entry[PatientsOnly].resource = MyInlinePatient
+      bundleInstance.rules.push(bundleValRule);
+
+      const exported = exportInstance(bundleInstance);
+      expect(exported.entry[0]).toEqual({
+        resource: { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
+      });
     });
 
     it('should only export an instance once', () => {

@@ -1083,11 +1083,69 @@ describe('StructureDefinition', () => {
       }).toThrow('Cannot resolve element from path: extension[fake-extension].value[x]');
     });
 
-    it('should allow fixing an InstanceDefinition to a resource element', () => {
-      const instanceDef = new InstanceDefinition();
-      instanceDef.resourceType = 'Patient';
-      const { fixedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
-      expect(fixedValue.resourceType).toBe('Patient');
+    describe('#Inline Instances', () => {
+      beforeEach(() => {
+        const contained = respRate.findElementByPath('contained', fisher);
+        contained.sliceIt('type', '$this', false, 'open');
+        contained.addSlice('PatientsOnly');
+        const containedPatients = respRate.findElementByPath('contained[PatientsOnly]', fisher);
+        const patientRule = new OnlyRule('contained[PatientsOnly]');
+        patientRule.types = [{ type: 'Patient' }];
+        containedPatients.constrainType(patientRule, fisher);
+
+        contained.addSlice('DomainsOnly');
+        const containedDomains = respRate.findElementByPath('contained[DomainsOnly]', fisher);
+        const domainRule = new OnlyRule('contained[DomainsOnly]');
+        domainRule.types = [{ type: 'DomainResource' }];
+        containedDomains.constrainType(domainRule, fisher);
+      });
+
+      it('should allow fixing a Patient type InstanceDefinition to a Resource element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.resourceType = 'Patient';
+        const { fixedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
+        expect(fixedValue.resourceType).toBe('Patient');
+      });
+
+      it('should allow fixing a Patient type InstanceDefinition to a DomainResource element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.resourceType = 'Patient';
+        const { fixedValue } = respRate.validateValueAtPath(
+          'contained[DomainsOnly][0]',
+          instanceDef,
+          fisher
+        );
+        expect(fixedValue.resourceType).toBe('Patient');
+      });
+
+      it('should allow fixing a Patient type InstanceDefinition to a Patient element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.resourceType = 'Patient';
+        const { fixedValue } = respRate.validateValueAtPath(
+          'contained[PatientsOnly][0]',
+          instanceDef,
+          fisher
+        );
+        expect(fixedValue.resourceType).toBe('Patient');
+      });
+
+      it('should not allow fixing a Bundle type InstanceDefinition to a DomainResource element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.id = 'OfJoy';
+        instanceDef.resourceType = 'Bundle';
+        expect(() =>
+          respRate.validateValueAtPath('contained[DomainsOnly][0]', instanceDef, fisher)
+        ).toThrow(/Bundle.*OfJoy.*DomainResource/);
+      });
+
+      it('should not allow fixing a Bundle type InstanceDefinition to a Patient element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.id = 'OfJoy';
+        instanceDef.resourceType = 'Bundle';
+        expect(() =>
+          respRate.validateValueAtPath('contained[PatientsOnly][0]', instanceDef, fisher)
+        ).toThrow(/Bundle.*OfJoy.*Patient/);
+      });
     });
   });
 
