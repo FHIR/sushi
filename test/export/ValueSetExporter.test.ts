@@ -303,10 +303,14 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a concept component where the concept system includes a version', () => {
     const valueSet = new FshValueSet('BreakfastVS');
-    const component = new ValueSetConceptComponent(true);
-    component.from = { system: 'http://food.org/food|2.0.1' };
-    component.concepts.push(new FshCode('Toast', 'http://food.org/food|2.0.1'));
-    valueSet.components.push(component);
+    const toastComponent = new ValueSetConceptComponent(true);
+    toastComponent.from = { system: 'http://food.org/food|2.0.1' };
+    toastComponent.concepts.push(new FshCode('Toast', 'http://food.org/food|2.0.1'));
+    valueSet.components.push(toastComponent);
+    const juiceComponent = new ValueSetConceptComponent(true);
+    juiceComponent.from = { system: 'http://food.org/beverage|1.1|x' };
+    juiceComponent.concepts.push(new FshCode('Orange juice', 'http://food.org/beverage|1.1|x'));
+    valueSet.components.push(juiceComponent);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
@@ -320,8 +324,14 @@ describe('ValueSetExporter', () => {
       compose: {
         include: [
           {
-            system: 'http://food.org/food|2.0.1',
-            concept: [{ code: 'Toast' }]
+            system: 'http://food.org/food',
+            concept: [{ code: 'Toast' }],
+            version: '2.0.1'
+          },
+          {
+            system: 'http://food.org/beverage',
+            concept: [{ code: 'Orange juice' }],
+            version: '1.1|x'
           }
         ]
       }
