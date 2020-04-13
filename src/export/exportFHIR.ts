@@ -11,7 +11,7 @@ import { MasterFisher } from '../utils';
  * @returns {Package} - the Package structure returned from processing the FSH definitions
  */
 export function exportFHIR(tank: FSHTank, FHIRDefs: FHIRDefinitions): Package {
-  const pkg = new Package(tank.config);
+  const pkg = new Package(tank.packageJSON);
   const fisher = new MasterFisher(tank, FHIRDefs, pkg);
   const exporter = new FHIRExporter(tank, pkg, fisher);
   return exporter.export();

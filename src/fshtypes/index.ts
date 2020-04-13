@@ -1,5 +1,5 @@
 export * from './FshCodeSystem';
-export * from './Config';
+export * from './PackageJSON';
 export * from './Extension';
 export * from './Instance';
 export * from './FshCode';

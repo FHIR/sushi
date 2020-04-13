@@ -36,7 +36,7 @@ describe('ValueSetExporter', () => {
       version: '0.0.1',
       canonical: 'http://example.com'
     });
-    const pkg = new Package(input.config);
+    const pkg = new Package(input.packageJSON);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new ValueSetExporter(input, pkg, fisher);
   });

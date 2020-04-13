@@ -50,7 +50,7 @@ describe('StructureDefinitionExporter', () => {
       version: '0.0.1',
       canonical: 'http://example.com'
     });
-    pkg = new Package(input.config);
+    pkg = new Package(input.packageJSON);
     fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
     loggerSpy.reset();
@@ -93,7 +93,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
-    expect(exported.version).toBe('0.0.1'); // provided by config
+    expect(exported.version).toBe('0.0.1'); // provided by packageJSON
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
     expect(exported.status).toBe('active'); // always active
@@ -233,7 +233,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
-    expect(exported.version).toBe('0.0.1'); // provided by config
+    expect(exported.version).toBe('0.0.1'); // provided by packageJSON
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
     expect(exported.status).toBe('active'); // always active

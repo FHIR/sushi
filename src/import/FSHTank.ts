@@ -10,13 +10,13 @@ import {
   Mapping
 } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
-import { Config } from '../fshtypes/Config';
+import { PackageJSON } from '../fshtypes/PackageJSON';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
 
 export class FSHTank implements Fishable {
   constructor(
     public readonly docs: FSHDocument[],
-    public readonly config: Config,
+    public readonly packageJSON: PackageJSON,
     public readonly root?: string
   ) {}
 
@@ -143,7 +143,7 @@ export class FSHTank implements Fishable {
             p =>
               p.name === item ||
               p.id === item ||
-              `${this.config.canonical}/StructureDefinition/${p.id}` === item
+              `${this.packageJSON.canonical}/StructureDefinition/${p.id}` === item
           );
           break;
         case Type.Extension:
@@ -151,7 +151,7 @@ export class FSHTank implements Fishable {
             e =>
               e.name === item ||
               e.id === item ||
-              `${this.config.canonical}/StructureDefinition/${e.id}` === item
+              `${this.packageJSON.canonical}/StructureDefinition/${e.id}` === item
           );
           break;
         case Type.ValueSet:
@@ -159,7 +159,7 @@ export class FSHTank implements Fishable {
             vs =>
               vs.name === item ||
               vs.id === item ||
-              `${this.config.canonical}/ValueSet/${vs.id}` === item
+              `${this.packageJSON.canonical}/ValueSet/${vs.id}` === item
           );
           break;
         case Type.CodeSystem:
@@ -167,7 +167,7 @@ export class FSHTank implements Fishable {
             vs =>
               vs.name === item ||
               vs.id === item ||
-              `${this.config.canonical}/CodeSystem/${vs.id}` === item
+              `${this.packageJSON.canonical}/CodeSystem/${vs.id}` === item
           );
           break;
         case Type.Instance:
@@ -204,12 +204,12 @@ export class FSHTank implements Fishable {
         name: result.name
       };
       if (result instanceof Profile || result instanceof Extension) {
-        meta.url = `${this.config.canonical}/StructureDefinition/${result.id}`;
+        meta.url = `${this.packageJSON.canonical}/StructureDefinition/${result.id}`;
         meta.parent = result.parent;
       } else if (result instanceof FshValueSet) {
-        meta.url = `${this.config.canonical}/ValueSet/${result.id}`;
+        meta.url = `${this.packageJSON.canonical}/ValueSet/${result.id}`;
       } else if (result instanceof FshCodeSystem) {
-        meta.url = `${this.config.canonical}/CodeSystem/${result.id}`;
+        meta.url = `${this.packageJSON.canonical}/CodeSystem/${result.id}`;
       }
       return meta;
     }

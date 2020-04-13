@@ -80,19 +80,19 @@ export class IGExporter {
    * @see {@link https://confluence.hl7.org/pages/viewpage.action?pageId=35718629#NPMPackageSpecification-PackageManifestpropertiesforIGs}
    */
   private initIG(): void {
-    const config = this.pkg.config;
+    const packageJSON = this.pkg.packageJSON;
     // TODO: Consider adding a generated file warning when the IG Publisher supports JSON5-style comments
     this.ig = {
       resourceType: 'ImplementationGuide',
-      id: config.name,
-      url: `${config.canonical}/ImplementationGuide/${config.name}`,
-      version: config.version,
+      id: packageJSON.name,
+      url: `${packageJSON.canonical}/ImplementationGuide/${packageJSON.name}`,
+      version: packageJSON.version,
       // name must be alphanumeric (allowing underscore as well)
-      name: (config.title ?? config.name).replace(/[^A-Za-z0-9_]/g, ''),
-      title: config.title ?? config.name,
+      name: (packageJSON.title ?? packageJSON.name).replace(/[^A-Za-z0-9_]/g, ''),
+      title: packageJSON.title ?? packageJSON.name,
       status: 'active', // TODO: make user-configurable
-      publisher: config.author,
-      contact: config.maintainers?.map(m => {
+      publisher: packageJSON.author,
+      contact: packageJSON.maintainers?.map(m => {
         const contact: ContactDetail = {};
         if (m.name) {
           contact.name = m.name;
@@ -114,9 +114,9 @@ export class IGExporter {
         }
         return contact;
       }),
-      description: config.description,
-      packageId: config.name,
-      license: config.license,
+      description: packageJSON.description,
+      packageId: packageJSON.name,
+      license: packageJSON.license,
       fhirVersion: ['4.0.1'],
       dependsOn: [],
       definition: {
@@ -146,21 +146,21 @@ export class IGExporter {
     };
 
     // Add the path-history, if applicable (only applies to HL7 IGs)
-    if (/^https?:\/\/hl7.org\//.test(this.pkg.config.canonical)) {
+    if (/^https?:\/\/hl7.org\//.test(this.pkg.packageJSON.canonical)) {
       this.ig.definition.parameter.push({
         code: 'path-history',
-        value: `${this.pkg.config.canonical}/history.html`
+        value: `${this.pkg.packageJSON.canonical}/history.html`
       });
     }
 
     // Add the dependencies
-    if (this.pkg.config.dependencies) {
+    if (this.pkg.packageJSON.dependencies) {
       const igs = this.fhirDefs.allImplementationGuides();
-      for (const depId of Object.keys(this.pkg.config.dependencies)) {
+      for (const depId of Object.keys(this.pkg.packageJSON.dependencies)) {
         if (depId === 'hl7.fhir.r4.core') {
           continue;
         }
-        const depVersion = this.pkg.config.dependencies[depId];
+        const depVersion = this.pkg.packageJSON.dependencies[depId];
         // find the matching IG by id (for "current"/"dev" version) or id and version (for specific version)
         const depIG = igs.find(
           ig =>
@@ -260,7 +260,7 @@ export class IGExporter {
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(igPath, 'input', 'pagecontent', 'index.md');
-      outputFileSync(outputPath, `${warning}${this.pkg.config.description ?? ''}`);
+      outputFileSync(outputPath, `${warning}${this.pkg.packageJSON.description ?? ''}`);
       this.updateOutputLog(outputPath, [this.packagePath], 'generated');
     }
 
@@ -600,12 +600,12 @@ export class IGExporter {
   private addIgIni(igPath: string): void {
     // First generate the ig.ini from the package.json
     const iniObj: any = {};
-    iniObj.ig = `input/ImplementationGuide-${this.pkg.config.name}.json`;
+    iniObj.ig = `input/ImplementationGuide-${this.pkg.packageJSON.name}.json`;
     iniObj.template = 'fhir.base.template';
     iniObj['usage-stats-opt-out'] = 'false';
     iniObj.copyrightyear = `${new Date().getFullYear()}+`;
-    iniObj.license = this.pkg.config.license ?? 'CC0-1.0';
-    iniObj.version = this.pkg.config.version;
+    iniObj.license = this.pkg.packageJSON.license ?? 'CC0-1.0';
+    iniObj.version = this.pkg.packageJSON.version;
     iniObj.ballotstatus = 'CI Build';
     iniObj.fhirspec = 'http://build.fhir.org/';
 
@@ -702,16 +702,16 @@ export class IGExporter {
     if (existsSync(inputPackageListPath)) {
       let mismatch = false;
       const inputPackageList = readJSONSync(inputPackageListPath);
-      if (inputPackageList['package-id'] !== this.pkg.config.name) {
+      if (inputPackageList['package-id'] !== this.pkg.packageJSON.name) {
         logger.error(
-          `package-list.json: package-id value (${inputPackageList['package-id']}) does not match name declared in package.json (${this.pkg.config.name}).  Ignoring custom package-list.json.`,
+          `package-list.json: package-id value (${inputPackageList['package-id']}) does not match name declared in package.json (${this.pkg.packageJSON.name}).  Ignoring custom package-list.json.`,
           { file: inputPackageListPath }
         );
         mismatch = true;
       }
-      if (inputPackageList.canonical !== this.pkg.config.canonical) {
+      if (inputPackageList.canonical !== this.pkg.packageJSON.canonical) {
         logger.error(
-          `package-list.json: canonical value (${inputPackageList.canonical}) does not match canonical declared in package.json (${this.pkg.config.canonical}).  Ignoring custom package-list.json.`,
+          `package-list.json: canonical value (${inputPackageList.canonical}) does not match canonical declared in package.json (${this.pkg.packageJSON.canonical}).  Ignoring custom package-list.json.`,
           { file: inputPackageListPath }
         );
         mismatch = true;
@@ -732,24 +732,27 @@ export class IGExporter {
           'and delete this comment property from it.',
           'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#igroot'
         ]),
-        'package-id': this.pkg.config.name,
-        title: this.pkg.config.title ?? this.pkg.config.name,
-        canonical: this.pkg.config.canonical,
-        introduction: this.pkg.config.description ?? this.pkg.config.title ?? this.pkg.config.name,
+        'package-id': this.pkg.packageJSON.name,
+        title: this.pkg.packageJSON.title ?? this.pkg.packageJSON.name,
+        canonical: this.pkg.packageJSON.canonical,
+        introduction:
+          this.pkg.packageJSON.description ??
+          this.pkg.packageJSON.title ??
+          this.pkg.packageJSON.name,
         list: [
           {
             version: 'current',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: this.pkg.config.url,
+            path: this.pkg.packageJSON.url,
             status: 'ci-build',
             current: true
           },
           {
-            version: this.pkg.config.version,
+            version: this.pkg.packageJSON.version,
             fhirversion: '4.0.1',
             date: '2099-01-01',
             desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-            path: this.pkg.config.url,
+            path: this.pkg.packageJSON.url,
             status: 'ballot',
             sequence: 'STU 1'
           }
