@@ -47,9 +47,12 @@ export class ValueSetExporter {
       components.forEach(component => {
         const composeElement: ValueSetComposeIncludeOrExclude = {};
         if (component.from.system) {
-          composeElement.system =
+          const foundSystem = (
             this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
-            component.from.system;
+            component.from.system
+          ).split('|');
+          composeElement.system = foundSystem[0];
+          composeElement.version = foundSystem.slice(1).join('|') || undefined;
           if (!isUri(composeElement.system)) {
             throw new InvalidUriError(composeElement.system);
           }
