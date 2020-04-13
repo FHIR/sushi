@@ -1373,10 +1373,17 @@ export class ElementDefinition {
       throw new NoSingleTypeError('Resource');
     }
     const type = this.type[0].code;
-    if (type === 'Resource') {
+    if (
+      type === 'Resource' ||
+      (type === 'DomainResource' &&
+        // These are the only 3 resources not inherited from DomainResource
+        // https://www.hl7.org/fhir/domainresource.html#bnr
+        !['Bundle', 'Parameters', 'Binary'].includes(value.resourceType)) ||
+      type === value.resourceType
+    ) {
       return value;
     } else {
-      throw new MismatchedTypeError('Resource', value.id, type);
+      throw new MismatchedTypeError(value.resourceType, value.id, type);
     }
   }
 
