@@ -53,6 +53,7 @@
     "@types/tar": "^4.0.3",
     "@types/temp": "^0.8.34",
     "@types/valid-url": "^1.0.3",
+    "@types/yaml": "^1.2.0",
     "@typescript-eslint/eslint-plugin": "^2.26.0",
     "@typescript-eslint/parser": "^2.26.0",
     "acorn": "^7.1.1",
@@ -82,6 +83,7 @@
     "temp": "^0.9.1",
     "title-case": "^3.0.2",
     "valid-url": "^1.0.9",
-    "winston": "^3.2.1"
+    "winston": "^3.2.1",
+    "yaml": "^1.8.3"
   }
 }
