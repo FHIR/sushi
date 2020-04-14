@@ -1129,6 +1129,14 @@ describe('StructureDefinition', () => {
         expect(fixedValue.resourceType).toBe('Patient');
       });
 
+      it('should allow fixing a Bundle type InstanceDefinition to a Resource element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.id = 'OfJoy';
+        instanceDef.resourceType = 'Bundle';
+        const { fixedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
+        expect(fixedValue.resourceType).toBe('Bundle');
+      });
+
       it('should not allow fixing a Bundle type InstanceDefinition to a DomainResource element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.id = 'OfJoy';
