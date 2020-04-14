@@ -308,7 +308,7 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'Something smells fishy...',
     'Warnings... Water those about?',
     'Looks like you are casting about.',
-    'A bit pitchy, but tuna-ble'
+    'A bit pitchy, but tuna-ble.'
   ],
   errors: [
     'Ick! Errors!',
@@ -318,7 +318,7 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'You spawned some errors.',
     'Just keep swimming, Dory.',
     'This is the one that got away.',
-    'The documentation might be bene-fish-al'
+    'The docs might be bene-fish-al.'
   ]
 };
 
