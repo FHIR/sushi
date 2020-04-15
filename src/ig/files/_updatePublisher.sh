@@ -55,7 +55,7 @@ if [[ "$FORCE" != true ]]; then
   read -r -p "$message" response
 fi
 
-if [[ "$FORCE" ]] || [[ "$response" =~ ^([yY])$ ]]; then
+if [[ "$FORCE" == true ]] || [[ "$response" =~ ^([yY])$ ]]; then
 	echo "Downloading most recent publisher to $jarlocationname - it's ~100 MB, so this may take a bit"
 #	wget "https://fhir.github.io/latest-ig-publisher/org.hl7.fhir.publisher.jar" -O "$jarlocation" 
 	curl $dlurl -o "$jarlocation" --create-dirs
