@@ -1,5 +1,5 @@
 export * from './FshCodeSystem';
-export * from './Config';
+export * from './PackageJSON';
 export * from './Extension';
 export * from './Instance';
 export * from './FshCode';
@@ -15,3 +15,4 @@ export * from './ValueSetComponent';
 export * from './Invariant';
 export * from './RuleSet';
 export * from './Mapping';
+export * from './Configuration';

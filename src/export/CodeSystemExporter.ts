@@ -19,9 +19,9 @@ export class CodeSystemExporter {
     codeSystem.setId(fshDefinition.id, fshDefinition.sourceInfo);
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
-    // Version is set to value provided in config, will be overriden if reset by rules
-    codeSystem.version = this.tank.config.version;
-    codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
+    // Version is set to value provided in packageJSON, will be overriden if reset by rules
+    codeSystem.version = this.tank.packageJSON.version;
+    codeSystem.url = `${this.tank.packageJSON.canonical}/CodeSystem/${codeSystem.id}`;
   }
 
   private setConcepts(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
