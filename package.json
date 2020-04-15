@@ -6,7 +6,7 @@
     "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files",
     "build:watch": "tsc -w",
     "build:grammar": "bash antlr/gradlew -p antlr generateGrammarSource",
-    "test": "jest --coverage",
+    "test": "jest --maxWorkers=4 --coverage",
     "test:watch": "npm run test -- --watchAll",
     "coverage": "opener coverage/lcov-report/index.html",
     "lint": "tsc && eslint \"**/*.{js,ts}\"",
