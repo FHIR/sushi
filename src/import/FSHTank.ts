@@ -10,14 +10,14 @@ import {
   Mapping
 } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
-import { Config } from '../fshtypes/Config';
+import { PackageJSON } from '../fshtypes/PackageJSON';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
 import { CaretValueRule } from '../fshtypes/rules';
 
 export class FSHTank implements Fishable {
   constructor(
     public readonly docs: FSHDocument[],
-    public readonly config: Config,
+    public readonly packageJSON: PackageJSON,
     public readonly root?: string
   ) {}
 
@@ -144,7 +144,7 @@ export class FSHTank implements Fishable {
             p =>
               p.name === item ||
               p.id === item ||
-              `${this.config.canonical}/StructureDefinition/${p.id}` === item
+              `${this.packageJSON.canonical}/StructureDefinition/${p.id}` === item
           );
           break;
         case Type.Extension:
@@ -152,7 +152,7 @@ export class FSHTank implements Fishable {
             e =>
               e.name === item ||
               e.id === item ||
-              `${this.config.canonical}/StructureDefinition/${e.id}` === item
+              `${this.packageJSON.canonical}/StructureDefinition/${e.id}` === item
           );
           break;
         case Type.ValueSet:
@@ -160,7 +160,7 @@ export class FSHTank implements Fishable {
             vs =>
               vs.name === item ||
               vs.id === item ||
-              `${this.config.canonical}/ValueSet/${vs.id}` === item
+              `${this.packageJSON.canonical}/ValueSet/${vs.id}` === item
           );
           break;
         case Type.CodeSystem:
@@ -168,7 +168,7 @@ export class FSHTank implements Fishable {
             vs =>
               vs.name === item ||
               vs.id === item ||
-              `${this.config.canonical}/CodeSystem/${vs.id}` === item
+              `${this.packageJSON.canonical}/CodeSystem/${vs.id}` === item
           );
           break;
         case Type.Instance:

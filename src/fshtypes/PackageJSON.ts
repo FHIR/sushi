@@ -1,10 +1,10 @@
 /**
- * Config follows the package.json format defined for FSH
+ * PackageJSON follows the package.json format defined for FSH
  *
  * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/index.html}
  * @see {@link https://confluence.hl7.org/display/FHIR/NPM+Package+Specification}
  */
-export type Config = {
+export type PackageJSON = {
   name: string;
   version: string;
   canonical: string;

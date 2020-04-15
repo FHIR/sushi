@@ -10,7 +10,7 @@ import path from 'path';
 describe('MasterFisher', () => {
   let fisher: MasterFisher;
   beforeAll(() => {
-    const config = {
+    const packageJSON = {
       name: 'test',
       canonical: 'http://example.org',
       version: '0.0.1'
@@ -35,9 +35,9 @@ describe('MasterFisher', () => {
     );
     doc1.profiles.get('Practitioner').id = 'my-dr';
     doc1.profiles.get('Practitioner').parent = 'Practitioner';
-    const tank = new FSHTank([doc1], config);
+    const tank = new FSHTank([doc1], packageJSON);
 
-    const pkg = new Package(config);
+    const pkg = new Package(packageJSON);
     const profile3 = new StructureDefinition();
     profile3.name = 'Profile3';
     profile3.id = 'profile3';
