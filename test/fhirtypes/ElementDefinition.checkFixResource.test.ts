@@ -48,7 +48,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         status.checkFixResource(inlineInstance);
       }).toThrow(
-        'Cannot fix Resource value: MyInlineInstance. Value does not match element type: code'
+        'Cannot fix Patient value: MyInlineInstance. Value does not match element type: code'
       );
     });
   });
