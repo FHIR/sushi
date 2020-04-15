@@ -1172,7 +1172,7 @@ export class ElementDefinition {
     parentSlices.forEach(parentSlice => {
       const slicedElement = parentSlice.slicedElement();
       if (
-        slicedElement.slicing.discriminator.some(
+        slicedElement.slicing.discriminator?.some(
           d =>
             `${slicedElement.path}${d.path === '$this' ? '' : `.${d.path}`}` === this.path &&
             ['value', 'pattern'].includes(d.type)
