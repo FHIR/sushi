@@ -91,17 +91,21 @@ export class InstanceExporter implements Fishable {
           const foundFixedValue = cloneDeep(associatedEl[fixedValueKey as keyof ElementDefinition]);
           if (foundFixedValue) {
             // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
-            let overlapIndex = 0;
-            element.id.split('.').forEach((p, i) => {
-              if (p === associatedEl.id.split('.')[i]) overlapIndex++;
-            });
+            let overlapIdx = 0;
+            const elParts = element.id.split('.');
+            const assocElParts = associatedEl.id.split('.');
+            for (
+              ;
+              overlapIdx < elParts.length && elParts[overlapIdx] === assocElParts[overlapIdx];
+              overlapIdx++
+            );
             // We must keep the relevant portion of the beginning of path to preserve sliceNames
             // and combine this with portion of the associatedEl's path that is not overlapped
-            const pathStart = splitOnPathPeriods(path).slice(0, overlapIndex - 1);
+            const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
             const pathEnd = associatedEl
               .diffId()
               .split('.')
-              .slice(overlapIndex)
+              .slice(overlapIdx)
               // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
               .map(r => r.replace(/(\S):(\S+)/, (match, c1, c2) => `${c1}[${c2}]`));
             const finalPath = [...pathStart, ...pathEnd].join('.');

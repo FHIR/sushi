@@ -535,6 +535,35 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should not get confused by matching path parts when fixing deeply nested elements', () => {
+      loggerSpy.reset();
+      // * maritalStatus, maritalStatus.coding, maritalStatus.coding.system 1..1
+      // * maritalStatus.coding.system = "http://itscomplicated.com"
+      const statCard = new CardRule('maritalStatus');
+      statCard.min = 1;
+      statCard.max = '1';
+      const codingCard = new CardRule('maritalStatus.coding');
+      codingCard.min = 1;
+      codingCard.max = '1';
+      const sysCard = new CardRule('maritalStatus.coding.system');
+      sysCard.min = 1;
+      sysCard.max = '1';
+      const fixedValRule = new FixedValueRule('maritalStatus.coding.system');
+      fixedValRule.fixedValue = 'http://itscomplicated.com';
+
+      patient.rules.push(statCard, codingCard, sysCard, fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('generalPractitioner.identifier.system');
+      instanceFixedValRule.fixedValue = 'http://medicine.med';
+      patientInstance.rules.push(instanceFixedValRule); // * generalPractitioner.identifier.system = "http://medicine.med"
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus).toEqual({ coding: [{ system: 'http://itscomplicated.com' }] });
+      expect(exported.generalPractitioner).toEqual([
+        { identifier: { system: 'http://medicine.med' } }
+      ]);
+      const messages = loggerSpy.getAllMessages('error');
+      expect(messages).toHaveLength(0);
+    });
+
     it('should fix a deeply nested element that is fixed on the Structure Definition and has array parents with min > 1', () => {
       // * identifier 2..*
       // * identifier.type.coding 2..*
