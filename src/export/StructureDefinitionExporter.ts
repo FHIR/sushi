@@ -66,9 +66,9 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.contained;
     delete structDef.extension; // see https://github.com/FHIR/sushi/issues/116
     delete structDef.modifierExtension;
-    structDef.url = `${this.tank.config.canonical}/StructureDefinition/${structDef.id}`;
+    structDef.url = `${this.tank.packageJSON.canonical}/StructureDefinition/${structDef.id}`;
     delete structDef.identifier;
-    structDef.version = this.tank.config.version; // can be overridden using a rule
+    structDef.version = this.tank.packageJSON.version; // can be overridden using a rule
     structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;

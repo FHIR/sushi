@@ -44,7 +44,7 @@ describe('InstanceExporter', () => {
       version: '0.0.1',
       canonical: 'http://example.com'
     });
-    const pkg = new Package(input.config);
+    const pkg = new Package(input.packageJSON);
     const fisher = new TestFisher(input, defs, pkg);
     sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
     exporter = new InstanceExporter(input, pkg, fisher);

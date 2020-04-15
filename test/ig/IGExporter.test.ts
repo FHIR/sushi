@@ -5,7 +5,7 @@ import os from 'os';
 import { IGExporter } from '../../src/ig';
 import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
-import { Config } from '../../src/fshtypes';
+import { PackageJSON } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
 import { TestFisher } from '../testhelpers';
@@ -27,8 +27,8 @@ describe('IGExporter', () => {
         defs
       );
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       const profiles = path.join(fixtures, 'profiles');
       fs.readdirSync(profiles).forEach(f => {
         if (f.endsWith('.json')) {
@@ -386,8 +386,8 @@ describe('IGExporter', () => {
         defs
       );
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
 
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true); // set to true to indicate ig publisher context
       tempOut = temp.mkdirSync('sushi-test');
@@ -451,8 +451,8 @@ describe('IGExporter', () => {
         defs
       );
       const fixtures = path.join(__dirname, 'fixtures', 'non-hl7-ig');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
 
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
@@ -536,8 +536,8 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -809,8 +809,8 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-local-template');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       exporter.export(tempOut);
@@ -836,8 +836,8 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-index-xml');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -888,8 +888,8 @@ describe('IGExporter', () => {
         defs
       );
       const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       loadCustomResources(fixtures, defs);
 
       // Add a patient to the package that will be overwritten
@@ -1074,8 +1074,8 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'invalid-data-ig');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -1205,8 +1205,8 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -1298,8 +1298,8 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
-      const config: Config = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(config);
+      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      pkg = new Package(packageJSON);
       exporter = new IGExporter(pkg, new FHIRDefinitions(), path.resolve(fixtures, 'ig-data'));
       tempOut = temp.mkdirSync('sushi-test');
       // No need to regenerate the IG on every test -- generate it once and inspect what you

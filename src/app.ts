@@ -96,16 +96,16 @@ async function app() {
   }
 
   // Parse package.json
-  let config: any;
+  let packageJSON: any;
   try {
-    config = fs.readJSONSync(packagePath);
+    packageJSON = fs.readJSONSync(packagePath);
   } catch (e) {
     logger.error(`The package.json file is not valid JSON: ${packagePath}`);
     process.exit(1);
   }
 
   // Ensure FHIR R4 is added as a dependency
-  const fhirR4Dependency = config.dependencies?.['hl7.fhir.r4.core'];
+  const fhirR4Dependency = packageJSON.dependencies?.['hl7.fhir.r4.core'];
   if (fhirR4Dependency !== '4.0.1') {
     logger.error(
       'The package.json must specify FHIR R4 as a dependency. Be sure to' +
@@ -117,15 +117,15 @@ async function app() {
   // Load external dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
-  for (const dep of Object.keys(config?.dependencies ?? {})) {
+  for (const dep of Object.keys(packageJSON?.dependencies ?? {})) {
     dependencyDefs.push(
-      loadDependency(dep, config.dependencies[dep], defs)
+      loadDependency(dep, packageJSON.dependencies[dep], defs)
         .then(def => {
-          logger.info(`Loaded package ${dep}#${config.dependencies[dep]}`);
+          logger.info(`Loaded package ${dep}#${packageJSON.dependencies[dep]}`);
           return def;
         })
         .catch(e => {
-          logger.error(`Failed to load ${dep}#${config.dependencies[dep]}`);
+          logger.error(`Failed to load ${dep}#${packageJSON.dependencies[dep]}`);
           logger.error(e.message);
         })
     );
@@ -145,7 +145,7 @@ async function app() {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
 
-  const tank = new FSHTank(docs, config);
+  const tank = new FSHTank(docs, packageJSON);
   await Promise.all(dependencyDefs);
 
   // Check for StructureDefinition
@@ -176,7 +176,7 @@ async function app() {
 
   fs.writeFileSync(
     path.join(outDir, 'package.json'),
-    JSON.stringify(outPackage.config, null, 2),
+    JSON.stringify(outPackage.packageJSON, null, 2),
     'utf8'
   );
 
