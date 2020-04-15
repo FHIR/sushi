@@ -987,13 +987,14 @@ export class FSHImporter extends FSHVisitor {
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
     fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
     fixedValueRule.units = ctx.KW_UNITS() != null;
-    fixedValueRule.isResource = ctx.value().SEQUENCE() != null;
+    fixedValueRule.isResource =
+      ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
     return fixedValueRule;
   }
 
   visitValue(ctx: pc.ValueContext): FixedValueType {
     if (ctx.SEQUENCE()) {
-      return ctx.SEQUENCE().getText();
+      return this.aliasAwareValue(ctx, ctx.SEQUENCE().getText());
     }
 
     if (ctx.STRING()) {
@@ -1062,6 +1063,8 @@ export class FSHImporter extends FSHVisitor {
     }
     if (ctx.STRING()) {
       concept.definition = this.extractString(ctx.STRING());
+    } else if (ctx.MULTILINE_STRING()) {
+      concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
     return concept;
   }

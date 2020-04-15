@@ -1123,6 +1123,21 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
+      it('should parse fixed values that are an alias', () => {
+        const input = `
+        Alias: EXAMPLE = http://example.org
+
+        Profile: PatientProfile
+        Parent: Patient
+        * identifier.system = EXAMPLE
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PatientProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertFixedValueRule(profile.rules[0], 'identifier.system', 'http://example.org');
+      });
+
       it('should log an error and skip the rule when parsing fixed value Resource rule', () => {
         const input = `
 
@@ -1436,6 +1451,17 @@ describe('FSHImporter', () => {
           'code[0]',
           new FshCode('bar', 'foo', 'baz').withLocation([6, 29, 6, 41]).withFile('')
         );
+      });
+
+      it('should not include non-breaking spaces as part of the caret path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * status ^short\u00A0= "Non-breaking"
+        `;
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        assertCaretValueRule(profile.rules[0], 'status', 'short', 'Non-breaking');
       });
     });
 

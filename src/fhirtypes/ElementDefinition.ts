@@ -547,6 +547,17 @@ export class ElementDefinition {
     }
   }
 
+  findConnectedSliceElement(postPath = ''): ElementDefinition {
+    const slicingRoot = this.slicedElement();
+    if (slicingRoot) {
+      return this.structDef.findElement(`${slicingRoot.id}${postPath}`);
+    } else if (this.parent()) {
+      return this.parent().findConnectedSliceElement(
+        `.${this.path.split('.').slice(-1)[0]}${postPath}`
+      );
+    }
+  }
+
   /**
    * Checks if the sum of slice mins exceeds the max of sliced element, and returns
    * the sum if so.
@@ -1155,6 +1166,23 @@ export class ElementDefinition {
         throw new MismatchedTypeError(type, value, this.type[0].code);
     }
 
+    // If the element is found in a discriminator.path, then we enforce that it has minimum cardinality 1
+    // since its value is fixed
+    const parentSlices = [this, ...this.getAllParents().reverse()].filter(el => el.sliceName);
+    parentSlices.forEach(parentSlice => {
+      const slicedElement = parentSlice.slicedElement();
+      if (
+        slicedElement.slicing.discriminator.some(
+          d =>
+            `${slicedElement.path}${d.path === '$this' ? '' : `.${d.path}`}` === this.path &&
+            ['value', 'pattern'].includes(d.type)
+        ) &&
+        this.min === 0
+      ) {
+        this.constrainCardinality(1, '');
+      }
+    });
+
     // Units error should not stop fixing value, but must still be logged
     const types = this.findTypesByCode('Quantity');
     if (units && types.length === 0) {
@@ -1439,6 +1467,20 @@ export class ElementDefinition {
   }
 
   /**
+   * Finds and returns all parent elements.  For example, the parent elements of `Foo.bar.one` are [`Foo.bar`, `Foo`].
+   * @returns {ElementDefinition[]} the array of parents, empty if no parents
+   */
+  getAllParents(): ElementDefinition[] {
+    const parents = [];
+    let parent = this.parent();
+    while (parent) {
+      parents.push(parent);
+      parent = parent.parent();
+    }
+    return parents;
+  }
+
+  /**
    * Finds and returns all child elements of this element.  For example, the children of `Foo.bar` might be the
    * elements `Foo.bar.one`, `Foo.bar.two`, and `Foo.bar.two.a`.  This will not "expand" or "unroll" elements; it
    * only returns those child elements that already exist in the structure definition.
@@ -1453,6 +1495,19 @@ export class ElementDefinition {
         (!directOnly || e.path.split('.').length === this.path.split('.').length + 1)
       );
     });
+  }
+  /**
+   * Finds and returns all fixable descendents of the element. A fixable descendent is a direct child of the
+   * element that has minimum cardinality greater than 0, and all fixable descendents of such children
+   * @returns {ElementDefinition[]} the fixable descendents of this element
+   */
+  getFixableDescendents(): ElementDefinition[] {
+    const fixableChildren = this.children(true).filter(e => e.min > 0);
+    let fixableDescendents: ElementDefinition[] = [];
+    fixableChildren.forEach(fc => {
+      fixableDescendents = fixableDescendents.concat(fc.getFixableDescendents());
+    });
+    return [...fixableChildren, ...fixableDescendents];
   }
 
   /**

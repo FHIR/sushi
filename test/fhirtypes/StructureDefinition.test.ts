@@ -553,6 +553,53 @@ describe('StructureDefinition', () => {
       expect(foundRoot.id).toBe('Observation.category:VSCat.coding');
     });
 
+    it('should find a slice that only exists on a sliced element child', () => {
+      const coding = respRate.findElementByPath('category.coding', fisher);
+      coding.slicing = {
+        discriminator: [{ type: 'pattern', path: '$this' }],
+        rules: 'open'
+      };
+      coding.addSlice('RegularSlice');
+      const originalLength = respRate.elements.length;
+      const root = respRate.findElement('Observation.category:VSCat.coding');
+      const slice = respRate.findElementByPath('category[VSCat].coding[RegularSlice]', fisher);
+      expect(slice).toBeDefined();
+      expect(slice.id).toBe('Observation.category:VSCat.coding:RegularSlice');
+      expect(root.slicing).toEqual(coding.slicing);
+      expect(respRate.elements.length).toBe(originalLength + 1);
+    });
+
+    it('should find a slice that only exists on a sliced element grandchild', () => {
+      const id = respRate.findElementByPath('category.coding.id', fisher);
+      id.slicing = {
+        discriminator: [{ type: 'pattern', path: '$this' }],
+        rules: 'open'
+      };
+      id.addSlice('RegularSlice');
+      const originalLength = respRate.elements.length;
+      const root = respRate.findElement('Observation.category:VSCat.coding.id');
+      const slice = respRate.findElementByPath('category[VSCat].coding.id[RegularSlice]', fisher);
+      expect(root.slicing).toEqual(id.slicing);
+      expect(slice).toBeDefined();
+      expect(slice.id).toBe('Observation.category:VSCat.coding.id:RegularSlice');
+      expect(respRate.elements.length).toBe(originalLength + 1);
+    });
+
+    it('should not find a slice that does not exist on a sliced root child', () => {
+      const regularCoding = respRate.findElementByPath('category.coding', fisher);
+      regularCoding.slicing = {
+        discriminator: [{ type: 'pattern', path: '$this' }],
+        rules: 'open'
+      };
+      regularCoding.addSlice('RegularSlice');
+      const originalLength = respRate.elements.length;
+      const root = respRate.findElement('Observation.category:VSCat.coding');
+      const slice = respRate.findElementByPath('category[VSCat].coding[IrregularSlice]', fisher);
+      expect(root.slicing).toBeUndefined();
+      expect(slice).toBeUndefined();
+      expect(respRate.elements.length).toBe(originalLength);
+    });
+
     it('should find a re-sliced element by path', () => {
       const jsonReslice = JSON.parse(
         fs.readFileSync(

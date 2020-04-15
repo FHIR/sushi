@@ -127,11 +127,13 @@ describe('InstanceExporter', () => {
 
   describe('#exportInstance', () => {
     let patient: Profile;
+    let respRate: Profile;
     let patientProf: Profile;
     let patientInstance: Instance;
     let patientProfInstance: Instance;
     let lipidInstance: Instance;
     let valueSetInstance: Instance;
+    let respRateInstance: Instance;
     beforeEach(() => {
       patient = new Profile('TestPatient');
       patient.parent = 'Patient';
@@ -139,6 +141,9 @@ describe('InstanceExporter', () => {
       patientProf = new Profile('TestPatientProf');
       patientProf.parent = 'patient-proficiency';
       doc.profiles.set(patientProf.name, patientProf);
+      respRate = new Profile('TestRespRate');
+      respRate.parent = 'resprate';
+      doc.profiles.set(respRate.name, respRate);
       patientInstance = new Instance('Bar')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -155,6 +160,9 @@ describe('InstanceExporter', () => {
       valueSetInstance = new Instance('Boom');
       valueSetInstance.instanceOf = 'ValueSet';
       doc.instances.set(valueSetInstance.name, valueSetInstance);
+      respRateInstance = new Instance('Bang');
+      respRateInstance.instanceOf = 'TestRespRate';
+      doc.instances.set(respRateInstance.name, respRateInstance);
     });
 
     // Setting Metadata
@@ -245,9 +253,6 @@ describe('InstanceExporter', () => {
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.active).toBeUndefined();
-      expect(loggerSpy.getLastMessage()).toMatch(
-        'Element Patient.active is optional with min cardinality 0, so fixed value for optional element is not set on instance Bar'
-      );
     });
 
     it('should fix top level elements to an array even if constrained on the Structure Definition', () => {
@@ -322,34 +327,26 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix a value onto slice elements that are fixed by a pattern on the Structure Definition', () => {
-      const resprate = new Profile('TestResprate');
-      resprate.parent = 'resprate';
-      doc.profiles.set(resprate.name, resprate);
       const containsRule = new ContainsRule('category');
       containsRule.items = [{ name: 'niceSlice' }];
-      resprate.rules.push(containsRule); // * identifier contains niceSlice
+      respRate.rules.push(containsRule); // * category contains niceSlice
       const cardRule = new CardRule('category[niceSlice]');
       cardRule.min = 1;
       cardRule.max = '*';
-      resprate.rules.push(cardRule); // * category[niceSlice] 1..*
+      respRate.rules.push(cardRule); // * category[niceSlice] 1..*
       const fixedValRule = new FixedValueRule('category[niceSlice]');
       const fixedFshCode = new FshCode('rice', 'http://spice.com');
       fixedValRule.fixedValue = fixedFshCode;
-      resprate.rules.push(fixedValRule); // * category[niceSlice] = http://spice.com#rice
-      const resprateInstance = new Instance('myResprate');
-      resprateInstance.instanceOf = 'TestResprate';
-      doc.instances.set(resprateInstance.name, resprateInstance);
-      const exported = exportInstance(resprateInstance);
-      expect(exported.category).toEqual([
-        {
-          coding: [
-            {
-              code: 'rice',
-              system: 'http://spice.com'
-            }
-          ]
-        }
-      ]);
+      respRate.rules.push(fixedValRule); // * category[niceSlice] = http://spice.com#rice
+      const exported = exportInstance(respRateInstance);
+      expect(exported.category).toContainEqual({
+        coding: [
+          {
+            code: 'rice',
+            system: 'http://spice.com'
+          }
+        ]
+      });
     });
 
     it('should fix top level choice elements that are fixed on the Structure Definition', () => {
@@ -509,6 +506,135 @@ describe('InstanceExporter', () => {
           relationship: [{ coding: [{ code: 'mother' }] }]
         }
       ]);
+    });
+
+    // Deeply Nested Elements
+    it('should fix a deeply nested element that is fixed on the Structure Definition and has 1..1 parents', () => {
+      // * telecom.period 1..1
+      // * telecom.period.start 1..1
+      // * telecom.period.start = "2000-07-04"
+      const periodCard = new CardRule('telecom.period');
+      periodCard.min = 1;
+      periodCard.max = '1';
+      const startCard = new CardRule('telecom.period.start');
+      startCard.min = 1;
+      startCard.max = '1';
+      const fixedValRule = new FixedValueRule('telecom.period.start');
+      fixedValRule.fixedValue = '2000-07-04';
+
+      patient.rules.push(periodCard, startCard, fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('telecom[0].system');
+      instanceFixedValRule.fixedValue = new FshCode('email');
+      patientInstance.rules.push(instanceFixedValRule); // * telecom[0].system = #email
+      const exported = exportInstance(patientInstance);
+      expect(exported.telecom[0]).toEqual({
+        system: 'email',
+        period: {
+          start: '2000-07-04'
+        }
+      });
+    });
+
+    it('should fix a deeply nested element that is fixed on the Structure Definition and has array parents with min > 1', () => {
+      // * identifier 2..*
+      // * identifier.type.coding 2..*
+      // * identifier.type.coding.display 1..1
+      // * identifier.type.coding.display = "This is my coding"
+      const idCard = new CardRule('identifier');
+      idCard.min = 2;
+      idCard.max = '*';
+      const typeCard = new CardRule('identifier.type.coding');
+      typeCard.min = 2;
+      typeCard.max = '*';
+      const displayCard = new CardRule('identifier.type.coding.display');
+      displayCard.min = 1;
+      displayCard.max = '1';
+      const fixedValRule = new FixedValueRule('identifier.type.coding.display');
+      fixedValRule.fixedValue = 'This is my coding';
+
+      patient.rules.push(idCard, typeCard, displayCard, fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('identifier.type.coding[2].version');
+      instanceFixedValRule.fixedValue = '1.2.3';
+      patientInstance.rules.push(instanceFixedValRule); // * identifier.type.coding[2].version = "1.2.3"
+      const exported = exportInstance(patientInstance);
+      expect(exported.identifier).toEqual([
+        {
+          type: {
+            coding: [
+              {
+                display: 'This is my coding'
+              },
+              {
+                display: 'This is my coding'
+              },
+              {
+                display: 'This is my coding',
+                version: '1.2.3'
+              }
+            ]
+          }
+        }
+      ]);
+    });
+
+    it('should fix a deeply nested element that is fixed on the Structure Definition and has slice array parents with min > 1', () => {
+      // * category contains niceSlice
+      // * category[niceSlice] 1..1
+      // * category[niceSlice] = http://spice.com#rice
+      const containsRule = new ContainsRule('category');
+      containsRule.items = [{ name: 'niceSlice' }];
+      respRate.rules.push(containsRule);
+      const cardRule = new CardRule('category[niceSlice]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      respRate.rules.push(cardRule);
+      const fixedValRule = new FixedValueRule('category[niceSlice]');
+      const fixedFshCode = new FshCode('rice', 'http://spice.com');
+      fixedValRule.fixedValue = fixedFshCode;
+      respRate.rules.push(containsRule, cardRule, fixedValRule);
+      const exported = exportInstance(respRateInstance);
+      expect(exported.category).toEqual([
+        {
+          coding: [
+            {
+              code: 'rice',
+              system: 'http://spice.com'
+            }
+          ]
+        },
+        {
+          coding: [
+            {
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              code: 'vital-signs'
+            }
+          ]
+        }
+      ]);
+    });
+
+    it('should not fix a deeply nested element that is fixed on the Structure Definition but does not have 1..1 parents', () => {
+      // * telecom.period 0..1 // Element is optional
+      // * telecom.period.start 1..1
+      // * telecom.period.start = "2000-07-04"
+      const periodCard = new CardRule('telecom.period');
+      periodCard.min = 0;
+      periodCard.max = '1';
+      const startCard = new CardRule('telecom.period.start');
+      startCard.min = 1;
+      startCard.max = '1';
+      const fixedValRule = new FixedValueRule('telecom.period.start');
+      fixedValRule.fixedValue = '2000-07-04';
+
+      patient.rules.push(periodCard, startCard, fixedValRule);
+      const instanceFixedValRule = new FixedValueRule('telecom[0].system');
+      instanceFixedValRule.fixedValue = new FshCode('email');
+      patientInstance.rules.push(instanceFixedValRule); // * telecom[0].system = #email
+      const exported = exportInstance(patientInstance);
+      expect(exported.telecom[0]).toEqual({
+        system: 'email'
+        // period not included since it is 0..1
+      });
     });
 
     // Fixing with pattern[x]
@@ -868,7 +994,7 @@ describe('InstanceExporter', () => {
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
-        null,
+        { url: 'type' },
         { url: 'type', valueCoding: { system: 'foo', version: '1.2.3' } }
       ]);
     });
@@ -887,12 +1013,15 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it('should fix sliced elements in an array and null fill empty values', () => {
+    it('should fix sliced elements in an array and fill empty values', () => {
       const fooRule = new FixedValueRule('extension[type][1].valueCoding.system');
       fooRule.fixedValue = 'foo';
       patientProfInstance.rules.push(fooRule);
       const exported = exportInstance(patientProfInstance);
-      expect(exported.extension).toEqual([null, { url: 'type', valueCoding: { system: 'foo' } }]);
+      expect(exported.extension).toEqual([
+        { url: 'type' },
+        { url: 'type', valueCoding: { system: 'foo' } }
+      ]);
     });
 
     it('should fix mixed sliced elements in an array', () => {
@@ -937,7 +1066,7 @@ describe('InstanceExporter', () => {
       const containsRule = new ContainsRule('extension');
       containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
       patientProf.rules.push(containsRule);
-      const barRule = new FixedValueRule('extension[FooExtension].valueString');
+      const barRule = new FixedValueRule('extension[foo].valueString');
       barRule.fixedValue = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
@@ -1239,6 +1368,31 @@ describe('InstanceExporter', () => {
       expect(exported.contained).toEqual([
         { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
       ]);
+    });
+
+    it('should only export an instance once', () => {
+      const bundleInstance = new Instance('MyBundle');
+      bundleInstance.instanceOf = 'Bundle';
+      const inlineRule = new FixedValueRule('entry[0].resource');
+      inlineRule.fixedValue = 'MyBundledPatient';
+      inlineRule.isResource = true;
+      bundleInstance.rules.push(inlineRule); // * entry[0].resource = MyBundledPatient
+      doc.instances.set(bundleInstance.name, bundleInstance);
+
+      const inlineInstance = new Instance('MyBundledPatient');
+      inlineInstance.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      inlineInstance.rules.push(fixedValRule); // * active = true
+      doc.instances.set(inlineInstance.name, inlineInstance);
+
+      const exported = exporter.export().instances;
+      const exportedBundle = exported.filter(i => i._instanceMeta.name === 'MyBundle');
+      const exportedBundledPatient = exported.filter(
+        i => i._instanceMeta.name === 'MyBundledPatient'
+      );
+      expect(exportedBundle).toHaveLength(1);
+      expect(exportedBundledPatient).toHaveLength(1);
     });
 
     it('should log an error when fixing an inline resource that does not exist to an instance', () => {
