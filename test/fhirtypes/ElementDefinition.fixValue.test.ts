@@ -166,6 +166,17 @@ describe('ElementDefinition', () => {
       expect(catMouseCoding.patternCoding).toEqual({ code: 'cheese' });
       expect(catMouseCoding.min).toBe(2); // We do not try to decrease min to 1
     });
+
+    it('should not ensure that minimum cardinality is 1 when fixing a value with no parent slice discriminator', () => {
+      const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
+      cat.slicing = { rules: 'open' };
+      cat.addSlice('mouse');
+      const catMouseCoding = medicationRequest.findElementByPath('category[mouse].coding', fisher);
+      expect(catMouseCoding.min).toBe(0);
+      catMouseCoding.fixValue(new FshCode('cheese'));
+      expect(catMouseCoding.patternCoding).toEqual({ code: 'cheese' });
+      expect(catMouseCoding.min).toBe(0); // We do not increase min, since no discriminator
+    });
   });
 
   describe('#fixedByDirectParent', () => {
