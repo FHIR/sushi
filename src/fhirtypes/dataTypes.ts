@@ -36,9 +36,9 @@ export type Coding = {
  * @see {@link http://hl7.org/fhir/R4/datatypes.html#ContactPoint}
  */
 export type ContactPoint = {
-  system?: string;
+  system?: 'phone' | 'fax' | 'email' | 'pager' | 'url' | 'sms' | 'other';
   value?: string;
-  use?: string;
+  use?: 'home' | 'work' | 'temp' | 'old' | 'mobile';
   rank?: number;
   period?: Period;
 };
