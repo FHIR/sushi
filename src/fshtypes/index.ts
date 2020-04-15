@@ -15,3 +15,4 @@ export * from './ValueSetComponent';
 export * from './Invariant';
 export * from './RuleSet';
 export * from './Mapping';
+export * from './Configuration';
