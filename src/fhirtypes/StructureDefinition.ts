@@ -8,13 +8,19 @@ import {
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { CannotResolvePathError, InvalidElementAccessError, MissingSnapshotError } from '../errors';
+import {
+  CannotResolvePathError,
+  InvalidElementAccessError,
+  MissingSnapshotError,
+  InvalidResourceTypeError
+} from '../errors';
 import {
   getArrayIndex,
   setPropertyOnDefinitionInstance,
   HasName,
   HasId,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  isInheritedResource
 } from './common';
 import { Fishable, Type } from '../utils/Fishable';
 import { applyMixins } from '../utils';
@@ -419,6 +425,7 @@ export class StructureDefinition {
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {boolean} units - If the value uses the units keyword
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
+   * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
    * @returns {any} - The object or value to fix
    */
   validateValueAtPath(
@@ -431,6 +438,7 @@ export class StructureDefinition {
     let currentPath = '';
     let previousPath = '';
     let currentElement: ElementDefinition;
+    let previousElement: ElementDefinition;
     for (const pathPart of pathParts) {
       // Construct the path up to this point
       previousPath = currentPath;
@@ -468,6 +476,18 @@ export class StructureDefinition {
         }
       }
 
+      if (
+        !currentElement &&
+        pathPart.base === 'resourceType' &&
+        previousElement?.type?.length === 1
+      ) {
+        if (isInheritedResource(value, previousElement.type[0].code, fisher)) {
+          return { fixedValue: value, pathParts: pathParts };
+        } else {
+          throw new InvalidResourceTypeError(value, previousElement.type[0].code);
+        }
+      }
+
       // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
       const nonArrayElementIsBasedOnArray =
         currentElement?.base?.max !== '0' &&
@@ -502,12 +522,13 @@ export class StructureDefinition {
       ) {
         pathPart.primitive = true;
       }
+      previousElement = currentElement;
     }
     const clone = currentElement.clone();
     let fixedValue;
     // Fixed resources cannot be fixed by pattern[x]/fixed[x], so we must set fixedValue directly
     if (value instanceof InstanceDefinition) {
-      fixedValue = clone.checkFixResource(value);
+      fixedValue = clone.checkFixResource(value, fisher);
     } else {
       // fixValue will throw if it fails, but skip the check if value is null
       if (value != null) {

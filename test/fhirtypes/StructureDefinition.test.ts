@@ -1154,6 +1154,82 @@ describe('StructureDefinition', () => {
           respRate.validateValueAtPath('contained[PatientsOnly][0]', instanceDef, fisher)
         ).toThrow(/Bundle.*OfJoy.*Patient/);
       });
+
+      // resourceType
+      it('should allow a valid FHIR resourceType to be set on a Resource element', () => {
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].resourceType',
+          'Patient',
+          fisher
+        );
+        expect(fixedValue).toBe('Patient');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'resourceType' }
+        ]);
+      });
+
+      it('should allow a valid FHIR resourceType to be set on a DomainResource element', () => {
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[DomainsOnly][0].resourceType',
+          'Patient',
+          fisher
+        );
+        expect(fixedValue).toBe('Patient');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['DomainsOnly', '0'] },
+          { base: 'resourceType' }
+        ]);
+      });
+
+      it('should allow a valid FHIR resourceType to be set on a Patient element', () => {
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[PatientsOnly][0].resourceType',
+          'Patient',
+          fisher
+        );
+        expect(fixedValue).toBe('Patient');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['PatientsOnly', '0'] },
+          { base: 'resourceType' }
+        ]);
+      });
+
+      it('should not allow a resourceType to be set on a non-Resource element', () => {
+        expect(() => {
+          respRate.validateValueAtPath('code.resourceType', 'CodeableConcept', fisher);
+        }).toThrow(
+          'A resourceType of CodeableConcept cannot be set on an element of type CodeableConcept.'
+        );
+      });
+
+      it('should not allow an invalid FHIR resourceType to be set on a DomainResource element', () => {
+        expect(() =>
+          respRate.validateValueAtPath('contained[DomainsOnly][0].resourceType', 'Bundle', fisher)
+        ).toThrow('A resourceType of Bundle cannot be set on an element of type DomainResource.');
+      });
+
+      it('should not allow an invalid FHIR resourceType to be set on a Patient element', () => {
+        expect(() =>
+          respRate.validateValueAtPath(
+            'contained[PatientsOnly][0].resourceType',
+            'Resource',
+            fisher
+          )
+        ).toThrow('A resourceType of Resource cannot be set on an element of type Patient.');
+      });
+
+      it('should not allow an invalid FHIR resourceType to be set on a choice element', () => {
+        expect(() =>
+          respRate.validateValueAtPath('component.value[x].resourceType', 'Patient', fisher)
+        ).toThrow('Cannot resolve element from path: component.value[x].resourceType');
+      });
+
+      it('should not allow a resourceType to be set at the top level of the instance', () => {
+        expect(() => respRate.validateValueAtPath('resourceType', 'Patient', fisher)).toThrow(
+          'Cannot resolve element from path: resourceType'
+        );
+      });
     });
   });
 

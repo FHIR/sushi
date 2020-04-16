@@ -304,6 +304,28 @@ export function getAllImpliedPaths(element: ElementDefinition, path: string): st
   return finalPaths;
 }
 
+/**
+ * Tests if resourceType is a valid FHIR resource that is a subtype of type. This is the case
+ * if type is Resource, or if type is DomainResource and resourceType is one of the resources
+ * that inherits from DomainResource, or if type is equal to resourceType.
+ * @param {string} resourceType - The resourceType to test inheritance of
+ * @param {string} type - The original type being inherited from
+ * @param {Fishable} fisher - A fisher for finding FHIR definitions
+ * @returns {boolean} true if resourceType is a valid sub-type of type, false otherwise
+ */
+export function isInheritedResource(resourceType: string, type: string, fisher: Fishable): boolean {
+  const resource = fisher.fishForFHIR(resourceType, Type.Resource);
+  return (
+    resource &&
+    (type === 'Resource' ||
+      (type === 'DomainResource' &&
+        // These are the only 3 resources not inherited from DomainResource
+        // https://www.hl7.org/fhir/domainresource.html#bnr
+        !['Bundle', 'Parameters', 'Binary'].includes(resourceType)) ||
+      type === resourceType)
+  );
+}
+
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
 export class HasName {

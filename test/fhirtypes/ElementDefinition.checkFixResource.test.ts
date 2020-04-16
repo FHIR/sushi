@@ -30,14 +30,14 @@ describe('ElementDefinition', () => {
   describe('#checkFixResource', () => {
     it('should return a resource when it can be fixed', () => {
       const contained = observation.elements.find(e => e.id === 'Observation.contained');
-      const value = contained.checkFixResource(inlineInstance);
+      const value = contained.checkFixResource(inlineInstance, fisher);
       expect(value.resourceType).toBe('Patient');
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.checkFixResource(inlineInstance);
+        valueX.checkFixResource(inlineInstance, fisher);
       }).toThrow(
         'Cannot fix Resource value on this element since this element does not have a single type'
       );
@@ -46,7 +46,7 @@ describe('ElementDefinition', () => {
     it('should throw MismatchedTypeError when the value is fixed to a non-Resource', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(() => {
-        status.checkFixResource(inlineInstance);
+        status.checkFixResource(inlineInstance, fisher);
       }).toThrow(
         'Cannot fix Patient value: MyInlineInstance. Value does not match element type: code'
       );
