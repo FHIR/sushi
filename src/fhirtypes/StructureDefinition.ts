@@ -525,7 +525,7 @@ export class StructureDefinition {
         pathPart.primitive = true;
       }
 
-      // If we have inlineResourceTypes at this pathPart, we need to validate using that
+      // If we have inlineResourceTypes at this pathPart, we need to validate recursively using that
       // inline resource type, not the original type of the currentElement
       if (
         inlineResourceTypes.length > 0 &&
@@ -547,7 +547,7 @@ export class StructureDefinition {
               value,
               fisher,
               units,
-              inlineResourceTypes.slice(1)
+              inlineResourceTypes.slice(i + 1)
             );
             return {
               fixedValue: validatedInlineResource.fixedValue,

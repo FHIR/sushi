@@ -1213,6 +1213,29 @@ describe('StructureDefinition', () => {
         ]);
       });
 
+      it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle within a Bundle', () => {
+        const gender = new FshCode('F');
+        const {
+          fixedValue,
+          pathParts
+        } = respRate.validateValueAtPath(
+          'contained[0].entry[0].resource.entry[0].resource.gender',
+          gender,
+          fisher,
+          false,
+          ['Bundle', null, 'Bundle', null, 'Patient', null]
+        );
+        expect(fixedValue).toBe('F');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'gender', primitive: true }
+        ]);
+      });
+
       it('should allow overriding a Resource with a Profile', () => {
         const unit = 'slugs';
         const {
@@ -1238,7 +1261,7 @@ describe('StructureDefinition', () => {
         ).toThrow('Cannot resolve element from path: contained[0].system');
       });
 
-      it('should not allow overriding a Resource constrained to Patient with a non-Patient inside a Resource', () => {
+      it('should not allow overriding a Resource constrained to Patient with a non-Patient path inside a Resource', () => {
         const system = 'http://hello.com';
         expect(() =>
           respRate.validateValueAtPath(
@@ -1331,6 +1354,12 @@ describe('StructureDefinition', () => {
             fisher
           )
         ).toThrow('A resourceType of Resource cannot be set on an element of type Patient.');
+      });
+
+      it('should not allow a profile resourceType to be set on a Resource element', () => {
+        expect(() =>
+          respRate.validateValueAtPath('contained[0].resourceType', 'resprate', fisher)
+        ).toThrow('A resourceType of resprate cannot be set on an element of type Resource');
       });
 
       it('should not allow an invalid FHIR resourceType to be set on a choice element', () => {

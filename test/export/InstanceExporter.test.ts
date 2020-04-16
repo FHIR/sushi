@@ -1514,7 +1514,7 @@ describe('InstanceExporter', () => {
         patientRule.isResource = true;
         const birthDateRule = new FixedValueRule('contained[0].entry[0].resource.birthDate');
         birthDateRule.fixedValue = '2000-02-24';
-        // * contained[0].resourceType = Bundle
+        // * contained[0].resourceType = "Bundle"
         // * contained[0].entry[0].resource = MyInlinePatient
         // * contained[0].entry[0].resource.birthDate = "2000-02-24"
         patientInstance.rules.push(bundleRule, patientRule, birthDateRule);

@@ -45,16 +45,23 @@ export class InstanceExporter implements Fishable {
       }
       return true;
     });
+    // Collect all paths that indicate the sub-paths of that path should be of a given resourceType
+    // for example, if a.b = SomePatientInstance, then any subpath (a.b.x) must ensure that when validating
+    // Patient is used for the type of a.b
     const inlineResourcePaths: { path: string; instanceOf: string }[] = [];
     rules.forEach(r => {
       if (r.isResource && r.fixedValue instanceof InstanceDefinition) {
         inlineResourcePaths.push({
           path: r.path,
+          // We only use the first element of the meta.profile array, if a need arises for a more
+          // comprehensive approach, we can come back to this later
           instanceOf: r.fixedValue.meta?.profile[0] ?? r.fixedValue.resourceType
         });
       }
       if (r.path.endsWith('.resourceType') && typeof r.fixedValue === 'string') {
         inlineResourcePaths.push({
+          // Only get the part of the path before resourceType, aka if path is a.b.resourceType
+          // the relevant element is a.b, since it is the actual Resource element
           path: splitOnPathPeriods(r.path).slice(0, -1).join('.'),
           instanceOf: r.fixedValue
         });
@@ -78,6 +85,9 @@ export class InstanceExporter implements Fishable {
             rule.path !== i.path &&
             rule.path != `${i.path}.resourceType`
         );
+        // Generate an array of resourceTypes that matches the path, so if path is
+        // a.b.c.d.e, and b is a Bundle and D is a Patient,
+        // inlineResourceTypes = [undefined, "Bundle", undefined, "Patient", undefined]
         const inlineResourceTypes: string[] = [];
         matchingInlineResourcePaths.forEach(match => {
           inlineResourceTypes[splitOnPathPeriods(match.path).length - 1] = match.instanceOf;
