@@ -455,26 +455,28 @@ export class IGExporter {
       this.pkg.instances,
       instance => instance.id ?? instance._instanceMeta.name
     );
-    instances.forEach(instance => {
-      const resource: ImplementationGuideDefinitionResource = {
-        reference: {
-          reference: `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`
-        },
-        name: instance._instanceMeta.title ?? instance._instanceMeta.name,
-        description: instance._instanceMeta.description
-      };
-      if (instance._instanceMeta.usage === 'Example') {
-        const exampleUrl = instance.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
-        if (exampleUrl) {
-          resource.exampleCanonical = exampleUrl;
+    instances
+      .filter(instance => instance._instanceMeta.usage !== 'Inline')
+      .forEach(instance => {
+        const resource: ImplementationGuideDefinitionResource = {
+          reference: {
+            reference: `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`
+          },
+          name: instance._instanceMeta.title ?? instance._instanceMeta.name,
+          description: instance._instanceMeta.description
+        };
+        if (instance._instanceMeta.usage === 'Example') {
+          const exampleUrl = instance.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
+          if (exampleUrl) {
+            resource.exampleCanonical = exampleUrl;
+          } else {
+            resource.exampleBoolean = true;
+          }
         } else {
-          resource.exampleBoolean = true;
+          resource.exampleBoolean = false;
         }
-      } else {
-        resource.exampleBoolean = false;
-      }
-      this.ig.definition.resource.push(resource);
-    });
+        this.ig.definition.resource.push(resource);
+      });
   }
 
   /**

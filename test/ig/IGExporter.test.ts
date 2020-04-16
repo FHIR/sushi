@@ -48,6 +48,9 @@ describe('IGExporter', () => {
         if (f.endsWith('.json')) {
           const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(examples, f)));
           // since instance meta isn't encoded in the JSON, add some here (usually done in the FSH import)
+          if (instanceDef.id === 'patient-example-three') {
+            instanceDef._instanceMeta.usage = 'Inline';
+          }
           if (instanceDef.id === 'patient-example-two') {
             instanceDef._instanceMeta.title = 'Another Patient Example';
             instanceDef._instanceMeta.description = 'Another example of a Patient';
