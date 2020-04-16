@@ -424,6 +424,7 @@ export class StructureDefinition {
    * @param {any} value - The value to fix; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {boolean} units - If the value uses the units keyword
+   * @param {inlineResourceTypes} - Types that will be used to replace Resource elements
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
    * @returns {any} - The object or value to fix
@@ -432,14 +433,15 @@ export class StructureDefinition {
     path: string,
     value: any,
     fisher: Fishable,
-    units = false
+    units = false,
+    inlineResourceTypes: string[] = []
   ): { fixedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
     let currentPath = '';
     let previousPath = '';
     let currentElement: ElementDefinition;
     let previousElement: ElementDefinition;
-    for (const pathPart of pathParts) {
+    for (const [i, pathPart] of pathParts.entries()) {
       // Construct the path up to this point
       previousPath = currentPath;
       currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
@@ -522,6 +524,42 @@ export class StructureDefinition {
       ) {
         pathPart.primitive = true;
       }
+
+      // If we have inlineResourceTypes at this pathPart, we need to validate using that
+      // inline resource type, not the original type of the currentElement
+      if (
+        inlineResourceTypes.length > 0 &&
+        inlineResourceTypes[i] &&
+        currentElement.type?.length === 1 &&
+        isInheritedResource(inlineResourceTypes[i], currentElement.type[0].code, fisher)
+      ) {
+        const inlineResourceJSON = fisher.fishForFHIR(inlineResourceTypes[i], Type.Resource);
+        if (inlineResourceJSON) {
+          const inlineResourceStructDef = StructureDefinition.fromJSON(inlineResourceJSON);
+          const inlinePath = this.assembleFSHPath(pathParts.slice(i + 1));
+          try {
+            const validatedInlineResource = inlineResourceStructDef.validateValueAtPath(
+              inlinePath,
+              value,
+              fisher,
+              units,
+              inlineResourceTypes.slice(1)
+            );
+            return {
+              fixedValue: validatedInlineResource.fixedValue,
+              pathParts: pathParts.slice(0, i + 1).concat(validatedInlineResource.pathParts)
+            };
+          } catch (e) {
+            // Catch the error from the recursive call so the original path can be logged
+            if (e instanceof CannotResolvePathError) {
+              throw new CannotResolvePathError(path);
+            } else {
+              throw e;
+            }
+          }
+        }
+      }
+
       previousElement = currentElement;
     }
     const clone = currentElement.clone();
@@ -570,6 +608,23 @@ export class StructureDefinition {
       }
     }
     return pathParts;
+  }
+
+  /**
+   * Assembles a PathPart array back to its original form
+   * @param {PathPart[]} pathParts - An array of pathParts
+   * @returns {string} path - The path corresponding to those pathParts
+   */
+  private assembleFSHPath(pathParts: PathPart[]): string {
+    let path = '';
+    pathParts.forEach((pathPart, i) => {
+      path += pathPart.base;
+      pathPart.brackets?.forEach(bracket => (path += `[${bracket}]`));
+      if (i < pathParts.length - 1) {
+        path += '.';
+      }
+    });
+    return path;
   }
 
   /**

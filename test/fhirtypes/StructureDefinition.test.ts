@@ -1155,6 +1155,102 @@ describe('StructureDefinition', () => {
         ).toThrow(/Bundle.*OfJoy.*Patient/);
       });
 
+      // Overriding elements
+      it('should allow replacing parts of a Resource element', () => {
+        const language = new FshCode('French');
+        const { fixedValue } = respRate.validateValueAtPath(
+          'contained[0].language',
+          language,
+          fisher
+        );
+        expect(fixedValue).toBe('French');
+      });
+
+      it('should allow replacing parts of a Patient element', () => {
+        const gender = new FshCode('F');
+        const { fixedValue } = respRate.validateValueAtPath(
+          'contained[PatientsOnly][0].gender',
+          gender,
+          fisher
+        );
+        expect(fixedValue).toBe('F');
+      });
+
+      it('should allow overriding a Resource with a Patient', () => {
+        const gender = new FshCode('F');
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].gender',
+          gender,
+          fisher,
+          false,
+          ['Patient']
+        );
+        expect(fixedValue).toBe('F');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'gender', primitive: true }
+        ]);
+      });
+
+      it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle', () => {
+        const gender = new FshCode('F');
+        const {
+          fixedValue,
+          pathParts
+        } = respRate.validateValueAtPath(
+          'contained[0].entry[0].resource.gender',
+          gender,
+          fisher,
+          false,
+          ['Bundle', null, 'Patient', null]
+        );
+        expect(fixedValue).toBe('F');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'gender', primitive: true }
+        ]);
+      });
+
+      it('should not allow overriding a Resource constrained to Patient with a non-Patient path', () => {
+        const system = 'http://hello.com';
+        expect(() =>
+          respRate.validateValueAtPath('contained[0].system', system, fisher, false, ['Patient'])
+        ).toThrow('Cannot resolve element from path: contained[0].system');
+      });
+
+      it('should not allow overriding a Resource constrained to Patient with a non-Patient inside a Resource', () => {
+        const system = 'http://hello.com';
+        expect(() =>
+          respRate.validateValueAtPath(
+            'contained[0].entry[0].resource.system',
+            system,
+            fisher,
+            false,
+            ['Bundle', null, 'Patient', null]
+          )
+        ).toThrow('Cannot resolve element from path: contained[0].entry[0].resource.system');
+      });
+
+      it('should not allow overriding a Patient with an Observation', () => {
+        const method = new FshCode('man', 'http://method.com');
+        expect(() =>
+          respRate.validateValueAtPath('contained[PatientsOnly].method', method, fisher, false, [
+            'Observation'
+          ])
+        ).toThrow('Cannot resolve element from path: contained[PatientsOnly].method');
+      });
+
+      it('should not allow overriding a Resource constrained to a non-FHIR Resource', () => {
+        const system = 'http://hello.com';
+        expect(() =>
+          respRate.validateValueAtPath('contained[0].system', system, fisher, false, [
+            'CodeableConcept'
+          ])
+        ).toThrow('Cannot resolve element from path: contained[0].system');
+      });
+
       // resourceType
       it('should allow a valid FHIR resourceType to be set on a Resource element', () => {
         const { fixedValue, pathParts } = respRate.validateValueAtPath(
