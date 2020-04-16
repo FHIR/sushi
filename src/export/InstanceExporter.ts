@@ -50,7 +50,7 @@ export class InstanceExporter implements Fishable {
       if (r.isResource && r.fixedValue instanceof InstanceDefinition) {
         inlineResourcePaths.push({
           path: r.path,
-          instanceOf: r.fixedValue.resourceType
+          instanceOf: r.fixedValue.meta?.profile[0] ?? r.fixedValue.resourceType
         });
       }
       if (r.path.endsWith('.resourceType') && typeof r.fixedValue === 'string') {

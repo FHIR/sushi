@@ -1535,6 +1535,38 @@ describe('InstanceExporter', () => {
           }
         ]);
       });
+
+      it('should override an inline profile on an instance', () => {
+        const inlineBundle = new Instance('MyBundle');
+        inlineBundle.instanceOf = 'TestBundle';
+        doc.instances.set(inlineBundle.name, inlineBundle);
+
+        const bundleRule = new FixedValueRule('contained[0]');
+        bundleRule.fixedValue = 'MyBundle';
+        bundleRule.isResource = true;
+        const birthDateRule = new FixedValueRule(
+          'contained[0].entry[PatientsOnly].resource.birthDate'
+        );
+        birthDateRule.fixedValue = '2000-02-24';
+        // contained[0] = MyBundle
+        // contained[0].entry[PatientsOnly].resource.birthDate = "2000-02-24"
+        patientInstance.rules.push(bundleRule, birthDateRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          {
+            id: 'MyBundle',
+            meta: { profile: ['http://example.com/StructureDefinition/TestBundle'] },
+            resourceType: 'Bundle',
+            entry: [
+              {
+                resource: {
+                  birthDate: '2000-02-24'
+                }
+              }
+            ]
+          }
+        ]);
+      });
     });
   });
 

@@ -531,9 +531,13 @@ export class StructureDefinition {
         inlineResourceTypes.length > 0 &&
         inlineResourceTypes[i] &&
         currentElement.type?.length === 1 &&
-        isInheritedResource(inlineResourceTypes[i], currentElement.type[0].code, fisher)
+        isInheritedResource(inlineResourceTypes[i], currentElement.type[0].code, fisher, true)
       ) {
-        const inlineResourceJSON = fisher.fishForFHIR(inlineResourceTypes[i], Type.Resource);
+        const inlineResourceJSON = fisher.fishForFHIR(
+          inlineResourceTypes[i],
+          Type.Resource,
+          Type.Profile
+        );
         if (inlineResourceJSON) {
           const inlineResourceStructDef = StructureDefinition.fromJSON(inlineResourceJSON);
           const inlinePath = this.assembleFSHPath(pathParts.slice(i + 1));

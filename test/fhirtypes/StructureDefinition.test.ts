@@ -1213,6 +1213,24 @@ describe('StructureDefinition', () => {
         ]);
       });
 
+      it('should allow overriding a Resource with a Profile', () => {
+        const unit = 'slugs';
+        const {
+          fixedValue,
+          pathParts
+        } = respRate.validateValueAtPath('contained[0].valueQuantity.unit', unit, fisher, false, [
+          'http://hl7.org/fhir/StructureDefinition/resprate',
+          null,
+          null
+        ]);
+        expect(fixedValue).toBe('slugs');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'valueQuantity' },
+          { base: 'unit', primitive: true }
+        ]);
+      });
+
       it('should not allow overriding a Resource constrained to Patient with a non-Patient path', () => {
         const system = 'http://hello.com';
         expect(() =>
