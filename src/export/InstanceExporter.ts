@@ -27,6 +27,10 @@ export class InstanceExporter implements Fishable {
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r));
+    // Normalize all rules to not use the optional [0] index
+    rules.forEach(r => {
+      r.path = r.path.replace(/\[0+\]/g, '');
+    });
     rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
     // Convert strings in fixedValueRules to instances
     rules = rules.filter(r => {

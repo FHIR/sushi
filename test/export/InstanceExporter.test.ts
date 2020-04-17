@@ -1506,6 +1506,33 @@ describe('InstanceExporter', () => {
         expect(exported.contained).toEqual([{ resourceType: 'Patient', birthDate: '2000-02-24' }]);
       });
 
+      it('should override a fixed inline resource on an instance with paths that mix usage of [0] indexing', () => {
+        const inlineRule = new FixedValueRule('contained[00]'); // [00] index used
+        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.isResource = true;
+        const overrideRule = new FixedValueRule('contained.birthDate'); // no [0] index used
+        overrideRule.fixedValue = '2000-02-24';
+        // * contained[0] = MyInlinePatient
+        // * contained.birthDate = 2000-02-24
+        patientInstance.rules.push(inlineRule, overrideRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          { resourceType: 'Patient', id: 'MyInlinePatient', active: true, birthDate: '2000-02-24' }
+        ]);
+      });
+
+      it('should override a fixed via resourceType inline resource on an instance with paths that mix usage of [0] indexing', () => {
+        const inlineRule = new FixedValueRule('contained[0].resourceType'); // [0] index used
+        inlineRule.fixedValue = 'Patient';
+        const overrideRule = new FixedValueRule('contained.birthDate'); // no [0] index used
+        overrideRule.fixedValue = '2000-02-24';
+        // * contained.birthDate = 2000-02-24
+        // * contained[0].resourceType = "Patient"
+        patientInstance.rules.push(overrideRule, inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([{ resourceType: 'Patient', birthDate: '2000-02-24' }]);
+      });
+
       it('should override a nested fixed inline resource on an instance', () => {
         const bundleRule = new FixedValueRule('contained[0].resourceType');
         bundleRule.fixedValue = 'Bundle';
