@@ -29,7 +29,7 @@ import {
   InvalidMappingError,
   InvalidFHIRIdError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
+import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isInheritedResource } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -1364,23 +1364,17 @@ export class ElementDefinition {
   /**
    * Checks if a resource can be fixed to this element
    * @param {InstanceDefinition} value - The resource to fix
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {MismatchedTypeError} when the ElementDefinition is not of type Resource
    * @returns {InstanceDefinition} the input value when it can be fixed
    */
-  checkFixResource(value: InstanceDefinition): InstanceDefinition {
+  checkFixResource(value: InstanceDefinition, fisher: Fishable): InstanceDefinition {
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError('Resource');
     }
     const type = this.type[0].code;
-    if (
-      type === 'Resource' ||
-      (type === 'DomainResource' &&
-        // These are the only 3 resources not inherited from DomainResource
-        // https://www.hl7.org/fhir/domainresource.html#bnr
-        !['Bundle', 'Parameters', 'Binary'].includes(value.resourceType)) ||
-      type === value.resourceType
-    ) {
+    if (isInheritedResource(value.resourceType, type, fisher)) {
       return value;
     } else {
       throw new MismatchedTypeError(value.resourceType, value.id, type);

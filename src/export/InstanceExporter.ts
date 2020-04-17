@@ -27,6 +27,10 @@ export class InstanceExporter implements Fishable {
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r));
+    // Normalize all rules to not use the optional [0] index
+    rules.forEach(r => {
+      r.path = r.path.replace(/\[0+\]/g, '');
+    });
     rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
     // Convert strings in fixedValueRules to instances
     rules = rules.filter(r => {
@@ -45,6 +49,28 @@ export class InstanceExporter implements Fishable {
       }
       return true;
     });
+    // Collect all paths that indicate the sub-paths of that path should be of a given resourceType
+    // for example, if a.b = SomePatientInstance, then any subpath (a.b.x) must ensure that when validating
+    // Patient is used for the type of a.b
+    const inlineResourcePaths: { path: string; instanceOf: string }[] = [];
+    rules.forEach(r => {
+      if (r.isResource && r.fixedValue instanceof InstanceDefinition) {
+        inlineResourcePaths.push({
+          path: r.path,
+          // We only use the first element of the meta.profile array, if a need arises for a more
+          // comprehensive approach, we can come back to this later
+          instanceOf: r.fixedValue.meta?.profile[0] ?? r.fixedValue.resourceType
+        });
+      }
+      if (r.path.endsWith('.resourceType') && typeof r.fixedValue === 'string') {
+        inlineResourcePaths.push({
+          // Only get the part of the path before resourceType, aka if path is a.b.resourceType
+          // the relevant element is a.b, since it is the actual Resource element
+          path: splitOnPathPeriods(r.path).slice(0, -1).join('.'),
+          instanceOf: r.fixedValue
+        });
+      }
+    });
 
     // When fixing values, things happen in the order:
     // 1 - Validate values for rules that are on the instance
@@ -57,14 +83,31 @@ export class InstanceExporter implements Fishable {
     const ruleMap: Map<string, { pathParts: PathPart[]; fixedValue: any }> = new Map();
     rules.forEach(rule => {
       try {
-        const { fixedValue, pathParts } = instanceOfStructureDefinition.validateValueAtPath(
+        const matchingInlineResourcePaths = inlineResourcePaths.filter(
+          i =>
+            rule.path.startsWith(i.path) &&
+            rule.path !== i.path &&
+            rule.path != `${i.path}.resourceType`
+        );
+        // Generate an array of resourceTypes that matches the path, so if path is
+        // a.b.c.d.e, and b is a Bundle and D is a Patient,
+        // inlineResourceTypes = [undefined, "Bundle", undefined, "Patient", undefined]
+        const inlineResourceTypes: string[] = [];
+        matchingInlineResourcePaths.forEach(match => {
+          inlineResourceTypes[splitOnPathPeriods(match.path).length - 1] = match.instanceOf;
+        });
+        const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
           rule.fixedValue,
           this.fisher,
-          rule.units
+          rule.units,
+          inlineResourceTypes
         );
         // Record each valid rule in a map
-        ruleMap.set(rule.path, { pathParts, fixedValue });
+        ruleMap.set(rule.path, {
+          pathParts: validatedRule.pathParts,
+          fixedValue: validatedRule.fixedValue
+        });
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }

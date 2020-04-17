@@ -1154,6 +1154,225 @@ describe('StructureDefinition', () => {
           respRate.validateValueAtPath('contained[PatientsOnly][0]', instanceDef, fisher)
         ).toThrow(/Bundle.*OfJoy.*Patient/);
       });
+
+      // Overriding elements
+      it('should allow replacing parts of a Resource element', () => {
+        const language = new FshCode('French');
+        const { fixedValue } = respRate.validateValueAtPath(
+          'contained[0].language',
+          language,
+          fisher
+        );
+        expect(fixedValue).toBe('French');
+      });
+
+      it('should allow replacing parts of a Patient element', () => {
+        const gender = new FshCode('F');
+        const { fixedValue } = respRate.validateValueAtPath(
+          'contained[PatientsOnly][0].gender',
+          gender,
+          fisher
+        );
+        expect(fixedValue).toBe('F');
+      });
+
+      it('should allow overriding a Resource with a Patient', () => {
+        const gender = new FshCode('F');
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].gender',
+          gender,
+          fisher,
+          false,
+          ['Patient']
+        );
+        expect(fixedValue).toBe('F');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'gender', primitive: true }
+        ]);
+      });
+
+      it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle', () => {
+        const gender = new FshCode('F');
+        const {
+          fixedValue,
+          pathParts
+        } = respRate.validateValueAtPath(
+          'contained[0].entry[0].resource.gender',
+          gender,
+          fisher,
+          false,
+          ['Bundle', null, 'Patient', null]
+        );
+        expect(fixedValue).toBe('F');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'gender', primitive: true }
+        ]);
+      });
+
+      it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle within a Bundle', () => {
+        const gender = new FshCode('F');
+        const {
+          fixedValue,
+          pathParts
+        } = respRate.validateValueAtPath(
+          'contained[0].entry[0].resource.entry[0].resource.gender',
+          gender,
+          fisher,
+          false,
+          ['Bundle', null, 'Bundle', null, 'Patient', null]
+        );
+        expect(fixedValue).toBe('F');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'gender', primitive: true }
+        ]);
+      });
+
+      it('should allow overriding a Resource with a Profile', () => {
+        const unit = 'slugs';
+        const {
+          fixedValue,
+          pathParts
+        } = respRate.validateValueAtPath('contained[0].valueQuantity.unit', unit, fisher, false, [
+          'http://hl7.org/fhir/StructureDefinition/resprate',
+          null,
+          null
+        ]);
+        expect(fixedValue).toBe('slugs');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'valueQuantity' },
+          { base: 'unit', primitive: true }
+        ]);
+      });
+
+      it('should not allow overriding a Resource constrained to Patient with a non-Patient path', () => {
+        const system = 'http://hello.com';
+        expect(() =>
+          respRate.validateValueAtPath('contained[0].system', system, fisher, false, ['Patient'])
+        ).toThrow('Cannot resolve element from path: contained[0].system');
+      });
+
+      it('should not allow overriding a Resource constrained to Patient with a non-Patient path inside a Resource', () => {
+        const system = 'http://hello.com';
+        expect(() =>
+          respRate.validateValueAtPath(
+            'contained[0].entry[0].resource.system',
+            system,
+            fisher,
+            false,
+            ['Bundle', null, 'Patient', null]
+          )
+        ).toThrow('Cannot resolve element from path: contained[0].entry[0].resource.system');
+      });
+
+      it('should not allow overriding a Patient with an Observation', () => {
+        const method = new FshCode('man', 'http://method.com');
+        expect(() =>
+          respRate.validateValueAtPath('contained[PatientsOnly].method', method, fisher, false, [
+            'Observation'
+          ])
+        ).toThrow('Cannot resolve element from path: contained[PatientsOnly].method');
+      });
+
+      it('should not allow overriding a Resource constrained to a non-FHIR Resource', () => {
+        const system = 'http://hello.com';
+        expect(() =>
+          respRate.validateValueAtPath('contained[0].system', system, fisher, false, [
+            'CodeableConcept'
+          ])
+        ).toThrow('Cannot resolve element from path: contained[0].system');
+      });
+
+      // resourceType
+      it('should allow a valid FHIR resourceType to be set on a Resource element', () => {
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].resourceType',
+          'Patient',
+          fisher
+        );
+        expect(fixedValue).toBe('Patient');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['0'] },
+          { base: 'resourceType' }
+        ]);
+      });
+
+      it('should allow a valid FHIR resourceType to be set on a DomainResource element', () => {
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[DomainsOnly][0].resourceType',
+          'Patient',
+          fisher
+        );
+        expect(fixedValue).toBe('Patient');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['DomainsOnly', '0'] },
+          { base: 'resourceType' }
+        ]);
+      });
+
+      it('should allow a valid FHIR resourceType to be set on a Patient element', () => {
+        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[PatientsOnly][0].resourceType',
+          'Patient',
+          fisher
+        );
+        expect(fixedValue).toBe('Patient');
+        expect(pathParts).toEqual([
+          { base: 'contained', brackets: ['PatientsOnly', '0'] },
+          { base: 'resourceType' }
+        ]);
+      });
+
+      it('should not allow a resourceType to be set on a non-Resource element', () => {
+        expect(() => {
+          respRate.validateValueAtPath('code.resourceType', 'CodeableConcept', fisher);
+        }).toThrow(
+          'A resourceType of CodeableConcept cannot be set on an element of type CodeableConcept.'
+        );
+      });
+
+      it('should not allow an invalid FHIR resourceType to be set on a DomainResource element', () => {
+        expect(() =>
+          respRate.validateValueAtPath('contained[DomainsOnly][0].resourceType', 'Bundle', fisher)
+        ).toThrow('A resourceType of Bundle cannot be set on an element of type DomainResource.');
+      });
+
+      it('should not allow an invalid FHIR resourceType to be set on a Patient element', () => {
+        expect(() =>
+          respRate.validateValueAtPath(
+            'contained[PatientsOnly][0].resourceType',
+            'Resource',
+            fisher
+          )
+        ).toThrow('A resourceType of Resource cannot be set on an element of type Patient.');
+      });
+
+      it('should not allow a profile resourceType to be set on a Resource element', () => {
+        expect(() =>
+          respRate.validateValueAtPath('contained[0].resourceType', 'resprate', fisher)
+        ).toThrow('A resourceType of resprate cannot be set on an element of type Resource');
+      });
+
+      it('should not allow an invalid FHIR resourceType to be set on a choice element', () => {
+        expect(() =>
+          respRate.validateValueAtPath('component.value[x].resourceType', 'Patient', fisher)
+        ).toThrow('Cannot resolve element from path: component.value[x].resourceType');
+      });
+
+      it('should not allow a resourceType to be set at the top level of the instance', () => {
+        expect(() => respRate.validateValueAtPath('resourceType', 'Patient', fisher)).toThrow(
+          'Cannot resolve element from path: resourceType'
+        );
+      });
     });
   });
 

@@ -1388,61 +1388,6 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it('should fix an inline resource to an instance', () => {
-      const inlineInstance = new Instance('MyInlinePatient');
-      inlineInstance.instanceOf = 'Patient';
-      const fixedValRule = new FixedValueRule('active');
-      fixedValRule.fixedValue = true;
-      inlineInstance.rules.push(fixedValRule); // * active = true
-      doc.instances.set(inlineInstance.name, inlineInstance);
-
-      const inlineRule = new FixedValueRule('contained[0]');
-      inlineRule.fixedValue = 'MyInlinePatient';
-      inlineRule.isResource = true;
-      patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
-
-      const exported = exportInstance(patientInstance);
-      expect(exported.contained).toEqual([
-        { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
-      ]);
-    });
-
-    it('should fix an inline resource to an instance element with a specific type', () => {
-      const inlineInstance = new Instance('MyInlinePatient');
-      inlineInstance.instanceOf = 'Patient';
-      const fixedValRule = new FixedValueRule('active');
-      fixedValRule.fixedValue = true;
-      inlineInstance.rules.push(fixedValRule);
-      // * active = true
-      doc.instances.set(inlineInstance.name, inlineInstance);
-
-      const caretRule = new CaretValueRule('entry');
-      caretRule.caretPath = 'slicing.discriminator.type';
-      caretRule.value = new FshCode('value');
-      const containsRule = new ContainsRule('entry');
-      containsRule.items = [{ name: 'PatientsOnly' }];
-      const cardRule = new CardRule('entry[PatientsOnly]');
-      cardRule.min = 0;
-      cardRule.max = '1';
-      const typeRule = new OnlyRule('entry[PatientsOnly].resource');
-      typeRule.types = [{ type: 'Patient' }];
-      // * entry ^slicing.discriminator.type = #value
-      // * entry contains Patient 0..1
-      // * entry[PatientsOnly].resource only Patient
-      bundle.rules.push(caretRule, containsRule, cardRule, typeRule);
-
-      const bundleValRule = new FixedValueRule('entry[PatientsOnly].resource');
-      bundleValRule.fixedValue = 'MyInlinePatient';
-      bundleValRule.isResource = true;
-      // * entry[PatientsOnly].resource = MyInlinePatient
-      bundleInstance.rules.push(bundleValRule);
-
-      const exported = exportInstance(bundleInstance);
-      expect(exported.entry[0]).toEqual({
-        resource: { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
-      });
-    });
-
     it('should only export an instance once', () => {
       const bundleInstance = new Instance('MyBundle');
       bundleInstance.instanceOf = 'Bundle';
@@ -1468,19 +1413,187 @@ describe('InstanceExporter', () => {
       expect(exportedBundledPatient).toHaveLength(1);
     });
 
-    it('should log an error when fixing an inline resource that does not exist to an instance', () => {
-      const inlineRule = new FixedValueRule('contained[0]')
-        .withFile('FakeInstance.fsh')
-        .withLocation([1, 2, 3, 4]);
-      inlineRule.fixedValue = 'MyFakePatient';
-      inlineRule.isResource = true;
-      patientInstance.rules.push(inlineRule); // * contained[0] = MyFakePatient
+    describe('#Inline Instances', () => {
+      beforeEach(() => {
+        const inlineInstance = new Instance('MyInlinePatient');
+        inlineInstance.instanceOf = 'Patient';
+        const fixedValRule = new FixedValueRule('active');
+        fixedValRule.fixedValue = true;
+        inlineInstance.rules.push(fixedValRule);
+        // * active = true
+        doc.instances.set(inlineInstance.name, inlineInstance);
 
-      const exported = exportInstance(patientInstance);
-      expect(exported.contained).toBeUndefined();
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot find definition for Instance: MyFakePatient. Skipping rule.*File: FakeInstance.fsh.*Line: 1 - 3\D*/s
-      );
+        const caretRule = new CaretValueRule('entry');
+        caretRule.caretPath = 'slicing.discriminator.type';
+        caretRule.value = new FshCode('value');
+        const containsRule = new ContainsRule('entry');
+        containsRule.items = [{ name: 'PatientsOnly' }];
+        const cardRule = new CardRule('entry[PatientsOnly]');
+        cardRule.min = 0;
+        cardRule.max = '1';
+        const typeRule = new OnlyRule('entry[PatientsOnly].resource');
+        typeRule.types = [{ type: 'Patient' }];
+        // * entry ^slicing.discriminator.type = #value
+        // * entry contains Patient 0..1
+        // * entry[PatientsOnly].resource only Patient
+        bundle.rules.push(caretRule, containsRule, cardRule, typeRule);
+      });
+
+      it('should fix an inline resource to an instance', () => {
+        const inlineRule = new FixedValueRule('contained[0]');
+        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.isResource = true;
+        patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
+        ]);
+      });
+
+      it('should fix an inline resource to an instance element with a specific type', () => {
+        const bundleValRule = new FixedValueRule('entry[PatientsOnly].resource');
+        bundleValRule.fixedValue = 'MyInlinePatient';
+        bundleValRule.isResource = true;
+        // * entry[PatientsOnly].resource = MyInlinePatient
+        bundleInstance.rules.push(bundleValRule);
+
+        const exported = exportInstance(bundleInstance);
+        expect(exported.entry[0]).toEqual({
+          resource: { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
+        });
+      });
+
+      it('should log an error when fixing an inline resource that does not exist to an instance', () => {
+        const inlineRule = new FixedValueRule('contained[0]')
+          .withFile('FakeInstance.fsh')
+          .withLocation([1, 2, 3, 4]);
+        inlineRule.fixedValue = 'MyFakePatient';
+        inlineRule.isResource = true;
+        patientInstance.rules.push(inlineRule); // * contained[0] = MyFakePatient
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toBeUndefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Cannot find definition for Instance: MyFakePatient. Skipping rule.*File: FakeInstance.fsh.*Line: 1 - 3\D*/s
+        );
+      });
+
+      it('should override a fixed inline resource on an instance', () => {
+        const inlineRule = new FixedValueRule('contained[0]');
+        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.isResource = true;
+        const overrideRule = new FixedValueRule('contained[0].birthDate');
+        overrideRule.fixedValue = '2000-02-24';
+        // * contained[0] = MyInlinePatient
+        // * contained[0].birthDate = 2000-02-24
+        patientInstance.rules.push(inlineRule, overrideRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          { resourceType: 'Patient', id: 'MyInlinePatient', active: true, birthDate: '2000-02-24' }
+        ]);
+      });
+
+      it('should override a fixed via resourceType inline resource on an instance', () => {
+        const inlineRule = new FixedValueRule('contained[0].resourceType');
+        inlineRule.fixedValue = 'Patient';
+        const overrideRule = new FixedValueRule('contained[0].birthDate');
+        overrideRule.fixedValue = '2000-02-24';
+        // * contained[0].resourceType = "Patient"
+        // * contained[0].birthDate = 2000-02-24
+        patientInstance.rules.push(inlineRule, overrideRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([{ resourceType: 'Patient', birthDate: '2000-02-24' }]);
+      });
+
+      it('should override a fixed inline resource on an instance with paths that mix usage of [0] indexing', () => {
+        const inlineRule = new FixedValueRule('contained[00]'); // [00] index used
+        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.isResource = true;
+        const overrideRule = new FixedValueRule('contained.birthDate'); // no [0] index used
+        overrideRule.fixedValue = '2000-02-24';
+        // * contained[0] = MyInlinePatient
+        // * contained.birthDate = 2000-02-24
+        patientInstance.rules.push(inlineRule, overrideRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          { resourceType: 'Patient', id: 'MyInlinePatient', active: true, birthDate: '2000-02-24' }
+        ]);
+      });
+
+      it('should override a fixed via resourceType inline resource on an instance with paths that mix usage of [0] indexing', () => {
+        const inlineRule = new FixedValueRule('contained[0].resourceType'); // [0] index used
+        inlineRule.fixedValue = 'Patient';
+        const overrideRule = new FixedValueRule('contained.birthDate'); // no [0] index used
+        overrideRule.fixedValue = '2000-02-24';
+        // * contained.birthDate = 2000-02-24
+        // * contained[0].resourceType = "Patient"
+        patientInstance.rules.push(overrideRule, inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([{ resourceType: 'Patient', birthDate: '2000-02-24' }]);
+      });
+
+      it('should override a nested fixed inline resource on an instance', () => {
+        const bundleRule = new FixedValueRule('contained[0].resourceType');
+        bundleRule.fixedValue = 'Bundle';
+        const patientRule = new FixedValueRule('contained[0].entry[0].resource');
+        patientRule.fixedValue = 'MyInlinePatient';
+        patientRule.isResource = true;
+        const birthDateRule = new FixedValueRule('contained[0].entry[0].resource.birthDate');
+        birthDateRule.fixedValue = '2000-02-24';
+        // * contained[0].resourceType = "Bundle"
+        // * contained[0].entry[0].resource = MyInlinePatient
+        // * contained[0].entry[0].resource.birthDate = "2000-02-24"
+        patientInstance.rules.push(bundleRule, patientRule, birthDateRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          {
+            resourceType: 'Bundle',
+            entry: [
+              {
+                resource: {
+                  resourceType: 'Patient',
+                  id: 'MyInlinePatient',
+                  active: true,
+                  birthDate: '2000-02-24'
+                }
+              }
+            ]
+          }
+        ]);
+      });
+
+      it('should override an inline profile on an instance', () => {
+        const inlineBundle = new Instance('MyBundle');
+        inlineBundle.instanceOf = 'TestBundle';
+        doc.instances.set(inlineBundle.name, inlineBundle);
+
+        const bundleRule = new FixedValueRule('contained[0]');
+        bundleRule.fixedValue = 'MyBundle';
+        bundleRule.isResource = true;
+        const birthDateRule = new FixedValueRule(
+          'contained[0].entry[PatientsOnly].resource.birthDate'
+        );
+        birthDateRule.fixedValue = '2000-02-24';
+        // contained[0] = MyBundle
+        // contained[0].entry[PatientsOnly].resource.birthDate = "2000-02-24"
+        patientInstance.rules.push(bundleRule, birthDateRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          {
+            id: 'MyBundle',
+            meta: { profile: ['http://example.com/StructureDefinition/TestBundle'] },
+            resourceType: 'Bundle',
+            entry: [
+              {
+                resource: {
+                  birthDate: '2000-02-24'
+                }
+              }
+            ]
+          }
+        ]);
+      });
     });
   });
 
