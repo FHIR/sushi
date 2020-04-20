@@ -18,7 +18,6 @@ import {
 import table from 'markdown-table';
 import { Package } from '../export';
 import {
-  ContactDetail,
   ImplementationGuide,
   ImplementationGuideDefinitionResource,
   ImplementationGuideDefinitionPageGeneration,
@@ -29,6 +28,7 @@ import {
 } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
+import { Configuration } from '../fshtypes';
 
 /**
  * The IG Exporter exports the FSH artifacts into a file structure supported by the IG Publisher.
@@ -45,7 +45,8 @@ export class IGExporter {
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string,
-    private readonly isIgPubContext: boolean = false
+    private readonly isIgPubContext: boolean = false,
+    private readonly config: Configuration = null
   ) {
     this.packagePath = path.resolve(this.igDataPath, '..', 'package.json');
     this.outputLog = new Map();
@@ -64,7 +65,9 @@ export class IGExporter {
     this.addPredefinedResources(outPath);
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
-    this.addOtherPageContent(outPath);
+    if (!this.config.pages?.length) {
+      this.addOtherPageContent(outPath);
+    }
     this.addImages(outPath);
     this.addIncludeContents(outPath);
     this.addIgIni(outPath);
@@ -75,50 +78,27 @@ export class IGExporter {
   }
 
   /**
-   * Initializes the ImplementationGuide JSON w/ data from the package.json
+   * Initializes the ImplementationGuide JSON w/ data from the configuration YAML
    *
    * @see {@link https://confluence.hl7.org/pages/viewpage.action?pageId=35718629#NPMPackageSpecification-PackageManifestpropertiesforIGs}
    */
-  private initIG(): void {
-    const packageJSON = this.pkg.packageJSON;
-    // TODO: Consider adding a generated file warning when the IG Publisher supports JSON5-style comments
+  private initIG() {
+    // first, properties that can be directly used without much trouble
     this.ig = {
       resourceType: 'ImplementationGuide',
-      id: packageJSON.name,
-      url: `${packageJSON.canonical}/ImplementationGuide/${packageJSON.name}`,
-      version: packageJSON.version,
+      id: this.config.id,
+      url: `${this.config.url}/ImplementationGuide/${this.config.name}`,
+      version: this.config.version,
       // name must be alphanumeric (allowing underscore as well)
-      name: (packageJSON.title ?? packageJSON.name).replace(/[^A-Za-z0-9_]/g, ''),
-      title: packageJSON.title ?? packageJSON.name,
-      status: 'active', // TODO: make user-configurable
-      publisher: packageJSON.author,
-      contact: packageJSON.maintainers?.map(m => {
-        const contact: ContactDetail = {};
-        if (m.name) {
-          contact.name = m.name;
-        }
-        if (m.url) {
-          contact.telecom = [
-            {
-              system: 'url',
-              value: m.url
-            }
-          ];
-        }
-        if (m.email) {
-          contact.telecom = contact.telecom ?? [];
-          contact.telecom.push({
-            system: 'email',
-            value: m.email
-          });
-        }
-        return contact;
-      }),
-      description: packageJSON.description,
-      packageId: packageJSON.name,
-      license: packageJSON.license,
-      fhirVersion: ['4.0.1'],
-      dependsOn: [],
+      name: (this.config.title ?? this.config.name).replace(/[^A-Za-z0-9_]/g, ''),
+      title: this.config.title ?? this.config.name,
+      status: this.config.status ?? 'active',
+      publisher: this.config.publisher,
+      contact: this.config.contact,
+      description: this.config.description,
+      packageId: this.config.name,
+      license: this.config.license,
+      fhirVersion: this.config.fhirVersion,
       definition: {
         resource: [],
         page: {
@@ -129,59 +109,81 @@ export class IGExporter {
         },
         // Parameters apparently required by IG Publisher (as of Jan 29, 2020)
         parameter: [
+          // ...(this.config?.parameters ?? []),
           {
             code: 'copyrightyear',
-            value: '' // Gets set when ig.ini is processed
+            value:
+              this.config?.parameters?.find(p => p.code == 'copyrightyear')?.value ??
+              `${new Date().getFullYear()}+`
           },
           {
             code: 'releaselabel',
-            value: '' // Gets set when ig.ini is processed
+            value: this.config?.parameters?.find(p => p.code == 'releaselabel')?.value ?? 'CI Build'
           },
           {
             code: 'show-inherited-invariants',
-            value: 'false' // TODO: Make this configurable
-          }
+            value:
+              this.config?.parameters?.find(p => p.code == 'show-inherited-invariants')?.value ??
+              'false'
+          },
+          ...(this.config?.parameters?.filter(
+            p =>
+              ['copyrightyear', 'releaselabel', 'show-inherited-invariants'].indexOf(p.code) == -1
+          ) ?? [])
         ]
       }
     };
-
-    // Add the path-history, if applicable (only applies to HL7 IGs)
-    if (/^https?:\/\/hl7.org\//.test(this.pkg.packageJSON.canonical)) {
-      this.ig.definition.parameter.push({
-        code: 'path-history',
-        value: `${this.pkg.packageJSON.canonical}/history.html`
-      });
+    // add non-omitted resources
+    this.config.resources?.forEach(resource => {
+      if (!resource.omit) {
+        this.ig.definition.resource.push(resource);
+      }
+    });
+    // check for some optional properties and add them if present
+    if (this.config.useContext?.length) {
+      this.ig.useContext = this.config.useContext;
     }
-
-    // Add the dependencies
-    if (this.pkg.packageJSON.dependencies) {
+    // add dependencies
+    if (this.config.dependencies?.length) {
+      this.ig.dependsOn = [];
       const igs = this.fhirDefs.allImplementationGuides();
-      for (const depId of Object.keys(this.pkg.packageJSON.dependencies)) {
-        if (depId === 'hl7.fhir.r4.core') {
+      for (const dependency of this.config.dependencies) {
+        if (dependency.packageId === 'hl7.fhir.r4.core') {
           continue;
         }
-        const depVersion = this.pkg.packageJSON.dependencies[depId];
-        // find the matching IG by id (for "current"/"dev" version) or id and version (for specific version)
-        const depIG = igs.find(
+        const dependencyIG = igs.find(
           ig =>
-            ig.packageId === depId &&
-            (ig.version === depVersion || 'current' === depVersion || 'dev' === depVersion)
+            ig.packageId === dependency.packageId &&
+            (ig.version === dependency.version ||
+              'current' === dependency.version ||
+              'dev' === dependency.version)
         );
-        if (depIG && depIG.url) {
+        if (dependencyIG?.url) {
           this.ig.dependsOn.push({
-            uri: `${depIG.url}`,
-            packageId: depId,
-            version: depVersion
+            uri: dependencyIG.url,
+            packageId: dependency.packageId,
+            version: dependency.version
           });
         } else {
           logger.error(
-            `Failed to add ${depId}:${depVersion} to ImplementationGuide instance.  Could not determine its canonical URL from the FHIR cache.`
+            `Failed to add ${dependency.packageId}:${dependency.version} to ImplementationGuide instance.  Could not determine its canonical URL from the FHIR cache.`
           );
         }
       }
-      if (this.ig.dependsOn.length === 0) {
-        delete this.ig.dependsOn;
-      }
+    }
+    if (this.config.global?.length) {
+      this.ig.global = this.config.global;
+    }
+    if (this.config.pages?.length) {
+      this.ig.definition.page.page = this.config.pages;
+    }
+
+    // Add the path-history, if applicable (only applies to HL7 IGs)
+    if (/^https?:\/\/hl7.org\//.test(this.config.url)) {
+      this.ig.definition.parameter.push({
+        code: 'path-history',
+        value: `${this.config.url}/history.html`
+      });
     }
   }
 
@@ -265,11 +267,14 @@ export class IGExporter {
     }
 
     // Add user-provided or generated index file to IG definition
-    this.ig.definition.page.page.push({
-      nameUrl: 'index.html',
-      title: 'Home',
-      generation
-    });
+    // If pages are defined in the configuration, this is the author's responsibility
+    if (!this.config.pages?.length) {
+      this.ig.definition.page.page.push({
+        nameUrl: 'index.html',
+        title: 'Home',
+        generation
+      });
+    }
   }
 
   /**
@@ -435,6 +440,7 @@ export class IGExporter {
 
   /**
    * Add each of the resources from the package to the ImplementationGuide JSON file.
+   * Configuration may specify resources to omit.
    */
   private addResources(): void {
     const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
@@ -444,36 +450,86 @@ export class IGExporter {
       ...sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name)
     ];
     resources.forEach(r => {
-      this.ig.definition.resource.push({
-        reference: { reference: `${r.resourceType}/${r.id}` },
-        name: r.title ?? r.name ?? r.id,
-        description: r.description,
-        exampleBoolean: false
-      });
+      const referenceKey = `${r.resourceType}/${r.id}`;
+      const newResource: ImplementationGuideDefinitionResource = {
+        reference: { reference: referenceKey }
+      };
+      const configResource = (this.config.resources ?? []).find(
+        resource => resource.reference?.reference == referenceKey
+      );
+
+      if (!(configResource?.omit === true)) {
+        newResource.name = configResource?.name ?? r.title ?? r.name ?? r.id;
+        newResource.description = configResource?.description ?? r.description;
+        // Object.assign(newResource, {
+        //   name: configResource?.name ?? r.title ?? r.name ?? r.id,
+        //   description: configResource?.description ?? r.description
+        // });
+        if (configResource?.fhirVersion?.length) {
+          newResource.fhirVersion = configResource.fhirVersion;
+        }
+        if (configResource?.groupingId) {
+          newResource.groupingId = configResource.groupingId;
+        }
+        if (configResource?.exampleCanonical) {
+          newResource.exampleCanonical = configResource.exampleCanonical;
+        } else if (typeof configResource?.exampleBoolean === 'boolean') {
+          newResource.exampleBoolean = configResource.exampleBoolean;
+        } else {
+          newResource.exampleBoolean = false;
+        }
+        this.ig.definition.resource.push(newResource);
+      }
     });
     const instances = sortBy(
       this.pkg.instances,
       instance => instance.id ?? instance._instanceMeta.name
     );
     instances.forEach(instance => {
-      const resource: ImplementationGuideDefinitionResource = {
+      const referenceKey = `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`;
+      const newResource: ImplementationGuideDefinitionResource = {
         reference: {
-          reference: `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`
-        },
-        name: instance._instanceMeta.title ?? instance._instanceMeta.name,
-        description: instance._instanceMeta.description
-      };
-      if (instance._instanceMeta.usage === 'Example') {
-        const exampleUrl = instance.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
-        if (exampleUrl) {
-          resource.exampleCanonical = exampleUrl;
-        } else {
-          resource.exampleBoolean = true;
+          reference: referenceKey
         }
-      } else {
-        resource.exampleBoolean = false;
+      };
+      const configResource = (this.config.resources ?? []).find(
+        resource => resource.reference?.reference == referenceKey
+      );
+
+      if (!(configResource?.omit === true)) {
+        newResource.name =
+          configResource?.name ?? instance._instanceMeta.title ?? instance._instanceMeta.name;
+        newResource.description = configResource?.description ?? instance._instanceMeta.description;
+        // Object.assign(newResource, {
+        //   name: configResource?.name ?? instance._instanceMeta.title ?? instance._instanceMeta.name,
+        //   description: configResource?.description ?? instance._instanceMeta.description
+        // });
+        if (configResource?.fhirVersion?.length) {
+          newResource.fhirVersion = configResource.fhirVersion;
+        }
+        if (configResource?.groupingId) {
+          newResource.groupingId = configResource.groupingId;
+        }
+        if (configResource?.exampleCanonical) {
+          newResource.exampleCanonical = configResource.exampleCanonical;
+        } else if (typeof configResource?.exampleBoolean === 'boolean') {
+          newResource.exampleBoolean = configResource.exampleBoolean;
+        } else {
+          if (instance._instanceMeta.usage === 'Example') {
+            const exampleUrl = instance.meta?.profile?.find(url =>
+              this.pkg.fish(url, Type.Profile)
+            );
+            if (exampleUrl) {
+              newResource.exampleCanonical = exampleUrl;
+            } else {
+              newResource.exampleBoolean = true;
+            }
+          } else {
+            newResource.exampleBoolean = false;
+          }
+        }
+        this.ig.definition.resource.push(newResource);
       }
-      this.ig.definition.resource.push(resource);
     });
   }
 
@@ -513,61 +569,106 @@ export class IGExporter {
               continue;
             }
 
-            const resource: ImplementationGuideDefinitionResource = {
+            const referenceKey = `${resourceJSON.resourceType}/${resourceJSON.id}`;
+            const newResource: ImplementationGuideDefinitionResource = {
               reference: {
-                reference: `${resourceJSON.resourceType}/${resourceJSON.id}`
-              },
-              name: resourceJSON.id, // will be overwritten w/ title or name where applicable
-              description: resourceJSON.description
+                reference: referenceKey
+              }
+              // name: resourceJSON.id, // will be overwritten w/ title or name where applicable
+              // description: resourceJSON.description
             };
+            const configResource = (this.config.resources ?? []).find(
+              resource => resource.reference?.reference == referenceKey
+            );
 
-            if (pathEnd === 'examples') {
-              const exampleUrl = resourceJSON.meta?.profile?.find(
-                url =>
-                  this.pkg.fish(url, Type.Profile) ?? this.fhirDefs.fishForFHIR(url, Type.Profile)
+            if (!(configResource?.omit === true)) {
+              const existingIndex = this.ig.definition.resource.findIndex(
+                r => r.reference.reference === referenceKey
               );
-              if (exampleUrl) {
-                resource.exampleCanonical = exampleUrl;
+              const existingResource =
+                existingIndex >= 0 ? this.ig.definition.resource[existingIndex] : null;
+              const existingIsExample =
+                existingResource?.exampleBoolean || existingResource?.exampleCanonical;
+              // name: configName ?? existingName ?? resourceJSON.title ?? resourceJSON.name ?? resourceJSON.id
+              const existingName = existingIsExample ? existingResource.name : null;
+              const existingDescription = existingIsExample ? existingResource.description : null;
+              // description: configDesc ?? existingDesc ?? resourceJSON.description
+              newResource.description =
+                configResource?.description ?? existingDescription ?? resourceJSON.description;
+              // fhirVersion: config
+              if (configResource?.fhirVersion) {
+                newResource.fhirVersion = configResource.fhirVersion;
+              }
+              // groupingId: config
+              if (configResource?.groupingId) {
+                newResource.groupingId = configResource.groupingId;
+              }
+              if (pathEnd === 'examples') {
+                newResource.name = configResource?.name ?? existingName ?? resourceJSON.id;
+                // set exampleCanonical or exampleBoolean, preferring configured values
+                if (configResource?.exampleCanonical) {
+                  newResource.exampleCanonical = configResource.exampleCanonical;
+                } else if (typeof configResource?.exampleBoolean === 'boolean') {
+                  newResource.exampleBoolean = configResource.exampleBoolean;
+                } else {
+                  const exampleUrl = resourceJSON.meta?.profile?.find(
+                    url =>
+                      this.pkg.fish(url, Type.Profile) ??
+                      this.fhirDefs.fishForFHIR(url, Type.Profile)
+                  );
+                  if (exampleUrl) {
+                    newResource.exampleCanonical = exampleUrl;
+                  } else {
+                    newResource.exampleBoolean = true;
+                  }
+                }
               } else {
-                resource.exampleBoolean = true;
+                if (configResource?.exampleCanonical) {
+                  newResource.exampleCanonical = configResource.exampleCanonical;
+                } else if (typeof configResource?.exampleBoolean === 'boolean') {
+                  newResource.exampleBoolean = configResource.exampleBoolean;
+                } else {
+                  newResource.exampleBoolean = false;
+                }
+                // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
+                const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
+                const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
+                newResource.name =
+                  configResource?.name ??
+                  existingResource?.name ??
+                  title ??
+                  name ??
+                  resourceJSON.id;
+                // if (title || name) {
+                //   newResource.name = title ?? name;
+                // }
               }
-            } else {
-              resource.exampleBoolean = false;
-              // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
-              const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
-              const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
-              if (title || name) {
-                resource.name = title ?? name;
-              }
-            }
 
-            const existingIndex = this.ig.definition.resource.findIndex(
-              r => r.reference.reference === resource.reference.reference
-            );
-            if (existingIndex >= 0) {
-              if (
-                this.ig.definition.resource[existingIndex].exampleBoolean ||
-                this.ig.definition.resource[existingIndex].exampleCanonical
-              ) {
-                // If it is replacing an existing example, preserve description and name from SUSHI
-                // Allows user method for setting description/name on external example
-                const oldDescription = this.ig.definition.resource[existingIndex].description;
-                const oldName = this.ig.definition.resource[existingIndex].name;
-                if (oldDescription) resource.description = oldDescription;
-                if (oldName) resource.name = this.ig.definition.resource[existingIndex].name;
+              if (existingIndex >= 0) {
+                // if (
+                //   this.ig.definition.resource[existingIndex].exampleBoolean ||
+                //   this.ig.definition.resource[existingIndex].exampleCanonical
+                // ) {
+                //   // If it is replacing an existing example, preserve description and name from SUSHI
+                //   // Allows user method for setting description/name on external example
+                //   const oldDescription = this.ig.definition.resource[existingIndex].description;
+                //   const oldName = this.ig.definition.resource[existingIndex].name;
+                //   if (oldDescription) newResource.description = oldDescription;
+                //   if (oldName) newResource.name = this.ig.definition.resource[existingIndex].name;
+                // }
+                this.ig.definition.resource[existingIndex] = newResource;
+              } else {
+                this.ig.definition.resource.push(newResource);
               }
-              this.ig.definition.resource[existingIndex] = resource;
-            } else {
-              this.ig.definition.resource.push(resource);
+              const inputPath = path.join(dirPath, file);
+              const outputPath = path.join(
+                igPath,
+                'input',
+                pathEnd,
+                `${resourceJSON.resourceType}-${resourceJSON.id}.json`
+              );
+              this.copyAsIs(inputPath, outputPath);
             }
-            const inputPath = path.join(dirPath, file);
-            const outputPath = path.join(
-              igPath,
-              'input',
-              pathEnd,
-              `${resourceJSON.resourceType}-${resourceJSON.id}.json`
-            );
-            this.copyAsIs(inputPath, outputPath);
           }
         }
       }
@@ -650,10 +751,10 @@ export class IGExporter {
     }
 
     // Update the corresponding parameters in the ImplementationGuide JSON
-    const copyrightParam = this.ig.definition.parameter.find(p => p.code === 'copyrightyear');
-    copyrightParam.value = iniObj.copyrightyear;
-    const releaseParam = this.ig.definition.parameter.find(p => p.code === 'releaselabel');
-    releaseParam.value = iniObj.ballotstatus;
+    // const copyrightParam = this.ig.definition.parameter.find(p => p.code === 'copyrightyear');
+    // copyrightParam.value = iniObj.copyrightyear;
+    // const releaseParam = this.ig.definition.parameter.find(p => p.code === 'releaselabel');
+    // releaseParam.value = iniObj.ballotstatus;
 
     // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
     let outputIniContents = ini.encode(iniObj, { section: 'IG', whitespace: true });
