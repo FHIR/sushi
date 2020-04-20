@@ -109,7 +109,6 @@ export class IGExporter {
         },
         // Parameters apparently required by IG Publisher (as of Jan 29, 2020)
         parameter: [
-          // ...(this.config?.parameters ?? []),
           {
             code: 'copyrightyear',
             value:
@@ -120,15 +119,8 @@ export class IGExporter {
             code: 'releaselabel',
             value: this.config?.parameters?.find(p => p.code == 'releaselabel')?.value ?? 'CI Build'
           },
-          {
-            code: 'show-inherited-invariants',
-            value:
-              this.config?.parameters?.find(p => p.code == 'show-inherited-invariants')?.value ??
-              'false'
-          },
           ...(this.config?.parameters?.filter(
-            p =>
-              ['copyrightyear', 'releaselabel', 'show-inherited-invariants'].indexOf(p.code) == -1
+            p => ['copyrightyear', 'releaselabel'].indexOf(p.code) == -1
           ) ?? [])
         ]
       }

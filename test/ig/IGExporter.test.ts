@@ -10,7 +10,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
 import { TestFisher } from '../testhelpers';
 
-describe('IGExporter', () => {
+describe.skip('IGExporter', () => {
   // Track temp files/folders for cleanup
   temp.track();
 
@@ -121,7 +121,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
     });
 
-    it.skip('should generate an ig.ini with the correct values based on the package.json', () => {
+    it('should generate an ig.ini with the correct values based on the package.json', () => {
       const iniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(iniPath)).toBeTruthy();
       const content = fs.readFileSync(iniPath, 'utf8');
@@ -300,7 +300,7 @@ describe('IGExporter', () => {
       });
     });
 
-    it.skip('should generate a package-list.json based on the package', () => {
+    it('should generate a package-list.json based on the package', () => {
       const pkgListPath = path.join(tempOut, 'package-list.json');
       expect(fs.existsSync(pkgListPath)).toBeTruthy();
       const content = fs.readJSONSync(pkgListPath);
@@ -343,7 +343,7 @@ describe('IGExporter', () => {
       });
     });
 
-    it.skip('should generate an index.md with the package description', () => {
+    it('should generate an index.md with the package description', () => {
       const indexPath = path.join(tempOut, 'input', 'pagecontent', 'index.md');
       expect(fs.existsSync(indexPath)).toBeTruthy();
       const content = fs.readFileSync(indexPath, 'utf8');
@@ -355,7 +355,7 @@ describe('IGExporter', () => {
       expect(content).toMatch('Provides a simple example of how FSH can be used to create an IG');
     });
 
-    it.skip('should generate a default menu.xml', () => {
+    it('should generate a default menu.xml', () => {
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();
       const content = fs.readFileSync(menuPath, 'utf8');
@@ -368,7 +368,7 @@ describe('IGExporter', () => {
       expect(content).toMatch('<li><a href="toc.html">Table of Contents</a></li>');
     });
 
-    it.skip('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
+    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
       const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
