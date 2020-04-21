@@ -52,18 +52,24 @@ const MINIMAL_CONFIG_PROPERTIES = ['id', 'version', 'url', 'fhirVersion'];
  * Imports the YAML Configuration format (as a YAML string or already parsed JSON) and returns
  * the normalized FSH Configuration object.
  * @param {YAMLConfiguration | string} yaml - the YAML config as a string or JSON document
+ * @param {string} file - the path to the configuration file (used for logging source info)
  * @returns {Configuration} - the FSH configuration representing the parsed config
  */
 export function importConfiguration(yaml: YAMLConfiguration | string, file: string): Configuration {
   if (typeof yaml === 'string') {
-    return importConfiguration(YAML.parse(yaml) as YAMLConfiguration, file);
+    const parsed: YAMLConfiguration = YAML.parse(yaml);
+    if (typeof parsed !== 'object' || parsed === null) {
+      logger.error('Configuration is not a valid YAML object.', { file });
+      throw new Error('Invalid configuration YAML');
+    }
+    return importConfiguration(parsed, file);
   }
 
   // There are a few properties that are absolutely required if we are to have *any* success at all
   if (
     MINIMAL_CONFIG_PROPERTIES.some(
-      // @ts-ignore Element implicitly has an 'any' type
-      p => yaml[p] == null || (Array.isArray(yaml[p]) && yaml[p].length === 0)
+      (p: keyof YAMLConfiguration) =>
+        yaml[p] == null || (Array.isArray(yaml[p]) && (yaml[p] as any[]).length === 0)
     )
   ) {
     logger.error(
@@ -156,7 +162,7 @@ function parseFshCode(yamlCode: string, property: string, file: string): FshCode
   const m = yamlCode.match(/^(.*\S)(\s+"(([^"]|\\")*)")$/);
   if (m) {
     const concept = parseCodeLexeme(m[1]);
-    concept.display = m[3].replace('\\"', '"');
+    concept.display = m[3].replace(/\\"/g, '"');
     return concept;
   }
   const concept = parseCodeLexeme(yamlCode);
@@ -457,11 +463,24 @@ function parseUsageContext(
       valueRange: parseRange(yaml.valueRange, 'useContext.valueRange', file),
       valueReference: parseReference(yaml.valueReference, 'useContext.valueReference', file)
     };
-    required(
-      yaml.valueCodeableConcept ?? yaml.valueQuantity ?? yaml.valueRange ?? yaml.valueReference,
-      'useContext.value[x]',
-      file
-    );
+    const valueFields = [
+      'valueCodeableConcept',
+      'valueQuantity',
+      'valueRange',
+      'valueReference'
+    ].filter((v: keyof UsageContext) => yaml[v] != null);
+    if (valueFields.length === 0) {
+      // at least one is required, so force the 'required' error
+      required(undefined, 'useContext.value[x]', file);
+    } else if (valueFields.length > 1) {
+      // more than one value is not allowed since it is a value[x] choice
+      logger.error(
+        `Only one useContext.value[x] is allowed but found multiple: ${valueFields.join(', ')}`,
+        {
+          file
+        }
+      );
+    }
     removeUndefinedValues(usageContext);
     return usageContext;
   });
@@ -625,7 +644,7 @@ function parseMenu(yamlMenu: YAMLConfigurationMenuTree): ConfigurationMenuItem[]
 }
 
 function parseHistory(yamlConfig: YAMLConfiguration, file: string): ConfigurationHistory {
-  const yamlHistory = yamlConfig['history'];
+  const yamlHistory = yamlConfig.history;
   if (yamlHistory == null) {
     return;
   }
@@ -651,7 +670,7 @@ function parseHistory(yamlConfig: YAMLConfiguration, file: string): Configuratio
         date: normalizeToString(yamlHistory.current.date),
         desc:
           yamlHistory.current.desc ?? 'Continuous Integration Build (latest in version control)',
-        path: yamlHistory.current.path,
+        path: required(yamlHistory.current.path, 'history[current].path', file),
         changes: yamlHistory.current.changes,
         status: parseCodeWithRequiredValues(
           yamlHistory.current.status ?? 'ci-build',

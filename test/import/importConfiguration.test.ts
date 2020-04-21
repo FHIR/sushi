@@ -177,6 +177,15 @@ describe('importConfiguration', () => {
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
   });
 
+  it('should report an error and throw on an invalid YAML config', () => {
+    expect(() => importConfiguration('foo', 'foo-config.yaml')).toThrow(
+      'Invalid configuration YAML'
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Configuration is not a valid YAML object\.\s*File: foo-config\.yaml/
+    );
+  });
+
   describe('#id', () => {
     it('should import id as-is', () => {
       minYAML.id = 'my-id';
@@ -1091,6 +1100,45 @@ describe('importConfiguration', () => {
         }
       ]);
     });
+    it('should report an error if there is more than one useContext.value[x]', () => {
+      // @ts-ignore Type '...' is not assignable to type ...
+      minYAML.useContext = {
+        code: {
+          system: 'http://terminology.hl7.org/CodeSystem/usage-context-type',
+          code: 'gender',
+          display: 'Gender'
+        },
+        valueCodeableConcept: 'http://hl7.org/fhir/administrative-gender#female "Female"',
+        valueQuantity: "50 'a'"
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Only one useContext.value\[x\] is allowed but found multiple: valueCodeableConcept, valueQuantity\s*File: test-config\.yaml/
+      );
+      expect(config.useContext).toEqual([
+        {
+          code: {
+            system: 'http://terminology.hl7.org/CodeSystem/usage-context-type',
+            code: 'gender',
+            display: 'Gender'
+          },
+          valueCodeableConcept: {
+            coding: [
+              {
+                system: 'http://hl7.org/fhir/administrative-gender',
+                code: 'female',
+                display: 'Female'
+              }
+            ]
+          },
+          valueQuantity: {
+            code: 'a',
+            system: 'http://unitsofmeasure.org',
+            value: 50
+          }
+        }
+      ]);
+    });
   });
 
   describe('#jurisdiction', () => {
@@ -1720,7 +1768,7 @@ describe('importConfiguration', () => {
         ]
       });
     });
-    it('should allow mix of default and provide values for history.current', () => {
+    it('should allow mix of default and provided values for history.current', () => {
       minYAML.title = 'HL7 FHIR Implementation Guide: Minimal IG Release 1 - US Realm | STU1';
       minYAML.description = 'Minimal IG exercises only required fields in a SUSHI configuration.';
       minYAML.history = {
@@ -1841,6 +1889,25 @@ describe('importConfiguration', () => {
         version: 'current',
         desc: 'Continuous Integration Build (latest in version control)',
         path: 'http://build.fhir.org/ig/HL7/example-ig/',
+        current: true
+      });
+    });
+    it('should report an error if history.current is an object and path is missing', () => {
+      minYAML.history = {
+        // @ts-ignore Type '...' is not assignable to type 'YAMLConfigurationHistoryItem'.
+        current: {
+          fhirversion: '4.0.1'
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Configuration missing required property: history\[current]\.path\s*File: test-config\.yaml/
+      );
+      expect(config.history.list[0]).toEqual({
+        version: 'current',
+        desc: 'Continuous Integration Build (latest in version control)',
+        status: 'ci-build',
+        fhirversion: '4.0.1',
         current: true
       });
     });

@@ -19,7 +19,7 @@ import {
 } from '../fhirtypes';
 
 /**
- * RawConfiguration follows the proposed configuration format for FSH and incorporates aspects
+ * YAMLConfiguration follows the proposed configuration format for FSH and incorporates aspects
  * of the ImplementationGuide, ig.ini, package.json, package-list.json, and menu.xml formats.
  *
  * This format is intended to be represented using YAML but is transformed into JSON for our use.
