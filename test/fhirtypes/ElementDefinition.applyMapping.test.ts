@@ -35,6 +35,18 @@ describe('ElementDefinition', () => {
       expect(mapping.language).toBe('myLanguageCode');
     });
 
+    it('should apply a mapping on an element which does not have one', () => {
+      const id = observation.elements.find(e => e.id === 'Observation.id');
+      expect(id.mapping).toBeUndefined();
+      id.applyMapping('myId', 'myMap', 'myComment', new FshCode('myLanguageCode'));
+      expect(id.mapping.length).toBe(1);
+      const mapping = id.mapping[0];
+      expect(mapping.identity).toBe('myId');
+      expect(mapping.map).toBe('myMap');
+      expect(mapping.comment).toBe('myComment');
+      expect(mapping.language).toBe('myLanguageCode');
+    });
+
     it('should apply a mapping without a comment and language', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       const originalLength = status.mapping.length;

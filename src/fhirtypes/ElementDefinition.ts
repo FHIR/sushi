@@ -1448,12 +1448,17 @@ export class ElementDefinition {
     if (!idRegex.test(identity)) {
       throw new InvalidFHIRIdError(identity);
     }
-    this.mapping.push({
+    const mapping = {
       identity,
       map,
       ...(comment && { comment }),
       ...(language && { language: language.code })
-    });
+    };
+    if (this.mapping) {
+      this.mapping.push(mapping);
+    } else {
+      this.mapping = [mapping];
+    }
   }
 
   /**
