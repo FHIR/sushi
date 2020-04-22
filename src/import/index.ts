@@ -4,3 +4,6 @@ export * from './FSHImporter';
 export * from './importText';
 export * from './parserContexts';
 export * from './RawFSH';
+export * from './importConfiguration';
+export * from './YAMLConfiguration';
+export * from './parseCodeLexeme';
