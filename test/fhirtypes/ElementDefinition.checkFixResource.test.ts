@@ -34,15 +34,6 @@ describe('ElementDefinition', () => {
       expect(value.resourceType).toBe('Patient');
     });
 
-    it('should throw NoSingleTypeError when element has multiple types', () => {
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      expect(() => {
-        valueX.checkFixResource(inlineInstance, fisher);
-      }).toThrow(
-        'Cannot fix Resource value on this element since this element does not have a single type'
-      );
-    });
-
     it('should throw MismatchedTypeError when the value is fixed to a non-Resource', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(() => {
