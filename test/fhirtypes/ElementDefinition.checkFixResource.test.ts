@@ -9,6 +9,7 @@ describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
   let inlineInstance: InstanceDefinition;
+  let inlineCodeable: InstanceDefinition;
   let fisher: TestFisher;
 
   beforeAll(() => {
@@ -25,6 +26,10 @@ describe('ElementDefinition', () => {
     inlineInstance = new InstanceDefinition();
     inlineInstance.resourceType = 'Patient';
     inlineInstance.id = 'MyInlineInstance';
+
+    inlineCodeable = new InstanceDefinition();
+    inlineCodeable.resourceType = 'CodeableConcept';
+    inlineCodeable.id = 'MyCodeable';
   });
 
   describe('#checkFixResource', () => {
@@ -40,6 +45,15 @@ describe('ElementDefinition', () => {
         status.checkFixResource(inlineInstance, fisher);
       }).toThrow(
         'Cannot fix Patient value: MyInlineInstance. Value does not match element type: code'
+      );
+    });
+
+    it('should throw FixingNonResourceError when the value is fixed to a non-Resource', () => {
+      const status = observation.elements.find(e => e.id === 'Observation.category');
+      expect(() => {
+        status.checkFixResource(inlineCodeable, fisher);
+      }).toThrow(
+        'Instance MyCodeable of type CodeableConcept is not an Instance of a Resource. Only Instances of Resources may be assigned to other Instances.'
       );
     });
   });

@@ -1184,6 +1184,15 @@ describe('StructureDefinition', () => {
         ).toThrow(/Bundle.*OfJoy.*Patient, Observation/);
       });
 
+      it('should not allow fixing a CodeableConcept type InstanceDefinition to any element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.id = 'CODES';
+        instanceDef.resourceType = 'CodeableConcept';
+        expect(() => respRate.validateValueAtPath('contained[0]', instanceDef, fisher)).toThrow(
+          /CODES.*CodeableConcept is not an Instance of a Resource/
+        );
+      });
+
       // Overriding elements
       it('should allow replacing parts of a Resource element', () => {
         const language = new FshCode('French');
