@@ -1441,10 +1441,28 @@ describe('InstanceExporter', () => {
         cardRule.max = '1';
         const typeRule = new OnlyRule('entry[PatientsOnly].resource');
         typeRule.types = [{ type: 'Patient' }];
+
+        const choiceContainsRule = new ContainsRule('entry');
+        choiceContainsRule.items = [{ name: 'PatientOrOrganization' }];
+        const choiceCardRule = new CardRule('entry[PatientOrOrganization]');
+        choiceCardRule.min = 0;
+        choiceCardRule.max = '1';
+        const choiceTypeRule = new OnlyRule('entry[PatientOrOrganization].resource');
+        choiceTypeRule.types = [{ type: 'Patient' }, { type: 'Organization' }];
         // * entry ^slicing.discriminator.type = #value
         // * entry contains Patient 0..1
         // * entry[PatientsOnly].resource only Patient
-        bundle.rules.push(caretRule, containsRule, cardRule, typeRule);
+        // * contained contains PatientOrOrganization 0..1
+        // * contained[PatientOrOrganization] only Patient or Organization
+        bundle.rules.push(
+          caretRule,
+          containsRule,
+          cardRule,
+          typeRule,
+          choiceContainsRule,
+          choiceCardRule,
+          choiceTypeRule
+        );
       });
 
       it('should fix an inline resource to an instance', () => {
@@ -1492,6 +1510,43 @@ describe('InstanceExporter', () => {
         expect(exported.entry[0]).toEqual({
           resource: { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
         });
+      });
+
+      it('should fix an inline resource to an instance element with a choice type', () => {
+        const bundleValRule = new FixedValueRule('entry[PatientOrOrganization].resource');
+        bundleValRule.fixedValue = 'MyInlinePatient';
+        bundleValRule.isResource = true;
+        // * entry[PatientOrOrganization].resource = MyInlinePatient
+        bundleInstance.rules.push(bundleValRule);
+
+        const exported = exportInstance(bundleInstance);
+        expect(exported.entry[0].resource).toEqual({
+          resourceType: 'Patient',
+          id: 'MyInlinePatient',
+          active: true
+        });
+      });
+
+      it('should log an error when fixing an inline resource to an invalid choice', () => {
+        const bundleValRule = new FixedValueRule('entry[PatientOrOrganization].resource')
+          .withFile('BadChoice.fsh')
+          .withLocation([1, 2, 3, 4]);
+        bundleValRule.fixedValue = 'MyInlineObservation';
+        bundleValRule.isResource = true;
+        // * entry[PatientOrOrganization].resource = MyInlineObservation
+        bundleInstance.rules.push(bundleValRule);
+
+        const exported = exportInstance(bundleInstance);
+        expect(exported.entry).toBeUndefined();
+        expect(
+          loggerSpy
+            .getAllMessages('error')
+            .some(e =>
+              e.match(
+                /Cannot fix Observation value: MyInlineObservation. Value does not match element type: Patient, Organization/
+              )
+            )
+        ).toBeTruthy();
       });
 
       it('should log an error when fixing an inline resource that does not exist to an instance', () => {
