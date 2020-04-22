@@ -7,7 +7,8 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
-  Mapping
+  Mapping,
+  Configuration
 } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
 import { PackageJSON } from '../fshtypes/PackageJSON';
@@ -18,7 +19,7 @@ export class FSHTank implements Fishable {
   constructor(
     public readonly docs: FSHDocument[],
     public readonly packageJSON: PackageJSON,
-    public readonly root?: string
+    public readonly config?: Configuration
   ) {}
 
   /**
