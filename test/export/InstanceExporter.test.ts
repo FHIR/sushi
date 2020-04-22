@@ -1423,6 +1423,14 @@ describe('InstanceExporter', () => {
         // * active = true
         doc.instances.set(inlineInstance.name, inlineInstance);
 
+        const inlineObservation = new Instance('MyInlineObservation');
+        inlineObservation.instanceOf = 'Observation';
+        const observationValueRule = new FixedValueRule('valueString');
+        observationValueRule.fixedValue = 'Some Observation';
+        inlineObservation.rules.push(observationValueRule);
+        // * valueString = "Some Observation"
+        doc.instances.set(inlineObservation.name, inlineObservation);
+
         const caretRule = new CaretValueRule('entry');
         caretRule.caretPath = 'slicing.discriminator.type';
         caretRule.value = new FshCode('value');
@@ -1448,6 +1456,28 @@ describe('InstanceExporter', () => {
         const exported = exportInstance(patientInstance);
         expect(exported.contained).toEqual([
           { resourceType: 'Patient', id: 'MyInlinePatient', active: true }
+        ]);
+      });
+
+      it('should fix multiple inline resources to an instance', () => {
+        const inlineRule = new FixedValueRule('contained[0]');
+        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.isResource = true;
+        patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
+
+        const inlineRule2 = new FixedValueRule('contained[1]');
+        inlineRule2.fixedValue = 'MyInlineObservation';
+        inlineRule2.isResource = true;
+        patientInstance.rules.push(inlineRule2); // * contained[1] = MyInlineObservation
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          { resourceType: 'Patient', id: 'MyInlinePatient', active: true },
+          {
+            resourceType: 'Observation',
+            id: 'MyInlineObservation',
+            valueString: 'Some Observation'
+          }
         ]);
       });
 
