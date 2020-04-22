@@ -1,9 +1,8 @@
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { CodeableConcept, Reference, BackboneElement } from './dataTypes';
+import { CodeableConcept, Reference, BackboneElement, DomainResource } from './dataTypes';
 
-export type ImplementationGuide = {
+export type ImplementationGuide = DomainResource & {
   resourceType: 'ImplementationGuide';
-  id: string;
   url: string;
   version?: string;
   name: string;

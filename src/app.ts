@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
 import cloneDeep from 'lodash/cloneDeep';
-import { importText, FSHTank, RawFSH } from './import';
+import { importText, FSHTank, RawFSH, importConfiguration } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
 import { logger, stats, Type } from './utils';
@@ -22,6 +22,7 @@ import {
 } from './utils';
 import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
+import { Configuration } from './fshtypes';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -88,6 +89,18 @@ async function app() {
     process.exit(1);
   }
 
+  // If the config.yaml file exists, parse it; otherwise skip for now (until we fully support it)
+  let config: Configuration;
+  const configPath = path.join(input, 'config.yaml');
+  if (fs.existsSync(configPath)) {
+    const configYaml = fs.readFileSync(configPath, 'utf8');
+    try {
+      config = importConfiguration(configYaml, configPath);
+    } catch (e) {
+      process.exit(1);
+    }
+  }
+
   // Check that package.json exists
   const packagePath = path.join(input, 'package.json');
   if (!fs.existsSync(packagePath)) {
@@ -145,7 +158,7 @@ async function app() {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
 
-  const tank = new FSHTank(docs, packageJSON);
+  const tank = new FSHTank(docs, packageJSON, config);
   await Promise.all(dependencyDefs);
 
   // Check for StructureDefinition
