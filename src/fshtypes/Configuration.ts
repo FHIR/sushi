@@ -19,6 +19,7 @@ import {
  * ambiguities (like singular vs list representations) and normalizes closer to the intended
  * export formats.
  *
+ * @see YAMLConfiguration
  * @see {@link http://hl7.org/fhir/R4/implementationguide.html}
  * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#igroot}
  * @see {@link https://confluence.hl7.org/display/FHIR/NPM+Package+Specification}
@@ -161,7 +162,7 @@ export type ConfigurationHistoryItem = {
     | 'trial-use'
     | 'update'
     | 'normative'
-    | 'trial=use+normative';
+    | 'trial-use+normative';
   sequence?: string;
   fhirversion?: string;
   current?: boolean;

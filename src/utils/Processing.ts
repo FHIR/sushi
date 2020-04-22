@@ -16,6 +16,7 @@ import {
   filterExtensionInstances,
   filterProfileInstances
 } from './InstanceDefinitionUtils';
+import { Configuration, PackageJSON } from '../fshtypes';
 
 export function findInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
@@ -119,10 +120,14 @@ export function getRawFSHes(input: string): RawFSH[] {
   return rawFSHes;
 }
 
-export function fillTank(rawFSHes: RawFSH[], config: any): FSHTank {
+export function fillTank(
+  rawFSHes: RawFSH[],
+  config: PackageJSON,
+  yamlConfig: Configuration
+): FSHTank {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
-  return new FSHTank(docs, config);
+  return new FSHTank(docs, config, yamlConfig);
 }
 
 export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {

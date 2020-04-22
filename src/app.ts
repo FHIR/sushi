@@ -3,7 +3,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
-import { FSHTank } from './import';
+import { FSHTank, importConfiguration } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
 import { logger, stats, Type } from './utils';
@@ -21,6 +21,7 @@ import {
 } from './utils/Processing';
 import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
+import { Configuration } from './fshtypes';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -70,6 +71,18 @@ async function app() {
     process.exit(1);
   }
 
+  // If the config.yaml file exists, parse it; otherwise skip for now (until we fully support it)
+  let yamlConfig: Configuration;
+  const configPath = path.join(input, 'config.yaml');
+  if (fs.existsSync(configPath)) {
+    const configYaml = fs.readFileSync(configPath, 'utf8');
+    try {
+      yamlConfig = importConfiguration(configYaml, configPath);
+    } catch (e) {
+      process.exit(1);
+    }
+  }
+
   // Load external dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs = loadExternalDependencies(defs, config);
@@ -80,7 +93,7 @@ async function app() {
   let tank: FSHTank;
   try {
     const rawFSH = getRawFSHes(input);
-    tank = fillTank(rawFSH, config);
+    tank = fillTank(rawFSH, config, yamlConfig);
   } catch {
     program.outputHelp();
     process.exit(1);

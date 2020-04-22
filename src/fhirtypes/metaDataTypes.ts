@@ -1,4 +1,4 @@
-import { ContactPoint, CodeableConcept, Quantity, Coding, Reference } from './dataTypes';
+import { ContactPoint, CodeableConcept, Quantity, Coding, Range, Reference } from './dataTypes';
 
 /**
  * Represents the FHIR R4 metadata type ContactDetail.

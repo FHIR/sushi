@@ -83,7 +83,7 @@ export type Extension = {
  * @see {@link http://hl7.org/fhir/R4/datatypes.html#Identifier}
  */
 export type Identifier = {
-  use?: string;
+  use?: 'usual' | 'official' | 'temp' | 'secondary' | 'old';
   type?: CodeableConcept;
   system?: string;
   value?: string;
@@ -97,7 +97,7 @@ export type Identifier = {
  * @see {@link http://hl7.org/fhir/R4/narrative.html#Narrative}
  */
 export type Narrative = {
-  status: string;
+  status: 'generated' | 'extensions' | 'additional' | 'empty';
   div: string;
 };
 
@@ -142,7 +142,7 @@ export function validatePeriod(period: Period): void {
  */
 export type Quantity = {
   value?: number;
-  comparator?: string;
+  comparator?: '<' | '<=' | '>=' | '>';
   unit?: string;
   system?: string;
   code?: string;
@@ -214,4 +214,16 @@ export type Resource = {
   meta?: Meta;
   implicitRules?: string;
   language?: string;
+};
+
+/**
+ * Represents the FHIR R4 data type DomainResource.
+ *
+ * @see {@link http://hl7.org/fhir/R4/domainresource.html#resource}
+ */
+export type DomainResource = Resource & {
+  text?: Narrative;
+  contained?: any[];
+  extension?: Extension[];
+  modifierExtension?: Extension[];
 };
