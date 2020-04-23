@@ -317,12 +317,28 @@ export class IGExporter {
     }
   }
 
+  /**
+   * Adds additional pages based on user configuration.
+   * Only pages present in the configuration are added, regardless of available files.
+   * Intro and notes pages are not included in the IG, but must be specified in order
+   * for the files to be copied to the output directory.
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
   private addConfiguredPageContent(igPath: string): void {
     for (const page of this.config.pages) {
       this.copyConfiguredPage(page, this.ig.definition.page.page, igPath);
     }
   }
 
+  /**
+   * Adds pages to the implementation guide's list of pages.
+   * The page configuration is traversed recursively to maintain the configured structure.
+   *
+   * @param {ImplementationGuideDefinitionPage} page - the current page being added to a list of output pages
+   * @param {ImplementationGuideDefinitionPage[]} target - the list of output pages that will receive the current page
+   * @param igPath - the path where the IG is exported to
+   */
   private copyConfiguredPage(
     page: ImplementationGuideDefinitionPage,
     target: ImplementationGuideDefinitionPage[],
@@ -545,10 +561,6 @@ export class IGExporter {
         newResource.name =
           configResource?.name ?? instance._instanceMeta.title ?? instance._instanceMeta.name;
         newResource.description = configResource?.description ?? instance._instanceMeta.description;
-        // Object.assign(newResource, {
-        //   name: configResource?.name ?? instance._instanceMeta.title ?? instance._instanceMeta.name,
-        //   description: configResource?.description ?? instance._instanceMeta.description
-        // });
         if (configResource?.fhirVersion?.length) {
           newResource.fhirVersion = configResource.fhirVersion;
         }
@@ -619,8 +631,6 @@ export class IGExporter {
               reference: {
                 reference: referenceKey
               }
-              // name: resourceJSON.id, // will be overwritten w/ title or name where applicable
-              // description: resourceJSON.description
             };
             const configResource = (this.config.resources ?? []).find(
               resource => resource.reference?.reference == referenceKey
@@ -634,17 +644,13 @@ export class IGExporter {
                 existingIndex >= 0 ? this.ig.definition.resource[existingIndex] : null;
               const existingIsExample =
                 existingResource?.exampleBoolean || existingResource?.exampleCanonical;
-              // name: configName ?? existingName ?? resourceJSON.title ?? resourceJSON.name ?? resourceJSON.id
               const existingName = existingIsExample ? existingResource.name : null;
               const existingDescription = existingIsExample ? existingResource.description : null;
-              // description: configDesc ?? existingDesc ?? resourceJSON.description
               newResource.description =
                 configResource?.description ?? existingDescription ?? resourceJSON.description;
-              // fhirVersion: config
               if (configResource?.fhirVersion) {
                 newResource.fhirVersion = configResource.fhirVersion;
               }
-              // groupingId: config
               if (configResource?.groupingId) {
                 newResource.groupingId = configResource.groupingId;
               }
@@ -684,23 +690,9 @@ export class IGExporter {
                   title ??
                   name ??
                   resourceJSON.id;
-                // if (title || name) {
-                //   newResource.name = title ?? name;
-                // }
               }
 
               if (existingIndex >= 0) {
-                // if (
-                //   this.ig.definition.resource[existingIndex].exampleBoolean ||
-                //   this.ig.definition.resource[existingIndex].exampleCanonical
-                // ) {
-                //   // If it is replacing an existing example, preserve description and name from SUSHI
-                //   // Allows user method for setting description/name on external example
-                //   const oldDescription = this.ig.definition.resource[existingIndex].description;
-                //   const oldName = this.ig.definition.resource[existingIndex].name;
-                //   if (oldDescription) newResource.description = oldDescription;
-                //   if (oldName) newResource.name = this.ig.definition.resource[existingIndex].name;
-                // }
                 this.ig.definition.resource[existingIndex] = newResource;
               } else {
                 this.ig.definition.resource.push(newResource);
