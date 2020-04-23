@@ -10,7 +10,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
 import { TestFisher } from '../testhelpers';
 
-describe.skip('IGExporter', () => {
+describe('IGExporter', () => {
   // Track temp files/folders for cleanup
   temp.track();
 
@@ -271,7 +271,7 @@ describe.skip('IGExporter', () => {
       });
     });
 
-    it('should generate a package-list.json based on the package', () => {
+    it.skip('should generate a package-list.json based on the package', () => {
       const pkgListPath = path.join(tempOut, 'package-list.json');
       expect(fs.existsSync(pkgListPath)).toBeTruthy();
       const content = fs.readJSONSync(pkgListPath);
@@ -339,7 +339,7 @@ describe.skip('IGExporter', () => {
       expect(content).toMatch('<li><a href="toc.html">Table of Contents</a></li>');
     });
 
-    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
+    it.skip('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
       const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
@@ -404,7 +404,7 @@ describe.skip('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
     });
 
-    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
+    it.skip('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
       const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
@@ -577,7 +577,7 @@ describe.skip('IGExporter', () => {
       );
     });
 
-    it('should use the user-provided package-list.json when supplied', () => {
+    it.skip('should use the user-provided package-list.json when supplied', () => {
       const pkgListPath = path.join(tempOut, 'package-list.json');
       expect(fs.existsSync(pkgListPath)).toBeTruthy();
       const content = fs.readJSONSync(pkgListPath);
@@ -749,7 +749,7 @@ describe.skip('IGExporter', () => {
       expect(imageFileNames).toEqual(['Shorty.png']);
     });
 
-    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
+    it.skip('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
       const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
@@ -1082,7 +1082,7 @@ describe.skip('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should should log errors for invalid user-specified values in ig.ini', () => {
+    it.skip('should should log errors for invalid user-specified values in ig.ini', () => {
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-5, 'error')).toMatch(
         /igi\.ini: sushi does not currently support overriding ig value\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]ig.ini/s
@@ -1140,7 +1140,7 @@ describe.skip('IGExporter', () => {
       );
     });
 
-    it('should log an error if supplied package-list.json does not match package.json', () => {
+    it.skip('should log an error if supplied package-list.json does not match package.json', () => {
       // Check for log messages indicating invalid input
       expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
         /package-list\.json: package-id value \(wrong-package-id\) does not match name declared in package\.json \(sushi-test\)\.  Ignoring custom package-list\.json\..*File: .*[\/\\]invalid-data-ig[\/\\]ig-data[\/\\]package-list.json/s
