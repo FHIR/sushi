@@ -26,7 +26,36 @@ describe('IGExporter', () => {
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
       // several parts of the IG exporter still need packageJSON to function
       const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      pkg = new Package(packageJSON);
+      const config: Configuration = {
+        filePath: path.join(fixtures, 'config.yml'),
+        id: 'sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test',
+        version: '0.1.0',
+        name: 'sushi-test',
+        title: 'FSH Test IG',
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        dependencies: [
+          { packageId: 'hl7.fhir.r4.core', version: '4.0.1' },
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
+        ],
+        status: null,
+        template: null,
+        fhirVersion: ['4.0.1'],
+        language: 'en',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        license: 'CC0-1.0'
+      };
+      pkg = new Package(packageJSON, config);
       const profiles = path.join(fixtures, 'profiles');
       fs.readdirSync(profiles).forEach(f => {
         if (f.endsWith('.json')) {
@@ -67,37 +96,7 @@ describe('IGExporter', () => {
       codeSystemDef.name = 'SampleCodeSystem';
       codeSystemDef.description = 'A code system description';
       pkg.codeSystems.push(codeSystemDef);
-      // add config directly
-      const config: Configuration = {
-        filePath: path.join(fixtures, 'config.yml'),
-        id: 'sushi-test',
-        url: 'http://hl7.org/fhir/sushi-test',
-        version: '0.1.0',
-        name: 'sushi-test',
-        title: 'FSH Test IG',
-        description: 'Provides a simple example of how FSH can be used to create an IG',
-        dependencies: [
-          { packageId: 'hl7.fhir.r4.core', version: '4.0.1' },
-          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
-          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
-        ],
-        status: null,
-        template: null,
-        fhirVersion: ['4.0.1'],
-        language: 'en',
-        publisher: 'James Tuna',
-        contact: [
-          {
-            name: 'Bill Cod',
-            telecom: [
-              { system: 'url', value: 'https://capecodfishermen.org/' },
-              { system: 'email', value: 'cod@reef.gov' }
-            ]
-          }
-        ],
-        license: 'CC0-1.0'
-      };
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, config);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
       tempOut = temp.mkdirSync('sushi-test');
       exporter.export(tempOut);
     });
@@ -303,8 +302,8 @@ describe('IGExporter', () => {
         ],
         license: 'CC0-1.0'
       };
-      pkg = new Package(packageJSON);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, config);
+      pkg = new Package(packageJSON, config);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
     });
 
     afterAll(() => {

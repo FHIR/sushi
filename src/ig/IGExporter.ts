@@ -42,15 +42,16 @@ export class IGExporter {
   private ig: ImplementationGuide;
   private readonly packagePath: string;
   private readonly outputLog: Map<string, outputLogDetails>;
+  private readonly config: Configuration;
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string,
-    private readonly isIgPubContext: boolean = false,
-    private readonly config: Configuration = null
+    private readonly isIgPubContext: boolean = false
   ) {
     this.packagePath = path.resolve(this.igDataPath, '..', 'package.json');
     this.outputLog = new Map();
+    this.config = pkg.config;
   }
 
   /**
@@ -793,12 +794,6 @@ export class IGExporter {
         });
       }
     }
-
-    // Update the corresponding parameters in the ImplementationGuide JSON
-    // const copyrightParam = this.ig.definition.parameter.find(p => p.code === 'copyrightyear');
-    // copyrightParam.value = iniObj.copyrightyear;
-    // const releaseParam = this.ig.definition.parameter.find(p => p.code === 'releaselabel');
-    // releaseParam.value = iniObj.ballotstatus;
 
     // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
     let outputIniContents = ini.encode(iniObj, { section: 'IG', whitespace: true });
