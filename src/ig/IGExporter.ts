@@ -24,7 +24,8 @@ import {
   StructureDefinition,
   ValueSet,
   CodeSystem,
-  InstanceDefinition
+  InstanceDefinition,
+  ImplementationGuideDefinitionPage
 } from '../fhirtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -67,6 +68,8 @@ export class IGExporter {
     this.addIndex(outPath);
     if (!this.config.pages?.length) {
       this.addOtherPageContent(outPath);
+    } else {
+      this.addConfiguredPageContent(outPath);
     }
     this.addImages(outPath);
     this.addIncludeContents(outPath);
@@ -165,9 +168,6 @@ export class IGExporter {
     }
     if (this.config.global?.length) {
       this.ig.global = this.config.global;
-    }
-    if (this.config.pages?.length) {
-      this.ig.definition.page.page = this.config.pages;
     }
 
     // Add the path-history, if applicable (only applies to HL7 IGs)
@@ -312,6 +312,55 @@ export class IGExporter {
         logger.warn(errorString, {
           file: inputPageContentPath
         });
+      }
+    }
+  }
+
+  private addConfiguredPageContent(igPath: string): void {
+    for (const page of this.config.pages) {
+      this.copyConfiguredPage(page, this.ig.definition.page.page, igPath);
+    }
+  }
+
+  private copyConfiguredPage(
+    page: ImplementationGuideDefinitionPage,
+    target: ImplementationGuideDefinitionPage[],
+    igPath: string
+  ) {
+    if (page.nameUrl) {
+      const lastPeriod = page.nameUrl.lastIndexOf('.');
+      let name: string,
+        fileType = '';
+      if (lastPeriod === -1) {
+        name = page.nameUrl;
+      } else {
+        name = page.nameUrl.slice(0, lastPeriod);
+        fileType = page.nameUrl.slice(lastPeriod + 1);
+      }
+      const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page.nameUrl);
+      if (existsSync(pagePath)) {
+        this.copyWithWarningText(
+          pagePath,
+          path.join(igPath, 'input', 'pagecontent', `${name}.${fileType}`)
+        );
+      } else {
+        logger.error(`File for configured page ${page.nameUrl} not found.`);
+      }
+
+      const isIntroOrNotesFile = name.endsWith('-intro') || name.endsWith('-notes');
+      if (!isIntroOrNotesFile) {
+        const igPage: ImplementationGuideDefinitionPage = {
+          nameUrl: `${name}.html`,
+          title: page.title ?? titleCase(words(name).join(' ')),
+          generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html')
+        };
+        if (page.page?.length) {
+          igPage.page = [];
+          for (const subpage of page.page) {
+            this.copyConfiguredPage(subpage, igPage.page, igPath);
+          }
+        }
+        target.push(igPage);
       }
     }
   }

@@ -6,13 +6,16 @@ import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/f
 import { Package } from '../../src/export';
 import { Configuration, PackageJSON } from '../../src/fshtypes';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { loggerSpy } from '../testhelpers';
 
 describe('IGExporter', () => {
   temp.track();
+
   describe('#simple-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
     let tempOut: string;
+
     beforeAll(() => {
       const defs = new FHIRDefinitions();
       loadFromPath(
@@ -97,6 +100,10 @@ describe('IGExporter', () => {
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, config);
       tempOut = temp.mkdirSync('sushi-test');
       exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
     });
 
     it('should generate an implementation guide for simple-ig', () => {
@@ -242,6 +249,272 @@ describe('IGExporter', () => {
           ]
         }
       });
+    });
+  });
+
+  describe('#customized-ig', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let packageJSON: PackageJSON;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
+      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      tempOut = temp.mkdirSync('sushi-test');
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+    });
+
+    beforeEach(() => {
+      config = {
+        filePath: path.join(fixtures, 'config.yml'),
+        id: 'sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test',
+        version: '0.1.0',
+        name: 'sushi-test',
+        title: 'FSH Test IG',
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        dependencies: [
+          { packageId: 'hl7.fhir.r4.core', version: '4.0.1' },
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
+        ],
+        status: null,
+        template: null,
+        fhirVersion: ['4.0.1'],
+        language: 'en',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        license: 'CC0-1.0'
+      };
+      pkg = new Package(packageJSON);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, config);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should provide defaults for copyrightyear and releaselabel parameters', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: 'copyrightyear',
+        value: `${new Date().getFullYear()}+`
+      });
+      expect(igContent.definition.parameter).toContainEqual({
+        code: 'releaselabel',
+        value: 'CI Build'
+      });
+    });
+
+    it('should provide a default path-history for an HL7 IG', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: 'path-history',
+        value: 'http://hl7.org/fhir/sushi-test/history.html'
+      });
+    });
+
+    it('should not provide a default path-history for a non-HL7 IG', () => {
+      config.url = 'http://different-domain.org/fhir/sushi-test';
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).not.toContainEqual(
+        expect.objectContaining({
+          code: 'path-history'
+        })
+      );
+    });
+    it('should use configured pages when provided', () => {
+      config.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'other-page.md',
+          title: 'Some Other Page',
+          generation: 'markdown'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'other-page.html',
+          title: 'Some Other Page',
+          generation: 'markdown'
+        }
+      ]);
+    });
+
+    it('should provide default title and generation for configured pages when no title is provided', () => {
+      config.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'other-page.md'
+        },
+        {
+          nameUrl: 'something-special.xml',
+          generation: 'xml'
+        },
+        {
+          nameUrl: 'unsupported.html'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'other-page.html',
+          title: 'Other Page',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'something-special.html',
+          title: 'Something Special',
+          generation: 'xml'
+        },
+        {
+          nameUrl: 'unsupported.html',
+          title: 'Unsupported',
+          generation: 'html'
+        }
+      ]);
+    });
+
+    it('should maintain page hierarchy for configured pages', () => {
+      config.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home',
+          generation: 'markdown',
+          page: [
+            {
+              nameUrl: 'something-special.xml',
+              title: 'Something Special',
+              generation: 'xml'
+            },
+            {
+              nameUrl: 'other-page.md',
+              title: 'Other Page',
+              generation: 'markdown',
+              page: [
+                {
+                  nameUrl: 'unsupported.html',
+                  title: 'Unsupported',
+                  generation: 'html'
+                }
+              ]
+            }
+          ]
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home',
+          generation: 'markdown',
+          page: [
+            {
+              nameUrl: 'something-special.html',
+              title: 'Something Special',
+              generation: 'xml'
+            },
+            {
+              nameUrl: 'other-page.html',
+              title: 'Other Page',
+              generation: 'markdown',
+              page: [
+                {
+                  nameUrl: 'unsupported.html',
+                  title: 'Unsupported',
+                  generation: 'html'
+                }
+              ]
+            }
+          ]
+        }
+      ]);
+    });
+
+    it('should log an error when no file exists for a configured page', () => {
+      config.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'nothing.md',
+          title: 'Nothing',
+          generation: 'markdown'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'nothing.html',
+          title: 'Nothing',
+          generation: 'markdown'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/nothing\.md not found/s);
     });
   });
 });
