@@ -39,7 +39,7 @@ describe('ElementDefinition', () => {
       expect(value.resourceType).toBe('Patient');
     });
 
-    it('should throw MismatchedTypeError when the value is fixed to a non-Resource', () => {
+    it('should throw MismatchedTypeError when a Resource is fixed on a non-Resource element', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(() => {
         status.checkFixResource(inlineInstance, fisher);
@@ -48,12 +48,12 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixingNonResourceError when the value is fixed to a non-Resource', () => {
-      const status = observation.elements.find(e => e.id === 'Observation.category');
+    it('should throw FixingNonResourceError when a non-Resource value is fixed on a non-Resource', () => {
+      const category = observation.elements.find(e => e.id === 'Observation.category');
       expect(() => {
-        status.checkFixResource(inlineCodeable, fisher);
+        category.checkFixResource(inlineCodeable, fisher);
       }).toThrow(
-        'Instance MyCodeable of type CodeableConcept is not an Instance of a Resource. Only Instances of Resources may be assigned to other Instances.'
+        'Instance MyCodeable of type CodeableConcept is not an Instance of a Resource or Profile of a Resource. Only Instances of Resources or Profiles of Resources may be assigned to other Instances.'
       );
     });
   });
