@@ -23,7 +23,10 @@ import {
 import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
 
-app();
+app().catch(e => {
+  logger.error(e.message);
+  process.exit(1);
+});
 
 async function app() {
   let input: string;
