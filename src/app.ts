@@ -84,14 +84,15 @@ async function app() {
     files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');
-    program.help();
+    program.outputHelp();
+    process.exit(1);
   }
 
   // Check that package.json exists
   const packagePath = path.join(input, 'package.json');
   if (!fs.existsSync(packagePath)) {
     logger.error('No package.json in FSH definition folder.');
-    return;
+    process.exit(1);
   }
 
   // Parse package.json
@@ -100,7 +101,7 @@ async function app() {
     config = fs.readJSONSync(packagePath);
   } catch (e) {
     logger.error(`The package.json file is not valid JSON: ${packagePath}`);
-    return;
+    process.exit(1);
   }
 
   // Ensure FHIR R4 is added as a dependency
@@ -110,7 +111,7 @@ async function app() {
       'The package.json must specify FHIR R4 as a dependency. Be sure to' +
         ' add "hl7.fhir.r4.core": "4.0.1" to the dependencies list.'
     );
-    return;
+    process.exit(1);
   }
 
   // Load external dependencies
@@ -155,7 +156,7 @@ async function app() {
         ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
         ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
     );
-    return;
+    process.exit(1);
   }
 
   logger.info('Converting FSH to FHIR resources...');
