@@ -355,9 +355,12 @@ export class IGExporter {
           generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html')
         };
         if (page.page?.length) {
-          igPage.page = [];
+          const igSubpages: ImplementationGuideDefinitionPage[] = [];
           for (const subpage of page.page) {
-            this.copyConfiguredPage(subpage, igPage.page, igPath);
+            this.copyConfiguredPage(subpage, igSubpages, igPath);
+          }
+          if (igSubpages.length > 0) {
+            igPage.page = igSubpages;
           }
         }
         target.push(igPage);

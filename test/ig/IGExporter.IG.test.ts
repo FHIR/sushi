@@ -485,6 +485,35 @@ describe('IGExporter', () => {
       ]);
     });
 
+    it('should not include a page attribute when all subpages are intro or notes files', () => {
+      config.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home',
+          generation: 'markdown',
+          page: [
+            {
+              nameUrl: 'main-intro.md'
+            },
+            {
+              nameUrl: 'main-notes.md'
+            }
+          ]
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home',
+          generation: 'markdown'
+        }
+      ]);
+    });
+
     it('should log an error when no file exists for a configured page', () => {
       config.pages = [
         {
