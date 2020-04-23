@@ -10,7 +10,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
 import { TestFisher } from '../testhelpers';
 
-describe('IGExporter', () => {
+describe.skip('IGExporter', () => {
   // Track temp files/folders for cleanup
   temp.track();
 
