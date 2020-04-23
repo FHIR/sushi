@@ -1098,6 +1098,15 @@ describe('StructureDefinition', () => {
         const domainRule = new OnlyRule('contained[DomainsOnly]');
         domainRule.types = [{ type: 'DomainResource' }];
         containedDomains.constrainType(domainRule, fisher);
+
+        contained.addSlice('PatientOrObservation');
+        const containedChoice = respRate.findElementByPath(
+          'contained[PatientOrObservation]',
+          fisher
+        );
+        const choiceRule = new OnlyRule('contained[PatientOrObservation]');
+        choiceRule.types = [{ type: 'Patient' }, { type: 'Observation' }];
+        containedChoice.constrainType(choiceRule, fisher);
       });
 
       it('should allow fixing a Patient type InstanceDefinition to a Resource element', () => {
@@ -1129,6 +1138,17 @@ describe('StructureDefinition', () => {
         expect(fixedValue.resourceType).toBe('Patient');
       });
 
+      it('should allow fixing a Patient type InstanceDefinition to a choice element that includes Patient', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.resourceType = 'Patient';
+        const { fixedValue } = respRate.validateValueAtPath(
+          'contained[PatientOrObservation][0]',
+          instanceDef,
+          fisher
+        );
+        expect(fixedValue.resourceType).toBe('Patient');
+      });
+
       it('should allow fixing a Bundle type InstanceDefinition to a Resource element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.id = 'OfJoy';
@@ -1153,6 +1173,24 @@ describe('StructureDefinition', () => {
         expect(() =>
           respRate.validateValueAtPath('contained[PatientsOnly][0]', instanceDef, fisher)
         ).toThrow(/Bundle.*OfJoy.*Patient/);
+      });
+
+      it('should not allow fixing a Bundle type InstanceDefinition to a choice element that does not include Bundle', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.id = 'OfJoy';
+        instanceDef.resourceType = 'Bundle';
+        expect(() =>
+          respRate.validateValueAtPath('contained[PatientOrObservation][0]', instanceDef, fisher)
+        ).toThrow(/Bundle.*OfJoy.*Patient, Observation/);
+      });
+
+      it('should not allow fixing a CodeableConcept type InstanceDefinition to any element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.id = 'CODES';
+        instanceDef.resourceType = 'CodeableConcept';
+        expect(() => respRate.validateValueAtPath('contained[0]', instanceDef, fisher)).toThrow(
+          /CODES.*CodeableConcept is not an Instance of a Resource/
+        );
       });
 
       // Overriding elements

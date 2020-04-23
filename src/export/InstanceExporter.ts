@@ -84,10 +84,7 @@ export class InstanceExporter implements Fishable {
     rules.forEach(rule => {
       try {
         const matchingInlineResourcePaths = inlineResourcePaths.filter(
-          i =>
-            rule.path.startsWith(i.path) &&
-            rule.path !== i.path &&
-            rule.path != `${i.path}.resourceType`
+          i => rule.path.startsWith(`${i.path}.`) && rule.path !== `${i.path}.resourceType`
         );
         // Generate an array of resourceTypes that matches the path, so if path is
         // a.b.c.d.e, and b is a Bundle and D is a Patient,

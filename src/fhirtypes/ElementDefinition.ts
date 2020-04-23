@@ -27,7 +27,8 @@ import {
   FixedToPatternError,
   MultipleStandardsStatusError,
   InvalidMappingError,
-  InvalidFHIRIdError
+  InvalidFHIRIdError,
+  FixingNonResourceError
 } from '../errors';
 import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isInheritedResource } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -1365,19 +1366,23 @@ export class ElementDefinition {
    * Checks if a resource can be fixed to this element
    * @param {InstanceDefinition} value - The resource to fix
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {MismatchedTypeError} when the ElementDefinition is not of type Resource
+   * @throws {FixingNonResourceError} when the value being fixed is non-Resource
    * @returns {InstanceDefinition} the input value when it can be fixed
    */
   checkFixResource(value: InstanceDefinition, fisher: Fishable): InstanceDefinition {
-    if (!this.hasSingleType()) {
-      throw new NoSingleTypeError('Resource');
-    }
-    const type = this.type[0].code;
-    if (isInheritedResource(value.resourceType, type, fisher)) {
+    if (this.type?.some(t => isInheritedResource(value.resourceType, t.code, fisher))) {
       return value;
     } else {
-      throw new MismatchedTypeError(value.resourceType, value.id, type);
+      const resource = fisher.fishForFHIR(value.resourceType, Type.Resource);
+      if (resource) {
+        // In this case the value is actually a resource, but not one that inherits from this.type
+        const typesString = this.type?.map(t => t.code).join(', ');
+        throw new MismatchedTypeError(value.resourceType, value.id, typesString);
+      } else {
+        // In this case the value is not actually a resource
+        throw new FixingNonResourceError(value.resourceType, value.id);
+      }
     }
   }
 
