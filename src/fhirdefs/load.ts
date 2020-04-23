@@ -1,5 +1,5 @@
 import { FHIRDefinitions } from './FHIRDefinitions';
-import { PackageLoadError, DevPackageLoadError, CurrentPackageLoadError } from '../errors';
+import { PackageLoadError, CurrentPackageLoadError } from '../errors';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -37,10 +37,14 @@ export async function loadDependency(
   }
   if (!loadedPackage) {
     let packageUrl: string;
-    if (version === 'dev') {
-      // Dev packages must be present in local FHIR cache
-      throw new DevPackageLoadError(fullPackageName);
-    } else if (version === 'current') {
+    if (version === 'current' || version === 'dev') {
+      if (version === 'dev') {
+        // When a dev package is not present locally, fall back to using the current version
+        // as described here https://confluence.hl7.org/pages/viewpage.action?pageId=35718627#IGPublisherDocumentation-DependencyList
+        logger.info(
+          `Since ${fullPackageName} is not locally cached, it will be added to local cache from current version.`
+        );
+      }
       // Current packages need to be loaded using build.fhir.org
       const baseUrl = 'http://build.fhir.org/ig';
       const res: { 'package-id': string; date: string; repo: string }[] = await rp.get({

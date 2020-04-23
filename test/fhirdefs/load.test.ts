@@ -154,6 +154,32 @@ describe('#loadDependency()', () => {
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.us.core.r4#current'));
   });
 
+  it('should load the current package from build.fhir.org when a dev package is loaded and not locally cached', async () => {
+    await expect(loadDependency('hl7.fhir.us.core.r4', 'dev', defs, 'foo')).rejects.toThrow(
+      'The package hl7.fhir.us.core.r4#dev could not be loaded locally or from the FHIR package registry'
+    );
+    expect(
+      loggerSpy
+        .getAllMessages('info')
+        .some(message =>
+          message.match(
+            /Since hl7.fhir.us.core.r4#dev is not locally cached, it will be added to local cache from current version/
+          )
+        )
+    ).toBeTruthy();
+    expect(requestSpy.mock.calls[0]).toEqual([
+      {
+        json: true,
+        uri: 'http://build.fhir.org/ig/qas.json'
+      }
+    ]);
+    expect(requestSpy.mock.calls[1][0].uri).toBe(
+      'http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz'
+    );
+    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.us.core.r4#dev')]);
+    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.us.core.r4#dev'));
+  });
+
   it('should throw CurrentPackageLoadError when a current package is not listed', async () => {
     await expect(loadDependency('hl7.fhir.us.core', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.us.core#current is not available on http://build.fhir.org/ig/qas.json, so no current version can be loaded'
@@ -179,12 +205,6 @@ describe('#loadDependency()', () => {
         uri: 'http://build.fhir.org/ig/qas.json'
       }
     ]);
-  });
-
-  it('should throw DevPackageLoadError when a dev package version is not locally present', async () => {
-    await expect(loadDependency('test', 'dev', defs, 'somePath')).rejects.toThrow(
-      'The package test#dev could not be loaded locally. Dev packages must be present in local cache'
-    );
   });
 });
 

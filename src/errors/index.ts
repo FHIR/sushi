@@ -29,7 +29,6 @@ export * from './InvalidSumOfSliceMinsError';
 export * from './InvalidMaxOfSliceError';
 export * from './ParentNotDefinedError';
 export * from './PackageLoadError';
-export * from './DevPackageLoadError';
 export * from './CurrentPackageLoadError';
 export * from './InvalidUriError';
 export * from './MissingSnapshotError';
