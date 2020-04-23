@@ -24,7 +24,7 @@ import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
 
 app().catch(e => {
-  logger.error(e.message);
+  logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
   process.exit(1);
 });
 
