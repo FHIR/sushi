@@ -14,6 +14,8 @@ describe('importConfiguration', () => {
       status: 'draft',
       version: '1.0.0',
       fhirVersion: ['4.0.1'],
+      copyrightYear: '2020+',
+      releaseLabel: 'Build CI',
       template: 'hl7.fhir.template#0.0.5'
     };
     loggerSpy.reset();
@@ -31,6 +33,10 @@ describe('importConfiguration', () => {
       status: 'draft',
       version: '1.0.0',
       fhirVersion: ['4.0.1'],
+      parameters: [
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' }
+      ],
       template: 'hl7.fhir.template#0.0.5',
       packageId: 'fhir.us.minimal'
     };
@@ -1554,6 +1560,8 @@ describe('importConfiguration', () => {
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters).toEqual([
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' },
         { code: 'excludettl', value: 'true' },
         { code: 'validation', value: 'allow-any-extensions' }
       ]);
@@ -1564,6 +1572,8 @@ describe('importConfiguration', () => {
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters).toEqual([
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' },
         { code: 'validation', value: 'allow-any-extensions' },
         { code: 'validation', value: 'no-broken-links' }
       ]);
@@ -1680,38 +1690,59 @@ describe('importConfiguration', () => {
   });
 
   describe('#copyrightYear', () => {
+    // some of these are a little redundant due to minimal-config, but that's OK
     it('should convert copyrightYear to a parameter', () => {
       minYAML.copyrightYear = '2019+';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2019+' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2019+' });
     });
     it('should convert copyrightyear to a parameter', () => {
+      delete minYAML.copyrightYear;
       minYAML.copyrightyear = '2020+';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2020+' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020+' });
     });
     it('should support copyrightYear when YAML imports it as a number', () => {
       // @ts-ignore Type '2020' is not assignable to type 'string'
       minYAML.copyrightYear = 2020; // YAML parse will interpret 2020 as a number, not a string
       let config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2020' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
       // @ts-ignore Type '2020' is not assignable to type 'string'
+      delete minYAML.copyrightYear;
       minYAML.copyrightyear = 2020; // YAML parse will interpret 2020 as a number, not a string
       config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2020' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
+    });
+    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+      delete minYAML.copyrightYear;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Configuration missing required property: copyrightYear\s*File: test-config\.yaml/
+      );
+      expect(config.parameters.find(p => p.code === 'copyrightYear')).toBeUndefined();
     });
   });
 
   describe('#releaseLabel', () => {
+    // some of these are a little redundant due to minimal-config, but that's OK
     it('should convert releaseLabel to a parameter', () => {
       minYAML.releaseLabel = 'STU1';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'releaselabel', value: 'STU1' }]);
+      expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU1' });
     });
     it('should convert releaselabel to a parameter', () => {
+      delete minYAML.releaseLabel;
       minYAML.releaselabel = 'STU2';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'releaselabel', value: 'STU2' }]);
+      expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU2' });
+    });
+    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+      delete minYAML.releaseLabel;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Configuration missing required property: releaseLabel\s*File: test-config\.yaml/
+      );
+      expect(config.parameters.find(p => p.code === 'releaseLabel')).toBeUndefined();
     });
   });
 
