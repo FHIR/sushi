@@ -40,6 +40,7 @@ import { FHIRDefinitions } from '../fhirdefs';
 export class IGExporter {
   private ig: ImplementationGuide;
   private readonly packagePath: string;
+  private readonly configPath: string;
   private readonly outputLog: Map<string, outputLogDetails>;
   constructor(
     private readonly pkg: Package,
@@ -48,7 +49,12 @@ export class IGExporter {
     private readonly isIgPubContext: boolean = false
   ) {
     this.packagePath = path.resolve(this.igDataPath, '..', 'package.json');
+    this.configPath = path.resolve(this.igDataPath, '..', 'config.yaml');
     this.outputLog = new Map();
+  }
+
+  getOutputLogDetails(file: string) {
+    return this.outputLog.get(file);
   }
 
   /**
@@ -694,78 +700,22 @@ export class IGExporter {
   }
 
   /**
-   * Adds the package-list.json file to the IG.  If one already exists, it will be used, otherwise
-   * it will be generated based on the package.json.
+   * Adds the package-list.json file to the IG. Generated based on the Configuration history
+   * field.
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addPackageList(igPath: string): void {
-    // If the user provided an index.md file, use that
-    const inputPackageListPath = path.join(this.igDataPath, 'package-list.json');
-    const outputPath = path.join(igPath, 'package-list.json');
-    if (existsSync(inputPackageListPath)) {
-      let mismatch = false;
-      const inputPackageList = readJSONSync(inputPackageListPath);
-      if (inputPackageList['package-id'] !== this.pkg.packageJSON.name) {
-        logger.error(
-          `package-list.json: package-id value (${inputPackageList['package-id']}) does not match name declared in package.json (${this.pkg.packageJSON.name}).  Ignoring custom package-list.json.`,
-          { file: inputPackageListPath }
-        );
-        mismatch = true;
-      }
-      if (inputPackageList.canonical !== this.pkg.packageJSON.canonical) {
-        logger.error(
-          `package-list.json: canonical value (${inputPackageList.canonical}) does not match canonical declared in package.json (${this.pkg.packageJSON.canonical}).  Ignoring custom package-list.json.`,
-          { file: inputPackageListPath }
-        );
-        mismatch = true;
-      }
-      if (!mismatch) {
-        this.copyAsIs(inputPackageListPath, outputPath);
-        logger.info('Copied ig-data/package-list.json.');
-        return;
-      }
+  addPackageList(igPath: string): void {
+    if (this.pkg.config?.history) {
+      const outputPath = path.join(igPath, 'package-list.json');
+      outputJSONSync(outputPath, this.pkg.config.history, { spaces: 2 });
+      logger.info('Generated package-list.json');
+      this.updateOutputLog(outputPath, [this.configPath], 'generated');
+    } else if (/^https?:\/\/hl7.org\//.test(this.pkg.config?.url)) {
+      logger.warn(
+        'HL7 IGs must have a package-list.json. Please define "history" in config.yaml to generate one.'
+      );
     }
-    outputJSONSync(
-      outputPath,
-      {
-        '//': warningTextArray('', [
-          'This package-list.json was generated using default values and values inferred from',
-          'package.json (name, title, canonical, description, url, version). This is only a starter',
-          'file. IG authors should provide their own package-list.json file in the ig-data folder',
-          'and delete this comment property from it.',
-          'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#igroot'
-        ]),
-        'package-id': this.pkg.packageJSON.name,
-        title: this.pkg.packageJSON.title ?? this.pkg.packageJSON.name,
-        canonical: this.pkg.packageJSON.canonical,
-        introduction:
-          this.pkg.packageJSON.description ??
-          this.pkg.packageJSON.title ??
-          this.pkg.packageJSON.name,
-        list: [
-          {
-            version: 'current',
-            desc: 'Continuous Integration Build (latest in version control)',
-            path: this.pkg.packageJSON.url,
-            status: 'ci-build',
-            current: true
-          },
-          {
-            version: this.pkg.packageJSON.version,
-            fhirversion: '4.0.1',
-            date: '2099-01-01',
-            desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-            path: this.pkg.packageJSON.url,
-            status: 'ballot',
-            sequence: 'STU 1'
-          }
-        ]
-      },
-      { spaces: 2 }
-    );
-    logger.info('Generated default package-list.json');
-    this.updateOutputLog(outputPath, [this.packagePath], 'generated');
   }
 
   /**
