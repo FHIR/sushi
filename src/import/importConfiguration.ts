@@ -119,7 +119,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     groups: parseGroups(yaml.groups),
     resources: parseResources(yaml.resources, file),
     pages: parsePages(yaml.pages, file),
-    parameters: parseParameters(yaml),
+    parameters: parseParameters(yaml, file),
     templates: parseTemplates(yaml.templates, file),
     template: required(yaml.template, 'template', file),
     menu: parseMenu(yaml.menu),
@@ -589,15 +589,18 @@ function parsePage(
   return page;
 }
 
-function parseParameters(yamlConfig: YAMLConfiguration): ImplementationGuideDefinitionParameter[] {
+function parseParameters(
+  yamlConfig: YAMLConfiguration,
+  file: string
+): ImplementationGuideDefinitionParameter[] {
   const parameters: ImplementationGuideDefinitionParameter[] = [];
-  if (yamlConfig.copyrightYear || yamlConfig.copyrightyear) {
+  if (required(yamlConfig.copyrightYear ?? yamlConfig.copyrightyear, 'copyrightYear', file)) {
     parameters.push({
       code: 'copyrightyear',
       value: `${yamlConfig.copyrightYear ?? yamlConfig.copyrightyear}`
     });
   }
-  if (yamlConfig.releaseLabel || yamlConfig.releaselabel) {
+  if (required(yamlConfig.releaseLabel ?? yamlConfig.releaselabel, 'releaseLabel', file)) {
     parameters.push({
       code: 'releaselabel',
       value: `${yamlConfig.releaseLabel ?? yamlConfig.releaselabel}`
