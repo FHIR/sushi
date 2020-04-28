@@ -32,7 +32,7 @@ describe('MasterFisher', () => {
     doc1.profiles.get('Practitioner').parent = 'Practitioner';
     const tank = new FSHTank([doc1], minimalConfig);
 
-    const pkg = new Package(null, tank.config);
+    const pkg = new Package(tank.config);
     const profile3 = new StructureDefinition();
     profile3.name = 'Profile3';
     profile3.id = 'profile3';

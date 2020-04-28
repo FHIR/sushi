@@ -8,7 +8,7 @@ describe('FHIRExporter', () => {
     const input = new FSHTank([], minimalConfig);
     const result = exportFHIR(input, new FHIRDefinitions());
     expect(result).toEqual(
-      new Package(null, {
+      new Package({
         filePath: 'config.yaml',
         id: 'fhir.us.minimal',
         version: '1.0.0',

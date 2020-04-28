@@ -24,7 +24,7 @@ describe('ExtensionExporter', () => {
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(null, input.config);
+    const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
   });

@@ -47,7 +47,7 @@ describe('StructureDefinitionExporter', () => {
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    pkg = new Package(null, input.config);
+    pkg = new Package(input.config);
     fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
     loggerSpy.reset();
