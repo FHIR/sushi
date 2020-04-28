@@ -711,7 +711,7 @@ export class IGExporter {
       outputJSONSync(outputPath, this.pkg.config.history, { spaces: 2 });
       logger.info('Generated package-list.json');
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
-    } else if (/^https?:\/\/hl7.org\//.test(this.pkg.config?.url)) {
+    } else if (/^https?:\/\/hl7.org\//.test(this.pkg.config?.canonical)) {
       logger.warn(
         'HL7 IGs must have a package-list.json. Please define "history" in config.yaml to generate one.'
       );
