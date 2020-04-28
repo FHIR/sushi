@@ -22,11 +22,13 @@ describe('IGExporter', () => {
     });
 
     it('should not export package-list.json when config.history is undefined', () => {
+      minimalConfig.canonical = 'https://foo.com/my-ig';
       const pkg = new Package(null, minimalConfig);
       const exporter = new IGExporter(pkg, null, '');
       exporter.addPackageList(tempOut);
       const pkgListPath = path.join(tempOut, 'package-list.json');
       expect(fs.existsSync(pkgListPath)).toBeFalsy();
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should log a warning when an HL7 IG is missing the history field', () => {
