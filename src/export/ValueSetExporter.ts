@@ -35,7 +35,7 @@ export class ValueSetExporter {
     }
     // Version is set to value provided in packageJSON, will be overriden if reset by rules
     valueSet.version = this.tank.config.version;
-    valueSet.url = `${this.tank.config.url}/ValueSet/${valueSet.id}`;
+    valueSet.url = `${this.tank.config.canonical}/ValueSet/${valueSet.id}`;
   }
 
   private setCompose(valueSet: ValueSet, components: ValueSetComponent[]) {

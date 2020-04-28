@@ -21,7 +21,7 @@ export class CodeSystemExporter {
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
     // Version is set to value provided in packageJSON, will be overriden if reset by rules
     codeSystem.version = this.tank.config.version;
-    codeSystem.url = `${this.tank.config.url}/CodeSystem/${codeSystem.id}`;
+    codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
 
   private setConcepts(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {

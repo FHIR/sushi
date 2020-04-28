@@ -139,7 +139,7 @@ export class FSHTank implements Fishable {
             p =>
               p.name === item ||
               p.id === item ||
-              `${this.config.url}/StructureDefinition/${p.id}` === item
+              `${this.config.canonical}/StructureDefinition/${p.id}` === item
           );
           break;
         case Type.Extension:
@@ -147,13 +147,15 @@ export class FSHTank implements Fishable {
             e =>
               e.name === item ||
               e.id === item ||
-              `${this.config.url}/StructureDefinition/${e.id}` === item
+              `${this.config.canonical}/StructureDefinition/${e.id}` === item
           );
           break;
         case Type.ValueSet:
           result = this.getAllValueSets().find(
             vs =>
-              vs.name === item || vs.id === item || `${this.config.url}/ValueSet/${vs.id}` === item
+              vs.name === item ||
+              vs.id === item ||
+              `${this.config.canonical}/ValueSet/${vs.id}` === item
           );
           break;
         case Type.CodeSystem:
@@ -161,7 +163,7 @@ export class FSHTank implements Fishable {
             vs =>
               vs.name === item ||
               vs.id === item ||
-              `${this.config.url}/CodeSystem/${vs.id}` === item
+              `${this.config.canonical}/CodeSystem/${vs.id}` === item
           );
           break;
         case Type.Instance:
@@ -198,12 +200,12 @@ export class FSHTank implements Fishable {
         name: result.name
       };
       if (result instanceof Profile || result instanceof Extension) {
-        meta.url = `${this.config.url}/StructureDefinition/${result.id}`;
+        meta.url = `${this.config.canonical}/StructureDefinition/${result.id}`;
         meta.parent = result.parent;
       } else if (result instanceof FshValueSet) {
-        meta.url = `${this.config.url}/ValueSet/${result.id}`;
+        meta.url = `${this.config.canonical}/ValueSet/${result.id}`;
       } else if (result instanceof FshCodeSystem) {
-        meta.url = `${this.config.url}/CodeSystem/${result.id}`;
+        meta.url = `${this.config.canonical}/CodeSystem/${result.id}`;
       }
       return meta;
     }
