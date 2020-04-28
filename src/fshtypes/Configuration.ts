@@ -36,7 +36,8 @@ export type Configuration = {
   contained?: any[];
   extension?: Extension[];
   modifierExtension?: Extension[];
-  url: string;
+  canonical: string;
+  url?: string;
   version: string;
   name: string;
   title?: string;

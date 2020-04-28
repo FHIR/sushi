@@ -39,7 +39,8 @@ export type YAMLConfiguration = {
   contained?: ImplementationGuide['contained']; // any[]
   extension?: ImplementationGuide['extension']; // Extension[]
   modifierExtension?: ImplementationGuide['modifierExtension']; // Extension[]
-  url: ImplementationGuide['url']; // string
+  canonical: string;
+  url?: ImplementationGuide['url']; // string
   version:
     | ImplementationGuide['version'] // string
     | number; // YAML will parse some versions (e.g., 1.2) as numbers

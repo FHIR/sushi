@@ -46,7 +46,7 @@ import {
 } from '../fhirtypes';
 import { FshCode } from '../fshtypes';
 
-const MINIMAL_CONFIG_PROPERTIES = ['id', 'version', 'url', 'fhirVersion'];
+const MINIMAL_CONFIG_PROPERTIES = ['id', 'version', 'canonical', 'fhirVersion'];
 
 /**
  * Imports the YAML Configuration format (as a YAML string or already parsed JSON) and returns
@@ -91,7 +91,8 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     contained: yaml.contained,
     extension: yaml.extension,
     modifierExtension: yaml.modifierExtension,
-    url: yaml.url, // minimum config property
+    canonical: yaml.canonical, // minimum config property
+    url: yaml.url ?? `${yaml.canonical}/ImplementationGuide/${yaml.id}`,
     version: normalizeToString(yaml.version), // minimum config property
     name: required(yaml.name, 'name', file),
     title: yaml.title,
@@ -653,7 +654,7 @@ function parseHistory(yamlConfig: YAMLConfiguration, file: string): Configuratio
   }
   const history: ConfigurationHistory = {
     'package-id': yamlHistory['package-id'] ?? yamlConfig.packageId ?? yamlConfig.id,
-    canonical: yamlHistory.canonical ?? yamlConfig.url,
+    canonical: yamlHistory.canonical ?? yamlConfig.canonical,
     title: yamlHistory.title ?? yamlConfig.title,
     introduction: yamlHistory.introduction ?? yamlConfig.description,
     list: []
