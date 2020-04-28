@@ -9,7 +9,7 @@ describe('importConfiguration', () => {
   beforeEach(() => {
     minYAML = {
       id: 'fhir.us.minimal',
-      url: 'http://hl7.org/fhir/us/minimal',
+      canonical: 'http://hl7.org/fhir/us/minimal',
       name: 'MinimalIG',
       status: 'draft',
       version: '1.0.0',
@@ -28,7 +28,8 @@ describe('importConfiguration', () => {
     const expected: Configuration = {
       filePath: yamlPath,
       id: 'fhir.us.minimal',
-      url: 'http://hl7.org/fhir/us/minimal',
+      canonical: 'http://hl7.org/fhir/us/minimal',
+      url: 'http://hl7.org/fhir/us/minimal/ImplementationGuide/fhir.us.minimal',
       name: 'MinimalIG',
       status: 'draft',
       version: '1.0.0',
@@ -51,7 +52,8 @@ describe('importConfiguration', () => {
     const expected: Configuration = {
       filePath: yamlPath,
       id: 'fhir.us.example',
-      url: 'http://hl7.org/fhir/us/example',
+      canonical: 'http://hl7.org/fhir/us/example',
+      url: 'http://hl7.org/fhir/us/example/ImplementationGuide/fhir.us.example',
       name: 'ExampleIG',
       title: 'HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1',
       description: 'Example IG exercises many of the fields in a SUSHI configuration.',
@@ -204,7 +206,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -365,20 +367,34 @@ describe('importConfiguration', () => {
     });
   });
 
-  describe('#url', () => {
-    it('should import url as-is', () => {
-      minYAML.url = 'http://foo.org/some-url';
+  describe('#canonical', () => {
+    it('should import canonical as-is', () => {
+      minYAML.canonical = 'http://foo.org/some-canonical-url';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.url).toBe('http://foo.org/some-url');
+      expect(config.canonical).toBe('http://foo.org/some-canonical-url');
     });
-    it('should report an error and throw if url is missing', () => {
-      delete minYAML.url;
+    it('should report an error and throw if canonical is missing', () => {
+      delete minYAML.canonical;
       expect(() => importConfiguration(minYAML, 'test-config.yaml')).toThrow(
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
+    });
+  });
+
+  describe('#url', () => {
+    it('should import url as-is if provided', () => {
+      minYAML.url = 'http://foo.org/some-url/ImplementationGuide/my.guide';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.url).toBe('http://foo.org/some-url/ImplementationGuide/my.guide');
+    });
+    it('should default url based on canonical if url is not provided', () => {
+      delete minYAML.url;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.url).toBe(`${config.canonical}/ImplementationGuide/${config.id}`);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
@@ -400,7 +416,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -1263,7 +1279,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
     it('should report an error and throw if fhirVersion is an empty array', () => {
@@ -1272,7 +1288,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });
