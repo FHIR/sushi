@@ -83,6 +83,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
 
   const config: Configuration = {
     filePath: file,
+    canonical: yaml.canonical, // minimum config property
     id: yaml.id, // minimum config property
     meta: parseMeta(yaml.meta, file),
     implicitRules: yaml.implicitRules,
@@ -91,7 +92,6 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     contained: yaml.contained,
     extension: yaml.extension,
     modifierExtension: yaml.modifierExtension,
-    canonical: yaml.canonical, // minimum config property
     url: yaml.url ?? `${yaml.canonical}/ImplementationGuide/${yaml.id}`,
     version: normalizeToString(yaml.version), // minimum config property
     name: required(yaml.name, 'name', file),

@@ -31,6 +31,7 @@ import {
  * @see {@link https://github.com/FHIR/sample-ig/blob/master/input/includes/menu.xml}
  */
 export type YAMLConfiguration = {
+  canonical: string;
   id: ImplementationGuide['id']; // string
   meta?: YAMLConfigurationMeta;
   implicitRules?: ImplementationGuide['implicitRules']; // string
@@ -39,7 +40,6 @@ export type YAMLConfiguration = {
   contained?: ImplementationGuide['contained']; // any[]
   extension?: ImplementationGuide['extension']; // Extension[]
   modifierExtension?: ImplementationGuide['modifierExtension']; // Extension[]
-  canonical: string;
   url?: ImplementationGuide['url']; // string
   version:
     | ImplementationGuide['version'] // string

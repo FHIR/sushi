@@ -30,7 +30,7 @@ describe('IGExporter', () => {
     });
 
     it('should log a warning when an HL7 IG is missing the history field', () => {
-      minimalConfig.url = 'https://hl7.org/half-life-7';
+      minimalConfig.canonical = 'https://hl7.org/half-life-7';
       const pkg = new Package(null, minimalConfig);
       const exporter = new IGExporter(pkg, null, '');
       exporter.addPackageList(tempOut);

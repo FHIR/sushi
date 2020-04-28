@@ -391,7 +391,6 @@ describe('importConfiguration', () => {
       expect(config.url).toBe('http://foo.org/some-url/ImplementationGuide/my.guide');
     });
     it('should default url based on canonical if url is not provided', () => {
-      // loggerSpy.reset(); // JULIA
       delete minYAML.url;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.url).toBe(`${config.canonical}/ImplementationGuide/${config.id}`);
