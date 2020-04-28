@@ -4,7 +4,7 @@ import temp from 'temp';
 import { IGExporter } from '../../src/ig';
 import { Package } from '../../src/export';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { minimalConfig } from './fixtures/minimalConfig';
+import { minimalConfig } from '../utils/minimalConfig';
 import { Configuration } from '../../src/fshtypes';
 import { cloneDeep } from 'lodash';
 

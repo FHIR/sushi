@@ -161,7 +161,7 @@ async function app() {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
 
-  const tank = new FSHTank(docs, packageJSON, config);
+  const tank = new FSHTank(docs, config);
   await Promise.all(dependencyDefs);
 
   // Check for StructureDefinition

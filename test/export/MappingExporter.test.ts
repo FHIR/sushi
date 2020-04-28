@@ -7,6 +7,7 @@ import path from 'path';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { Mapping } from '../../src/fshtypes';
 import { MappingRule } from '../../src/fshtypes/rules';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('MappingExporter', () => {
   let defs: FHIRDefinitions;
@@ -25,12 +26,8 @@ describe('MappingExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], {
-      name: 'test',
-      version: '0.0.1',
-      canonical: 'http://example.com'
-    });
-    const pkg = new Package(input.packageJSON);
+    const input = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(null, input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new MappingExporter(input, pkg, fisher);
     observation = fisher.fishForStructureDefinition('Observation');

@@ -34,8 +34,8 @@ export class ValueSetExporter {
       valueSet.description = fshDefinition.description;
     }
     // Version is set to value provided in packageJSON, will be overriden if reset by rules
-    valueSet.version = this.tank.packageJSON.version;
-    valueSet.url = `${this.tank.packageJSON.canonical}/ValueSet/${valueSet.id}`;
+    valueSet.version = this.tank.config.version;
+    valueSet.url = `${this.tank.config.url}/ValueSet/${valueSet.id}`;
   }
 
   private setCompose(valueSet: ValueSet, components: ValueSetComponent[]) {
