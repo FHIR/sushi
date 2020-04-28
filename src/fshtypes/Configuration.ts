@@ -28,6 +28,7 @@ import {
  */
 export type Configuration = {
   filePath: string;
+  canonical: string;
   id: string;
   meta?: Meta;
   implicitRules?: string;
@@ -36,7 +37,7 @@ export type Configuration = {
   contained?: any[];
   extension?: Extension[];
   modifierExtension?: Extension[];
-  url: string;
+  url?: string;
   version: string;
   name: string;
   title?: string;
