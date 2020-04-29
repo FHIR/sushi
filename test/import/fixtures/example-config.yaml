@@ -6,7 +6,8 @@
 # SUSHI will use id as both id and packageId in the IG unless a
 # specific packageId is also provided in this file.
 id: fhir.us.example
-url: http://hl7.org/fhir/us/example
+canonical: http://hl7.org/fhir/us/example
+url: http://hl7.org/fhir/us/example/ImplementationGuide/fhir.us.example
 name: ExampleIG
 title: "HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1"
 description: Example IG exercises many of the fields in a SUSHI configuration.

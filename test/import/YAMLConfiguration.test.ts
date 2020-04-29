@@ -13,7 +13,8 @@ describe('YAMLConfiguration', () => {
       );
       const config: YAMLConfiguration = YAML.parse(configYAML);
       expect(config.id).toBe('fhir.us.example');
-      expect(config.url).toBe('http://hl7.org/fhir/us/example');
+      expect(config.canonical).toBe('http://hl7.org/fhir/us/example');
+      expect(config.url).toBe('http://hl7.org/fhir/us/example/ImplementationGuide/fhir.us.example');
       expect(config.name).toBe('ExampleIG');
       expect(config.title).toBe(
         'HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1'

@@ -46,7 +46,7 @@ import {
 } from '../fhirtypes';
 import { FshCode } from '../fshtypes';
 
-const MINIMAL_CONFIG_PROPERTIES = ['id', 'version', 'url', 'fhirVersion'];
+const MINIMAL_CONFIG_PROPERTIES = ['id', 'version', 'canonical', 'fhirVersion'];
 
 /**
  * Imports the YAML Configuration format (as a YAML string or already parsed JSON) and returns
@@ -83,6 +83,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
 
   const config: Configuration = {
     filePath: file,
+    canonical: yaml.canonical, // minimum config property
     id: yaml.id, // minimum config property
     meta: parseMeta(yaml.meta, file),
     implicitRules: yaml.implicitRules,
@@ -91,7 +92,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     contained: yaml.contained,
     extension: yaml.extension,
     modifierExtension: yaml.modifierExtension,
-    url: yaml.url, // minimum config property
+    url: yaml.url ?? `${yaml.canonical}/ImplementationGuide/${yaml.id}`,
     version: normalizeToString(yaml.version), // minimum config property
     name: required(yaml.name, 'name', file),
     title: yaml.title,
@@ -119,7 +120,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     groups: parseGroups(yaml.groups),
     resources: parseResources(yaml.resources, file),
     pages: parsePages(yaml.pages, file),
-    parameters: parseParameters(yaml),
+    parameters: parseParameters(yaml, file),
     templates: parseTemplates(yaml.templates, file),
     template: required(yaml.template, 'template', file),
     menu: parseMenu(yaml.menu),
@@ -589,15 +590,18 @@ function parsePage(
   return page;
 }
 
-function parseParameters(yamlConfig: YAMLConfiguration): ImplementationGuideDefinitionParameter[] {
+function parseParameters(
+  yamlConfig: YAMLConfiguration,
+  file: string
+): ImplementationGuideDefinitionParameter[] {
   const parameters: ImplementationGuideDefinitionParameter[] = [];
-  if (yamlConfig.copyrightYear || yamlConfig.copyrightyear) {
+  if (required(yamlConfig.copyrightYear ?? yamlConfig.copyrightyear, 'copyrightYear', file)) {
     parameters.push({
       code: 'copyrightyear',
       value: `${yamlConfig.copyrightYear ?? yamlConfig.copyrightyear}`
     });
   }
-  if (yamlConfig.releaseLabel || yamlConfig.releaselabel) {
+  if (required(yamlConfig.releaseLabel ?? yamlConfig.releaselabel, 'releaseLabel', file)) {
     parameters.push({
       code: 'releaselabel',
       value: `${yamlConfig.releaseLabel ?? yamlConfig.releaselabel}`
@@ -650,7 +654,7 @@ function parseHistory(yamlConfig: YAMLConfiguration, file: string): Configuratio
   }
   const history: ConfigurationHistory = {
     'package-id': yamlHistory['package-id'] ?? yamlConfig.packageId ?? yamlConfig.id,
-    canonical: yamlHistory.canonical ?? yamlConfig.url,
+    canonical: yamlHistory.canonical ?? yamlConfig.canonical,
     title: yamlHistory.title ?? yamlConfig.title,
     introduction: yamlHistory.introduction ?? yamlConfig.description,
     list: []

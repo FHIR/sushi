@@ -9,11 +9,13 @@ describe('importConfiguration', () => {
   beforeEach(() => {
     minYAML = {
       id: 'fhir.us.minimal',
-      url: 'http://hl7.org/fhir/us/minimal',
+      canonical: 'http://hl7.org/fhir/us/minimal',
       name: 'MinimalIG',
       status: 'draft',
       version: '1.0.0',
       fhirVersion: ['4.0.1'],
+      copyrightYear: '2020+',
+      releaseLabel: 'Build CI',
       template: 'hl7.fhir.template#0.0.5'
     };
     loggerSpy.reset();
@@ -26,11 +28,16 @@ describe('importConfiguration', () => {
     const expected: Configuration = {
       filePath: yamlPath,
       id: 'fhir.us.minimal',
-      url: 'http://hl7.org/fhir/us/minimal',
+      canonical: 'http://hl7.org/fhir/us/minimal',
+      url: 'http://hl7.org/fhir/us/minimal/ImplementationGuide/fhir.us.minimal',
       name: 'MinimalIG',
       status: 'draft',
       version: '1.0.0',
       fhirVersion: ['4.0.1'],
+      parameters: [
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' }
+      ],
       template: 'hl7.fhir.template#0.0.5',
       packageId: 'fhir.us.minimal'
     };
@@ -45,7 +52,8 @@ describe('importConfiguration', () => {
     const expected: Configuration = {
       filePath: yamlPath,
       id: 'fhir.us.example',
-      url: 'http://hl7.org/fhir/us/example',
+      canonical: 'http://hl7.org/fhir/us/example',
+      url: 'http://hl7.org/fhir/us/example/ImplementationGuide/fhir.us.example',
       name: 'ExampleIG',
       title: 'HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1',
       description: 'Example IG exercises many of the fields in a SUSHI configuration.',
@@ -198,7 +206,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -359,20 +367,34 @@ describe('importConfiguration', () => {
     });
   });
 
-  describe('#url', () => {
-    it('should import url as-is', () => {
-      minYAML.url = 'http://foo.org/some-url';
+  describe('#canonical', () => {
+    it('should import canonical as-is', () => {
+      minYAML.canonical = 'http://foo.org/some-canonical-url';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.url).toBe('http://foo.org/some-url');
+      expect(config.canonical).toBe('http://foo.org/some-canonical-url');
     });
-    it('should report an error and throw if url is missing', () => {
-      delete minYAML.url;
+    it('should report an error and throw if canonical is missing', () => {
+      delete minYAML.canonical;
       expect(() => importConfiguration(minYAML, 'test-config.yaml')).toThrow(
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
+    });
+  });
+
+  describe('#url', () => {
+    it('should import url as-is if provided', () => {
+      minYAML.url = 'http://foo.org/some-url/ImplementationGuide/my.guide';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.url).toBe('http://foo.org/some-url/ImplementationGuide/my.guide');
+    });
+    it('should default url based on canonical if url is not provided', () => {
+      delete minYAML.url;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.url).toBe(`${config.canonical}/ImplementationGuide/${config.id}`);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
@@ -394,7 +416,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -1257,7 +1279,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
     it('should report an error and throw if fhirVersion is an empty array', () => {
@@ -1266,7 +1288,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, url, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -1554,6 +1576,8 @@ describe('importConfiguration', () => {
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters).toEqual([
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' },
         { code: 'excludettl', value: 'true' },
         { code: 'validation', value: 'allow-any-extensions' }
       ]);
@@ -1564,6 +1588,8 @@ describe('importConfiguration', () => {
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters).toEqual([
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' },
         { code: 'validation', value: 'allow-any-extensions' },
         { code: 'validation', value: 'no-broken-links' }
       ]);
@@ -1680,38 +1706,59 @@ describe('importConfiguration', () => {
   });
 
   describe('#copyrightYear', () => {
+    // some of these are a little redundant due to minimal-config, but that's OK
     it('should convert copyrightYear to a parameter', () => {
       minYAML.copyrightYear = '2019+';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2019+' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2019+' });
     });
     it('should convert copyrightyear to a parameter', () => {
+      delete minYAML.copyrightYear;
       minYAML.copyrightyear = '2020+';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2020+' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020+' });
     });
     it('should support copyrightYear when YAML imports it as a number', () => {
       // @ts-ignore Type '2020' is not assignable to type 'string'
       minYAML.copyrightYear = 2020; // YAML parse will interpret 2020 as a number, not a string
       let config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2020' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
       // @ts-ignore Type '2020' is not assignable to type 'string'
+      delete minYAML.copyrightYear;
       minYAML.copyrightyear = 2020; // YAML parse will interpret 2020 as a number, not a string
       config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'copyrightyear', value: '2020' }]);
+      expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
+    });
+    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+      delete minYAML.copyrightYear;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Configuration missing required property: copyrightYear\s*File: test-config\.yaml/
+      );
+      expect(config.parameters.find(p => p.code === 'copyrightYear')).toBeUndefined();
     });
   });
 
   describe('#releaseLabel', () => {
+    // some of these are a little redundant due to minimal-config, but that's OK
     it('should convert releaseLabel to a parameter', () => {
       minYAML.releaseLabel = 'STU1';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'releaselabel', value: 'STU1' }]);
+      expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU1' });
     });
     it('should convert releaselabel to a parameter', () => {
+      delete minYAML.releaseLabel;
       minYAML.releaselabel = 'STU2';
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.parameters).toEqual([{ code: 'releaselabel', value: 'STU2' }]);
+      expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU2' });
+    });
+    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+      delete minYAML.releaseLabel;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Configuration missing required property: releaseLabel\s*File: test-config\.yaml/
+      );
+      expect(config.parameters.find(p => p.code === 'releaseLabel')).toBeUndefined();
     });
   });
 
