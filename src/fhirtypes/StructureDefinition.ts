@@ -574,7 +574,7 @@ export class StructureDefinition {
     } else {
       // fixValue will throw if it fails, but skip the check if value is null
       if (value != null) {
-        // since we don't actually keep the clone, argument for exactly should not matter
+        // exactly must be true so that we always test fixing with the more strict fixed[x] approach
         clone.fixValue(value, true, units);
       }
       // If there is a fixedValue or patternValue, find it and return it
