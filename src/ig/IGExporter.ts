@@ -27,6 +27,7 @@ import {
   CodeSystem,
   InstanceDefinition
 } from '../fhirtypes';
+import { ConfigurationMenuItem } from '../fshtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 
@@ -424,6 +425,74 @@ export class IGExporter {
     if (existsSync(includesPath)) {
       this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'));
     }
+
+    const menuXMLPath = path.join(includesPath, 'menu.xml');
+    if (existsSync(menuXMLPath) && this.pkg.config?.menu) {
+      logger.warn(
+        'An IG menu is configured in config.yaml and provided in a menu.xml file in the ' +
+          'ig-data/input/includes folder. Only the menu.xml file will be used to generate the IG menu.'
+      );
+      return; // menu.xml file is already copied over with full includes folder above
+    }
+
+    // If menu is not specified in config, static file is already copied
+    if (this.pkg.config?.menu) {
+      let menu = '<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">\n';
+      this.pkg.config?.menu.forEach(item => {
+        menu += this.buildMenuItem(item, 2);
+      });
+      menu += '</ul>';
+
+      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
+
+      const warning = warningBlock(
+        `<!-- ${path.parse(outputPath).base} {% comment %}`,
+        '{% endcomment %} -->',
+        [
+          'To change the contents of this file, edit the `menu` attribute in the tank config.yaml file',
+          'or provide your own menu.xml in the ig-data/input/includes folder'
+        ]
+      );
+      outputFileSync(outputPath, `${warning}${menu}`, 'utf8');
+      this.updateOutputLog(outputPath, [this.configPath], 'generated');
+    }
+  }
+
+  private buildMenuItem(item: ConfigurationMenuItem, spaces: number): string {
+    const prefixSpaces = ' '.repeat(spaces);
+    let menuItem = '';
+
+    if (item.subMenu) {
+      menuItem += `${prefixSpaces}<li class="dropdown">\n`;
+      menuItem += this.buildSubMenu(item, spaces + 2);
+      menuItem += `${prefixSpaces}</li>\n`;
+    } else {
+      menuItem += `${prefixSpaces}<li>\n${prefixSpaces}${'  '}`;
+      if (item.url) menuItem += `<a href="${item.url}">`;
+      menuItem += item.name;
+      if (item.url) menuItem += '</a>';
+      menuItem += `\n${prefixSpaces}</li>\n`;
+    }
+    return menuItem;
+  }
+
+  private buildSubMenu(item: ConfigurationMenuItem, spaces: number): string {
+    const prefixSpaces = ' '.repeat(spaces);
+    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${item.name}\n`;
+    subMenu += `${prefixSpaces}${'  '}<b class="caret"></b>\n`;
+    subMenu += `${prefixSpaces}</a>\n`;
+    subMenu += `${prefixSpaces}<ul class="dropdown-menu">\n`;
+    item.subMenu.forEach((subItem: ConfigurationMenuItem): void => {
+      if (subItem.subMenu) {
+        logger.warn(
+          `The ${subItem.name} menu item specifies a sub-menu. The IG template currently only supports two levels of menus. ` +
+            `The sub-menu for ${subItem.name} is included in the menu.xml file but it will not be rendered in the IG.`
+        );
+      }
+      subMenu += this.buildMenuItem(subItem, spaces + 2);
+    });
+    subMenu += `${prefixSpaces}</ul>\n`;
+    return subMenu;
   }
 
   /**
