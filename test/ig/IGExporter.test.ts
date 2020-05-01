@@ -31,7 +31,7 @@ describe.skip('IGExporter', () => {
       const config: Configuration = {
         filePath: path.join(fixtures, 'config.yml'),
         id: 'sushi-test',
-        url: 'http://hl7.org/fhir/sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
         version: '0.1.0',
         name: 'sushi-test',
         title: 'FSH Test IG',

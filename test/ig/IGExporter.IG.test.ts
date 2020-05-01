@@ -29,18 +29,18 @@ describe('IGExporter', () => {
       const config: Configuration = {
         filePath: path.join(fixtures, 'config.yml'),
         id: 'sushi-test',
-        url: 'http://hl7.org/fhir/sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
         version: '0.1.0',
-        name: 'sushi-test',
+        name: 'FSHTestIG',
         title: 'FSH Test IG',
         description: 'Provides a simple example of how FSH can be used to create an IG',
         dependencies: [
-          { packageId: 'hl7.fhir.r4.core', version: '4.0.1' },
           { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
           { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
         ],
-        status: null,
-        template: null,
+        status: 'active',
+        template: 'fhir.base.template',
         fhirVersion: ['4.0.1'],
         language: 'en',
         publisher: 'James Tuna',
@@ -53,7 +53,17 @@ describe('IGExporter', () => {
             ]
           }
         ],
-        license: 'CC0-1.0'
+        license: 'CC0-1.0',
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020+'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
+          }
+        ]
       };
       pkg = new Package(packageJSON, config);
       const profiles = path.join(fixtures, 'profiles');
@@ -112,7 +122,8 @@ describe('IGExporter', () => {
       expect(content).toEqual({
         resourceType: 'ImplementationGuide',
         id: 'sushi-test',
-        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/sushi-test',
+        language: 'en',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
         version: '0.1.0',
         name: 'FSHTestIG',
         title: 'FSH Test IG',
@@ -235,7 +246,7 @@ describe('IGExporter', () => {
           parameter: [
             {
               code: 'copyrightyear',
-              value: `${new Date().getFullYear()}+`
+              value: '2020+'
             },
             {
               code: 'releaselabel',
@@ -276,18 +287,17 @@ describe('IGExporter', () => {
       config = {
         filePath: path.join(fixtures, 'config.yml'),
         id: 'sushi-test',
-        url: 'http://hl7.org/fhir/sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
         version: '0.1.0',
         name: 'sushi-test',
         title: 'FSH Test IG',
         description: 'Provides a simple example of how FSH can be used to create an IG',
         dependencies: [
-          { packageId: 'hl7.fhir.r4.core', version: '4.0.1' },
           { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
           { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
         ],
-        status: null,
-        template: null,
+        status: 'active',
+        template: 'fhir.base.template',
         fhirVersion: ['4.0.1'],
         language: 'en',
         publisher: 'James Tuna',
@@ -310,21 +320,6 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should provide defaults for copyrightyear and releaselabel parameters', () => {
-      exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
-      expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
-      expect(igContent.definition.parameter).toContainEqual({
-        code: 'copyrightyear',
-        value: `${new Date().getFullYear()}+`
-      });
-      expect(igContent.definition.parameter).toContainEqual({
-        code: 'releaselabel',
-        value: 'CI Build'
-      });
-    });
-
     it('should provide a default path-history for an HL7 IG', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
@@ -337,7 +332,7 @@ describe('IGExporter', () => {
     });
 
     it('should not provide a default path-history for a non-HL7 IG', () => {
-      config.url = 'http://different-domain.org/fhir/sushi-test';
+      config.canonical = 'http://different-domain.org/fhir/sushi-test';
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
@@ -484,35 +479,6 @@ describe('IGExporter', () => {
       ]);
     });
 
-    it('should not include a page attribute when all subpages are intro or notes files', () => {
-      config.pages = [
-        {
-          nameUrl: 'index.md',
-          title: 'Home',
-          generation: 'markdown',
-          page: [
-            {
-              nameUrl: 'main-intro.md'
-            },
-            {
-              nameUrl: 'main-notes.md'
-            }
-          ]
-        }
-      ];
-      exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
-      expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
-      expect(igContent.definition.page.page).toEqual([
-        {
-          nameUrl: 'index.html',
-          title: 'Home',
-          generation: 'markdown'
-        }
-      ]);
-    });
-
     it('should log an error when no file exists for a configured page', () => {
       config.pages = [
         {
@@ -543,6 +509,119 @@ describe('IGExporter', () => {
         }
       ]);
       expect(loggerSpy.getLastMessage('error')).toMatch(/nothing\.md not found/s);
+    });
+  });
+
+  describe('#pages-folder-ig', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let packageJSON: PackageJSON;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      fixtures = path.join(__dirname, 'fixtures', 'pages-folder-ig');
+      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+    });
+
+    beforeEach(() => {
+      tempOut = temp.mkdirSync('sushi-test');
+      config = {
+        filePath: path.join(fixtures, 'config.yml'),
+        id: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        version: '0.1.0',
+        name: 'sushi-test',
+        title: 'FSH Test IG',
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        status: 'active',
+        template: 'fhir.base.template',
+        fhirVersion: ['4.0.1'],
+        language: 'en',
+        publisher: 'Georgio Manos',
+        license: 'CC0-1.0'
+      };
+      pkg = new Package(packageJSON, config);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+    });
+
+    afterEach(() => {
+      temp.cleanupSync();
+    });
+
+    it('should use all available page content when pages are not configured', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'extra.html',
+          title: 'Extra',
+          generation: 'html'
+        },
+        {
+          nameUrl: 'other-page.html',
+          title: 'Other Page',
+          generation: 'markdown'
+        }
+      ]);
+      expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'extra.xml'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'index.md'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'other-page.md'))).toBeTruthy();
+      expect(
+        fs.existsSync(path.join(tempOut, 'input', 'resource-docs', 'other-page-notes.md'))
+      ).toBeTruthy();
+    });
+
+    it('should include only configured pages when provided, but still copy all available files', () => {
+      config.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home Page',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'extra.xml',
+          title: 'Extra!',
+          generation: 'html'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home Page',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'extra.html',
+          title: 'Extra!',
+          generation: 'html'
+        }
+      ]);
+      expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'extra.xml'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'index.md'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'other-page.md'))).toBeTruthy();
+      expect(
+        fs.existsSync(path.join(tempOut, 'input', 'resource-docs', 'other-page-notes.md'))
+      ).toBeTruthy();
     });
   });
 });

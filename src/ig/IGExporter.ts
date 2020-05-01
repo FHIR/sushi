@@ -62,9 +62,9 @@ export class IGExporter {
 
   /**
    * Export the IG structure to the location specified by the outPath argument
-   * @param outPath {string} - the path to export the IG file structure to
    *
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#directory-structure}
+   * @param outPath {string} - the path to export the IG file structure to
    */
   export(outPath: string) {
     ensureDirSync(outPath);
@@ -97,16 +97,22 @@ export class IGExporter {
     this.ig = {
       resourceType: 'ImplementationGuide',
       id: this.config.id,
-      url: `${this.config.url}/ImplementationGuide/${this.config.name}`,
+      meta: this.config.meta,
+      implicitRules: this.config.implicitRules,
+      language: this.config.language,
+      text: this.config.text,
+      contained: this.config.contained,
+      modifierExtension: this.config.modifierExtension,
+      url: this.config.url ?? `${this.config.canonical}/ImplementationGuide/${this.config.name}`,
       version: this.config.version,
       // name must be alphanumeric (allowing underscore as well)
-      name: (this.config.title ?? this.config.name).replace(/[^A-Za-z0-9_]/g, ''),
-      title: this.config.title ?? this.config.name,
-      status: this.config.status ?? 'active',
+      name: this.config.name.replace(/[^A-Za-z0-9_]/g, ''),
+      title: this.config.title,
+      status: this.config.status,
       publisher: this.config.publisher,
       contact: this.config.contact,
       description: this.config.description,
-      packageId: this.config.name,
+      packageId: this.config.packageId ?? this.config.id,
       license: this.config.license,
       fhirVersion: this.config.fhirVersion,
       definition: {
@@ -117,24 +123,23 @@ export class IGExporter {
           generation: 'html',
           page: [] // index.[md|html] is required and added later
         },
-        // Parameters apparently required by IG Publisher (as of Jan 29, 2020)
-        parameter: [
-          {
-            code: 'copyrightyear',
-            value:
-              this.config?.parameters?.find(p => p.code == 'copyrightyear')?.value ??
-              `${new Date().getFullYear()}+`
-          },
-          {
-            code: 'releaselabel',
-            value: this.config?.parameters?.find(p => p.code == 'releaselabel')?.value ?? 'CI Build'
-          },
-          ...(this.config?.parameters?.filter(
-            p => ['copyrightyear', 'releaselabel'].indexOf(p.code) == -1
-          ) ?? [])
-        ]
+        // required parameters are enforced in the configuration
+        // default to empty array in case we want to add other parameters later
+        parameter: this.config.parameters ?? []
       }
     };
+    // Add the path-history, if applicable (only applies to HL7 IGs)
+    if (
+      /^https?:\/\/hl7.org\//.test(this.config.canonical) &&
+      !this.ig.definition.parameter.some(param => {
+        return param.code === 'path-history';
+      })
+    ) {
+      this.ig.definition.parameter.push({
+        code: 'path-history',
+        value: `${this.config.canonical}/history.html`
+      });
+    }
     // add non-omitted resources
     this.config.resources?.forEach(resource => {
       if (!resource.omit) {
@@ -150,9 +155,6 @@ export class IGExporter {
       this.ig.dependsOn = [];
       const igs = this.fhirDefs.allImplementationGuides();
       for (const dependency of this.config.dependencies) {
-        if (dependency.packageId === 'hl7.fhir.r4.core') {
-          continue;
-        }
         const dependencyIG = igs.find(
           ig =>
             ig.packageId === dependency.packageId &&
@@ -175,14 +177,6 @@ export class IGExporter {
     }
     if (this.config.global?.length) {
       this.ig.global = this.config.global;
-    }
-
-    // Add the path-history, if applicable (only applies to HL7 IGs)
-    if (/^https?:\/\/hl7.org\//.test(this.config.url)) {
-      this.ig.definition.parameter.push({
-        code: 'path-history',
-        value: `${this.config.url}/history.html`
-      });
     }
   }
 
@@ -226,41 +220,70 @@ export class IGExporter {
   }
 
   /**
-   * Add the index.md file.  If the user provided one in ig-data/input/pagecontent,
-   * use that -- otherwise create one, setting its content to be the package
-   * description.
+   * Add the index.md file.  If the user provided one, use that.
+   * Otherwise create one, setting its content to be the package
+   * description. The provided file may be in one of two locations:
+   * ig-data/input/pagecontent or ig-data/input/pages
    *
+   * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
    * @param igPath {string} - the path where the IG is exported to
    */
   private addIndex(igPath: string): void {
-    ensureDirSync(path.join(igPath, 'input', 'pagecontent'));
+    const pageContentExportPath = path.join(igPath, 'input', 'pagecontent');
+    const pagesExportPath = path.join(igPath, 'input', 'pages');
 
     // If the user provided an index.md file, use that
-    const inputIndexMarkdownPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.md');
-    const inputIndexXMLPath = path.join(this.igDataPath, 'input', 'pagecontent', 'index.xml');
+    // There are four possible locations for it (two filenames in two directories)
+    // If more possibilities arise, rewrite this to avoid having to list all of them
+    const inputIndexMarkdownPageContentPath = path.join(
+      this.igDataPath,
+      'input',
+      'pagecontent',
+      'index.md'
+    );
+    const inputIndexXMLPageContentPath = path.join(
+      this.igDataPath,
+      'input',
+      'pagecontent',
+      'index.xml'
+    );
+    const inputIndexMarkdownPagesPath = path.join(this.igDataPath, 'input', 'pages', 'index.md');
+    const inputIndexXMLPagesPath = path.join(this.igDataPath, 'input', 'pages', 'index.xml');
     let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
-    if (existsSync(inputIndexMarkdownPath)) {
+    if (existsSync(inputIndexMarkdownPageContentPath)) {
+      ensureDirSync(pageContentExportPath);
       this.copyWithWarningText(
-        inputIndexMarkdownPath,
-        path.join(igPath, 'input', 'pagecontent', 'index.md')
+        inputIndexMarkdownPageContentPath,
+        path.join(pageContentExportPath, 'index.md')
       );
-      logger.info('Copied ig-data/input/pagecontent/index.md');
-    } else if (existsSync(inputIndexXMLPath)) {
+      logger.info(`Copied ${path.join(pageContentExportPath, 'index.md')}`);
+    } else if (existsSync(inputIndexXMLPageContentPath)) {
+      ensureDirSync(pageContentExportPath);
       this.copyWithWarningText(
-        inputIndexXMLPath,
-        path.join(igPath, 'input', 'pagecontent', 'index.xml')
+        inputIndexXMLPageContentPath,
+        path.join(pageContentExportPath, 'index.xml')
       );
       generation = 'html';
-      logger.info('Copied ig-data/input/pagecontent/index.xml');
+      logger.info(`Copied ${path.join(pageContentExportPath, 'index.xml')}`);
+    } else if (existsSync(inputIndexMarkdownPagesPath)) {
+      ensureDirSync(pagesExportPath);
+      this.copyWithWarningText(inputIndexMarkdownPagesPath, path.join(pagesExportPath, 'index.md'));
+      logger.info(`Copied ${path.join(pagesExportPath, 'index.md')}`);
+    } else if (existsSync(inputIndexXMLPagesPath)) {
+      ensureDirSync(pagesExportPath);
+      this.copyWithWarningText(inputIndexXMLPagesPath, path.join(pagesExportPath, 'index.xml'));
+      generation = 'html';
+      logger.info(`Copied ${path.join(pagesExportPath, 'index.xml')}`);
     } else {
+      ensureDirSync(pageContentExportPath);
       logger.info('Generated default index.md.');
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
         'This index.md file was generated from the "description" in package.json. To provide',
         'your own index file, create an index.md or index.xml in the ig-data/input/pagecontent',
-        'folder.',
+        'or ig-data/input/pages folder.',
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
-      const outputPath = path.join(igPath, 'input', 'pagecontent', 'index.md');
+      const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.pkg.packageJSON.description ?? ''}`);
       this.updateOutputLog(outputPath, [this.packagePath], 'generated');
     }
@@ -280,39 +303,88 @@ export class IGExporter {
    * Adds additional pages beyond index.md that are defined by the user.
    * Only add formats that are supported by the IG template
    * Intro and notes file contents are injected into relevant pages and should not be treated as their own page
+   * Three directories are checked for additional page content:
+   * pagecontent, pages, and resource-docs
    *
+   * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
    * @param {string} igPath - the path where the IG is exported to
    */
   private addOtherPageContent(igPath: string): void {
-    const inputPageContentPath = path.join(this.igDataPath, 'input', 'pagecontent');
-    if (existsSync(inputPageContentPath)) {
-      const organizedPages = this.organizePageContent(readdirSync(inputPageContentPath));
+    const pageContentFolderNames: string[] = ['pagecontent', 'pages', 'resource-docs'];
+    for (const contentFolder of pageContentFolderNames) {
+      const inputPageContentPath = path.join(this.igDataPath, 'input', contentFolder);
+      if (existsSync(inputPageContentPath)) {
+        const organizedPages = this.organizePageContent(readdirSync(inputPageContentPath));
 
-      let invalidFileTypeIncluded = false;
-      organizedPages.forEach(page => {
-        // All user defined pages are included in input/pagecontent
-        const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page.originalName);
+        let invalidFileTypeIncluded = false;
+        organizedPages.forEach(page => {
+          // All user defined pages are included in input/${contentFolder}
+          const pagePath = path.join(this.igDataPath, 'input', contentFolder, page.originalName);
 
-        this.copyWithWarningText(
-          pagePath,
-          path.join(igPath, 'input', 'pagecontent', `${page.name}.${page.fileType}`)
-        );
-        const isSupportedFileType = page.fileType === 'md' || page.fileType === 'xml';
-        const isIntroOrNotesFile = page.name.endsWith('-intro') || page.name.endsWith('-notes');
-        if (isSupportedFileType) {
-          // Intro and notes files will be in supported formats but are not separate pages, so they should not be added to IG definition
-          if (!isIntroOrNotesFile) {
-            // Valid page files will be added to the IG definition
-            this.ig.definition.page.page.push({
-              nameUrl: `${page.name}.html`,
-              title: page.title,
-              generation: page.fileType === 'md' ? 'markdown' : 'html'
-            });
+          this.copyWithWarningText(
+            pagePath,
+            path.join(igPath, 'input', contentFolder, `${page.name}.${page.fileType}`)
+          );
+          const isSupportedFileType = page.fileType === 'md' || page.fileType === 'xml';
+          const isIntroOrNotesFile = page.name.endsWith('-intro') || page.name.endsWith('-notes');
+          if (isSupportedFileType) {
+            // Intro and notes files will be in supported formats but are not separate pages, so they should not be added to IG definition
+            if (!isIntroOrNotesFile) {
+              // Valid page files will be added to the IG definition
+              this.ig.definition.page.page.push({
+                nameUrl: `${page.name}.html`,
+                title: page.title,
+                generation: page.fileType === 'md' ? 'markdown' : 'html'
+              });
+            }
+          } else {
+            invalidFileTypeIncluded = true;
           }
-        } else {
-          invalidFileTypeIncluded = true;
+        });
+        if (invalidFileTypeIncluded) {
+          const errorString =
+            'Files not in the supported file types (.md and .xml) were detected. These files will be copied over without any processing.';
+          logger.warn(errorString, {
+            file: inputPageContentPath
+          });
         }
-      });
+      }
+    }
+  }
+
+  /**
+   * Adds additional pages to the IG based on user configuration.
+   * Only pages present in the configuration are added, regardless of available files.
+   * All files in the page content folders will be copied,
+   * regardless of configuration.
+   *
+   * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#directory-structure}
+   * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  private addConfiguredPageContent(igPath: string): void {
+    // only configured pages are added to the implementation guide,
+    for (const page of this.config.pages) {
+      this.addConfiguredPage(page, this.ig.definition.page.page);
+    }
+    // but all files in page content folders are copied to corresponding output folders
+    const pageContentFolderNames: string[] = ['pagecontent', 'pages', 'resource-docs'];
+    for (const contentFolder of pageContentFolderNames) {
+      let invalidFileTypeIncluded = false;
+      const inputPageContentPath = path.join(this.igDataPath, 'input', contentFolder);
+      if (existsSync(inputPageContentPath)) {
+        const outputPageContentPath = path.join(igPath, 'input', contentFolder);
+        for (const contentFile of readdirSync(inputPageContentPath)) {
+          this.copyWithWarningText(
+            path.join(inputPageContentPath, contentFile),
+            path.join(outputPageContentPath, contentFile)
+          );
+          const fileType = contentFile.slice(contentFile.lastIndexOf('.') + 1);
+          if (!(fileType === 'md' || fileType === 'xml')) {
+            invalidFileTypeIncluded = true;
+          }
+        }
+      }
       if (invalidFileTypeIncluded) {
         const errorString =
           'Files not in the supported file types (.md and .xml) were detected. These files will be copied over without any processing.';
@@ -324,31 +396,16 @@ export class IGExporter {
   }
 
   /**
-   * Adds additional pages based on user configuration.
-   * Only pages present in the configuration are added, regardless of available files.
-   * Intro and notes pages are not included in the IG, but must be specified in order
-   * for the files to be copied to the output directory.
-   *
-   * @param {string} igPath - the path where the IG is exported to
-   */
-  private addConfiguredPageContent(igPath: string): void {
-    for (const page of this.config.pages) {
-      this.copyConfiguredPage(page, this.ig.definition.page.page, igPath);
-    }
-  }
-
-  /**
    * Adds pages to the implementation guide's list of pages.
    * The page configuration is traversed recursively to maintain the configured structure.
    *
+   * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
    * @param {ImplementationGuideDefinitionPage} page - the current page being added to a list of output pages
    * @param {ImplementationGuideDefinitionPage[]} target - the list of output pages that will receive the current page
-   * @param igPath - the path where the IG is exported to
    */
-  private copyConfiguredPage(
+  private addConfiguredPage(
     page: ImplementationGuideDefinitionPage,
-    target: ImplementationGuideDefinitionPage[],
-    igPath: string
+    target: ImplementationGuideDefinitionPage[]
   ) {
     if (page.nameUrl) {
       const lastPeriod = page.nameUrl.lastIndexOf('.');
@@ -360,34 +417,28 @@ export class IGExporter {
         name = page.nameUrl.slice(0, lastPeriod);
         fileType = page.nameUrl.slice(lastPeriod + 1);
       }
-      const pagePath = path.join(this.igDataPath, 'input', 'pagecontent', page.nameUrl);
-      if (existsSync(pagePath)) {
-        this.copyWithWarningText(
-          pagePath,
-          path.join(igPath, 'input', 'pagecontent', `${name}.${fileType}`)
-        );
-      } else {
+      // page content may be in pagecontent or pages folders
+      const pageFolder = ['pagecontent', 'pages'].find(folder => {
+        return existsSync(path.join(this.igDataPath, 'input', folder, page.nameUrl));
+      });
+      if (!pageFolder) {
         logger.error(`File for configured page ${page.nameUrl} not found.`);
       }
-
-      const isIntroOrNotesFile = name.endsWith('-intro') || name.endsWith('-notes');
-      if (!isIntroOrNotesFile) {
-        const igPage: ImplementationGuideDefinitionPage = {
-          nameUrl: `${name}.html`,
-          title: page.title ?? titleCase(words(name).join(' ')),
-          generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html')
-        };
-        if (page.page?.length) {
-          const igSubpages: ImplementationGuideDefinitionPage[] = [];
-          for (const subpage of page.page) {
-            this.copyConfiguredPage(subpage, igSubpages, igPath);
-          }
-          if (igSubpages.length > 0) {
-            igPage.page = igSubpages;
-          }
+      const igPage: ImplementationGuideDefinitionPage = {
+        nameUrl: `${name}.html`,
+        title: page.title ?? titleCase(words(name).join(' ')),
+        generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html')
+      };
+      if (page.page?.length) {
+        const igSubpages: ImplementationGuideDefinitionPage[] = [];
+        for (const subpage of page.page) {
+          this.addConfiguredPage(subpage, igSubpages);
         }
-        target.push(igPage);
+        if (igSubpages.length > 0) {
+          igPage.page = igSubpages;
+        }
       }
+      target.push(igPage);
     }
   }
 
@@ -525,13 +576,9 @@ export class IGExporter {
         resource => resource.reference?.reference == referenceKey
       );
 
-      if (!(configResource?.omit === true)) {
+      if (configResource?.omit !== true) {
         newResource.name = configResource?.name ?? r.title ?? r.name ?? r.id;
         newResource.description = configResource?.description ?? r.description;
-        // Object.assign(newResource, {
-        //   name: configResource?.name ?? r.title ?? r.name ?? r.id,
-        //   description: configResource?.description ?? r.description
-        // });
         if (configResource?.fhirVersion?.length) {
           newResource.fhirVersion = configResource.fhirVersion;
         }
@@ -555,15 +602,13 @@ export class IGExporter {
     instances.forEach(instance => {
       const referenceKey = `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`;
       const newResource: ImplementationGuideDefinitionResource = {
-        reference: {
-          reference: referenceKey
-        }
+        reference: { reference: referenceKey }
       };
       const configResource = (this.config.resources ?? []).find(
         resource => resource.reference?.reference == referenceKey
       );
 
-      if (!(configResource?.omit === true)) {
+      if (configResource?.omit !== true) {
         newResource.name =
           configResource?.name ?? instance._instanceMeta.title ?? instance._instanceMeta.name;
         newResource.description = configResource?.description ?? instance._instanceMeta.description;
@@ -642,10 +687,12 @@ export class IGExporter {
               resource => resource.reference?.reference == referenceKey
             );
 
-            if (!(configResource?.omit === true)) {
+            if (configResource?.omit !== true) {
               const existingIndex = this.ig.definition.resource.findIndex(
                 r => r.reference.reference === referenceKey
               );
+              // If the user has provided a resource, it should override the generated resource.
+              // This can be helpful for working around cases where the generated resource has some incorrect values.
               const existingResource =
                 existingIndex >= 0 ? this.ig.definition.resource[existingIndex] : null;
               const existingIsExample =
@@ -834,12 +881,12 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   addPackageList(igPath: string): void {
-    if (this.pkg.config?.history) {
+    if (this.config.history) {
       const outputPath = path.join(igPath, 'package-list.json');
-      outputJSONSync(outputPath, this.pkg.config.history, { spaces: 2 });
+      outputJSONSync(outputPath, this.config.history, { spaces: 2 });
       logger.info('Generated package-list.json');
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
-    } else if (/^https?:\/\/hl7.org\//.test(this.pkg.config?.canonical)) {
+    } else if (/^https?:\/\/hl7.org\//.test(this.config.canonical)) {
       logger.warn(
         'HL7 IGs must have a package-list.json. Please define "history" in config.yaml to generate one.'
       );
