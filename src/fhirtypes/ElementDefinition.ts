@@ -457,7 +457,7 @@ export class ElementDefinition {
     }
 
     // Check to ensure max <= existing max
-    if (this.max != null && this.max !== '*' && maxInt > parseInt(this.max)) {
+    if (this.max != null && this.max !== '*' && (maxInt > parseInt(this.max) || isUnbounded)) {
       throw new WideningCardinalityError(this.min, this.max, min, max);
     }
 
