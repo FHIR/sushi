@@ -346,8 +346,8 @@ describe('ElementDefinition', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==');
-      expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
+      expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBeUndefined();
     });
 
@@ -355,8 +355,8 @@ describe('ElementDefinition', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==', true);
-      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
+      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.patternBase64Binary).toBeUndefined();
     });
 
@@ -364,17 +364,17 @@ describe('ElementDefinition', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==');
-      expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
+      expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(() => {
         udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=');
       }).toThrow(
-        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "d293IHNvbWVvbmUgZGVjb2RlZA==".'
+        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
       );
       expect(() => {
         udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=', true);
       }).toThrow(
-        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "d293IHNvbWVvbmUgZGVjb2RlZA==".'
+        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
       );
     });
 
@@ -382,12 +382,12 @@ describe('ElementDefinition', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==', true);
-      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
+      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(() => {
         udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=', true);
       }).toThrow(
-        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "d293IHNvbWVvbmUgZGVjb2RlZA==".'
+        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
       );
     });
 
@@ -395,10 +395,10 @@ describe('ElementDefinition', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==', true);
-      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('d293IHNvbWVvbmUgZGVjb2RlZA==');
+      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
+      expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(() => {
-        udiCarrierCarrierAIDC.fixValue('d293IHNvbWVvbmUgZGVjb2RlZA==');
+        udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       }).toThrow(
         'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedBase64Binary.'
       );
