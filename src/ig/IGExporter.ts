@@ -555,6 +555,9 @@ export class IGExporter {
   /**
    * Add each of the resources from the package to the ImplementationGuide JSON file.
    * Configuration may specify resources to omit.
+   *
+   * This function has similar operation to addPredefinedResources, and both should be
+   * analyzed when making changes to either.
    */
   private addResources(): void {
     const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
@@ -644,6 +647,9 @@ export class IGExporter {
    * This includes definitions in:
    * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
    * Based on: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input
+   *
+   * This function has similar operation to addResources, and both should be
+   * analyzed when making changes to either.
    *
    * @param {string} igPath - the path where the IG is exported to
    */
