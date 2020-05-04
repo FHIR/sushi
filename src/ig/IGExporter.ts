@@ -197,7 +197,7 @@ export class IGExporter {
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addStaticFiles(igPath: string): void {
+  addStaticFiles(igPath: string): void {
     const inputPath = path.join(__dirname, 'files');
     this.copyAsIs(inputPath, igPath, src => {
       // If in an IG Publisher context, do not include any of the publisher scripts
@@ -420,7 +420,7 @@ export class IGExporter {
    *
    * @param {string} igPath - the path where the IG is exported to
    */
-  private addIncludeContents(igPath: string): void {
+  addIncludeContents(igPath: string): void {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
     if (existsSync(includesPath)) {
       this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'));
