@@ -2,7 +2,12 @@ import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
 import { IGExporter } from '../../src/ig';
-import { StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
+import {
+  StructureDefinition,
+  InstanceDefinition,
+  CodeSystem,
+  ImplementationGuideDefinitionResource
+} from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Configuration, PackageJSON } from '../../src/fshtypes';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
@@ -15,18 +20,72 @@ describe('IGExporter', () => {
     let pkg: Package;
     let exporter: IGExporter;
     let tempOut: string;
+    let fixtures: string;
+    let packageJSON: PackageJSON;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    const pkgProfiles: StructureDefinition[] = [];
+    const pkgExtensions: StructureDefinition[] = [];
+    const pkgInstances: InstanceDefinition[] = [];
+    const pkgCodeSystems: CodeSystem[] = [];
 
     beforeAll(() => {
-      const defs = new FHIRDefinitions();
+      defs = new FHIRDefinitions();
       loadFromPath(
         path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
         'testPackage',
         defs
       );
-      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
       // several parts of the IG exporter still need packageJSON to function
-      const packageJSON: PackageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
-      const config: Configuration = {
+      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+
+      const profiles = path.join(fixtures, 'profiles');
+      fs.readdirSync(profiles).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(profiles, f)));
+          pkgProfiles.push(sd);
+        }
+      });
+      const extensions = path.join(fixtures, 'extensions');
+      fs.readdirSync(extensions).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(extensions, f)));
+          pkgExtensions.push(sd);
+        }
+      });
+      const examples = path.join(fixtures, 'examples');
+      fs.readdirSync(examples).forEach(f => {
+        if (f.endsWith('.json')) {
+          const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(examples, f)));
+          // since instance meta isn't encoded in the JSON, add some here (usually done in the FSH import)
+          if (instanceDef.id === 'patient-example-two') {
+            instanceDef._instanceMeta.title = 'Another Patient Example';
+            instanceDef._instanceMeta.description = 'Another example of a Patient';
+            instanceDef._instanceMeta.usage = 'Example';
+          }
+          if (instanceDef.id === 'capability-statement-example') {
+            instanceDef._instanceMeta.usage = 'Definition';
+          }
+          if (instanceDef.id === 'patient-example') {
+            instanceDef._instanceMeta.usage = 'Example'; // Default would be set to example in import
+          }
+          pkgInstances.push(instanceDef);
+        }
+      });
+
+      // Add CodeSystem directly because there is no fromJSON method on the class
+      const codeSystemDef = new CodeSystem();
+      codeSystemDef.id = 'sample-code-system';
+      codeSystemDef.name = 'SampleCodeSystem';
+      codeSystemDef.description = 'A code system description';
+      pkgCodeSystems.push(codeSystemDef);
+      tempOut = temp.mkdirSync('sushi-test');
+    });
+
+    beforeEach(() => {
+      config = {
         filePath: path.join(fixtures, 'config.yml'),
         id: 'sushi-test',
         canonical: 'http://hl7.org/fhir/sushi-test',
@@ -63,52 +122,15 @@ describe('IGExporter', () => {
             code: 'releaselabel',
             value: 'CI Build'
           }
-        ]
+        ],
+        history: {} // to suppress warning for HL7 IGs
       };
       pkg = new Package(packageJSON, config);
-      const profiles = path.join(fixtures, 'profiles');
-      fs.readdirSync(profiles).forEach(f => {
-        if (f.endsWith('.json')) {
-          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(profiles, f)));
-          pkg.profiles.push(sd);
-        }
-      });
-      const extensions = path.join(fixtures, 'extensions');
-      fs.readdirSync(extensions).forEach(f => {
-        if (f.endsWith('.json')) {
-          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(extensions, f)));
-          pkg.extensions.push(sd);
-        }
-      });
-      const examples = path.join(fixtures, 'examples');
-      fs.readdirSync(examples).forEach(f => {
-        if (f.endsWith('.json')) {
-          const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(examples, f)));
-          // since instance meta isn't encoded in the JSON, add some here (usually done in the FSH import)
-          if (instanceDef.id === 'patient-example-two') {
-            instanceDef._instanceMeta.title = 'Another Patient Example';
-            instanceDef._instanceMeta.description = 'Another example of a Patient';
-            instanceDef._instanceMeta.usage = 'Example';
-          }
-          if (instanceDef.id === 'capability-statement-example') {
-            instanceDef._instanceMeta.usage = 'Definition';
-          }
-          if (instanceDef.id === 'patient-example') {
-            instanceDef._instanceMeta.usage = 'Example'; // Default would be set to example in import
-          }
-          pkg.instances.push(instanceDef);
-        }
-      });
-
-      // Add CodeSystem directly because there is no fromJSON method on the class
-      const codeSystemDef = new CodeSystem();
-      codeSystemDef.id = 'sample-code-system';
-      codeSystemDef.name = 'SampleCodeSystem';
-      codeSystemDef.description = 'A code system description';
-      pkg.codeSystems.push(codeSystemDef);
+      pkg.profiles.push(...pkgProfiles);
+      pkg.extensions.push(...pkgExtensions);
+      pkg.instances.push(...pkgInstances);
+      pkg.codeSystems.push(...pkgCodeSystems);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
-      tempOut = temp.mkdirSync('sushi-test');
-      exporter.export(tempOut);
     });
 
     afterAll(() => {
@@ -116,6 +138,7 @@ describe('IGExporter', () => {
     });
 
     it('should generate an implementation guide for simple-ig', () => {
+      exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
@@ -259,6 +282,191 @@ describe('IGExporter', () => {
           ]
         }
       });
+    });
+
+    it('should override generated resource attributes with configured attributes', () => {
+      config.resources = [
+        {
+          reference: { reference: 'StructureDefinition/sample-observation' },
+          name: 'ConfiguredSampleObservation',
+          description: 'This is a specially configured description'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
+        (r: ImplementationGuideDefinitionResource) =>
+          r?.reference?.reference === 'StructureDefinition/sample-observation'
+      );
+      expect(sampleObservation).toEqual({
+        reference: { reference: 'StructureDefinition/sample-observation' },
+        name: 'ConfiguredSampleObservation',
+        description: 'This is a specially configured description',
+        exampleBoolean: false
+      });
+    });
+
+    it('should omit resources that are configured to be omitted', () => {
+      config.resources = [
+        {
+          reference: { reference: 'StructureDefinition/sample-observation' },
+          omit: true
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
+        (r: ImplementationGuideDefinitionResource) =>
+          r?.reference?.reference === 'StructureDefinition/sample-observation'
+      );
+      expect(sampleObservation).toBeUndefined();
+    });
+
+    it('should add resources that are only present in configuration', () => {
+      config.resources = [
+        {
+          reference: { reference: 'StructureDefinition/config-only-observation' },
+          name: 'ConfigOnlyObservation',
+          description: 'This resource is only in the configuration.'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const configOnlyObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
+        (r: ImplementationGuideDefinitionResource) =>
+          r?.reference?.reference === 'StructureDefinition/config-only-observation'
+      );
+      expect(configOnlyObservation).toEqual({
+        reference: {
+          reference: 'StructureDefinition/config-only-observation'
+        },
+        name: 'ConfigOnlyObservation',
+        description: 'This resource is only in the configuration.'
+      });
+    });
+
+    it('should create groups based on configured resource groupingId values', () => {
+      config.resources = [
+        {
+          reference: { reference: 'StructureDefinition/sample-patient' },
+          groupingId: 'MyPatientGroup'
+        },
+        {
+          reference: { reference: 'Patient/patient-example' },
+          groupingId: 'MyPatientGroup'
+        },
+        {
+          reference: { reference: 'StructureDefinition/sample-observation' },
+          groupingId: 'MyObservationGroup'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content.definition.grouping).toHaveLength(2);
+      expect(content.definition.grouping).toContainEqual({ name: 'MyPatientGroup' });
+      expect(content.definition.grouping).toContainEqual({ name: 'MyObservationGroup' });
+    });
+
+    it('should create groups for each configured group', () => {
+      config.groups = [
+        {
+          name: 'MyPatientGroup',
+          description: 'Group for some patient-related things.',
+          resources: ['StructureDefinition/sample-patient', 'Patient/patient-example']
+        },
+        {
+          name: 'MyObservationGroup',
+          description: 'Group for some observation-related things.',
+          resources: ['StructureDefinition/sample-observation']
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content.definition.grouping).toContainEqual({
+        name: 'MyPatientGroup',
+        description: 'Group for some patient-related things.'
+      });
+      expect(content.definition.grouping).toContainEqual({
+        name: 'MyObservationGroup',
+        description: 'Group for some observation-related things.'
+      });
+      const samplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
+        (r: ImplementationGuideDefinitionResource) =>
+          r?.reference?.reference === 'StructureDefinition/sample-patient'
+      );
+      expect(samplePatient.groupingId).toBe('MyPatientGroup');
+      const examplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
+        (r: ImplementationGuideDefinitionResource) =>
+          r?.reference?.reference === 'Patient/patient-example'
+      );
+      expect(examplePatient.groupingId).toBe('MyPatientGroup');
+      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
+        (r: ImplementationGuideDefinitionResource) =>
+          r?.reference?.reference === 'StructureDefinition/sample-observation'
+      );
+      expect(sampleObservation.groupingId).toBe('MyObservationGroup');
+    });
+
+    it('should log an error when a group is configured with a nonexistent resource', () => {
+      config.groups = [
+        {
+          name: 'BananaGroup',
+          description: 'Holds all the bananas.',
+          resources: ['StructureDefinition/sample-banana']
+        }
+      ];
+      exporter.export(tempOut);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /BananaGroup configured with nonexistent resource StructureDefinition\/sample-banana/s
+      );
+    });
+
+    it('should log an error when a resource has a groupingId, but a different group claims it', () => {
+      config.resources = [
+        {
+          reference: { reference: 'StructureDefinition/sample-patient' },
+          groupingId: 'Montagues'
+        }
+      ];
+      config.groups = [
+        {
+          name: 'Capulets',
+          resources: ['StructureDefinition/sample-patient']
+        }
+      ];
+      exporter.export(tempOut);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /StructureDefinition\/sample-patient configured with groupingId Montagues.*member of group Capulets/s
+      );
+    });
+
+    it('should log a warning when a resource is a member of a group and has a redundant groupingId', () => {
+      config.resources = [
+        {
+          reference: { reference: 'StructureDefinition/sample-patient' },
+          groupingId: 'JustOneGroup'
+        }
+      ];
+      config.groups = [
+        {
+          name: 'JustOneGroup',
+          resources: ['StructureDefinition/sample-patient']
+        }
+      ];
+      exporter.export(tempOut);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /StructureDefinition\/sample-patient is listed as a member of group JustOneGroup.*does not need a groupingId/s
+      );
     });
   });
 

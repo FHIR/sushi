@@ -71,6 +71,8 @@ export class IGExporter {
     this.initIG();
     this.addResources();
     this.addPredefinedResources(outPath);
+    this.addConfiguredResources();
+    this.addConfiguredGroups();
     this.addStaticFiles(outPath);
     this.addIndex(outPath);
     if (!this.config.pages?.length) {
@@ -140,12 +142,6 @@ export class IGExporter {
         value: `${this.config.canonical}/history.html`
       });
     }
-    // add non-omitted resources
-    this.config.resources?.forEach(resource => {
-      if (!resource.omit) {
-        this.ig.definition.resource.push(resource);
-      }
-    });
     // check for some optional properties and add them if present
     if (this.config.useContext?.length) {
       this.ig.useContext = this.config.useContext;
@@ -584,6 +580,7 @@ export class IGExporter {
         }
         if (configResource?.groupingId) {
           newResource.groupingId = configResource.groupingId;
+          this.addGroup(newResource.groupingId);
         }
         if (configResource?.exampleCanonical) {
           newResource.exampleCanonical = configResource.exampleCanonical;
@@ -617,6 +614,7 @@ export class IGExporter {
         }
         if (configResource?.groupingId) {
           newResource.groupingId = configResource.groupingId;
+          this.addGroup(newResource.groupingId);
         }
         if (configResource?.exampleCanonical) {
           newResource.exampleCanonical = configResource.exampleCanonical;
@@ -706,6 +704,7 @@ export class IGExporter {
               }
               if (configResource?.groupingId) {
                 newResource.groupingId = configResource.groupingId;
+                this.addGroup(newResource.groupingId);
               }
               if (pathEnd === 'examples') {
                 newResource.name = configResource?.name ?? existingName ?? resourceJSON.id;
@@ -760,6 +759,83 @@ export class IGExporter {
               this.copyAsIs(inputPath, outputPath);
             }
           }
+        }
+      }
+    }
+  }
+
+  /**
+   * Adds resources that are present only in the configuration.
+   * If a configured resource is already in the implementation guide,
+   * there is no need to add it again.
+   */
+  private addConfiguredResources(): void {
+    for (const resource of this.config.resources ?? []) {
+      if (
+        !resource.omit &&
+        this.ig.definition.resource.findIndex(
+          r => resource.reference?.reference === r.reference?.reference
+        ) === -1
+      ) {
+        this.ig.definition.resource.push(resource);
+      }
+    }
+  }
+
+  /**
+   * Adds or updates a group in the implementation guide.
+   *
+   * @param {string} name - name of the group, used as unique identifier
+   * @param {string} description - optional description of the group
+   */
+  private addGroup(name: string, description?: string): void {
+    if (!this.ig.definition.grouping) {
+      this.ig.definition.grouping = [];
+    }
+    const existingGroup = this.ig.definition.grouping.find(group => group.name === name);
+    if (existingGroup) {
+      if (description) {
+        existingGroup.description = description;
+      }
+    } else {
+      this.ig.definition.grouping.push({
+        name: name,
+        ...(description && { description })
+      });
+    }
+  }
+
+  /**
+   * Adds groups listed in the configuration to the implementation guide.
+   * Updates the groupingId on resources listed as members of a group.
+   * Shows errors if a listed resource does not exist, or if there are conflicting
+   * configured values for groupingId.
+   * Shows a warning if a groupingId is given in resource configuration and
+   * that resource is listed in the group with that groupingId.
+   */
+
+  private addConfiguredGroups(): void {
+    for (const group of this.config.groups ?? []) {
+      this.addGroup(group.name, group.description);
+      for (const resourceKey of group.resources) {
+        const existingResource = this.ig.definition.resource.find(
+          resource => resource.reference?.reference === resourceKey
+        );
+        if (!existingResource) {
+          logger.error(`Group ${group.name} configured with nonexistent resource ${resourceKey}`);
+        } else {
+          if (existingResource.groupingId) {
+            if (existingResource.groupingId === group.name) {
+              logger.warn(
+                `Resource ${resourceKey} is listed as a member of group ${group.name}, and does not need a groupingId.`
+              );
+            } else {
+              logger.error(
+                `Resource ${resourceKey} configured with groupingId ${existingResource.groupingId}, but listed as member of group ${group.name}.`
+              );
+            }
+          }
+          existingResource.groupingId = group.name;
         }
       }
     }
