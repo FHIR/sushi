@@ -105,7 +105,7 @@ export class IGExporter {
       text: this.config.text,
       contained: this.config.contained,
       modifierExtension: this.config.modifierExtension,
-      url: this.config.url ?? `${this.config.canonical}/ImplementationGuide/${this.config.name}`,
+      url: this.config.url ?? `${this.config.canonical}/ImplementationGuide/${this.config.id}`,
       version: this.config.version,
       // name must be alphanumeric (allowing underscore as well)
       name: this.config.name.replace(/[^A-Za-z0-9_]/g, ''),
