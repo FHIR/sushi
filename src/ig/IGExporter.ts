@@ -74,6 +74,7 @@ export class IGExporter {
     this.addOtherPageContent(outPath);
     this.addImages(outPath);
     this.addIncludeContents(outPath);
+    this.addMenuXML(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
     this.addIgnoreWarningsFile(outPath);
@@ -197,7 +198,7 @@ export class IGExporter {
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  addStaticFiles(igPath: string): void {
+  private addStaticFiles(igPath: string): void {
     const inputPath = path.join(__dirname, 'files');
     this.copyAsIs(inputPath, igPath, src => {
       // If in an IG Publisher context, do not include any of the publisher scripts
@@ -207,6 +208,8 @@ export class IGExporter {
         if (path.parse(src).base.startsWith('_updatePublisher.')) return false;
         return true;
       }
+      // Filter out menu because handled separately
+      if (path.parse(src).base.startsWith('menu.xml')) return false;
       return true;
     });
 
@@ -416,26 +419,56 @@ export class IGExporter {
 
   /**
    * Adds any user provided includes files
-   * A user provided menu.xml will be in this folder. If one is not provided, the static one SUSHI provides will be used.
+   * A user provided menu.xml may be in this folder, but do not handle it here. It is handled separately in addMenuXML.
    *
    * @param {string} igPath - the path where the IG is exported to
    */
-  addIncludeContents(igPath: string): void {
+  private addIncludeContents(igPath: string): void {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
     if (existsSync(includesPath)) {
-      this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'));
+      this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'), src => {
+        // Filter out menu.xml because handled separately
+        if (path.parse(src).base.startsWith('menu.xml')) return false;
+        return true;
+      });
+    }
+  }
+
+  /**
+   * Adds menu.xml
+   * A user can define a menu in config.yaml or provide one in ig-data/input/includes.
+   * If neither is provided, the static one SUSHI provides will be used.
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  addMenuXML(igPath: string): void {
+    const menuXMLPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+
+    // If user did not provide a menu.xml file and config.menu is not defined, use SUSHI's basic menu.
+    if (!existsSync(menuXMLPath) && !this.pkg.config?.menu) {
+      const inputPath = path.join(__dirname, 'files', 'input', 'includes', 'menu.xml');
+      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
+      this.copyAsIs(inputPath, outputPath);
+      return;
     }
 
-    const menuXMLPath = path.join(includesPath, 'menu.xml');
+    // If user provided file and no config, copy over the file.
+    if (existsSync(menuXMLPath) && !this.pkg.config?.menu) {
+      this.copyWithWarningText(menuXMLPath, path.join(igPath, 'input', 'includes', 'menu.xml'));
+      return;
+    }
+
+    // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLPath) && this.pkg.config?.menu) {
       logger.warn(
         'An IG menu is configured in config.yaml and provided in a menu.xml file in the ' +
-          'ig-data/input/includes folder. Only the menu.xml file will be used to generate the IG menu.'
+          'ig-data/input/includes folder. Only the menu configured by config.yaml will ' +
+          'used to generate the IG menu. To provide your own menu.xml, remove the menu ' +
+          'attribute in config.yaml.'
       );
-      return; // menu.xml file is already copied over with full includes folder above
     }
 
-    // If menu is not specified in config, static file is already copied
+    // Always use config menu if defined
     if (this.pkg.config?.menu) {
       let menu = '<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">\n';
       this.pkg.config?.menu.forEach(item => {
@@ -458,6 +491,14 @@ export class IGExporter {
     }
   }
 
+  /**
+   * Build individual menu item for menu.xml file. An item could contain a submenu
+   *
+   * @param {ConfigurationMenuItem} item - the menu item to be rendered
+   * @param {number} spaces - the base number of spaces to indent
+   * @returns {string} - the piece of XML relating to the given menu item
+   */
+
   private buildMenuItem(item: ConfigurationMenuItem, spaces: number): string {
     const prefixSpaces = ' '.repeat(spaces);
     let menuItem = '';
@@ -476,13 +517,20 @@ export class IGExporter {
     return menuItem;
   }
 
+  /**
+   * Build a submenu for an item for menu.xml.
+   *
+   * @param item - the menu item with submenu to be rendered
+   * @param spaces - the base number of spaces to indent
+   * @returns {string} - the piece of XML relating to the submenu
+   */
   private buildSubMenu(item: ConfigurationMenuItem, spaces: number): string {
     const prefixSpaces = ' '.repeat(spaces);
     let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${item.name}\n`;
     subMenu += `${prefixSpaces}${'  '}<b class="caret"></b>\n`;
     subMenu += `${prefixSpaces}</a>\n`;
     subMenu += `${prefixSpaces}<ul class="dropdown-menu">\n`;
-    item.subMenu.forEach((subItem: ConfigurationMenuItem): void => {
+    item.subMenu?.forEach((subItem: ConfigurationMenuItem): void => {
       if (subItem.subMenu) {
         logger.warn(
           `The ${subItem.name} menu item specifies a sub-menu. The IG template currently only supports two levels of menus. ` +
@@ -855,15 +903,24 @@ export class IGExporter {
    * @param inputPath {string} - the input path to copy
    * @param outputPath {string} - the output path to copy to
    */
-  private copyWithWarningText(inputPath: string, outputPath: string): void {
+  private copyWithWarningText(
+    inputPath: string,
+    outputPath: string,
+    filter?: (src: string) => boolean
+  ): void {
     if (!existsSync(inputPath)) {
       return;
     }
 
     if (statSync(inputPath).isDirectory()) {
       readdirSync(inputPath).forEach(child => {
-        this.copyWithWarningText(path.join(inputPath, child), path.join(outputPath, child));
+        this.copyWithWarningText(path.join(inputPath, child), path.join(outputPath, child), filter);
       });
+      return;
+    }
+
+    // Filtered out, don't copy
+    if (filter && !filter(inputPath)) {
       return;
     }
 
