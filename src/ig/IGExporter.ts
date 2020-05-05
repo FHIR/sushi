@@ -819,6 +819,14 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   addPackageList(igPath: string): void {
+    const packageListPath = path.join(this.igDataPath, '..', 'package-list.json');
+    if (existsSync(packageListPath)) {
+      logger.warn(
+        'A package-list.json file was provided. This file will not be included in SUSHI output. ' +
+          'To create a package-list.json file, define "history" in config.yaml.'
+      );
+    }
+
     if (this.pkg.config?.history) {
       const outputPath = path.join(igPath, 'package-list.json');
       outputJSONSync(outputPath, this.pkg.config.history, { spaces: 2 });
