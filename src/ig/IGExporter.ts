@@ -463,8 +463,8 @@ export class IGExporter {
       logger.warn(
         'An IG menu is configured in config.yaml and provided in a menu.xml file in the ' +
           'ig-data/input/includes folder. Only the menu configured by config.yaml will ' +
-          'used to generate the IG menu. To provide your own menu.xml, remove the menu ' +
-          'attribute in config.yaml.'
+          'be used to generate the IG menu. Please remove the menu.xml file from the ig-data folder. ' +
+          'To provide your own menu.xml, remove the "menu" attribute in config.yaml.'
       );
     }
 
@@ -482,7 +482,7 @@ export class IGExporter {
         `<!-- ${path.parse(outputPath).base} {% comment %}`,
         '{% endcomment %} -->',
         [
-          'To change the contents of this file, edit the `menu` attribute in the tank config.yaml file',
+          'To change the contents of this file, edit the "menu" attribute in the tank config.yaml file',
           'or provide your own menu.xml in the ig-data/input/includes folder'
         ]
       );
