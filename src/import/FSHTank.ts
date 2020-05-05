@@ -12,6 +12,7 @@ import {
 import flatMap from 'lodash/flatMap';
 import { Config } from '../fshtypes/Config';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
+import { CaretValueRule } from '../fshtypes/rules';
 
 export class FSHTank implements Fishable {
   constructor(
@@ -204,16 +205,39 @@ export class FSHTank implements Fishable {
         name: result.name
       };
       if (result instanceof Profile || result instanceof Extension) {
-        meta.url = `${this.config.canonical}/StructureDefinition/${result.id}`;
+        meta.url = this.getMetadataUrl(result, 'StructureDefinition');
         meta.parent = result.parent;
       } else if (result instanceof FshValueSet) {
-        meta.url = `${this.config.canonical}/ValueSet/${result.id}`;
+        meta.url = this.getMetadataUrl(result, 'ValueSet');
       } else if (result instanceof FshCodeSystem) {
-        meta.url = `${this.config.canonical}/CodeSystem/${result.id}`;
+        meta.url = this.getMetadataUrl(result, 'CodeSystem');
       }
       return meta;
     }
     return;
+  }
+
+  /**
+   * Determines the URL to use to refer to a fished-up FHIR entity.
+   * If a caret value rule has been applied to the entity's url, use the
+   * value specified in that rule.
+   * Otherwise, use the default url based on the configured canonical url.
+   *
+   * @param result - The FHIR entity that was fished up
+   * @param fhirType - The entity's type as a string for building the default URL
+   * @returns {string} - The URL to use to refer to the FHIR entity
+   */
+  getMetadataUrl(
+    result: Profile | Extension | FshValueSet | FshCodeSystem,
+    fhirType: string
+  ): string {
+    for (const rule of result.rules) {
+      if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url') {
+        // this value should only be a string, but that might change at some point
+        return rule.value.toString();
+      }
+    }
+    return `${this.config.canonical}/${fhirType}/${result.id}`;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

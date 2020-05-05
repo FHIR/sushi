@@ -580,4 +580,50 @@ describe('ValueSetExporter', () => {
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
+
+  it('should use the url specified in a CaretValueRule when referencing a named value set', () => {
+    const lunchVS = new FshValueSet('LunchVS');
+    const lunchFilterComponent = new ValueSetFilterComponent(true);
+    lunchFilterComponent.from = {
+      valueSets: ['SandwichVS']
+    };
+    lunchVS.components.push(lunchFilterComponent);
+
+    const sandwichVS = new FshValueSet('SandwichVS');
+    const sandwichRule = new CaretValueRule('');
+    sandwichRule.caretPath = 'url';
+    sandwichRule.value = 'http://sandwich.org/ValueSet/SandwichVS';
+    sandwichVS.rules.push(sandwichRule);
+
+    doc.valueSets.set(lunchVS.name, lunchVS);
+    doc.valueSets.set(sandwichVS.name, sandwichVS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(2);
+    expect(exported[0].compose.include[0].valueSet[0]).toBe(
+      'http://sandwich.org/ValueSet/SandwichVS'
+    );
+  });
+
+  it('should use the url specified in a CaretValueRule when referencing a named code system', () => {
+    const lunchVS = new FshValueSet('LunchVS');
+    const lunchFilterComponent = new ValueSetFilterComponent(true);
+    lunchFilterComponent.from = {
+      system: 'FoodCS'
+    };
+    lunchVS.components.push(lunchFilterComponent);
+
+    const foodCS = new FshCodeSystem('FoodCS');
+    const foodRule = new CaretValueRule('');
+    foodRule.caretPath = 'url';
+    foodRule.value = 'http://food.net/CodeSystem/FoodCS';
+    foodCS.rules.push(foodRule);
+
+    doc.valueSets.set(lunchVS.name, lunchVS);
+    doc.codeSystems.set(foodCS.name, foodCS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].compose.include[0].system).toBe('http://food.net/CodeSystem/FoodCS');
+  });
 });
