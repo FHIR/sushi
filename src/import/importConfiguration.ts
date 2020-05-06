@@ -22,7 +22,8 @@ import {
   ConfigurationResource,
   ConfigurationMenuItem,
   ConfigurationHistory,
-  ConfigurationHistoryItem
+  ConfigurationHistoryItem,
+  ConfigurationMenu
 } from '../fshtypes/Configuration';
 import { logger } from '../utils/FSHLogger';
 import { parseCodeLexeme } from './parseCodeLexeme';
@@ -632,19 +633,23 @@ function parseTemplates(
   });
 }
 
-function parseMenu(yamlMenu: YAMLConfigurationMenuTree): ConfigurationMenuItem[] {
+function parseMenu(yamlMenu: YAMLConfigurationMenuTree): ConfigurationMenu {
   if (yamlMenu == null) {
     return;
   }
-  return Object.entries(yamlMenu).map(([name, value]) => {
-    const item: ConfigurationMenuItem = { name };
-    if (typeof value === 'string') {
-      item.url = value;
-    } else {
-      item.subMenu = parseMenu(value);
-    }
-    return item;
-  });
+  if (typeof yamlMenu === 'string') {
+    return yamlMenu;
+  } else {
+    return Object.entries(yamlMenu).map(([name, value]) => {
+      const item: ConfigurationMenuItem = { name };
+      if (typeof value === 'string') {
+        item.url = value;
+      } else {
+        item.subMenu = parseMenu(value) as ConfigurationMenuItem[];
+      }
+      return item;
+    });
+  }
 }
 
 function parseHistory(yamlConfig: YAMLConfiguration, file: string): ConfigurationHistory {

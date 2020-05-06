@@ -1,0 +1,5 @@
+<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">
+  <li>
+    <a href="index.html">My fancy menu not at the default location</a>
+  </li>
+</ul>

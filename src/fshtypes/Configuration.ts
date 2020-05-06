@@ -111,7 +111,7 @@ export type Configuration = {
   // TO CONSIDER: If no menu data is provided, can we generate the menu based on the pages order
   // or should we just generate a very standard menu (since there may be too many pages to fit in
   // a menu)?
-  menu?: ConfigurationMenuItem[];
+  menu?: ConfigurationMenu;
 
   // The history property corresponds to package-list.json. SUSHI will use the existing top-level
   // properties in its config to populate the top-level package-list.json properties: package-id,
@@ -135,6 +135,8 @@ export type ConfigurationGroup = {
 };
 
 export type ConfigurationResource = ImplementationGuideDefinitionResource & { omit?: boolean };
+
+export type ConfigurationMenu = ConfigurationMenuItem[] | string;
 
 export type ConfigurationMenuItem = {
   name: string;

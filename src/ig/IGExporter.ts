@@ -441,52 +441,77 @@ export class IGExporter {
    * @param {string} igPath - the path where the IG is exported to
    */
   addMenuXML(igPath: string): void {
-    const menuXMLPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+    const menuXMLDefaultPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+    let menuXMLProvidedPath;
+    if (typeof this.pkg.config?.menu === 'string') {
+      menuXMLProvidedPath = path.join(this.configPath, '..', this.pkg.config?.menu);
+    }
+    const menuXMLOutputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
 
     // If user did not provide a menu.xml file and config.menu is not defined, use SUSHI's basic menu.
-    if (!existsSync(menuXMLPath) && !this.pkg.config?.menu) {
+    if (!existsSync(menuXMLDefaultPath) && !this.pkg.config?.menu) {
       const inputPath = path.join(__dirname, 'files', 'input', 'includes', 'menu.xml');
-      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
-      this.copyAsIs(inputPath, outputPath);
+      this.copyAsIs(inputPath, menuXMLOutputPath);
       return;
     }
 
-    // If user provided file and no config, copy over the file.
-    if (existsSync(menuXMLPath) && !this.pkg.config?.menu) {
-      this.copyWithWarningText(menuXMLPath, path.join(igPath, 'input', 'includes', 'menu.xml'));
+    // If user provided file in default location and no config, copy over the file.
+    if (existsSync(menuXMLDefaultPath) && !this.pkg.config?.menu) {
+      this.copyWithWarningText(menuXMLDefaultPath, menuXMLOutputPath);
+      logger.warn(
+        'A menu.xml file was found in the ig-data/input/includes folder. ' +
+          'Please specify the location of this file in the "menu" attribute ' +
+          'in config.yaml (ex: menu: ig-data/input/includes/menu.xml).'
+      );
       return;
     }
 
     // If user provided file and config, log a warning but prefer the config.
-    if (existsSync(menuXMLPath) && this.pkg.config?.menu) {
-      logger.warn(
-        'An IG menu is configured in config.yaml and provided in a menu.xml file in the ' +
-          'ig-data/input/includes folder. Only the menu configured by config.yaml will ' +
-          'be used to generate the IG menu. Please remove the menu.xml file from the ig-data folder. ' +
-          'To provide your own menu.xml, remove the "menu" attribute in config.yaml.'
-      );
+    if (
+      existsSync(menuXMLDefaultPath) &&
+      this.pkg.config?.menu &&
+      (menuXMLDefaultPath !== menuXMLProvidedPath || typeof this.pkg.config?.menu !== 'string')
+    ) {
+      const warningMessage =
+        'An IG menu is configured in config.yaml and provided in ig-data/input/includes/menu.xml. ' +
+        'Only the menu configured by config.yaml will be used to build the IG menu. ' +
+        'Remove the menu in ig-data/input/includes.';
+      logger.warn(warningMessage);
     }
 
     // Always use config menu if defined
     if (this.pkg.config?.menu) {
-      let menu = `<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">${EOL}`;
-      this.pkg.config?.menu.forEach(item => {
-        menu += this.buildMenuItem(item, 2);
-      });
-      menu += '</ul>';
+      if (typeof this.pkg.config?.menu === 'string') {
+        // Copy over specified menu
+        if (existsSync(menuXMLProvidedPath)) {
+          this.copyWithWarningText(
+            path.join(this.igDataPath, '..', this.pkg.config?.menu),
+            menuXMLOutputPath
+          );
+        } else {
+          logger.error(
+            'A menu.xml file was specified by path in config.yaml but was not found at the given path.'
+          );
+        }
+      } else {
+        // type is ConfigurationMenuItem[] so build XML file
+        let menu = `<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">${EOL}`;
+        this.pkg.config?.menu.forEach(item => {
+          menu += this.buildMenuItem(item, 2);
+        });
+        menu += '</ul>';
 
-      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
-
-      const warning = warningBlock(
-        `<!-- ${path.parse(outputPath).base} {% comment %}`,
-        '{% endcomment %} -->',
-        [
-          'To change the contents of this file, edit the "menu" attribute in the tank config.yaml file',
-          'or provide your own menu.xml in the ig-data/input/includes folder'
-        ]
-      );
-      outputFileSync(outputPath, `${warning}${menu}`, 'utf8');
-      this.updateOutputLog(outputPath, [this.configPath], 'generated');
+        const warning = warningBlock(
+          `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
+          '{% endcomment %} -->',
+          [
+            'To change the contents of this file, edit the "menu" attribute in the tank config.yaml file',
+            'or provide your own menu.xml in the ig-data/input/includes folder'
+          ]
+        );
+        outputFileSync(menuXMLOutputPath, `${warning}${menu}`, 'utf8');
+        this.updateOutputLog(menuXMLOutputPath, [this.configPath], 'generated');
+      }
     }
   }
 
