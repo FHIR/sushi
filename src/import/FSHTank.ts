@@ -223,8 +223,8 @@ export class FSHTank implements Fishable {
    * value specified in that rule.
    * Otherwise, use the default url based on the configured canonical url.
    *
-   * @param result - The FHIR entity that was fished up
-   * @param fhirType - The entity's type as a string for building the default URL
+   * @param {Profile | Extension | FshValueSet | FshCodeSystem} result - The FHIR entity that was fished up
+   * @param {string} fhirType - The entity's type as a string for building the default URL
    * @returns {string} - The URL to use to refer to the FHIR entity
    */
   getMetadataUrl(
