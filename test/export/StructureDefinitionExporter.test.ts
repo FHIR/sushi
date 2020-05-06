@@ -722,6 +722,29 @@ describe('StructureDefinitionExporter', () => {
     expect(element.binding.strength).toBe('extensible');
   });
 
+  it('should use the url specified in a CaretValueRule when referencing a named value set', () => {
+    const customCategoriesVS = new FshValueSet('CustomCategories');
+    customCategoriesVS.id = 'custom-categories';
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'url';
+    caretValueRule.value = 'http://different-url.com/ValueSet/custom-categories';
+    customCategoriesVS.rules.push(caretValueRule);
+    doc.valueSets.set('CustomCategories', customCategoriesVS);
+
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    const vsRule = new ValueSetRule('category');
+    vsRule.valueSet = 'CustomCategories';
+    vsRule.strength = 'extensible';
+    profile.rules.push(vsRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const element = sd.findElement('Observation.category');
+    expect(element.binding.valueSet).toBe('http://different-url.com/ValueSet/custom-categories');
+    expect(element.binding.strength).toBe('extensible');
+  });
+
   it('should not apply a value set rule on an element that cannot support it', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -1383,6 +1406,31 @@ describe('StructureDefinitionExporter', () => {
       {
         code: 'bright',
         system: 'http://example.com/CodeSystem/Visible'
+      }
+    ]);
+  });
+
+  it('should use the url specified in a CaretValueRule when referencing a named code system', () => {
+    const profile = new Profile('LightObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('valueCodeableConcept');
+    rule.fixedValue = new FshCode('bright', 'Visible');
+    profile.rules.push(rule);
+
+    const visibleSystem = new FshCodeSystem('Visible');
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'url';
+    caretValueRule.value = 'http://special-domain.com/CodeSystem/Visible';
+    visibleSystem.rules.push(caretValueRule);
+    doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+    expect(fixedElement.patternCodeableConcept.coding).toEqual([
+      {
+        code: 'bright',
+        system: 'http://special-domain.com/CodeSystem/Visible'
       }
     ]);
   });
