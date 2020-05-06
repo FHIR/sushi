@@ -1,5 +1,5 @@
 export const simpleMenuXMLContent = `
-<ul xmlns=\"http://www.w3.org/1999/xhtml\" class=\"nav navbar-nav\">
+<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">
   <li>
     <a href="animals.html">Animals</a>
   </li>
