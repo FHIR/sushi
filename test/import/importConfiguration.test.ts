@@ -1695,11 +1695,13 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.template).toBe('hl7.fhir.template#0.0.5');
     });
-    it('should report an error if template is missing', () => {
+    it('should report a warning if template is missing and unused properties are given', () => {
       delete minYAML.template;
+      minYAML.menu = { Home: 'index.html' };
+      minYAML.contained = [{ resourceType: 'Patient' }];
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Configuration missing required property: template\s*File: test-config\.yaml/
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /The following properties are unused and only relevant for IG creation: contained, parameters, menu.*File: test-config.yaml/s
       );
       expect(config.template).toBeUndefined();
     });
@@ -1729,13 +1731,19 @@ describe('importConfiguration', () => {
       config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
     });
-    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+    it('should report an error if copyrightYear/copyrightyear is missing and template is given', () => {
       delete minYAML.copyrightYear;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Configuration missing required property: copyrightYear\s*File: test-config\.yaml/
       );
       expect(config.parameters.find(p => p.code === 'copyrightYear')).toBeUndefined();
+    });
+    it('should not report an error if copyrightYear/copyrightyear is missing and template is missing', () => {
+      delete minYAML.copyrightYear;
+      delete minYAML.template;
+      importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
@@ -1752,13 +1760,19 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU2' });
     });
-    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+    it('should report an error if releaseLabel/releaselabel is missing and template is given', () => {
       delete minYAML.releaseLabel;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Configuration missing required property: releaseLabel\s*File: test-config\.yaml/
       );
       expect(config.parameters.find(p => p.code === 'releaseLabel')).toBeUndefined();
+    });
+    it('should not report an error if releaseLabel/releaselabel is missing and template is missing', () => {
+      delete minYAML.releaseLabel;
+      delete minYAML.template;
+      importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 

@@ -47,6 +47,18 @@ import {
 import { FshCode } from '../fshtypes';
 
 const MINIMAL_CONFIG_PROPERTIES = ['id', 'version', 'canonical', 'fhirVersion'];
+// Properties that are only relevant when an IG is going to be generated from output, and have no informational purpose
+const IG_ONLY_PROPERTIES = [
+  'contained',
+  'extension',
+  'modifierExtension',
+  'groups',
+  'resources',
+  'pages',
+  'parameters',
+  'templates',
+  'menu'
+];
 
 /**
  * Imports the YAML Configuration format (as a YAML string or already parsed JSON) and returns
@@ -80,6 +92,9 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     );
     throw new Error('Minimal config not met');
   }
+
+  // If a template is given, we will generate the output necessary for IG generation
+  const generateIG = yaml.template != null;
 
   const config: Configuration = {
     filePath: file,
@@ -120,15 +135,30 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     groups: parseGroups(yaml.groups),
     resources: parseResources(yaml.resources, file),
     pages: parsePages(yaml.pages, file),
-    parameters: parseParameters(yaml, file),
+    parameters: parseParameters(yaml, generateIG, file),
     templates: parseTemplates(yaml.templates, file),
-    template: required(yaml.template, 'template', file),
+    template: yaml.template,
     menu: parseMenu(yaml.menu),
     history: parseHistory(yaml, file)
   };
 
   // Remove all undefined variables (mainly helpful for test assertions)
   removeUndefinedValues(config);
+
+  if (!generateIG) {
+    // If no IG is being generated, emit warning when IG specific properties are used in config
+    const unusedProperties = Object.keys(config).filter((p: keyof Configuration) =>
+      IG_ONLY_PROPERTIES.includes(p)
+    );
+    if (unusedProperties.length > 0) {
+      logger.warn(
+        `No template property is specified, so no output specific to IG creation will be generated. The following properties are unused and only relevant for IG creation: ${unusedProperties.join(
+          ', '
+        )}.`,
+        { file }
+      );
+    }
+  }
 
   return config;
 }
@@ -592,19 +622,28 @@ function parsePage(
 
 function parseParameters(
   yamlConfig: YAMLConfiguration,
+  generateIG: boolean,
   file: string
 ): ImplementationGuideDefinitionParameter[] {
   const parameters: ImplementationGuideDefinitionParameter[] = [];
-  if (required(yamlConfig.copyrightYear ?? yamlConfig.copyrightyear, 'copyrightYear', file)) {
+  // copyrightYear and releaseLabel are only required when generating an IG
+  const copyrightYear = generateIG
+    ? required(yamlConfig.copyrightYear ?? yamlConfig.copyrightyear, 'copyrightYear', file)
+    : yamlConfig.copyrightYear ?? yamlConfig.copyrightyear;
+
+  const releaseLabel = generateIG
+    ? required(yamlConfig.releaseLabel ?? yamlConfig.releaselabel, 'releaseLabel', file)
+    : yamlConfig.releaseLabel ?? yamlConfig.releaselabel;
+  if (copyrightYear) {
     parameters.push({
       code: 'copyrightyear',
-      value: `${yamlConfig.copyrightYear ?? yamlConfig.copyrightyear}`
+      value: copyrightYear.toString()
     });
   }
-  if (required(yamlConfig.releaseLabel ?? yamlConfig.releaselabel, 'releaseLabel', file)) {
+  if (releaseLabel) {
     parameters.push({
       code: 'releaselabel',
-      value: `${yamlConfig.releaseLabel ?? yamlConfig.releaselabel}`
+      value: releaseLabel
     });
   }
   if (yamlConfig.parameters) {

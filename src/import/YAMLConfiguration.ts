@@ -134,7 +134,7 @@ export type YAMLConfiguration = {
 
   // The template property will be copied into the ig.ini file. If the value of template is "none",
   // then only the resources will be generated (with no supporting ImplementationGuide sources).
-  template: string;
+  template?: string;
 
   // The following two lines correspond to items that used to be in ig.ini but were recently moved
   // to IG.definition.parameter. For consistency within this file, the names are represented using
