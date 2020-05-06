@@ -121,7 +121,7 @@ export class InstanceExporter implements Fishable {
         // fixable descendents, and fixable descenendents of its parents. A fixable descendent is a 1..n direct child
         // or a fixable descendent of such a child
         const parents = element.getAllParents();
-        const associatedElements = [element, ...element.getFixableDescendents(), ...parents];
+        const associatedElements = [...element.getFixableDescendents(), ...parents];
         parents.map(p => p.getFixableDescendents()).forEach(pd => associatedElements.push(...pd));
 
         for (const associatedEl of associatedElements) {

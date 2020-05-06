@@ -936,6 +936,32 @@ describe('StructureDefinition', () => {
       expect(pathParts[0]).toEqual({ primitive: true, base: 'version' });
     });
 
+    it('should allow fixing the same instance value over an existing pattern[x]', () => {
+      const method = respRate.findElement('Observation.method');
+      method.patternCodeableConcept = { coding: [{ system: 'http://system.com', code: 'foo' }] };
+      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        'method',
+        new FshCode('foo', 'http://system.com'),
+        fisher
+      );
+      expect(fixedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
+      expect(pathParts.length).toBe(1);
+      expect(pathParts[0]).toEqual({ base: 'method' });
+    });
+
+    it('should allow fixing the same instance value over an existing fixed[x]', () => {
+      const method = respRate.findElement('Observation.method');
+      method.fixedCodeableConcept = { coding: [{ system: 'http://system.com', code: 'foo' }] };
+      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        'method',
+        new FshCode('foo', 'http://system.com'),
+        fisher
+      );
+      expect(fixedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
+      expect(pathParts.length).toBe(1);
+      expect(pathParts[0]).toEqual({ base: 'method' });
+    });
+
     // Invalid paths
     it('should not allow fixing an instance value with an incorrect path', () => {
       expect(() => {

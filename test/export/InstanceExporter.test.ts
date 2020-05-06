@@ -233,12 +233,24 @@ describe('InstanceExporter', () => {
     });
 
     // Fixing top level elements
-    it('should fix top level elements that are fixed on the Structure Definition', () => {
+    it('should fix top level elements that are fixed by pattern[x] on the Structure Definition', () => {
       const cardRule = new CardRule('active');
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
+      patient.rules.push(fixedValRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.active).toEqual(true);
+    });
+
+    it('should fix top level elements that are fixed by fixed[x] on the Structure Definition', () => {
+      const cardRule = new CardRule('active');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
+      const fixedValRule = new FixedValueRule('active');
+      fixedValRule.fixedValue = true;
+      fixedValRule.exactly = true;
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.active).toEqual(true);
@@ -369,17 +381,21 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix an element to a value the same as the fixed value on the Structure Definition', () => {
+      loggerSpy.reset();
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
+      fixedValRule.exactly = true;
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new FixedValueRule('active');
       instanceFixedValRule.fixedValue = true;
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.active).toEqual(true);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should fix an element to a value the same as the fixed pattern on the Structure Definition', () => {
+      loggerSpy.reset();
       const fixedValRule = new FixedValueRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
@@ -392,6 +408,7 @@ describe('InstanceExporter', () => {
       expect(exported.maritalStatus).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
       });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should fix an element to a value that is a superset of the fixed pattern on the Structure Definition', () => {

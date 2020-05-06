@@ -148,6 +148,16 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(status);
     });
 
+    it('should throw WideningCardinalityError when max is * and original max is not *', () => {
+      const status = observation.elements.find(e => e.id === 'Observation.status');
+      const clone = cloneDeep(status);
+      expect(() => {
+        // constrain 1..1 to 1..*
+        clone.constrainCardinality(1, '*');
+      }).toThrow(/1..\* is wider than 1..1\./);
+      expect(clone).toEqual(status);
+    });
+
     // Slice Handling
     it('should update sliced element min when sum of slice mins is constrainted greater than it', () => {
       const category = respRate.elements.find(e => e.id === 'Observation.category');
