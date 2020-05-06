@@ -152,7 +152,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     );
     if (unusedProperties.length > 0) {
       logger.warn(
-        `No template property is specified, so no output specific to IG creation will be generated. The following properties are unused and only relevant for IG creation: ${unusedProperties.join(
+        `No template property is specified in configuration, so no output specific to IG creation will be generated. The following properties are unused and only relevant for IG creation: ${unusedProperties.join(
           ', '
         )}.`,
         { file }

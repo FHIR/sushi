@@ -225,15 +225,19 @@ async function app() {
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 
-  // If ig-data exists, generate an IG, otherwise, generate resources only
+  // If template is given in the config, generate an IG, otherwise, generate resources only
   let isIG = false;
   const igDataPath = path.resolve(input, 'ig-data');
-  if (fs.existsSync(igDataPath)) {
+  if (config.template) {
     isIG = true;
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
+  } else if (fs.existsSync(igDataPath)) {
+    logger.warn(
+      'No template property is specified in configuration, so no output specific to IG creation will be generated. Therefore the ig-data folder will be unused.'
+    );
   }
 
   console.log();
