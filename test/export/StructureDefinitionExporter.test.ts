@@ -1705,6 +1705,34 @@ describe('StructureDefinitionExporter', () => {
     expect(fooSlice).toBeDefined();
   });
 
+  it('should apply a containsRule on the child of a choice element', () => {
+    // * value[x].extension contains my-inline-extension 0..1
+
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const containsRule = new ContainsRule('value[x].extension');
+    containsRule.items = [{ name: 'my-inline-extension' }];
+    profile.rules.push(containsRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const extension = sd.elements.find(e => e.id === 'Observation.value[x].extension');
+    const extensionSlice = sd.elements.find(
+      e => e.id === 'Observation.value[x].extension:my-inline-extension'
+    );
+    const extensionSliceUrl = sd.elements.find(
+      e => e.id === 'Observation.value[x].extension:my-inline-extension.url'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('my-inline-extension');
+  });
+
   it('should not apply a ContainsRule on an element without defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';
