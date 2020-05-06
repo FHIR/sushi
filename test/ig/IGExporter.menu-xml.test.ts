@@ -115,7 +115,7 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /^\*\s+or provide your own menu\.xml in the ig-data[\/\\]input[\/\\]includes folder\s+\*$/m
       );
-      expect(content).toContain(simpleMenuXMLContent.replace('\n', EOL));
+      expect(content).toContain(simpleMenuXMLContent.replace(/\n/g, EOL));
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
@@ -137,7 +137,7 @@ describe('IGExporter', () => {
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();
       const content = fs.readFileSync(menuPath, 'utf8');
-      expect(content).toContain(subMenuXMLContent.replace('\n', EOL));
+      expect(content).toContain(subMenuXMLContent.replace(/\n/g, EOL));
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
@@ -162,7 +162,7 @@ describe('IGExporter', () => {
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();
       const content = fs.readFileSync(menuPath, 'utf8');
-      expect(content).toContain(subMenuWithWarningXMLContent.replace('\n', EOL));
+      expect(content).toContain(subMenuWithWarningXMLContent.replace(/\n/g, EOL));
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage()).toMatch(/The Flowers menu item specifies a sub-menu/s);
     });
