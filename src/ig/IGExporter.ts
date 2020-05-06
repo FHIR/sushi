@@ -428,8 +428,7 @@ export class IGExporter {
     if (existsSync(includesPath)) {
       this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'), src => {
         // Filter out menu.xml because handled separately
-        if (path.parse(src).base.startsWith('menu.xml')) return false;
-        return true;
+        return !path.parse(src).base.startsWith('menu.xml');
       });
     }
   }
@@ -470,7 +469,7 @@ export class IGExporter {
 
     // Always use config menu if defined
     if (this.pkg.config?.menu) {
-      let menu = '<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">\n';
+      let menu = `<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">${EOL}`;
       this.pkg.config?.menu.forEach(item => {
         menu += this.buildMenuItem(item, 2);
       });
@@ -504,15 +503,15 @@ export class IGExporter {
     let menuItem = '';
 
     if (item.subMenu) {
-      menuItem += `${prefixSpaces}<li class="dropdown">\n`;
+      menuItem += `${prefixSpaces}<li class="dropdown">${EOL}`;
       menuItem += this.buildSubMenu(item, spaces + 2);
-      menuItem += `${prefixSpaces}</li>\n`;
+      menuItem += `${prefixSpaces}</li>${EOL}`;
     } else {
-      menuItem += `${prefixSpaces}<li>\n${prefixSpaces}${'  '}`;
+      menuItem += `${prefixSpaces}<li>${EOL}${prefixSpaces}${'  '}`;
       if (item.url) menuItem += `<a href="${item.url}">`;
       menuItem += item.name;
       if (item.url) menuItem += '</a>';
-      menuItem += `\n${prefixSpaces}</li>\n`;
+      menuItem += `${EOL}${prefixSpaces}</li>${EOL}`;
     }
     return menuItem;
   }
@@ -526,10 +525,10 @@ export class IGExporter {
    */
   private buildSubMenu(item: ConfigurationMenuItem, spaces: number): string {
     const prefixSpaces = ' '.repeat(spaces);
-    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${item.name}\n`;
-    subMenu += `${prefixSpaces}${'  '}<b class="caret"></b>\n`;
-    subMenu += `${prefixSpaces}</a>\n`;
-    subMenu += `${prefixSpaces}<ul class="dropdown-menu">\n`;
+    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${item.name}${EOL}`;
+    subMenu += `${prefixSpaces}${'  '}<b class="caret"></b>${EOL}`;
+    subMenu += `${prefixSpaces}</a>${EOL}`;
+    subMenu += `${prefixSpaces}<ul class="dropdown-menu">${EOL}`;
     item.subMenu?.forEach((subItem: ConfigurationMenuItem): void => {
       if (subItem.subMenu) {
         logger.warn(
@@ -539,7 +538,7 @@ export class IGExporter {
       }
       subMenu += this.buildMenuItem(subItem, spaces + 2);
     });
-    subMenu += `${prefixSpaces}</ul>\n`;
+    subMenu += `${prefixSpaces}</ul>${EOL}`;
     return subMenu;
   }
 
