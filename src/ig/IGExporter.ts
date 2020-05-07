@@ -451,16 +451,15 @@ export class IGExporter {
 
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.pkg.config?.menu) {
-      const warningMessage =
+      logger.warn(
         'An IG menu is configured in config.yaml and provided in ig-data/input/includes/menu.xml. ' +
-        'Only the menu configured by config.yaml will be used to build the IG menu. ' +
-        'Remove the menu in ig-data/input/includes or remove the "menu" in config.yaml.';
-      logger.warn(warningMessage);
+          'Only the menu configured by config.yaml will be used to build the IG menu. ' +
+          'Remove the menu in ig-data/input/includes or remove the "menu" in config.yaml.'
+      );
     }
 
     // Always use config menu if defined
     if (this.pkg.config?.menu) {
-      // type is ConfigurationMenuItem[] so build XML file
       let menu = `<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">${EOL}`;
       this.pkg.config?.menu.forEach(item => {
         menu += this.buildMenuItem(item, 2);
