@@ -208,7 +208,6 @@ export class IGExporter {
         if (path.parse(src).base.startsWith('_genonce.')) return false;
         if (path.parse(src).base.startsWith('_gencontinuous.')) return false;
         if (path.parse(src).base.startsWith('_updatePublisher.')) return false;
-        return true;
       }
       // Filter out menu because handled separately
       if (path.parse(src).base.startsWith('menu.xml')) return false;
@@ -443,29 +442,21 @@ export class IGExporter {
    * @param {string} igPath - the path where the IG is exported to
    */
   addMenuXML(igPath: string): void {
-    const menuXMLPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+    const menuXMLDefaultPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+    const menuXMLOutputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
 
-    // If user did not provide a menu.xml file and config.menu is not defined, use SUSHI's basic menu.
-    if (!existsSync(menuXMLPath) && !this.pkg.config?.menu) {
-      const inputPath = path.join(__dirname, 'files', 'input', 'includes', 'menu.xml');
-      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
-      this.copyAsIs(inputPath, outputPath);
-      return;
-    }
-
-    // If user provided file and no config, copy over the file.
-    if (existsSync(menuXMLPath) && !this.pkg.config?.menu) {
-      this.copyWithWarningText(menuXMLPath, path.join(igPath, 'input', 'includes', 'menu.xml'));
+    // If user provided menu file in input/includes and no config, copy over the file.
+    if (existsSync(menuXMLDefaultPath) && !this.pkg.config?.menu) {
+      this.copyWithWarningText(menuXMLDefaultPath, menuXMLOutputPath);
       return;
     }
 
     // If user provided file and config, log a warning but prefer the config.
-    if (existsSync(menuXMLPath) && this.pkg.config?.menu) {
+    if (existsSync(menuXMLDefaultPath) && this.pkg.config?.menu) {
       logger.warn(
-        'An IG menu is configured in config.yaml and provided in a menu.xml file in the ' +
-          'ig-data/input/includes folder. Only the menu configured by config.yaml will ' +
-          'be used to generate the IG menu. Please remove the menu.xml file from the ig-data folder. ' +
-          'To provide your own menu.xml, remove the "menu" attribute in config.yaml.'
+        'An IG menu is configured in config.yaml and provided in ig-data/input/includes/menu.xml. ' +
+          'Only the menu configured by config.yaml will be used to build the IG menu. ' +
+          'Remove the menu in ig-data/input/includes or remove the "menu" in config.yaml.'
       );
     }
 
@@ -477,18 +468,16 @@ export class IGExporter {
       });
       menu += '</ul>';
 
-      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
-
       const warning = warningBlock(
-        `<!-- ${path.parse(outputPath).base} {% comment %}`,
+        `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
         [
           'To change the contents of this file, edit the "menu" attribute in the tank config.yaml file',
           'or provide your own menu.xml in the ig-data/input/includes folder'
         ]
       );
-      outputFileSync(outputPath, `${warning}${menu}`, 'utf8');
-      this.updateOutputLog(outputPath, [this.configPath], 'generated');
+      outputFileSync(menuXMLOutputPath, `${warning}${menu}`, 'utf8');
+      this.updateOutputLog(menuXMLOutputPath, [this.configPath], 'generated');
     }
   }
 
