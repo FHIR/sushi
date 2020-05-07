@@ -92,7 +92,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeFalsy(); // simple-ig does not specify a menu in ig-data or config
     });
 
     it('should generate an ig.ini with the correct values based on the package.json', () => {
@@ -404,7 +404,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeFalsy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeFalsy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeFalsy(); // simple-ig does not specify a menu in ig-data or config
     });
 
     it.skip('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
