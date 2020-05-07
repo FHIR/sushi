@@ -1789,12 +1789,6 @@ describe('importConfiguration', () => {
         { name: 'History', url: 'http://hl7.org/fhir/us/example/history.html' }
       ]);
     });
-    it('should convert the menu into a string', () => {
-      // @ts-ignore Type '"some/file/path"' is not assignable to type 'YAMLConfigurationMenuTree'.
-      minYAML.menu = 'ig-data/input/includes/my-menu.xml';
-      const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.menu).toEqual('ig-data/input/includes/my-menu.xml');
-    });
   });
 
   describe('#history', () => {
