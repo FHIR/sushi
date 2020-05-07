@@ -27,6 +27,7 @@ import {
   CodeSystem,
   InstanceDefinition
 } from '../fhirtypes';
+import { ConfigurationMenuItem } from '../fshtypes';
 import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 
@@ -73,6 +74,7 @@ export class IGExporter {
     this.addOtherPageContent(outPath);
     this.addImages(outPath);
     this.addIncludeContents(outPath);
+    this.addMenuXML(outPath);
     this.addIgIni(outPath);
     this.addPackageList(outPath);
     this.addIgnoreWarningsFile(outPath);
@@ -208,6 +210,8 @@ export class IGExporter {
         if (path.parse(src).base.startsWith('_updatePublisher.')) return false;
         return true;
       }
+      // Filter out menu because handled separately
+      if (path.parse(src).base.startsWith('menu.xml')) return false;
       return true;
     });
 
@@ -417,15 +421,127 @@ export class IGExporter {
 
   /**
    * Adds any user provided includes files
-   * A user provided menu.xml will be in this folder. If one is not provided, the static one SUSHI provides will be used.
+   * A user provided menu.xml may be in this folder, but do not handle it here. It is handled separately in addMenuXML.
    *
    * @param {string} igPath - the path where the IG is exported to
    */
   private addIncludeContents(igPath: string): void {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
     if (existsSync(includesPath)) {
-      this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'));
+      this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'), src => {
+        // Filter out menu.xml because handled separately
+        return !path.parse(src).base.startsWith('menu.xml');
+      });
     }
+  }
+
+  /**
+   * Adds menu.xml
+   * A user can define a menu in config.yaml or provide one in ig-data/input/includes.
+   * If neither is provided, the static one SUSHI provides will be used.
+   *
+   * @param {string} igPath - the path where the IG is exported to
+   */
+  addMenuXML(igPath: string): void {
+    const menuXMLPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+
+    // If user did not provide a menu.xml file and config.menu is not defined, use SUSHI's basic menu.
+    if (!existsSync(menuXMLPath) && !this.pkg.config?.menu) {
+      const inputPath = path.join(__dirname, 'files', 'input', 'includes', 'menu.xml');
+      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
+      this.copyAsIs(inputPath, outputPath);
+      return;
+    }
+
+    // If user provided file and no config, copy over the file.
+    if (existsSync(menuXMLPath) && !this.pkg.config?.menu) {
+      this.copyWithWarningText(menuXMLPath, path.join(igPath, 'input', 'includes', 'menu.xml'));
+      return;
+    }
+
+    // If user provided file and config, log a warning but prefer the config.
+    if (existsSync(menuXMLPath) && this.pkg.config?.menu) {
+      logger.warn(
+        'An IG menu is configured in config.yaml and provided in a menu.xml file in the ' +
+          'ig-data/input/includes folder. Only the menu configured by config.yaml will ' +
+          'be used to generate the IG menu. Please remove the menu.xml file from the ig-data folder. ' +
+          'To provide your own menu.xml, remove the "menu" attribute in config.yaml.'
+      );
+    }
+
+    // Always use config menu if defined
+    if (this.pkg.config?.menu) {
+      let menu = `<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">${EOL}`;
+      this.pkg.config?.menu.forEach(item => {
+        menu += this.buildMenuItem(item, 2);
+      });
+      menu += '</ul>';
+
+      const outputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
+
+      const warning = warningBlock(
+        `<!-- ${path.parse(outputPath).base} {% comment %}`,
+        '{% endcomment %} -->',
+        [
+          'To change the contents of this file, edit the "menu" attribute in the tank config.yaml file',
+          'or provide your own menu.xml in the ig-data/input/includes folder'
+        ]
+      );
+      outputFileSync(outputPath, `${warning}${menu}`, 'utf8');
+      this.updateOutputLog(outputPath, [this.configPath], 'generated');
+    }
+  }
+
+  /**
+   * Build individual menu item for menu.xml file. An item could contain a submenu
+   *
+   * @param {ConfigurationMenuItem} item - the menu item to be rendered
+   * @param {number} spaces - the base number of spaces to indent
+   * @returns {string} - the piece of XML relating to the given menu item
+   */
+
+  private buildMenuItem(item: ConfigurationMenuItem, spaces: number): string {
+    const prefixSpaces = ' '.repeat(spaces);
+    let menuItem = '';
+
+    if (item.subMenu) {
+      menuItem += `${prefixSpaces}<li class="dropdown">${EOL}`;
+      menuItem += this.buildSubMenu(item, spaces + 2);
+      menuItem += `${prefixSpaces}</li>${EOL}`;
+    } else {
+      menuItem += `${prefixSpaces}<li>${EOL}${prefixSpaces}${'  '}`;
+      if (item.url) menuItem += `<a href="${item.url}">`;
+      menuItem += item.name;
+      if (item.url) menuItem += '</a>';
+      menuItem += `${EOL}${prefixSpaces}</li>${EOL}`;
+    }
+    return menuItem;
+  }
+
+  /**
+   * Build a submenu for an item for menu.xml.
+   *
+   * @param item - the menu item with submenu to be rendered
+   * @param spaces - the base number of spaces to indent
+   * @returns {string} - the piece of XML relating to the submenu
+   */
+  private buildSubMenu(item: ConfigurationMenuItem, spaces: number): string {
+    const prefixSpaces = ' '.repeat(spaces);
+    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${item.name}${EOL}`;
+    subMenu += `${prefixSpaces}${'  '}<b class="caret"></b>${EOL}`;
+    subMenu += `${prefixSpaces}</a>${EOL}`;
+    subMenu += `${prefixSpaces}<ul class="dropdown-menu">${EOL}`;
+    item.subMenu?.forEach((subItem: ConfigurationMenuItem): void => {
+      if (subItem.subMenu) {
+        logger.warn(
+          `The ${subItem.name} menu item specifies a sub-menu. The IG template currently only supports two levels of menus. ` +
+            `The sub-menu for ${subItem.name} is included in the menu.xml file but it will not be rendered in the IG.`
+        );
+      }
+      subMenu += this.buildMenuItem(subItem, spaces + 2);
+    });
+    subMenu += `${prefixSpaces}</ul>${EOL}`;
+    return subMenu;
   }
 
   /**
@@ -706,6 +822,14 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   addPackageList(igPath: string): void {
+    const packageListPath = path.join(this.igDataPath, '..', 'package-list.json');
+    if (existsSync(packageListPath)) {
+      logger.warn(
+        'A package-list.json file was provided. This file will not be included in SUSHI output. ' +
+          'To create a package-list.json file, define "history" in config.yaml.'
+      );
+    }
+
     if (this.pkg.config?.history) {
       const outputPath = path.join(igPath, 'package-list.json');
       outputJSONSync(outputPath, this.pkg.config.history, { spaces: 2 });
@@ -790,15 +914,24 @@ export class IGExporter {
    * @param inputPath {string} - the input path to copy
    * @param outputPath {string} - the output path to copy to
    */
-  private copyWithWarningText(inputPath: string, outputPath: string): void {
+  private copyWithWarningText(
+    inputPath: string,
+    outputPath: string,
+    filter?: (src: string) => boolean
+  ): void {
     if (!existsSync(inputPath)) {
       return;
     }
 
     if (statSync(inputPath).isDirectory()) {
       readdirSync(inputPath).forEach(child => {
-        this.copyWithWarningText(path.join(inputPath, child), path.join(outputPath, child));
+        this.copyWithWarningText(path.join(inputPath, child), path.join(outputPath, child), filter);
       });
+      return;
+    }
+
+    // Filtered out, don't copy
+    if (filter && !filter(inputPath)) {
       return;
     }
 
