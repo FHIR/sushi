@@ -40,3 +40,4 @@ export * from './InvalidFHIRIdError';
 export * from './ParentDeclaredAsProfileNameError';
 export * from './InvalidResourceTypeError';
 export * from './FixingNonResourceError';
+export * from './InvalidExtensionParentError';

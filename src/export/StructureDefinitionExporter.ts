@@ -10,7 +10,8 @@ import { FSHTank } from '../import';
 import {
   ParentNotDefinedError,
   ParentDeclaredAsProfileNameError,
-  InvalidFHIRIdError
+  InvalidFHIRIdError,
+  InvalidExtensionParentError
 } from '../errors';
 import {
   CardRule,
@@ -430,6 +431,12 @@ export class StructureDefinitionExporter implements Fishable {
     // If we still don't have a resolution, then it's not defined
     if (!json) {
       throw new ParentNotDefinedError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
+    } else if (fshDefinition instanceof Extension && json.type !== 'Extension') {
+      throw new InvalidExtensionParentError(
+        fshDefinition.name,
+        parentName,
+        fshDefinition.sourceInfo
+      );
     }
 
     const structDef = StructureDefinition.fromJSON(json);
