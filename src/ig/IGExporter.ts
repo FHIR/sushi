@@ -118,6 +118,8 @@ export class IGExporter {
       contact: this.config.contact,
       description: this.config.description,
       useContext: this.config.useContext,
+      jurisdiction: this.config.jurisdiction,
+      copyright: this.config.copyright,
       packageId: this.config.packageId ?? this.config.id,
       license: this.config.license,
       fhirVersion: this.config.fhirVersion,
