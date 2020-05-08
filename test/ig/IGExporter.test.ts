@@ -116,7 +116,7 @@ describe.skip('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeFalsy(); // simple-ig does not specify a menu in ig-data or config
     });
 
     it('should generate an ig.ini with the correct values based on the package.json', () => {
@@ -353,7 +353,7 @@ describe.skip('IGExporter', () => {
       expect(content).toMatch('Provides a simple example of how FSH can be used to create an IG');
     });
 
-    it('should generate a default menu.xml', () => {
+    it.skip('should generate a default menu.xml', () => {
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();
       const content = fs.readFileSync(menuPath, 'utf8');
@@ -428,7 +428,7 @@ describe.skip('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeFalsy();
       expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeFalsy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeTruthy();
+      expect(fs.existsSync(path.join(tempOut, 'input', 'includes', 'menu.xml'))).toBeFalsy(); // simple-ig does not specify a menu in ig-data or config
     });
 
     it.skip('should generate a SUSHI-GENERATED-FILES.md with the correct listings', () => {
@@ -680,7 +680,7 @@ describe.skip('IGExporter', () => {
       });
     });
 
-    it('should use the user-provided menu.xml if it exists', () => {
+    it.skip('should use the user-provided menu.xml if it exists', () => {
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();
       const content = fs.readFileSync(menuPath, 'utf8');
