@@ -104,6 +104,7 @@ export class IGExporter {
       language: this.config.language,
       text: this.config.text,
       contained: this.config.contained,
+      extension: this.config.extension,
       modifierExtension: this.config.modifierExtension,
       url: this.config.url ?? `${this.config.canonical}/ImplementationGuide/${this.config.id}`,
       version: this.config.version,
@@ -111,9 +112,12 @@ export class IGExporter {
       name: this.config.name.replace(/[^A-Za-z0-9_]/g, ''),
       title: this.config.title,
       status: this.config.status,
+      experimental: this.config.experimental,
+      date: this.config.date,
       publisher: this.config.publisher,
       contact: this.config.contact,
       description: this.config.description,
+      useContext: this.config.useContext,
       packageId: this.config.packageId ?? this.config.id,
       license: this.config.license,
       fhirVersion: this.config.fhirVersion,
@@ -141,10 +145,6 @@ export class IGExporter {
         code: 'path-history',
         value: `${this.config.canonical}/history.html`
       });
-    }
-    // check for some optional properties and add them if present
-    if (this.config.useContext?.length) {
-      this.ig.useContext = this.config.useContext;
     }
     // add dependencies
     if (this.config.dependencies?.length) {

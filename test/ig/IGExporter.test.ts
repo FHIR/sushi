@@ -37,12 +37,11 @@ describe.skip('IGExporter', () => {
         title: 'FSH Test IG',
         description: 'Provides a simple example of how FSH can be used to create an IG',
         dependencies: [
-          { packageId: 'hl7.fhir.r4.core', version: '4.0.1' },
           { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
           { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
         ],
-        status: null,
-        template: null,
+        status: 'active',
+        template: 'fhir.base.template',
         fhirVersion: ['4.0.1'],
         language: 'en',
         publisher: 'James Tuna',
