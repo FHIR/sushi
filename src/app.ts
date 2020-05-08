@@ -226,22 +226,18 @@ async function app() {
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 
   // If template is given in the config, generate an IG, otherwise, generate resources only
-  let isIG = false;
-  const igDataPath = path.resolve(input, 'ig-data');
-  if (config.template) {
-    isIG = true;
+  if (config.FSHOnly) {
+    logger.info('Exporting FSH definitions only. No IG related content will be exported.');
+  } else {
+    const igDataPath = path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
-  } else if (fs.existsSync(igDataPath)) {
-    logger.warn(
-      'No template property is specified in configuration, so no output specific to IG creation will be generated. Therefore the ig-data folder will be unused.'
-    );
   }
 
   console.log();
-  printResults(outPackage, isIG);
+  printResults(outPackage, !config.FSHOnly);
 
   const exitCode = stats.numError > 0 ? 1 : 0;
   process.exit(exitCode);
