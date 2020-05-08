@@ -225,7 +225,7 @@ async function app() {
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 
-  // If template is given in the config, generate an IG, otherwise, generate resources only
+  // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
   if (config.FSHOnly) {
     logger.info('Exporting FSH definitions only. No IG related content will be exported.');
   } else {
