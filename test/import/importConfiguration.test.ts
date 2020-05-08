@@ -39,7 +39,8 @@ describe('importConfiguration', () => {
         { code: 'releaselabel', value: 'Build CI' }
       ],
       template: 'hl7.fhir.template#0.0.5',
-      packageId: 'fhir.us.minimal'
+      packageId: 'fhir.us.minimal',
+      FSHOnly: false
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -179,7 +180,8 @@ describe('importConfiguration', () => {
             sequence: 'STU 1'
           }
         ]
-      }
+      },
+      FSHOnly: false
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -2156,14 +2158,20 @@ describe('importConfiguration', () => {
       expect(config.FSHOnly).toBe(true);
     });
 
+    it('should default FSHOnly to false when not specified', () => {
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.FSHOnly).toBe(false);
+    });
+
     it('should report a warning if FSHOnly is true and unused properties are given', () => {
       minYAML.menu = { Home: 'index.html' };
       minYAML.contained = [{ resourceType: 'Patient' }];
       minYAML.FSHOnly = true;
-      importConfiguration(minYAML, 'test-config.yaml');
+      const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         /The following properties are unused and only relevant for IG creation: contained, parameters, template, menu.*File: test-config.yaml/s
       );
+      expect(config.FSHOnly).toBe(true);
     });
   });
 });

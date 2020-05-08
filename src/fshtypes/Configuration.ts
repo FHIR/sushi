@@ -127,7 +127,7 @@ export type Configuration = {
   // * current: true
   history?: ConfigurationHistory;
   // When the FSHOnly parameter is set to true, no IG specific content will be generated, SUSHI will
-  // only convert FSH definitions to JSON files. When false or unset, IG content is generated.
+  // only convert FSH definitions to JSON files. When false, IG content is generated.
   FSHOnly?: boolean;
 };
 

@@ -138,7 +138,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     template: yaml.template,
     menu: parseMenu(yaml.menu),
     history: parseHistory(yaml, file),
-    FSHOnly: yaml.FSHOnly
+    FSHOnly: yaml.FSHOnly ?? false
   };
 
   // Remove all undefined variables (mainly helpful for test assertions)
