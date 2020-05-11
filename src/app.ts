@@ -118,7 +118,7 @@ async function app() {
   }
 
   // Ensure FHIR R4 is added as a fhirVersion
-  const dependencies = config.dependencies ?? [];
+  const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config
   if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
       'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
