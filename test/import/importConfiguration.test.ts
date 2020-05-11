@@ -1723,8 +1723,9 @@ describe('importConfiguration', () => {
       config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
     });
-    it('should report an error if copyrightYear/copyrightyear is missing and FSHOnly is false/unset', () => {
+    it('should report an error if copyrightYear/copyrightyear is missing and FSHOnly is false', () => {
       delete minYAML.copyrightYear;
+      minYAML.FSHOnly = false;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Configuration missing required property: copyrightYear\s*File: test-config\.yaml/
@@ -1752,8 +1753,9 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU2' });
     });
-    it('should report an error if releaseLabel/releaselabel is missing and FSHOnly is false/unset', () => {
+    it('should report an error if releaseLabel/releaselabel is missing and FSHOnly is false', () => {
       delete minYAML.releaseLabel;
+      minYAML.FSHOnly = false;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Configuration missing required property: releaseLabel\s*File: test-config\.yaml/
