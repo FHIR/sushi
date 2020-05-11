@@ -95,7 +95,18 @@ describe('ensureConfiguration', () => {
       }
     });
     // Test at least one of the comments
-    expect(configText).toMatch('This SUSHI config.yaml file is provided as an example');
+    expect(configText).toMatch(
+      'ACTION REQUIRED: EDIT THIS FILE TO ENSURE IT ACCURATELY REFLECTS YOUR PROJECT!'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
+    );
   });
 
   it('should generate an appropriate config for a tank w/ only a package.json', () => {
@@ -152,7 +163,18 @@ describe('ensureConfiguration', () => {
     });
 
     // Test at least one of the comments
-    expect(configText).toMatch('This SUSHI config.yaml file was generated');
+    expect(configText).toMatch(
+      'ACTION REQUIRED: REVIEW AND EDIT THIS FILE TO ENSURE IT ACCURATELY REFLECTS YOUR PROJECT!'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
+    );
   });
 
   it('should generate an appropriate config for a tank w/ minimal package.json', () => {
@@ -213,14 +235,6 @@ describe('ensureConfiguration', () => {
         }
       }
     });
-    // There should be a commented out publisher
-    expect(configText).toMatch('# publisher:');
-    // There should be a commented out description
-    expect(configText).toMatch('# description:');
-    // There should be a commented out license
-    expect(configText).toMatch('# license:');
-    // There should be a commented out dependencies
-    expect(configText).toMatch('# dependencies:');
   });
 
   it('should generate an appropriate config for a tank w/ multiple maintainers in package.json', () => {
@@ -378,6 +392,15 @@ describe('ensureConfiguration', () => {
 
     // Template should be commented out since we use the one from ig.ini
     expect(configText).toMatch('# template:');
+    expect(configText).toMatch(
+      'To control the ig.ini using this config, uncomment and set the "template" property.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
+    );
   });
 
   it('should generate an appropriate config for a tank w/ a package.json and minimal ig.ini', () => {
@@ -487,6 +510,9 @@ describe('ensureConfiguration', () => {
 
     // history should be commented out since we use the one from ig.ini
     expect(configText).toMatch('# history:');
+    expect(configText).toMatch(
+      'To control the package-list.json using this config, uncomment and set the "history" property.'
+    );
 
     // The commented out history should correspond to the existing package-list.json
     const configTextLines = configText.split('\n');
@@ -522,6 +548,13 @@ describe('ensureConfiguration', () => {
         sequence: 'STU 1'
       }
     });
+
+    expect(configText).toMatch(
+      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
+    );
   });
 
   it('should generate an appropriate config for a tank w/ package.json and simplest package-list.json', () => {
@@ -658,6 +691,9 @@ describe('ensureConfiguration', () => {
 
     // menu should be commented out since we use the one from ig.ini
     expect(configText).toMatch('# menu:');
+    expect(configText).toMatch(
+      'To control the menu.xml using this config, uncomment and set the "menu" property.'
+    );
 
     // The commented out menu should correspond to the default menu.json
     const configTextLines = configText.split('\n');
@@ -683,5 +719,12 @@ describe('ensureConfiguration', () => {
         Downloads: 'downloads.html'
       }
     });
+
+    expect(configText).toMatch(
+      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
+    );
+    expect(configText).toMatch(
+      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
+    );
   });
 });
