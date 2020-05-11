@@ -920,6 +920,26 @@ describe('IGExporter', () => {
       });
     });
 
+    it('should omit predefined resources that are configured to be omitted', () => {
+      config.resources = [
+        {
+          reference: {
+            reference: 'StructureDefinition/MyPatient'
+          },
+          omit: true
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      const myPatient: ImplementationGuideDefinitionResource = igContent.definition.resource.find(
+        (r: ImplementationGuideDefinitionResource) =>
+          r?.reference?.reference === 'StructureDefinition/MyPatient'
+      );
+      expect(myPatient).toBeUndefined();
+    });
+
     it('should log an error for input files missing resourceType or id', () => {
       exporter.export(tempOut);
       expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
