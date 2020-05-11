@@ -127,7 +127,7 @@ async function app() {
   }
 
   console.log();
-  printResults(outPackage, isIG);
+  printResults(outPackage, !config.FSHOnly);
 
   const exitCode = stats.numError > 0 ? 1 : 0;
   process.exit(exitCode);
