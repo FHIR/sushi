@@ -113,28 +113,31 @@ async function app() {
     return;
   }
 
-  // Ensure FHIR R4 is added as a dependency
-  const fhirR4Dependency = packageJSON.dependencies?.['hl7.fhir.r4.core'];
-  if (fhirR4Dependency !== '4.0.1') {
+  // Ensure FHIR R4 is added as a fhirVersion
+  const dependencies = config.dependencies;
+  if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
-      'The package.json must specify FHIR R4 as a dependency. Be sure to' +
-        ' add "hl7.fhir.r4.core": "4.0.1" to the dependencies list.'
+      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
+        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
     );
     return;
+  } else {
+    // Add hl7.fhir.r4.core so that it will be loaded as dependency
+    dependencies.push({ packageId: 'hl7.fhir.r4.core', version: '4.0.1' });
   }
 
-  // Load external dependencies
+  // Load dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
-  for (const dep of Object.keys(packageJSON?.dependencies ?? {})) {
+  for (const dep of dependencies) {
     dependencyDefs.push(
-      loadDependency(dep, packageJSON.dependencies[dep], defs)
+      loadDependency(dep.packageId, dep.version, defs)
         .then(def => {
-          logger.info(`Loaded package ${dep}#${packageJSON.dependencies[dep]}`);
+          logger.info(`Loaded package ${dep.packageId}#${dep.version}`);
           return def;
         })
         .catch(e => {
-          logger.error(`Failed to load ${dep}#${packageJSON.dependencies[dep]}`);
+          logger.error(`Failed to load ${dep.packageId}#${dep.version}`);
           logger.error(e.message);
         })
     );
