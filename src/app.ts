@@ -85,7 +85,7 @@ async function app() {
 
   // Load external dependencies
   const defs = new FHIRDefinitions();
-  const dependencyDefs = loadExternalDependencies(defs, config);
+  const dependencyDefs = loadExternalDependencies(defs, yamlConfig);
 
   // Load custom resources specified in ig-data folder
   loadCustomResources(input, defs);

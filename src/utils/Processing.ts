@@ -85,17 +85,31 @@ export function readConfig(input: string): any {
 
 export function loadExternalDependencies(
   defs: FHIRDefinitions,
-  config: any
+  config: Configuration
 ): Promise<FHIRDefinitions | void>[] {
+  // Ensure FHIR R4 is added as a fhirVersion
+  const dependencies = config.dependencies ?? [];
+  if (!config.fhirVersion.includes('4.0.1')) {
+    logger.error(
+      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
+        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
+    );
+    process.exit(1);
+  } else {
+    // Add hl7.fhir.r4.core so that it will be loaded as dependency
+    dependencies.push({ packageId: 'hl7.fhir.r4.core', version: '4.0.1' });
+  }
+
+  // Load dependencies
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
-  for (const dep of Object.keys(config?.dependencies ?? {})) {
+  for (const dep of dependencies) {
     dependencyDefs.push(
-      loadDependency(dep, config.dependencies[dep], defs)
+      loadDependency(dep.packageId, dep.version, defs)
         .then(def => {
           return def;
         })
         .catch(e => {
-          logger.error(`Failed to load ${dep}#${config.dependencies[dep]}: ${e.message}`);
+          logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
         })
     );
   }
