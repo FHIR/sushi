@@ -10,8 +10,10 @@ import {
 } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Configuration, PackageJSON } from '../../src/fshtypes';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { loggerSpy } from '../testhelpers';
+import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
+import { loggerSpy, TestFisher } from '../testhelpers';
+import { cloneDeep } from 'lodash';
+import { minimalConfig } from './fixtures/minimalConfig';
 
 describe('IGExporter', () => {
   temp.track();
@@ -717,6 +719,212 @@ describe('IGExporter', () => {
         }
       ]);
       expect(loggerSpy.getLastMessage('error')).toMatch(/nothing\.md not found/s);
+    });
+  });
+
+  describe('#customized-ig-with-resources', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let packageJSON: PackageJSON;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
+      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
+      loadCustomResources(fixtures, defs);
+      tempOut = temp.mkdirSync('sushi-test');
+    });
+
+    beforeEach(() => {
+      config = cloneDeep(minimalConfig);
+      pkg = new Package(packageJSON, config);
+      // Add a patient to the package that will be overwritten
+      const fisher = new TestFisher(null, defs, pkg);
+      const patient = fisher.fishForStructureDefinition('Patient');
+      patient.id = 'MyPatient';
+      patient.name = 'MyPatient';
+      patient.description = 'This should go away';
+      pkg.profiles.push(patient);
+
+      const patientInstance = new InstanceDefinition();
+      patientInstance.resourceType = 'Patient';
+      patientInstance.id = 'FooPatient';
+      patientInstance._instanceMeta.description = 'This should stay';
+      patientInstance._instanceMeta.name = 'StayName';
+      patientInstance._instanceMeta.usage = 'Example';
+      pkg.instances.push(patientInstance);
+
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should copy over resource files', () => {
+      exporter.export(tempOut);
+      const directoryContents = new Map<string, string[]>();
+      const dirNames = [
+        'capabilities',
+        'extensions',
+        'models',
+        'operations',
+        'profiles',
+        'resources',
+        'vocabulary',
+        'examples'
+      ];
+      for (const dirName of dirNames) {
+        directoryContents.set(dirName, fs.readdirSync(path.join(tempOut, 'input', dirName)));
+      }
+      expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
+      expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
+      expect(directoryContents.get('extensions')).toEqual([
+        'StructureDefinition-patient-birthPlace.json'
+      ]);
+      expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
+      expect(directoryContents.get('profiles')).toEqual([
+        'StructureDefinition-MyPatient.json',
+        'StructureDefinition-MyTitlePatient.json'
+      ]);
+      expect(directoryContents.get('resources')).toEqual(['Patient-BazPatient.json']);
+      expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
+      expect(directoryContents.get('examples')).toEqual([
+        'Patient-BarPatient.json',
+        'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
+      ]);
+    });
+
+    it('should add basic resource references to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyLM'
+        },
+        name: 'MyLM',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'OperationDefinition/MyOD'
+        },
+        name: 'Populate Questionnaire', // Use name over ID
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BazPatient'
+        },
+        name: 'BazPatient',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'ValueSet/MyVS'
+        },
+        // eslint-disable-next-line
+        name: "Yes/No/Don't Know", // Use name over ID
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/patient-birthPlace'
+        },
+        name: 'birthPlace', // Use name over ID
+        exampleBoolean: false
+      });
+    });
+
+    it('should overwrite existing resource references in the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      // Should only have one copy of MyPatient
+      expect(
+        igContent.definition.resource.filter(
+          (r: any) => r.reference.reference === 'StructureDefinition/MyPatient'
+        )
+      ).toHaveLength(1);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyPatient'
+        },
+        name: 'MyPatient',
+        exampleBoolean: false
+        // Description is overwritten to be null
+      });
+    });
+
+    it('should add resource references with a description to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'CapabilityStatement/MyCS'
+        },
+        name: 'Base FHIR Capability Statement (Empty)', // Use name over ID
+        description: 'Test description',
+        exampleBoolean: false
+      });
+    });
+
+    it('should add example references to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/FooPatient'
+        },
+        // Preserve description and name from SUSHI defined Instance
+        description: 'This should stay',
+        name: 'StayName',
+        exampleBoolean: true
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BarPatient'
+        },
+        name: 'BarPatient',
+        exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+      });
+    });
+
+    it('should add resource references with a title to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyTitlePatient'
+        },
+        name: 'This patient has a title',
+        exampleBoolean: false
+      });
+    });
+
+    it('should log an error for input files missing resourceType or id', () => {
+      exporter.export(tempOut);
+      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
+        /.*InvalidPatient.json must define resourceType and id/
+      );
     });
   });
 
