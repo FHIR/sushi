@@ -100,23 +100,6 @@ async function app() {
     process.exit(1);
   }
 
-  // While we work on config.yaml, we also need package.json, but this should be removed before
-  // support for config.yaml is released.
-  const packagePath = path.join(input, 'package.json');
-  if (!fs.existsSync(packagePath)) {
-    logger.error('No package.json in FSH definition folder.');
-    return;
-  }
-
-  // Parse package.json
-  let packageJSON: any;
-  try {
-    packageJSON = fs.readJSONSync(packagePath);
-  } catch (e) {
-    logger.error(`The package.json file is not valid JSON: ${packagePath}`);
-    return;
-  }
-
   // Ensure FHIR R4 is added as a fhirVersion
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config
   if (!config.fhirVersion.includes('4.0.1')) {
@@ -189,12 +172,6 @@ async function app() {
     logger.info(`No output path specified. Output to ${outDir}`);
   }
   fs.ensureDirSync(outDir);
-
-  fs.writeFileSync(
-    path.join(outDir, 'package.json'),
-    JSON.stringify(outPackage.packageJSON, null, 2),
-    'utf8'
-  );
 
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
