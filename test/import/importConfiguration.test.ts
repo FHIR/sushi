@@ -39,7 +39,8 @@ describe('importConfiguration', () => {
         { code: 'releaselabel', value: 'Build CI' }
       ],
       template: 'hl7.fhir.template#0.0.5',
-      packageId: 'fhir.us.minimal'
+      packageId: 'fhir.us.minimal',
+      FSHOnly: false
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -179,7 +180,8 @@ describe('importConfiguration', () => {
             sequence: 'STU 1'
           }
         ]
-      }
+      },
+      FSHOnly: false
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -1695,14 +1697,6 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.template).toBe('hl7.fhir.template#0.0.5');
     });
-    it('should report an error if template is missing', () => {
-      delete minYAML.template;
-      const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Configuration missing required property: template\s*File: test-config\.yaml/
-      );
-      expect(config.template).toBeUndefined();
-    });
   });
 
   describe('#copyrightYear', () => {
@@ -1729,13 +1723,20 @@ describe('importConfiguration', () => {
       config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
     });
-    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+    it('should report an error if copyrightYear/copyrightyear is missing and FSHOnly is false', () => {
       delete minYAML.copyrightYear;
+      minYAML.FSHOnly = false;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Configuration missing required property: copyrightYear\s*File: test-config\.yaml/
       );
       expect(config.parameters.find(p => p.code === 'copyrightYear')).toBeUndefined();
+    });
+    it('should not report an error if copyrightYear/copyrightyear is missing and FSHOnly is true', () => {
+      delete minYAML.copyrightYear;
+      minYAML.FSHOnly = true;
+      importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
@@ -1752,13 +1753,20 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU2' });
     });
-    it('should report an error if copyrightYear/copyrightyear is missing', () => {
+    it('should report an error if releaseLabel/releaselabel is missing and FSHOnly is false', () => {
       delete minYAML.releaseLabel;
+      minYAML.FSHOnly = false;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Configuration missing required property: releaseLabel\s*File: test-config\.yaml/
       );
       expect(config.parameters.find(p => p.code === 'releaseLabel')).toBeUndefined();
+    });
+    it('should not report an error if releaseLabel/releaselabel is missing and and FSHOnly is true', () => {
+      delete minYAML.releaseLabel;
+      minYAML.FSHOnly = true;
+      importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
@@ -2142,6 +2150,30 @@ describe('importConfiguration', () => {
         sequence: 'STU 1',
         current: true
       });
+    });
+  });
+
+  describe('#FSHOnly', () => {
+    it('should copy FSHOnly as-is', () => {
+      minYAML.FSHOnly = true;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.FSHOnly).toBe(true);
+    });
+
+    it('should default FSHOnly to false when not specified', () => {
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.FSHOnly).toBe(false);
+    });
+
+    it('should report a warning if FSHOnly is true and unused properties are given', () => {
+      minYAML.menu = { Home: 'index.html' };
+      minYAML.contained = [{ resourceType: 'Patient' }];
+      minYAML.FSHOnly = true;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /The following properties are unused and only relevant for IG creation: contained, parameters, template, menu.*File: test-config.yaml/s
+      );
+      expect(config.FSHOnly).toBe(true);
     });
   });
 });

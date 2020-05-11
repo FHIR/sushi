@@ -103,7 +103,7 @@ export type Configuration = {
 
   // The template property will be copied into the ig.ini file. If the value of template is "none",
   // then only the resources will be generated (with no supporting ImplementationGuide sources).
-  template: string;
+  template?: string;
 
   // The menu property will be used to generate the input/menu.xml file. The menu is represented as
   // a simple structure where the YAML key is the menu item name and the value is the URL. The IG
@@ -126,6 +126,9 @@ export type Configuration = {
   // * status: ci-build
   // * current: true
   history?: ConfigurationHistory;
+  // When the FSHOnly parameter is set to true, no IG specific content will be generated, SUSHI will
+  // only convert FSH definitions to JSON files. When false, IG content is generated.
+  FSHOnly?: boolean;
 };
 
 export type ConfigurationGroup = {
