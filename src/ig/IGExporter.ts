@@ -94,7 +94,7 @@ export class IGExporter {
    *
    * @see {@link https://confluence.hl7.org/pages/viewpage.action?pageId=35718629#NPMPackageSpecification-PackageManifestpropertiesforIGs}
    */
-  private initIG() {
+  initIG() {
     // first, properties that can be directly used without much trouble
     this.ig = {
       resourceType: 'ImplementationGuide',
@@ -227,7 +227,7 @@ export class IGExporter {
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addIndex(igPath: string): void {
+  addIndex(igPath: string): void {
     const pageContentExportPath = path.join(igPath, 'input', 'pagecontent');
     const pagesExportPath = path.join(igPath, 'input', 'pages');
 
@@ -249,7 +249,38 @@ export class IGExporter {
     const inputIndexMarkdownPagesPath = path.join(this.igDataPath, 'input', 'pages', 'index.md');
     const inputIndexXMLPagesPath = path.join(this.igDataPath, 'input', 'pages', 'index.xml');
     let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
-    if (existsSync(inputIndexMarkdownPageContentPath)) {
+    let filePath: string;
+    if (existsSync(inputIndexMarkdownPageContentPath)) filePath = inputIndexMarkdownPageContentPath;
+    if (existsSync(inputIndexXMLPageContentPath)) filePath = inputIndexXMLPageContentPath;
+    if (existsSync(inputIndexMarkdownPagesPath)) filePath = inputIndexMarkdownPagesPath;
+    if (existsSync(inputIndexXMLPagesPath)) filePath = inputIndexXMLPagesPath;
+
+    if (this.config.indexPageContent) {
+      ensureDirSync(pageContentExportPath);
+      logger.info('Generated index.md based on "indexPageContent" in config.yaml.');
+      const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
+        'To change the contents of this file, edit the "indexPageContent" attribute in the tank config.yaml file',
+        'or provide your own index file in the ig-data/input/pagecontent or ig-data/input/pages folder.',
+        'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
+      ]);
+      const outputPath = path.join(pageContentExportPath, 'index.md');
+      outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
+      this.updateOutputLog(outputPath, [this.configPath], 'generated');
+
+      if (filePath) {
+        logger.warn(
+          'Found both an "indexPageContent" property in config.yaml and an index file at ' +
+            `ig-data${path.sep}${path.relative(this.igDataPath, filePath)}. ` +
+            'Since the "indexPageContent" property is present in the config.yaml, an index.md file will be generated and ' +
+            `the ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file will be ` +
+            'ignored. Remove the "indexPageContent" property in config.yaml to use the ' +
+            `ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file instead.`,
+          {
+            file: filePath
+          }
+        );
+      }
+    } else if (existsSync(inputIndexMarkdownPageContentPath)) {
       ensureDirSync(pageContentExportPath);
       this.copyWithWarningText(
         inputIndexMarkdownPageContentPath,
@@ -274,22 +305,12 @@ export class IGExporter {
       generation = 'html';
       logger.info(`Copied ${path.join(pagesExportPath, 'index.xml')}`);
     } else {
-      ensureDirSync(pageContentExportPath);
-      logger.info('Generated default index.md.');
-      const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
-        'This index.md file was generated from the "description" in package.json. To provide',
-        'your own index file, create an index.md or index.xml in the ig-data/input/pagecontent',
-        'or ig-data/input/pages folder.',
-        'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
-      ]);
-      const outputPath = path.join(pageContentExportPath, 'index.md');
-      outputFileSync(outputPath, `${warning}${this.config.description ?? ''}`);
-      this.updateOutputLog(outputPath, [this.configPath], 'generated');
+      // do nothing -- no indexPageContent in config, no index file in ig-data
     }
 
     // Add user-provided or generated index file to IG definition
     // If pages are defined in the configuration, this is the author's responsibility
-    if (!this.config.pages?.length) {
+    if (!this.config.pages?.length && (filePath || this.config.indexPageContent)) {
       this.ig.definition.page.page.push({
         nameUrl: 'index.html',
         title: 'Home',
@@ -557,13 +578,13 @@ export class IGExporter {
     const menuXMLOutputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
 
     // If user provided menu file in input/includes and no config, copy over the file.
-    if (existsSync(menuXMLDefaultPath) && !this.pkg.config?.menu) {
+    if (existsSync(menuXMLDefaultPath) && !this.config.menu) {
       this.copyWithWarningText(menuXMLDefaultPath, menuXMLOutputPath);
       return;
     }
 
     // If user provided file and config, log a warning but prefer the config.
-    if (existsSync(menuXMLDefaultPath) && this.pkg.config?.menu) {
+    if (existsSync(menuXMLDefaultPath) && this.config.menu) {
       logger.warn(
         `Found both a "menu" property in config.yaml and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
           'Since the "menu" property is present in the config.yaml, a menu.xml file will be generated and ' +
@@ -576,9 +597,9 @@ export class IGExporter {
     }
 
     // Always use config menu if defined
-    if (this.pkg.config?.menu) {
+    if (this.config.menu) {
       let menu = `<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">${EOL}`;
-      this.pkg.config?.menu.forEach(item => {
+      this.config.menu.forEach(item => {
         menu += this.buildMenuItem(item, 2);
       });
       menu += '</ul>';
@@ -961,7 +982,7 @@ export class IGExporter {
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addImplementationGuide(igPath: string): void {
+  addImplementationGuide(igPath: string): void {
     const igJsonPath = path.join(igPath, 'input', `ImplementationGuide-${this.ig.id}.json`);
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
     this.updateOutputLog(
