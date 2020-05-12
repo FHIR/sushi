@@ -1639,10 +1639,7 @@ export class ElementDefinition {
       });
     const sharedAncestry = intersectionWith(...allTypeAncestry);
     if (sharedAncestry.length > 0) {
-      console.log(`good time: ${sharedAncestry[sharedAncestry.length - 1]}`);
-      const commonAncestor = StructureDefinition.fromJSON(
-        fisher.fishForFHIR(sharedAncestry[sharedAncestry.length - 1])
-      );
+      const commonAncestor = StructureDefinition.fromJSON(fisher.fishForFHIR(sharedAncestry[0]));
       const newElements = commonAncestor.elements.slice(1).map(e => {
         const eClone = e.clone();
         eClone.id = eClone.id.replace(commonAncestor.type, `${this.id}`);

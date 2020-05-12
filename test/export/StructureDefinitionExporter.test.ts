@@ -1434,6 +1434,28 @@ describe('StructureDefinitionExporter', () => {
       }
     ]);
   });
+  it('should apply a fixedValueRule on the child of a choice element with constrained choices', () => {
+    // Quantity is the first ancestor of Duration and Age
+
+    // * value[x] only Duration, Age
+    // * value[x].comparator = #>=
+
+    const profile = new Profile('QuantifiedObservation');
+    profile.parent = 'Observation';
+
+    const onlyRule = new OnlyRule('value[x]');
+    onlyRule.types = [{ type: 'Duration' }, { type: 'Age' }];
+    profile.rules.push(onlyRule);
+
+    const fixedValueRule = new FixedValueRule('value[x].comparator');
+    fixedValueRule.fixedValue = new FshCode('>=');
+    profile.rules.push(fixedValueRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedElement = sd.findElement('Observation.value[x].comparator');
+    expect(fixedElement.patternCode).toBe('>=');
+  });
 
   it('should not apply an incorrect FixedValueRule', () => {
     const profile = new Profile('Foo');
@@ -1705,7 +1727,8 @@ describe('StructureDefinitionExporter', () => {
     expect(fooSlice).toBeDefined();
   });
 
-  it('should apply a containsRule on the child of a choice element', () => {
+  it('should apply a containsRule on the child of a choice element with a common ancestor of Element', () => {
+    // Element contains extension and id
     // * value[x].extension contains my-inline-extension 0..1
 
     const profile = new Profile('Foo');
