@@ -35,7 +35,7 @@ describe('IGExporter', () => {
       loggerSpy.reset();
     });
 
-    it('should not export index file when config.indexPageContents is not defined and none provided', () => {
+    it('should not export index file when config.indexPageContent is not defined and none provided', () => {
       const pkg = new Package(null, minimalConfig);
       const exporter = new IGExporter(pkg, null, '');
       exporter.initIG();
@@ -59,7 +59,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(loggerSpy.getAllMessages('info').length);
     });
 
-    it('should use user-provided input/pagecontent/index.md when config.indexPageContents is not defined', () => {
+    it('should use user-provided input/pagecontent/index.md when config.indexPageContent is not defined', () => {
       const pkg = new Package(null, minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
@@ -90,7 +90,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(loggerSpy.getAllMessages('info').length);
     });
 
-    it('should use user-provided input/pagecontent/index.xml when config.indexPageContents is not defined', () => {
+    it('should use user-provided input/pagecontent/index.xml when config.indexPageContent is not defined', () => {
       const pkg = new Package(null, minimalConfig);
       const igDataPath = path.resolve(
         __dirname,
@@ -128,7 +128,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(loggerSpy.getAllMessages('info').length);
     });
 
-    it('should use user-provided input/pages/index.md when config.indexPageContents is not defined', () => {
+    it('should use user-provided input/pages/index.md when config.indexPageContent is not defined', () => {
       // Create temp ig fixture for ig-data/input/pages/index.md set up
       const igDir = temp.mkdirSync('custom-ig-pages-index');
       fs.copySync(path.resolve(__dirname, 'fixtures', 'customized-ig'), igDir);
@@ -165,7 +165,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(loggerSpy.getAllMessages('info').length);
     });
 
-    it('should use user-provided input/pages/index.xml when config.indexPageContents is not defined', () => {
+    it('should use user-provided input/pages/index.xml when config.indexPageContent is not defined', () => {
       // Create temp ig fixture for ig-data/input/pages/index.xml set up
       const igDir = temp.mkdirSync('custom-ig-pages-index');
       fs.copySync(path.resolve(__dirname, 'fixtures', 'customized-ig-with-index-xml'), igDir);
@@ -202,7 +202,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(loggerSpy.getAllMessages('info').length);
     });
 
-    it('should use config.indexPageContents to generate an index.md file', () => {
+    it('should use config.indexPageContent to generate an index.md file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
       const pkg = new Package(null, config);
       const exporter = new IGExporter(pkg, null, '');
@@ -237,7 +237,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(loggerSpy.getAllMessages('info').length);
     });
 
-    it('should log a warning if config.indexPageContents defined and user provided index file', () => {
+    it('should log a warning if config.indexPageContent defined and user provided index file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
       const pkg = new Package(null, config);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');

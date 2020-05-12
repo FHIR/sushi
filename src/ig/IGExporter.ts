@@ -219,13 +219,13 @@ export class IGExporter {
   }
 
   /**
-   * Add the index.md file.  If the user provided one, use that.
-   * Otherwise create one, setting its content to be the package
-   * description. The provided file may be in one of two locations:
+   * Add the index.md file. Creates an index.md based on the "indexPageContent" in config.yaml.
+   * If the user specified an index file in the ig-data folder, and no "indexPageContent" in config.yaml is specified,
+   * the file from ig-data is used instead. The provided file may be in one of two locations:
    * ig-data/input/pagecontent or ig-data/input/pages
    *
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
-   * @param igPath {string} - the path where the IG is exported to
+   * @param igPath - the path where the IG is exported to
    */
   addIndex(igPath: string): void {
     const pageContentExportPath = path.join(igPath, 'input', 'pagecontent');
