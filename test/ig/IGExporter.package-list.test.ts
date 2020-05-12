@@ -38,16 +38,6 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
-    it('should log a warning when an HL7 IG is missing config.history and ig-data/package-list.json does not exist', () => {
-      config.canonical = 'https://hl7.org/half-life-7';
-      const pkg = new Package(null, config);
-      const exporter = new IGExporter(pkg, null, '');
-      exporter.addPackageList(tempOut);
-      const pkgListPath = path.join(tempOut, 'package-list.json');
-      expect(fs.existsSync(pkgListPath)).toBeFalsy();
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/HL7 IGs must have a package-list\.json/);
-    });
-
     it('should export package-list.json when config.history is defined', () => {
       config.history = {
         'package-id': 'fhir.us.example',

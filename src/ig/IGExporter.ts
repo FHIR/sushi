@@ -1088,11 +1088,6 @@ export class IGExporter {
     } else if (isIgDataPackageList) {
       this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
       logger.info('Copied ig-data/package-list.json.');
-    } else if (/^https?:\/\/hl7.org\//.test(this.config.canonical)) {
-      logger.warn(
-        'HL7 IGs must have a package-list.json. Please define "history" in config.yaml to generate one, ' +
-          'or add a package-list.json at ig-data/package-list.json'
-      );
     }
   }
 
