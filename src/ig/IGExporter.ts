@@ -1065,27 +1065,33 @@ export class IGExporter {
 
   /**
    * Adds the package-list.json file to the IG. Generated based on the Configuration history
-   * field.
+   * field, or the package-list.json found at ig-data/package-list.json.
    *
    * @param igPath {string} - the path where the IG is exported to
    */
   addPackageList(igPath: string): void {
-    const packageListPath = path.join(this.igDataPath, '..', 'package-list.json');
-    if (existsSync(packageListPath)) {
-      logger.warn(
-        'A package-list.json file was provided. This file will not be included in SUSHI output. ' +
-          'To create a package-list.json file, define "history" in config.yaml.'
-      );
-    }
+    const packageListPath = path.join(this.igDataPath, 'package-list.json');
+    const isIgDataPackageList = existsSync(packageListPath);
 
     if (this.config.history) {
       const outputPath = path.join(igPath, 'package-list.json');
       outputJSONSync(outputPath, this.config.history, { spaces: 2 });
       logger.info('Generated package-list.json');
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
+      if (isIgDataPackageList) {
+        logger.warn(
+          'A package-list.json file is configured with "history" in config.yaml and provided in ig-data/package-list.json. ' +
+            'Only the package-list configured by config.yaml will be used to generate a package-list.json. ' +
+            'Remove the "history" in config.yaml to use the package-list.json in ig-data/package-list.json.'
+        );
+      }
+    } else if (isIgDataPackageList) {
+      this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
+      logger.info('Copied ig-data/package-list.json.');
     } else if (/^https?:\/\/hl7.org\//.test(this.config.canonical)) {
       logger.warn(
-        'HL7 IGs must have a package-list.json. Please define "history" in config.yaml to generate one.'
+        'HL7 IGs must have a package-list.json. Please define "history" in config.yaml to generate one, ' +
+          'or add a package-list.json at ig-data/package-list.json'
       );
     }
   }
