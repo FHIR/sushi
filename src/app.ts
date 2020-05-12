@@ -22,6 +22,7 @@ import {
 import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
 import { Configuration } from './fshtypes';
+import { ensureConfiguration } from './import/ensureConfiguration';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -71,19 +72,21 @@ async function app() {
     process.exit(1);
   }
 
-  // If the config.yaml file exists, parse it; otherwise skip for now (until we fully support it)
+  // Get the config.yaml (or create it if possible)
+  const configPath = ensureConfiguration(input);
+  if (configPath == null || !fs.existsSync(configPath)) {
+    logger.error('No config.yaml in FSH definition folder.');
+    process.exit(1);
+  }
+  const configYaml = fs.readFileSync(configPath, 'utf8');
   let yamlConfig: Configuration;
-  const configPath = path.join(input, 'config.yaml');
-  if (fs.existsSync(configPath)) {
-    const configYaml = fs.readFileSync(configPath, 'utf8');
-    try {
-      yamlConfig = importConfiguration(configYaml, configPath);
-    } catch (e) {
-      process.exit(1);
-    }
+  try {
+    yamlConfig = importConfiguration(configYaml, configPath);
+  } catch (e) {
+    process.exit(1);
   }
 
-  // Load external dependencies
+  // Load dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs = loadExternalDependencies(defs, yamlConfig);
 
