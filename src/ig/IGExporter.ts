@@ -573,9 +573,13 @@ export class IGExporter {
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.pkg.config?.menu) {
       logger.warn(
-        'An IG menu is configured in config.yaml and provided in ig-data/input/includes/menu.xml. ' +
-          'Only the menu configured by config.yaml will be used to build the IG menu. ' +
-          'Remove the menu in ig-data/input/includes or remove the "menu" in config.yaml.'
+        `Found both a "menu" property in config.yaml and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
+          'Since the "menu" property is present in the config.yaml, a menu.xml file will be generated and ' +
+          `the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored. Remove the "menu" property in config.yaml ` +
+          `to use the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file instead.`,
+        {
+          file: menuXMLDefaultPath
+        }
       );
     }
 
@@ -1163,28 +1167,33 @@ export class IGExporter {
 
   /**
    * Adds the package-list.json file to the IG. Generated based on the Configuration history
-   * field.
+   * field, or the package-list.json found at ig-data/package-list.json.
    *
    * @param igPath {string} - the path where the IG is exported to
    */
   addPackageList(igPath: string): void {
-    const packageListPath = path.join(this.igDataPath, '..', 'package-list.json');
-    if (existsSync(packageListPath)) {
-      logger.warn(
-        'A package-list.json file was provided. This file will not be included in SUSHI output. ' +
-          'To create a package-list.json file, define "history" in config.yaml.'
-      );
-    }
+    const packageListPath = path.join(this.igDataPath, 'package-list.json');
+    const isIgDataPackageList = existsSync(packageListPath);
 
     if (this.config.history) {
       const outputPath = path.join(igPath, 'package-list.json');
       outputJSONSync(outputPath, this.config.history, { spaces: 2 });
       logger.info('Generated package-list.json');
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
-    } else if (/^https?:\/\/hl7.org\//.test(this.config.canonical)) {
-      logger.warn(
-        'HL7 IGs must have a package-list.json. Please define "history" in config.yaml to generate one.'
-      );
+      if (isIgDataPackageList) {
+        logger.warn(
+          `Found both a "history" property in config.yaml and a package-list.json file at ig-data${path.sep}package-list.json. ` +
+            'Since the "history" property is present in the config.yaml, a package-list.json file will be generated and ' +
+            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in config.yaml ` +
+            `to use the ig-data${path.sep}package-list.json file instead.`,
+          {
+            file: packageListPath
+          }
+        );
+      }
+    } else if (isIgDataPackageList) {
+      this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
+      logger.info('Copied ig-data/package-list.json.');
     }
   }
 
