@@ -23,6 +23,7 @@ import {
 import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
 import { Configuration } from './fshtypes';
+import { ensureConfiguration } from './import/ensureConfiguration';
 
 app();
 
@@ -85,19 +86,22 @@ async function app() {
     program.help();
   }
 
-  // If the config.yaml file exists, parse it; otherwise skip for now (until we fully support it)
+  // Get the config.yaml (or create it if possible)
+  const configPath = ensureConfiguration(input);
+  if (configPath == null || !fs.existsSync(configPath)) {
+    logger.error('No config.yaml in FSH definition folder.');
+    process.exit(1);
+  }
+  const configYaml = fs.readFileSync(configPath, 'utf8');
   let config: Configuration;
-  const configPath = path.join(input, 'config.yaml');
-  if (fs.existsSync(configPath)) {
-    const configYaml = fs.readFileSync(configPath, 'utf8');
-    try {
-      config = importConfiguration(configYaml, configPath);
-    } catch (e) {
-      process.exit(1);
-    }
+  try {
+    config = importConfiguration(configYaml, configPath);
+  } catch (e) {
+    process.exit(1);
   }
 
-  // Check that package.json exists
+  // While we work on config.yaml, we also need package.json, but this should be removed before
+  // support for config.yaml is released.
   const packagePath = path.join(input, 'package.json');
   if (!fs.existsSync(packagePath)) {
     logger.error('No package.json in FSH definition folder.');
