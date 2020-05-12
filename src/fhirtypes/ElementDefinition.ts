@@ -1,4 +1,4 @@
-import { isEmpty, isEqual, isMatch, cloneDeep, upperFirst } from 'lodash';
+import { isEmpty, isEqual, isMatch, cloneDeep, upperFirst, intersectionWith } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -1609,6 +1609,53 @@ export class ElementDefinition {
         this.structDef.addElements(newElements);
         return newElements;
       }
+    }
+    return [];
+  }
+
+  /**
+   * Unfolds a choice element's typed choices. The elements added to this element's
+   * structure definition are those that are on the common ancestor of the available types.
+   * All types have a common ancestor of Element, so if all else fails, Element's
+   * elements are used.
+   *
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   */
+  unfoldChoiceElementTypes(fisher: Fishable): ElementDefinition[] {
+    const allTypeAncestry = this.type
+      .map(t => {
+        return StructureDefinition.fromJSON(fisher.fishForFHIR(t.code));
+      })
+      .map(sd => {
+        const ancestry: string[] = [sd.url];
+        let ancestryWalker = sd;
+        while (ancestryWalker.baseDefinition) {
+          ancestryWalker = StructureDefinition.fromJSON(
+            fisher.fishForFHIR(ancestryWalker.baseDefinition)
+          );
+          ancestry.push(ancestryWalker.url);
+        }
+        return ancestry;
+      });
+    const sharedAncestry = intersectionWith(...allTypeAncestry);
+    if (sharedAncestry.length > 0) {
+      console.log(`good time: ${sharedAncestry[sharedAncestry.length - 1]}`);
+      const commonAncestor = StructureDefinition.fromJSON(
+        fisher.fishForFHIR(sharedAncestry[sharedAncestry.length - 1])
+      );
+      const newElements = commonAncestor.elements.slice(1).map(e => {
+        const eClone = e.clone();
+        eClone.id = eClone.id.replace(commonAncestor.type, `${this.id}`);
+        eClone.structDef = this.structDef;
+        // Capture the original so that diffs only show what changed *after* unfolding
+        eClone.captureOriginal();
+        return eClone;
+      });
+      this.structDef.addElements(newElements);
+      return newElements;
+    } else {
+      // this should not be reachable if the rest of the software is working correctly
+      logger.error(`Could not unfold choice element ${this.id}: choices have no common ancestor.`);
     }
     return [];
   }
