@@ -379,6 +379,20 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Foo\.fsh.*Line: 3 - 4\D*/s);
   });
 
+  it('should emit an error and continue when the path for the child of a choice element is not found', () => {
+    const profile = new Profile('Foo');
+    const rule = new FixedValueRule('value[x].comparator')
+      .withFile('Foo.fsh')
+      .withLocation([4, 7, 4, 22]);
+    rule.fixedValue = new FshCode('>=');
+    profile.rules.push(rule);
+    exporter.exportStructDef(profile);
+    const structDef = pkg.profiles[0];
+    expect(structDef).toBeDefined();
+    expect(structDef.type).toBe('Resource');
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Foo\.fsh.*Line: 4\D*/s);
+  });
+
   // Card Rule
   it('should apply a correct card rule', () => {
     const profile = new Profile('Foo');
