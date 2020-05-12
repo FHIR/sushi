@@ -7,3 +7,4 @@ export * from './RawFSH';
 export * from './importConfiguration';
 export * from './YAMLConfiguration';
 export * from './parseCodeLexeme';
+export * from './ensureConfiguration';
