@@ -116,7 +116,7 @@ describe('IGExporter', () => {
       expect(outputLogDetails.inputs[0].endsWith('config.yaml')).toBeTruthy();
       expect(loggerSpy.getLastMessage('info')).toBe('Generated package-list.json');
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /A package-list\.json file is configured with "history" in config\.yaml and provided in ig-data\/package-list\.json./
+        /Found both a "history" property in config\.yaml and a package-list\.json file.*File: .*package-list.json/s
       );
     });
 

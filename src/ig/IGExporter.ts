@@ -567,9 +567,13 @@ export class IGExporter {
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.pkg.config?.menu) {
       logger.warn(
-        'An IG menu is configured in config.yaml and provided in ig-data/input/includes/menu.xml. ' +
-          'Only the menu configured by config.yaml will be used to build the IG menu. ' +
-          'Remove the menu in ig-data/input/includes or remove the "menu" in config.yaml.'
+        `Found both a "menu" property in config.yaml and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
+          'Since the "menu" property is present in the config.yaml, a menu.xml file will be generated and ' +
+          `the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored. Remove the "menu" property in config.yaml ` +
+          `to use the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file instead.`,
+        {
+          file: menuXMLDefaultPath
+        }
       );
     }
 
@@ -1080,9 +1084,13 @@ export class IGExporter {
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
       if (isIgDataPackageList) {
         logger.warn(
-          'A package-list.json file is configured with "history" in config.yaml and provided in ig-data/package-list.json. ' +
-            'Only the package-list configured by config.yaml will be used to generate a package-list.json. ' +
-            'Remove the "history" in config.yaml to use the package-list.json in ig-data/package-list.json.'
+          `Found both a "history" property in config.yaml and a package-list.json file at ig-data${path.sep}package-list.json. ` +
+            'Since the "history" property is present in the config.yaml, a package-list.json file will be generated and ' +
+            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in config.yaml ` +
+            `to use the ig-data${path.sep}package-list.json file instead.`,
+          {
+            file: packageListPath
+          }
         );
       }
     } else if (isIgDataPackageList) {
