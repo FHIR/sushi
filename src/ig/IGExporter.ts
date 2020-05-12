@@ -977,89 +977,176 @@ export class IGExporter {
    *
    * @param igPath {string} - the path where the IG is exported to
    */
-  private addIgIni(igPath: string): void {
-    // First generate the ig.ini from the package.json
-    const iniObj: any = {};
-    iniObj.ig = `input/ImplementationGuide-${this.pkg.packageJSON.name}.json`;
-    iniObj.template = 'fhir.base.template';
-    iniObj['usage-stats-opt-out'] = 'false';
-    iniObj.copyrightyear = `${new Date().getFullYear()}+`;
-    iniObj.license = this.pkg.packageJSON.license ?? 'CC0-1.0';
-    iniObj.version = this.pkg.packageJSON.version;
-    iniObj.ballotstatus = 'CI Build';
-    iniObj.fhirspec = 'http://build.fhir.org/';
-
-    // Then add properties from the user-provided ig.ini (if applicable)
+  addIgIni(igPath: string): void {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
-    let merged = false;
-    if (existsSync(inputIniPath)) {
-      merged = true;
-      let inputIniContents = readFileSync(inputIniPath, 'utf8');
-      // FHIR allows templates to have versions identified using #.  E.g.,
-      //   template = hl7.fhir.template#0.1.0
-      // The ini library, however, treats # as a comment unless it is escaped.  So if it exists, we need to escape it.
-      inputIniContents = inputIniContents.replace(/^\s*template\s*=\s*[^#]*(#.+)?$/m, ($0, $1) =>
-        $1 ? $0.replace($1, `\\${$1}`) : $0
-      );
-      const inputIni = ini.parse(inputIniContents);
-      if (Object.keys(inputIni).length > 1 || inputIni.IG == null) {
-        logger.error('igi.ini file must contain an [IG] section with no other sections', {
-          file: inputIniPath
-        });
-      } else {
-        Object.keys(inputIni.IG).forEach(key => {
-          if (key === 'ig' && inputIni.IG.ig !== iniObj.ig) {
-            logger.error('igi.ini: sushi does not currently support overriding ig value.', {
-              file: inputIniPath
-            });
-          } else if (key === 'license' && inputIni.IG.license !== iniObj.license) {
-            logger.error(
-              `igi.ini: license value (${inputIni.IG.license}) does not match license declared in package.json (${iniObj.license}).  Keeping ${iniObj.license}.`,
-              { file: inputIniPath }
-            );
-          } else if (key === 'version' && inputIni.IG.version !== iniObj.version) {
-            logger.error(
-              `igi.ini: version value (${inputIni.IG.version}) does not match version declared in package.json (${iniObj.version}).  Keeping ${iniObj.version}.`,
-              { file: inputIniPath }
-            );
-          } else {
-            iniObj[key] = inputIni.IG[key];
+    if (this.config.template != null) {
+      this.generateIgIni(igPath);
+      if (existsSync(inputIniPath)) {
+        logger.warn(
+          `Found both a "template" property in config.yaml and an ig.ini file at ig-data${path.sep}ig.ini. ` +
+            'Since the "template" property is present in the config.yaml, an ig.ini file will be generated and ' +
+            `the ig-data${path.sep}ig.ini file will be ignored. Remove the "template" property in config.yaml ` +
+            `to use the ig-data${path.sep}ig.ini file instead.`,
+          {
+            file: inputIniPath
           }
-        });
+        );
       }
+    } else if (existsSync(inputIniPath)) {
+      this.processIgIni(igPath, inputIniPath);
+    } else {
+      // do nothing -- no template in config, no ig.ini in ig-data
     }
+  }
 
-    // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
-    let outputIniContents = ini.encode(iniObj, { section: 'IG', whitespace: true });
+  /**
+   * Generates an ig.ini file using the information in the configuration.
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
+  generateIgIni(igPath: string): void {
+    // Create an ig.ini object from the configuration
+    const iniObj: any = {};
+    iniObj.ig = `input/ImplementationGuide-${this.config.id}.json`;
+    iniObj.template = this.config.template;
+    const comment = [
+      'This ig.ini was generated using the template property in config.yaml. To provide your own',
+      'ig.ini, create an ig.ini file in the ig-data folder with required properties: ig, template.',
+      'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
+    ];
+    const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
+    let outputIniContents = ini
+      .encode(iniObj, { section: 'IG', whitespace: true })
+      .replace('\n', `\n${iniWarning}`);
+
+    // The encoder escapes '#' but FHIR doesn't like that, so if `#` is escaped in the template, then unescape it.
     outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
       $1 ? $0.replace($1, $1.slice(1)) : $0
     );
 
-    // Insert the warning comment, which unfortunately cannot be on the first line due to an IG Publisher limitation
-    const extra = merged
-      ? [
-          'This ig.ini was generated by merging values from ig-data/ig.ini with a default set of values,',
-          'including values inferred from package.json (name, license, version). To affect the generation',
-          'of this file, edit values in the ig-data/ig.ini input file.'
-        ]
-      : [
-          'This ig.ini was generated using a default set of values, including values inferred from',
-          'package.json (name, license, version). To affect the generation of this file, create an ig.ini',
-          'file in the ig-data folder with the values that should be merged into this generated file.',
-          'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
-        ];
-    const iniWarning = [...warningTextArray('; ', extra), ''].join(EOL);
-    outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
-
-    // Finally, write it to disk
+    // Write the ig.ini to disk
     const outputPath = path.join(igPath, 'ig.ini');
     outputFileSync(outputPath, outputIniContents);
-    this.updateOutputLog(outputPath, [this.packagePath, inputIniPath], 'generated');
+    this.updateOutputLog(outputPath, [this.configPath], 'generated');
+    logger.info('Generated ig.ini.');
+  }
 
-    if (merged) {
-      logger.info('Merged ig-data/ig.ini w/ generated ig.ini');
+  /**
+   * Process an existing ig.ini. This may involve merging in default values when one of the required properties
+   * is missing.  If required properties are present, the file will be copied as-is.
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   * @param inputIniPath {string} - the path to the input ig.ini file
+   */
+  processIgIni(igPath: string, inputIniPath: string): void {
+    // Since we used to merge ig.ini, we did not allow the ig property -- so it may be missing for existing users.
+    // Similarly, we merged in the template property if it was missing, so that may be missing as well. In these
+    // cases, we should add them to the copied file (to be friendly) but also issue a warning that the user should
+    // update their ig.ini to include them.
+    let modified = false;
+    let inputIniContents = readFileSync(inputIniPath, 'utf8');
+    // FHIR allows templates to have versions identified using #.  E.g.,
+    //   template = hl7.fhir.template#0.1.0
+    // The ini library, however, treats # as a comment unless it is escaped.  So if it exists, we need to escape it.
+    inputIniContents = inputIniContents.replace(/^\s*template\s*=\s*[^#]*(#.+)?$/m, ($0, $1) =>
+      $1 ? $0.replace($1, `\\${$1}`) : $0
+    );
+    const inputIni = ini.parse(inputIniContents);
+    if (Object.keys(inputIni).length > 1 || inputIni.IG == null) {
+      logger.error('igi.ini file must contain an [IG] section with no other sections', {
+        file: inputIniPath
+      });
+    }
+    if (inputIni.IG) {
+      if (inputIni.IG.ig == null) {
+        const igValue = `input/ImplementationGuide-${this.config.id}.json`;
+        inputIni.IG.ig = igValue;
+        logger.warn(
+          'The ig.ini file must have an "ig" property pointing to the IG file. SUSHI has added the following line ' +
+            'to the copied version of the ig.ini:\n' +
+            `ig = ${igValue}\n` +
+            `Please update ig-data${path.sep}ig.ini to include this value.`,
+          {
+            file: inputIniPath
+          }
+        );
+        modified = true;
+      }
+      if (inputIni.IG.template == null) {
+        const templateValue = 'fhir.base.template';
+        inputIni.IG.template = templateValue;
+        logger.warn(
+          'The ig.ini file must have a "template" property. SUSHI has added the following line to the copied ' +
+            'version of the ig.ini:\n' +
+            `template = ${templateValue}\n` +
+            `Please update ig-data${path.sep}ig.ini to include your desired template value.`,
+          {
+            file: inputIniPath
+          }
+        );
+        modified = true;
+      }
+      const deprecatedProps = [
+        'copyrightyear',
+        'license',
+        'version',
+        'ballotstatus',
+        'fhirspec',
+        'excludexml',
+        'excludejson',
+        'excludettl',
+        'excludeMaps'
+      ].filter(p => inputIni.IG.hasOwnProperty(p));
+      if (deprecatedProps.length > 0) {
+        const propList = deprecatedProps.join(', ');
+        logger.warn(
+          `Your ig-data${path.sep}ig.ini file contains the following deprecated properties: ${propList}. ` +
+            'These are no longer supported in ig.ini and should be removed.  See the following link for details: ' +
+            'https://github.com/HL7/ig-template-base/releases/tag/0.0.2',
+          {
+            file: inputIniPath
+          }
+        );
+      }
+    }
+
+    let outputIniContents;
+    if (modified) {
+      // Generate a merged version of the ig.ini
+      outputIniContents = ini.encode(inputIni.IG, { section: 'IG', whitespace: true });
+      // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
+      outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
+        $1 ? $0.replace($1, $1.slice(1)) : $0
+      );
+      const comment = [
+        'This ig.ini was generated by merging in required properties: "ig" and/or "template". Review your ',
+        `original ig-data${path.sep}ig.ini file and add the missing required properties.`
+      ];
+      const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
+      outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
+
+      // Finally, write it to disk
+      const outputPath = path.join(igPath, 'ig.ini');
+      outputFileSync(outputPath, outputIniContents);
+      this.updateOutputLog(outputPath, [this.configPath, inputIniPath], 'generated');
+      logger.info(`Merged ig-data${path.sep}ig.ini w/ default values for missing properties.`);
     } else {
-      logger.info('Generated default ig.ini.');
+      // Copy the ig.ini as-is with an embedded comment
+      outputIniContents = inputIniContents;
+      // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
+      outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
+        $1 ? $0.replace($1, $1.slice(1)) : $0
+      );
+      const comment = [
+        'To change the contents of this file, edit the original source file at:',
+        `ig-data${path.sep}ig.ini`
+      ];
+      const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
+      outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
+      const outputPath = path.join(igPath, 'ig.ini');
+      outputFileSync(outputPath, outputIniContents);
+      this.updateOutputLogForCopiedPath(outputPath, inputIniPath);
+      logger.info('Copied ig.ini.');
     }
   }
 
