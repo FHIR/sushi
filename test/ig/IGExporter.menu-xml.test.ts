@@ -82,7 +82,7 @@ describe('IGExporter', () => {
 
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage()).toMatch(
-        /menu is configured in config\.yaml and provided in ig-data/s
+        /Found both a "menu" property in config.yaml and a menu.xml file.*File: .*menu.xml/s
       );
     });
 
