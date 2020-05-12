@@ -351,34 +351,32 @@ export type YAMLConfigurationHistory = {
   canonical?: string;
   title?: string;
   introduction?: string;
-  current: YAMLConfigurationHistoryItem;
-  [key: string]: YAMLConfigurationHistoryItem;
+  current: string | YAMLConfigurationHistoryItem;
+  [key: string]: string | YAMLConfigurationHistoryItem;
 };
 
-export type YAMLConfigurationHistoryItem =
-  | string
-  | {
-      date?: string | number; // YAML will parse year-only dates as numbers
-      desc?: string;
-      path: string;
-      changes?: string;
-      status?:
-        | 'ci-build'
-        | '#ci-build'
-        | 'preview'
-        | '#preview'
-        | 'ballot'
-        | '#ballot'
-        | 'trial-use'
-        | '#trial-use'
-        | 'update'
-        | '#update'
-        | 'normative'
-        | '#normative'
-        | 'trial=use+normative'
-        | '#trial=use+normative';
+export type YAMLConfigurationHistoryItem = {
+  date?: string | number; // YAML will parse year-only dates as numbers
+  desc?: string;
+  path: string;
+  changes?: string;
+  status?:
+    | 'ci-build'
+    | '#ci-build'
+    | 'preview'
+    | '#preview'
+    | 'ballot'
+    | '#ballot'
+    | 'trial-use'
+    | '#trial-use'
+    | 'update'
+    | '#update'
+    | 'normative'
+    | '#normative'
+    | 'trial=use+normative'
+    | '#trial=use+normative';
 
-      sequence?: string;
-      fhirversion?: string;
-      current?: boolean;
-    };
+  sequence?: string;
+  fhirversion?: string;
+  current?: boolean;
+};
