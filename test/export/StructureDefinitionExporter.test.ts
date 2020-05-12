@@ -90,7 +90,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
-    expect(exported.version).toBe('1.0.0'); // provided by packageJSON
+    expect(exported.version).toBe('1.0.0'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
     expect(exported.status).toBe('active'); // always active
@@ -230,7 +230,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
-    expect(exported.version).toBe('1.0.0'); // provided by packageJSON
+    expect(exported.version).toBe('1.0.0'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
     expect(exported.status).toBe('active'); // always active

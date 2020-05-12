@@ -9,7 +9,7 @@ export class Package implements Fishable {
   public readonly valueSets: ValueSet[] = [];
   public readonly codeSystems: CodeSystem[] = [];
 
-  constructor(public readonly config?: Configuration) {}
+  constructor(public readonly config: Configuration) {}
 
   fish(
     item: string,
