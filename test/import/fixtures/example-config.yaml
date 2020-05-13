@@ -18,7 +18,7 @@ version: 1.0.0
 
 # Although fhirVersions is 0..* in the ImplementationGuide resource
 # it can be a single item OR and array here (but so far SUSHI only
-# support 4.0.1 anyway).
+# supports 4.0.1 anyway).
 fhirVersion: 4.0.1
 
 # The template property will be used to generate an ig.ini file.
