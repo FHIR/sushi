@@ -1699,7 +1699,7 @@ describe('InstanceExporter', () => {
         expect(exported.contained).toEqual([
           {
             id: 'MyBundle',
-            meta: { profile: ['http://example.com/StructureDefinition/TestBundle'] },
+            meta: { profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/TestBundle'] },
             resourceType: 'Bundle',
             entry: [
               {
