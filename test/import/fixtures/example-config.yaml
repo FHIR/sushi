@@ -204,7 +204,7 @@ history:
 # The indexPageContent property is used to generate a basic index.md file. To provide a
 # custom index file, do not include this property and include an index.md or index.xml file
 # in input/pages/ or input/pagecontent folders.
-  indexPageContent?: string;
+indexPageContent: Example Index Page Content
 
 # The fshOnly flag indicates if only FSH resources should be exported.
 # If set to true, no IG related content will be generated.
