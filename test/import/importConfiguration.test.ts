@@ -2153,6 +2153,14 @@ describe('importConfiguration', () => {
     });
   });
 
+  describe('#indexPageContent', () => {
+    it('should copy indexPageContent as-is', () => {
+      minYAML.indexPageContent = 'This is a great index. Really great. The best.';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.indexPageContent).toBe('This is a great index. Really great. The best.');
+    });
+  });
+
   describe('#FSHOnly', () => {
     it('should copy FSHOnly as-is', () => {
       minYAML.FSHOnly = true;

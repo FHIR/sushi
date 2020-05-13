@@ -92,7 +92,9 @@ describe('ensureConfiguration', () => {
           sequence: 'STU 1',
           current: true
         }
-      }
+      },
+      indexPageContent:
+        'This is an example IG description. You should uncomment and replace it with your own.'
     });
     // Test at least one of the comments
     expect(configText).toMatch(
@@ -159,7 +161,8 @@ describe('ensureConfiguration', () => {
           sequence: 'STU 1',
           current: true
         }
-      }
+      },
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
     // Test at least one of the comments
@@ -233,7 +236,8 @@ describe('ensureConfiguration', () => {
           sequence: 'STU 1',
           current: true
         }
-      }
+      },
+      indexPageContent: ''
     });
   });
 
@@ -330,7 +334,8 @@ describe('ensureConfiguration', () => {
           sequence: 'STU 1',
           current: true
         }
-      }
+      },
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
   });
 
@@ -387,7 +392,8 @@ describe('ensureConfiguration', () => {
           sequence: 'STU 1',
           current: true
         }
-      }
+      },
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
     // Template should be commented out since we use the one from ig.ini
@@ -459,7 +465,8 @@ describe('ensureConfiguration', () => {
           sequence: 'STU 1',
           current: true
         }
-      }
+      },
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
     // Template should be commented out since we use the one from ig.ini
@@ -504,8 +511,9 @@ describe('ensureConfiguration', () => {
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'http://hl7.org/fhir/R4/index.html' }
-      }
+      },
       // history should no longer exist since it will just use the provided package-list.json
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
     // history should be commented out since we use the one from ig.ini
@@ -605,8 +613,9 @@ describe('ensureConfiguration', () => {
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'http://hl7.org/fhir/R4/index.html' }
-      }
+      },
       // history should still not exist since it will just use the provided package-list.json
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
     // history should be commented out since we use the one from ig.ini
@@ -686,7 +695,8 @@ describe('ensureConfiguration', () => {
           sequence: 'STU 1',
           current: true
         }
-      }
+      },
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
     // menu should be commented out since we use the one from ig.ini
@@ -726,5 +736,62 @@ describe('ensureConfiguration', () => {
     expect(configText).toMatch(
       'To use a provided ig-data/package-list.json file, delete the "history" property below.'
     );
+  });
+
+  it('should generate an appropriate config for a tank w/ package.json and index.md', () => {
+    // Copy the fixture to a temp folder since we actually create files in the tank
+    const tank = temp.mkdirSync('sushi-test');
+    fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-index-md'), tank);
+    const configPath = ensureConfiguration(tank);
+    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(loggerSpy.getLastMessage('warn')).toBe(
+      `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
+    );
+    const configText = fs.readFileSync(configPath, 'utf8');
+    const configJSON = YAML.parse(configText);
+
+    // Test the formal YAML contents
+    expect(configJSON).toEqual({
+      id: 'sushi-test',
+      canonical: 'http://hl7.org/fhir/sushi-test',
+      version: '0.1.0',
+      name: 'FSHTestIG',
+      title: 'FSH Test IG',
+      status: 'active',
+      publisher: {
+        name: 'James Tuna',
+        url: 'https://tunafish.org/',
+        email: 'tuna@reef.gov'
+      },
+      description: 'Provides a simple example of how FSH can be used to create an IG',
+      license: 'CC0-1.0',
+      fhirVersion: '4.0.1',
+      dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
+      parameters: { 'show-inherited-invariants': false },
+      copyrightYear: '2020+',
+      releaseLabel: 'CI Build',
+      template: 'fhir.base.template#current',
+      menu: {
+        'IG Home': 'index.html',
+        'Table of Contents': 'toc.html',
+        'Artifact Index': 'artifacts.html',
+        Support: { 'FHIR Spec': 'http://hl7.org/fhir/R4/index.html' }
+      },
+      history: {
+        current: 'http://build.fhir.org/ig/example/example-ig',
+        '0.0.1': {
+          fhirversion: '4.0.1',
+          date: '2099-01-01',
+          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
+          path: 'http://example.org/fhir/STU1',
+          status: 'ballot',
+          sequence: 'STU 1',
+          current: true
+        }
+      }
+      // indexPageContent should not exist since the provided index.md is used
+    });
+
+    // Nothing is added as a commented pair to the config.yaml because there is not configuration equivalent
   });
 });
