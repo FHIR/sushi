@@ -166,6 +166,12 @@ export type YAMLConfiguration = {
   // * status: ci-build
   // * current: true
   history?: YAMLConfigurationHistory;
+
+  // The indexPageContent property is used to generate a basic index.md file. To provide a
+  // custom index file, do not include this property and include an index.md or index.xml file
+  // in input/pages/ or input/pagecontent folders.
+  indexPageContent?: string;
+
   // When the FSHOnly parameter is set to true, no IG specific content will be generated, SUSHI will
   // only convert FSH definitions to JSON files. When false or unset, IG content is generated.
   FSHOnly?: boolean;
