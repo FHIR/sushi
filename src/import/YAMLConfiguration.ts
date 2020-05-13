@@ -83,7 +83,7 @@ export type YAMLConfiguration = {
     | ImplementationGuide['fhirVersion'][0] // string
     | ImplementationGuide['fhirVersion']; // string[]
 
-  // The dependencies property corresponds to IG.dependsOn. They key is the package id and the
+  // The dependencies property corresponds to IG.dependsOn. The key is the package id and the
   // value is the version (or dev/current).
   dependencies?: YAMLConfigurationDependencyMap;
 
@@ -121,7 +121,7 @@ export type YAMLConfiguration = {
   pages?: YAMLConfigurationPageTree;
 
   // The parameters property represents IG.definition.parameter. Rather than a list of code/value
-  // pairs (as in the ImplementationGuide resource, the code is the YAML key. If a parameter allows
+  // pairs (as in the ImplementationGuide resource), the code is the YAML key. If a parameter allows
   // repeating values, the value in the YAML should be a sequence/array. For a partial list of
   // allowed parameters see: https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
   parameters?: YAMLConfigurationParameterMap;
@@ -132,8 +132,8 @@ export type YAMLConfiguration = {
   // template to use for this IG.
   templates?: ImplementationGuideDefinitionTemplate | ImplementationGuideDefinitionTemplate[];
 
-  // The template property will be copied into the ig.ini file. If the value of template is "none",
-  // then only the resources will be generated (with no supporting ImplementationGuide sources).
+  // The template property will be copied into the ig.ini file.
+  // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file in ig-data.
   template?: string;
 
   // The following two lines correspond to items that used to be in ig.ini but were recently moved
@@ -147,7 +147,8 @@ export type YAMLConfiguration = {
 
   // The menu property will be used to generate the input/menu.xml file. The menu is represented as
   // a simple structure where the YAML key is the menu item name and the value is the URL. The IG
-  // publisher currently only supports one level deep on sub-menus.
+  // publisher currently only supports one level deep on sub-menus. To provide a custom menu.xml
+  // file, do not include this property and include a `menu.xml` file in input/includes.
   // TO CONSIDER: If no menu data is provided, can we generate the menu based on the pages order
   // or should we just generate a very standard menu (since there may be too many pages to fit in
   // a menu)?
@@ -157,7 +158,8 @@ export type YAMLConfiguration = {
   // properties in its config to populate the top-level package-list.json properties: package-id,
   // canonical, title, and introduction. Authors that wish to provide different values can supply
   // them as properties under history. All other properties under history are assumed to be
-  // versions.
+  // versions. To provide a custom package-list.json file, remove this property and include a
+  // package-list.json file in ig-data.
   //
   // The current version is special. If the author provides only a single string value, it is
   // assumed to be the URL path to the current build. The following default values will then be
@@ -193,7 +195,7 @@ export type YAMLConfigurationNarrative = {
     | '#extensions'
     | '#additional'
     | '#empty';
-  div: string;
+  div: Narrative['div'];
 };
 
 export type YAMLConfigurationStatus =
