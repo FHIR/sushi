@@ -283,6 +283,45 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
         .withSpaceBefore()
     );
   }
+  // index
+  // There are four possible locations for it (two filenames in two directories)
+  const inputIndexMarkdownPageContentPath = path.join(
+    root,
+    'ig-data',
+    'input',
+    'pagecontent',
+    'index.md'
+  );
+  const inputIndexXMLPageContentPath = path.join(
+    root,
+    'ig-data',
+    'input',
+    'pagecontent',
+    'index.xml'
+  );
+  const inputIndexMarkdownPagesPath = path.join(root, 'ig-data', 'input', 'pages', 'index.md');
+  const inputIndexXMLPagesPath = path.join(root, 'ig-data', 'input', 'pages', 'index.xml');
+  if (
+    !fs.existsSync(inputIndexMarkdownPageContentPath) &&
+    !fs.existsSync(inputIndexXMLPageContentPath) &&
+    !fs.existsSync(inputIndexMarkdownPagesPath) &&
+    !fs.existsSync(inputIndexXMLPagesPath)
+  ) {
+    // no index file found, create our default
+    setPairs.push(
+      new YAMLPair('indexPageContent', packageJSON.description ?? '')
+        .withCommentBefore(
+          getBoxComment(
+            'index.md',
+            `To use a provided ig-data${path.sep}input${path.sep}[pagecontent | pages]${path.sep}index.[md | xml], delete the "indexPageContent" property below.`
+          )
+        )
+        .withSpaceBefore()
+    );
+  } else {
+    // if an index file is provided, don't add anything to config
+  }
+
   // history
   // @ts-ignore it's ok that we don't initialize it with current.  It will get current eventually.
   const yamlHistory: YAMLConfigurationHistory = {};

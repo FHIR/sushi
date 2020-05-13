@@ -257,13 +257,7 @@ describe('IGExporter', () => {
             nameUrl: 'toc.html',
             title: 'Table of Contents',
             generation: 'html',
-            page: [
-              {
-                nameUrl: 'index.html',
-                title: 'Home',
-                generation: 'markdown'
-              }
-            ]
+            page: [] // no index file specified for this ig
           },
           parameter: [
             {
