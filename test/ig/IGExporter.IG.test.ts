@@ -65,6 +65,9 @@ describe('IGExporter', () => {
             instanceDef._instanceMeta.description = 'Another example of a Patient';
             instanceDef._instanceMeta.usage = 'Example';
           }
+          if (instanceDef.id === 'patient-example-three') {
+            instanceDef._instanceMeta.usage = 'Inline';
+          }
           if (instanceDef.id === 'capability-statement-example') {
             instanceDef._instanceMeta.usage = 'Definition';
           }
