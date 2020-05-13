@@ -20,6 +20,7 @@ import {
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import path from 'path';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('InstanceExporter', () => {
   let defs: FHIRDefinitions;
@@ -39,12 +40,8 @@ describe('InstanceExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], {
-      name: 'test',
-      version: '0.0.1',
-      canonical: 'http://example.com'
-    });
-    const pkg = new Package(input.packageJSON);
+    const input = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
     exporter = new InstanceExporter(input, pkg, fisher);
@@ -177,7 +174,7 @@ describe('InstanceExporter', () => {
     it('should set meta.profile to the defining URL we are making an instance of', () => {
       const exported = exportInstance(patientInstance);
       expect(exported.meta).toEqual({
-        profile: ['http://example.com/StructureDefinition/TestPatient']
+        profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient']
       });
     });
 
@@ -917,12 +914,12 @@ describe('InstanceExporter', () => {
 
     it('should fix a reference without replacing if the referred Instance does not exist', () => {
       const fixedRefRule = new FixedValueRule('managingOrganization');
-      fixedRefRule.fixedValue = new FshReference('http://example.com');
+      fixedRefRule.fixedValue = new FshReference('http://hl7.org/fhir/us/minimal');
       patientInstance.rules.push(fixedRefRule);
       doc.instances.set(patientInstance.name, patientInstance);
       const exported = exportInstance(patientInstance);
       expect(exported.managingOrganization).toEqual({
-        reference: 'http://example.com'
+        reference: 'http://hl7.org/fhir/us/minimal'
       });
     });
 
@@ -941,7 +938,7 @@ describe('InstanceExporter', () => {
       expect(exported.code.coding).toEqual([
         {
           code: 'bright',
-          system: 'http://example.com/CodeSystem/Visible'
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
     });
@@ -960,7 +957,7 @@ describe('InstanceExporter', () => {
       expect(exported.component[0].code.coding).toEqual([
         {
           code: 'bright',
-          system: 'http://example.com/CodeSystem/Visible'
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
     });
@@ -1125,7 +1122,10 @@ describe('InstanceExporter', () => {
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
-        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
       ]);
     });
 
@@ -1136,19 +1136,25 @@ describe('InstanceExporter', () => {
       containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
       patientProf.rules.push(containsRule);
       const barRule = new FixedValueRule(
-        'extension[http://example.com/StructureDefinition/FooExtension].valueString'
+        'extension[http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension].valueString'
       );
       barRule.fixedValue = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
-        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
       ]);
     });
 
     it('should fix a sliced extension element that is referred to by aliased url', () => {
       const fooExtension = new Extension('FooExtension');
-      doc.aliases.set('FooAlias', 'http://example.com/StructureDefinition/FooExtension');
+      doc.aliases.set(
+        'FooAlias',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension'
+      );
       doc.extensions.set(fooExtension.name, fooExtension);
       const containsRule = new ContainsRule('extension');
       containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
@@ -1158,20 +1164,29 @@ describe('InstanceExporter', () => {
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
-        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
       ]);
     });
 
     it('should fix an extension that is defined but not present on the SD', () => {
       const fooExtension = new Extension('FooExtension');
-      doc.aliases.set('FooAlias', 'http://example.com/StructureDefinition/FooExtension');
+      doc.aliases.set(
+        'FooAlias',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension'
+      );
       doc.extensions.set(fooExtension.name, fooExtension);
       const barRule = new FixedValueRule('extension[FooAlias].valueString');
       barRule.fixedValue = 'bar';
       patientInstance.rules.push(barRule);
       const exported = exportInstance(patientInstance);
       expect(exported.extension).toEqual([
-        { url: 'http://example.com/StructureDefinition/FooExtension', valueString: 'bar' }
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
       ]);
     });
 
