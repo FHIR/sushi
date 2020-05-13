@@ -4,7 +4,7 @@ import temp from 'temp';
 import { IGExporter } from '../../src/ig';
 import { Package } from '../../src/export';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { minimalConfig } from './fixtures/minimalConfig';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('IGExporter', () => {
   // Track temp files/folders for cleanup
@@ -36,7 +36,7 @@ describe('IGExporter', () => {
     });
 
     it('should not export index file when config.indexPageContent is not defined and none provided', () => {
-      const pkg = new Package(null, minimalConfig);
+      const pkg = new Package(minimalConfig);
       const exporter = new IGExporter(pkg, null, '');
       exporter.initIG();
       exporter.addIndex(tempOut);
@@ -60,7 +60,7 @@ describe('IGExporter', () => {
     });
 
     it('should use user-provided input/pagecontent/index.md when config.indexPageContent is not defined', () => {
-      const pkg = new Package(null, minimalConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
@@ -91,7 +91,7 @@ describe('IGExporter', () => {
     });
 
     it('should use user-provided input/pagecontent/index.xml when config.indexPageContent is not defined', () => {
-      const pkg = new Package(null, minimalConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(
         __dirname,
         'fixtures',
@@ -137,7 +137,7 @@ describe('IGExporter', () => {
         path.join(igDir, 'ig-data', 'input', 'pages')
       );
 
-      const pkg = new Package(null, minimalConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(igDir, 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
@@ -174,7 +174,7 @@ describe('IGExporter', () => {
         path.join(igDir, 'ig-data', 'input', 'pages')
       );
 
-      const pkg = new Package(null, minimalConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(igDir, 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
@@ -204,7 +204,7 @@ describe('IGExporter', () => {
 
     it('should use config.indexPageContent to generate an index.md file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const exporter = new IGExporter(pkg, null, '');
       exporter.initIG();
       exporter.addIndex(tempOut);
@@ -239,7 +239,7 @@ describe('IGExporter', () => {
 
     it('should log a warning if config.indexPageContent defined and user provided index file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
