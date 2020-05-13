@@ -1003,7 +1003,7 @@ export class IGExporter {
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
     this.updateOutputLog(
       igJsonPath,
-      [this.configPath, path.join(this.igDataPath, 'ig.ini'), '{all input resources and pages}'],
+      [this.configPath, '{all input resources and pages}'],
       'generated'
     );
     logger.info(`Generated ImplementationGuide-${this.ig.id}.json`);
