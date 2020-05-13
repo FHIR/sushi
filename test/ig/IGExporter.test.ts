@@ -5,12 +5,14 @@ import { Package } from '../../src/export';
 import { IGExporter } from '../../src/ig';
 import { importConfiguration } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { loggerSpy } from '../testhelpers';
 
 describe('IGExporter', () => {
   describe('#minimal-config', () => {
     let tempOut: string;
 
     beforeAll(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const configPath = path.join(__dirname, '..', 'import', 'fixtures', 'minimal-config.yaml');
       const configYaml = fs.readFileSync(configPath, 'utf8');
@@ -56,6 +58,7 @@ describe('IGExporter', () => {
     let tempOut: string;
 
     beforeAll(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const configPath = path.join(__dirname, '..', 'import', 'fixtures', 'example-config.yaml');
       const configYaml = fs.readFileSync(configPath, 'utf8');
