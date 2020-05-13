@@ -181,6 +181,7 @@ describe('importConfiguration', () => {
           }
         ]
       },
+      indexPageContent: 'Example Index Page Content',
       FSHOnly: false
     };
     expect(actual).toEqual(expected);
