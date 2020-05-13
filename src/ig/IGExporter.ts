@@ -123,7 +123,12 @@ export class IGExporter {
       packageId: this.config.packageId ?? this.config.id,
       license: this.config.license,
       fhirVersion: this.config.fhirVersion,
+      // put an empty dependsOn here to preserve the location of this property (delete later if not needed)
+      dependsOn: [],
+      global: this.config.global,
       definition: {
+        // put an empty grouping here to preserve the location of this property (delete later if not needed)
+        grouping: [],
         resource: [],
         page: {
           nameUrl: 'toc.html',
@@ -133,7 +138,8 @@ export class IGExporter {
         },
         // required parameters are enforced in the configuration
         // default to empty array in case we want to add other parameters later
-        parameter: this.config.parameters ?? []
+        parameter: this.config.parameters ?? [],
+        template: this.config.templates
       }
     };
     // Add the path-history, if applicable (only applies to HL7 IGs)
@@ -150,7 +156,6 @@ export class IGExporter {
     }
     // add dependencies
     if (this.config.dependencies?.length) {
-      this.ig.dependsOn = [];
       const igs = this.fhirDefs.allImplementationGuides();
       for (const dependency of this.config.dependencies) {
         const dependencyIG = igs.find(
@@ -172,9 +177,20 @@ export class IGExporter {
           );
         }
       }
+    } else {
+      delete this.ig.dependsOn;
     }
-    if (this.config.global?.length) {
-      this.ig.global = this.config.global;
+    // delete grouping value if there are no groups in the config
+    if (!this.config.groups?.length && !this.config.resources?.some(r => r.groupingId != null)) {
+      delete this.ig.definition.grouping;
+    }
+    // delete global if it is empty
+    if (!this.config.global?.length) {
+      delete this.ig.global;
+    }
+    // delete templates if it is empty
+    if (!this.config.templates?.length) {
+      delete this.ig.definition.template;
     }
   }
 
