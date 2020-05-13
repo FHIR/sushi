@@ -4,7 +4,7 @@ import temp from 'temp';
 import { IGExporter } from '../../src/ig';
 import { Package } from '../../src/export';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { minimalConfig } from './fixtures/minimalConfig';
+import { minimalConfig } from '../utils/minimalConfig';
 import { Configuration } from '../../src/fshtypes';
 import { cloneDeep } from 'lodash';
 
@@ -30,7 +30,7 @@ describe('IGExporter', () => {
 
     it('should not export package-list.json when config.history is undefined and ig-data/package-list.json does not exist', () => {
       config.canonical = 'https://foo.com/my-ig';
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const exporter = new IGExporter(pkg, null, '');
       exporter.addPackageList(tempOut);
       const pkgListPath = path.join(tempOut, 'package-list.json');
@@ -63,7 +63,7 @@ describe('IGExporter', () => {
           }
         ]
       };
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const exporter = new IGExporter(pkg, null, '');
       exporter.addPackageList(tempOut);
       const pkgListPath = path.join(tempOut, 'package-list.json');
@@ -102,7 +102,7 @@ describe('IGExporter', () => {
           }
         ]
       };
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addPackageList(tempOut);
@@ -121,7 +121,7 @@ describe('IGExporter', () => {
     });
 
     it('should copy package-list.json when ig-data/package-list.json is defined', () => {
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addPackageList(tempOut);
