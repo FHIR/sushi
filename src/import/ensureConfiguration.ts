@@ -313,7 +313,7 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
         .withCommentBefore(
           getBoxComment(
             'index.md',
-            'To use a provided index.md or index.xml file, delete the "indexPageContent" property below.'
+            `To use a provided ig-data${path.sep}input${path.sep}[pagecontent | pages]${path.sep}index.[md | xml], delete the "indexPageContent" property below.`
           )
         )
         .withSpaceBefore()

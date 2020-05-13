@@ -257,15 +257,15 @@ export class IGExporter {
 
     if (this.config.indexPageContent) {
       ensureDirSync(pageContentExportPath);
-      logger.info('Generated index.md based on "indexPageContent" in config.yaml.');
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
         'To change the contents of this file, edit the "indexPageContent" attribute in the tank config.yaml file',
-        'or provide your own index file in the ig-data/input/pagecontent or ig-data/input/pages folder.',
+        `or provide your own index file in the ig-data${path.sep}input${path.sep}pagecontent or ig-data${path.sep}input${path.sep}pages folder.`,
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
+      logger.info('Generated index.md based on "indexPageContent" in config.yaml.');
 
       if (filePath) {
         logger.warn(
