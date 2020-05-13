@@ -101,7 +101,7 @@ export type Configuration = {
   // template to use for this IG.
   templates?: ImplementationGuideDefinitionTemplate[];
 
-  // The template property will be copied into the ig.ini file.
+  // The template property will be used to generate an ig.ini file.
   // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file in ig-data.
   template?: string;
 
