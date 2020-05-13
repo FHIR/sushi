@@ -6,7 +6,8 @@ import {
   StructureDefinition,
   InstanceDefinition,
   CodeSystem,
-  ImplementationGuideDefinitionResource
+  ImplementationGuideDefinitionResource,
+  ImplementationGuide
 } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Configuration } from '../../src/fshtypes';
@@ -523,7 +524,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.parameter).toContainEqual({
         code: 'path-history',
         value: 'http://hl7.org/fhir/sushi-test/history.html'
@@ -535,7 +536,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.parameter).not.toContainEqual(
         expect.objectContaining({
           code: 'path-history'
@@ -558,7 +559,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
@@ -594,7 +595,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
@@ -649,7 +650,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
@@ -694,7 +695,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
@@ -708,6 +709,27 @@ describe('IGExporter', () => {
         }
       ]);
       expect(loggerSpy.getLastMessage('error')).toMatch(/nothing\.md not found/s);
+    });
+
+    it('should copy over the templates property', () => {
+      config.templates = [
+        {
+          code: 'foo',
+          source: 'bar',
+          scope: 'mouthwash'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.template).toEqual([
+        {
+          code: 'foo',
+          source: 'bar',
+          scope: 'mouthwash'
+        }
+      ]);
     });
   });
 
@@ -795,7 +817,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
         reference: {
           reference: 'StructureDefinition/MyLM'
@@ -838,7 +860,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       // Should only have one copy of MyPatient
       expect(
         igContent.definition.resource.filter(
@@ -859,7 +881,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
         reference: {
           reference: 'CapabilityStatement/MyCS'
@@ -874,7 +896,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
         reference: {
           reference: 'Patient/FooPatient'
@@ -897,7 +919,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
         reference: {
           reference: 'StructureDefinition/MyTitlePatient'
@@ -919,7 +941,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       const myPatient: ImplementationGuideDefinitionResource = igContent.definition.resource.find(
         (r: ImplementationGuideDefinitionResource) =>
           r?.reference?.reference === 'StructureDefinition/MyPatient'
@@ -982,7 +1004,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
@@ -1024,7 +1046,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
