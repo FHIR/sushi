@@ -1,5 +1,5 @@
 import { StructureDefinition, InstanceDefinition, ValueSet, CodeSystem } from '../fhirtypes';
-import { PackageJSON, Configuration } from '../fshtypes';
+import { Configuration } from '../fshtypes';
 import { Fishable, Type, Metadata } from '../utils/Fishable';
 
 export class Package implements Fishable {
@@ -9,7 +9,7 @@ export class Package implements Fishable {
   public readonly valueSets: ValueSet[] = [];
   public readonly codeSystems: CodeSystem[] = [];
 
-  constructor(public readonly packageJSON: PackageJSON, public readonly config?: Configuration) {}
+  constructor(public readonly config: Configuration) {}
 
   fish(
     item: string,

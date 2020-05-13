@@ -14,6 +14,7 @@ import { TestFisher } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import path from 'path';
 import { CaretValueRule } from '../../src/fshtypes/rules';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('ValueSetExporter', () => {
   let defs: FHIRDefinitions;
@@ -31,12 +32,8 @@ describe('ValueSetExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], {
-      name: 'test',
-      version: '0.0.1',
-      canonical: 'http://example.com'
-    });
-    const pkg = new Package(input.packageJSON);
+    const input = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new ValueSetExporter(input, pkg, fisher);
   });
@@ -56,8 +53,8 @@ describe('ValueSetExporter', () => {
       name: 'BreakfastVS',
       id: 'BreakfastVS',
       status: 'active',
-      url: 'http://example.com/ValueSet/BreakfastVS',
-      version: '0.0.1'
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0'
     });
   });
 
@@ -84,8 +81,8 @@ describe('ValueSetExporter', () => {
       status: 'active',
       title: 'Breakfast Values',
       description: 'A value set for breakfast items',
-      url: 'http://example.com/ValueSet/BreakfastVS',
-      version: '0.0.1'
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0'
     });
   });
 
@@ -136,8 +133,8 @@ describe('ValueSetExporter', () => {
       name: 'DinnerVS',
       id: 'DinnerVS',
       status: 'active',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       compose: {
         include: [{ system: 'http://food.org/food' }]
       }
@@ -160,10 +157,10 @@ describe('ValueSetExporter', () => {
       name: 'DinnerVS',
       id: 'DinnerVS',
       status: 'active',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       compose: {
-        include: [{ system: 'http://example.com/CodeSystem/food' }]
+        include: [{ system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food' }]
       }
     });
   });
@@ -185,8 +182,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -215,8 +212,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -248,15 +245,15 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
           {
             valueSet: [
-              'http://example.com/ValueSet/hot-food',
-              'http://example.com/ValueSet/cold-food'
+              'http://hl7.org/fhir/us/minimal/ValueSet/hot-food',
+              'http://hl7.org/fhir/us/minimal/ValueSet/cold-food'
             ]
           }
         ]
@@ -283,8 +280,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -318,8 +315,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'BreakfastVS',
       name: 'BreakfastVS',
-      url: 'http://example.com/ValueSet/BreakfastVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -355,8 +352,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'BreakfastVS',
       name: 'BreakfastVS',
-      url: 'http://example.com/ValueSet/BreakfastVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -392,8 +389,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'BreakfastVS',
       name: 'BreakfastVS',
-      url: 'http://example.com/ValueSet/BreakfastVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -429,8 +426,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'BreakfastVS',
       name: 'BreakfastVS',
-      url: 'http://example.com/ValueSet/BreakfastVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -470,8 +467,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       status: 'active',
       compose: {
         include: [
@@ -554,8 +551,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       status: 'active',
       publisher: 'Carrots'
     });
@@ -574,8 +571,8 @@ describe('ValueSetExporter', () => {
       resourceType: 'ValueSet',
       id: 'DinnerVS',
       name: 'DinnerVS',
-      url: 'http://example.com/ValueSet/DinnerVS',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
       status: 'active'
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
