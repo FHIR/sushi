@@ -9,11 +9,11 @@ import {
   ImplementationGuideDefinitionResource
 } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
-import { Configuration, PackageJSON } from '../../src/fshtypes';
+import { Configuration } from '../../src/fshtypes';
 import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { cloneDeep } from 'lodash';
-import { minimalConfig } from './fixtures/minimalConfig';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('IGExporter', () => {
   temp.track();
@@ -23,7 +23,6 @@ describe('IGExporter', () => {
     let exporter: IGExporter;
     let tempOut: string;
     let fixtures: string;
-    let packageJSON: PackageJSON;
     let config: Configuration;
     let defs: FHIRDefinitions;
 
@@ -40,8 +39,6 @@ describe('IGExporter', () => {
         defs
       );
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      // several parts of the IG exporter still need packageJSON to function
-      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
 
       const profiles = path.join(fixtures, 'profiles');
       fs.readdirSync(profiles).forEach(f => {
@@ -127,7 +124,7 @@ describe('IGExporter', () => {
         ],
         history: {} // to suppress warning for HL7 IGs
       };
-      pkg = new Package(packageJSON, config);
+      pkg = new Package(config);
       pkg.profiles.push(...pkgProfiles);
       pkg.extensions.push(...pkgExtensions);
       pkg.instances.push(...pkgInstances);
@@ -477,13 +474,11 @@ describe('IGExporter', () => {
     let exporter: IGExporter;
     let tempOut: string;
     let fixtures: string;
-    let packageJSON: PackageJSON;
     let config: Configuration;
     let defs: FHIRDefinitions;
 
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
-      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
       tempOut = temp.mkdirSync('sushi-test');
       defs = new FHIRDefinitions();
       loadFromPath(
@@ -522,7 +517,7 @@ describe('IGExporter', () => {
         ],
         license: 'CC0-1.0'
       };
-      pkg = new Package(packageJSON, config);
+      pkg = new Package(config);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
     });
 
@@ -727,7 +722,6 @@ describe('IGExporter', () => {
     let exporter: IGExporter;
     let tempOut: string;
     let fixtures: string;
-    let packageJSON: PackageJSON;
     let config: Configuration;
     let defs: FHIRDefinitions;
 
@@ -739,14 +733,13 @@ describe('IGExporter', () => {
         defs
       );
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
       loadCustomResources(fixtures, defs);
       tempOut = temp.mkdirSync('sushi-test');
     });
 
     beforeEach(() => {
       config = cloneDeep(minimalConfig);
-      pkg = new Package(packageJSON, config);
+      pkg = new Package(config);
       // Add a patient to the package that will be overwritten
       const fisher = new TestFisher(null, defs, pkg);
       const patient = fisher.fishForStructureDefinition('Patient');
@@ -953,13 +946,11 @@ describe('IGExporter', () => {
     let exporter: IGExporter;
     let tempOut: string;
     let fixtures: string;
-    let packageJSON: PackageJSON;
     let config: Configuration;
     let defs: FHIRDefinitions;
 
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'pages-folder-ig');
-      packageJSON = fs.readJSONSync(path.join(fixtures, 'package.json'));
       defs = new FHIRDefinitions();
       loadFromPath(
         path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
@@ -985,7 +976,7 @@ describe('IGExporter', () => {
         publisher: 'Georgio Manos',
         license: 'CC0-1.0'
       };
-      pkg = new Package(packageJSON, config);
+      pkg = new Package(config);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
     });
 

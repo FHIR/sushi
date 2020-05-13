@@ -26,6 +26,7 @@ import { loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
 import path from 'path';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('StructureDefinitionExporter', () => {
   let defs: FHIRDefinitions;
@@ -45,12 +46,8 @@ describe('StructureDefinitionExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], {
-      name: 'test',
-      version: '0.0.1',
-      canonical: 'http://example.com'
-    });
-    pkg = new Package(input.packageJSON);
+    const input = new FSHTank([doc], minimalConfig);
+    pkg = new Package(input.config);
     fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
     loggerSpy.reset();
@@ -70,8 +67,8 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.id).toBe('foo');
     expect(exported.title).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
-    expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
-    expect(exported.version).toBe('0.0.1');
+    expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
+    expect(exported.version).toBe('1.0.0');
     expect(exported.type).toBe('Observation');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
   });
@@ -91,9 +88,9 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.contained).toBeUndefined(); // inherited from Observation
     expect(exported.extension).toBeUndefined();
     expect(exported.modifierExtension).toBeUndefined();
-    expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
+    expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
-    expect(exported.version).toBe('0.0.1'); // provided by packageJSON
+    expect(exported.version).toBe('1.0.0'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
     expect(exported.status).toBe('active'); // always active
@@ -142,8 +139,8 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
     expect(exported.description).toBeUndefined();
-    expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
-    expect(exported.version).toBe('0.0.1');
+    expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
+    expect(exported.version).toBe('1.0.0');
     expect(exported.type).toBe('Resource');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
     expect(exported.derivation).toBe('constraint');
@@ -234,14 +231,14 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.id).toBe('foo');
     expect(exported.title).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
-    expect(exported.url).toBe('http://example.com/StructureDefinition/foo');
-    expect(exported.version).toBe('0.0.1');
+    expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
+    expect(exported.version).toBe('1.0.0');
     expect(exported.type).toBe('Extension');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
 
     // Check that Extension.url is correctly fixed
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
-      'http://example.com/StructureDefinition/foo'
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/foo'
     );
   });
 
@@ -260,9 +257,9 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.contained).toBeUndefined(); // inherited from patient-mothersMaidenName
     expect(exported.extension).toBeUndefined();
     expect(exported.modifierExtension).toBeUndefined();
-    expect(exported.url).toBe('http://example.com/StructureDefinition/Foo'); // constructed from canonical and id
+    expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
-    expect(exported.version).toBe('0.0.1'); // provided by packageJSON
+    expect(exported.version).toBe('1.0.0'); // provided by config
     expect(exported.name).toBe('Foo'); // provided by user
     expect(exported.title).toBeUndefined();
     expect(exported.status).toBe('active'); // always active
@@ -293,7 +290,7 @@ describe('StructureDefinitionExporter', () => {
 
     // Check that Extension.url is correctly fixed
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
-      'http://example.com/StructureDefinition/Foo'
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
     );
   });
 
@@ -305,11 +302,11 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
-    expect(exported.url).toBe('http://example.com/StructureDefinition/Foo');
+    expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
-      'http://example.com/StructureDefinition/Foo'
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
     );
-    expect(exported.version).toBe('0.0.1');
+    expect(exported.version).toBe('1.0.0');
     expect(exported.context).toEqual([
       {
         type: 'element',
@@ -850,7 +847,9 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
     const element = sd.findElement('Observation.category');
-    expect(element.binding.valueSet).toBe('http://example.com/ValueSet/custom-categories');
+    expect(element.binding.valueSet).toBe(
+      'http://hl7.org/fhir/us/minimal/ValueSet/custom-categories'
+    );
     expect(element.binding.strength).toBe('extensible');
   });
 
@@ -1097,7 +1096,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedValue.type).toHaveLength(1);
     expect(constrainedValue.type[0]).toEqual(
       new ElementDefinitionType('Quantity').withProfiles(
-        'http://example.com/StructureDefinition/MySpecialQuantity'
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/MySpecialQuantity'
       )
     );
   });
@@ -1134,7 +1133,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedSubject.type).toHaveLength(1);
     expect(constrainedSubject.type[0]).toEqual(
       new ElementDefinitionType('Reference').withTargetProfiles(
-        'http://example.com/StructureDefinition/MySpecialDevice'
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/MySpecialDevice'
       )
     );
   });
@@ -1176,8 +1175,8 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedHasMember.type).toHaveLength(1);
     expect(constrainedHasMember.type[0]).toEqual(
       new ElementDefinitionType('Reference').withTargetProfiles(
-        'http://example.com/StructureDefinition/MySpecialObservation1',
-        'http://example.com/StructureDefinition/MySpecialObservation2',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/MySpecialObservation1',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/MySpecialObservation2',
         'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
         'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
       )
@@ -1224,7 +1223,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedHasMemberFoo.type).toHaveLength(1);
     expect(constrainedHasMemberFoo.type[0]).toEqual(
       new ElementDefinitionType('Reference').withTargetProfiles(
-        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar',
         'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
         'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
       )
@@ -1233,7 +1232,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedHasMemberBar.type).toHaveLength(1);
     expect(constrainedHasMemberBar.type[0]).toEqual(
       new ElementDefinitionType('Reference').withTargetProfiles(
-        'http://example.com/StructureDefinition/Foo',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
         'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
         'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
       )
@@ -1262,7 +1261,7 @@ describe('StructureDefinitionExporter', () => {
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     expect(sdFoo.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
-    expect(sdBar.baseDefinition).toBe('http://example.com/StructureDefinition/Foo');
+    expect(sdBar.baseDefinition).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
 
     const baseHasMember = baseStructDef.findElement('Observation.hasMember');
     const constrainedHasMemberFoo = sdFoo.findElement('Observation.hasMember');
@@ -1280,7 +1279,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedHasMemberFoo.type).toHaveLength(1);
     expect(constrainedHasMemberFoo.type[0]).toEqual(
       new ElementDefinitionType('Reference').withTargetProfiles(
-        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar',
         'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
         'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
       )
@@ -1289,7 +1288,7 @@ describe('StructureDefinitionExporter', () => {
     expect(constrainedHasMemberBar.type).toHaveLength(1);
     expect(constrainedHasMemberBar.type[0]).toEqual(
       new ElementDefinitionType('Reference').withTargetProfiles(
-        'http://example.com/StructureDefinition/Bar',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar',
         'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
         'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
       )
@@ -1562,7 +1561,7 @@ describe('StructureDefinitionExporter', () => {
     expect(fixedElement.patternCodeableConcept.coding).toEqual([
       {
         code: 'bright',
-        system: 'http://example.com/CodeSystem/Visible'
+        system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
       }
     ]);
   });
@@ -1809,13 +1808,13 @@ describe('StructureDefinitionExporter', () => {
     expect(bar).toBeDefined();
     expect(bar.type[0]).toEqual(
       new ElementDefinitionType('Extension').withProfiles(
-        'http://example.com/StructureDefinition/Bar'
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar'
       )
     );
     expect(baz).toBeDefined();
     expect(baz.type[0]).toEqual(
       new ElementDefinitionType('Extension').withProfiles(
-        'http://example.com/StructureDefinition/BazId'
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/BazId'
       )
     );
   });
@@ -3186,13 +3185,13 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should apply ValueSetRules on a slice, then a sliced element, with different value sets', () => {
-      // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
-      // * category from http://example.com/ImportantObservationCodes (required)
+      // * category[Procedure] from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
+      // * category from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
       const procedureValueSet = new ValueSetRule('category[Procedure]');
-      procedureValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       procedureValueSet.strength = 'extensible';
       const rootValueSet = new ValueSetRule('category');
-      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
 
       observationWithSlice.rules.push(procedureValueSet, rootValueSet);
@@ -3202,11 +3201,11 @@ describe('StructureDefinitionExporter', () => {
       const rootCategory = sd.findElement('Observation.category');
       const procedureCategory = sd.findElement('Observation.category:Procedure');
       const importantBinding = {
-        valueSet: 'http://example.com/ImportantObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes',
         strength: 'required'
       };
       const mediocreBinding = {
-        valueSet: 'http://example.com/MediocreObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes',
         strength: 'extensible'
       };
       expect(rootCategory.binding).toEqual(importantBinding);
@@ -3214,13 +3213,13 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should apply ValueSetRules on a sliced element, then a slice, with different value sets', () => {
-      // * category from http://example.com/ImportantObservationCodes (required)
-      // * category[Procedure] from http://example.com/MediocreObservationCodes (extensible)
+      // * category from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
+      // * category[Procedure] from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
       const rootValueSet = new ValueSetRule('category');
-      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
       const procedureValueSet = new ValueSetRule('category[Procedure]');
-      procedureValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       procedureValueSet.strength = 'extensible';
 
       observationWithSlice.rules.push(rootValueSet, procedureValueSet);
@@ -3230,11 +3229,11 @@ describe('StructureDefinitionExporter', () => {
       const rootCategory = sd.findElement('Observation.category');
       const procedureCategory = sd.findElement('Observation.category:Procedure');
       const importantBinding = {
-        valueSet: 'http://example.com/ImportantObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes',
         strength: 'required'
       };
       const mediocreBinding = {
-        valueSet: 'http://example.com/MediocreObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes',
         strength: 'extensible'
       };
       expect(rootCategory.binding).toEqual(importantBinding);
@@ -3242,13 +3241,13 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should apply ValueSetRules on a slice, then the sliced element, with the same value set', () => {
-      // * category[Procedure] from http://example.com/RegularObservationCodes (extensible)
-      // * category from http://example.com/RegularObservationCodes (required)
+      // * category[Procedure] from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
+      // * category from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
       const procedureValueSet = new ValueSetRule('category[Procedure]');
-      procedureValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       procedureValueSet.strength = 'extensible';
       const rootValueSet = new ValueSetRule('category');
-      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
 
       observationWithSlice.rules.push(procedureValueSet, rootValueSet);
@@ -3258,7 +3257,7 @@ describe('StructureDefinitionExporter', () => {
       const rootCategory = sd.findElement('Observation.category');
       const procedureCategory = sd.findElement('Observation.category:Procedure');
       const regularBinding = {
-        valueSet: 'http://example.com/RegularObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/RegularObservationCodes',
         strength: 'required'
       };
       expect(rootCategory.binding).toEqual(regularBinding);
@@ -3266,15 +3265,15 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should not apply a ValueSetRule on a sliced element that would bind it to the same value set as the root, but more weakly', () => {
-      // * category from http://example.com/RegularObservationCodes (required)
-      // * category[Procedure] from http://example.com/RegularObservationCodes (extensible)
+      // * category from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
+      // * category[Procedure] from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
       const rootValueSet = new ValueSetRule('category');
-      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
       const procedureValueSet = new ValueSetRule('category[Procedure]')
         .withFile('Weaker.fsh')
         .withLocation([4, 8, 4, 23]);
-      procedureValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       procedureValueSet.strength = 'extensible';
 
       observationWithSlice.rules.push(rootValueSet, procedureValueSet);
@@ -3283,7 +3282,7 @@ describe('StructureDefinitionExporter', () => {
       const sd = pkg.profiles[0];
       const rootCategory = sd.findElement('Observation.category');
       const regularBinding = {
-        valueSet: 'http://example.com/RegularObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/RegularObservationCodes',
         strength: 'required'
       };
       expect(rootCategory.binding).toEqual(regularBinding);
@@ -3294,13 +3293,13 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should apply ValueSetRules on the child of a slice, then the child of a sliced element, with different value sets', () => {
-      // * component[Lab].code from http://example.com/MediocreObservationCodes (extensible)
-      // * component.code from http://example.com/ImportantObservationCodes (required)
+      // * component[Lab].code from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
+      // * component.code from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
       const labValueSet = new ValueSetRule('component[Lab].code');
-      labValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       labValueSet.strength = 'extensible';
       const rootValueSet = new ValueSetRule('component.code');
-      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
 
       observationWithSlice.rules.push(labValueSet, rootValueSet);
@@ -3310,11 +3309,11 @@ describe('StructureDefinitionExporter', () => {
       const rootCode = sd.findElement('Observation.component.code');
       const labCode = sd.findElement('Observation.component:Lab.code');
       const importantBinding = {
-        valueSet: 'http://example.com/ImportantObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes',
         strength: 'required'
       };
       const mediocreBinding = {
-        valueSet: 'http://example.com/MediocreObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes',
         strength: 'extensible'
       };
       expect(rootCode.binding).toEqual(importantBinding);
@@ -3323,15 +3322,15 @@ describe('StructureDefinitionExporter', () => {
 
     it('should apply ValueSetRules on the child of a sliced element, then the child of a slice, with different value sets', () => {
       // * component[Lab].code MS // force creation of element
-      // * component.code from http://example.com/ImportantObservationCodes (required)
-      // * component[Lab].code from http://example.com/MediocreObservationCodes (extensible)
+      // * component.code from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
+      // * component[Lab].code from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
       const flagRule = new FlagRule('component[Lab].code');
       flagRule.mustSupport = true;
       const rootValueSet = new ValueSetRule('component.code');
-      rootValueSet.valueSet = 'http://example.com/ImportantObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
       const labValueSet = new ValueSetRule('component[Lab].code');
-      labValueSet.valueSet = 'http://example.com/MediocreObservationCodes';
+      labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       labValueSet.strength = 'extensible';
 
       observationWithSlice.rules.push(flagRule, rootValueSet, labValueSet);
@@ -3341,11 +3340,11 @@ describe('StructureDefinitionExporter', () => {
       const rootCode = sd.findElement('Observation.component.code');
       const labCode = sd.findElement('Observation.component:Lab.code');
       const importantBinding = {
-        valueSet: 'http://example.com/ImportantObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes',
         strength: 'required'
       };
       const mediocreBinding = {
-        valueSet: 'http://example.com/MediocreObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes',
         strength: 'extensible'
       };
       expect(rootCode.binding).toEqual(importantBinding);
@@ -3353,13 +3352,13 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should apply ValueSetRules on the child of a slice, then the child of the sliced element, with the same value set', () => {
-      // * component[Lab].code from http://example.com/RegularObservationCodes (extensible)
-      // * component.code from http://example.com/RegularObservationCodes (required)
+      // * component[Lab].code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
+      // * component.code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
       const labValueSet = new ValueSetRule('component[Lab].code');
-      labValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       labValueSet.strength = 'extensible';
       const rootValueSet = new ValueSetRule('component.code');
-      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
 
       observationWithSlice.rules.push(labValueSet, rootValueSet);
@@ -3369,7 +3368,7 @@ describe('StructureDefinitionExporter', () => {
       const rootCode = sd.findElement('Observation.component.code');
       const labCode = sd.findElement('Observation.component:Lab.code');
       const regularBinding = {
-        valueSet: 'http://example.com/RegularObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/RegularObservationCodes',
         strength: 'required'
       };
       expect(rootCode.binding).toEqual(regularBinding);
@@ -3377,15 +3376,15 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should not apply a ValueSetRule on the child of a sliced element that would bind it to the same value set as the child of the root, but more weakly', () => {
-      // * component.code from http://example.com/RegularObservationCodes (required)
-      // * component[Lab].code from http://example.com/RegularObservationCodes (extensible)
+      // * component.code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
+      // * component[Lab].code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
       const rootValueSet = new ValueSetRule('component.code');
-      rootValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
       const labValueSet = new ValueSetRule('component[Lab].code')
         .withFile('Weaker.fsh')
         .withLocation([9, 15, 9, 33]);
-      labValueSet.valueSet = 'http://example.com/RegularObservationCodes';
+      labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       labValueSet.strength = 'extensible';
 
       observationWithSlice.rules.push(rootValueSet, labValueSet);
@@ -3395,7 +3394,7 @@ describe('StructureDefinitionExporter', () => {
       const rootCode = sd.findElement('Observation.component.code');
       // const labCode = sd.findElement('Observation.component:Lab.code');
       const regularBinding = {
-        valueSet: 'http://example.com/RegularObservationCodes',
+        valueSet: 'http://hl7.org/fhir/us/minimal/RegularObservationCodes',
         strength: 'required'
       };
       expect(rootCode.binding).toEqual(regularBinding);
@@ -3621,12 +3620,12 @@ describe('StructureDefinitionExporter', () => {
       const expectedShouting = {
         key: 'shout-1',
         human: 'No shouting allowed.',
-        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationWithSlice'
       };
       const expectedTalking = {
         key: 'talk-1',
         human: 'Talking is prohibited.',
-        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationWithSlice'
       };
       expect(rootCategory.constraint).toContainEqual(expectedTalking);
       expect(procedureCategory.constraint).toContainEqual(expectedShouting);
@@ -3661,12 +3660,12 @@ describe('StructureDefinitionExporter', () => {
       const expectedRunning = {
         key: 'run-1',
         human: 'Run as fast as you can!',
-        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationWithSlice'
       };
       const expectedWalking = {
         key: 'walk-1',
         human: 'Walk at your own pace.',
-        source: 'http://example.com/StructureDefinition/ObservationWithSlice'
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationWithSlice'
       };
       expect(rootCode.constraint).toContainEqual(expectedWalking);
       expect(labCode.constraint).toContainEqual(expectedRunning);

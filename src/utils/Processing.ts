@@ -88,7 +88,7 @@ export function loadExternalDependencies(
   config: Configuration
 ): Promise<FHIRDefinitions | void>[] {
   // Ensure FHIR R4 is added as a fhirVersion
-  const dependencies = config.dependencies ?? [];
+  const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
   if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
       'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
@@ -134,14 +134,10 @@ export function getRawFSHes(input: string): RawFSH[] {
   return rawFSHes;
 }
 
-export function fillTank(
-  rawFSHes: RawFSH[],
-  config: PackageJSON,
-  yamlConfig: Configuration
-): FSHTank {
+export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
-  return new FSHTank(docs, config, yamlConfig);
+  return new FSHTank(docs, config);
 }
 
 export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {

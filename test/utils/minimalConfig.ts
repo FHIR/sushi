@@ -1,7 +1,7 @@
-import { Configuration } from '../../../src/fshtypes';
+import { Configuration } from '../../src/fshtypes';
 
 export const minimalConfig: Configuration = {
-  filePath: 'input-path',
+  filePath: 'config.yaml',
   id: 'fhir.us.minimal',
   canonical: 'http://hl7.org/fhir/us/minimal',
   name: 'MinimalIG',

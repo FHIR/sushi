@@ -5,7 +5,7 @@ import { EOL } from 'os';
 import { IGExporter } from '../../src/ig';
 import { Package } from '../../src/export';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { minimalConfig } from './fixtures/minimalConfig';
+import { minimalConfig } from '../utils/minimalConfig';
 import {
   simpleMenuXMLContent,
   subMenuXMLContent,
@@ -32,7 +32,7 @@ describe('IGExporter', () => {
     });
 
     it('should do nothing when config.menu is undefined and none provided', () => {
-      const pkg = new Package(null, minimalConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
@@ -42,7 +42,7 @@ describe('IGExporter', () => {
     });
 
     it('should use user-provided menu.xml when config.menu is not defined', () => {
-      const pkg = new Package(null, minimalConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
@@ -63,7 +63,7 @@ describe('IGExporter', () => {
     it('should use config.menu when defined even with user-provided menu.xml present and log a warning', () => {
       const config = { ...minimalConfig };
       config.menu = [{ name: 'Animals', url: 'animals.html' }];
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
@@ -93,7 +93,7 @@ describe('IGExporter', () => {
         { name: 'Plants', url: 'plants.html' },
         { name: 'Other' }
       ];
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const exporter = new IGExporter(pkg, null, '');
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
@@ -123,7 +123,7 @@ describe('IGExporter', () => {
           ]
         }
       ];
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const exporter = new IGExporter(pkg, null, '');
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
@@ -148,7 +148,7 @@ describe('IGExporter', () => {
           ]
         }
       ];
-      const pkg = new Package(null, config);
+      const pkg = new Package(config);
       const exporter = new IGExporter(pkg, null, '');
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');

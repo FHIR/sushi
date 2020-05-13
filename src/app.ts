@@ -96,7 +96,7 @@ async function app() {
   let tank: FSHTank;
   try {
     const rawFSH = getRawFSHes(input);
-    tank = fillTank(rawFSH, config, yamlConfig);
+    tank = fillTank(rawFSH, yamlConfig);
   } catch {
     program.outputHelp();
     process.exit(1);
@@ -118,11 +118,11 @@ async function app() {
   const outPackage = exportFHIR(tank, defs);
   writeFHIRResources(outDir, outPackage, program.snapshot);
 
-  // If igDataPath exists, generate an IG, otherwise, generate resources only
-  let isIG = false;
-  const igDataPath = getIgDataPath(input);
-  if (igDataPath) {
-    isIG = true;
+  // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
+  if (config.FSHOnly) {
+    logger.info('Exporting FSH definitions only. No IG related content will be exported.');
+  } else {
+    const igDataPath = path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);

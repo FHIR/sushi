@@ -11,6 +11,7 @@ import {
   Mapping
 } from '../../src/fshtypes';
 import { Type, Metadata } from '../../src/utils/Fishable';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('FSHTank', () => {
   let tank: FSHTank;
@@ -49,11 +50,7 @@ describe('FSHTank', () => {
     doc3.mappings.set('Mapping1', new Mapping('Mapping1'));
     doc3.mappings.get('Mapping1').id = 'map1';
 
-    tank = new FSHTank([doc1, doc2, doc3], {
-      name: 'test',
-      canonical: 'http://example.org',
-      version: '0.0.1'
-    });
+    tank = new FSHTank([doc1, doc2, doc3], minimalConfig);
   });
 
   describe('#fish', () => {
@@ -78,10 +75,14 @@ describe('FSHTank', () => {
     });
 
     it('should find valid fish when fishing by url for all types', () => {
-      expect(tank.fish('http://example.org/StructureDefinition/prf1').name).toBe('Profile1');
-      expect(tank.fish('http://example.org/StructureDefinition/ext1').name).toBe('Extension1');
-      expect(tank.fish('http://example.org/ValueSet/vs1').name).toBe('ValueSet1');
-      expect(tank.fish('http://example.org/CodeSystem/cs1').name).toBe('CodeSystem1');
+      expect(tank.fish('http://hl7.org/fhir/us/minimal/StructureDefinition/prf1').name).toBe(
+        'Profile1'
+      );
+      expect(tank.fish('http://hl7.org/fhir/us/minimal/StructureDefinition/ext1').name).toBe(
+        'Extension1'
+      );
+      expect(tank.fish('http://hl7.org/fhir/us/minimal/ValueSet/vs1').name).toBe('ValueSet1');
+      expect(tank.fish('http://hl7.org/fhir/us/minimal/CodeSystem/cs1').name).toBe('CodeSystem1');
       // not applicable for Instance or Invariant or RuleSet or Mapping
     });
 
@@ -238,24 +239,24 @@ describe('FSHTank', () => {
     const prf1MD: Metadata = {
       id: 'prf1',
       name: 'Profile1',
-      url: 'http://example.org/StructureDefinition/prf1',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
       parent: 'Observation'
     };
     const ext1MD: Metadata = {
       id: 'ext1',
       name: 'Extension1',
-      url: 'http://example.org/StructureDefinition/ext1',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ext1',
       parent: 'Extension2'
     };
     const vs1MD: Metadata = {
       id: 'vs1',
       name: 'ValueSet1',
-      url: 'http://example.org/ValueSet/vs1'
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1'
     };
     const cs1MD: Metadata = {
       id: 'cs1',
       name: 'CodeSystem1',
-      url: 'http://example.org/CodeSystem/cs1'
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1'
     };
     const inst1MD: Metadata = {
       id: 'inst1',
@@ -295,10 +296,14 @@ describe('FSHTank', () => {
     });
 
     it('should find valid fish when fishing by url for all types', () => {
-      expect(tank.fishForMetadata('http://example.org/StructureDefinition/prf1')).toEqual(prf1MD);
-      expect(tank.fishForMetadata('http://example.org/StructureDefinition/ext1')).toEqual(ext1MD);
-      expect(tank.fishForMetadata('http://example.org/ValueSet/vs1')).toEqual(vs1MD);
-      expect(tank.fishForMetadata('http://example.org/CodeSystem/cs1')).toEqual(cs1MD);
+      expect(
+        tank.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/prf1')
+      ).toEqual(prf1MD);
+      expect(
+        tank.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/ext1')
+      ).toEqual(ext1MD);
+      expect(tank.fishForMetadata('http://hl7.org/fhir/us/minimal/ValueSet/vs1')).toEqual(vs1MD);
+      expect(tank.fishForMetadata('http://hl7.org/fhir/us/minimal/CodeSystem/cs1')).toEqual(cs1MD);
       // not applicable for Instance or Invariant or RuleSet or Mapping
     });
 
@@ -456,19 +461,23 @@ describe('FSHTank', () => {
       expect(tank.fishForFHIR('prf1')).toBeUndefined();
       expect(tank.fishForFHIR('prf1', Type.Profile)).toBeUndefined();
       expect(tank.fishForFHIR('Profile2')).toBeUndefined();
-      expect(tank.fishForFHIR('http://example.org/StructureDefinition/prf1')).toBeUndefined();
+      expect(
+        tank.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/prf1')
+      ).toBeUndefined();
       expect(tank.fishForFHIR('ext1')).toBeUndefined();
       expect(tank.fishForFHIR('ext1', Type.Extension)).toBeUndefined();
       expect(tank.fishForFHIR('Extension2')).toBeUndefined();
-      expect(tank.fishForFHIR('http://example.org/StructureDefinition/ext1')).toBeUndefined();
+      expect(
+        tank.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/ext1')
+      ).toBeUndefined();
       expect(tank.fishForFHIR('vs1')).toBeUndefined();
       expect(tank.fishForFHIR('vs1', Type.ValueSet)).toBeUndefined();
       expect(tank.fishForFHIR('ValueSet2')).toBeUndefined();
-      expect(tank.fishForFHIR('http://example.org/ValueSet/vs1')).toBeUndefined();
+      expect(tank.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/vs1')).toBeUndefined();
       expect(tank.fishForFHIR('cs1')).toBeUndefined();
       expect(tank.fishForFHIR('cs1', Type.CodeSystem)).toBeUndefined();
       expect(tank.fishForFHIR('CodeSystem2')).toBeUndefined();
-      expect(tank.fishForFHIR('http://example.org/ValueSet/vs1')).toBeUndefined();
+      expect(tank.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/vs1')).toBeUndefined();
       expect(tank.fishForFHIR('inst1')).toBeUndefined();
       expect(tank.fishForFHIR('inst1', Type.Instance)).toBeUndefined();
       expect(tank.fishForFHIR('Instance1')).toBeUndefined();

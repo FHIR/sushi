@@ -41,7 +41,6 @@ import { Configuration } from '../fshtypes';
  */
 export class IGExporter {
   private ig: ImplementationGuide;
-  private readonly packagePath: string;
   private readonly configPath: string;
   private readonly outputLog: Map<string, outputLogDetails>;
   private readonly config: Configuration;
@@ -51,7 +50,6 @@ export class IGExporter {
     private readonly igDataPath: string,
     private readonly isIgPubContext: boolean = false
   ) {
-    this.packagePath = path.resolve(this.igDataPath, '..', 'package.json');
     this.configPath = path.resolve(this.igDataPath, '..', 'config.yaml');
     this.outputLog = new Map();
     this.config = pkg.config;
@@ -291,8 +289,8 @@ export class IGExporter {
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
-      outputFileSync(outputPath, `${warning}${this.pkg.packageJSON.description ?? ''}`);
-      this.updateOutputLog(outputPath, [this.packagePath], 'generated');
+      outputFileSync(outputPath, `${warning}${this.config.description ?? ''}`);
+      this.updateOutputLog(outputPath, [this.configPath], 'generated');
     }
 
     // Add user-provided or generated index file to IG definition
@@ -979,16 +977,16 @@ export class IGExporter {
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
     this.updateOutputLog(
       igJsonPath,
-      [this.packagePath, path.join(this.igDataPath, 'ig.ini'), '{all input resources and pages}'],
+      [this.configPath, path.join(this.igDataPath, 'ig.ini'), '{all input resources and pages}'],
       'generated'
     );
     logger.info(`Generated ImplementationGuide-${this.ig.id}.json`);
   }
 
   /**
-   * Creates an ig.ini file based on the package.json and exports it to the IG folder.
-   * If the user specified an igi.ini file in the ig-data folder, then use its values
-   * as long as they don't conflict with values already in package.json.
+   * Creates an ig.ini file based on the "template" in config.yaml and exports it to the IG folder.
+   * If the user specified an igi.ini file in the ig-data folder, and no "template" in config.yaml is specified,
+   * the file from ig-data is used instead.
    *
    * @param igPath {string} - the path where the IG is exported to
    */
@@ -1204,10 +1202,6 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   private addOutputLog(igPath: string): void {
-    // Add package.json to the output log since it's actually copied outside of this process
-    // so nothing else has added it yet
-    this.updateOutputLogForCopiedPath(path.join(igPath, 'package.json'), this.packagePath);
-
     const intro = [
       '# SUSHI-GENERATED FILES #',
       '',
