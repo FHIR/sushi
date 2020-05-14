@@ -11,7 +11,8 @@ import {
   ParentNotDefinedError,
   ParentDeclaredAsProfileNameError,
   InvalidFHIRIdError,
-  InvalidExtensionParentError
+  InvalidExtensionParentError,
+  ParentDeclaredAsProfileIdError
 } from '../errors';
 import {
   CardRule,
@@ -421,6 +422,16 @@ export class StructureDefinitionExporter implements Fishable {
       const result = this.fishForMetadata(parentName, Type.Resource);
       throw new ParentDeclaredAsProfileNameError(
         fshDefinition.name,
+        fshDefinition.sourceInfo,
+        result?.url
+      );
+    }
+
+    if (fshDefinition.id === parentName) {
+      const result = this.fishForMetadata(parentName, Type.Resource);
+      throw new ParentDeclaredAsProfileIdError(
+        fshDefinition.name,
+        fshDefinition.id,
         fshDefinition.sourceInfo,
         result?.url
       );

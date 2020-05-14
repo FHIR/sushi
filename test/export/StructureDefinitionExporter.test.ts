@@ -192,6 +192,35 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should throw ParentDeclaredAsProfileIdError when a profile sets the same value for parent and id', () => {
+    const parentProfile = new Profile('InitialProfile');
+    parentProfile.id = 'ParentProfile';
+    doc.profiles.set(parentProfile.name, parentProfile);
+
+    const childProfile = new Profile('OverlappingProfile');
+    childProfile.parent = 'InitialProfile';
+    childProfile.id = 'InitialProfile';
+    doc.profiles.set(childProfile.name, childProfile);
+
+    expect(() => {
+      exporter.exportStructDef(childProfile);
+    }).toThrow(
+      'Profile "OverlappingProfile" cannot declare "InitialProfile" as both Parent and Id.'
+    );
+  });
+
+  it('should throw ParentDeclaredAsProfileIdError and suggest resource URL when a profile sets the same value for parent and id and the parent is a FHIR resource', () => {
+    const profile = new Profile('KidsFirstPatient');
+    profile.parent = 'Patient';
+    profile.id = 'Patient';
+    doc.profiles.set(profile.name, profile);
+    expect(() => {
+      exporter.exportStructDef(profile);
+    }).toThrow(
+      'Profile "KidsFirstPatient" cannot declare "Patient" as both Parent and Id. It looks like the parent is an external resource; use its URL (e.g., http://hl7.org/fhir/StructureDefinition/Patient).'
+    );
+  });
+
   // Extension
   it('should set all user-provided metadata for an extension', () => {
     const extension = new Extension('Foo');
