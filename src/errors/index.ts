@@ -19,6 +19,7 @@ export * from './ValueSetFilterMissingValueError';
 export * from './ValueSetFilterValueTypeError';
 export * from './SlicingDefinitionError';
 export * from './SlicingNotDefinedError';
+export * from './DuplicateSliceError';
 export * from './TypeNotFoundError';
 export * from './UnitMismatchError';
 export * from './WideningCardinalityError';

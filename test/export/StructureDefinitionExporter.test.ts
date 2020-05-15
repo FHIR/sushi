@@ -1734,6 +1734,70 @@ describe('StructureDefinitionExporter', () => {
     expect(fooSlice).toBeDefined();
   });
 
+  it('should report an error and not add the slice when a ContainsRule tries to add a slice that already exists', () => {
+    // Profile: DoubleSlice
+    // Parent: resprate
+    // * code.coding contains onlySlice
+    // * code.coding contains onlySlice
+
+    const profile = new Profile('DoubleSlice');
+    profile.parent = 'resprate';
+
+    const rule1 = new ContainsRule('code.coding');
+    rule1.items = [{ name: 'onlySlice' }];
+    const rule2 = new ContainsRule('code.coding');
+    rule2.items = [{ name: 'onlySlice' }];
+    profile.rules.push(rule1, rule2);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
+    const onlySlice = sd.elements.find(e => e.id === 'Observation.code.coding:onlySlice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 1);
+    expect(onlySlice).toBeDefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Slice named onlySlice already exists on element Observation\.code\.coding of DoubleSlice/s
+    );
+  });
+
+  it('should report an error and not add the slice when a ContainsRule tries to add a slice that was created on the parent', () => {
+    // Profile: FirstProfile
+    // Parent: resprate
+    // * code.coding contains onlySlice
+
+    // Profile: SecondProfile
+    // Parent: FirstProfile
+    // * code.coding contains onlySlice
+
+    const firstProfile = new Profile('FirstProfile');
+    firstProfile.parent = 'resprate';
+    const firstRule = new ContainsRule('code.coding');
+    firstRule.items = [{ name: 'onlySlice' }];
+    firstProfile.rules.push(firstRule);
+    doc.profiles.set(firstProfile.name, firstProfile);
+
+    const secondProfile = new Profile('SecondProfile');
+    secondProfile.parent = 'FirstProfile';
+    const secondRule = new ContainsRule('code.coding');
+    secondRule.items = [{ name: 'onlySlice' }];
+    secondProfile.rules.push(secondRule);
+    doc.profiles.set(secondProfile.name, secondProfile);
+
+    exporter.exportStructDef(firstProfile);
+    exporter.exportStructDef(secondProfile);
+    const [firstSd, secondSd] = pkg.profiles;
+    const firstSlice = firstSd.elements.find(e => e.id === 'Observation.code.coding:onlySlice');
+    const secondSlice = secondSd.elements.find(e => e.id === 'Observation.code.coding:onlySlice');
+
+    expect(firstSlice).toBeDefined();
+    expect(secondSlice).toBeDefined();
+    expect(firstSd.elements.length).toEqual(secondSd.elements.length);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Slice named onlySlice already exists on element Observation\.code\.coding of SecondProfile/s
+    );
+  });
+
   it('should not apply a ContainsRule on an element without defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';
