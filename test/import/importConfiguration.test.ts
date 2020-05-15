@@ -197,6 +197,17 @@ describe('importConfiguration', () => {
     );
   });
 
+  it('should report an error and throw on a YAML file with invalid entries', () => {
+    const yamlPath = path.join(__dirname, 'fixtures', 'invalid-config.yaml');
+    const invalidYaml = fs.readFileSync(yamlPath, 'utf8');
+    expect(() => importConfiguration(invalidYaml, 'invalid-config.yaml')).toThrow(
+      'Invalid configuration YAML'
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Error parsing configuration: Map keys must be unique; "releaseLabel" is repeated\.\s*File: invalid-config\.yaml/
+    );
+  });
+
   describe('#id', () => {
     it('should import id as-is', () => {
       minYAML.id = 'my-id';
