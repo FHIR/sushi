@@ -70,7 +70,13 @@ const IG_ONLY_PROPERTIES = [
  */
 export function importConfiguration(yaml: YAMLConfiguration | string, file: string): Configuration {
   if (typeof yaml === 'string') {
-    const parsed: YAMLConfiguration = YAML.parse(yaml);
+    let parsed: YAMLConfiguration;
+    try {
+      parsed = YAML.parse(yaml);
+    } catch (e) {
+      logger.error(`Error parsing configuration: ${e.message}.`, { file });
+      throw new Error('Invalid configuration YAML');
+    }
     if (typeof parsed !== 'object' || parsed === null) {
       logger.error('Configuration is not a valid YAML object.', { file });
       throw new Error('Invalid configuration YAML');
