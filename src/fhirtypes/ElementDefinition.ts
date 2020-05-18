@@ -28,7 +28,8 @@ import {
   MultipleStandardsStatusError,
   InvalidMappingError,
   InvalidFHIRIdError,
-  FixingNonResourceError
+  FixingNonResourceError,
+  DuplicateSliceError
 } from '../errors';
 import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isInheritedResource } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -1736,9 +1737,16 @@ export class ElementDefinition {
     if (!this.slicing) {
       throw new SlicingNotDefinedError(this.id, name);
     }
+
     const slice = this.clone(true);
     delete slice.slicing;
     slice.id = `${this.id}:${name}`;
+
+    // if a slice with the same id already exists, don't add it again
+    const existingSlice = this.structDef.findElement(slice.id);
+    if (existingSlice) {
+      throw new DuplicateSliceError(this.structDef.name, this.id, name);
+    }
 
     // Capture the original so that the differential only contains changes from this point on.
     slice.captureOriginal();
