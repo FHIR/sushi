@@ -137,6 +137,7 @@ describe('InstanceExporter', () => {
     let respRateInstance: Instance;
     let bundleInstance: Instance;
     beforeEach(() => {
+      loggerSpy.reset();
       patient = new Profile('TestPatient');
       patient.parent = 'Patient';
       doc.profiles.set(patient.name, patient);
@@ -381,7 +382,6 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix an element to a value the same as the fixed value on the Structure Definition', () => {
-      loggerSpy.reset();
       const fixedValRule = new FixedValueRule('active');
       fixedValRule.fixedValue = true;
       fixedValRule.exactly = true;
@@ -395,7 +395,6 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix an element to a value the same as the fixed pattern on the Structure Definition', () => {
-      loggerSpy.reset();
       const fixedValRule = new FixedValueRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
       fixedValRule.fixedValue = fixedFshCode;
@@ -561,7 +560,6 @@ describe('InstanceExporter', () => {
     });
 
     it('should not get confused by matching path parts when fixing deeply nested elements', () => {
-      loggerSpy.reset();
       // * maritalStatus, maritalStatus.coding, maritalStatus.coding.system 1..1
       // * maritalStatus.coding.system = "http://itscomplicated.com"
       const statCard = new CardRule('maritalStatus');
@@ -1403,6 +1401,85 @@ describe('InstanceExporter', () => {
       expect(messages[messages.length - 1]).toMatch(
         /Observation.code.*File: ObservationInstance\.fsh.*Line: 10 - 20/s
       );
+    });
+
+    it('should log an error when a required primitive child element is not present', () => {
+      const cardRule1 = new CardRule('active.id');
+      cardRule1.min = 1;
+      cardRule1.max = '1';
+      const cardRule2 = new CardRule('active');
+      cardRule2.min = 1;
+      cardRule2.max = '1';
+      // * active.id 1..1
+      // * active 1..1
+      patient.rules.push(cardRule1, cardRule2);
+      const activeRule = new FixedValueRule('active');
+      activeRule.fixedValue = true;
+      // * active = true
+      patientInstance.rules.push(activeRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Patient.active.id has minimum cardinality 1 but occurs 0 time\(s\).*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should not log an error when a required primitive child element is present', () => {
+      const cardRule1 = new CardRule('active.id');
+      cardRule1.min = 1;
+      cardRule1.max = '1';
+      const cardRule2 = new CardRule('active');
+      cardRule2.min = 1;
+      cardRule2.max = '1';
+      // * active.id 1..1
+      // * active 1..1
+      patient.rules.push(cardRule1, cardRule2);
+      const idRule = new FixedValueRule('active.id');
+      idRule.fixedValue = 'foo';
+      // * active.id = "foo"
+      patientInstance.rules.push(idRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when a required primitive child array is not large enough', () => {
+      const cardRule1 = new CardRule('active.extension');
+      cardRule1.min = 2;
+      cardRule1.max = '*';
+      const cardRule2 = new CardRule('active');
+      cardRule2.min = 1;
+      cardRule2.max = '1';
+      // * active.extension 2..*
+      // * active 1..1
+      patient.rules.push(cardRule1, cardRule2);
+      const activeRule = new FixedValueRule('active');
+      activeRule.fixedValue = true;
+      const extensionRule = new FixedValueRule('active.extension.url');
+      extensionRule.fixedValue = 'http://example.com';
+      // * active = true
+      // * active.extension.url = "http://example.com"
+      patientInstance.rules.push(activeRule, extensionRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Patient.active.extension has minimum cardinality 2 but occurs 1 time\(s\).*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should not log an error when a required primitive child array is large enough', () => {
+      const cardRule1 = new CardRule('active.extension');
+      cardRule1.min = 1;
+      cardRule1.max = '*';
+      const cardRule2 = new CardRule('active');
+      cardRule2.min = 1;
+      cardRule2.max = '1';
+      // * active.extension 1..*
+      // * active 1..1
+      patient.rules.push(cardRule1, cardRule2);
+      const idRule = new FixedValueRule('active.extension.url');
+      idRule.fixedValue = 'http://example.com';
+      // * active.extension.url = "http://example.com"
+      patientInstance.rules.push(idRule);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should only export an instance once', () => {
