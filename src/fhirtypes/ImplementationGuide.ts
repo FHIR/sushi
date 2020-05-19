@@ -1,5 +1,5 @@
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { CodeableConcept, Reference } from './dataTypes';
+import { CodeableConcept, Reference, BackboneElement } from './dataTypes';
 
 export type ImplementationGuide = {
   resourceType: 'ImplementationGuide';
@@ -26,7 +26,7 @@ export type ImplementationGuide = {
   manifest?: ImplementationGuideManifest;
 };
 
-export type ImplementationGuideDependsOn = {
+export type ImplementationGuideDependsOn = BackboneElement & {
   uri: string;
   packageId?: string;
   version?: string;
