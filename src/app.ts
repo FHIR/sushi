@@ -305,7 +305,8 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'You rock, lobster!',
     'Everything is ship-shape!',
     'Ex-clam-ation point!',
-    'Ac-clam-ations!'
+    'Ac-clam-ations!',
+    'Fin-tastic job!'
   ],
   warnings: [
     'Not bad, but you cod do batter!',
@@ -322,7 +323,9 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'You spawned some errors.',
     'Just keep swimming, Dory.',
     'This is the one that got away.',
-    'The docs might be bene-fish-al.'
+    'The docs might be bene-fish-al.',
+    'This was a turtle disaster.',
+    'Something went eely wrong there.'
   ]
 };
 
