@@ -189,7 +189,9 @@ export class InstanceExporter implements Fishable {
     children.forEach(child => {
       // Get the last part of the path, A.B.C => C
       const childPathEnd = child.path.split('.').slice(-1)[0];
-      let instanceChild = instance[childPathEnd];
+      // Note that in most cases the _ prefixed element will not exist. But if it does exist, we validate
+      // using the _ prefixed element, since it will contain any children of the primitive
+      let instanceChild = instance[`_${childPathEnd}`] ?? instance[childPathEnd];
       // If the element is a choice, we will fail to find it, we need to use the choice name
       if (instanceChild == null && childPathEnd.endsWith('[x]')) {
         const choiceSlices = children.filter(c => c.path === child.path && c.sliceName);
