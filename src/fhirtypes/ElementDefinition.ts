@@ -1623,21 +1623,30 @@ export class ElementDefinition {
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
   unfoldChoiceElementTypes(fisher: Fishable): ElementDefinition[] {
-    const allTypeAncestry = this.type
-      .map(t => {
-        return StructureDefinition.fromJSON(fisher.fishForFHIR(t.code));
-      })
-      .map(sd => {
-        const ancestry: string[] = [sd.url];
-        let ancestryWalker = sd;
-        while (ancestryWalker.baseDefinition) {
-          ancestryWalker = StructureDefinition.fromJSON(
-            fisher.fishForFHIR(ancestryWalker.baseDefinition)
-          );
-          ancestry.push(ancestryWalker.url);
-        }
-        return ancestry;
-      });
+    // const allTypeAncestry = this.type
+    //   .map(t => {
+    //     return StructureDefinition.fromJSON(fisher.fishForFHIR(t.code));
+    //   })
+    //   .map(sd => {
+    //     const ancestry: string[] = [sd.url];
+    //     let ancestryWalker = sd;
+    //     while (ancestryWalker.baseDefinition) {
+    //       ancestryWalker = StructureDefinition.fromJSON(
+    //         fisher.fishForFHIR(ancestryWalker.baseDefinition)
+    //       );
+    //       ancestry.push(ancestryWalker.url);
+    //     }
+    //     return ancestry;
+    //   });
+    const allTypes: string[] = [];
+    this.type.forEach(t => {
+      if (t.profile?.length) {
+        allTypes.push(...t.profile);
+      } else {
+        allTypes.push(t.code);
+      }
+    });
+    const allTypeAncestry = allTypes.map(t => this.getTypeLineage(t, fisher).map(l => l.url));
     const sharedAncestry = intersectionWith(...allTypeAncestry);
     if (sharedAncestry.length > 0) {
       const commonAncestor = StructureDefinition.fromJSON(fisher.fishForFHIR(sharedAncestry[0]));

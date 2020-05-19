@@ -1477,10 +1477,11 @@ describe('StructureDefinitionExporter', () => {
       }
     ]);
   });
-  it('should apply a fixedValueRule on the child of a choice element with constrained choices', () => {
+
+  it('should apply a fixedValueRule on the child of a choice element with constrained choices that share a type', () => {
     // Quantity is the first ancestor of Duration and Age
 
-    // * value[x] only Duration, Age
+    // * value[x] only Duration or Age
     // * value[x].comparator = #>=
 
     const profile = new Profile('QuantifiedObservation');
@@ -1498,6 +1499,56 @@ describe('StructureDefinitionExporter', () => {
     const sd = pkg.profiles[0];
     const fixedElement = sd.findElement('Observation.value[x].comparator');
     expect(fixedElement.patternCode).toBe('>=');
+  });
+
+  it('should apply a fixedValueRule on the child of a choice element with constrained choices that share a profile', () => {
+    // Profile: CustomizedTiming
+    // Parent: Timing
+    // * extension contains customField 0..1
+    const customizedTiming = new Profile('CustomizedTiming');
+    customizedTiming.parent = 'Timing';
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = [{ name: 'customField' }];
+    const cardRule = new CardRule('extension[customField]');
+    cardRule.min = 0;
+    cardRule.max = '1';
+    customizedTiming.rules.push(containsRule, cardRule);
+    doc.profiles.set(customizedTiming.name, customizedTiming);
+
+    // Profile: VerifiedTiming
+    // Parent: CustomizedTiming
+    const verifiedTiming = new Profile('VerifiedTiming');
+    verifiedTiming.parent = customizedTiming.name;
+    doc.profiles.set(verifiedTiming.name, verifiedTiming);
+
+    // Profile: ConsensusTiming
+    // Parent: CustomizedTiming
+    const consensusTiming = new Profile('ConsensusTiming');
+    consensusTiming.parent = customizedTiming.name;
+    doc.profiles.set(consensusTiming.name, consensusTiming);
+
+    // Profile: SpecialTimingObservation
+    // Parent: Observation
+    // * effective[x] only VerifiedTiming or ConsensusTiming
+    // * effective[x].extension[customField].id = my-special-id
+    const specialTimingObservation = new Profile('SpecialTimingObservation');
+    specialTimingObservation.parent = 'Observation';
+    const onlyRule = new OnlyRule('effective[x]');
+    onlyRule.types = [{ type: 'VerifiedTiming' }, { type: 'ConsensusTiming' }];
+    const fixedValueRule = new FixedValueRule('effective[x].extension[customField].id');
+    fixedValueRule.fixedValue = 'my-special-id';
+    specialTimingObservation.rules.push(onlyRule, fixedValueRule);
+    doc.profiles.set(specialTimingObservation.name, specialTimingObservation);
+
+    exporter.exportStructDef(specialTimingObservation);
+    const specialTimingObservationSd = pkg.profiles.find(
+      resource => resource.id === 'SpecialTimingObservation'
+    );
+    expect(specialTimingObservationSd).toBeDefined();
+    const fixedId = specialTimingObservationSd.findElement(
+      'Observation.effective[x].extension:customField.id'
+    );
+    expect(fixedId.patternString).toBe('my-special-id');
   });
 
   it('should not apply an incorrect FixedValueRule', () => {
