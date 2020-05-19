@@ -1,4 +1,4 @@
-import { isEmpty, isEqual, isMatch, cloneDeep, upperFirst } from 'lodash';
+import { isEmpty, isEqual, isMatch, cloneDeep, upperFirst, intersectionWith } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -1610,6 +1610,44 @@ export class ElementDefinition {
         this.structDef.addElements(newElements);
         return newElements;
       }
+    }
+    return [];
+  }
+
+  /**
+   * Unfolds a choice element's typed choices. The elements added to this element's
+   * structure definition are those that are on the common ancestor of the available types.
+   * All types have a common ancestor of Element, so if all else fails, Element's
+   * elements are used.
+   *
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   */
+  unfoldChoiceElementTypes(fisher: Fishable): ElementDefinition[] {
+    const allTypes: string[] = [];
+    this.type.forEach(t => {
+      if (t.profile?.length) {
+        allTypes.push(...t.profile);
+      } else {
+        allTypes.push(t.code);
+      }
+    });
+    const allTypeAncestry = allTypes.map(t => this.getTypeLineage(t, fisher).map(l => l.url));
+    const sharedAncestry = intersectionWith(...allTypeAncestry);
+    if (sharedAncestry.length > 0) {
+      const commonAncestor = StructureDefinition.fromJSON(fisher.fishForFHIR(sharedAncestry[0]));
+      const newElements = commonAncestor.elements.slice(1).map(e => {
+        const eClone = e.clone();
+        eClone.id = eClone.id.replace(commonAncestor.type, `${this.id}`);
+        eClone.structDef = this.structDef;
+        // Capture the original so that diffs only show what changed *after* unfolding
+        eClone.captureOriginal();
+        return eClone;
+      });
+      this.structDef.addElements(newElements);
+      return newElements;
+    } else {
+      // this should not be reachable if the rest of the software is working correctly
+      logger.error(`Could not unfold choice element ${this.id}: choices have no common ancestor.`);
     }
     return [];
   }
