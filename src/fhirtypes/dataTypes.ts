@@ -8,6 +8,17 @@ import { FHIRDateTime, validateFHIRDateTime } from './primitiveTypes';
 import { Meta } from './specialTypes';
 
 /**
+ * Represents the FHIR R4 data type BackboneElement.
+ * This is the base definition for elements that have children defined
+ * on a resource.
+ *
+ * @see {@link http://hl7.org/fhir/R4/backboneelement.html}
+ */
+export type BackboneElement = Element & {
+  modifierExtension?: Extension[];
+};
+
+/**
  * Represents the FHIR R4 data type CodeableConcept.
  *
  * @see {@link http://hl7.org/fhir/R4/datatypes.html#CodeableConcept}
@@ -41,6 +52,16 @@ export type ContactPoint = {
   use?: string;
   rank?: number;
   period?: Period;
+};
+
+/**
+ * Represents the FHIR R4 data type Element.
+ *
+ * @see {@link http://hl7.org/fhir/R4/element.html}
+ */
+export type Element = {
+  id?: string;
+  extension?: Extension[];
 };
 
 /**

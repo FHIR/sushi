@@ -171,6 +171,8 @@ export class IGExporter {
           this.ig.dependsOn.push({
             uri: `${depIG.url}`,
             packageId: depId,
+            // packageId should be alphanumeric or '.', id must be alphanumeric or '_' for IG Publisher, so replace '.' with '_'
+            id: depId.replace(/\./g, '_'),
             version: depVersion
           });
         } else {
