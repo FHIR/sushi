@@ -214,6 +214,9 @@ export class StructureDefinition {
         if (unfoldedElements.length > 0) {
           // Only get the children that match our path
           newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
+        } else if (matchingElements[0].id.endsWith('[x]')) {
+          unfoldedElements = matchingElements[0].unfoldChoiceElementTypes(fisher);
+          newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
         }
       }
 

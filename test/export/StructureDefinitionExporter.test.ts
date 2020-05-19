@@ -408,6 +408,20 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Foo\.fsh.*Line: 3 - 4\D*/s);
   });
 
+  it('should emit an error and continue when the path for the child of a choice element is not found', () => {
+    const profile = new Profile('Foo');
+    const rule = new FixedValueRule('value[x].comparator')
+      .withFile('Foo.fsh')
+      .withLocation([4, 7, 4, 22]);
+    rule.fixedValue = new FshCode('>=');
+    profile.rules.push(rule);
+    exporter.exportStructDef(profile);
+    const structDef = pkg.profiles[0];
+    expect(structDef).toBeDefined();
+    expect(structDef.type).toBe('Resource');
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Foo\.fsh.*Line: 4\D*/s);
+  });
+
   // Card Rule
   it('should apply a correct card rule', () => {
     const profile = new Profile('Foo');
@@ -1464,6 +1478,79 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
+  it('should apply a fixedValueRule on the child of a choice element with constrained choices that share a type', () => {
+    // Quantity is the first ancestor of Duration and Age
+
+    // * value[x] only Duration or Age
+    // * value[x].comparator = #>=
+
+    const profile = new Profile('QuantifiedObservation');
+    profile.parent = 'Observation';
+
+    const onlyRule = new OnlyRule('value[x]');
+    onlyRule.types = [{ type: 'Duration' }, { type: 'Age' }];
+    profile.rules.push(onlyRule);
+
+    const fixedValueRule = new FixedValueRule('value[x].comparator');
+    fixedValueRule.fixedValue = new FshCode('>=');
+    profile.rules.push(fixedValueRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedElement = sd.findElement('Observation.value[x].comparator');
+    expect(fixedElement.patternCode).toBe('>=');
+  });
+
+  it('should apply a fixedValueRule on the child of a choice element with constrained choices that share a profile', () => {
+    // Profile: CustomizedTiming
+    // Parent: Timing
+    // * extension contains customField 0..1
+    const customizedTiming = new Profile('CustomizedTiming');
+    customizedTiming.parent = 'Timing';
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = [{ name: 'customField' }];
+    const cardRule = new CardRule('extension[customField]');
+    cardRule.min = 0;
+    cardRule.max = '1';
+    customizedTiming.rules.push(containsRule, cardRule);
+    doc.profiles.set(customizedTiming.name, customizedTiming);
+
+    // Profile: VerifiedTiming
+    // Parent: CustomizedTiming
+    const verifiedTiming = new Profile('VerifiedTiming');
+    verifiedTiming.parent = customizedTiming.name;
+    doc.profiles.set(verifiedTiming.name, verifiedTiming);
+
+    // Profile: ConsensusTiming
+    // Parent: CustomizedTiming
+    const consensusTiming = new Profile('ConsensusTiming');
+    consensusTiming.parent = customizedTiming.name;
+    doc.profiles.set(consensusTiming.name, consensusTiming);
+
+    // Profile: SpecialTimingObservation
+    // Parent: Observation
+    // * effective[x] only VerifiedTiming or ConsensusTiming
+    // * effective[x].extension[customField].id = my-special-id
+    const specialTimingObservation = new Profile('SpecialTimingObservation');
+    specialTimingObservation.parent = 'Observation';
+    const onlyRule = new OnlyRule('effective[x]');
+    onlyRule.types = [{ type: 'VerifiedTiming' }, { type: 'ConsensusTiming' }];
+    const fixedValueRule = new FixedValueRule('effective[x].extension[customField].id');
+    fixedValueRule.fixedValue = 'my-special-id';
+    specialTimingObservation.rules.push(onlyRule, fixedValueRule);
+    doc.profiles.set(specialTimingObservation.name, specialTimingObservation);
+
+    exporter.exportStructDef(specialTimingObservation);
+    const specialTimingObservationSd = pkg.profiles.find(
+      resource => resource.id === 'SpecialTimingObservation'
+    );
+    expect(specialTimingObservationSd).toBeDefined();
+    const fixedId = specialTimingObservationSd.findElement(
+      'Observation.effective[x].extension:customField.id'
+    );
+    expect(fixedId.patternString).toBe('my-special-id');
+  });
+
   it('should not apply an incorrect FixedValueRule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -1734,6 +1821,34 @@ describe('StructureDefinitionExporter', () => {
     expect(fooSlice).toBeDefined();
   });
 
+  it('should apply a containsRule on the child of a choice element with a common ancestor of Element', () => {
+    // Element contains extension and id
+    // * value[x].extension contains my-inline-extension 0..1
+
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const containsRule = new ContainsRule('value[x].extension');
+    containsRule.items = [{ name: 'my-inline-extension' }];
+    profile.rules.push(containsRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const extension = sd.elements.find(e => e.id === 'Observation.value[x].extension');
+    const extensionSlice = sd.elements.find(
+      e => e.id === 'Observation.value[x].extension:my-inline-extension'
+    );
+    const extensionSliceUrl = sd.elements.find(
+      e => e.id === 'Observation.value[x].extension:my-inline-extension.url'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('my-inline-extension');
+  });
   it('should report an error and not add the slice when a ContainsRule tries to add a slice that already exists', () => {
     // Profile: DoubleSlice
     // Parent: resprate
