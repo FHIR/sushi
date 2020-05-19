@@ -1623,21 +1623,6 @@ export class ElementDefinition {
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
   unfoldChoiceElementTypes(fisher: Fishable): ElementDefinition[] {
-    // const allTypeAncestry = this.type
-    //   .map(t => {
-    //     return StructureDefinition.fromJSON(fisher.fishForFHIR(t.code));
-    //   })
-    //   .map(sd => {
-    //     const ancestry: string[] = [sd.url];
-    //     let ancestryWalker = sd;
-    //     while (ancestryWalker.baseDefinition) {
-    //       ancestryWalker = StructureDefinition.fromJSON(
-    //         fisher.fishForFHIR(ancestryWalker.baseDefinition)
-    //       );
-    //       ancestry.push(ancestryWalker.url);
-    //     }
-    //     return ancestry;
-    //   });
     const allTypes: string[] = [];
     this.type.forEach(t => {
       if (t.profile?.length) {
