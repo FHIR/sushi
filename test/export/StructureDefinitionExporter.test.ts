@@ -3693,7 +3693,7 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
-  it('should include slice root and sliceName in a differential when an attribute of the slice is changed', () => {
+  it('should include sliceName in a differential when an attribute of the slice is changed', () => {
     const profile = new Profile('MustSlice');
     profile.parent = 'resprate';
     const mustCode = new FlagRule('code.coding[RespRateCode]');
@@ -3702,7 +3702,7 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
     const json = sd.toJSON();
-    expect(json.differential.element).toHaveLength(4);
+    expect(json.differential.element).toHaveLength(3);
     expect(json.differential.element).toEqual([
       {
         id: 'Observation',
@@ -3711,10 +3711,6 @@ describe('StructureDefinitionExporter', () => {
       {
         id: 'Observation.code',
         path: 'Observation.code'
-      },
-      {
-        id: 'Observation.code.coding',
-        path: 'Observation.code.coding'
       },
       {
         id: 'Observation.code.coding:RespRateCode',

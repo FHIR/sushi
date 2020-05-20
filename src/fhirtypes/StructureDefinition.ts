@@ -347,16 +347,12 @@ export class StructureDefinition {
       return hasDiffCache.get(element.id);
     };
 
-    // Populate the differential
+    // Populate the differential (including intermediate elements to avoid a "sparse differential")
     j.differential = { element: [] };
     this.elements.forEach(e => {
-      let hasDiff = cachedHasDiff(e);
-      let choiceSliceRoot = false;
-      if (hasDiff) {
+      if (cachedHasDiff(e)) {
         const diff = e.calculateDiff().toJSON();
-        // choice[x] elements that differ only by the standard type slicing definition don't need to go in the
-        // differential, as they are inferred. See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-        if (
+        const isTypeSlicingChoiceDiff =
           diff.id.endsWith('[x]') &&
           Object.keys(diff).length === 3 &&
           diff.id &&
@@ -365,33 +361,21 @@ export class StructureDefinition {
           diff.slicing.discriminator[0].type === 'type' &&
           diff.slicing.discriminator[0].path === '$this' &&
           diff.slicing.rules === 'open' &&
-          (diff.slicing.ordered == null || diff.slicing.ordered === false)
-        ) {
-          // treat it like a no-diff element
-          hasDiff = false;
-          choiceSliceRoot = true;
-        } else {
-          j.differential.element.push(diff);
-        }
-      }
+          (diff.slicing.ordered == null || diff.slicing.ordered === false);
 
-      // Since the publisher can be buggy w/ sparse differentials, include a simple representation of
-      // the element if it has any children that will be in the differential. Since the children()
-      // function doesn't include slices, also check the slices since we want an element representing
-      // the slice root if there are slices (BTW - slices will always be hasDiff===true since we always put
-      // the sliceName in the diff). There is one exception: if this element is a choice[x] only differing
-      // by the standard choice slicing *and* it doesn't have any direct children w/ diffs, don't include
-      // it even if it has slices because it makes the diff a bit more confusing and it is supposed to
-      // be inferred anyway (see blog reference above).
-      // NOTE: This is a separate 'if' instead of 'else if' because when a sliced choice element has
-      // direct children that have diffs, the sliced choice element will be caught in the 'if' above, but
-      // then is treated like a no-diff. In order to get the no-diff treatment, it needs to be considered
-      // for the logic below (but it would not be if this was an else-if).
-      if (
-        !hasDiff &&
-        (e.children().some(c => cachedHasDiff(c)) ||
-          (!choiceSliceRoot && e.getSlices().some(c => cachedHasDiff(c))))
-      ) {
+        // choice[x] elements that differ only by the standard type slicing definition don't need to go in the
+        // differential, as they are inferred. See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+        if (!isTypeSlicingChoiceDiff) {
+          j.differential.element.push(diff);
+        } else if (e.children().some(c => cachedHasDiff(c))) {
+          // Even for a type-slicing choice diff, we want at least a simple diff when it has children with a diff
+          j.differential.element.push({
+            id: e.id,
+            path: e.path
+          });
+        }
+      } else if (e.children().some(c => cachedHasDiff(c))) {
+        // Since it has children with a diff, at least add a simple diff element to avoid "sparse differentials"
         j.differential.element.push({
           id: e.id,
           path: e.path
