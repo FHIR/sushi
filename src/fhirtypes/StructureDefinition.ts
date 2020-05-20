@@ -383,6 +383,10 @@ export class StructureDefinition {
       // by the standard choice slicing *and* it doesn't have any direct children w/ diffs, don't include
       // it even if it has slices because it makes the diff a bit more confusing and it is supposed to
       // be inferred anyway (see blog reference above).
+      // NOTE: This is a separate 'if' instead of 'else if' because when a sliced choice element has
+      // direct children that have diffs, the sliced choice element will be caught in the 'if' above, but
+      // then is treated like a no-diff. In order to get the no-diff treatment, it needs to be considered
+      // for the logic below (but it would not be if this was an else-if).
       if (
         !hasDiff &&
         (e.children().some(c => cachedHasDiff(c)) ||

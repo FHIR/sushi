@@ -206,6 +206,47 @@ describe('StructureDefinition', () => {
       });
     });
 
+    it('should contain intermediate elements in differential for children of choices', () => {
+      // If we have this:
+      //   * valueQuantity ^short = "value[x] Quantity choice"
+      // then value[x] should not appear because IG Publisher infers it.
+      // But if we have this:
+      //   * value[x].extension ^short = "Extension on value[x]"
+      //   * valueQuantity ^short = "the quantity choice"
+      // then it should appear since it has a direct child.
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.sliceIt('type', '$this', false, 'open');
+      valueX.unfoldChoiceElementTypes(fisher);
+      const valueXExtension = observation.elements.find(
+        e => e.id === 'Observation.value[x].extension'
+      );
+      valueXExtension.short = 'Extension on value[x]';
+      const valueQuantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      valueQuantity.short = 'the quantity choice';
+
+      const json = observation.toJSON();
+      expect(json.differential.element).toHaveLength(4);
+      expect(json.differential.element[0]).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      expect(json.differential.element[1]).toEqual({
+        id: 'Observation.value[x]',
+        path: 'Observation.value[x]'
+      });
+      expect(json.differential.element[2]).toEqual({
+        id: 'Observation.value[x].extension',
+        path: 'Observation.value[x].extension',
+        short: 'Extension on value[x]'
+      });
+      expect(json.differential.element[3]).toEqual({
+        id: 'Observation.valueQuantity',
+        path: 'Observation.valueQuantity',
+        short: 'the quantity choice',
+        type: [{ code: 'Quantity' }]
+      });
+    });
+
     it('should reflect basic differential for structure definitions with no changes', () => {
       const json = observation.toJSON();
       expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
