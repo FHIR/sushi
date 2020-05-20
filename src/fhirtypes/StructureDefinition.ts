@@ -1,10 +1,6 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
-import {
-  ElementDefinition,
-  ElementDefinitionType,
-  ElementDefinitionSlicing
-} from './ElementDefinition';
+import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
@@ -341,37 +337,71 @@ export class StructureDefinition {
       j.snapshot = { element: this.elements.map(e => e.toJSON()) };
     }
 
-    const differentialElements = this.elements
-      .filter(e => e.hasDiff())
-      .map(e => e.calculateDiff().toJSON());
-    const defaultDifferentialElements = [{ id: this.elements[0].id, path: this.elements[0].path }];
-
-    j.differential = {
-      element: differentialElements.length > 0 ? differentialElements : defaultDifferentialElements
+    // Create a cached hasDiff function since hasDiff can be expensive and may be called multiple times
+    // per element when generating the differential.
+    const hasDiffCache: Map<string, boolean> = new Map();
+    const cachedHasDiff = (element: ElementDefinition): boolean => {
+      if (!hasDiffCache.has(element.id)) {
+        hasDiffCache.set(element.id, element.hasDiff());
+      }
+      return hasDiffCache.get(element.id);
     };
 
-    // Post-process the differential to remove any choice[x] elements if the only thing they do is establish the type
-    // slicing.  In this case, the type slicing can be inferred and does not need to be explicitly added.
-    // See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-    j.differential.element = j.differential.element.filter(
-      (e: { id: string; path: string; slicing: ElementDefinitionSlicing }) => {
-        return (
-          // not a choice, or
-          !e.id.endsWith('[x]') ||
-          // is a choice but not one whose only diff is the standard type slicing
-          !(
-            Object.keys(e).length === 3 &&
-            e.id &&
-            e.path &&
-            e.slicing?.discriminator?.length === 1 &&
-            e.slicing.discriminator[0].type === 'type' &&
-            e.slicing.discriminator[0].path === '$this' &&
-            e.slicing.rules === 'open' &&
-            (e.slicing.ordered == null || e.slicing.ordered === false)
-          )
-        );
+    // Populate the differential
+    j.differential = { element: [] };
+    this.elements.forEach(e => {
+      let hasDiff = cachedHasDiff(e);
+      let choiceSliceRoot = false;
+      if (hasDiff) {
+        const diff = e.calculateDiff().toJSON();
+        // choice[x] elements that differ only by the standard type slicing definition don't need to go in the
+        // differential, as they are inferred. See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+        if (
+          diff.id.endsWith('[x]') &&
+          Object.keys(diff).length === 3 &&
+          diff.id &&
+          diff.path &&
+          diff.slicing?.discriminator?.length === 1 &&
+          diff.slicing.discriminator[0].type === 'type' &&
+          diff.slicing.discriminator[0].path === '$this' &&
+          diff.slicing.rules === 'open' &&
+          (diff.slicing.ordered == null || diff.slicing.ordered === false)
+        ) {
+          // treat it like a no-diff element
+          hasDiff = false;
+          choiceSliceRoot = true;
+        } else {
+          j.differential.element.push(diff);
+        }
       }
-    );
+
+      // Since the publisher can be buggy w/ sparse differentials, include a simple representation of
+      // the element if it has any children that will be in the differential. Since the children()
+      // function doesn't include slices, also check the slices since we want an element representing
+      // the slice root if there are slices (BTW - slices will always be hasDiff===true since we always put
+      // the sliceName in the diff). There is one exception: if this element is a choice[x] only differing
+      // by the standard choice slicing *and* it doesn't have any direct children w/ diffs, don't include
+      // it even if it has slices because it makes the diff a bit more confusing and it is supposed to
+      // be inferred anyway (see blog reference above).
+      if (
+        !hasDiff &&
+        (e.children().some(c => cachedHasDiff(c)) ||
+          (!choiceSliceRoot && e.getSlices().some(c => cachedHasDiff(c))))
+      ) {
+        j.differential.element.push({
+          id: e.id,
+          path: e.path
+        });
+      }
+    });
+
+    // Never have an empty differential. It makes the IG Publisher mad.
+    if (j.differential.element.length === 0) {
+      j.differential.element.push({
+        id: this.elements[0].id,
+        path: this.elements[0].path
+      });
+    }
 
     // If the StructureDefinition is in progress, we want to persist that in the JSON so that when
     // the Fisher retrieves it from a package and converts to JSON, the inProgress state will be
@@ -821,8 +851,8 @@ export type PathPart = {
 interface LooseStructDefJSON {
   resourceType: string;
   derivation?: string;
-  snapshot?: { element: any[] };
-  differential?: { element: any[] };
+  snapshot?: { element: LooseElementDefJSON[] };
+  differential?: { element: LooseElementDefJSON[] };
   inProgress?: boolean;
   // [key: string]: any;
 }

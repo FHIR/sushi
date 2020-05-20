@@ -122,13 +122,17 @@ describe('StructureDefinition', () => {
       valueX.min = 1;
 
       const json = observation.toJSON();
-      expect(json.differential.element).toHaveLength(2);
+      expect(json.differential.element).toHaveLength(3);
       expect(json.differential.element[0]).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      expect(json.differential.element[1]).toEqual({
         id: 'Observation.code',
         path: 'Observation.code',
         short: 'Special observation code'
       });
-      expect(json.differential.element[1]).toEqual({
+      expect(json.differential.element[2]).toEqual({
         id: 'Observation.value[x]',
         path: 'Observation.value[x]',
         min: 1
@@ -142,18 +146,64 @@ describe('StructureDefinition', () => {
       valueX.min = 1;
 
       const json = observation.toJSON(false);
-      expect(json.differential.element).toHaveLength(2);
+      expect(json.differential.element).toHaveLength(3);
       expect(json.differential.element[0]).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      expect(json.differential.element[1]).toEqual({
         id: 'Observation.code',
         path: 'Observation.code',
         short: 'Special observation code'
       });
-      expect(json.differential.element[1]).toEqual({
+      expect(json.differential.element[2]).toEqual({
         id: 'Observation.value[x]',
         path: 'Observation.value[x]',
         min: 1
       });
       expect(json.snapshot).toBeUndefined();
+    });
+
+    it('should contain intermediate elements in differential to avoid sparse differentials', () => {
+      const componentCode = observation.elements.find(e => e.id === 'Observation.component.code');
+      componentCode.short = 'Special component code';
+
+      const json = observation.toJSON();
+      expect(json.differential.element).toHaveLength(3);
+      expect(json.differential.element[0]).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      expect(json.differential.element[1]).toEqual({
+        id: 'Observation.component',
+        path: 'Observation.component'
+      });
+      expect(json.differential.element[2]).toEqual({
+        id: 'Observation.component.code',
+        path: 'Observation.component.code',
+        short: 'Special component code'
+      });
+    });
+
+    it('should contain intermediate elements in differential to avoid sparse differentials without generating snapshot', () => {
+      const componentCode = observation.elements.find(e => e.id === 'Observation.component.code');
+      componentCode.short = 'Special component code';
+
+      const json = observation.toJSON(false);
+      expect(json.differential.element).toHaveLength(3);
+      expect(json.differential.element[0]).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      expect(json.differential.element[1]).toEqual({
+        id: 'Observation.component',
+        path: 'Observation.component'
+      });
+      expect(json.differential.element[2]).toEqual({
+        id: 'Observation.component.code',
+        path: 'Observation.component.code',
+        short: 'Special component code'
+      });
     });
 
     it('should reflect basic differential for structure definitions with no changes', () => {
@@ -203,8 +253,13 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
       // then check that differential has value[x] and shortcut syntax valueQuantity and valueString
-      expect(json.differential.element).toHaveLength(3);
-      const valueXDiff = json.differential.element[0];
+      expect(json.differential.element).toHaveLength(4);
+      const rootDiff = json.differential.element[0];
+      expect(rootDiff).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      const valueXDiff = json.differential.element[1];
       expect(valueXDiff).toEqual({
         id: 'Observation.value[x]',
         path: 'Observation.value[x]',
@@ -215,13 +270,13 @@ describe('StructureDefinition', () => {
           rules: 'open'
         }
       });
-      const valueQuantityDiff = json.differential.element[1];
+      const valueQuantityDiff = json.differential.element[2];
       expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
       expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantityDiff.sliceName).toBeUndefined();
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringDiff = json.differential.element[2];
+      const valueStringDiff = json.differential.element[3];
       expect(valueStringDiff.id).toBe('Observation.valueString');
       expect(valueStringDiff.path).toBe('Observation.valueString');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
@@ -262,14 +317,19 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
       // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
-      expect(json.differential.element).toHaveLength(2);
-      const valueQuantityDiff = json.differential.element[0];
+      expect(json.differential.element).toHaveLength(3);
+      const rootDiff = json.differential.element[0];
+      expect(rootDiff).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      const valueQuantityDiff = json.differential.element[1];
       expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
       expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantityDiff.sliceName).toBeUndefined();
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringDiff = json.differential.element[1];
+      const valueStringDiff = json.differential.element[2];
       expect(valueStringDiff.id).toBe('Observation.valueString');
       expect(valueStringDiff.path).toBe('Observation.valueString');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
@@ -314,8 +374,13 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
       // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
-      expect(json.differential.element).toHaveLength(3);
-      const valueXDiff = json.differential.element[0];
+      expect(json.differential.element).toHaveLength(4);
+      const rootDiff = json.differential.element[0];
+      expect(rootDiff).toEqual({
+        id: 'Observation',
+        path: 'Observation'
+      });
+      const valueXDiff = json.differential.element[1];
       expect(valueXDiff).toEqual({
         id: 'Observation.value[x]',
         path: 'Observation.value[x]',
@@ -326,13 +391,13 @@ describe('StructureDefinition', () => {
         },
         short: 'a choice of many things'
       });
-      const valueQuantityDiff = json.differential.element[1];
+      const valueQuantityDiff = json.differential.element[2];
       expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
       expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantityDiff.sliceName).toBeUndefined();
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringDiff = json.differential.element[2];
+      const valueStringDiff = json.differential.element[3];
       expect(valueStringDiff.id).toBe('Observation.valueString');
       expect(valueStringDiff.path).toBe('Observation.valueString');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
@@ -375,8 +440,8 @@ describe('StructureDefinition', () => {
       expect(catCoding).toEqual(catCodingOriginal);
       expect(cat).toEqual(catOriginal);
 
-      const vsCatCodingDiff = json.differential.element[3];
-      const vsCatDiff = json.differential.element[2];
+      const vsCatCodingDiff = json.differential.element[4];
+      const vsCatDiff = json.differential.element[3];
       expect(vsCatCodingDiff).toEqual({
         id: 'Observation.category:VSCat.coding',
         path: 'Observation.category.coding',
@@ -388,8 +453,8 @@ describe('StructureDefinition', () => {
         sliceName: 'VSCat'
       });
 
-      const catCodingDiff = json.differential.element[1];
-      const catDiff = json.differential.element[0];
+      const catCodingDiff = json.differential.element[2];
+      const catDiff = json.differential.element[1];
       expect(catCodingDiff).toEqual({
         id: 'Observation.category.coding',
         path: 'Observation.category.coding',
@@ -398,6 +463,12 @@ describe('StructureDefinition', () => {
       expect(catDiff).toEqual({
         id: 'Observation.category',
         path: 'Observation.category'
+      });
+
+      const rootDiff = json.differential.element[0];
+      expect(rootDiff).toEqual({
+        id: 'Observation',
+        path: 'Observation'
       });
     });
   });
