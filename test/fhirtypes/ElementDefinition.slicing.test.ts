@@ -262,6 +262,9 @@ describe('ElementDefinition', () => {
       expect(systolicBP.max).toBe('*');
       expect(systolicBP.type).toHaveLength(1);
       expect(systolicBP.type[0]).toEqual(new ElementDefinitionType('BackboneElement'));
+      const systolicDiff = systolicBP.calculateDiff();
+      expect(systolicDiff.min).toBe(0);
+      expect(systolicDiff.max).toBe('*');
       expect(diastolicBP.id).toBe('Observation.component:DiastolicBP');
       expect(diastolicBP.path).toBe('Observation.component');
       expect(diastolicBP.slicing).toBeUndefined();
@@ -272,6 +275,9 @@ describe('ElementDefinition', () => {
       expect(diastolicBP.type[0]).toEqual(new ElementDefinitionType('BackboneElement'));
       expect(observation.elements[lastComponentIndex + 1]).toEqual(systolicBP);
       expect(observation.elements[lastComponentIndex + 2]).toEqual(diastolicBP);
+      const diastolicDiff = diastolicBP.calculateDiff();
+      expect(diastolicDiff.min).toBe(0);
+      expect(diastolicDiff.max).toBe('*');
     });
 
     it('should add slices for specific types in a choice', () => {
