@@ -1463,6 +1463,27 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should not apply a Reference FixedValueRule with invalid type and log an error', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Condition';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new FixedValueRule('subject'); // subject cannot be a reference to condition
+    rule.fixedValue = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const fixedSubject = sd.findElement('Observation.subject');
+
+    expect(fixedSubject.patternReference).toEqual(undefined);
+  });
+
   it('should apply a Code FixedValueRule and replace the local code system name with its url', () => {
     const profile = new Profile('LightObservation');
     profile.parent = 'Observation';

@@ -965,6 +965,24 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should log a warning when an invalid reference is fixed', () => {
+      const observationInstance = new Instance('TestObservation');
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+      const fixedRefRule = new FixedValueRule('contact[0].organization');
+      fixedRefRule.fixedValue = new FshReference('TestObservation');
+      // * contact[0].organization = Reference(TestObservation)
+      patientInstance.rules.push(fixedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.contact).toEqual(undefined); // Contact is not set with invalid type
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The type "Reference\(Observation\)" does not match any of the allowed types\D*/s
+      );
+    });
+
     // Fixing codes from local systems
     it('should fix a code to a top level element while replacing the local code system name with its url', () => {
       const brightInstance = new Instance('BrightObservation');
