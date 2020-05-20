@@ -1,4 +1,4 @@
-import { upperFirst, words } from 'lodash';
+import { upperFirst, words, isEmpty } from 'lodash';
 import {
   StructureDefinition,
   ElementDefinition,
@@ -25,7 +25,12 @@ import {
   ObeysRule
 } from '../fshtypes/rules';
 import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
-import { replaceReferences, splitOnPathPeriods, applyMixinRules } from '../fhirtypes/common';
+import {
+  replaceReferences,
+  splitOnPathPeriods,
+  applyMixinRules,
+  replaceField
+} from '../fhirtypes/common';
 import { Package } from './Package';
 
 /**
@@ -476,9 +481,36 @@ export class StructureDefinitionExporter implements Fishable {
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);
+    this.cleanStructureDefinition(structDef);
     structDef.inProgress = false;
 
     return structDef;
+  }
+
+  cleanStructureDefinition(structDef: StructureDefinition) {
+    // Remove all _sliceName fields
+    const skipFn = (prop: string) => prop == 'elements' || prop.indexOf('_') == 0;
+    replaceField(
+      structDef,
+      (o, p) => p === '_sliceName',
+      (o, p) => delete o[p],
+      skipFn
+    );
+    // Change any {} to null
+    replaceField(
+      structDef,
+      (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
+      (o, p) => (o[p] = null),
+      skipFn
+    );
+
+    // Change back any primitives that have been converted into objects by setPropertyOnInstance
+    replaceField(
+      structDef,
+      (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._primitive,
+      (o, p) => (o[p] = o[p].fixedValue),
+      skipFn
+    );
   }
 
   /**

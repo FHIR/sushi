@@ -21,6 +21,7 @@ import { Type, Fishable } from '../utils/Fishable';
 import cloneDeep = require('lodash/cloneDeep');
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
+import { isEmpty } from 'lodash';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -41,7 +42,68 @@ export function setPropertyOnDefinitionInstance(
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { fixedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
+  setImpliedPropertiesOnInstance(instance, instanceSD, [path], fisher);
   setPropertyOnInstance(instance, pathParts, fixedValue);
+}
+
+export function setImpliedPropertiesOnInstance(
+  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
+  instanceOfStructureDefinition: StructureDefinition,
+  paths: string[],
+  fisher: Fishable
+) {
+  // Record the values implied by the structure definition in sdRuleMap
+  const sdRuleMap: Map<string, any> = new Map();
+  paths.forEach(path => {
+    const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
+    const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
+    if (element) {
+      // If an element is pointed to by a path, that means we must fix values on its parents, its own
+      // fixable descendents, and fixable descenendents of its parents. A fixable descendent is a 1..n direct child
+      // or a fixable descendent of such a child
+      const parents = element.getAllParents();
+      const associatedElements = [...element.getFixableDescendents(), ...parents];
+      parents.map(p => p.getFixableDescendents()).forEach(pd => associatedElements.push(...pd));
+
+      for (const associatedEl of associatedElements) {
+        const fixedValueKey = Object.keys(associatedEl).find(
+          k => k.startsWith('fixed') || k.startsWith('pattern')
+        );
+        const foundFixedValue = cloneDeep(associatedEl[fixedValueKey as keyof ElementDefinition]);
+        if (foundFixedValue) {
+          // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
+          let overlapIdx = 0;
+          const elParts = element.id.split('.');
+          const assocElParts = associatedEl.id.split('.');
+          for (
+            ;
+            overlapIdx < elParts.length && elParts[overlapIdx] === assocElParts[overlapIdx];
+            overlapIdx++
+          );
+          // We must keep the relevant portion of the beginning of path to preserve sliceNames
+          // and combine this with portion of the associatedEl's path that is not overlapped
+          const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
+          const pathEnd = associatedEl
+            .diffId()
+            .split('.')
+            .slice(overlapIdx)
+            // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
+            .map(r => r.replace(/(\S):(\S+)/, (match, c1, c2) => `${c1}[${c2}]`));
+          const finalPath = [...pathStart, ...pathEnd].join('.');
+          const impliedPaths = getAllImpliedPaths(
+            associatedEl,
+            // Implied paths are found via the index free path
+            finalPath.replace(/\[[-+]?\d+\]/g, '')
+          );
+          [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundFixedValue));
+        }
+      }
+    }
+  });
+  sdRuleMap.forEach((value, path) => {
+    const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
+    setPropertyOnInstance(instanceDef, pathParts, value);
+  });
 }
 
 export function setPropertyOnInstance(
@@ -208,15 +270,44 @@ export function getSliceName(pathPart: PathPart): string {
 export function replaceField(
   object: { [key: string]: any },
   matchFn: (object: { [key: string]: any }, prop: string) => boolean,
-  replaceFn: (object: { [key: string]: any }, prop: string) => void
+  replaceFn: (object: { [key: string]: any }, prop: string) => void,
+  skipFn: (prop: string) => boolean = () => false
 ): void {
   for (const prop in object) {
     if (matchFn(object, prop)) {
       replaceFn(object, prop);
-    } else if (typeof object[prop] === 'object') {
+    } else if (typeof object[prop] === 'object' && !skipFn(prop)) {
       replaceField(object[prop], matchFn, replaceFn);
     }
   }
+}
+
+/**
+ * Cleans up temporary properties that were added to the resource definition during processing
+ * @param {StructureDefinition | ElementDefinition | InstanceDefinition} instanceDef - The resource definition to clean
+ */
+export function cleanInstance(
+  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition
+): void {
+  // Remove all _sliceName fields
+  replaceField(
+    instanceDef,
+    (o, p) => p === '_sliceName',
+    (o, p) => delete o[p]
+  );
+  // Change any {} to null
+  replaceField(
+    instanceDef,
+    (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
+    (o, p) => (o[p] = null)
+  );
+
+  // Change back any primitives that have been converted into objects by setPropertyOnInstance
+  replaceField(
+    instanceDef,
+    (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._primitive,
+    (o, p) => (o[p] = o[p].fixedValue)
+  );
 }
 
 /**
@@ -280,7 +371,7 @@ export function getAllImpliedPaths(element: ElementDefinition, path: string): st
     } else {
       // If min >= 1, the parent or its parents my have implied paths, recursively find those
       parentPaths.push(
-        ...this.getAllImpliedPaths(parent, splitOnPathPeriods(path).slice(0, -1).join('.'))
+        ...getAllImpliedPaths(parent, splitOnPathPeriods(path).slice(0, -1).join('.'))
       );
     }
   } else {

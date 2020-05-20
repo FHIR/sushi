@@ -5,14 +5,14 @@ import { logger, Fishable, Type, Metadata } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
-  replaceField,
+  cleanInstance,
   splitOnPathPeriods,
   applyMixinRules,
-  getAllImpliedPaths
+  setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
-import { isEmpty, cloneDeep } from 'lodash';
+import { cloneDeep } from 'lodash';
 
 export class InstanceExporter implements Fishable {
   constructor(
@@ -110,63 +110,8 @@ export class InstanceExporter implements Fishable {
       }
     });
 
-    // Record the values implied by the structure definition in sdRuleMap
-    const sdRuleMap: Map<string, any> = new Map();
     const paths = ['', ...rules.map(rule => rule.path)];
-    paths.forEach(path => {
-      const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
-      const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, this.fisher);
-      if (element) {
-        // If an element is pointed to by a path, that means we must fix values on its parents, its own
-        // fixable descendents, and fixable descenendents of its parents. A fixable descendent is a 1..n direct child
-        // or a fixable descendent of such a child
-        const parents = element.getAllParents();
-        const associatedElements = [...element.getFixableDescendents(), ...parents];
-        parents.map(p => p.getFixableDescendents()).forEach(pd => associatedElements.push(...pd));
-
-        for (const associatedEl of associatedElements) {
-          const fixedValueKey = Object.keys(associatedEl).find(
-            k => k.startsWith('fixed') || k.startsWith('pattern')
-          );
-          const foundFixedValue = cloneDeep(associatedEl[fixedValueKey as keyof ElementDefinition]);
-          if (foundFixedValue) {
-            // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
-            let overlapIdx = 0;
-            const elParts = element.id.split('.');
-            const assocElParts = associatedEl.id.split('.');
-            for (
-              ;
-              overlapIdx < elParts.length && elParts[overlapIdx] === assocElParts[overlapIdx];
-              overlapIdx++
-            );
-            // We must keep the relevant portion of the beginning of path to preserve sliceNames
-            // and combine this with portion of the associatedEl's path that is not overlapped
-            const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
-            const pathEnd = associatedEl
-              .diffId()
-              .split('.')
-              .slice(overlapIdx)
-              // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
-              .map(r => r.replace(/(\S):(\S+)/, (match, c1, c2) => `${c1}[${c2}]`));
-            const finalPath = [...pathStart, ...pathEnd].join('.');
-            const impliedPaths = getAllImpliedPaths(
-              associatedEl,
-              // Implied paths are found via the index free path
-              finalPath.replace(/\[[-+]?\d+\]/g, '')
-            );
-            [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundFixedValue));
-          }
-        }
-      }
-    });
-    sdRuleMap.forEach((value, path) => {
-      const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(
-        path,
-        null,
-        this.fisher
-      );
-      setPropertyOnInstance(instanceDef, pathParts, value);
-    });
+    setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
     ruleMap.forEach(rule => setPropertyOnInstance(instanceDef, rule.pathParts, rule.fixedValue));
     return instanceDef;
   }
@@ -246,32 +191,6 @@ export class InstanceExporter implements Fishable {
     this.validateRequiredChildElements(instanceDef, elements[0], fshDefinition);
   }
 
-  /**
-   * Cleans up temporary properties that were added to the InstanceDefinition during processing
-   * @param {InstanceDefinition} instanceDef - The InstanceDefinition to clean
-   */
-  private cleanInstance(instanceDef: InstanceDefinition): void {
-    // Remove all _sliceName fields
-    replaceField(
-      instanceDef,
-      (o, p) => p === '_sliceName',
-      (o, p) => delete o[p]
-    );
-    // Change any {} to null
-    replaceField(
-      instanceDef,
-      (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
-      (o, p) => (o[p] = null)
-    );
-
-    // Change back any primitives that have been converted into objects by setPropertyOnInstance
-    replaceField(
-      instanceDef,
-      (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._primitive,
-      (o, p) => (o[p] = o[p].fixedValue)
-    );
-  }
-
   fishForFHIR(item: string) {
     let result = this.fisher.fishForFHIR(item, Type.Instance);
     if (result == null) {
@@ -344,7 +263,7 @@ export class InstanceExporter implements Fishable {
       instanceOfStructureDefinition.elements,
       fshDefinition
     );
-    this.cleanInstance(instanceDef);
+    cleanInstance(instanceDef);
     return instanceDef;
   }
 
