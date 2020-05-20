@@ -1108,7 +1108,7 @@ export class ElementDefinition {
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  fixValue(value: FixedValueType, exactly = false, units = false): void {
+  fixValue(value: FixedValueType, exactly = false, units = false, fisher?: Fishable): void {
     let type: string;
     if (value instanceof FshCode) {
       type = 'Code';
@@ -1162,6 +1162,9 @@ export class ElementDefinition {
         break;
       case 'Reference':
         value = value as FshReference;
+        if (value.sdType) {
+          this.findTypeMatch({ type: value.sdType, isReference: true }, this.type, fisher);
+        }
         this.fixFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
       default:
