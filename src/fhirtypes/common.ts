@@ -266,6 +266,7 @@ export function getSliceName(pathPart: PathPart): string {
  * @param { {[key: string]: any} } object - The object to replace fields on
  * @param {(object: { [key: string]: any }, prop: string) => boolean} matchFn - The function to match with
  * @param {(object: { [key: string]: any }, prop: string) => void} replaceFn - The function to replace with
+ * @param {string => boolean} skipFn - A function that returns true if a property should not be traversed
  */
 export function replaceField(
   object: { [key: string]: any },
@@ -285,7 +286,7 @@ export function replaceField(
 /**
  * Cleans up temporary properties that were added to the resource definition during processing
  * @param {StructureDefinition | InstanceDefinition} resourceDef - The resource definition to clean
- * @param {string => boolean} skipFn - A function that returns true if a property should be skipped
+ * @param {string => boolean} skipFn - A function that returns true if a property should not be traversed
  */
 export function cleanResource(
   resourceDef: StructureDefinition | InstanceDefinition,
