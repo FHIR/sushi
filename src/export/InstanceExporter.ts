@@ -5,7 +5,7 @@ import { logger, Fishable, Type, Metadata } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
-  cleanInstance,
+  cleanResource,
   splitOnPathPeriods,
   applyMixinRules,
   setImpliedPropertiesOnInstance
@@ -263,7 +263,7 @@ export class InstanceExporter implements Fishable {
       instanceOfStructureDefinition.elements,
       fshDefinition
     );
-    cleanInstance(instanceDef);
+    cleanResource(instanceDef);
     return instanceDef;
   }
 

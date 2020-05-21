@@ -131,7 +131,7 @@ export function setPropertyOnInstance(
           if (typeof fixedValue !== 'object') {
             // When a fixedValue is a primitive but also a slice, we convert to an object so that
             // the sliceName field can be tracked on the object. The _primitive field marks the object
-            // to later be converted back to a primitive by replaceField in cleanInstance
+            // to later be converted back to a primitive by replaceField in cleanResource
             fixedValue = { fixedValue, _primitive: true };
           }
           const sliceIndices: number[] = [];
@@ -271,42 +271,47 @@ export function replaceField(
   object: { [key: string]: any },
   matchFn: (object: { [key: string]: any }, prop: string) => boolean,
   replaceFn: (object: { [key: string]: any }, prop: string) => void,
-  skipFn: (prop: string) => boolean = () => false
+  skipFn: (prop: string) => boolean
 ): void {
   for (const prop in object) {
     if (matchFn(object, prop)) {
       replaceFn(object, prop);
     } else if (typeof object[prop] === 'object' && !skipFn(prop)) {
-      replaceField(object[prop], matchFn, replaceFn);
+      replaceField(object[prop], matchFn, replaceFn, skipFn);
     }
   }
 }
 
 /**
  * Cleans up temporary properties that were added to the resource definition during processing
- * @param {StructureDefinition | ElementDefinition | InstanceDefinition} instanceDef - The resource definition to clean
+ * @param {StructureDefinition | InstanceDefinition} resourceDef - The resource definition to clean
+ * @param {string => boolean} skipFn - A function that returns true if a property should be skipped
  */
-export function cleanInstance(
-  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition
+export function cleanResource(
+  resourceDef: StructureDefinition | InstanceDefinition,
+  skipFn: (prop: string) => boolean = () => false
 ): void {
   // Remove all _sliceName fields
   replaceField(
-    instanceDef,
+    resourceDef,
     (o, p) => p === '_sliceName',
-    (o, p) => delete o[p]
+    (o, p) => delete o[p],
+    skipFn
   );
   // Change any {} to null
   replaceField(
-    instanceDef,
+    resourceDef,
     (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
-    (o, p) => (o[p] = null)
+    (o, p) => (o[p] = null),
+    skipFn
   );
 
   // Change back any primitives that have been converted into objects by setPropertyOnInstance
   replaceField(
-    instanceDef,
+    resourceDef,
     (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._primitive,
-    (o, p) => (o[p] = o[p].fixedValue)
+    (o, p) => (o[p] = o[p].fixedValue),
+    skipFn
   );
 }
 

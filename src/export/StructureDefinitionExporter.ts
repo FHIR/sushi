@@ -1,4 +1,4 @@
-import { upperFirst, words, isEmpty } from 'lodash';
+import { upperFirst, words } from 'lodash';
 import {
   StructureDefinition,
   ElementDefinition,
@@ -29,7 +29,7 @@ import {
   replaceReferences,
   splitOnPathPeriods,
   applyMixinRules,
-  replaceField
+  cleanResource
 } from '../fhirtypes/common';
 import { Package } from './Package';
 
@@ -481,36 +481,10 @@ export class StructureDefinitionExporter implements Fishable {
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);
-    this.cleanStructureDefinition(structDef);
+    cleanResource(structDef, (prop: string) => prop == 'elements' || prop.indexOf('_') == 0);
     structDef.inProgress = false;
 
     return structDef;
-  }
-
-  cleanStructureDefinition(structDef: StructureDefinition) {
-    // Remove all _sliceName fields
-    const skipFn = (prop: string) => prop == 'elements' || prop.indexOf('_') == 0;
-    replaceField(
-      structDef,
-      (o, p) => p === '_sliceName',
-      (o, p) => delete o[p],
-      skipFn
-    );
-    // Change any {} to null
-    replaceField(
-      structDef,
-      (o, p) => typeof o[p] === 'object' && o[p] !== null && isEmpty(o[p]),
-      (o, p) => (o[p] = null),
-      skipFn
-    );
-
-    // Change back any primitives that have been converted into objects by setPropertyOnInstance
-    replaceField(
-      structDef,
-      (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._primitive,
-      (o, p) => (o[p] = o[p].fixedValue),
-      skipFn
-    );
   }
 
   /**
