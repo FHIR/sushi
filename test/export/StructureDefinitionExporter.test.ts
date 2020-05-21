@@ -1608,6 +1608,9 @@ describe('StructureDefinitionExporter', () => {
 
     expect(sd.elements.length).toBe(baseStructDef.elements.length + 1);
     expect(barSlice).toBeDefined();
+    const diff = barSlice.calculateDiff();
+    expect(diff.min).toBe(0);
+    expect(diff.max).toBe('*');
   });
 
   it('should apply a ContainsRule of a defined extension on an extension element', () => {
@@ -3658,6 +3661,7 @@ describe('StructureDefinitionExporter', () => {
         id: 'Observation.component:SystolicBP',
         path: 'Observation.component',
         sliceName: 'SystolicBP',
+        min: 0,
         max: '1'
       },
       {
@@ -3676,6 +3680,7 @@ describe('StructureDefinitionExporter', () => {
         id: 'Observation.component:DiastolicBP',
         path: 'Observation.component',
         sliceName: 'DiastolicBP',
+        min: 0,
         max: '1'
       },
       {
