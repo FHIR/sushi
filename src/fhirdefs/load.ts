@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import tar from 'tar';
-import rp from 'request-promise-native';
+import axios from 'axios';
 import temp from 'temp';
 import { logger } from '../utils';
 
@@ -50,14 +50,12 @@ export async function loadDependency(
     if (version === 'current') {
       // Current packages need to be loaded using build.fhir.org
       const baseUrl = 'http://build.fhir.org/ig';
-      const res: { 'package-id': string; date: string; repo: string }[] = await rp.get({
-        uri: `${baseUrl}/qas.json`,
-        json: true
-      });
+      const res = await axios.get(`${baseUrl}/qas.json`);
+      const qaData: { 'package-id': string; date: string; repo: string }[] = res?.data;
       // Find matching packages and sort by date to get the most recent
       let newestPackage;
-      if (res && res.length > 0) {
-        const matchingPackages = res.filter(p => p['package-id'] === packageName);
+      if (qaData && qaData.length > 0) {
+        const matchingPackages = qaData.filter(p => p['package-id'] === packageName);
         newestPackage = matchingPackages.sort((p1, p2) => {
           return Date.parse(p2['date']) - Date.parse(p1['date']);
         })[0];
@@ -81,27 +79,14 @@ export async function loadDependency(
     temp.track();
     const tempFile = temp.openSync();
     const targetDirectory = path.join(cachePath, fullPackageName);
-    let res;
-    try {
-      logger.info(`Downloading ${fullPackageName}...`);
-      res = await rp.get({
-        uri: packageUrl,
-        encoding: null,
-        transform: (body, response) => {
-          if (response.statusCode < 200 || response.statusCode > 299) {
-            return body.toString();
-          }
-          return body;
-        }
-      });
-      logger.info(`Downloaded ${fullPackageName}`);
-    } catch (e) {
-      e.message = `${e.statusCode} - ${e.response}`;
-      throw e;
-    }
+    logger.info(`Downloading ${fullPackageName}...`);
+    const res = await axios.get(packageUrl, {
+      responseType: 'arraybuffer'
+    });
+    logger.info(`Downloaded ${fullPackageName}`);
 
     fs.ensureDirSync(targetDirectory);
-    fs.writeFileSync(tempFile.path, res);
+    fs.writeFileSync(tempFile.path, res?.data);
     // Extract the package from that temporary file location
     tar.x({
       cwd: targetDirectory,
