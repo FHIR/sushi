@@ -7,10 +7,12 @@ import { Type } from '../../src/utils';
 import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
 import { OnlyRule } from '../../src/fshtypes/rules';
+import { readFileSync } from 'fs-extra';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
+  let extension: StructureDefinition;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -23,6 +25,7 @@ describe('ElementDefinition', () => {
   });
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');
+    extension = fisher.fishForStructureDefinition('Extension');
   });
 
   describe('#constrainType()', () => {
@@ -80,6 +83,32 @@ describe('ElementDefinition', () => {
       expect(valueX.type[0]).toEqual(
         new ElementDefinitionType('Quantity').withProfiles(
           'http://hl7.org/fhir/StructureDefinition/SimpleQuantity'
+        )
+      );
+    });
+
+    it('should allow a choice to be constrained to a profile of Reference', () => {
+      const def = JSON.parse(
+        readFileSync(
+          path.join(
+            __dirname,
+            '..',
+            'testhelpers',
+            'testdefs',
+            'StructureDefinition-reference-with-type.json'
+          ),
+          'utf-8'
+        ).trim()
+      );
+      defs.add(def);
+      const valueX = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [{ type: 'ReferenceWithType' }];
+      valueX.constrainType(valueConstraint, fisher);
+      expect(valueX.type).toHaveLength(1);
+      expect(valueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withProfiles(
+          'http://example.org/StructureDefinition/reference-with-type'
         )
       );
     });

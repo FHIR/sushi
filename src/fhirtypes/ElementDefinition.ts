@@ -855,7 +855,7 @@ export class ElementDefinition {
     for (const match of matches) {
       if (match.metadata.id === newType.code) {
         continue;
-      } else if (match.code === 'Reference') {
+      } else if (match.code === 'Reference' && match.metadata.sdType !== 'Reference') {
         matchedTargetProfiles.push(match.metadata.url);
       } else {
         matchedProfiles.push(match.metadata.url);
