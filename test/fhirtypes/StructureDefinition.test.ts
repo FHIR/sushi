@@ -243,7 +243,9 @@ describe('StructureDefinition', () => {
         id: 'Observation.valueQuantity',
         path: 'Observation.valueQuantity',
         short: 'the quantity choice',
-        type: [{ code: 'Quantity' }]
+        type: [{ code: 'Quantity' }],
+        min: 0,
+        max: '1'
       });
     });
 
