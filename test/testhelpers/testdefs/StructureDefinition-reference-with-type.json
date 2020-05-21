@@ -1,0 +1,29 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "reference-with-type",
+  "url": "http://example.org/StructureDefinition/reference-with-type",
+  "version": "0.1.0",
+  "name": "ReferenceWithType",
+  "title": "Reference with Required Type",
+  "status": "active",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "type": "Reference",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Reference",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Reference",
+        "path": "Reference"
+      },
+      {
+        "id": "Reference.type",
+        "path": "Reference.type",
+        "min": 1,
+        "max": "1"
+      }
+    ]
+  }
+}
