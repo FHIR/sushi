@@ -1908,7 +1908,10 @@ export type ElementDefinitionMapping = {
 /**
  * A barebones and lenient definition of ElementDefinition JSON
  */
-interface LooseElementDefJSON {
+export interface LooseElementDefJSON {
+  id?: string;
+  path?: string;
+  slicing?: ElementDefinitionSlicing;
   type?: ElementDefinitionTypeJSON[];
   binding?: ElementDefinitionBinding;
   // [key: string]: any;

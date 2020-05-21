@@ -3541,12 +3541,11 @@ describe('StructureDefinitionExporter', () => {
     const sd = pkg.profiles[0];
     const json = sd.toJSON();
 
-    expect(json.differential.element).toHaveLength(1);
-    expect(json.differential.element[0]).toEqual({
-      id: 'Observation.subject',
-      path: 'Observation.subject',
-      min: 1
-    });
+    expect(json.differential.element).toHaveLength(2);
+    expect(json.differential.element).toEqual([
+      { id: 'Observation', path: 'Observation' },
+      { id: 'Observation.subject', path: 'Observation.subject', min: 1 }
+    ]);
   });
 
   it('should correctly generate a diff containing only changed elements when elements are unfolded', () => {
@@ -3571,17 +3570,27 @@ describe('StructureDefinitionExporter', () => {
     const sd = pkg.profiles[0];
     const json = sd.toJSON();
 
-    expect(json.differential.element).toHaveLength(2);
-    expect(json.differential.element[0]).toEqual({
-      id: 'Observation.code.coding',
-      path: 'Observation.code.coding',
-      min: 1
-    });
-    expect(json.differential.element[1]).toEqual({
-      id: 'Observation.code.coding.userSelected',
-      path: 'Observation.code.coding.userSelected',
-      min: 1
-    });
+    expect(json.differential.element).toHaveLength(4);
+    expect(json.differential.element).toEqual([
+      {
+        id: 'Observation',
+        path: 'Observation'
+      },
+      {
+        id: 'Observation.code',
+        path: 'Observation.code'
+      },
+      {
+        id: 'Observation.code.coding',
+        path: 'Observation.code.coding',
+        min: 1
+      },
+      {
+        id: 'Observation.code.coding.userSelected',
+        path: 'Observation.code.coding.userSelected',
+        min: 1
+      }
+    ]);
   });
 
   it('should correctly generate a diff containing only changed elements when elements are sliced', () => {
@@ -3633,55 +3642,60 @@ describe('StructureDefinitionExporter', () => {
     const sd = pkg.profiles[0];
     const json = sd.toJSON();
 
-    const diffs = json.differential.element;
-    expect(diffs).toHaveLength(7);
-    expect(diffs[0]).toEqual({
-      id: 'Observation.component',
-      path: 'Observation.component',
-      slicing: {
-        discriminator: [{ type: 'pattern', path: 'code' }],
-        rules: 'open'
+    expect(json.differential.element).toHaveLength(8);
+    expect(json.differential.element).toEqual([
+      {
+        id: 'Observation',
+        path: 'Observation'
       },
-      comment: 'BP comment'
-    });
-    expect(diffs[1]).toEqual({
-      id: 'Observation.component:SystolicBP',
-      path: 'Observation.component',
-      sliceName: 'SystolicBP',
-      min: 0,
-      max: '1'
-    });
-    expect(diffs[2]).toEqual({
-      id: 'Observation.component:SystolicBP.code',
-      path: 'Observation.component.code',
-      patternCodeableConcept: {
-        coding: [{ code: '8480-6', system: 'http://loinc.org' }]
+      {
+        id: 'Observation.component',
+        path: 'Observation.component',
+        slicing: {
+          discriminator: [{ type: 'pattern', path: 'code' }],
+          rules: 'open'
+        },
+        comment: 'BP comment'
+      },
+      {
+        id: 'Observation.component:SystolicBP',
+        path: 'Observation.component',
+        sliceName: 'SystolicBP',
+        min: 0,
+        max: '1'
+      },
+      {
+        id: 'Observation.component:SystolicBP.code',
+        path: 'Observation.component.code',
+        patternCodeableConcept: {
+          coding: [{ code: '8480-6', system: 'http://loinc.org' }]
+        }
+      },
+      {
+        id: 'Observation.component:SystolicBP.value[x]',
+        path: 'Observation.component.value[x]',
+        type: [{ code: 'Quantity' }]
+      },
+      {
+        id: 'Observation.component:DiastolicBP',
+        path: 'Observation.component',
+        sliceName: 'DiastolicBP',
+        min: 0,
+        max: '1'
+      },
+      {
+        id: 'Observation.component:DiastolicBP.code',
+        path: 'Observation.component.code',
+        patternCodeableConcept: {
+          coding: [{ code: '8462-4', system: 'http://loinc.org' }]
+        }
+      },
+      {
+        id: 'Observation.component:DiastolicBP.value[x]',
+        path: 'Observation.component.value[x]',
+        type: [{ code: 'Quantity' }]
       }
-    });
-    expect(diffs[3]).toEqual({
-      id: 'Observation.component:SystolicBP.value[x]',
-      path: 'Observation.component.value[x]',
-      type: [{ code: 'Quantity' }]
-    });
-    expect(diffs[4]).toEqual({
-      id: 'Observation.component:DiastolicBP',
-      path: 'Observation.component',
-      sliceName: 'DiastolicBP',
-      min: 0,
-      max: '1'
-    });
-    expect(diffs[5]).toEqual({
-      id: 'Observation.component:DiastolicBP.code',
-      path: 'Observation.component.code',
-      patternCodeableConcept: {
-        coding: [{ code: '8462-4', system: 'http://loinc.org' }]
-      }
-    });
-    expect(diffs[6]).toEqual({
-      id: 'Observation.component:DiastolicBP.value[x]',
-      path: 'Observation.component.value[x]',
-      type: [{ code: 'Quantity' }]
-    });
+    ]);
   });
 
   it('should include sliceName in a differential when an attribute of the slice is changed', () => {
@@ -3693,13 +3707,23 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
     const json = sd.toJSON();
-    expect(json.differential.element).toHaveLength(1);
-    expect(json.differential.element[0]).toEqual({
-      id: 'Observation.code.coding:RespRateCode',
-      path: 'Observation.code.coding',
-      sliceName: 'RespRateCode',
-      mustSupport: true
-    });
+    expect(json.differential.element).toHaveLength(3);
+    expect(json.differential.element).toEqual([
+      {
+        id: 'Observation',
+        path: 'Observation'
+      },
+      {
+        id: 'Observation.code',
+        path: 'Observation.code'
+      },
+      {
+        id: 'Observation.code.coding:RespRateCode',
+        path: 'Observation.code.coding',
+        sliceName: 'RespRateCode',
+        mustSupport: true
+      }
+    ]);
   });
 
   it.skip('should not change sliceName based on a CaretValueRule', () => {
