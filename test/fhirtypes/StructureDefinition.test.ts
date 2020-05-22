@@ -1080,7 +1080,7 @@ describe('StructureDefinition', () => {
     it('should not allow fixing an instance value with an incorrect path', () => {
       expect(() => {
         structureDefinition.validateValueAtPath('Version', '4.0.2', fisher);
-      }).toThrow('Cannot resolve element from path: Version');
+      }).toThrow('The element or path you referenced does not exist: Version');
     });
 
     it('should not allow fixing an instance value with an incorrect value', () => {
@@ -1096,7 +1096,7 @@ describe('StructureDefinition', () => {
       version.max = '0';
       expect(() => {
         structureDefinition.validateValueAtPath('version', '4.0.2', fisher);
-      }).toThrow('Cannot resolve element from path: version');
+      }).toThrow('The element or path you referenced does not exist: version');
     });
 
     // Arrays
@@ -1141,13 +1141,13 @@ describe('StructureDefinition', () => {
     it('should not allow using array brackets when an element is not an array', () => {
       expect(() => {
         structureDefinition.validateValueAtPath('version[0]', 'foo', fisher);
-      }).toThrow('Cannot resolve element from path: version[0]');
+      }).toThrow('The element or path you referenced does not exist: version[0]');
     });
 
     it('should not add an instance property in an array with negative index', () => {
       expect(() => {
         structureDefinition.validateValueAtPath('contact[-1].telecom[0].value', 'foo', fisher);
-      }).toThrow('Cannot resolve element from path: contact[-1].telecom[0].value');
+      }).toThrow('The element or path you referenced does not exist: contact[-1].telecom[0].value');
     });
 
     it('should not add an instance property in an array with too large an index', () => {
@@ -1157,7 +1157,7 @@ describe('StructureDefinition', () => {
       contact.max = '3';
       expect(() => {
         structureDefinition.validateValueAtPath('contact[4].telecom[0].value', 'foo', fisher);
-      }).toThrow('Cannot resolve element from path: contact[4].telecom[0].value');
+      }).toThrow('The element or path you referenced does not exist: contact[4].telecom[0].value');
     });
 
     // Slices
@@ -1220,7 +1220,9 @@ describe('StructureDefinition', () => {
     it('should not allow setting arbitrary undefined extensions', () => {
       expect(() => {
         respRate.validateValueAtPath('extension[fake-extension].value[x]', 'foo', fisher);
-      }).toThrow('Cannot resolve element from path: extension[fake-extension].value[x]');
+      }).toThrow(
+        'The element or path you referenced does not exist: extension[fake-extension].value[x]'
+      );
     });
 
     describe('#Inline Instances', () => {
@@ -1436,7 +1438,7 @@ describe('StructureDefinition', () => {
         const system = 'http://hello.com';
         expect(() =>
           respRate.validateValueAtPath('contained[0].system', system, fisher, false, ['Patient'])
-        ).toThrow('Cannot resolve element from path: contained[0].system');
+        ).toThrow('The element or path you referenced does not exist: contained[0].system');
       });
 
       it('should not allow overriding a Resource constrained to Patient with a non-Patient path inside a Resource', () => {
@@ -1449,7 +1451,9 @@ describe('StructureDefinition', () => {
             false,
             ['Bundle', null, 'Patient', null]
           )
-        ).toThrow('Cannot resolve element from path: contained[0].entry[0].resource.system');
+        ).toThrow(
+          'The element or path you referenced does not exist: contained[0].entry[0].resource.system'
+        );
       });
 
       it('should not allow overriding a Patient with an Observation', () => {
@@ -1458,7 +1462,9 @@ describe('StructureDefinition', () => {
           respRate.validateValueAtPath('contained[PatientsOnly].method', method, fisher, false, [
             'Observation'
           ])
-        ).toThrow('Cannot resolve element from path: contained[PatientsOnly].method');
+        ).toThrow(
+          'The element or path you referenced does not exist: contained[PatientsOnly].method'
+        );
       });
 
       it('should not allow overriding a Resource constrained to a non-FHIR Resource', () => {
@@ -1467,7 +1473,7 @@ describe('StructureDefinition', () => {
           respRate.validateValueAtPath('contained[0].system', system, fisher, false, [
             'CodeableConcept'
           ])
-        ).toThrow('Cannot resolve element from path: contained[0].system');
+        ).toThrow('The element or path you referenced does not exist: contained[0].system');
       });
 
       // resourceType
@@ -1543,12 +1549,14 @@ describe('StructureDefinition', () => {
       it('should not allow an invalid FHIR resourceType to be set on a choice element', () => {
         expect(() =>
           respRate.validateValueAtPath('component.value[x].resourceType', 'Patient', fisher)
-        ).toThrow('Cannot resolve element from path: component.value[x].resourceType');
+        ).toThrow(
+          'The element or path you referenced does not exist: component.value[x].resourceType'
+        );
       });
 
       it('should not allow a resourceType to be set at the top level of the instance', () => {
         expect(() => respRate.validateValueAtPath('resourceType', 'Patient', fisher)).toThrow(
-          'Cannot resolve element from path: resourceType'
+          'The element or path you referenced does not exist: resourceType'
         );
       });
     });
