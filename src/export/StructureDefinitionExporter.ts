@@ -25,7 +25,12 @@ import {
   ObeysRule
 } from '../fshtypes/rules';
 import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
-import { replaceReferences, splitOnPathPeriods, applyMixinRules } from '../fhirtypes/common';
+import {
+  replaceReferences,
+  splitOnPathPeriods,
+  applyMixinRules,
+  cleanResource
+} from '../fhirtypes/common';
 import { Package } from './Package';
 
 /**
@@ -476,6 +481,7 @@ export class StructureDefinitionExporter implements Fishable {
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);
+    cleanResource(structDef, (prop: string) => prop == 'elements' || prop.indexOf('_') == 0);
     structDef.inProgress = false;
 
     return structDef;

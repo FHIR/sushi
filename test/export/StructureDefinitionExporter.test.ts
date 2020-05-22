@@ -2221,6 +2221,20 @@ describe('StructureDefinitionExporter', () => {
     expect(sd.description).toBe('foo');
   });
 
+  it('should apply a CaretValueRule on the child of a primitive element without a path', () => {
+    const profile = new Profile('SpecialUrlId');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'url.id';
+    rule.value = 'my-id';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    expect(sd).toHaveProperty('_url', { id: 'my-id' });
+  });
+
   it('should not apply an invalid CaretValueRule on an element without a path', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -2235,6 +2249,30 @@ describe('StructureDefinitionExporter', () => {
 
     expect(sd.description).toBeUndefined();
     expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
+  });
+
+  it('should apply a CaretValueRule on an extension element without a path', () => {
+    // Extension: SpecialExtension
+    const extension = new Extension('SpecialExtension');
+    doc.extensions.set(extension.name, extension);
+    // Profile: HasSpecialExtension
+    // Parent: Observation
+    // * ^extension[SpecialExtension].valueString = "This is the special extension on the structure definition."
+    const profile = new Profile('HasSpecialExtension');
+    profile.parent = 'Observation';
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'extension[SpecialExtension].valueString';
+    caretValueRule.value = 'This is the special extension on the structure definition.';
+    profile.rules.push(caretValueRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const extensionElement = sd.extension[0];
+    expect(extensionElement).toBeDefined();
+    expect(extensionElement).toEqual({
+      url: 'http://example.com/StructureDefinition/SpecialExtension',
+      valueString: 'This is the special extension on the structure definition.'
+    });
   });
 
   // ObeysRule
