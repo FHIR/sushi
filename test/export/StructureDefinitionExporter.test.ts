@@ -2218,6 +2218,20 @@ describe('StructureDefinitionExporter', () => {
     expect(sd.description).toBe('foo');
   });
 
+  it('should apply a CaretValueRule on the child of a primitive element without a path', () => {
+    const profile = new Profile('SpecialUrlId');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'url.id';
+    rule.value = 'my-id';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    expect(sd).toHaveProperty('_url', { id: 'my-id' });
+  });
+
   it('should not apply an invalid CaretValueRule on an element without a path', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
