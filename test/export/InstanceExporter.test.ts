@@ -233,6 +233,49 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage()).toMatch(/File: Some\.fsh.*Line: 3 - 6\D*/s);
     });
 
+    it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
+      const instance = new Instance('Foo').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+      instance.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('id');
+      fixedValRule.fixedValue = 'Some_Patient';
+      instance.rules.push(fixedValRule);
+      const exported = exportInstance(instance);
+      const expectedInstanceJSON = {
+        resourceType: 'Patient',
+        id: 'Some-Patient'
+      };
+      expect(exported.toJSON()).toEqual(expectedInstanceJSON);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /The string "Some_Patient" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "Some-Patient"/s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+    });
+
+    it('should sanitize the id and log a message when a long valid name is used to make an invalid id', () => {
+      const instance = new Instance('Foo').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+      instance.instanceOf = 'Patient';
+      const fixedValRule = new FixedValueRule('id');
+      let longId = 'Toolong';
+      while (longId.length < 65) longId += 'longer';
+      fixedValRule.fixedValue = longId;
+      instance.rules.push(fixedValRule);
+      const exported = exportInstance(instance);
+      const expectedInstanceJSON = {
+        resourceType: 'Patient',
+        id: longId.slice(0, 64)
+      };
+      expect(exported.toJSON()).toEqual(expectedInstanceJSON);
+      const warning = new RegExp(
+        `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${longId.slice(
+          0,
+          64
+        )}"`,
+        's'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+    });
+
     // Fixing top level elements
     it('should fix top level elements that are fixed by pattern[x] on the Structure Definition', () => {
       const cardRule = new CardRule('active');
