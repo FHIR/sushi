@@ -5,7 +5,7 @@ import { TestFisher, loggerSpy } from '../testhelpers';
 import path from 'path';
 import fs from 'fs-extra';
 import tar from 'tar';
-import rp from 'request-promise-native';
+import axios from 'axios';
 
 describe('#loadFromPath()', () => {
   let defs: FHIRDefinitions;
@@ -58,42 +58,44 @@ describe('#loadFromPath()', () => {
 
 describe('#loadDependency()', () => {
   let defs: FHIRDefinitions;
-  let requestSpy: jest.SpyInstance;
+  let axiosSpy: jest.SpyInstance;
   let tarSpy: jest.SpyInstance;
   let ensureDirSpy: jest.SpyInstance;
   let writeSpy: jest.SpyInstance;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    requestSpy = jest.spyOn(rp, 'get').mockImplementation((options: any): any => {
-      if (options.uri === 'http://build.fhir.org/ig/qas.json') {
-        return [
-          {
-            url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core.r4-4.0.0',
-            name: 'USCoreR4',
-            'package-id': 'hl7.fhir.us.core.r4',
-            'ig-ver': '4.0.0',
-            date: 'Sat, 18 May, 2019 01:48:14 +0000',
-            errs: 538,
-            warnings: 34,
-            hints: 202,
-            version: '4.0.0',
-            tool: '4.1.0 (3)',
-            repo: 'HL7Imposter/US-Core-R4/branches/oldbranch/qa.json'
-          },
-          {
-            url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core.r4-4.0.0',
-            name: 'USCoreR4',
-            'package-id': 'hl7.fhir.us.core.r4',
-            'ig-ver': '4.0.0',
-            date: 'Mon, 20 Jan, 2020 19:36:43 +0000',
-            errs: 1496,
-            warnings: 36,
-            hints: 228,
-            version: '4.0.0',
-            tool: '4.1.0 (3)',
-            repo: 'HL7/US-Core-R4/branches/newbranch/qa.json'
-          }
-        ];
+    axiosSpy = jest.spyOn(axios, 'get').mockImplementation((uri: string): any => {
+      if (uri === 'http://build.fhir.org/ig/qas.json') {
+        return {
+          data: [
+            {
+              url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core.r4-4.0.0',
+              name: 'USCoreR4',
+              'package-id': 'hl7.fhir.us.core.r4',
+              'ig-ver': '4.0.0',
+              date: 'Sat, 18 May, 2019 01:48:14 +0000',
+              errs: 538,
+              warnings: 34,
+              hints: 202,
+              version: '4.0.0',
+              tool: '4.1.0 (3)',
+              repo: 'HL7Imposter/US-Core-R4/branches/oldbranch/qa.json'
+            },
+            {
+              url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core.r4-4.0.0',
+              name: 'USCoreR4',
+              'package-id': 'hl7.fhir.us.core.r4',
+              'ig-ver': '4.0.0',
+              date: 'Mon, 20 Jan, 2020 19:36:43 +0000',
+              errs: 1496,
+              warnings: 36,
+              hints: 228,
+              version: '4.0.0',
+              tool: '4.1.0 (3)',
+              repo: 'HL7/US-Core-R4/branches/newbranch/qa.json'
+            }
+          ]
+        };
       } else {
         return {};
       }
@@ -104,7 +106,7 @@ describe('#loadDependency()', () => {
   });
 
   beforeEach(() => {
-    requestSpy.mockClear();
+    axiosSpy.mockClear();
     tarSpy.mockClear();
     writeSpy.mockClear();
     ensureDirSpy.mockClear();
@@ -125,14 +127,14 @@ describe('#loadDependency()', () => {
         path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package')
       )
     ).resolves.toEqual(defs);
-    expect(requestSpy.mock.calls.length).toBe(0);
+    expect(axiosSpy.mock.calls.length).toBe(0);
   });
 
   it('should try to load a package from packages.fhir.org when a non-special package version is loaded', async () => {
     await expect(loadDependency('hl7.fhir.hspc', '1.1.1', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.hspc#1.1.1 could not be loaded locally or from the FHIR package registry'
     );
-    expect(requestSpy.mock.calls[0][0].uri).toBe('http://packages.fhir.org/hl7.fhir.hspc/1.1.1');
+    expect(axiosSpy.mock.calls[0][0]).toBe('http://packages.fhir.org/hl7.fhir.hspc/1.1.1');
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.hspc#1.1.1')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.hspc#1.1.1'));
   });
@@ -141,15 +143,8 @@ describe('#loadDependency()', () => {
     await expect(loadDependency('hl7.fhir.us.core.r4', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.us.core.r4#current could not be loaded locally or from the FHIR package registry'
     );
-    expect(requestSpy.mock.calls[0]).toEqual([
-      {
-        json: true,
-        uri: 'http://build.fhir.org/ig/qas.json'
-      }
-    ]);
-    expect(requestSpy.mock.calls[1][0].uri).toBe(
-      'http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz'
-    );
+    expect(axiosSpy.mock.calls[0][0]).toBe('http://build.fhir.org/ig/qas.json');
+    expect(axiosSpy.mock.calls[1][0]).toBe('http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz');
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.us.core.r4#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.us.core.r4#current'));
   });
@@ -167,15 +162,8 @@ describe('#loadDependency()', () => {
           )
         )
     ).toBeTruthy();
-    expect(requestSpy.mock.calls[0]).toEqual([
-      {
-        json: true,
-        uri: 'http://build.fhir.org/ig/qas.json'
-      }
-    ]);
-    expect(requestSpy.mock.calls[1][0].uri).toBe(
-      'http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz'
-    );
+    expect(axiosSpy.mock.calls[0][0]).toBe('http://build.fhir.org/ig/qas.json');
+    expect(axiosSpy.mock.calls[1][0]).toBe('http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz');
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.us.core.r4#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.us.core.r4#current'));
   });
@@ -184,27 +172,17 @@ describe('#loadDependency()', () => {
     await expect(loadDependency('hl7.fhir.us.core', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.us.core#current is not available on http://build.fhir.org/ig/qas.json, so no current version can be loaded'
     );
-    expect(requestSpy.mock.calls.length).toBe(1);
-    expect(requestSpy.mock.calls[0]).toEqual([
-      {
-        json: true,
-        uri: 'http://build.fhir.org/ig/qas.json'
-      }
-    ]);
+    expect(axiosSpy.mock.calls.length).toBe(1);
+    expect(axiosSpy.mock.calls[0][0]).toBe('http://build.fhir.org/ig/qas.json');
   });
 
   it('should throw CurrentPackageLoadError when http://build.fhir.org/ig/qas.json gives a bad response', async () => {
-    requestSpy.mockImplementationOnce(() => {});
+    axiosSpy.mockImplementationOnce(() => {});
     await expect(loadDependency('bad.response', 'current', defs, 'foo')).rejects.toThrow(
       'The package bad.response#current is not available on http://build.fhir.org/ig/qas.json, so no current version can be loaded'
     );
-    expect(requestSpy.mock.calls.length).toBe(1);
-    expect(requestSpy.mock.calls[0]).toEqual([
-      {
-        json: true,
-        uri: 'http://build.fhir.org/ig/qas.json'
-      }
-    ]);
+    expect(axiosSpy.mock.calls.length).toBe(1);
+    expect(axiosSpy.mock.calls[0][0]).toBe('http://build.fhir.org/ig/qas.json');
   });
 });
 

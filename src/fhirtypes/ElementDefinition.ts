@@ -855,7 +855,7 @@ export class ElementDefinition {
     for (const match of matches) {
       if (match.metadata.id === newType.code) {
         continue;
-      } else if (match.code === 'Reference') {
+      } else if (match.code === 'Reference' && match.metadata.sdType !== 'Reference') {
         matchedTargetProfiles.push(match.metadata.url);
       } else {
         matchedProfiles.push(match.metadata.url);
@@ -1742,6 +1742,12 @@ export class ElementDefinition {
       throw new DuplicateSliceError(this.structDef.name, this.id, name);
     }
 
+    // On a new slice, delete slice.min and slice.max and then reset them
+    // so that they are always captured in diff
+    const originalMax = slice.max;
+    delete slice.min;
+    delete slice.max;
+
     // Capture the original so that the differential only contains changes from this point on.
     slice.captureOriginal();
 
@@ -1751,6 +1757,7 @@ export class ElementDefinition {
     // Cardinality can be later narrowed by card constraints, which check validity of narrowing
     // According to https://chat.fhir.org/#narrow/stream/179239-tooling/topic/Slicing.201.2E.2E.3F.20element
     slice.min = 0;
+    slice.max = originalMax;
     if (type) {
       slice.type = [type];
     }
@@ -1901,7 +1908,10 @@ export type ElementDefinitionMapping = {
 /**
  * A barebones and lenient definition of ElementDefinition JSON
  */
-interface LooseElementDefJSON {
+export interface LooseElementDefJSON {
+  id?: string;
+  path?: string;
+  slicing?: ElementDefinitionSlicing;
   type?: ElementDefinitionTypeJSON[];
   binding?: ElementDefinitionBinding;
   // [key: string]: any;
