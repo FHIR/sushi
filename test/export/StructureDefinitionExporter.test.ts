@@ -375,11 +375,11 @@ describe('StructureDefinitionExporter', () => {
 
   it('should log a message when the structure definition has an invalid id', () => {
     const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
-    profile.id = 'will_not_work';
+    profile.id = 'will?not?work';
     doc.profiles.set(profile.name, profile);
     exporter.exportStructDef(profile);
     const exported = pkg.profiles[0];
-    expect(exported.id).toBe('will_not_work');
+    expect(exported.id).toBe('will?not?work');
     expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
     expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 1 - 4\D*/s);
   });
@@ -392,6 +392,37 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.name).toBe('Not-good');
     expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR name/s);
     expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+  });
+
+  it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
+    const profile = new Profile('Not_good_id').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+    doc.profiles.set(profile.name, profile);
+    exporter.exportStructDef(profile);
+    const exported = pkg.profiles[0];
+    expect(exported.name).toBe('Not_good_id');
+    expect(exported.id).toBe('Not-good-id');
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /The string "Not_good_id" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "Not-good-id"/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+  });
+
+  it('should sanitize the id and log a message when a long valid name is used to make an invalid id', () => {
+    let longId = 'Toolong';
+    while (longId.length < 65) longId += 'longer';
+    const profile = new Profile(longId).withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+    doc.profiles.set(profile.name, profile);
+    exporter.exportStructDef(profile);
+    const exported = pkg.profiles[0];
+    const expectedId = longId.slice(0, 64);
+    expect(exported.name).toBe(longId);
+    expect(exported.id).toBe(expectedId);
+    const warning = new RegExp(
+      `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${expectedId}"`,
+      's'
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
 
   // Rules

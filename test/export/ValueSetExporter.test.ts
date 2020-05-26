@@ -114,6 +114,37 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D*/s);
   });
 
+  it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
+    const valueSet = new FshValueSet('Not_good_id')
+      .withFile('Wrong.fsh')
+      .withLocation([2, 8, 5, 18]);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported[0].name).toBe('Not_good_id');
+    expect(exported[0].id).toBe('Not-good-id');
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /The string "Not_good_id" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "Not-good-id"/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+  });
+
+  it('should sanitize the id and log a message when a long valid name is used to make an invalid id', () => {
+    let longId = 'Toolong';
+    while (longId.length < 65) longId += 'longer';
+    const valueSet = new FshValueSet(longId).withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    const expectedId = longId.slice(0, 64);
+    expect(exported[0].name).toBe(longId);
+    expect(exported[0].id).toBe(expectedId);
+    const warning = new RegExp(
+      `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${expectedId}"`,
+      's'
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+  });
+
   it('should export each value set once, even if export is called more than once', () => {
     const breakfast = new FshValueSet('BreakfastVS');
     doc.valueSets.set(breakfast.name, breakfast);

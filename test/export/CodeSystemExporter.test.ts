@@ -165,6 +165,37 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
   });
 
+  it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
+    const codeSystem = new FshCodeSystem('Not_good_id')
+      .withFile('Wrong.fsh')
+      .withLocation([2, 8, 5, 18]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported[0].name).toBe('Not_good_id');
+    expect(exported[0].id).toBe('Not-good-id');
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /The string "Not_good_id" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "Not-good-id"/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+  });
+
+  it('should sanitize the id and log a message when a long valid name is used to make an invalid id', () => {
+    let longId = 'Toolong';
+    while (longId.length < 65) longId += 'longer';
+    const codeSystem = new FshCodeSystem(longId).withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    const expectedId = longId.slice(0, 64);
+    expect(exported[0].name).toBe(longId);
+    expect(exported[0].id).toBe(expectedId);
+    const warning = new RegExp(
+      `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${expectedId}"`,
+      's'
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+  });
+
   // CaretValueRules
   it('should apply a CaretValueRule', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
