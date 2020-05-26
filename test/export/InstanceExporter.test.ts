@@ -965,7 +965,26 @@ describe('InstanceExporter', () => {
       });
     });
 
-    it('should log a warning when an invalid reference is fixed', () => {
+    it('should fix a reference to a type based on a profile', () => {
+      const profiledObservation = new Profile('USCoreObservation');
+      profiledObservation.parent =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
+      doc.profiles.set(profiledObservation.name, profiledObservation);
+
+      const profiledInstance = new Instance('MyExampleObservation');
+      profiledInstance.instanceOf = 'USCoreObservation';
+      const fixedRefRule = new FixedValueRule('subject');
+      fixedRefRule.fixedValue = new FshReference('Bar');
+      profiledInstance.rules.push(fixedRefRule);
+      doc.instances.set(profiledInstance.name, profiledInstance);
+      doc.instances.set(patientInstance.name, patientInstance);
+      const exported = exportInstance(profiledInstance);
+      expect(exported.subject).toEqual({
+        reference: 'Patient/Bar'
+      });
+    });
+
+    it('should log an error when an invalid reference is fixed', () => {
       const observationInstance = new Instance('TestObservation');
       observationInstance.instanceOf = 'Observation';
       doc.instances.set(observationInstance.name, observationInstance);
@@ -980,6 +999,27 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /The type "Reference\(Observation\)" does not match any of the allowed types\D*/s
+      );
+    });
+
+    it('should log an error when fixing an invalid reference to a type based on a profile', () => {
+      loggerSpy.reset();
+      const profiledObservation = new Profile('USCoreObservation');
+      profiledObservation.parent =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
+      doc.profiles.set(profiledObservation.name, profiledObservation);
+
+      const profiledInstance = new Instance('MyExampleObservation');
+      profiledInstance.instanceOf = 'USCoreObservation';
+      const fixedRefRule = new FixedValueRule('subject');
+      fixedRefRule.fixedValue = new FshReference('Pow'); // Pow is instanceOf Bundle and not an allowed subject reference type
+      profiledInstance.rules.push(fixedRefRule);
+      doc.instances.set(profiledInstance.name, profiledInstance);
+      doc.instances.set(patientInstance.name, patientInstance);
+      const exported = exportInstance(profiledInstance);
+      expect(exported.subject).toEqual(undefined);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /The type "Reference\(Bundle\)" does not match any of the allowed types\D*/s
       );
     });
 

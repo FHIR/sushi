@@ -1482,6 +1482,10 @@ describe('StructureDefinitionExporter', () => {
     const fixedSubject = sd.findElement('Observation.subject');
 
     expect(fixedSubject.patternReference).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The type "Reference\(Condition\)" does not match any of the allowed types\D*/s
+    );
   });
 
   it('should apply a Code FixedValueRule and replace the local code system name with its url', () => {
