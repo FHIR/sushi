@@ -126,7 +126,26 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 7\D*/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 8\D*/s);
       });
+
+      it('should log an error and skip the code system when encountering a code system with a name used by another code system', () => {
+        const input = `
+        CodeSystem: BREAD
+        Title: "Known Bread"
+        
+        CodeSystem: BREAD
+        Title: "Unknown Bread"
+        `;
+        const result = importSingleText(input, 'Bread.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('BREAD');
+        expect(codeSystem.title).toBe('Known Bread');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /code system named BREAD already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bread\.fsh.*Line: 5 - 6\D*/s);
+      });
     });
+
     describe('#concept', () => {
       it('should parse a code system with one concept', () => {
         const input = `

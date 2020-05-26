@@ -246,16 +246,30 @@ export class FSHImporter extends FSHVisitor {
     const profile = new Profile(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
-    this.currentDoc.profiles.set(profile.name, profile);
+    if (this.currentDoc.profiles.has(profile.name)) {
+      logger.error(`Skipping profile: a profile named ${profile.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseProfileOrExtension(profile, ctx.sdMetadata(), ctx.sdRule());
+      this.currentDoc.profiles.set(profile.name, profile);
+    }
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
     const extension = new Extension(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
-    this.currentDoc.extensions.set(extension.name, extension);
+    if (this.currentDoc.extensions.has(extension.name)) {
+      logger.error(`Skipping extension: an extension named ${extension.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
+      this.currentDoc.extensions.set(extension.name, extension);
+    }
   }
 
   private parseProfileOrExtension(
@@ -298,11 +312,18 @@ export class FSHImporter extends FSHVisitor {
     const instance = new Instance(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    try {
-      this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
-      this.currentDoc.instances.set(instance.name, instance);
-    } catch (e) {
-      logger.error(e.message, instance.sourceInfo);
+    if (this.currentDoc.instances.has(instance.name)) {
+      logger.error(`Skipping instance: an instance named ${instance.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      try {
+        this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
+        this.currentDoc.instances.set(instance.name, instance);
+      } catch (e) {
+        logger.error(e.message, instance.sourceInfo);
+      }
     }
   }
 
@@ -352,8 +373,15 @@ export class FSHImporter extends FSHVisitor {
     const valueSet = new FshValueSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent(), ctx.caretValueRule());
-    this.currentDoc.valueSets.set(valueSet.name, valueSet);
+    if (this.currentDoc.valueSets.has(valueSet.name)) {
+      logger.error(`Skipping value set: a value set named ${valueSet.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent(), ctx.caretValueRule());
+      this.currentDoc.valueSets.set(valueSet.name, valueSet);
+    }
   }
 
   private parseValueSet(
@@ -427,8 +455,15 @@ export class FSHImporter extends FSHVisitor {
     const codeSystem = new FshCodeSystem(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.concept(), ctx.caretValueRule());
-    this.currentDoc.codeSystems.set(codeSystem.name, codeSystem);
+    if (this.currentDoc.codeSystems.has(codeSystem.name)) {
+      logger.error(`Skipping code system: a code system named ${codeSystem.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.concept(), ctx.caretValueRule());
+      this.currentDoc.codeSystems.set(codeSystem.name, codeSystem);
+    }
   }
 
   private parseCodeSystem(
@@ -487,14 +522,21 @@ export class FSHImporter extends FSHVisitor {
     const invariant = new Invariant(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseInvariant(invariant, ctx.invariantMetadata());
-    if (invariant.description == null) {
-      logger.error(`Invariant ${invariant.name} must have a Description.`, invariant.sourceInfo);
+    if (this.currentDoc.invariants.has(invariant.name)) {
+      logger.error(`Skipping invariant: an invariant named ${invariant.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseInvariant(invariant, ctx.invariantMetadata());
+      if (invariant.description == null) {
+        logger.error(`Invariant ${invariant.name} must have a Description.`, invariant.sourceInfo);
+      }
+      if (invariant.severity == null) {
+        logger.error(`Invariant ${invariant.name} must have a Severity.`, invariant.sourceInfo);
+      }
+      this.currentDoc.invariants.set(invariant.name, invariant);
     }
-    if (invariant.severity == null) {
-      logger.error(`Invariant ${invariant.name} must have a Severity.`, invariant.sourceInfo);
-    }
-    this.currentDoc.invariants.set(invariant.name, invariant);
   }
 
   private parseInvariant(invariant: Invariant, metaCtx: pc.InvariantMetadataContext[] = []) {
@@ -531,8 +573,15 @@ export class FSHImporter extends FSHVisitor {
     const ruleSet = new RuleSet(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseRuleSet(ruleSet, ctx.sdRule());
-    this.currentDoc.ruleSets.set(ruleSet.name, ruleSet);
+    if (this.currentDoc.ruleSets.has(ruleSet.name)) {
+      logger.error(`Skipping rule set: a rule set named ${ruleSet.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseRuleSet(ruleSet, ctx.sdRule());
+      this.currentDoc.ruleSets.set(ruleSet.name, ruleSet);
+    }
   }
 
   parseRuleSet(ruleSet: RuleSet, rules: pc.SdRuleContext[]) {
@@ -545,8 +594,15 @@ export class FSHImporter extends FSHVisitor {
     const mapping = new Mapping(ctx.SEQUENCE().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    this.parseMapping(mapping, ctx.mappingMetadata(), ctx.mappingRule());
-    this.currentDoc.mappings.set(mapping.name, mapping);
+    if (this.currentDoc.mappings.has(mapping.name)) {
+      logger.error(`Skipping mapping: a mapping named ${mapping.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseMapping(mapping, ctx.mappingMetadata(), ctx.mappingRule());
+      this.currentDoc.mappings.set(mapping.name, mapping);
+    }
   }
 
   parseMapping(

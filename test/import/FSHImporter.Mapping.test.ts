@@ -102,6 +102,24 @@ describe('FSHImporter', () => {
       expect(mapping.sourceInfo.file).toBe('Mapping.fsh');
     });
 
+    it('should log an error and skip the mapping when encountering a mapping with a name used by another mapping', () => {
+      const input = `
+      Mapping: SameMapping
+      Title: "First Mapping"
+      
+      Mapping: SameMapping
+      Title: "Second Mapping"
+      `;
+      const result = importSingleText(input, 'SameName.fsh');
+      expect(result.mappings.size).toBe(1);
+      const mapping = result.mappings.get('SameMapping');
+      expect(mapping.title).toBe('First Mapping');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /mapping named SameMapping already exists/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+    });
+
     describe('#mappingRule', () => {
       it('should parse a simple mapping rule', () => {
         const input = `

@@ -74,6 +74,24 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
       });
+
+      it('should log an error and skip the value set when encountering a value set with a name used by another value set', () => {
+        const input = `
+        ValueSet: SimpleVS
+        Title: "First Value Set"
+
+        ValueSet: SimpleVS
+        Title: "Second Value Set"
+        `;
+        const result = importSingleText(input, 'SameName.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('SimpleVS');
+        expect(valueSet.title).toBe('First Value Set');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /value set named SimpleVS already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+      });
     });
 
     describe('#ValueSetConceptComponent', () => {

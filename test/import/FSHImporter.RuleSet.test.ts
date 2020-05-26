@@ -70,5 +70,24 @@ describe('FSHImporter', () => {
       });
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Empty\.fsh.*Line: 4\D*/s);
     });
+
+    it('should log an error and skip the RuleSet when encountering a RuleSet with a name used by another RuleSet', () => {
+      const input = `
+      RuleSet: SameRuleSet
+      * gender 0..0
+
+      RuleSet: SameRuleSet
+      * active = true
+      `;
+      const result = importSingleText(input, 'SameName.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('SameRuleSet');
+      expect(ruleSet.rules.length).toBe(1);
+      assertCardRule(ruleSet.rules[0], 'gender', 0, '0');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /rule set named SameRuleSet already exists/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+    });
   });
 });
