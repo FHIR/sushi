@@ -414,13 +414,11 @@ describe('StructureDefinitionExporter', () => {
     doc.profiles.set(profile.name, profile);
     exporter.exportStructDef(profile);
     const exported = pkg.profiles[0];
+    const expectedId = longId.slice(0, 64);
     expect(exported.name).toBe(longId);
-    expect(exported.id).toBe(longId.slice(0, 64));
+    expect(exported.id).toBe(expectedId);
     const warning = new RegExp(
-      `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${longId.slice(
-        0,
-        64
-      )}"`,
+      `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${expectedId}"`,
       's'
     );
     expect(loggerSpy.getLastMessage('warn')).toMatch(warning);

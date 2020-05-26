@@ -260,16 +260,14 @@ describe('InstanceExporter', () => {
       fixedValRule.fixedValue = longId;
       instance.rules.push(fixedValRule);
       const exported = exportInstance(instance);
+      const expectedId = longId.slice(0, 64);
       const expectedInstanceJSON = {
         resourceType: 'Patient',
-        id: longId.slice(0, 64)
+        id: expectedId
       };
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
       const warning = new RegExp(
-        `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${longId.slice(
-          0,
-          64
-        )}"`,
+        `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${expectedId}"`,
         's'
       );
       expect(loggerSpy.getLastMessage('warn')).toMatch(warning);

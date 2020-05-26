@@ -134,13 +134,11 @@ describe('ValueSetExporter', () => {
     const valueSet = new FshValueSet(longId).withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export().valueSets;
+    const expectedId = longId.slice(0, 64);
     expect(exported[0].name).toBe(longId);
-    expect(exported[0].id).toBe(longId.slice(0, 64));
+    expect(exported[0].id).toBe(expectedId);
     const warning = new RegExp(
-      `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${longId.slice(
-        0,
-        64
-      )}"`,
+      `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${expectedId}"`,
       's'
     );
     expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
