@@ -2381,7 +2381,7 @@ describe('StructureDefinitionExporter', () => {
     const extensionElement = sd.extension[0];
     expect(extensionElement).toBeDefined();
     expect(extensionElement).toEqual({
-      url: 'http://example.com/StructureDefinition/SpecialExtension',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialExtension',
       valueString: 'This is the special extension on the structure definition.'
     });
   });

@@ -177,12 +177,14 @@ describe('IGExporter', () => {
         dependsOn: [
           // USCore tests that it works with a package dependency w/ a specific version
           {
+            id: 'hl7_fhir_us_core',
             uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
             packageId: 'hl7.fhir.us.core',
             version: '3.1.0'
           },
           // VHDir tests that it works with a package dependency w/ "current"
           {
+            id: 'hl7_fhir_uv_vhdir',
             uri: 'http://hl7.org/fhir/uv/vhdir/ImplementationGuide/hl7.core.uv.vhdir',
             packageId: 'hl7.fhir.uv.vhdir',
             version: 'current'
