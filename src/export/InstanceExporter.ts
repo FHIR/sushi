@@ -34,7 +34,7 @@ export class InstanceExporter implements Fishable {
     rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
     // Convert strings in fixedValueRules to instances
     rules = rules.filter(r => {
-      if (r.isResource) {
+      if (r.isInstance) {
         const instance: InstanceDefinition = this.fishForFHIR(r.fixedValue as string);
         if (instance != null) {
           r.fixedValue = instance;
@@ -54,7 +54,7 @@ export class InstanceExporter implements Fishable {
     // Patient is used for the type of a.b
     const inlineResourcePaths: { path: string; instanceOf: string }[] = [];
     rules.forEach(r => {
-      if (r.isResource && r.fixedValue instanceof InstanceDefinition) {
+      if (r.isInstance && r.fixedValue instanceof InstanceDefinition) {
         inlineResourcePaths.push({
           path: r.path,
           // We only use the first element of the meta.profile array, if a need arises for a more

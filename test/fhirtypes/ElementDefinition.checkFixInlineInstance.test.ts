@@ -26,12 +26,12 @@ describe('ElementDefinition', () => {
     inlineInstance = new InstanceDefinition();
     inlineInstance.resourceType = 'Patient';
     inlineInstance.id = 'MyInlineInstance';
-    inlineInstance._instanceMeta.type = 'Patient';
+    inlineInstance._instanceMeta.sdType = 'Patient';
 
     inlineCodeable = new InstanceDefinition();
     inlineCodeable.resourceType = 'CodeableConcept';
     inlineCodeable.id = 'MyCodeable';
-    inlineCodeable._instanceMeta.type = 'CodeableConcept';
+    inlineCodeable._instanceMeta.sdType = 'CodeableConcept';
   });
 
   describe('#checkFixInlineInstance', () => {

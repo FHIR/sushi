@@ -1528,7 +1528,7 @@ describe('InstanceExporter', () => {
       bundleInstance.instanceOf = 'Bundle';
       const inlineRule = new FixedValueRule('entry[0].resource');
       inlineRule.fixedValue = 'MyBundledPatient';
-      inlineRule.isResource = true;
+      inlineRule.isInstance = true;
       bundleInstance.rules.push(inlineRule); // * entry[0].resource = MyBundledPatient
       doc.instances.set(bundleInstance.name, bundleInstance);
 
@@ -1603,7 +1603,7 @@ describe('InstanceExporter', () => {
       it('should fix an inline resource to an instance', () => {
         const inlineRule = new FixedValueRule('contained[0]');
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
 
         const exported = exportInstance(patientInstance);
@@ -1615,12 +1615,12 @@ describe('InstanceExporter', () => {
       it('should fix multiple inline resources to an instance', () => {
         const inlineRule = new FixedValueRule('contained[0]');
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
 
         const inlineRule2 = new FixedValueRule('contained[1]');
         inlineRule2.fixedValue = 'MyInlineObservation';
-        inlineRule2.isResource = true;
+        inlineRule2.isInstance = true;
         patientInstance.rules.push(inlineRule2); // * contained[1] = MyInlineObservation
 
         const exported = exportInstance(patientInstance);
@@ -1637,7 +1637,7 @@ describe('InstanceExporter', () => {
       it('should fix an inline resource to an instance element with a specific type', () => {
         const bundleValRule = new FixedValueRule('entry[PatientsOnly].resource');
         bundleValRule.fixedValue = 'MyInlinePatient';
-        bundleValRule.isResource = true;
+        bundleValRule.isInstance = true;
         // * entry[PatientsOnly].resource = MyInlinePatient
         bundleInstance.rules.push(bundleValRule);
 
@@ -1650,7 +1650,7 @@ describe('InstanceExporter', () => {
       it('should fix an inline resource to an instance element with a choice type', () => {
         const bundleValRule = new FixedValueRule('entry[PatientOrOrganization].resource');
         bundleValRule.fixedValue = 'MyInlinePatient';
-        bundleValRule.isResource = true;
+        bundleValRule.isInstance = true;
         // * entry[PatientOrOrganization].resource = MyInlinePatient
         bundleInstance.rules.push(bundleValRule);
 
@@ -1667,7 +1667,7 @@ describe('InstanceExporter', () => {
           .withFile('BadChoice.fsh')
           .withLocation([1, 2, 3, 4]);
         bundleValRule.fixedValue = 'MyInlineObservation';
-        bundleValRule.isResource = true;
+        bundleValRule.isInstance = true;
         // * entry[PatientOrOrganization].resource = MyInlineObservation
         bundleInstance.rules.push(bundleValRule);
 
@@ -1689,7 +1689,7 @@ describe('InstanceExporter', () => {
           .withFile('FakeInstance.fsh')
           .withLocation([1, 2, 3, 4]);
         inlineRule.fixedValue = 'MyFakePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyFakePatient
 
         const exported = exportInstance(patientInstance);
@@ -1702,7 +1702,7 @@ describe('InstanceExporter', () => {
       it('should override a fixed inline resource on an instance', () => {
         const inlineRule = new FixedValueRule('contained[0]');
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         const overrideRule = new FixedValueRule('contained[0].birthDate');
         overrideRule.fixedValue = '2000-02-24';
         // * contained[0] = MyInlinePatient
@@ -1729,7 +1729,7 @@ describe('InstanceExporter', () => {
       it('should override a fixed inline resource on an instance with paths that mix usage of [0] indexing', () => {
         const inlineRule = new FixedValueRule('contained[00]'); // [00] index used
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         const overrideRule = new FixedValueRule('contained.birthDate'); // no [0] index used
         overrideRule.fixedValue = '2000-02-24';
         // * contained[0] = MyInlinePatient
@@ -1758,7 +1758,7 @@ describe('InstanceExporter', () => {
         bundleRule.fixedValue = 'Bundle';
         const patientRule = new FixedValueRule('contained[0].entry[0].resource');
         patientRule.fixedValue = 'MyInlinePatient';
-        patientRule.isResource = true;
+        patientRule.isInstance = true;
         const birthDateRule = new FixedValueRule('contained[0].entry[0].resource.birthDate');
         birthDateRule.fixedValue = '2000-02-24';
         // * contained[0].resourceType = "Bundle"
@@ -1790,7 +1790,7 @@ describe('InstanceExporter', () => {
 
         const bundleRule = new FixedValueRule('contained[0]');
         bundleRule.fixedValue = 'MyBundle';
-        bundleRule.isResource = true;
+        bundleRule.isInstance = true;
         const birthDateRule = new FixedValueRule(
           'contained[0].entry[PatientsOnly].resource.birthDate'
         );
@@ -1827,7 +1827,7 @@ describe('InstanceExporter', () => {
 
         const inlineRule = new FixedValueRule('maritalStatus');
         inlineRule.fixedValue = 'MyCodeable';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         // * maritalStatus = MyCodeable
         patientInstance.rules.push(inlineRule);
         const exported = exportInstance(patientInstance);
@@ -1853,7 +1853,7 @@ describe('InstanceExporter', () => {
 
         const inlineRule = new FixedValueRule('valueQuantity');
         inlineRule.fixedValue = 'MyAge';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         // * valueQuantity = MyAge
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
@@ -1874,7 +1874,7 @@ describe('InstanceExporter', () => {
 
         const inlineRule = new FixedValueRule('valueQuantity');
         inlineRule.fixedValue = 'MySimple';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         // * valueQuantity = MySimple
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
@@ -1891,7 +1891,7 @@ describe('InstanceExporter', () => {
         patientProfInstance.rules.push(codingRule);
         const inlineRule = new FixedValueRule('extension');
         inlineRule.fixedValue = 'Baz'; // InstanceOf patientProf defined in beforeEach
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule);
         const exported = exportInstance(patientInstance);
         expect(exported.extension).toEqual([
@@ -1915,7 +1915,7 @@ describe('InstanceExporter', () => {
 
         const inlineRule = new FixedValueRule('maritalStatus');
         inlineRule.fixedValue = 'MyCodeable';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         // * maritalStatus = MyCodeable
         patientInstance.rules.push(inlineRule);
         const exported = exportInstance(patientInstance);
