@@ -484,6 +484,21 @@ export class StructureDefinitionExporter implements Fishable {
     cleanResource(structDef, (prop: string) => prop == 'elements' || prop.indexOf('_') == 0);
     structDef.inProgress = false;
 
+    // check for another structure definition with the same id
+    // see https://www.hl7.org/fhir/resource.html#id
+    // the structure definition has already been added to the package, so it's fine if it matches itself
+    if (
+      this.pkg.profiles.some(profile => structDef.id === profile.id && structDef !== profile) ||
+      this.pkg.extensions.some(
+        extension => structDef.id === extension.id && structDef !== extension
+      )
+    ) {
+      logger.error(
+        `Multiple structure definitions with id ${structDef.id}. Each structure definition must have a unique id.`,
+        fshDefinition.sourceInfo
+      );
+    }
+
     return structDef;
   }
 

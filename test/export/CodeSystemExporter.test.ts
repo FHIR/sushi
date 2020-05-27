@@ -195,6 +195,25 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
+  it('should log an error when multiple code systems have the same id', () => {
+    const firstCodeSystem = new FshCodeSystem('FirstCodeSystem')
+      .withFile('CodeSystems.fsh')
+      .withLocation([2, 8, 6, 15]);
+    firstCodeSystem.id = 'my-code-system';
+    const secondCodeSystem = new FshCodeSystem('SecondCodeSystem')
+      .withFile('CodeSystems.fsh')
+      .withLocation([8, 8, 15, 19]);
+    secondCodeSystem.id = 'my-code-system';
+    doc.codeSystems.set(firstCodeSystem.name, firstCodeSystem);
+    doc.codeSystems.set(secondCodeSystem.name, secondCodeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(2);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple code systems with id my-code-system/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: CodeSystems\.fsh.*Line: 8 - 15\D*/s);
+  });
 
   // CaretValueRules
   it('should apply a CaretValueRule', () => {

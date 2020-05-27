@@ -424,6 +424,64 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
+  it('should log an error when multiple profiles have the same id', () => {
+    const firstProfile = new Profile('FirstProfile')
+      .withFile('Profiles.fsh')
+      .withLocation([2, 8, 6, 25]);
+    firstProfile.id = 'my-profile';
+    const secondProfile = new Profile('SecondProfile')
+      .withFile('Profiles.fsh')
+      .withLocation([8, 8, 11, 25]);
+    secondProfile.id = 'my-profile';
+    doc.profiles.set(firstProfile.name, firstProfile);
+    doc.profiles.set(secondProfile.name, secondProfile);
+
+    exporter.export();
+    expect(pkg.profiles).toHaveLength(2);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple structure definitions with id my-profile/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profiles\.fsh.*Line: 8 - 11\D*/s);
+  });
+
+  it('should log an error when multiple extensions have the same id', () => {
+    const firstExtension = new Extension('FirstExtension')
+      .withFile('Extensions.fsh')
+      .withLocation([3, 8, 7, 22]);
+    firstExtension.id = 'my-extension';
+    const secondExtension = new Extension('SecondExtension')
+      .withFile('Extensions.fsh')
+      .withLocation([11, 8, 15, 29]);
+    secondExtension.id = 'my-extension';
+    doc.extensions.set(firstExtension.name, firstExtension);
+    doc.extensions.set(secondExtension.name, secondExtension);
+
+    exporter.export();
+    expect(pkg.extensions).toHaveLength(2);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple structure definitions with id my-extension/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Extensions\.fsh.*Line: 11 - 15\D*/s);
+  });
+
+  it('should log an error when a profile and an extension have the same id', () => {
+    const profile = new Profile('MyProfile').withFile('Profiles.fsh').withLocation([2, 8, 5, 15]);
+    profile.id = 'custom-definition';
+    const extension = new Extension('MyExtension')
+      .withFile('Extensions.fsh')
+      .withLocation([3, 8, 5, 19]);
+    extension.id = 'custom-definition';
+    doc.profiles.set(profile.name, profile);
+    doc.extensions.set(extension.name, extension);
+
+    exporter.export();
+    expect(pkg.profiles).toHaveLength(1);
+    expect(pkg.extensions).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple structure definitions with id custom-definition/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Extensions\.fsh.*Line: 3 - 5\D*/s);
+  });
 
   // Rules
   it('should emit an error and continue when the path is not found', () => {

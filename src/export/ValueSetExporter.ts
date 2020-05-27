@@ -155,6 +155,16 @@ export class ValueSetExporter {
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);
     }
+
+    // check for another value set with the same id
+    // see https://www.hl7.org/fhir/resource.html#id
+    if (this.pkg.valueSets.some(valueSet => vs.id === valueSet.id)) {
+      logger.error(
+        `Multiple value sets with id ${vs.id}. Each value set must have a unique id.`,
+        fshDefinition.sourceInfo
+      );
+    }
+
     this.pkg.valueSets.push(vs);
     return vs;
   }
