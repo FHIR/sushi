@@ -1163,11 +1163,13 @@ export class ElementDefinition {
       case 'Reference':
         value = value as FshReference;
         if (value.sdType) {
-          let lineage: Metadata[] = [];
+          const validTypes: string[] = [];
           this.type.forEach(t =>
-            t.targetProfile.map(tp => (lineage = lineage.concat(this.getTypeLineage(tp, fisher))))
+            t.targetProfile.map(tp => validTypes.push(fisher.fishForMetadata(tp).sdType))
           );
-          if (!lineage.find(md => md.sdType === (value as FshReference).sdType)) {
+
+          const referenceLineage = this.getTypeLineage(value.sdType, fisher);
+          if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {
             throw new InvalidTypeError(`Reference(${value.sdType})`, this.type);
           }
         }

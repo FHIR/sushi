@@ -966,21 +966,23 @@ describe('InstanceExporter', () => {
     });
 
     it('should fix a reference to a type based on a profile', () => {
-      const profiledObservation = new Profile('USCoreObservation');
-      profiledObservation.parent =
-        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
-      doc.profiles.set(profiledObservation.name, profiledObservation);
+      const basePatientInstance = new Instance('BasePatient');
+      basePatientInstance.instanceOf = 'Patient';
+      doc.instances.set(basePatientInstance.name, basePatientInstance);
 
+      // us-core-observation-lab constrains subject to be a reference to a us-core-patient
+      // However, any patient instance can be fixed (because it might conform to the us-core-patient profile without explicitly specifying the profile)
       const profiledInstance = new Instance('MyExampleObservation');
-      profiledInstance.instanceOf = 'USCoreObservation';
+      profiledInstance.instanceOf =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
       const fixedRefRule = new FixedValueRule('subject');
-      fixedRefRule.fixedValue = new FshReference('Bar');
-      profiledInstance.rules.push(fixedRefRule);
+      fixedRefRule.fixedValue = new FshReference('BasePatient');
+      profiledInstance.rules.push(fixedRefRule); // * subject = Reference(BasePatient)
       doc.instances.set(profiledInstance.name, profiledInstance);
-      doc.instances.set(patientInstance.name, patientInstance);
+
       const exported = exportInstance(profiledInstance);
       expect(exported.subject).toEqual({
-        reference: 'Patient/Bar'
+        reference: 'Patient/BasePatient'
       });
     });
 
@@ -1003,23 +1005,45 @@ describe('InstanceExporter', () => {
     });
 
     it('should log an error when fixing an invalid reference to a type based on a profile', () => {
-      loggerSpy.reset();
-      const profiledObservation = new Profile('USCoreObservation');
-      profiledObservation.parent =
-        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
-      doc.profiles.set(profiledObservation.name, profiledObservation);
+      const groupInstance = new Instance('MyGroup');
+      groupInstance.instanceOf = 'Group';
+      doc.instances.set(groupInstance.name, groupInstance);
 
+      // us-core-observation-lab subject can only be a us-core-patient
+      // Group, Device, and Location are allowed reference types on base Patient, but not this profile
       const profiledInstance = new Instance('MyExampleObservation');
-      profiledInstance.instanceOf = 'USCoreObservation';
+      profiledInstance.instanceOf =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
       const fixedRefRule = new FixedValueRule('subject');
-      fixedRefRule.fixedValue = new FshReference('Pow'); // Pow is instanceOf Bundle and not an allowed subject reference type
+      fixedRefRule.fixedValue = new FshReference('MyGroup'); // * subject = Reference(MyGroup)
       profiledInstance.rules.push(fixedRefRule);
       doc.instances.set(profiledInstance.name, profiledInstance);
-      doc.instances.set(patientInstance.name, patientInstance);
+
       const exported = exportInstance(profiledInstance);
       expect(exported.subject).toEqual(undefined);
       expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-        /The type "Reference\(Bundle\)" does not match any of the allowed types\D*/s
+        /The type "Reference\(Group\)" does not match any of the allowed types\D*/s
+      );
+    });
+
+    it('should log an error if an instance of a parent type is fixed', () => {
+      const resourceInstance = new Instance('MyGeneralResource');
+      resourceInstance.instanceOf = 'Resource';
+      doc.instances.set(resourceInstance.name, resourceInstance);
+
+      // Subject can be a reference to Patient, Group, Device, or Location, which are all Resources
+      // However, the reference must be to an instance of one of those types, not a generic Resource instance
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      const fixedRefRule = new FixedValueRule('subject');
+      fixedRefRule.fixedValue = new FshReference('MyGeneralResource'); // * subject = Reference(MyGeneralResource)
+      observationInstance.rules.push(fixedRefRule);
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.subject).toEqual(undefined);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /The type "Reference\(Resource\)" does not match any of the allowed types\D*/s
       );
     });
 
