@@ -26,34 +26,27 @@ describe('ElementDefinition', () => {
     inlineInstance = new InstanceDefinition();
     inlineInstance.resourceType = 'Patient';
     inlineInstance.id = 'MyInlineInstance';
+    inlineInstance._instanceMeta.type = 'Patient';
 
     inlineCodeable = new InstanceDefinition();
     inlineCodeable.resourceType = 'CodeableConcept';
     inlineCodeable.id = 'MyCodeable';
+    inlineCodeable._instanceMeta.type = 'CodeableConcept';
   });
 
-  describe('#checkFixResource', () => {
+  describe('#checkFixInlineInstance', () => {
     it('should return a resource when it can be fixed', () => {
       const contained = observation.elements.find(e => e.id === 'Observation.contained');
-      const value = contained.checkFixResource(inlineInstance, fisher);
+      const value = contained.checkFixInlineInstance(inlineInstance, fisher);
       expect(value.resourceType).toBe('Patient');
     });
 
     it('should throw MismatchedTypeError when a Resource is fixed on a non-Resource element', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(() => {
-        status.checkFixResource(inlineInstance, fisher);
+        status.checkFixInlineInstance(inlineInstance, fisher);
       }).toThrow(
         'Cannot fix Patient value: MyInlineInstance. Value does not match element type: code'
-      );
-    });
-
-    it('should throw FixingNonResourceError when a non-Resource value is fixed on a non-Resource', () => {
-      const category = observation.elements.find(e => e.id === 'Observation.category');
-      expect(() => {
-        category.checkFixResource(inlineCodeable, fisher);
-      }).toThrow(
-        'Instance MyCodeable of type CodeableConcept is not an Instance of a Resource or Profile of a Resource. Only Instances of Resources or Profiles of Resources may be assigned to other Instances.'
       );
     });
   });

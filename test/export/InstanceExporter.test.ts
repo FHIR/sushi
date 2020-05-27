@@ -1814,6 +1814,124 @@ describe('InstanceExporter', () => {
           }
         ]);
       });
+
+      it('should fix an inline instance of a type to an instance', () => {
+        const inlineCodeable = new Instance('MyCodeable');
+        inlineCodeable.instanceOf = 'CodeableConcept';
+        inlineCodeable.usage = 'Inline';
+        doc.instances.set(inlineCodeable.name, inlineCodeable);
+        const codingRule = new FixedValueRule('coding');
+        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        // * coding = http://bar.com#foo
+        inlineCodeable.rules.push(codingRule);
+
+        const inlineRule = new FixedValueRule('maritalStatus');
+        inlineRule.fixedValue = 'MyCodeable';
+        inlineRule.isResource = true;
+        // * maritalStatus = MyCodeable
+        patientInstance.rules.push(inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.maritalStatus).toEqual({
+          coding: [
+            {
+              system: 'http://bar.com',
+              code: 'foo'
+            }
+          ]
+        });
+      });
+
+      it('should fix an inline instance of a specialization of a type to an instance', () => {
+        const inlineAge = new Instance('MyAge');
+        inlineAge.instanceOf = 'Age';
+        inlineAge.usage = 'Inline';
+        doc.instances.set(inlineAge.name, inlineAge);
+        const ageRule = new FixedValueRule('value');
+        ageRule.fixedValue = 42;
+        // * value = 42
+        inlineAge.rules.push(ageRule);
+
+        const inlineRule = new FixedValueRule('valueQuantity');
+        inlineRule.fixedValue = 'MyAge';
+        inlineRule.isResource = true;
+        // * valueQuantity = MyAge
+        respRateInstance.rules.push(inlineRule);
+        const exported = exportInstance(respRateInstance);
+        expect(exported.valueQuantity).toEqual({
+          value: 42
+        });
+      });
+
+      it('should fix an inline instance of a profile of a type to an instance', () => {
+        const inlineSimple = new Instance('MySimple');
+        inlineSimple.instanceOf = 'SimpleQuantity';
+        inlineSimple.usage = 'Inline';
+        doc.instances.set(inlineSimple.name, inlineSimple);
+        const quantRule = new FixedValueRule('value');
+        quantRule.fixedValue = 7;
+        // * value = 7
+        inlineSimple.rules.push(quantRule);
+
+        const inlineRule = new FixedValueRule('valueQuantity');
+        inlineRule.fixedValue = 'MySimple';
+        inlineRule.isResource = true;
+        // * valueQuantity = MySimple
+        respRateInstance.rules.push(inlineRule);
+        const exported = exportInstance(respRateInstance);
+        expect(exported.valueQuantity).toEqual({
+          value: 7
+        });
+      });
+
+      it('should fix an inline instance of an extension to an instance', () => {
+        patientProfInstance.usage = 'Inline';
+        const codingRule = new FixedValueRule('extension[level].valueCoding');
+        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        // * extension[level].valueCoding = http://bar.com#foo
+        patientProfInstance.rules.push(codingRule);
+        const inlineRule = new FixedValueRule('extension');
+        inlineRule.fixedValue = 'Baz'; // InstanceOf patientProf defined in beforeEach
+        inlineRule.isResource = true;
+        patientInstance.rules.push(inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.extension).toEqual([
+          {
+            extension: [{ url: 'level', valueCoding: { system: 'http://bar.com', code: 'foo' } }],
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency'
+          }
+        ]);
+      });
+
+      it('should fix an instance of a type to an instance and log a warning when the type is not inline', () => {
+        const inlineCodeable = new Instance('MyCodeable')
+          .withFile('Code.fsh')
+          .withLocation([1, 2, 3, 4]);
+        inlineCodeable.instanceOf = 'CodeableConcept';
+        doc.instances.set(inlineCodeable.name, inlineCodeable);
+        const codingRule = new FixedValueRule('coding');
+        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        // * coding = http://bar.com#foo
+        inlineCodeable.rules.push(codingRule);
+
+        const inlineRule = new FixedValueRule('maritalStatus');
+        inlineRule.fixedValue = 'MyCodeable';
+        inlineRule.isResource = true;
+        // * maritalStatus = MyCodeable
+        patientInstance.rules.push(inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Instance MyCodeable is not an instance of a resource.*File: Code\.fsh.*Line: 1 - 3\D*/s
+        );
+        expect(exported.maritalStatus).toEqual({
+          coding: [
+            {
+              system: 'http://bar.com',
+              code: 'foo'
+            }
+          ]
+        });
+      });
     });
   });
 
