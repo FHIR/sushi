@@ -13,6 +13,7 @@ describe('MappingExporter', () => {
   let doc: FSHDocument;
   let exporter: MappingExporter;
   let observation: StructureDefinition;
+  let practitioner: StructureDefinition;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -24,6 +25,7 @@ describe('MappingExporter', () => {
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], {
       name: 'test',
@@ -36,6 +38,9 @@ describe('MappingExporter', () => {
     observation = fisher.fishForStructureDefinition('Observation');
     observation.id = 'MyObservation';
     pkg.profiles.push(observation);
+    practitioner = fisher.fishForStructureDefinition('Practitioner');
+    practitioner.id = 'MyPractitioner';
+    pkg.profiles.push(practitioner);
   });
 
   it('should log an error when the mapping source does not exist', () => {
@@ -134,6 +139,63 @@ describe('MappingExporter', () => {
         /The string "Invalid!" does not represent a valid FHIR id/
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadMapping\.fsh.*Line: 1 - 3\D*/s);
+    });
+
+    it('should log an error when multiple mappings have the same source and the same id', () => {
+      /**
+       * Mapping: FirstMapping
+       * Source: MyObservation
+       * Id: reused-id
+       *
+       * Mapping: SecondMapping
+       * Source: MyObservation
+       * Id: reused-id
+       */
+      const firstMapping = new Mapping('FirstMapping')
+        .withFile('Mappings.fsh')
+        .withLocation([3, 8, 7, 18]);
+      firstMapping.source = 'MyObservation';
+      firstMapping.id = 'reused-id';
+      doc.mappings.set(firstMapping.name, firstMapping);
+      const secondMapping = new Mapping('SecondMapping')
+        .withFile('Mappings.fsh')
+        .withLocation([8, 8, 11, 19]);
+      secondMapping.source = 'MyObservation';
+      secondMapping.id = 'reused-id';
+      doc.mappings.set(secondMapping.name, secondMapping);
+
+      exporter.export();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Multiple mappings on MyObservation found with id reused-id/
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Mappings\.fsh.*Line: 8 - 11\D*/s);
+    });
+
+    it('should not log an error when multiple mappings have different sources and the same id', () => {
+      /**
+       * Mapping: FirstMapping
+       * Source: MyObservation
+       * Id: reused-id
+       *
+       * Mapping: SecondMapping
+       * Source: MyPractitioner
+       * Id: reused-id
+       */
+      const firstMapping = new Mapping('FirstMapping')
+        .withFile('Mappings.fsh')
+        .withLocation([3, 8, 7, 18]);
+      firstMapping.source = 'MyObservation';
+      firstMapping.id = 'reused-id';
+      doc.mappings.set(firstMapping.name, firstMapping);
+      const secondMapping = new Mapping('SecondMapping')
+        .withFile('Mappings.fsh')
+        .withLocation([8, 8, 11, 19]);
+      secondMapping.source = 'MyPractitioner';
+      secondMapping.id = 'reused-id';
+      doc.mappings.set(secondMapping.name, secondMapping);
+
+      exporter.export();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
