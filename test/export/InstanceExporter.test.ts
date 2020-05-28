@@ -1883,6 +1883,31 @@ describe('InstanceExporter', () => {
         });
       });
 
+      it('should fix an inline instance of a FSH defined profile of a type to an instance', () => {
+        const profile = new Profile('Foo');
+        profile.parent = 'Quantity';
+        doc.profiles.set(profile.name, profile);
+
+        const inlineSimple = new Instance('MyQuantity');
+        inlineSimple.instanceOf = 'Foo';
+        inlineSimple.usage = 'Inline';
+        doc.instances.set(inlineSimple.name, inlineSimple);
+        const quantRule = new FixedValueRule('value');
+        quantRule.fixedValue = 7;
+        // * value = 7
+        inlineSimple.rules.push(quantRule);
+
+        const inlineRule = new FixedValueRule('valueQuantity');
+        inlineRule.fixedValue = 'MyQuantity';
+        inlineRule.isInstance = true;
+        // * valueQuantity = MyQuantity
+        respRateInstance.rules.push(inlineRule);
+        const exported = exportInstance(respRateInstance);
+        expect(exported.valueQuantity).toEqual({
+          value: 7
+        });
+      });
+
       it('should fix an inline instance of an extension to an instance', () => {
         patientProfInstance.usage = 'Inline';
         const codingRule = new FixedValueRule('extension[level].valueCoding');

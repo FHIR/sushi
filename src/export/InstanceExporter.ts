@@ -215,18 +215,26 @@ export class InstanceExporter implements Fishable {
     }
 
     let isResource = true;
-    let json = this.fisher.fishForFHIR(fshDefinition.instanceOf, Type.Resource, Type.Profile);
+    const json = this.fisher.fishForFHIR(
+      fshDefinition.instanceOf,
+      Type.Resource,
+      Type.Profile,
+      Type.Extension,
+      Type.Type
+    );
 
     if (!json) {
-      json = this.fisher.fishForFHIR(fshDefinition.instanceOf, Type.Extension, Type.Type);
+      throw new InstanceOfNotDefinedError(
+        fshDefinition.name,
+        fshDefinition.instanceOf,
+        fshDefinition.sourceInfo
+      );
+    }
+
+    if (json.kind !== 'resource') {
+      // If the instance is not a resource, it should be inline, since it cannot exist as a standalone instance
       isResource = false;
-      if (!json) {
-        throw new InstanceOfNotDefinedError(
-          fshDefinition.name,
-          fshDefinition.instanceOf,
-          fshDefinition.sourceInfo
-        );
-      } else if (fshDefinition.usage !== 'Inline') {
+      if (fshDefinition.usage !== 'Inline') {
         logger.warn(
           `Instance ${fshDefinition.name} is not an instance of a resource, so it should only be used inline on other instances, and it will not be exported to a standalone file. Specify "Usage: #inline" to remove this warning.`,
           fshDefinition.sourceInfo
