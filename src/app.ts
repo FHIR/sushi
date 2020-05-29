@@ -58,6 +58,58 @@ async function app() {
 
   logger.info(`Running SUSHI ${getVersion()}`);
 
+  input = ensureInputDir(input);
+
+  // If a fsh subdirectory is used, we are in an IG Publisher context
+  const isIgPubContext = path.parse(input).base === 'fsh';
+  const outDir = ensureOutputDir(input, program.out, isIgPubContext);
+
+  const config = readConfig(input);
+
+  // Load external dependencies
+  const defs = new FHIRDefinitions();
+  const dependencyDefs = loadExternalDependencies(defs, config);
+
+  // Load custom resources specified in ig-data folder
+  loadCustomResources(input, defs);
+
+  const tank = fillTank(input, config);
+  await Promise.all(dependencyDefs);
+
+  // Check for StructureDefinition
+  const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
+  if (structDef?.version !== '4.0.1') {
+    logger.error(
+      'StructureDefinition resource not found for v4.0.1. The FHIR R4 package in local cache' +
+        ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
+        ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
+    );
+    process.exit(1);
+  }
+
+  logger.info('Converting FSH to FHIR resources...');
+  const outPackage = exportFHIR(tank, defs);
+  writeFHIRResources(outDir, outPackage, program.snapshot);
+
+  // If ig-data exists, generate an IG, otherwise, generate resources only
+  let isIG = false;
+  const igDataPath = path.resolve(input, 'ig-data');
+  if (fs.existsSync(igDataPath)) {
+    isIG = true;
+    logger.info('Assembling Implementation Guide sources...');
+    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
+    igExporter.export(outDir);
+    logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
+  }
+
+  console.log();
+  printResults(outPackage, isIG);
+
+  const exitCode = stats.numError > 0 ? 1 : 0;
+  process.exit(exitCode);
+}
+
+export function ensureInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
   if (!input) {
     input = '.';
@@ -70,24 +122,30 @@ async function app() {
     input = path.join(input, 'fsh');
     logger.info('fsh/ subdirectory detected and add to input path');
   }
+  return input;
+}
 
-  // If a fsh subdirectory is used, we are in an IG Publisher context
-  const isIgPubContext = path.parse(input).base === 'fsh';
+export function ensureOutputDir(input: string, output: string, isIgPubContext: boolean): string {
   if (isIgPubContext) {
     logger.info(
       'Current FSH tank conforms to an IG Publisher context. Output will be adjusted accordingly.'
     );
   }
-
-  let files: string[];
-  try {
-    files = getFilesRecursive(input);
-  } catch {
-    logger.error('Invalid path to FSH definition folder.');
-    program.outputHelp();
-    process.exit(1);
+  let outDir = output;
+  if (isIgPubContext && !output) {
+    // When running in an IG Publisher context, default output is the parent folder of the tank
+    outDir = path.join(input, '..');
+    logger.info(`No output path specified. Output to ${outDir}`);
+  } else if (!output) {
+    // Any other time, default output is just to 'build'
+    outDir = path.join('.', 'build');
+    logger.info(`No output path specified. Output to ${outDir}`);
   }
+  fs.ensureDirSync(outDir);
+  return outDir;
+}
 
+export function readConfig(input: string): any {
   // Check that package.json exists
   const packagePath = path.join(input, 'package.json');
   if (!fs.existsSync(packagePath)) {
@@ -113,9 +171,13 @@ async function app() {
     );
     process.exit(1);
   }
+  return config;
+}
 
-  // Load external dependencies
-  const defs = new FHIRDefinitions();
+export function loadExternalDependencies(
+  defs: FHIRDefinitions,
+  config: any
+): Promise<FHIRDefinitions | void>[] {
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
   for (const dep of Object.keys(config?.dependencies ?? {})) {
     dependencyDefs.push(
@@ -130,10 +192,18 @@ async function app() {
         })
     );
   }
+  return dependencyDefs;
+}
 
-  // Load custom resources specified in ig-data folder
-  loadCustomResources(input, defs);
-
+export function fillTank(input: string, config: any): FSHTank {
+  let files: string[];
+  try {
+    files = getFilesRecursive(input);
+  } catch {
+    logger.error('Invalid path to FSH definition folder.');
+    program.outputHelp();
+    process.exit(1);
+  }
   const rawFSHes = files
     .filter(file => file.endsWith('.fsh'))
     .map(file => {
@@ -145,35 +215,10 @@ async function app() {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
 
-  const tank = new FSHTank(docs, config);
-  await Promise.all(dependencyDefs);
+  return new FSHTank(docs, config);
+}
 
-  // Check for StructureDefinition
-  const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
-  if (structDef?.version !== '4.0.1') {
-    logger.error(
-      'StructureDefinition resource not found for v4.0.1. The FHIR R4 package in local cache' +
-        ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
-        ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
-    );
-    process.exit(1);
-  }
-
-  logger.info('Converting FSH to FHIR resources...');
-  const outPackage = exportFHIR(tank, defs);
-
-  let outDir = program.out;
-  if (isIgPubContext && !program.out) {
-    // When running in an IG Publisher context, default output is the parent folder of the tank
-    outDir = path.join(input, '..');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  } else if (!program.out) {
-    // Any other time, default output is just to 'build'
-    outDir = path.join('.', 'build');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  }
-  fs.ensureDirSync(outDir);
-
+export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {
   fs.writeFileSync(
     path.join(outDir, 'package.json'),
     JSON.stringify(outPackage.config, null, 2),
@@ -188,13 +233,9 @@ async function app() {
   ) => {
     const exportDir = path.join(outDir, 'input', folder);
     resources.forEach(resource => {
-      fs.outputJSONSync(
-        path.join(exportDir, resource.getFileName()),
-        resource.toJSON(program.snapshot),
-        {
-          spaces: 2
-        }
-      );
+      fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
+        spaces: 2
+      });
       count++;
     });
   };
@@ -215,23 +256,6 @@ async function app() {
   writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
-
-  // If ig-data exists, generate an IG, otherwise, generate resources only
-  let isIG = false;
-  const igDataPath = path.resolve(input, 'ig-data');
-  if (fs.existsSync(igDataPath)) {
-    isIG = true;
-    logger.info('Assembling Implementation Guide sources...');
-    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
-    igExporter.export(outDir);
-    logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
-  }
-
-  console.log();
-  printResults(outPackage, isIG);
-
-  const exitCode = stats.numError > 0 ? 1 : 0;
-  process.exit(exitCode);
 }
 
 function getVersion(): string {
