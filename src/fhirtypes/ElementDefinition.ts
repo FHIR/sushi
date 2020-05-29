@@ -1377,7 +1377,8 @@ export class ElementDefinition {
     if (this.type?.some(t => lineage.includes(t.code))) {
       return value;
     } else {
-      // In this case the value is actually a resource, but not one that inherits from this.type
+      // In this case neither the type of the inline instance nor the type of any of its parents matches the
+      // ED.type, so we cannot fix the inline instance to this ED.
       throw new MismatchedTypeError(
         inlineInstanceType,
         value.id,
