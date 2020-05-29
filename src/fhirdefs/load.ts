@@ -6,7 +6,7 @@ import os from 'os';
 import tar from 'tar';
 import axios from 'axios';
 import temp from 'temp';
-import { logger } from '../utils';
+import { logger } from '../utils/FSHLogger';
 
 /**
  * Loads a dependency from user FHIR cache or from online
