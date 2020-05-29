@@ -1026,6 +1026,24 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should fix a reference to a child type of the referenced type', () => {
+      const documentReferenceInstance = new Instance('MyDocReference');
+      documentReferenceInstance.instanceOf = 'DocumentReference';
+      doc.instances.set(documentReferenceInstance.name, documentReferenceInstance);
+
+      // DocumentReference.context.related is a reference to Any
+      const fixedRefRule = new FixedValueRule('context.related');
+      fixedRefRule.fixedValue = new FshReference('Bar'); // Bar is a Patient Instance that has a TestPatient profile
+      documentReferenceInstance.rules.push(fixedRefRule); // * context.related = Reference(Bar)
+
+      const exported = exportInstance(documentReferenceInstance);
+      expect(exported.context.related).toEqual([
+        {
+          reference: 'Patient/Bar'
+        }
+      ]);
+    });
+
     it('should log an error if an instance of a parent type is fixed', () => {
       const resourceInstance = new Instance('MyGeneralResource');
       resourceInstance.instanceOf = 'Resource';

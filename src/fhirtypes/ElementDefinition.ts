@@ -1165,7 +1165,12 @@ export class ElementDefinition {
         if (value.sdType) {
           const validTypes: string[] = [];
           this.type.forEach(t =>
-            t.targetProfile.map(tp => validTypes.push(fisher.fishForMetadata(tp).sdType))
+            t.targetProfile.forEach(tp => {
+              const tpType = fisher.fishForMetadata(tp)?.sdType;
+              if (tpType) {
+                validTypes.push(tpType);
+              }
+            })
           );
 
           const referenceLineage = this.getTypeLineage(value.sdType, fisher);
