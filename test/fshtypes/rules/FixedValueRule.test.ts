@@ -9,7 +9,7 @@ describe('FixedValueRule', () => {
       expect(c.fixedValue).toBeUndefined();
       expect(c.exactly).toBeUndefined();
       expect(c.units).toBeUndefined();
-      expect(c.isResource).toBeUndefined();
+      expect(c.isInstance).toBeUndefined();
     });
   });
 });

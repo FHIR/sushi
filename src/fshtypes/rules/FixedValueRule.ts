@@ -16,7 +16,7 @@ export class FixedValueRule extends Rule {
   fixedValue: FixedValueType;
   exactly: boolean;
   units: boolean;
-  isResource: boolean;
+  isInstance: boolean;
 
   constructor(path: string) {
     super(path);
