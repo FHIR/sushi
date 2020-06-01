@@ -1463,6 +1463,31 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should not apply a Reference FixedValueRule with invalid type and log an error', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Condition';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new FixedValueRule('subject'); // subject cannot be a reference to condition
+    rule.fixedValue = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const fixedSubject = sd.findElement('Observation.subject');
+
+    expect(fixedSubject.patternReference).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The type "Reference\(Condition\)" does not match any of the allowed types\D*/s
+    );
+  });
+
   it('should apply a Code FixedValueRule and replace the local code system name with its url', () => {
     const profile = new Profile('LightObservation');
     profile.parent = 'Observation';
@@ -1966,10 +1991,10 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: NoSlice\.fsh.*Line: 6\D*/s);
   });
 
-  // Since previous versions of SUSHI used the slicename as a type lookup as well, we want to issue a warning when we
-  // find a rule that may have been intended to work that way (essentially, a user who has not updated their fsh).
-  // We expect to remove this warning at some point since it is only needed in the transition.
-  it('should report a warning if the extension slice name resolves to an external extension type and no explicit type was specified', () => {
+  // Since previous versions of SUSHI used the slicename as a type lookup as well, we used to issue a warning when we
+  // found a rule that may have been intended to work that way (essentially, a user who has not updated their fsh).
+  // Time has passed since then and we no longer issue that warning.  This test proves that.
+  it('should NOT report a warning if the extension slice name resolves to an external extension type and no explicit type was specified', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
@@ -1997,12 +2022,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionSliceUrl).toBeDefined();
     expect(extensionSliceUrl.fixedUri).toBe('maxSize');
 
-    expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /Alias: MaxSizeExtension = http:\/\/hl7\.org\/fhir\/StructureDefinition\/maxSize.*extension contains MaxSizeExtension named maxSize 0\.\.1.*File: ExternalSliceName\.fsh.*Line: 6\D*/s
-    );
+    // In previous versions of this test, a warning was expected here
+    expect(loggerSpy.getAllLogs('warn').length).toBe(0);
   });
 
-  it('should report a warning if the extension slice name resolves to a FSH extension and no explicit type was specified', () => {
+  it('should NOT report a warning if the extension slice name resolves to a FSH extension and no explicit type was specified', () => {
     const extension = new Extension('MyFshExtension');
     const extCardRule = new CardRule('extension');
     extCardRule.min = 0;
@@ -2039,9 +2063,8 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionSliceUrl).toBeDefined();
     expect(extensionSliceUrl.fixedUri).toBe('MyFshExtension');
 
-    expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /extension contains MyFshExtension named MyFshExtension 0\.\.1.*extension contains MyFshExtension named my-fsh-extension 0\.\.1.*File: FSHSliceName\.fsh.*Line: 6\D*/s
-    );
+    // In previous versions of this test, a warning was expected here
+    expect(loggerSpy.getAllLogs('warn').length).toBe(0);
   });
 
   it('should not report a warning if the extension slice name resolves to an extension type but explicit type was specified', () => {

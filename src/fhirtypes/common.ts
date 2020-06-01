@@ -236,6 +236,7 @@ export function replaceReferences(
       clone = cloneDeep(rule);
       const fv = clone.fixedValue as FshReference;
       fv.reference = `${instanceMeta.sdType}/${id}`;
+      fv.sdType = instanceMeta.sdType;
     }
   } else if (rule.fixedValue instanceof FshCode) {
     const codeSystem = tank.fish(rule.fixedValue.system, Type.CodeSystem);
