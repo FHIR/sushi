@@ -824,7 +824,7 @@ export class FSHImporter extends FSHVisitor {
       return [this.visitValueSetRule(ctx.valueSetRule())];
     } else if (ctx.fixedValueRule()) {
       const rule = this.visitFixedValueRule(ctx.fixedValueRule());
-      if (rule.isResource) {
+      if (rule.isInstance) {
         const sourceInfo = { location: this.extractStartStop(ctx), file: this.currentFile };
         logger.error(
           'Resources cannot be added inline to a Profile or Extension, skipping rule.',
@@ -987,7 +987,7 @@ export class FSHImporter extends FSHVisitor {
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
     fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
     fixedValueRule.units = ctx.KW_UNITS() != null;
-    fixedValueRule.isResource =
+    fixedValueRule.isInstance =
       ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
     return fixedValueRule;
   }

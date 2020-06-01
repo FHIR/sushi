@@ -49,6 +49,7 @@ type InstanceMeta = {
   title?: string;
   description?: string;
   usage?: InstanceUsage;
+  sdType?: string;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
