@@ -1108,7 +1108,7 @@ export class ElementDefinition {
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  fixValue(value: FixedValueType, exactly = false, units = false): void {
+  fixValue(value: FixedValueType, exactly = false, units = false, fisher?: Fishable): void {
     let type: string;
     if (value instanceof FshCode) {
       type = 'Code';
@@ -1162,6 +1162,22 @@ export class ElementDefinition {
         break;
       case 'Reference':
         value = value as FshReference;
+        if (value.sdType) {
+          const validTypes: string[] = [];
+          this.type.forEach(t =>
+            t.targetProfile.forEach(tp => {
+              const tpType = fisher.fishForMetadata(tp)?.sdType;
+              if (tpType) {
+                validTypes.push(tpType);
+              }
+            })
+          );
+
+          const referenceLineage = this.getTypeLineage(value.sdType, fisher);
+          if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {
+            throw new InvalidTypeError(`Reference(${value.sdType})`, this.type);
+          }
+        }
         this.fixFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
       default:
