@@ -35,7 +35,7 @@ export class CodeSystemExporter {
     }
   }
 
-  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]) {
+  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]): void {
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
@@ -55,6 +55,18 @@ export class CodeSystemExporter {
     }
   }
 
+  private updateCount(codeSystem: CodeSystem): void {
+    // Only update the count when it isn't explicitly set, when the content is 'complete',
+    // and there is at least one concept.
+    if (
+      codeSystem.count == null &&
+      codeSystem.content === 'complete' &&
+      codeSystem.concept?.length
+    ) {
+      codeSystem.count = codeSystem.concept.length;
+    }
+  }
+
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
     if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
@@ -63,6 +75,7 @@ export class CodeSystemExporter {
     this.setMetadata(codeSystem, fshDefinition);
     this.setCaretRules(codeSystem, fshDefinition.rules);
     this.setConcepts(codeSystem, fshDefinition);
+    this.updateCount(codeSystem);
     this.pkg.codeSystems.push(codeSystem);
     return codeSystem;
   }

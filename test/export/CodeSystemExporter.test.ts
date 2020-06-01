@@ -1,6 +1,6 @@
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
-import { FshCodeSystem } from '../../src/fshtypes';
+import { FshCodeSystem, FshCode } from '../../src/fshtypes';
 import { FshConcept } from '../../src/fshtypes/FshConcept';
 import { CaretValueRule } from '../../src/fshtypes/rules';
 import { TestFisher } from '../testhelpers';
@@ -101,6 +101,7 @@ describe('CodeSystemExporter', () => {
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       version: '0.0.1',
+      count: 2,
       concept: [{ code: 'myCode' }, { code: 'anotherCode' }]
     });
   });
@@ -125,6 +126,7 @@ describe('CodeSystemExporter', () => {
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       version: '0.0.1',
+      count: 2,
       concept: [
         {
           code: 'myCode',
@@ -216,6 +218,32 @@ describe('CodeSystemExporter', () => {
       status: 'active',
       publisher: 'carat'
     });
+  });
+
+  it('should not override count when ^count is provided by user', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'count';
+    rule.value = 5;
+    codeSystem.rules.push(rule);
+    codeSystem.concepts = [new FshConcept('myCode'), new FshConcept('anotherCode')];
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBe(5);
+  });
+
+  it('should not set count when ^content is not #complete', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'content';
+    rule.value = new FshCode('fragment', 'http://hl7.org/fhir/codesystem-content-mode');
+    codeSystem.rules.push(rule);
+    codeSystem.concepts = [new FshConcept('myCode'), new FshConcept('anotherCode')];
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBeUndefined();
   });
 
   it('should log a message when applying invalid CaretValueRule', () => {
