@@ -10,12 +10,13 @@ import { logger, stats, Type } from './utils';
 import { loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import {
-  ensureInputDir,
+  findInputDir,
   ensureOutputDir,
   readConfig,
   loadExternalDependencies,
   fillTank,
-  writeFHIRResources
+  writeFHIRResources,
+  getRawFSHes
 } from './utils/Processing';
 import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
@@ -55,7 +56,7 @@ async function app() {
 
   logger.info(`Running SUSHI ${getVersion()}`);
 
-  input = ensureInputDir(input);
+  input = findInputDir(input);
 
   // If a fsh subdirectory is used, we are in an IG Publisher context
   const isIgPubContext = path.parse(input).base === 'fsh';
@@ -77,7 +78,8 @@ async function app() {
 
   let tank: FSHTank;
   try {
-    tank = fillTank(input, config);
+    const rawFSH = getRawFSHes(input);
+    tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
     process.exit(1);

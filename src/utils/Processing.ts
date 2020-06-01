@@ -16,7 +16,7 @@ import {
   filterProfileInstances
 } from './InstanceDefinitionUtils';
 
-export function ensureInputDir(input: string): string {
+export function findInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
   if (!input) {
     input = '.';
@@ -94,15 +94,14 @@ export function loadExternalDependencies(
           return def;
         })
         .catch(e => {
-          logger.error(`Failed to load ${dep}#${config.dependencies[dep]}`);
-          logger.error(e.message);
+          logger.error(`Failed to load ${dep}#${config.dependencies[dep]}: ${e.message}`);
         })
     );
   }
   return dependencyDefs;
 }
 
-export function fillTank(input: string, config: any): FSHTank {
+export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
   try {
     files = getFilesRecursive(input);
@@ -117,10 +116,12 @@ export function fillTank(input: string, config: any): FSHTank {
       const fileContent = fs.readFileSync(filePath, 'utf8');
       return new RawFSH(fileContent, filePath);
     });
+  return rawFSHes;
+}
 
+export function fillTank(rawFSHes: RawFSH[], config: any): FSHTank {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
-
   return new FSHTank(docs, config);
 }
 
