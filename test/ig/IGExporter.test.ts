@@ -172,7 +172,7 @@ describe('IGExporter', () => {
             packageId: 'hl7.fhir.uv.vhdir',
             version: 'current'
           },
-          // test-wonky-id-1 tests that we are correctly turning - in packageId to - in id
+          // test-wonky-id-1 tests that we are correctly turning - in packageId to _ in id
           {
             id: 'test_wonky_id_1',
             packageId: 'test-wonky-id-1',
