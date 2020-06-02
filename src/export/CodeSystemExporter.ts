@@ -55,15 +55,24 @@ export class CodeSystemExporter {
     }
   }
 
-  private updateCount(codeSystem: CodeSystem): void {
-    // Only update the count when it isn't explicitly set, when the content is 'complete',
-    // and there is at least one concept.
-    if (
-      codeSystem.count == null &&
-      codeSystem.content === 'complete' &&
-      codeSystem.concept?.length
-    ) {
-      codeSystem.count = codeSystem.concept.length;
+  private updateCount(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
+    // We can only derive a true count if the content is #complete
+    if (codeSystem.content === 'complete') {
+      const actualCount = codeSystem.concept?.length;
+      if (codeSystem.count == null && actualCount != null) {
+        codeSystem.count = actualCount;
+      } else if (codeSystem.count !== actualCount) {
+        const countRule = fshDefinition.rules.find(
+          r => r instanceof CaretValueRule && r.caretPath === 'count'
+        );
+        const sourceInfo = countRule?.sourceInfo ?? fshDefinition.sourceInfo;
+        logger.warn(
+          `The user-specified ^count (${codeSystem.count}) does not match the specified number of concepts ` +
+            `(${actualCount}). If this is not a "complete" ValueSet, set the ^content property to the appropriate ` +
+            'value; otherwise fix or remove the ^count.',
+          sourceInfo
+        );
+      }
     }
   }
 
@@ -75,7 +84,7 @@ export class CodeSystemExporter {
     this.setMetadata(codeSystem, fshDefinition);
     this.setCaretRules(codeSystem, fshDefinition.rules);
     this.setConcepts(codeSystem, fshDefinition);
-    this.updateCount(codeSystem);
+    this.updateCount(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
     return codeSystem;
   }
