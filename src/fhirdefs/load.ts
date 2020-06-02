@@ -1,6 +1,6 @@
 import { FHIRDefinitions } from './FHIRDefinitions';
 import { PackageLoadError, CurrentPackageLoadError } from '../errors';
-import fs, { readJSONSync, existsSync } from 'fs-extra';
+import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import tar from 'tar';
@@ -40,7 +40,7 @@ export async function loadDependency(
   // as described here https://confluence.hl7.org/pages/viewpage.action?pageId=35718627#IGPublisherDocumentation-DependencyList
   if (version === 'dev' && !loadedPackage) {
     logger.info(
-      `Falling back to ${packageName}#current since ${fullPackageName} is not locally cached. To avoid this, add ${fullPackageName} to your local FHIR cache.`
+      `Falling back to ${packageName}#current since ${fullPackageName} is not locally cached. To avoid this, add ${fullPackageName} to your local FHIR cache by building it locally with the HL7 FHIR IG Publisher.`
     );
     version = 'current';
     fullPackageName = `${packageName}#${version}`;
@@ -57,25 +57,30 @@ export async function loadDependency(
     const qaData: { 'package-id': string; date: string; repo: string }[] = res?.data;
     // Find matching packages and sort by date to get the most recent
     let newestPackage;
-    if (qaData && qaData.length > 0) {
+    if (qaData?.length > 0) {
       const matchingPackages = qaData.filter(p => p['package-id'] === packageName);
       newestPackage = matchingPackages.sort((p1, p2) => {
         return Date.parse(p2['date']) - Date.parse(p1['date']);
       })[0];
     }
-    if (newestPackage && newestPackage.repo) {
+    if (newestPackage?.repo) {
       const [org, repo] = newestPackage.repo.split('/');
       const igUrl = `${baseUrl}/${org}/${repo}`;
       // get the package.manifest.json for the newest version of the package on build.fhir.org
       const manifest = await axios.get(`${igUrl}/package.manifest.json`);
       let cachedPackageJSON;
-      if (existsSync(path.join(loadPath, 'package.json'))) {
-        cachedPackageJSON = readJSONSync(path.join(loadPath, 'package.json'));
+      if (fs.existsSync(path.join(loadPath, 'package.json'))) {
+        cachedPackageJSON = fs.readJSONSync(path.join(loadPath, 'package.json'));
       }
       // if the date on the package.manifest.json does not match the date on the cached package
       // set the packageUrl to trigger a re-download of the package
       if (manifest?.data?.date !== cachedPackageJSON?.date) {
         packageUrl = `${igUrl}/package.tgz`;
+        if (cachedPackageJSON) {
+          logger.info(
+            `Cached package ${fullPackageName} is out of date and will be replaced by the more recent version found on build.fhir.org.`
+          );
+        }
       }
     } else {
       throw new CurrentPackageLoadError(fullPackageName);
@@ -99,7 +104,7 @@ export async function loadDependency(
     if (res?.data) {
       logger.info(`Downloaded ${fullPackageName}`);
       fs.ensureDirSync(targetDirectory);
-      fs.writeFileSync(tempFile.path, res?.data);
+      fs.writeFileSync(tempFile.path, res.data);
       // Extract the package from that temporary file location
       tar.x({
         cwd: targetDirectory,
@@ -118,6 +123,7 @@ export async function loadDependency(
     // If we fail again, then we couldn't get the package locally or from online
     throw new PackageLoadError(fullPackageName);
   }
+  logger.info(`Loaded package ${fullPackageName}`);
   return FHIRDefs;
 }
 

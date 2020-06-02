@@ -174,7 +174,6 @@ describe('#loadDependency()', () => {
     await expect(loadDependency('sushi-test', '0.2.0', defs, 'foo')).rejects.toThrow(
       'The package sushi-test#0.2.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(loggerSpy.getLastMessage('info')).toMatch(/Downloaded sushi-test#0.2.0/);
     expect(axiosSpy.mock.calls).toEqual([
       ['http://packages.fhir.org/sushi-test/0.2.0', { responseType: 'arraybuffer' }]
     ]);
@@ -217,7 +216,6 @@ describe('#loadDependency()', () => {
     await expect(loadDependency('hl7.fhir.us.core.r4', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.us.core.r4#current could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(loggerSpy.getLastMessage('info')).toMatch(/Downloaded hl7.fhir.us.core.r4#current/);
     expect(axiosSpy.mock.calls).toEqual([
       ['http://build.fhir.org/ig/qas.json'],
       ['http://build.fhir.org/ig/HL7/US-Core-R4/package.manifest.json'],
@@ -231,7 +229,6 @@ describe('#loadDependency()', () => {
     await expect(
       loadDependency('sushi-test-old', 'current', defs, cachePath)
     ).resolves.toBeTruthy(); // Since tar is mocked, the actual cache is not updated
-    expect(loggerSpy.getLastMessage('info')).toMatch(/Downloaded sushi-test-old#current/);
     expect(axiosSpy.mock.calls).toEqual([
       ['http://build.fhir.org/ig/qas.json'],
       ['http://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
@@ -251,9 +248,6 @@ describe('#loadDependency()', () => {
     await expect(
       loadDependency('sushi-test-no-download', 'current', defs, cachePath)
     ).resolves.toEqual(expectedDefs);
-    expect(loggerSpy.getLastMessage('info')).toMatch(
-      /Unable to download most current version of sushi-test-no-download#current/
-    );
     expect(axiosSpy.mock.calls).toEqual([
       ['http://build.fhir.org/ig/qas.json'],
       ['http://build.fhir.org/ig/sushi/sushi-test-no-download/package.manifest.json'],
@@ -262,6 +256,8 @@ describe('#loadDependency()', () => {
         { responseType: 'arraybuffer' }
       ]
     ]);
+    expect(ensureDirSpy.mock.calls).toHaveLength(0);
+    expect(tarSpy.mock.calls).toHaveLength(0);
   });
 
   // Packages with dev versions
