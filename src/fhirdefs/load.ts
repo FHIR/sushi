@@ -6,7 +6,6 @@ import os from 'os';
 import tar from 'tar';
 import axios from 'axios';
 import temp from 'temp';
-import moment from 'moment';
 import { logger } from '../utils';
 
 /**
@@ -75,19 +74,19 @@ export async function loadDependency(
       }
       // if the date on the package.manifest.json does not match the date on the cached package
       // set the packageUrl to trigger a re-download of the package
+      const dateRegex = /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
+      const dateFormatString = '$1-$2-$3T$4:$5:$6';
       if (manifest?.data?.date !== cachedPackageJSON?.date) {
         packageUrl = `${igUrl}/package.tgz`;
         if (cachedPackageJSON) {
           logger.debug(
-            `Cached package date for ${fullPackageName} (${moment(
-              cachedPackageJSON.date,
-              'YYYYMMDDHHmmss'
-            ).format(
-              'YYYY-MM-DDTHH:mm:ss'
-            )}) does not match last build date on build.fhir.org (${moment(
-              manifest?.data?.date,
-              'YYYYMMDDHHmmss'
-            ).format('YYYY-MM-DDTHH:mm:ss')})`
+            `Cached package date for ${fullPackageName} (${cachedPackageJSON.date?.replace(
+              dateRegex,
+              dateFormatString
+            )}) does not match last build date on build.fhir.org (${manifest?.data?.date?.replace(
+              dateRegex,
+              dateFormatString
+            )})`
           );
           logger.info(
             `Cached package ${fullPackageName} is out of date and will be replaced by the more recent version found on build.fhir.org.`
@@ -95,13 +94,13 @@ export async function loadDependency(
         }
       } else {
         logger.debug(
-          `Cached package date for ${fullPackageName} (${moment(
-            cachedPackageJSON.date,
-            'YYYYMMDDHHmmss'
-          ).format('YYYY-MM-DDTHH:mm:ss')}) matches last build date on build.fhir.org (${moment(
-            manifest?.data?.date,
-            'YYYYMMDDHHmmss'
-          ).format('YYYY-MM-DDTHH:mm:ss')}), so the cached package will be used`
+          `Cached package date for ${fullPackageName} (${cachedPackageJSON.date?.replace(
+            dateRegex,
+            dateFormatString
+          )}) matches last build date on build.fhir.org (${manifest?.data?.date?.replace(
+            dateRegex,
+            dateFormatString
+          )}), so the cached package will be used`
         );
       }
     } else {
