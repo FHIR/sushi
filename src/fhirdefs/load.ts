@@ -6,6 +6,7 @@ import os from 'os';
 import tar from 'tar';
 import axios from 'axios';
 import temp from 'temp';
+import moment from 'moment';
 import { logger } from '../utils';
 
 /**
@@ -77,10 +78,31 @@ export async function loadDependency(
       if (manifest?.data?.date !== cachedPackageJSON?.date) {
         packageUrl = `${igUrl}/package.tgz`;
         if (cachedPackageJSON) {
+          logger.debug(
+            `Cached package date for ${fullPackageName} (${moment(
+              cachedPackageJSON.date,
+              'YYYYMMDDHHmmss'
+            ).format(
+              'YYYY-MM-DDTHH:mm:ss'
+            )}) does not match last build date on build.fhir.org (${moment(
+              manifest?.data?.date,
+              'YYYYMMDDHHmmss'
+            ).format('YYYY-MM-DDTHH:mm:ss')})`
+          );
           logger.info(
             `Cached package ${fullPackageName} is out of date and will be replaced by the more recent version found on build.fhir.org.`
           );
         }
+      } else {
+        logger.debug(
+          `Cached package date for ${fullPackageName} (${moment(
+            cachedPackageJSON.date,
+            'YYYYMMDDHHmmss'
+          ).format('YYYY-MM-DDTHH:mm:ss')}) matches last build date on build.fhir.org (${moment(
+            manifest?.data?.date,
+            'YYYYMMDDHHmmss'
+          ).format('YYYY-MM-DDTHH:mm:ss')}), so the cached package will be used`
+        );
       }
     } else {
       throw new CurrentPackageLoadError(fullPackageName);
