@@ -35,7 +35,7 @@ export class CodeSystemExporter {
     }
   }
 
-  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]) {
+  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]): void {
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
@@ -51,6 +51,29 @@ export class CodeSystemExporter {
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
+      }
+    }
+  }
+
+  private updateCount(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
+    // We can only derive a true count if the content is #complete
+    if (codeSystem.content === 'complete') {
+      const actualCount = codeSystem.concept?.length;
+      if (codeSystem.count == null && actualCount != null) {
+        codeSystem.count = actualCount;
+      } else if (codeSystem.count !== actualCount) {
+        const countRule = fshDefinition.rules.find(
+          r => r instanceof CaretValueRule && r.caretPath === 'count'
+        );
+        const sourceInfo = countRule?.sourceInfo ?? fshDefinition.sourceInfo;
+        logger.warn(
+          `The user-specified ^count (${codeSystem.count}) does not match the specified number of concepts ` +
+            `(${
+              actualCount ?? 0
+            }). If this is not a "complete" CodeSystem, set the ^content property to the appropriate ` +
+            'value; otherwise fix or remove the ^count.',
+          sourceInfo
+        );
       }
     }
   }
@@ -73,6 +96,7 @@ export class CodeSystemExporter {
       );
     }
 
+    this.updateCount(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
     return codeSystem;
   }

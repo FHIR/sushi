@@ -28,10 +28,9 @@ import {
   MultipleStandardsStatusError,
   InvalidMappingError,
   InvalidFHIRIdError,
-  FixingNonResourceError,
   DuplicateSliceError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isInheritedResource } from './common';
+import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -1108,7 +1107,7 @@ export class ElementDefinition {
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  fixValue(value: FixedValueType, exactly = false, units = false): void {
+  fixValue(value: FixedValueType, exactly = false, units = false, fisher?: Fishable): void {
     let type: string;
     if (value instanceof FshCode) {
       type = 'Code';
@@ -1162,6 +1161,22 @@ export class ElementDefinition {
         break;
       case 'Reference':
         value = value as FshReference;
+        if (value.sdType) {
+          const validTypes: string[] = [];
+          this.type.forEach(t =>
+            t.targetProfile.forEach(tp => {
+              const tpType = fisher.fishForMetadata(tp)?.sdType;
+              if (tpType) {
+                validTypes.push(tpType);
+              }
+            })
+          );
+
+          const referenceLineage = this.getTypeLineage(value.sdType, fisher);
+          if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {
+            throw new InvalidTypeError(`Reference(${value.sdType})`, this.type);
+          }
+        }
         this.fixFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
       default:
@@ -1368,22 +1383,23 @@ export class ElementDefinition {
    * @param {InstanceDefinition} value - The resource to fix
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @throws {MismatchedTypeError} when the ElementDefinition is not of type Resource
-   * @throws {FixingNonResourceError} when the value being fixed is non-Resource
    * @returns {InstanceDefinition} the input value when it can be fixed
    */
-  checkFixResource(value: InstanceDefinition, fisher: Fishable): InstanceDefinition {
-    if (this.type?.some(t => isInheritedResource(value.resourceType, t.code, fisher))) {
+  checkFixInlineInstance(value: InstanceDefinition, fisher: Fishable): InstanceDefinition {
+    const inlineInstanceType = value.resourceType ?? value._instanceMeta.sdType;
+    const lineage = this.getTypeLineage(inlineInstanceType, fisher).map(
+      metadata => metadata.sdType
+    );
+    if (this.type?.some(t => lineage.includes(t.code))) {
       return value;
     } else {
-      const resource = fisher.fishForFHIR(value.resourceType, Type.Resource);
-      if (resource) {
-        // In this case the value is actually a resource, but not one that inherits from this.type
-        const typesString = this.type?.map(t => t.code).join(', ');
-        throw new MismatchedTypeError(value.resourceType, value.id, typesString);
-      } else {
-        // In this case the value is not actually a resource
-        throw new FixingNonResourceError(value.resourceType, value.id);
-      }
+      // In this case neither the type of the inline instance nor the type of any of its parents matches the
+      // ED.type, so we cannot fix the inline instance to this ED.
+      throw new MismatchedTypeError(
+        inlineInstanceType,
+        value.id,
+        this.type?.map(t => t.code).join(', ')
+      );
     }
   }
 

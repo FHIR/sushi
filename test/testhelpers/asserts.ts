@@ -71,7 +71,7 @@ export function assertFixedValueRule(
   value: FixedValueType,
   exactly = false,
   units = false,
-  isResource = false
+  isInstance = false
 ): void {
   expect(rule).toBeInstanceOf(FixedValueRule);
   const fixedValueRule = rule as FixedValueRule;
@@ -79,7 +79,7 @@ export function assertFixedValueRule(
   expect(fixedValueRule.fixedValue).toEqual(value);
   expect(fixedValueRule.exactly).toBe(exactly);
   expect(fixedValueRule.units).toBe(units);
-  expect(fixedValueRule.isResource).toEqual(isResource);
+  expect(fixedValueRule.isInstance).toEqual(isInstance);
 }
 
 export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[]): void {

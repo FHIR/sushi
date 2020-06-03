@@ -1,4 +1,3 @@
-import { upperFirst, words } from 'lodash';
 import {
   StructureDefinition,
   ElementDefinition,
@@ -133,7 +132,12 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.fixValue(replacedRule.fixedValue, replacedRule.exactly, replacedRule.units);
+            element.fixValue(
+              replacedRule.fixedValue,
+              replacedRule.exactly,
+              replacedRule.units,
+              this
+            );
           } else if (rule instanceof FlagRule) {
             element.applyFlags(
               rule.mustSupport,
@@ -230,61 +234,6 @@ export class StructureDefinitionExporter implements Fishable {
         }
         slice.type[0].profile.push(extension.url);
       } else {
-        const external = this.fishForMetadata(item.name, Type.Extension);
-        if (external) {
-          // Log a warning. This is intended to help users transitioning from SUSHI 0.9.x to SUSHI 0.10.0,
-          // since the syntax for specifying external extensions has changed.
-          // First find the corresponding card rule to assist in constructing the warning message
-          let card = 'm..n';
-          const cardRule = fshDefinition.rules.find(
-            r => r instanceof CardRule && r.path === `${rule.path}[${item.name}]`
-          );
-          if (cardRule) {
-            card = `${(cardRule as CardRule).min}..${(cardRule as CardRule).max}`;
-          }
-          // Customize the message based on whether or not extension comes from the tank
-          const fshMeta = this.tank.fishForMetadata(item.name);
-          if (fshMeta && fshMeta.url === external.url) {
-            // For the suggestion, create an alternate slice name to consider.
-            // E.g. TimeOfDay --> time-of-day, or time-of-day --> time-of-day-ext
-            let altSliceName = words(fshMeta.name).join('-').toLowerCase();
-            if (altSliceName === fshMeta.name) {
-              altSliceName += '-ext';
-            }
-            logger.warn(
-              `Extension with slice name '${item.name}' will be treated as an inline extension, even ` +
-                'though the name can be resolved to an extension defined in the FSH Tank. Starting with ' +
-                'SUSHI 0.10.0, extension slices using standalone extensions should explicitly declare a ' +
-                `slice name and type. If this extension slice should refer to the ${fshMeta.name} ` +
-                `extension (${fshMeta.url}), specify both the slice name and extension name in the ` +
-                'contains rule:\n' +
-                `  ${rule.path} contains ${fshMeta.name} named ${item.name} ${card}\n` +
-                'If you wish, you can give the slice name a different name than the FSH extension name. ' +
-                'For example:\n' +
-                `  ${rule.path} contains ${fshMeta.name} named ${altSliceName} ${card}\n` +
-                'If this extension is intended to be inlined, and not refer to the standalone ' +
-                `${fshMeta.name} extension, then no action is necessary. This warning will be removed in ` +
-                'a future version of SUSHI after authors have had time to transition.',
-              rule.sourceInfo
-            );
-          } else {
-            const alias = upperFirst(external.name ?? external.id) + 'Extension';
-            logger.warn(
-              `Extension with slice name '${item.name}' will be treated as an inline extension, even ` +
-                `though the name can be resolved to the external extension: ${external.url}. Starting ` +
-                'with SUSHI 0.10.0, extension slices using standalone extensions should explicitly ' +
-                `declare a slice name and type. If this extension slice should refer to ${external.url}, ` +
-                'recommended practice is to define an alias:\n' +
-                `  Alias: ${alias} = ${external.url}\n` +
-                'then use it in the contains rule:\n' +
-                `  ${rule.path} contains ${alias} named ${item.name} ${card}\n` +
-                `If this extension is intended to be inlined, and not refer to ${external.url}, then no ` +
-                'action is necessary. This warning will be removed in a future version of SUSHI after ' +
-                'authors have had time to transition.',
-              rule.sourceInfo
-            );
-          }
-        }
         // If the extension is inline, fix its url element automatically to the sliceName
         const slice = element.addSlice(item.name);
         const urlElement = structDef.findElementByPath(

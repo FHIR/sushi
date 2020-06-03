@@ -1,6 +1,6 @@
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
-import { FshCodeSystem } from '../../src/fshtypes';
+import { FshCodeSystem, FshCode } from '../../src/fshtypes';
 import { FshConcept } from '../../src/fshtypes/FshConcept';
 import { CaretValueRule } from '../../src/fshtypes/rules';
 import { TestFisher } from '../testhelpers';
@@ -32,6 +32,7 @@ describe('CodeSystemExporter', () => {
     const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new CodeSystemExporter(input, pkg, fisher);
+    loggerSpy.reset();
   });
 
   it('should output empty results with empty input', () => {
@@ -101,6 +102,7 @@ describe('CodeSystemExporter', () => {
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       version: '0.0.1',
+      count: 2,
       concept: [{ code: 'myCode' }, { code: 'anotherCode' }]
     });
   });
@@ -125,6 +127,7 @@ describe('CodeSystemExporter', () => {
       content: 'complete',
       url: 'http://example.com/CodeSystem/MyCodeSystem',
       version: '0.0.1',
+      count: 2,
       concept: [
         {
           code: 'myCode',
@@ -235,6 +238,84 @@ describe('CodeSystemExporter', () => {
       status: 'active',
       publisher: 'carat'
     });
+  });
+
+  it('should not override count when ^count is provided by user', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'content';
+    rule.value = new FshCode('fragment', 'http://hl7.org/fhir/codesystem-content-mode');
+    codeSystem.rules.push(rule);
+    const rule2 = new CaretValueRule('');
+    rule2.caretPath = 'count';
+    rule2.value = 5;
+    codeSystem.rules.push(rule2);
+    codeSystem.concepts = [new FshConcept('myCode'), new FshConcept('anotherCode')];
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBe(5);
+    expect(loggerSpy.getAllLogs('warn').length).toBe(0);
+  });
+
+  it('should warn when ^count does not match number of concepts in #complete CodeSystem', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    // NOTE: CS defaults to #complete so we don't need to explicitly set it
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'count';
+    rule.value = 5;
+    rule.sourceInfo.file = 'test.fsh';
+    rule.sourceInfo.location = {
+      startLine: 2,
+      startColumn: 1,
+      endLine: 2,
+      endColumn: 12
+    };
+    codeSystem.rules.push(rule);
+    codeSystem.concepts = [new FshConcept('myCode'), new FshConcept('anotherCode')];
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBe(5);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /The user-specified \^count \(5\) does not match the specified number of concepts \(2\)\..*File: test\.fsh\s*Line: 2\D*/s
+    );
+  });
+
+  it('should warn when ^count is set and concepts is null in #complete CodeSystem', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    // NOTE: CS defaults to #complete so we don't need to explicitly set it
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'count';
+    rule.value = 5;
+    rule.sourceInfo.file = 'test.fsh';
+    rule.sourceInfo.location = {
+      startLine: 2,
+      startColumn: 1,
+      endLine: 2,
+      endColumn: 12
+    };
+    codeSystem.rules.push(rule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBe(5);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /The user-specified \^count \(5\) does not match the specified number of concepts \(0\)\..*File: test\.fsh\s*Line: 2\D*/s
+    );
+  });
+
+  it('should not set count when ^content is not #complete', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'content';
+    rule.value = new FshCode('fragment', 'http://hl7.org/fhir/codesystem-content-mode');
+    codeSystem.rules.push(rule);
+    codeSystem.concepts = [new FshConcept('myCode'), new FshConcept('anotherCode')];
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBeUndefined();
   });
 
   it('should log a message when applying invalid CaretValueRule', () => {

@@ -1015,6 +1015,106 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should fix a reference to a type based on a profile', () => {
+      const basePatientInstance = new Instance('BasePatient');
+      basePatientInstance.instanceOf = 'Patient';
+      doc.instances.set(basePatientInstance.name, basePatientInstance);
+
+      // us-core-observation-lab constrains subject to be a reference to a us-core-patient
+      // However, any patient instance can be fixed (because it might conform to the us-core-patient profile without explicitly specifying the profile)
+      const profiledInstance = new Instance('MyExampleObservation');
+      profiledInstance.instanceOf =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
+      const fixedRefRule = new FixedValueRule('subject');
+      fixedRefRule.fixedValue = new FshReference('BasePatient');
+      profiledInstance.rules.push(fixedRefRule); // * subject = Reference(BasePatient)
+      doc.instances.set(profiledInstance.name, profiledInstance);
+
+      const exported = exportInstance(profiledInstance);
+      expect(exported.subject).toEqual({
+        reference: 'Patient/BasePatient'
+      });
+    });
+
+    it('should log an error when an invalid reference is fixed', () => {
+      const observationInstance = new Instance('TestObservation');
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+      const fixedRefRule = new FixedValueRule('contact[0].organization');
+      fixedRefRule.fixedValue = new FshReference('TestObservation');
+      // * contact[0].organization = Reference(TestObservation)
+      patientInstance.rules.push(fixedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.contact).toEqual(undefined); // Contact is not set with invalid type
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The type "Reference\(Observation\)" does not match any of the allowed types\D*/s
+      );
+    });
+
+    it('should log an error when fixing an invalid reference to a type based on a profile', () => {
+      const groupInstance = new Instance('MyGroup');
+      groupInstance.instanceOf = 'Group';
+      doc.instances.set(groupInstance.name, groupInstance);
+
+      // us-core-observation-lab subject can only be a us-core-patient
+      // Group, Device, and Location are allowed reference types on base Patient, but not this profile
+      const profiledInstance = new Instance('MyExampleObservation');
+      profiledInstance.instanceOf =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
+      const fixedRefRule = new FixedValueRule('subject');
+      fixedRefRule.fixedValue = new FshReference('MyGroup'); // * subject = Reference(MyGroup)
+      profiledInstance.rules.push(fixedRefRule);
+      doc.instances.set(profiledInstance.name, profiledInstance);
+
+      const exported = exportInstance(profiledInstance);
+      expect(exported.subject).toEqual(undefined);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /The type "Reference\(Group\)" does not match any of the allowed types\D*/s
+      );
+    });
+
+    it('should fix a reference to a child type of the referenced type', () => {
+      const documentReferenceInstance = new Instance('MyDocReference');
+      documentReferenceInstance.instanceOf = 'DocumentReference';
+      doc.instances.set(documentReferenceInstance.name, documentReferenceInstance);
+
+      // DocumentReference.context.related is a reference to Any
+      const fixedRefRule = new FixedValueRule('context.related');
+      fixedRefRule.fixedValue = new FshReference('Bar'); // Bar is a Patient Instance that has a TestPatient profile
+      documentReferenceInstance.rules.push(fixedRefRule); // * context.related = Reference(Bar)
+
+      const exported = exportInstance(documentReferenceInstance);
+      expect(exported.context.related).toEqual([
+        {
+          reference: 'Patient/Bar'
+        }
+      ]);
+    });
+
+    it('should log an error if an instance of a parent type is fixed', () => {
+      const resourceInstance = new Instance('MyGeneralResource');
+      resourceInstance.instanceOf = 'Resource';
+      doc.instances.set(resourceInstance.name, resourceInstance);
+
+      // Subject can be a reference to Patient, Group, Device, or Location, which are all Resources
+      // However, the reference must be to an instance of one of those types, not a generic Resource instance
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      const fixedRefRule = new FixedValueRule('subject');
+      fixedRefRule.fixedValue = new FshReference('MyGeneralResource'); // * subject = Reference(MyGeneralResource)
+      observationInstance.rules.push(fixedRefRule);
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.subject).toEqual(undefined);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /The type "Reference\(Resource\)" does not match any of the allowed types\D*/s
+      );
+    });
+
     // Fixing codes from local systems
     it('should fix a code to a top level element while replacing the local code system name with its url', () => {
       const brightInstance = new Instance('BrightObservation');
@@ -1578,7 +1678,7 @@ describe('InstanceExporter', () => {
       bundleInstance.instanceOf = 'Bundle';
       const inlineRule = new FixedValueRule('entry[0].resource');
       inlineRule.fixedValue = 'MyBundledPatient';
-      inlineRule.isResource = true;
+      inlineRule.isInstance = true;
       bundleInstance.rules.push(inlineRule); // * entry[0].resource = MyBundledPatient
       doc.instances.set(bundleInstance.name, bundleInstance);
 
@@ -1653,7 +1753,7 @@ describe('InstanceExporter', () => {
       it('should fix an inline resource to an instance', () => {
         const inlineRule = new FixedValueRule('contained[0]');
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
 
         const exported = exportInstance(patientInstance);
@@ -1665,12 +1765,12 @@ describe('InstanceExporter', () => {
       it('should fix multiple inline resources to an instance', () => {
         const inlineRule = new FixedValueRule('contained[0]');
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
 
         const inlineRule2 = new FixedValueRule('contained[1]');
         inlineRule2.fixedValue = 'MyInlineObservation';
-        inlineRule2.isResource = true;
+        inlineRule2.isInstance = true;
         patientInstance.rules.push(inlineRule2); // * contained[1] = MyInlineObservation
 
         const exported = exportInstance(patientInstance);
@@ -1687,7 +1787,7 @@ describe('InstanceExporter', () => {
       it('should fix an inline resource to an instance element with a specific type', () => {
         const bundleValRule = new FixedValueRule('entry[PatientsOnly].resource');
         bundleValRule.fixedValue = 'MyInlinePatient';
-        bundleValRule.isResource = true;
+        bundleValRule.isInstance = true;
         // * entry[PatientsOnly].resource = MyInlinePatient
         bundleInstance.rules.push(bundleValRule);
 
@@ -1700,7 +1800,7 @@ describe('InstanceExporter', () => {
       it('should fix an inline resource to an instance element with a choice type', () => {
         const bundleValRule = new FixedValueRule('entry[PatientOrOrganization].resource');
         bundleValRule.fixedValue = 'MyInlinePatient';
-        bundleValRule.isResource = true;
+        bundleValRule.isInstance = true;
         // * entry[PatientOrOrganization].resource = MyInlinePatient
         bundleInstance.rules.push(bundleValRule);
 
@@ -1717,7 +1817,7 @@ describe('InstanceExporter', () => {
           .withFile('BadChoice.fsh')
           .withLocation([1, 2, 3, 4]);
         bundleValRule.fixedValue = 'MyInlineObservation';
-        bundleValRule.isResource = true;
+        bundleValRule.isInstance = true;
         // * entry[PatientOrOrganization].resource = MyInlineObservation
         bundleInstance.rules.push(bundleValRule);
 
@@ -1739,7 +1839,7 @@ describe('InstanceExporter', () => {
           .withFile('FakeInstance.fsh')
           .withLocation([1, 2, 3, 4]);
         inlineRule.fixedValue = 'MyFakePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyFakePatient
 
         const exported = exportInstance(patientInstance);
@@ -1752,7 +1852,7 @@ describe('InstanceExporter', () => {
       it('should override a fixed inline resource on an instance', () => {
         const inlineRule = new FixedValueRule('contained[0]');
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         const overrideRule = new FixedValueRule('contained[0].birthDate');
         overrideRule.fixedValue = '2000-02-24';
         // * contained[0] = MyInlinePatient
@@ -1779,7 +1879,7 @@ describe('InstanceExporter', () => {
       it('should override a fixed inline resource on an instance with paths that mix usage of [0] indexing', () => {
         const inlineRule = new FixedValueRule('contained[00]'); // [00] index used
         inlineRule.fixedValue = 'MyInlinePatient';
-        inlineRule.isResource = true;
+        inlineRule.isInstance = true;
         const overrideRule = new FixedValueRule('contained.birthDate'); // no [0] index used
         overrideRule.fixedValue = '2000-02-24';
         // * contained[0] = MyInlinePatient
@@ -1808,7 +1908,7 @@ describe('InstanceExporter', () => {
         bundleRule.fixedValue = 'Bundle';
         const patientRule = new FixedValueRule('contained[0].entry[0].resource');
         patientRule.fixedValue = 'MyInlinePatient';
-        patientRule.isResource = true;
+        patientRule.isInstance = true;
         const birthDateRule = new FixedValueRule('contained[0].entry[0].resource.birthDate');
         birthDateRule.fixedValue = '2000-02-24';
         // * contained[0].resourceType = "Bundle"
@@ -1840,7 +1940,7 @@ describe('InstanceExporter', () => {
 
         const bundleRule = new FixedValueRule('contained[0]');
         bundleRule.fixedValue = 'MyBundle';
-        bundleRule.isResource = true;
+        bundleRule.isInstance = true;
         const birthDateRule = new FixedValueRule(
           'contained[0].entry[PatientsOnly].resource.birthDate'
         );
@@ -1863,6 +1963,149 @@ describe('InstanceExporter', () => {
             ]
           }
         ]);
+      });
+
+      it('should fix an inline instance of a type to an instance', () => {
+        const inlineCodeable = new Instance('MyCodeable');
+        inlineCodeable.instanceOf = 'CodeableConcept';
+        inlineCodeable.usage = 'Inline';
+        doc.instances.set(inlineCodeable.name, inlineCodeable);
+        const codingRule = new FixedValueRule('coding');
+        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        // * coding = http://bar.com#foo
+        inlineCodeable.rules.push(codingRule);
+
+        const inlineRule = new FixedValueRule('maritalStatus');
+        inlineRule.fixedValue = 'MyCodeable';
+        inlineRule.isInstance = true;
+        // * maritalStatus = MyCodeable
+        patientInstance.rules.push(inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.maritalStatus).toEqual({
+          coding: [
+            {
+              system: 'http://bar.com',
+              code: 'foo'
+            }
+          ]
+        });
+      });
+
+      it('should fix an inline instance of a specialization of a type to an instance', () => {
+        const inlineAge = new Instance('MyAge');
+        inlineAge.instanceOf = 'Age';
+        inlineAge.usage = 'Inline';
+        doc.instances.set(inlineAge.name, inlineAge);
+        const ageRule = new FixedValueRule('value');
+        ageRule.fixedValue = 42;
+        // * value = 42
+        inlineAge.rules.push(ageRule);
+
+        const inlineRule = new FixedValueRule('valueQuantity');
+        inlineRule.fixedValue = 'MyAge';
+        inlineRule.isInstance = true;
+        // * valueQuantity = MyAge
+        respRateInstance.rules.push(inlineRule);
+        const exported = exportInstance(respRateInstance);
+        expect(exported.valueQuantity).toEqual({
+          value: 42
+        });
+      });
+
+      it('should fix an inline instance of a profile of a type to an instance', () => {
+        const inlineSimple = new Instance('MySimple');
+        inlineSimple.instanceOf = 'SimpleQuantity';
+        inlineSimple.usage = 'Inline';
+        doc.instances.set(inlineSimple.name, inlineSimple);
+        const quantRule = new FixedValueRule('value');
+        quantRule.fixedValue = 7;
+        // * value = 7
+        inlineSimple.rules.push(quantRule);
+
+        const inlineRule = new FixedValueRule('valueQuantity');
+        inlineRule.fixedValue = 'MySimple';
+        inlineRule.isInstance = true;
+        // * valueQuantity = MySimple
+        respRateInstance.rules.push(inlineRule);
+        const exported = exportInstance(respRateInstance);
+        expect(exported.valueQuantity).toEqual({
+          value: 7
+        });
+      });
+
+      it('should fix an inline instance of a FSH defined profile of a type to an instance', () => {
+        const profile = new Profile('Foo');
+        profile.parent = 'Quantity';
+        doc.profiles.set(profile.name, profile);
+
+        const inlineSimple = new Instance('MyQuantity');
+        inlineSimple.instanceOf = 'Foo';
+        inlineSimple.usage = 'Inline';
+        doc.instances.set(inlineSimple.name, inlineSimple);
+        const quantRule = new FixedValueRule('value');
+        quantRule.fixedValue = 7;
+        // * value = 7
+        inlineSimple.rules.push(quantRule);
+
+        const inlineRule = new FixedValueRule('valueQuantity');
+        inlineRule.fixedValue = 'MyQuantity';
+        inlineRule.isInstance = true;
+        // * valueQuantity = MyQuantity
+        respRateInstance.rules.push(inlineRule);
+        const exported = exportInstance(respRateInstance);
+        expect(exported.valueQuantity).toEqual({
+          value: 7
+        });
+      });
+
+      it('should fix an inline instance of an extension to an instance', () => {
+        patientProfInstance.usage = 'Inline';
+        const codingRule = new FixedValueRule('extension[level].valueCoding');
+        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        // * extension[level].valueCoding = http://bar.com#foo
+        patientProfInstance.rules.push(codingRule);
+        const inlineRule = new FixedValueRule('extension');
+        inlineRule.fixedValue = 'Baz'; // InstanceOf patientProf defined in beforeEach
+        inlineRule.isInstance = true;
+        patientInstance.rules.push(inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(exported.extension).toEqual([
+          {
+            extension: [{ url: 'level', valueCoding: { system: 'http://bar.com', code: 'foo' } }],
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency'
+          }
+        ]);
+      });
+
+      it('should fix an instance of a type to an instance and log a warning when the type is not inline', () => {
+        const inlineCodeable = new Instance('MyCodeable')
+          .withFile('Code.fsh')
+          .withLocation([1, 2, 3, 4]);
+        inlineCodeable.instanceOf = 'CodeableConcept';
+        doc.instances.set(inlineCodeable.name, inlineCodeable);
+        const codingRule = new FixedValueRule('coding');
+        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        // * coding = http://bar.com#foo
+        inlineCodeable.rules.push(codingRule);
+
+        const inlineRule = new FixedValueRule('maritalStatus');
+        inlineRule.fixedValue = 'MyCodeable';
+        inlineRule.isInstance = true;
+        // * maritalStatus = MyCodeable
+        patientInstance.rules.push(inlineRule);
+        const exported = exportInstance(patientInstance);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Instance MyCodeable is not an instance of a resource.*File: Code\.fsh.*Line: 1 - 3\D*/s
+        );
+        expect(exported.maritalStatus).toEqual({
+          coding: [
+            {
+              system: 'http://bar.com',
+              code: 'foo'
+            }
+          ]
+        });
       });
     });
   });
