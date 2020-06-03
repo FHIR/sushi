@@ -74,18 +74,14 @@ export async function loadDependency(
       }
       // if the date on the package.manifest.json does not match the date on the cached package
       // set the packageUrl to trigger a re-download of the package
-      const dateRegex = /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
-      const dateFormatString = '$1-$2-$3T$4:$5:$6';
       if (manifest?.data?.date !== cachedPackageJSON?.date) {
         packageUrl = `${igUrl}/package.tgz`;
         if (cachedPackageJSON) {
           logger.debug(
-            `Cached package date for ${fullPackageName} (${cachedPackageJSON.date?.replace(
-              dateRegex,
-              dateFormatString
-            )}) does not match last build date on build.fhir.org (${manifest?.data?.date?.replace(
-              dateRegex,
-              dateFormatString
+            `Cached package date for ${fullPackageName} (${formatDate(
+              cachedPackageJSON.date
+            )}) does not match last build date on build.fhir.org (${formatDate(
+              manifest?.data?.date
             )})`
           );
           logger.info(
@@ -94,12 +90,10 @@ export async function loadDependency(
         }
       } else {
         logger.debug(
-          `Cached package date for ${fullPackageName} (${cachedPackageJSON.date?.replace(
-            dateRegex,
-            dateFormatString
-          )}) matches last build date on build.fhir.org (${manifest?.data?.date?.replace(
-            dateRegex,
-            dateFormatString
+          `Cached package date for ${fullPackageName} (${formatDate(
+            cachedPackageJSON.date
+          )}) matches last build date on build.fhir.org (${formatDate(
+            manifest?.data?.date
           )}), so the cached package will be used`
         );
       }
@@ -229,4 +223,15 @@ export function loadFromPath(
     // If the package has already been loaded, just return the targetPackage string
     return targetPackage;
   }
+}
+
+/**
+ * Takes a date in format YYYYMMDDHHmmss and converts to YYYY-MM-DDTHH:mm:ss
+ * @param {string} date - The date to format
+ * @returns {string} the formatted date
+ */
+function formatDate(date: string): string {
+  return date
+    ? date.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6')
+    : '';
 }
