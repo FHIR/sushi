@@ -609,7 +609,7 @@ const DEFAULT_MENU: YAMLConfigurationMenuTree = {
   'Table of Contents': 'toc.html',
   'Artifact Index': 'artifacts.html',
   Support: {
-    'FHIR Spec': 'http://hl7.org/fhir/R4/index.html'
+    'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html'
   }
 };
 
