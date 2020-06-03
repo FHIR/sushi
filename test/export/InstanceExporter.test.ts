@@ -342,6 +342,29 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should not log an error when an inline instance and a non-inline instance of the same type have the same id', () => {
+      const inlineQuantity = new Instance('FirstQuantity');
+      inlineQuantity.instanceOf = 'Quantity';
+      inlineQuantity.usage = 'Inline';
+      const inlineId = new FixedValueRule('id');
+      inlineId.fixedValue = 'my-quantity';
+      inlineQuantity.rules.push(inlineId);
+      doc.instances.set(inlineQuantity.name, inlineQuantity);
+
+      const exampleQuantity = new Instance('SecondQuantity');
+      exampleQuantity.instanceOf = 'Quantity';
+      exampleQuantity.usage = 'Example';
+      const exampleId = new FixedValueRule('id');
+      exampleId.fixedValue = 'my-quantity';
+      exampleQuantity.rules.push(exampleId);
+      doc.instances.set(exampleQuantity.name, exampleQuantity);
+
+      const inlineInstance = exporter.exportInstance(inlineQuantity);
+      const exampleInstance = exporter.exportInstance(exampleQuantity);
+      expect(inlineInstance.id).toBe(exampleInstance.id);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     // Fixing top level elements
     it('should fix top level elements that are fixed by pattern[x] on the Structure Definition', () => {
       const cardRule = new CardRule('active');
