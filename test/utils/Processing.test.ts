@@ -133,26 +133,7 @@ describe('Processing', () => {
       const config = {
         dependencies: {
           'hl7.fhir.r4.core': '4.0.1',
-          'hl7.fhir.us.core': '3.1.0',
-          'hl7.fhir.uv.vhdir': 'current'
-        }
-      };
-      const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
-      return Promise.all(dependencyDefs).then(() => {
-        expect(defs.packages.length).toBe(3);
-        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
-        expect(defs.packages).toContain('hl7.fhir.us.core#3.1.0');
-        expect(defs.packages).toContain('hl7.fhir.uv.vhdir#current');
-      });
-    });
-
-    it('should log an error when it fails to load a dependency', () => {
-      const config = {
-        dependencies: {
-          'hl7.fhir.r4.core': '4.0.1',
-          'hl7.fhir.us.core': '3.1.0',
-          'hl7.does.not.exist': 'current'
+          'hl7.fhir.us.core': '3.1.0'
         }
       };
       const defs = new FHIRDefinitions();
@@ -161,11 +142,26 @@ describe('Processing', () => {
         expect(defs.packages.length).toBe(2);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(defs.packages).toContain('hl7.fhir.us.core#3.1.0');
+      });
+    }, 10000);
+
+    it('should log an error when it fails to load a dependency', () => {
+      const config = {
+        dependencies: {
+          'hl7.fhir.r4.core': '4.0.1',
+          'hl7.does.not.exist': 'current'
+        }
+      };
+      const defs = new FHIRDefinitions();
+      const dependencyDefs = loadExternalDependencies(defs, config);
+      return Promise.all(dependencyDefs).then(() => {
+        expect(defs.packages.length).toBe(1);
+        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.does\.not\.exist#current/s
         );
       });
-    });
+    }, 10000);
   });
 
   describe('#getRawFSHes()', () => {
