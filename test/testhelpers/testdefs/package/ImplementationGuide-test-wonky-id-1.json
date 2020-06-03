@@ -1,0 +1,5 @@
+{
+  "resourceType": "ImplementationGuide",
+  "packageId": "test-wonky-id-1",
+  "url": "http://hl7.org/fhir/ImplementationGuide/test-wonky-id-1"
+}

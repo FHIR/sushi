@@ -171,6 +171,20 @@ describe('IGExporter', () => {
             uri: 'http://hl7.org/fhir/uv/vhdir/ImplementationGuide/hl7.core.uv.vhdir',
             packageId: 'hl7.fhir.uv.vhdir',
             version: 'current'
+          },
+          // test-wonky-id-1 tests that we are correctly turning - in packageId to _ in id
+          {
+            id: 'test_wonky_id_1',
+            packageId: 'test-wonky-id-1',
+            uri: 'http://hl7.org/fhir/ImplementationGuide/test-wonky-id-1',
+            version: 'current'
+          },
+          // 2-test-wonky-id tests that we are correctly prepending id_
+          {
+            id: 'id_2_test_wonky_id',
+            packageId: '2-test-wonky-id',
+            uri: 'http://hl7.org/fhir/ImplementationGuide/2-test-wonky-id',
+            version: 'current'
           }
         ],
         definition: {
