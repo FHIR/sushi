@@ -453,6 +453,9 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
         if (li.a && !Array.isArray(li.a)) {
           const name = li.a._text;
           const link = li.a._attributes?.href;
+          const inNewTab = li.a._attributes?.target === '_blank' ? 'new-tab ' : '';
+          const isExternal = li.a.img?._attributes?.src === 'external.png' ? 'external ' : '';
+          const menuLinkWithKeywords = `${inNewTab}${isExternal}${link}`;
           if (li.ul && li.ul.li) {
             const subMenu: YAMLConfigurationMenuTree = {};
             const subItems = Array.isArray(li.ul.li) ? li.ul.li : [li.ul.li];
@@ -460,8 +463,11 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
               if (subLi.a && !Array.isArray(subLi.a)) {
                 const subName = subLi.a._text;
                 const subLink = subLi.a._attributes?.href;
+                const subInNewTab = subLi.a._attributes?.target === '_blank' ? 'new-tab ' : '';
+                const subIsExternal =
+                  subLi.a.img?._attributes?.src === 'external.png' ? 'external ' : '';
                 if (subLink && subLink !== '#') {
-                  subMenu[subName] = subLink;
+                  subMenu[subName] = `${subInNewTab}${subIsExternal}${subLink}`;
                 }
                 // NOTE: if there is another sub-sub-menu, we drop it since publisher doesn't support it
               }
@@ -469,10 +475,10 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
             if (Object.keys(subMenu).length > 0) {
               menu[name] = subMenu;
             } else if (link && link !== '#') {
-              menu[name] = link;
+              menu[name] = menuLinkWithKeywords;
             }
           } else if (link && link !== '#') {
-            menu[name] = link;
+            menu[name] = menuLinkWithKeywords;
           }
         }
       });

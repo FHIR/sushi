@@ -705,7 +705,7 @@ describe('ensureConfiguration', () => {
       'To control the menu.xml using this config, uncomment and set the "menu" property.'
     );
 
-    // The commented out menu should correspond to the default menu.json
+    // The commented out menu should correspond to the generated menu based on provided menu.xml
     const configTextLines = configText.split('\n');
     const start = configTextLines.findIndex(l => l.startsWith('# menu:'));
     const end = configTextLines.findIndex(l => l.startsWith('# NOTE: The history property'));
@@ -725,7 +725,7 @@ describe('ensureConfiguration', () => {
       },
       'Artifact Index': 'artifacts.html',
       Support: {
-        'FHIR Spec': '{{site.data.fhir.path}}index.html',
+        'FHIR Spec': 'new-tab external {{site.data.fhir.path}}index.html',
         Downloads: 'downloads.html'
       }
     });
