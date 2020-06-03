@@ -161,7 +161,7 @@ describe('FSHImporter', () => {
         expect(result.invariants.size).toBe(1);
         const invariant = result.invariants.get('same-1');
         expect(invariant.description).toBe('First description.');
-        expect(loggerSpy.getLastMessage('error')).toMatch(/invariant named same-1 already exists/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/Invariant named same-1 already exists/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
       });
     });

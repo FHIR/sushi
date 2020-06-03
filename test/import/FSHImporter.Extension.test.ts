@@ -118,7 +118,7 @@ describe('FSHImporter', () => {
         const extension = result.extensions.get('SomeExtension');
         expect(extension.title).toBe('This Extension');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /extension named SomeExtension already exists/s
+          /Extension named SomeExtension already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
       });

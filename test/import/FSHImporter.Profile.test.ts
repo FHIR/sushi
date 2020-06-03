@@ -189,7 +189,7 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.title).toBe('First Observation Profile');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /profile named ObservationProfile already exists/s
+          /Profile named ObservationProfile already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
       });

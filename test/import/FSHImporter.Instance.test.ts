@@ -287,7 +287,7 @@ describe('FSHImporter', () => {
         const instance = result.instances.get('MyInstance');
         expect(instance.instanceOf).toBe('Observation');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /instance named MyInstance already exists/s
+          /Instance named MyInstance already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
       });

@@ -88,7 +88,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.title).toBe('First Value Set');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /value set named SimpleVS already exists/s
+          /ValueSet named SimpleVS already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
       });

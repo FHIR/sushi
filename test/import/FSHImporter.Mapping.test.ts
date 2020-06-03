@@ -115,7 +115,7 @@ describe('FSHImporter', () => {
       const mapping = result.mappings.get('SameMapping');
       expect(mapping.title).toBe('First Mapping');
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /mapping named SameMapping already exists/s
+        /Mapping named SameMapping already exists/s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
     });

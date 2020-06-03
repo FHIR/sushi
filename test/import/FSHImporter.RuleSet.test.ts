@@ -85,7 +85,7 @@ describe('FSHImporter', () => {
       expect(ruleSet.rules.length).toBe(1);
       assertCardRule(ruleSet.rules[0], 'gender', 0, '0');
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /rule set named SameRuleSet already exists/s
+        /RuleSet named SameRuleSet already exists/s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
     });
