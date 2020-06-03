@@ -8,7 +8,8 @@ import {
   readConfig,
   loadExternalDependencies,
   getRawFSHes,
-  writeFHIRResources
+  writeFHIRResources,
+  getIgDataPath
 } from '../../src/utils/Processing';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
@@ -336,6 +337,33 @@ describe('Processing', () => {
 
     it('should write an info message with the number of instances exported', () => {
       expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
+    });
+  });
+
+  describe('#getIgDataPath()', () => {
+    let tempRoot: string;
+
+    beforeAll(() => {
+      tempRoot = temp.mkdirSync('sushi-test');
+      fs.mkdirSync(path.join(tempRoot, 'yes-please'));
+      fs.mkdirSync(path.join(tempRoot, 'yes-please', 'ig-data'));
+      fs.mkdirSync(path.join(tempRoot, 'not-this-time'));
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should return the path to the ig-data directory when it exists', () => {
+      const input = path.join(tempRoot, 'yes-please');
+      const igDataPath = getIgDataPath(input);
+      expect(igDataPath).toBe(path.join(input, 'ig-data'));
+    });
+
+    it('should return null when the path to the ig-data directory does not exist', () => {
+      const input = path.join(tempRoot, 'not-this-time');
+      const igDataPath = getIgDataPath(input);
+      expect(igDataPath).toBeNull();
     });
   });
 });

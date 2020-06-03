@@ -16,7 +16,8 @@ import {
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
-  getRawFSHes
+  getRawFSHes,
+  getIgDataPath
 } from './utils/Processing';
 import { pad, padStart, sample, padEnd } from 'lodash';
 import chalk from 'chalk';
@@ -101,10 +102,10 @@ async function app() {
   const outPackage = exportFHIR(tank, defs);
   writeFHIRResources(outDir, outPackage, program.snapshot);
 
-  // If ig-data exists, generate an IG, otherwise, generate resources only
+  // If igDataPath exists, generate an IG, otherwise, generate resources only
   let isIG = false;
-  const igDataPath = path.resolve(input, 'ig-data');
-  if (fs.existsSync(igDataPath)) {
+  const igDataPath = getIgDataPath(input);
+  if (igDataPath) {
     isIG = true;
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);

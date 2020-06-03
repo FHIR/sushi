@@ -165,6 +165,15 @@ export function writeFHIRResources(outDir: string, outPackage: Package, snapshot
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 }
 
+export function getIgDataPath(input: string): string {
+  const igDataPath = path.resolve(input, 'ig-data');
+  if (fs.existsSync(igDataPath)) {
+    return igDataPath;
+  } else {
+    return null;
+  }
+}
+
 function getFilesRecursive(dir: string): string[] {
   if (fs.statSync(dir).isDirectory()) {
     const ancestors = fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f)));
