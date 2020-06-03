@@ -138,7 +138,13 @@ describe('importConfiguration', () => {
           ]
         },
         { name: 'Downloads', url: 'downloads.html' },
-        { name: 'History', url: 'http://hl7.org/fhir/us/example/history.html' }
+        { name: 'History', url: 'http://hl7.org/fhir/us/example/history.html' },
+        {
+          name: 'FHIR Spec',
+          url: 'http://hl7.org/fhir/R4/index.html',
+          isExternal: true,
+          openInNewTab: true
+        }
       ],
       parameters: [
         { code: 'copyrightyear', value: '2019+' },
@@ -1792,7 +1798,8 @@ describe('importConfiguration', () => {
           'Value Sets': 'artifacts.html#4'
         },
         Downloads: 'downloads.html',
-        History: 'http://hl7.org/fhir/us/example/history.html'
+        History: 'http://hl7.org/fhir/us/example/history.html',
+        'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html'
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.menu).toEqual([
@@ -1806,7 +1813,13 @@ describe('importConfiguration', () => {
           ]
         },
         { name: 'Downloads', url: 'downloads.html' },
-        { name: 'History', url: 'http://hl7.org/fhir/us/example/history.html' }
+        { name: 'History', url: 'http://hl7.org/fhir/us/example/history.html' },
+        {
+          name: 'FHIR Spec',
+          url: 'http://hl7.org/fhir/R4/index.html',
+          isExternal: true,
+          openInNewTab: true
+        }
       ]);
     });
   });

@@ -683,7 +683,19 @@ function parseMenu(yamlMenu: YAMLConfigurationMenuTree): ConfigurationMenuItem[]
   return Object.entries(yamlMenu).map(([name, value]) => {
     const item: ConfigurationMenuItem = { name };
     if (typeof value === 'string') {
-      item.url = value;
+      // Set menu item attributes based on keywords
+      if (value.includes('new-tab ')) {
+        item.openInNewTab = true;
+        value = value.replace('new-tab', '');
+      }
+
+      if (value.includes('external ')) {
+        item.isExternal = true;
+        value = value.replace('external', '');
+      }
+
+      // Trim off any white space left after using keywords. URL is remaining value.
+      item.url = value.trim();
     } else {
       item.subMenu = parseMenu(value);
     }
