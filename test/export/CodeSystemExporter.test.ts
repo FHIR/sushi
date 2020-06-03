@@ -263,6 +263,29 @@ describe('CodeSystemExporter', () => {
     );
   });
 
+  it('should warn when ^count is set and concepts is null in #complete CodeSystem', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    // NOTE: CS defaults to #complete so we don't need to explicitly set it
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'count';
+    rule.value = 5;
+    rule.sourceInfo.file = 'test.fsh';
+    rule.sourceInfo.location = {
+      startLine: 2,
+      startColumn: 1,
+      endLine: 2,
+      endColumn: 12
+    };
+    codeSystem.rules.push(rule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBe(5);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /The user-specified \^count \(5\) does not match the specified number of concepts \(0\)\..*File: test\.fsh\s*Line: 2\D*/s
+    );
+  });
+
   it('should not set count when ^content is not #complete', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     const rule = new CaretValueRule('');

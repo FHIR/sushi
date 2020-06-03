@@ -68,7 +68,9 @@ export class CodeSystemExporter {
         const sourceInfo = countRule?.sourceInfo ?? fshDefinition.sourceInfo;
         logger.warn(
           `The user-specified ^count (${codeSystem.count}) does not match the specified number of concepts ` +
-            `(${actualCount}). If this is not a "complete" ValueSet, set the ^content property to the appropriate ` +
+            `(${
+              actualCount ?? 0
+            }). If this is not a "complete" CodeSystem, set the ^content property to the appropriate ` +
             'value; otherwise fix or remove the ^count.',
           sourceInfo
         );
