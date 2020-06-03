@@ -121,7 +121,6 @@ async function app() {
     dependencyDefs.push(
       loadDependency(dep, config.dependencies[dep], defs)
         .then(def => {
-          logger.info(`Loaded package ${dep}#${config.dependencies[dep]}`);
           return def;
         })
         .catch(e => {
