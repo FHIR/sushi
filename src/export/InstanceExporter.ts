@@ -285,9 +285,11 @@ export class InstanceExporter implements Fishable {
     // check for another instance of the same type with the same id
     // see https://www.hl7.org/fhir/resource.html#id
     // instanceDef has already been added to the package, so it's fine if it matches itself
+    // inline instances are not written to their own files, so those can be skipped in this
     if (
       this.pkg.instances.some(
         instance =>
+          instance._instanceMeta.usage !== 'Inline' &&
           instanceDef.resourceType === instance.resourceType &&
           instanceDef.id === instance.id &&
           instanceDef !== instance

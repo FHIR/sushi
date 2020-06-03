@@ -247,7 +247,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.profiles.has(profile.name)) {
-      logger.error(`Skipping profile: a profile named ${profile.name} already exists.`, {
+      logger.error(`Skipping Profile: a Profile named ${profile.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
       });
@@ -262,7 +262,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.extensions.has(extension.name)) {
-      logger.error(`Skipping extension: an extension named ${extension.name} already exists.`, {
+      logger.error(`Skipping Extension: an Extension named ${extension.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
       });
@@ -313,7 +313,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.instances.has(instance.name)) {
-      logger.error(`Skipping instance: an instance named ${instance.name} already exists.`, {
+      logger.error(`Skipping Instance: an Instance named ${instance.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
       });
@@ -374,7 +374,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.valueSets.has(valueSet.name)) {
-      logger.error(`Skipping value set: a value set named ${valueSet.name} already exists.`, {
+      logger.error(`Skipping ValueSet: a ValueSet named ${valueSet.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
       });
@@ -523,7 +523,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.invariants.has(invariant.name)) {
-      logger.error(`Skipping invariant: an invariant named ${invariant.name} already exists.`, {
+      logger.error(`Skipping Invariant: an Invariant named ${invariant.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
       });
@@ -574,7 +574,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.ruleSets.has(ruleSet.name)) {
-      logger.error(`Skipping rule set: a rule set named ${ruleSet.name} already exists.`, {
+      logger.error(`Skipping RuleSet: a RuleSet named ${ruleSet.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
       });
@@ -595,7 +595,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.mappings.has(mapping.name)) {
-      logger.error(`Skipping mapping: a mapping named ${mapping.name} already exists.`, {
+      logger.error(`Skipping Mapping: a Mapping named ${mapping.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
       });
