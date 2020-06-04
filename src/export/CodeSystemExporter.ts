@@ -86,6 +86,16 @@ export class CodeSystemExporter {
     this.setMetadata(codeSystem, fshDefinition);
     this.setCaretRules(codeSystem, fshDefinition.rules);
     this.setConcepts(codeSystem, fshDefinition);
+
+    // check for another code system with the same id
+    // see https://www.hl7.org/fhir/resource.html#id
+    if (this.pkg.codeSystems.some(cs => codeSystem.id === cs.id)) {
+      logger.error(
+        `Multiple code systems with id ${codeSystem.id}. Each code system must have a unique id.`,
+        fshDefinition.sourceInfo
+      );
+    }
+
     this.updateCount(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
     return codeSystem;

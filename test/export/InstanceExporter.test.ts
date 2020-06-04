@@ -273,6 +273,97 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
       expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
     });
+    it('should log an error when multiple instances of the same type have the same id', () => {
+      const firstExample = new Instance('FirstExample')
+        .withFile('Repeat.fsh')
+        .withLocation([3, 8, 11, 25]);
+      firstExample.instanceOf = 'Patient';
+      const firstId = new FixedValueRule('id');
+      firstId.fixedValue = 'repeated-id';
+      firstExample.rules.push(firstId);
+      doc.instances.set(firstExample.name, firstExample);
+
+      const secondExample = new Instance('SecondExample')
+        .withFile('Repeat.fsh')
+        .withLocation([13, 8, 20, 22]);
+      secondExample.instanceOf = 'Patient';
+      const secondId = new FixedValueRule('id');
+      secondId.fixedValue = 'repeated-id';
+      secondExample.rules.push(secondId);
+      doc.instances.set(secondExample.name, secondExample);
+
+      exporter.exportInstance(firstExample);
+      exporter.exportInstance(secondExample);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Multiple instances of type Patient with id repeated-id/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Repeat\.fsh.*Line: 13 - 20\D*/s);
+    });
+
+    it('should not log an error when multiple instances of different types have the same id', () => {
+      const firstExample = new Instance('FirstExample')
+        .withFile('Repeat.fsh')
+        .withLocation([3, 8, 11, 25]);
+      firstExample.instanceOf = 'Patient';
+      const firstId = new FixedValueRule('id');
+      firstId.fixedValue = 'repeated-id';
+      firstExample.rules.push(firstId);
+      doc.instances.set(firstExample.name, firstExample);
+
+      const secondExample = new Instance('SecondExample')
+        .withFile('Repeat.fsh')
+        .withLocation([13, 8, 20, 22]);
+      secondExample.instanceOf = 'Practitioner';
+      const secondId = new FixedValueRule('id');
+      secondId.fixedValue = 'repeated-id';
+      secondExample.rules.push(secondId);
+      doc.instances.set(secondExample.name, secondExample);
+
+      exporter.exportInstance(firstExample);
+      exporter.exportInstance(secondExample);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not log an error when multiple inline instances of the same type have the same id', () => {
+      // Inline instances will typically not have an id assigned to them
+      const firstQuantity = new Instance('FirstQuantity');
+      firstQuantity.instanceOf = 'Quantity';
+      firstQuantity.usage = 'Inline';
+      doc.instances.set(firstQuantity.name, firstQuantity);
+
+      const secondQuantity = new Instance('SecondQuantity');
+      secondQuantity.instanceOf = 'Quantity';
+      secondQuantity.usage = 'Inline';
+      doc.instances.set(secondQuantity.name, secondQuantity);
+
+      const firstInstance = exporter.exportInstance(firstQuantity);
+      const secondInstance = exporter.exportInstance(secondQuantity);
+      expect(firstInstance.id).toBe(secondInstance.id);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not log an error when an inline instance and a non-inline instance of the same type have the same id', () => {
+      const inlineQuantity = new Instance('FirstQuantity');
+      inlineQuantity.instanceOf = 'Quantity';
+      inlineQuantity.usage = 'Inline';
+      const inlineId = new FixedValueRule('id');
+      inlineId.fixedValue = 'my-quantity';
+      inlineQuantity.rules.push(inlineId);
+      doc.instances.set(inlineQuantity.name, inlineQuantity);
+
+      const exampleQuantity = new Instance('SecondQuantity');
+      exampleQuantity.instanceOf = 'Quantity';
+      exampleQuantity.usage = 'Example';
+      const exampleId = new FixedValueRule('id');
+      exampleId.fixedValue = 'my-quantity';
+      exampleQuantity.rules.push(exampleId);
+      doc.instances.set(exampleQuantity.name, exampleQuantity);
+
+      const inlineInstance = exporter.exportInstance(inlineQuantity);
+      const exampleInstance = exporter.exportInstance(exampleQuantity);
+      expect(inlineInstance.id).toBe(exampleInstance.id);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
 
     // Fixing top level elements
     it('should fix top level elements that are fixed by pattern[x] on the Structure Definition', () => {

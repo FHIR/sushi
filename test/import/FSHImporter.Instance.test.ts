@@ -272,6 +272,25 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 9\D*/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 10\D*/s);
       });
+
+      it('should log an error and skip the instance when encountering an instance with a name used by another instance', () => {
+        const input = `
+        Instance: MyInstance
+        InstanceOf: Observation
+        
+        Instance: MyInstance
+        InstanceOf: Patient
+        `;
+
+        const result = importSingleText(input, 'SameName.fsh');
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyInstance');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Instance named MyInstance already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+      });
     });
   });
 });

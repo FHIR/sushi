@@ -173,6 +173,26 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
       });
+
+      it('should log an error and skip the profile when encountering a profile with a name used by another profile', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Title: "First Observation Profile"
+
+        Profile: ObservationProfile
+        Parent: Observation
+        Title: "Second Observation Profile"
+        `;
+        const result = importSingleText(input, 'SameName.fsh');
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.title).toBe('First Observation Profile');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Profile named ObservationProfile already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
+      });
     });
 
     describe('#cardRule', () => {
