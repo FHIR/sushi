@@ -342,37 +342,37 @@ export class StructureDefinition {
       j.snapshot = { element: this.elements.map(e => e.toJSON()) };
     }
 
-    const differentialElements = this.elements
-      .filter(e => e.hasDiff())
-      .map(e => e.calculateDiff().toJSON());
-    const defaultDifferentialElements = [{ id: this.elements[0].id, path: this.elements[0].path }];
+    // Populate the differential
+    j.differential = { element: [] };
+    this.elements.forEach(e => {
+      if (e.hasDiff()) {
+        const diff = e.calculateDiff().toJSON();
+        const isTypeSlicingChoiceDiff =
+          diff.id.endsWith('[x]') &&
+          Object.keys(diff).length === 3 &&
+          diff.id &&
+          diff.path &&
+          diff.slicing?.discriminator?.length === 1 &&
+          diff.slicing.discriminator[0].type === 'type' &&
+          diff.slicing.discriminator[0].path === '$this' &&
+          diff.slicing.rules === 'open' &&
+          (diff.slicing.ordered == null || diff.slicing.ordered === false);
 
-    j.differential = {
-      element: differentialElements.length > 0 ? differentialElements : defaultDifferentialElements
-    };
-
-    // Post-process the differential to remove any choice[x] elements if the only thing they do is establish the type
-    // slicing.  In this case, the type slicing can be inferred and does not need to be explicitly added.
-    // See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-    j.differential.element = j.differential.element.filter(
-      (e: { id: string; path: string; slicing: ElementDefinitionSlicing }) => {
-        return (
-          // not a choice, or
-          !e.id.endsWith('[x]') ||
-          // is a choice but not one whose only diff is the standard type slicing
-          !(
-            Object.keys(e).length === 3 &&
-            e.id &&
-            e.path &&
-            e.slicing?.discriminator?.length === 1 &&
-            e.slicing.discriminator[0].type === 'type' &&
-            e.slicing.discriminator[0].path === '$this' &&
-            e.slicing.rules === 'open' &&
-            (e.slicing.ordered == null || e.slicing.ordered === false)
-          )
-        );
+        // choice[x] elements that differ only by the standard type slicing definition don't need to go in the
+        // differential, as they are inferred. See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+        if (!isTypeSlicingChoiceDiff) {
+          j.differential.element.push(diff);
+        }
       }
-    );
+    });
+
+    // Never have an empty differential. It makes the IG Publisher mad.
+    if (j.differential.element.length === 0) {
+      j.differential.element.push({
+        id: this.elements[0].id,
+        path: this.elements[0].path
+      });
+    }
 
     // If the StructureDefinition is in progress, we want to persist that in the JSON so that when
     // the Fisher retrieves it from a package and converts to JSON, the inProgress state will be
