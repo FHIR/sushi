@@ -1,7 +1,8 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { logger } from './FSHLogger';
-import { FHIRDefinitions, loadDependency } from '../fhirdefs';
+import { loadDependency } from '../fhirdefs/load';
+import { FHIRDefinitions } from '../fhirdefs';
 import { FSHTank, RawFSH, importText } from '../import';
 import { cloneDeep } from 'lodash';
 import { Package } from '../export';

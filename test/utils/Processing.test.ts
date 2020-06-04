@@ -11,9 +11,13 @@ import {
   writeFHIRResources,
   getIgDataPath
 } from '../../src/utils/Processing';
+import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
+import { PackageLoadError } from '../../src/errors';
+// let load = import load from '../../src/fhirdefs/load';
+// let fakeLoad = import {loadDependency} from '../../src/fhirdefs/load';
 
 describe('Processing', () => {
   temp.track();
@@ -125,6 +129,21 @@ describe('Processing', () => {
   });
 
   describe('#loadExternalDependencies()', () => {
+    beforeAll(() => {
+      jest
+        .spyOn(loadModule, 'loadDependency')
+        .mockImplementation(
+          async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
+            // the mock loader can find hl7.fhir.r4.core and hl7.fhir.us.core
+            if (packageName === 'hl7.fhir.r4.core' || packageName === 'hl7.fhir.us.core') {
+              FHIRDefs.packages.push(`${packageName}#${version}`);
+              return Promise.resolve(FHIRDefs);
+            } else {
+              throw new PackageLoadError(`${packageName}#${version}`);
+            }
+          }
+        );
+    });
     beforeEach(() => {
       loggerSpy.reset();
     });
@@ -143,7 +162,7 @@ describe('Processing', () => {
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(defs.packages).toContain('hl7.fhir.us.core#3.1.0');
       });
-    }, 10000);
+    });
 
     it('should log an error when it fails to load a dependency', () => {
       const config = {
@@ -161,7 +180,7 @@ describe('Processing', () => {
           /Failed to load hl7\.does\.not\.exist#current/s
         );
       });
-    }, 10000);
+    });
   });
 
   describe('#getRawFSHes()', () => {
