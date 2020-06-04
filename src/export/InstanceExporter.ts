@@ -34,10 +34,10 @@ export class InstanceExporter implements Fishable {
     rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
     // Convert strings in fixedValueRules to instances
     rules = rules.filter(r => {
-      if (r.isResource) {
+      if (r.isInstance) {
         const instance: InstanceDefinition = this.fishForFHIR(r.fixedValue as string);
         if (instance != null) {
-          r.fixedValue = instance.toJSON();
+          r.fixedValue = instance;
           return true;
         } else {
           logger.error(
@@ -54,7 +54,7 @@ export class InstanceExporter implements Fishable {
     // Patient is used for the type of a.b
     const inlineResourcePaths: { path: string; instanceOf: string }[] = [];
     rules.forEach(r => {
-      if (r.isResource && r.fixedValue instanceof InstanceDefinition) {
+      if (r.isInstance && r.fixedValue instanceof InstanceDefinition) {
         inlineResourcePaths.push({
           path: r.path,
           // We only use the first element of the meta.profile array, if a need arises for a more
@@ -191,14 +191,14 @@ export class InstanceExporter implements Fishable {
     this.validateRequiredChildElements(instanceDef, elements[0], fshDefinition);
   }
 
-  fishForFHIR(item: string) {
-    let result = this.fisher.fishForFHIR(item, Type.Instance);
+  fishForFHIR(item: string): InstanceDefinition {
+    let result = this.pkg.fish(item, Type.Instance) as InstanceDefinition;
     if (result == null) {
       // If we find a FSH definition, then we can export and fish for it again
       const fshDefinition = this.tank.fish(item, Type.Instance) as Instance;
       if (fshDefinition) {
         this.exportInstance(fshDefinition);
-        result = this.fisher.fishForFHIR(item, Type.Instance);
+        result = this.pkg.fish(item, Type.Instance) as InstanceDefinition;
       }
     }
     return result;
@@ -214,12 +214,13 @@ export class InstanceExporter implements Fishable {
       return;
     }
 
+    let isResource = true;
     const json = this.fisher.fishForFHIR(
       fshDefinition.instanceOf,
       Type.Resource,
-      Type.Type,
       Type.Profile,
-      Type.Extension
+      Type.Extension,
+      Type.Type
     );
 
     if (!json) {
@@ -230,10 +231,21 @@ export class InstanceExporter implements Fishable {
       );
     }
 
+    if (json.kind !== 'resource') {
+      // If the instance is not a resource, it should be inline, since it cannot exist as a standalone instance
+      isResource = false;
+      if (fshDefinition.usage !== 'Inline') {
+        logger.warn(
+          `Instance ${fshDefinition.name} is not an instance of a resource, so it should only be used inline on other instances, and it will not be exported to a standalone file. Specify "Usage: #inline" to remove this warning.`,
+          fshDefinition.sourceInfo
+        );
+        fshDefinition.usage = 'Inline';
+      }
+    }
+
     const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
 
     let instanceDef = new InstanceDefinition();
-    instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
     instanceDef._instanceMeta.name = fshDefinition.id; // This is name of the instance in the FSH
     if (fshDefinition.title) {
       instanceDef._instanceMeta.title = fshDefinition.title;
@@ -244,11 +256,16 @@ export class InstanceExporter implements Fishable {
     if (fshDefinition.usage) {
       instanceDef._instanceMeta.usage = fshDefinition.usage;
     }
-    instanceDef.id = fshDefinition.id;
+    if (isResource) {
+      instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
+      instanceDef.id = fshDefinition.id;
+    } else {
+      instanceDef._instanceMeta.sdType = instanceOfStructureDefinition.type;
+    }
 
     // Add the SD we are making an instance of to meta.profile, as long as SD is not a base FHIR resource
     // If we end up adding more metadata, we should wrap this in a setMetadata function
-    if (instanceOfStructureDefinition.derivation === 'constraint') {
+    if (isResource && instanceOfStructureDefinition.derivation === 'constraint') {
       instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
     }
 
@@ -264,6 +281,27 @@ export class InstanceExporter implements Fishable {
       fshDefinition
     );
     cleanResource(instanceDef);
+
+    // check for another instance of the same type with the same id
+    // see https://www.hl7.org/fhir/resource.html#id
+    // instanceDef has already been added to the package, so it's fine if it matches itself
+    // inline instances are not written to their own files, so those can be skipped in this
+    if (
+      instanceDef._instanceMeta.usage !== 'Inline' &&
+      this.pkg.instances.some(
+        instance =>
+          instance._instanceMeta.usage !== 'Inline' &&
+          instanceDef.resourceType === instance.resourceType &&
+          instanceDef.id === instance.id &&
+          instanceDef !== instance
+      )
+    ) {
+      logger.error(
+        `Multiple instances of type ${instanceDef.resourceType} with id ${instanceDef.id}. Each non-inline instance of a given type must have a unique id.`,
+        fshDefinition.sourceInfo
+      );
+    }
+
     return instanceDef;
   }
 

@@ -591,12 +591,12 @@ export class StructureDefinition {
     let fixedValue;
     // Fixed resources cannot be fixed by pattern[x]/fixed[x], so we must set fixedValue directly
     if (value instanceof InstanceDefinition) {
-      fixedValue = clone.checkFixResource(value, fisher);
+      fixedValue = clone.checkFixInlineInstance(value, fisher).toJSON();
     } else {
       // fixValue will throw if it fails, but skip the check if value is null
       if (value != null) {
         // exactly must be true so that we always test fixing with the more strict fixed[x] approach
-        clone.fixValue(value, true, units);
+        clone.fixValue(value, true, units, fisher);
       }
       // If there is a fixedValue or patternValue, find it and return it
       const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));

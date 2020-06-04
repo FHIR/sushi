@@ -35,7 +35,7 @@ export class CodeSystemExporter {
     }
   }
 
-  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]) {
+  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]): void {
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
@@ -55,6 +55,29 @@ export class CodeSystemExporter {
     }
   }
 
+  private updateCount(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
+    // We can only derive a true count if the content is #complete
+    if (codeSystem.content === 'complete') {
+      const actualCount = codeSystem.concept?.length;
+      if (codeSystem.count == null && actualCount != null) {
+        codeSystem.count = actualCount;
+      } else if (codeSystem.count !== actualCount) {
+        const countRule = fshDefinition.rules.find(
+          r => r instanceof CaretValueRule && r.caretPath === 'count'
+        );
+        const sourceInfo = countRule?.sourceInfo ?? fshDefinition.sourceInfo;
+        logger.warn(
+          `The user-specified ^count (${codeSystem.count}) does not match the specified number of concepts ` +
+            `(${
+              actualCount ?? 0
+            }). If this is not a "complete" CodeSystem, set the ^content property to the appropriate ` +
+            'value; otherwise fix or remove the ^count.',
+          sourceInfo
+        );
+      }
+    }
+  }
+
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
     if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
@@ -63,6 +86,17 @@ export class CodeSystemExporter {
     this.setMetadata(codeSystem, fshDefinition);
     this.setCaretRules(codeSystem, fshDefinition.rules);
     this.setConcepts(codeSystem, fshDefinition);
+
+    // check for another code system with the same id
+    // see https://www.hl7.org/fhir/resource.html#id
+    if (this.pkg.codeSystems.some(cs => codeSystem.id === cs.id)) {
+      logger.error(
+        `Multiple code systems with id ${codeSystem.id}. Each code system must have a unique id.`,
+        fshDefinition.sourceInfo
+      );
+    }
+
+    this.updateCount(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
     return codeSystem;
   }

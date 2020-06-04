@@ -1326,13 +1326,73 @@ describe('StructureDefinition', () => {
         ).toThrow(/Bundle.*OfJoy.*Patient, Observation/);
       });
 
-      it('should not allow fixing a CodeableConcept type InstanceDefinition to any element', () => {
+      it('should allow fixing a CodeableConcept type InstanceDefinition to a CodeableConcept element', () => {
         const instanceDef = new InstanceDefinition();
-        instanceDef.id = 'CODES';
-        instanceDef.resourceType = 'CodeableConcept';
-        expect(() => respRate.validateValueAtPath('contained[0]', instanceDef, fisher)).toThrow(
-          /CODES.*CodeableConcept is not an Instance of a Resource/
+        instanceDef.coding = [{ value: '#5' }];
+        instanceDef._instanceMeta.sdType = 'CodeableConcept';
+        const { fixedValue } = respRate.validateValueAtPath('code', instanceDef, fisher);
+        expect(fixedValue).toEqual({ coding: [{ value: '#5' }] });
+      });
+
+      it('should allow fixing a specialization of a type to a type', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.value = 5;
+        instanceDef._instanceMeta.sdType = 'Age';
+        const { fixedValue } = respRate.validateValueAtPath('valueQuantity', instanceDef, fisher);
+        expect(fixedValue).toEqual({ value: 5 });
+      });
+
+      it('should allow fixing a profile of a type to a type', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.value = 5;
+        instanceDef._instanceMeta.sdType = 'SimpleQuantity';
+        const { fixedValue } = respRate.validateValueAtPath('valueQuantity', instanceDef, fisher);
+        expect(fixedValue).toEqual({ value: 5 });
+      });
+
+      it('should allow fixing a type to a choice type element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.value = 5;
+        instanceDef._instanceMeta.sdType = 'Quantity';
+        const { fixedValue } = observation.validateValueAtPath('value[x]', instanceDef, fisher);
+        expect(fixedValue).toEqual({ value: 5 });
+      });
+
+      it('should not allow fixing a type that is not in the choice to a choice type element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.value = 5.0;
+        instanceDef._instanceMeta.sdType = 'Money';
+        instanceDef.id = 'Cash';
+        expect(() => observation.validateValueAtPath('value[x]', instanceDef, fisher)).toThrow(
+          'Cannot fix Money value: Cash. Value does not match element type: '
         );
+      });
+
+      it('should not allow fixing a type to a non-matching type', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.value = 5;
+        instanceDef._instanceMeta.sdType = 'Quantity';
+        instanceDef.id = 'Foo';
+        expect(() => respRate.validateValueAtPath('code', instanceDef, fisher)).toThrow(
+          'Cannot fix Quantity value: Foo. Value does not match element type: CodeableConcept'
+        );
+      });
+
+      it('should not allow fixing a parent of a type to a type', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef._instanceMeta.sdType = 'Element';
+        instanceDef.id = 'Foo';
+        expect(() => respRate.validateValueAtPath('code', instanceDef, fisher)).toThrow(
+          'Cannot fix Element value: Foo. Value does not match element type: CodeableConcept'
+        );
+      });
+
+      it('should allow fixing an extension of to an extension element', () => {
+        const instanceDef = new InstanceDefinition();
+        instanceDef.valueString = 'hello';
+        instanceDef._instanceMeta.sdType = 'Extension';
+        const { fixedValue } = respRate.validateValueAtPath('extension', instanceDef, fisher);
+        expect(fixedValue).toEqual({ valueString: 'hello' });
       });
 
       // Overriding elements

@@ -8,10 +8,9 @@
   "dependencies": {
      "hl7.fhir.r4.core": "4.0.1",
      "hl7.fhir.us.core": "3.1.0",
-     "hl7.fhir.uv.vhdir":"current",
-     "test-wonky-id-1": "current",
-     "2-test-wonky-id": "current"
+     "hl7.fhir.uv.vhdir":"current"
   },
+  "date": "20200413230227",
   "language": "en",
   "author": "James Tuna",
   "maintainers": [

@@ -171,8 +171,12 @@ export class IGExporter {
           this.ig.dependsOn.push({
             uri: `${depIG.url}`,
             packageId: depId,
-            // packageId should be alphanumeric or '.', id must be alphanumeric or '_' for IG Publisher, so replace '.' with '_'
-            id: depId.replace(/\./g, '_'),
+            // packageId should be "a..z, A..Z, 0..9, and _ and it must start with a..z | A..Z" per
+            // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/SUSHI.200.2E12.2E7/near/199193333
+            // depId should be [A-Za-z0-9\-\.]{1,64}, so we replace . and - with _ and prepend "id_" if it does not start w/ a-z|A-Z
+            id: /[A-Za-z]/.test(depId[0])
+              ? depId.replace(/\.|-/g, '_')
+              : 'id_' + depId.replace(/\.|-/g, '_'),
             version: depVersion
           });
         } else {

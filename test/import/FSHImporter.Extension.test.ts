@@ -103,6 +103,25 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
       });
+
+      it('should log an error and skip the extension when encountering an extension with a name used by another extension', () => {
+        const input = `
+        Extension: SomeExtension
+        Title: "This Extension"
+        
+        Extension: SomeExtension
+        Title: "That Extension"
+        `;
+
+        const result = importSingleText(input, 'SameName.fsh');
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.title).toBe('This Extension');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Extension named SomeExtension already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+      });
     });
 
     // Since Extensions use the same rule parsing code as Profiles, only do minimal tests of rules

@@ -4,6 +4,7 @@ import { logger, Type, MasterFisher } from '../utils';
 import { Mapping } from '../fshtypes';
 import { StructureDefinition, idRegex } from '../fhirtypes';
 import { InvalidFHIRIdError } from '../errors';
+import { groupBy, pickBy } from 'lodash';
 
 export class MappingExporter {
   constructor(
@@ -81,6 +82,17 @@ export class MappingExporter {
         this.exportMapping(mapping);
       } catch (e) {
         logger.error(e.message, mapping.sourceInfo);
+      }
+    }
+    // The mappings on each Structure Definition should have a unique id
+    const groupedMappings = groupBy(mappings, 'source');
+    for (const sd in groupedMappings) {
+      const duplicateMappings = pickBy(groupBy(groupedMappings[sd], 'id'), m => m.length > 1);
+      for (const duplicateId in duplicateMappings) {
+        // show error for each time the id was used after the first
+        duplicateMappings[duplicateId].slice(1).forEach(m => {
+          logger.error(`Multiple mappings on ${sd} found with id ${m.id}`, m.sourceInfo);
+        });
       }
     }
   }

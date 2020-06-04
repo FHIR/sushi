@@ -146,6 +146,24 @@ describe('FSHImporter', () => {
         expect(invariant.severity).toEqual(severityCode);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Nope\.fsh.*Line: 3\D*/s);
       });
+
+      it('should log an error and skip the invariant when encountering a invariant with a name used by another invariant', () => {
+        const input = `
+        Invariant: same-1
+        Severity: #error
+        Description: "First description."
+
+        Invariant: same-1
+        Severity: #error
+        Description: "Second description."
+        `;
+        const result = importSingleText(input, 'SameName.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('same-1');
+        expect(invariant.description).toBe('First description.');
+        expect(loggerSpy.getLastMessage('error')).toMatch(/Invariant named same-1 already exists/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
+      });
     });
   });
 });

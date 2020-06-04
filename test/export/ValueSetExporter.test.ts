@@ -144,6 +144,23 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
+  it('should log an error when multiple value sets have the same id', () => {
+    const firstValueSet = new FshValueSet('FirstVS')
+      .withFile('ValueSets.fsh')
+      .withLocation([2, 8, 5, 15]);
+    firstValueSet.id = 'my-value-set';
+    const secondValueSet = new FshValueSet('SecondVS')
+      .withFile('ValueSets.fsh')
+      .withLocation([7, 8, 9, 19]);
+    secondValueSet.id = 'my-value-set';
+    doc.valueSets.set(firstValueSet.name, firstValueSet);
+    doc.valueSets.set(secondValueSet.name, secondValueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(2);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple value sets with id my-value-set/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: ValueSets\.fsh.*Line: 7 - 9\D*/s);
+  });
 
   it('should export each value set once, even if export is called more than once', () => {
     const breakfast = new FshValueSet('BreakfastVS');

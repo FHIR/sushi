@@ -424,6 +424,64 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
+  it('should log an error when multiple profiles have the same id', () => {
+    const firstProfile = new Profile('FirstProfile')
+      .withFile('Profiles.fsh')
+      .withLocation([2, 8, 6, 25]);
+    firstProfile.id = 'my-profile';
+    const secondProfile = new Profile('SecondProfile')
+      .withFile('Profiles.fsh')
+      .withLocation([8, 8, 11, 25]);
+    secondProfile.id = 'my-profile';
+    doc.profiles.set(firstProfile.name, firstProfile);
+    doc.profiles.set(secondProfile.name, secondProfile);
+
+    exporter.export();
+    expect(pkg.profiles).toHaveLength(2);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple structure definitions with id my-profile/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profiles\.fsh.*Line: 8 - 11\D*/s);
+  });
+
+  it('should log an error when multiple extensions have the same id', () => {
+    const firstExtension = new Extension('FirstExtension')
+      .withFile('Extensions.fsh')
+      .withLocation([3, 8, 7, 22]);
+    firstExtension.id = 'my-extension';
+    const secondExtension = new Extension('SecondExtension')
+      .withFile('Extensions.fsh')
+      .withLocation([11, 8, 15, 29]);
+    secondExtension.id = 'my-extension';
+    doc.extensions.set(firstExtension.name, firstExtension);
+    doc.extensions.set(secondExtension.name, secondExtension);
+
+    exporter.export();
+    expect(pkg.extensions).toHaveLength(2);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple structure definitions with id my-extension/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Extensions\.fsh.*Line: 11 - 15\D*/s);
+  });
+
+  it('should log an error when a profile and an extension have the same id', () => {
+    const profile = new Profile('MyProfile').withFile('Profiles.fsh').withLocation([2, 8, 5, 15]);
+    profile.id = 'custom-definition';
+    const extension = new Extension('MyExtension')
+      .withFile('Extensions.fsh')
+      .withLocation([3, 8, 5, 19]);
+    extension.id = 'custom-definition';
+    doc.profiles.set(profile.name, profile);
+    doc.extensions.set(extension.name, extension);
+
+    exporter.export();
+    expect(pkg.profiles).toHaveLength(1);
+    expect(pkg.extensions).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple structure definitions with id custom-definition/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Extensions\.fsh.*Line: 3 - 5\D*/s);
+  });
 
   // Rules
   it('should emit an error and continue when the path is not found', () => {
@@ -1463,6 +1521,31 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should not apply a Reference FixedValueRule with invalid type and log an error', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Condition';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new FixedValueRule('subject'); // subject cannot be a reference to condition
+    rule.fixedValue = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const fixedSubject = sd.findElement('Observation.subject');
+
+    expect(fixedSubject.patternReference).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The type "Reference\(Condition\)" does not match any of the allowed types\D*/s
+    );
+  });
+
   it('should apply a Code FixedValueRule and replace the local code system name with its url', () => {
     const profile = new Profile('LightObservation');
     profile.parent = 'Observation';
@@ -1966,10 +2049,10 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: NoSlice\.fsh.*Line: 6\D*/s);
   });
 
-  // Since previous versions of SUSHI used the slicename as a type lookup as well, we want to issue a warning when we
-  // find a rule that may have been intended to work that way (essentially, a user who has not updated their fsh).
-  // We expect to remove this warning at some point since it is only needed in the transition.
-  it('should report a warning if the extension slice name resolves to an external extension type and no explicit type was specified', () => {
+  // Since previous versions of SUSHI used the slicename as a type lookup as well, we used to issue a warning when we
+  // found a rule that may have been intended to work that way (essentially, a user who has not updated their fsh).
+  // Time has passed since then and we no longer issue that warning.  This test proves that.
+  it('should NOT report a warning if the extension slice name resolves to an external extension type and no explicit type was specified', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
@@ -1997,12 +2080,11 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionSliceUrl).toBeDefined();
     expect(extensionSliceUrl.fixedUri).toBe('maxSize');
 
-    expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /Alias: MaxSizeExtension = http:\/\/hl7\.org\/fhir\/StructureDefinition\/maxSize.*extension contains MaxSizeExtension named maxSize 0\.\.1.*File: ExternalSliceName\.fsh.*Line: 6\D*/s
-    );
+    // In previous versions of this test, a warning was expected here
+    expect(loggerSpy.getAllLogs('warn').length).toBe(0);
   });
 
-  it('should report a warning if the extension slice name resolves to a FSH extension and no explicit type was specified', () => {
+  it('should NOT report a warning if the extension slice name resolves to a FSH extension and no explicit type was specified', () => {
     const extension = new Extension('MyFshExtension');
     const extCardRule = new CardRule('extension');
     extCardRule.min = 0;
@@ -2039,9 +2121,8 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionSliceUrl).toBeDefined();
     expect(extensionSliceUrl.fixedUri).toBe('MyFshExtension');
 
-    expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /extension contains MyFshExtension named MyFshExtension 0\.\.1.*extension contains MyFshExtension named my-fsh-extension 0\.\.1.*File: FSHSliceName\.fsh.*Line: 6\D*/s
-    );
+    // In previous versions of this test, a warning was expected here
+    expect(loggerSpy.getAllLogs('warn').length).toBe(0);
   });
 
   it('should not report a warning if the extension slice name resolves to an extension type but explicit type was specified', () => {
