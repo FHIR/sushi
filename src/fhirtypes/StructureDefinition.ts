@@ -1,11 +1,6 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
-import {
-  ElementDefinition,
-  ElementDefinitionType,
-  LooseElementDefJSON,
-  ElementDefinitionSlicing
-} from './ElementDefinition';
+import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
