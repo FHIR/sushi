@@ -16,8 +16,6 @@ import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
-// let load = import load from '../../src/fhirdefs/load';
-// let fakeLoad = import {loadDependency} from '../../src/fhirdefs/load';
 
 describe('Processing', () => {
   temp.track();
@@ -27,8 +25,7 @@ describe('Processing', () => {
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
-      fs.mkdirSync(path.join(tempRoot, 'has-fsh'));
-      fs.mkdirSync(path.join(tempRoot, 'has-fsh', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'has-fsh', 'fsh'));
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
     });
 
