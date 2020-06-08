@@ -42,7 +42,7 @@ describe('FSHImporter', () => {
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
-        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
+        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
         `;
 
         const result = importSingleText(input);
@@ -58,8 +58,20 @@ describe('FSHImporter', () => {
           startLine: 2,
           startColumn: 9,
           endLine: 7,
-          endColumn: 46
+          endColumn: 55
         });
+      });
+
+      it('should log a warning when mixins are listed with commas', () => {
+        const input = `
+        Extension: SomeExtension
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
+        `;
+        const result = importSingleText(input);
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
       });
 
       it('should only apply each metadata attribute the first time it is declared', () => {

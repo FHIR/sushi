@@ -44,7 +44,7 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
+        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
         `;
 
         const result = importSingleText(input);
@@ -60,8 +60,21 @@ describe('FSHImporter', () => {
           startLine: 2,
           startColumn: 9,
           endLine: 7,
-          endColumn: 46
+          endColumn: 55
         });
+      });
+
+      it('should log a warning when mixins are listed with commas', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
+        `;
+        const result = importSingleText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
       });
 
       it('should properly parse a multi-string description', () => {
@@ -147,7 +160,7 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        Mixins: Mixin1, Mixin2, Mixin1
+        Mixins: Mixin1 and Mixin2 and Mixin1
         `;
 
         const result = importSingleText(input, 'Dupe.fsh');
@@ -503,9 +516,9 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category , value[x], component MS
-        * subject, focus ?!
-        * interpretation, note N
+        * category and value[x] and component MS
+        * subject and focus ?!
+        * interpretation and note N
         `;
 
         const result = importSingleText(input);
@@ -587,8 +600,8 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category, value[x], component MS SU N
-        * subject, focus ?! SU TU
+        * category and value[x] and component MS SU N
+        * subject and focus ?! SU TU
         `;
 
         const result = importSingleText(input);
@@ -644,6 +657,49 @@ describe('FSHImporter', () => {
           undefined,
           undefined
         );
+      });
+
+      it('should log a warning when paths are listed with commas', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category, value[x] , component MS SU N
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(3);
+        assertFlagRule(
+          profile.rules[0],
+          'category',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[1],
+          'value[x]',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[2],
+          'component',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list paths is deprecated/s);
       });
     });
 
