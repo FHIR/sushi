@@ -402,6 +402,11 @@ function getBoxComment(title: string, comment: string): string {
   return boxComment;
 }
 
+// Helper functions for converting menu XML file
+const itemInNewTab = (item: any) => (item.a._attributes?.target === '_blank' ? 'new-tab ' : '');
+const itemIsExternal = (item: any) =>
+  item.a.img?._attributes?.src === 'external.png' ? 'external ' : '';
+
 /**
  * Convert a menu XML file into the required menu object format for the YAML configuration.
  * This assumes the menu XML format found in the sample-ig.  Other formats won't be parsed
@@ -453,6 +458,7 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
         if (li.a && !Array.isArray(li.a)) {
           const name = li.a._text;
           const link = li.a._attributes?.href;
+          const menuLinkWithKeywords = `${itemInNewTab(li)}${itemIsExternal(li)}${link}`;
           if (li.ul && li.ul.li) {
             const subMenu: YAMLConfigurationMenuTree = {};
             const subItems = Array.isArray(li.ul.li) ? li.ul.li : [li.ul.li];
@@ -461,7 +467,7 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
                 const subName = subLi.a._text;
                 const subLink = subLi.a._attributes?.href;
                 if (subLink && subLink !== '#') {
-                  subMenu[subName] = subLink;
+                  subMenu[subName] = `${itemInNewTab(subLi)}${itemIsExternal(subLi)}${subLink}`;
                 }
                 // NOTE: if there is another sub-sub-menu, we drop it since publisher doesn't support it
               }
@@ -469,10 +475,10 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
             if (Object.keys(subMenu).length > 0) {
               menu[name] = subMenu;
             } else if (link && link !== '#') {
-              menu[name] = link;
+              menu[name] = menuLinkWithKeywords;
             }
           } else if (link && link !== '#') {
-            menu[name] = link;
+            menu[name] = menuLinkWithKeywords;
           }
         }
       });
@@ -603,7 +609,7 @@ const DEFAULT_MENU: YAMLConfigurationMenuTree = {
   'Table of Contents': 'toc.html',
   'Artifact Index': 'artifacts.html',
   Support: {
-    'FHIR Spec': 'http://hl7.org/fhir/R4/index.html'
+    'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html'
   }
 };
 

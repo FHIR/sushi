@@ -657,9 +657,16 @@ export class IGExporter {
       menuItem += `${prefixSpaces}</li>${EOL}`;
     } else {
       menuItem += `${prefixSpaces}<li>${EOL}${prefixSpaces}${'  '}`;
-      if (item.url) menuItem += `<a href="${item.url}">`;
+      if (item.url) {
+        menuItem += '<a ';
+        if (item.openInNewTab) menuItem += 'target="_blank" ';
+        menuItem += `href="${item.url}">`;
+      }
       menuItem += item.name;
-      if (item.url) menuItem += '</a>';
+      if (item.url) {
+        if (item.isExternal) menuItem += ' <img src="external.png" style="text-align: baseline"/>';
+        menuItem += '</a>';
+      }
       menuItem += `${EOL}${prefixSpaces}</li>${EOL}`;
     }
     return menuItem;

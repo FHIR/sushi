@@ -150,6 +150,8 @@ export type ConfigurationResource = ImplementationGuideDefinitionResource & { om
 export type ConfigurationMenuItem = {
   name: string;
   url?: string;
+  isExternal?: boolean;
+  openInNewTab?: boolean;
   subMenu?: ConfigurationMenuItem[];
 };
 
