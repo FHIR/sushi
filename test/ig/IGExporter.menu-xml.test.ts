@@ -10,7 +10,6 @@ import {
   simpleMenuXMLContent,
   simpleMenuXMLWithOpenInNewTabContent,
   simpleMenuXMLWithExternalContent,
-  simpleMenuXMLWithExternalNewTabNoUrlContent,
   subMenuXMLContent,
   subMenuWithWarningXMLContent
 } from './fixtures/menuXMLContent';
@@ -145,23 +144,6 @@ describe('IGExporter', () => {
       expect(fs.existsSync(menuPath)).toBeTruthy();
       const content = fs.readFileSync(menuPath, 'utf8');
       expect(content).toContain(simpleMenuXMLWithExternalContent.replace(/\n/g, EOL));
-      expect(loggerSpy.getAllMessages()).toHaveLength(0);
-    });
-
-    it('should build menu with external icon, new tab, and no url when provided in config.menu', () => {
-      const config = { ...minimalConfig };
-      config.menu = [
-        { name: 'Animals', openInNewTab: true, isExternal: true },
-        { name: 'Plants', url: 'plants.html' },
-        { name: 'Other' }
-      ];
-      const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, '');
-      exporter.addMenuXML(tempOut);
-      const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
-      expect(fs.existsSync(menuPath)).toBeTruthy();
-      const content = fs.readFileSync(menuPath, 'utf8');
-      expect(content).toContain(simpleMenuXMLWithExternalNewTabNoUrlContent.replace(/\n/g, EOL));
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 

@@ -653,15 +653,16 @@ export class IGExporter {
       menuItem += `${prefixSpaces}</li>${EOL}`;
     } else {
       menuItem += `${prefixSpaces}<li>${EOL}${prefixSpaces}${'  '}`;
-      if (item.url || item.openInNewTab) {
+      if (item.url) {
         menuItem += '<a ';
         if (item.openInNewTab) menuItem += 'target="_blank" ';
-        if (item.url) menuItem += `href="${item.url}"`;
-        menuItem += '>';
+        menuItem += `href="${item.url}">`;
       }
       menuItem += item.name;
-      if (item.isExternal) menuItem += '<img src="external.png" style="text-align: baseline"/>';
-      if (item.url || item.openInNewTab) menuItem += '</a>';
+      if (item.url) {
+        if (item.isExternal) menuItem += ' <img src="external.png" style="text-align: baseline"/>';
+        menuItem += '</a>';
+      }
       menuItem += `${EOL}${prefixSpaces}</li>${EOL}`;
     }
     return menuItem;

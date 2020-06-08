@@ -402,6 +402,11 @@ function getBoxComment(title: string, comment: string): string {
   return boxComment;
 }
 
+// Helper functions for converting menu XML file
+const itemInNewTab = (item: any) => (item.a._attributes?.target === '_blank' ? 'new-tab ' : '');
+const itemIsExternal = (item: any) =>
+  item.a.img?._attributes?.src === 'external.png' ? 'external ' : '';
+
 /**
  * Convert a menu XML file into the required menu object format for the YAML configuration.
  * This assumes the menu XML format found in the sample-ig.  Other formats won't be parsed
@@ -453,9 +458,7 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
         if (li.a && !Array.isArray(li.a)) {
           const name = li.a._text;
           const link = li.a._attributes?.href;
-          const inNewTab = li.a._attributes?.target === '_blank' ? 'new-tab ' : '';
-          const isExternal = li.a.img?._attributes?.src === 'external.png' ? 'external ' : '';
-          const menuLinkWithKeywords = `${inNewTab}${isExternal}${link}`;
+          const menuLinkWithKeywords = `${itemInNewTab(li)}${itemIsExternal(li)}${link}`;
           if (li.ul && li.ul.li) {
             const subMenu: YAMLConfigurationMenuTree = {};
             const subItems = Array.isArray(li.ul.li) ? li.ul.li : [li.ul.li];
@@ -463,11 +466,8 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
               if (subLi.a && !Array.isArray(subLi.a)) {
                 const subName = subLi.a._text;
                 const subLink = subLi.a._attributes?.href;
-                const subInNewTab = subLi.a._attributes?.target === '_blank' ? 'new-tab ' : '';
-                const subIsExternal =
-                  subLi.a.img?._attributes?.src === 'external.png' ? 'external ' : '';
                 if (subLink && subLink !== '#') {
-                  subMenu[subName] = `${subInNewTab}${subIsExternal}${subLink}`;
+                  subMenu[subName] = `${itemInNewTab(subLi)}${itemIsExternal(subLi)}${subLink}`;
                 }
                 // NOTE: if there is another sub-sub-menu, we drop it since publisher doesn't support it
               }
