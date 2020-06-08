@@ -1,0 +1,22 @@
+{
+  "name": "sushi-test",
+  "version": "0.1.0",
+  "canonical": "http://hl7.org/fhir/sushi-test",
+  "url": "http://hl7.org/fhir/sushi-test",
+  "title": "FSH Test IG",
+  "description": "Provides a simple example of how FSH can be used to create an IG",
+  "dependencies": {
+    "hl7.fhir.us.core": "3.1.0",
+    "hl7.fhir.uv.vhdir": "current"
+  },
+  "language": "en",
+  "author": "James Tuna",
+  "maintainers": [
+    {
+      "name": "Bill Cod",
+      "email": "cod@reef.gov",
+      "url": "https://capecodfishermen.org/"
+    }
+  ],
+  "license": "CC0-1.0"
+}
