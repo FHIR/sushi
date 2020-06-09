@@ -337,20 +337,10 @@ export class StructureDefinition {
       j.snapshot = { element: this.elements.map(e => e.toJSON()) };
     }
 
-    // Create a cached hasDiff function since hasDiff can be expensive and may be called multiple times
-    // per element when generating the differential.
-    const hasDiffCache: Map<string, boolean> = new Map();
-    const cachedHasDiff = (element: ElementDefinition): boolean => {
-      if (!hasDiffCache.has(element.id)) {
-        hasDiffCache.set(element.id, element.hasDiff());
-      }
-      return hasDiffCache.get(element.id);
-    };
-
-    // Populate the differential (including intermediate elements to avoid a "sparse differential")
+    // Populate the differential
     j.differential = { element: [] };
     this.elements.forEach(e => {
-      if (cachedHasDiff(e)) {
+      if (e.hasDiff()) {
         const diff = e.calculateDiff().toJSON();
         const isTypeSlicingChoiceDiff =
           diff.id.endsWith('[x]') &&
@@ -367,19 +357,7 @@ export class StructureDefinition {
         // differential, as they are inferred. See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
         if (!isTypeSlicingChoiceDiff) {
           j.differential.element.push(diff);
-        } else if (e.children().some(c => cachedHasDiff(c))) {
-          // Even for a type-slicing choice diff, we want at least a simple diff when it has children with a diff
-          j.differential.element.push({
-            id: e.id,
-            path: e.path
-          });
         }
-      } else if (e.children().some(c => cachedHasDiff(c))) {
-        // Since it has children with a diff, at least add a simple diff element to avoid "sparse differentials"
-        j.differential.element.push({
-          id: e.id,
-          path: e.path
-        });
       }
     });
 
