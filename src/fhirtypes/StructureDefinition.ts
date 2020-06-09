@@ -335,6 +335,12 @@ export class StructureDefinition {
         // @ts-ignore
         j[prop] = cloneDeep(this[prop]);
       }
+      // children of primitive properties are located by an underscore-prefixed property name
+      // @ts-ignore
+      if (this[`_${prop}`] !== undefined) {
+        // @ts-ignore
+        j[`_${prop}`] = cloneDeep(this[`_${prop}`]);
+      }
     }
 
     // Now handle snapshot and differential
