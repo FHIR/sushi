@@ -925,6 +925,12 @@ describe('StructureDefinition', () => {
         'Cannot directly access differential or snapshot with path: differential.element[0]'
       );
     });
+
+    it('should throw an InvalidAccessError when trying to override the Parent type with a caret value', () => {
+      expect(() => {
+        observation.setInstancePropertyByPath('type', 'foo', fisher);
+      }).toThrow('Cannot directly change type. Elements will naturally inherit their Parent type.');
+    });
   });
 
   describe('#validateValueAtPath', () => {

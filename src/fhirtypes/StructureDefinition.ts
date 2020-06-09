@@ -8,7 +8,8 @@ import {
   CannotResolvePathError,
   InvalidElementAccessError,
   MissingSnapshotError,
-  InvalidResourceTypeError
+  InvalidResourceTypeError,
+  InvalidAccessError
 } from '../errors';
 import {
   getArrayIndex,
@@ -285,6 +286,10 @@ export class StructureDefinition {
   setInstancePropertyByPath(path: string, value: any, fisher: Fishable): void {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
+    }
+    const parentName = this.type || 'Resource';
+    if (path == 'type' && value != parentName) {
+      throw new InvalidAccessError();
     }
     setPropertyOnDefinitionInstance(this, path, value, fisher);
   }
