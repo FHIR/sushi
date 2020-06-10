@@ -42,4 +42,4 @@ export * from './ParentDeclaredAsProfileNameError';
 export * from './ParentDeclaredAsProfileIdError';
 export * from './InvalidResourceTypeError';
 export * from './InvalidExtensionParentError';
-export * from './InvalidAccessError';
+export * from './InvalidTypeAccessError';

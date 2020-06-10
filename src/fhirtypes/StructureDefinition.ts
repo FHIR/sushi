@@ -9,7 +9,7 @@ import {
   InvalidElementAccessError,
   MissingSnapshotError,
   InvalidResourceTypeError,
-  InvalidAccessError
+  InvalidTypeAccessError
 } from '../errors';
 import {
   getArrayIndex,
@@ -287,9 +287,9 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    const parentName = this.type || 'Resource';
-    if (path == 'type' && value != parentName) {
-      throw new InvalidAccessError();
+    const parentName = this.type;
+    if (path === 'type' && value !== parentName) {
+      throw new InvalidTypeAccessError();
     }
     setPropertyOnDefinitionInstance(this, path, value, fisher);
   }

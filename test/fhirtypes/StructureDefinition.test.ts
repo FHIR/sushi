@@ -926,10 +926,12 @@ describe('StructureDefinition', () => {
       );
     });
 
-    it('should throw an InvalidAccessError when trying to override the Parent type with a caret value', () => {
+    it('should throw an InvalidTypeAccessError when trying to override the Parent type with a caret value', () => {
       expect(() => {
         observation.setInstancePropertyByPath('type', 'foo', fisher);
-      }).toThrow('Cannot directly change type. Elements will naturally inherit their Parent type.');
+      }).toThrow(
+        'Cannot directly change type. StructureDefinitions will naturally inherit their Parent type.'
+      );
     });
   });
 
