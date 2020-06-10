@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
+import { minimalConfig } from './minimalConfig';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import {
   findInputDir,
@@ -16,6 +17,7 @@ import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
+import { cloneDeep } from 'lodash';
 
 describe('Processing', () => {
   temp.track();
@@ -93,35 +95,61 @@ describe('Processing', () => {
       loggerSpy.reset();
     });
 
-    it('should return the contents of package.json from the input directory', () => {
-      const input = path.join(__dirname, 'fixtures', 'valid-json');
-      const expectedConfig = fs.readJSONSync(path.join(input, 'package.json'));
+    it('should return the contents of config.yaml from the input directory', () => {
+      const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
-      expect(config).toEqual(expectedConfig);
+      expect(config).toEqual({
+        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'config.yaml'),
+        id: 'sushi-test',
+        packageId: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/sushi-test',
+        version: '0.1.0',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        status: 'active',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        license: 'CC0-1.0',
+        fhirVersion: ['4.0.1'],
+        dependencies: [
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
+        ],
+        FSHOnly: false
+      });
     });
 
-    it('should log and throw an error when package.json is not found in the input directory', () => {
+    it('should log and throw an error when config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
         readConfig(input);
       }).toThrow();
-      expect(loggerSpy.getLastMessage('error')).toMatch(/No package\.json/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/No config\.yaml/s);
     });
 
-    it('should log and throw an error when the contents of package.json are not valid json', () => {
-      const input = path.join(__dirname, 'fixtures', 'invalid-json');
+    it('should log and throw an error when the contents of config.yaml are not valid yaml', () => {
+      const input = path.join(__dirname, 'fixtures', 'invalid-yaml');
       expect(() => {
         readConfig(input);
       }).toThrow();
-      expect(loggerSpy.getLastMessage('error')).toMatch(/not valid JSON/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/not a valid YAML object/s);
     });
 
     it('should log and throw an error when the configuration does not include a FHIR R4 dependency', () => {
-      const input = path.join(__dirname, 'fixtures', 'no-fhir-r4');
+      const input = path.join(__dirname, 'fixtures', 'fhir-dstu2');
       expect(() => {
         readConfig(input);
       }).toThrow();
-      expect(loggerSpy.getLastMessage('error')).toMatch(/must specify FHIR R4 as a dependency/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/must specify FHIR R4 as a fhirVersion/s);
     });
   });
 
@@ -146,14 +174,10 @@ describe('Processing', () => {
     });
 
     it('should load specified dependencies', () => {
-      const config = {
-        dependencies: {
-          'hl7.fhir.r4.core': '4.0.1',
-          'hl7.fhir.us.core': '3.1.0'
-        }
-      };
+      const usCoreDependencyConfig = cloneDeep(minimalConfig);
+      usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
+      const dependencyDefs = loadExternalDependencies(defs, usCoreDependencyConfig);
       return Promise.all(dependencyDefs).then(() => {
         expect(defs.packages.length).toBe(2);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
@@ -162,14 +186,10 @@ describe('Processing', () => {
     });
 
     it('should log an error when it fails to load a dependency', () => {
-      const config = {
-        dependencies: {
-          'hl7.fhir.r4.core': '4.0.1',
-          'hl7.does.not.exist': 'current'
-        }
-      };
+      const badDependencyConfig = cloneDeep(minimalConfig);
+      badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
+      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
       return Promise.all(dependencyDefs).then(() => {
         expect(defs.packages.length).toBe(1);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
@@ -210,7 +230,7 @@ describe('Processing', () => {
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('output-dir');
-      const input = path.join(__dirname, 'fixtures', 'valid-json');
+      const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       outPackage = new Package(config);
 

@@ -1,0 +1,1 @@
+TXT files are not supported in pagecontent.

@@ -3,12 +3,15 @@
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
-import { FSHTank, importConfiguration } from './import';
+import chalk from 'chalk';
+import { pad, padStart, sample, padEnd } from 'lodash';
+import { FSHTank } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
 import { logger, stats, Type } from './utils';
 import { loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
+import { Configuration } from './fshtypes';
 import {
   findInputDir,
   ensureOutputDir,
@@ -19,10 +22,6 @@ import {
   getRawFSHes,
   getIgDataPath
 } from './utils/Processing';
-import { pad, padStart, sample, padEnd } from 'lodash';
-import chalk from 'chalk';
-import { Configuration } from './fshtypes';
-import { ensureConfiguration } from './import/ensureConfiguration';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -65,30 +64,16 @@ async function app() {
   const isIgPubContext = path.parse(input).base === 'fsh';
   const outDir = ensureOutputDir(input, program.out, isIgPubContext);
 
-  let config: any;
+  let config: Configuration;
   try {
     config = readConfig(input);
   } catch {
     process.exit(1);
   }
 
-  // Get the config.yaml (or create it if possible)
-  const configPath = ensureConfiguration(input);
-  if (configPath == null || !fs.existsSync(configPath)) {
-    logger.error('No config.yaml in FSH definition folder.');
-    process.exit(1);
-  }
-  const configYaml = fs.readFileSync(configPath, 'utf8');
-  let yamlConfig: Configuration;
-  try {
-    yamlConfig = importConfiguration(configYaml, configPath);
-  } catch (e) {
-    process.exit(1);
-  }
-
   // Load dependencies
   const defs = new FHIRDefinitions();
-  const dependencyDefs = loadExternalDependencies(defs, yamlConfig);
+  const dependencyDefs = loadExternalDependencies(defs, config);
 
   // Load custom resources specified in ig-data folder
   loadCustomResources(input, defs);
@@ -96,7 +81,7 @@ async function app() {
   let tank: FSHTank;
   try {
     const rawFSH = getRawFSHes(input);
-    tank = fillTank(rawFSH, yamlConfig);
+    tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
     process.exit(1);
@@ -122,7 +107,7 @@ async function app() {
   if (config.FSHOnly) {
     logger.info('Exporting FSH definitions only. No IG related content will be exported.');
   } else {
-    const igDataPath = path.resolve(input, 'ig-data');
+    const igDataPath = getIgDataPath(input);
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);

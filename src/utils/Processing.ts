@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
-import { FSHTank, RawFSH, importText } from '../import';
+import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
 import { cloneDeep } from 'lodash';
 import { Package } from '../export';
 import {
@@ -16,7 +16,7 @@ import {
   filterExtensionInstances,
   filterProfileInstances
 } from './InstanceDefinitionUtils';
-import { Configuration, PackageJSON } from '../fshtypes';
+import { Configuration } from '../fshtypes';
 
 export function findInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
@@ -54,29 +54,18 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
   return outDir;
 }
 
-export function readConfig(input: string): any {
-  // Check that package.json exists
-  const packagePath = path.join(input, 'package.json');
-  if (!fs.existsSync(packagePath)) {
-    logger.error('No package.json in FSH definition folder.');
+export function readConfig(input: string): Configuration {
+  const configPath = ensureConfiguration(input);
+  if (configPath == null || !fs.existsSync(configPath)) {
+    logger.error('No config.yaml in FSH definition folder.');
     throw Error;
   }
-
-  // Parse package.json
-  let config: any;
-  try {
-    config = fs.readJSONSync(packagePath);
-  } catch (e) {
-    logger.error(`The package.json file is not valid JSON: ${packagePath}`);
-    throw e;
-  }
-
-  // Ensure FHIR R4 is added as a dependency
-  const fhirR4Dependency = config.dependencies?.['hl7.fhir.r4.core'];
-  if (fhirR4Dependency !== '4.0.1') {
+  const configYaml = fs.readFileSync(configPath, 'utf8');
+  const config = importConfiguration(configYaml, configPath);
+  if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
-      'The package.json must specify FHIR R4 as a dependency. Be sure to' +
-        ' add "hl7.fhir.r4.core": "4.0.1" to the dependencies list.'
+      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
+        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
     );
     throw Error;
   }
@@ -87,18 +76,9 @@ export function loadExternalDependencies(
   defs: FHIRDefinitions,
   config: Configuration
 ): Promise<FHIRDefinitions | void>[] {
-  // Ensure FHIR R4 is added as a fhirVersion
+  // Add FHIR R4 to the dependencies so it is loaded
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
-  if (!config.fhirVersion.includes('4.0.1')) {
-    logger.error(
-      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
-        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
-    );
-    process.exit(1);
-  } else {
-    // Add hl7.fhir.r4.core so that it will be loaded as dependency
-    dependencies.push({ packageId: 'hl7.fhir.r4.core', version: '4.0.1' });
-  }
+  dependencies.push({ packageId: 'hl7.fhir.r4.core', version: '4.0.1' });
 
   // Load dependencies
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
@@ -141,12 +121,6 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
 }
 
 export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {
-  fs.writeFileSync(
-    path.join(outDir, 'package.json'),
-    JSON.stringify(outPackage.config, null, 2),
-    'utf8'
-  );
-
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const writeResources = (
