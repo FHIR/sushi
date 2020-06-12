@@ -493,6 +493,20 @@ export class IGExporter {
    * @returns {PageMetadata []} - sorted list of file information objects
    */
   private organizePageContent(pages: string[]): PageMetadata[] {
+    // Remove any preexisting duplicate file names, and log an error
+    pages = pages.filter(page => {
+      if (
+        pages.find(p => p.slice(0, p.lastIndexOf('.')) === page.slice(0, page.lastIndexOf('.'))) !==
+        page
+      ) {
+        logger.error(`Duplicate file ${page} will be ignored. Please rename to avoid collisions.`, {
+          file: page
+        });
+        return false;
+      }
+      return true;
+    });
+
     const pageData = pages.map(page => {
       const nameParts = page.match(/^(\d+)_(.*)/);
       let prefix: number = null;
