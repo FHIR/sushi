@@ -1234,7 +1234,7 @@ describe('IGExporter', () => {
         {
           nameUrl: 'index.html',
           title: 'Home',
-          generation: 'html'
+          generation: 'markdown'
         },
         {
           nameUrl: '1_rocks.html',
@@ -1257,6 +1257,9 @@ describe('IGExporter', () => {
           generation: 'markdown'
         }
       ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Duplicate file index.xml will be ignored. Please rename to avoid collisions/
+      );
     });
 
     it('should not remove numeric prefixes from files when doing so would cause name collisions', () => {
@@ -1264,7 +1267,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(pageContentPath)).toBeTruthy();
       const pageContentFiles = fs.readdirSync(pageContentPath);
       expect(pageContentFiles).toHaveLength(5);
-      expect(pageContentFiles).toContain('index.xml');
+      expect(pageContentFiles).toContain('index.md');
       expect(pageContentFiles).toContain('1_rocks.md');
       expect(pageContentFiles).toContain('2_rocks.md');
       expect(pageContentFiles).toContain('3_index.md');
