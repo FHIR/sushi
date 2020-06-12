@@ -19,8 +19,7 @@ import {
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
-  getRawFSHes,
-  getIgDataPath
+  getRawFSHes
 } from './utils/Processing';
 
 app().catch(e => {
@@ -107,7 +106,7 @@ async function app() {
   if (config.FSHOnly) {
     logger.info('Exporting FSH definitions only. No IG related content will be exported.');
   } else {
-    const igDataPath = getIgDataPath(input);
+    const igDataPath = path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);
