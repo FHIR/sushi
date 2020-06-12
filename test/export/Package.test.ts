@@ -1,20 +1,17 @@
 import { Package } from '../../src/export';
 import { ValueSet, StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
 import { Type } from '../../src/utils/Fishable';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('Package', () => {
-  const pkg: Package = new Package({
-    name: 'test',
-    canonical: 'http://example.org',
-    version: '0.0.1'
-  });
+  const pkg: Package = new Package(minimalConfig);
   beforeAll(() => {
     // Profile[0]: Funny / fun-ny / Condition
     const profile0 = new StructureDefinition();
     profile0.name = 'Funny';
     profile0.id = 'fun-ny';
     profile0.type = 'Condition';
-    profile0.url = 'http://example.org/StructureDefinition/fun-ny';
+    profile0.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny';
     profile0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile0.fhirVersion = '4.0.1';
     pkg.profiles.push(profile0);
@@ -23,7 +20,7 @@ describe('Package', () => {
     profile1.name = 'Sanguine';
     profile1.id = 'san-guine';
     profile1.type = 'Condition';
-    profile1.url = 'http://example.org/StructureDefinition/san-guine';
+    profile1.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/san-guine';
     profile1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile1.fhirVersion = '4.0.1';
     pkg.profiles.push(profile1);
@@ -32,7 +29,7 @@ describe('Package', () => {
     extension0.name = 'PreferredBeatle';
     extension0.id = 'preferred-beatle';
     extension0.type = 'Extension';
-    extension0.url = 'http://example.org/StructureDefinition/preferred-beatle';
+    extension0.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/preferred-beatle';
     extension0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     extension0.fhirVersion = '4.0.1';
     pkg.extensions.push(extension0);
@@ -41,7 +38,7 @@ describe('Package', () => {
     extension1.name = 'PoorTaste';
     extension1.id = 'poor-taste';
     extension1.type = 'Extension';
-    extension1.url = 'http://example.org/StructureDefinition/poor-taste';
+    extension1.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste';
     extension1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     extension1.fhirVersion = '4.0.1';
     pkg.extensions.push(extension1);
@@ -49,28 +46,28 @@ describe('Package', () => {
     const valueset0 = new ValueSet();
     valueset0.name = 'Soups';
     valueset0.id = 'soup-flavors';
-    valueset0.url = 'http://example.org/ValueSet/soup-flavors';
+    valueset0.url = 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors';
     valueset0.version = '4.0.1';
     pkg.valueSets.push(valueset0);
     // ValueSet[1]: Cheeses / cheese-flavors
     const valueset1 = new ValueSet();
     valueset1.name = 'Cheeses';
     valueset1.id = 'cheese-flavors';
-    valueset1.url = 'http://example.org/ValueSet/cheese-flavors';
+    valueset1.url = 'http://hl7.org/fhir/us/minimal/ValueSet/cheese-flavors';
     valueset1.version = '4.0.1';
     pkg.valueSets.push(valueset1);
     // CodeSystem[0]: Letters / alphas
     const codeSystem0 = new CodeSystem();
     codeSystem0.name = 'Letters';
     codeSystem0.id = 'alphas';
-    codeSystem0.url = 'http://example.org/CodeSystem/alphas';
+    codeSystem0.url = 'http://hl7.org/fhir/us/minimal/CodeSystem/alphas';
     codeSystem0.version = '4.0.1';
     pkg.codeSystems.push(codeSystem0);
     // CodeSystem[1]: Numbers / numerics
     const codeSystem1 = new CodeSystem();
     codeSystem1.name = 'Numbers';
     codeSystem1.id = 'numerics';
-    codeSystem1.url = 'http://example.org/CodeSystem/numerics';
+    codeSystem1.url = 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics';
     codeSystem1.version = '4.0.1';
     pkg.codeSystems.push(codeSystem1);
     // Instance[0]: DrSue / dr-sue / Practitioner
@@ -93,46 +90,51 @@ describe('Package', () => {
   describe('#fishForFHIR()', () => {
     it('should find profiles', () => {
       const funnyProfile = pkg.fishForFHIR('fun-ny', Type.Profile);
-      expect(funnyProfile.url).toBe('http://example.org/StructureDefinition/fun-ny');
+      expect(funnyProfile.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny');
       expect(funnyProfile.fhirVersion).toBe('4.0.1');
       expect(pkg.fishForFHIR('Funny', Type.Profile)).toEqual(funnyProfile);
       expect(
-        pkg.fishForFHIR('http://example.org/StructureDefinition/fun-ny', Type.Profile)
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny', Type.Profile)
       ).toEqual(funnyProfile);
     });
 
     it('should find extensions', () => {
       const poorTasteExtensionByID = pkg.fishForFHIR('poor-taste', Type.Extension);
-      expect(poorTasteExtensionByID.url).toBe('http://example.org/StructureDefinition/poor-taste');
+      expect(poorTasteExtensionByID.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste'
+      );
       expect(poorTasteExtensionByID.fhirVersion).toBe('4.0.1');
       expect(pkg.fishForFHIR('PoorTaste', Type.Extension)).toEqual(poorTasteExtensionByID);
       expect(
-        pkg.fishForFHIR('http://example.org/StructureDefinition/poor-taste', Type.Extension)
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
+          Type.Extension
+        )
       ).toEqual(poorTasteExtensionByID);
     });
 
     it('should find value sets', () => {
       const soupsValueSetByID = pkg.fishForFHIR('soup-flavors', Type.ValueSet);
-      expect(soupsValueSetByID.url).toBe('http://example.org/ValueSet/soup-flavors');
+      expect(soupsValueSetByID.url).toBe('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors');
       // For some reason, value sets don't specify a fhirVersion, but in this case the business
       // version is the FHIR version, so we'll verify that instead
       expect(soupsValueSetByID.version).toBe('4.0.1');
       expect(pkg.fishForFHIR('Soups', Type.ValueSet)).toEqual(soupsValueSetByID);
-      expect(pkg.fishForFHIR('http://example.org/ValueSet/soup-flavors', Type.ValueSet)).toEqual(
-        soupsValueSetByID
-      );
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors', Type.ValueSet)
+      ).toEqual(soupsValueSetByID);
     });
 
     it('should find code systems', () => {
       const numericsCodeSystemByID = pkg.fishForFHIR('numerics', Type.CodeSystem);
-      expect(numericsCodeSystemByID.url).toBe('http://example.org/CodeSystem/numerics');
+      expect(numericsCodeSystemByID.url).toBe('http://hl7.org/fhir/us/minimal/CodeSystem/numerics');
       // For some reason, code systems don't specify a fhirVersion, but in this case the business
       // version is the FHIR version, so we'll verify that instead
       expect(numericsCodeSystemByID.version).toBe('4.0.1');
       expect(pkg.fishForFHIR('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
-      expect(pkg.fishForFHIR('http://example.org/CodeSystem/numerics', Type.CodeSystem)).toEqual(
-        numericsCodeSystemByID
-      );
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/CodeSystem/numerics', Type.CodeSystem)
+      ).toEqual(numericsCodeSystemByID);
     });
 
     it('should find instances', () => {
@@ -204,7 +206,7 @@ describe('Package', () => {
       expect(funnyProfileByID.name).toBe('Funny');
       expect(funnyProfileByID.fhirVersion).toBe('4.0.1');
       expect(pkg.fishForFHIR('Funny')).toEqual(funnyProfileByID);
-      expect(pkg.fishForFHIR('http://example.org/StructureDefinition/fun-ny')).toEqual(
+      expect(pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny')).toEqual(
         funnyProfileByID
       );
 
@@ -212,9 +214,9 @@ describe('Package', () => {
       expect(poorTasteExtensionByID.name).toBe('PoorTaste');
       expect(poorTasteExtensionByID.fhirVersion).toBe('4.0.1');
       expect(pkg.fishForFHIR('PoorTaste')).toEqual(poorTasteExtensionByID);
-      expect(pkg.fishForFHIR('http://example.org/StructureDefinition/poor-taste')).toEqual(
-        poorTasteExtensionByID
-      );
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste')
+      ).toEqual(poorTasteExtensionByID);
 
       const soupsValueSetByID = pkg.fishForFHIR('soup-flavors');
       expect(soupsValueSetByID.name).toBe('Soups');
@@ -222,7 +224,7 @@ describe('Package', () => {
       // version is the FHIR version, so we'll verify that instead
       expect(soupsValueSetByID.version).toBe('4.0.1');
       expect(pkg.fishForFHIR('Soups')).toEqual(soupsValueSetByID);
-      expect(pkg.fishForFHIR('http://example.org/ValueSet/soup-flavors')).toEqual(
+      expect(pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors')).toEqual(
         soupsValueSetByID
       );
 
@@ -232,7 +234,7 @@ describe('Package', () => {
       // version is the FHIR version, so we'll verify that instead
       expect(numericsCodeSystemByID.version).toBe('4.0.1');
       expect(pkg.fishForFHIR('Numbers')).toEqual(numericsCodeSystemByID);
-      expect(pkg.fishForFHIR('http://example.org/CodeSystem/numerics')).toEqual(
+      expect(pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/CodeSystem/numerics')).toEqual(
         numericsCodeSystemByID
       );
 
@@ -249,12 +251,15 @@ describe('Package', () => {
         id: 'fun-ny',
         name: 'Funny',
         sdType: 'Condition',
-        url: 'http://example.org/StructureDefinition/fun-ny',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
         parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
       });
       expect(pkg.fishForMetadata('Funny', Type.Profile)).toEqual(funnyProfile);
       expect(
-        pkg.fishForMetadata('http://example.org/StructureDefinition/fun-ny', Type.Profile)
+        pkg.fishForMetadata(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
+          Type.Profile
+        )
       ).toEqual(funnyProfile);
     });
 
@@ -264,12 +269,15 @@ describe('Package', () => {
         id: 'poor-taste',
         name: 'PoorTaste',
         sdType: 'Extension',
-        url: 'http://example.org/StructureDefinition/poor-taste',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });
       expect(pkg.fishForMetadata('PoorTaste', Type.Extension)).toEqual(poorTasteExtensionByID);
       expect(
-        pkg.fishForMetadata('http://example.org/StructureDefinition/poor-taste', Type.Extension)
+        pkg.fishForMetadata(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
+          Type.Extension
+        )
       ).toEqual(poorTasteExtensionByID);
     });
 
@@ -278,11 +286,11 @@ describe('Package', () => {
       expect(soupsValueSetByID).toEqual({
         id: 'soup-flavors',
         name: 'Soups',
-        url: 'http://example.org/ValueSet/soup-flavors'
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors'
       });
       expect(pkg.fishForMetadata('Soups', Type.ValueSet)).toEqual(soupsValueSetByID);
       expect(
-        pkg.fishForMetadata('http://example.org/ValueSet/soup-flavors', Type.ValueSet)
+        pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors', Type.ValueSet)
       ).toEqual(soupsValueSetByID);
     });
 
@@ -291,11 +299,11 @@ describe('Package', () => {
       expect(numericsCodeSystemByID).toEqual({
         id: 'numerics',
         name: 'Numbers',
-        url: 'http://example.org/CodeSystem/numerics'
+        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics'
       });
       expect(pkg.fishForMetadata('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
       expect(
-        pkg.fishForMetadata('http://example.org/CodeSystem/numerics', Type.CodeSystem)
+        pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/CodeSystem/numerics', Type.CodeSystem)
       ).toEqual(numericsCodeSystemByID);
     });
 
@@ -371,35 +379,35 @@ describe('Package', () => {
         id: 'fun-ny',
         name: 'Funny',
         sdType: 'Condition',
-        url: 'http://example.org/StructureDefinition/fun-ny',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
         parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
       });
       expect(pkg.fishForMetadata('Funny')).toEqual(funnyProfileByID);
-      expect(pkg.fishForMetadata('http://example.org/StructureDefinition/fun-ny')).toEqual(
-        funnyProfileByID
-      );
+      expect(
+        pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny')
+      ).toEqual(funnyProfileByID);
 
       const poorTasteExtensionByID = pkg.fishForMetadata('poor-taste');
       expect(poorTasteExtensionByID).toEqual({
         id: 'poor-taste',
         name: 'PoorTaste',
         sdType: 'Extension',
-        url: 'http://example.org/StructureDefinition/poor-taste',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
       });
       expect(pkg.fishForMetadata('PoorTaste')).toEqual(poorTasteExtensionByID);
-      expect(pkg.fishForMetadata('http://example.org/StructureDefinition/poor-taste')).toEqual(
-        poorTasteExtensionByID
-      );
+      expect(
+        pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste')
+      ).toEqual(poorTasteExtensionByID);
 
       const soupsValueSetByID = pkg.fishForMetadata('soup-flavors');
       expect(soupsValueSetByID).toEqual({
         id: 'soup-flavors',
         name: 'Soups',
-        url: 'http://example.org/ValueSet/soup-flavors'
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors'
       });
       expect(pkg.fishForMetadata('Soups')).toEqual(soupsValueSetByID);
-      expect(pkg.fishForMetadata('http://example.org/ValueSet/soup-flavors')).toEqual(
+      expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors')).toEqual(
         soupsValueSetByID
       );
 
@@ -407,10 +415,10 @@ describe('Package', () => {
       expect(numericsCodeSystemByID).toEqual({
         id: 'numerics',
         name: 'Numbers',
-        url: 'http://example.org/CodeSystem/numerics'
+        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics'
       });
       expect(pkg.fishForMetadata('Numbers')).toEqual(numericsCodeSystemByID);
-      expect(pkg.fishForMetadata('http://example.org/CodeSystem/numerics')).toEqual(
+      expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/CodeSystem/numerics')).toEqual(
         numericsCodeSystemByID
       );
 

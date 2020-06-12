@@ -1,0 +1,220 @@
+# This IG YML file is inspired by the ImplementationGuide resource
+# and also draws from package.json, package-list.json, and ig.ini.
+# That said, it is structured for ease-of-use, so it is not strictly
+# conformant to any of those existing configuration formats.
+
+# SUSHI will use id as both id and packageId in the IG unless a
+# specific packageId is also provided in this file.
+id: fhir.us.example
+canonical: http://hl7.org/fhir/us/example
+url: http://hl7.org/fhir/us/example/ImplementationGuide/fhir.us.example
+name: ExampleIG
+title: "HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1"
+description: Example IG exercises many of the fields in a SUSHI configuration.
+status: active
+license: CC0-1.0
+date: 2020-02-26
+version: 1.0.0
+
+# Although fhirVersions is 0..* in the ImplementationGuide resource
+# it can be a single item OR and array here (but so far SUSHI only
+# supports 4.0.1 anyway).
+fhirVersion: 4.0.1
+
+# The template property will be used to generate an ig.ini file.
+# To provide a custom ig.ini file, do not include this property and
+# include an `ig.ini` file in ig-data.
+template: hl7.fhir.template#0.0.5
+
+# The following two lines correspond to items that used to be in
+# ig.ini but were recently moved to IG.definition.parameter. For
+# consistency within this file, the names are represented using
+# camelcase, but if authors use the formal parameter names, SUSHI
+# will recognize them as well. In either case, they'll be copied
+# to the IG JSON using the formal names.
+copyrightYear: 2019+
+releaseLabel: STU1
+
+# The publisher can be a single item or a list, each with a name and
+# optional url and/or email. The first publisher's name will be used
+# as IG.publisher.  The contact details and/or additional publishers
+# will be translated into IG.contact values.
+publisher:
+  name: HL7 FHIR Management Group
+  url: http://www.hl7.org/Special/committees/fhirmg
+  email: fmg@lists.HL7.org
+
+# Those who need more control or want to add additional details to the contact values can use
+# contact directly and follow the format outlined in the ImplementationGuide resource and
+# ContactDetail.
+contact:
+  - name: Bob Smith
+    telecom:
+      - system: email
+        value: bobsmith@example.org
+        use: work
+
+# The jurisdiction can be a single item or a list. The FHIR Shorthand
+# code syntax can be used here.
+jurisdiction: urn:iso:std:iso:3166#US "United States of America"
+
+# The dependencies property corresponds to IG.dependsOn. The key is the
+# package id and the value is the version (or dev/current).
+dependencies:
+  hl7.fhir.us.core: 3.1.0
+
+# The global property corresponds to the IG.global property, but it
+# uses the type as the YAML key and the profile as its value. Since
+# FHIR does not explicitly disallow more than one profile per type,
+# neither do we; the value can be a single profile URL or an array
+# of profile URLs.
+global:
+  Patient: http://example.org/fhir/StructureDefinition/my-patient-profile
+  Encounter: http://example.org/fhir/StructureDefinition/my-encounter-profile
+
+# The resources property corresponds to IG.definition.resource.
+# SUSHI can auto-generate all of the resource entries based on
+# the FSH definitions and/or information in any user-provided
+# JSON resource files. If the generated entries are not
+# sufficient or complete, however, the author can add entries
+# here. If the reference matches a generated entry, it will
+# replace the generated entry. If it doesn't match any generated
+# entries, it will be added to the generated entries. The format
+# follows IG.definition.resource with the following differences:
+#   * use IG.definition.resource.reference.reference as the YAML key
+#   * specify "omit" to omit a FSH-generated resource from the
+#     resource list.
+#   * groupingId can be used, but top-level groups syntax may be a
+#     better option (see below).
+# The following are simple examples to demonstrate what this might
+# look like:
+resources:
+  Patient/my-example-patient:
+    name: My Example Patient
+    description: An example Patient
+    exampleBoolean: true
+  Patient/bad-example: omit
+
+# Groups can control certain aspects of the IG generation.  The IG
+# documentation recommends that authors use the default groups that
+# are provided by the templating framework, but if authors want to
+# use their own instead, they can use the mechanism below.  This will
+# create IG.definition.grouping entries and associate the individual
+# resource entries with the corresponding groupIds.
+groups:
+  GroupA:
+    description: The Alpha Group
+    resources:
+    - StructureDefinition/animal-patient
+    - StructureDefinition/arm-procedure
+  GroupB:
+    description: The Beta Group
+    resources:
+    - StructureDefinition/bark-control
+    - StructureDefinition/bee-sting
+
+# The pages property corresponds to IG.definition.page. SUSHI can
+# auto-generate the page list, but if the author includes pages in
+# this file, it is assumed that the author will fully manage the
+# pages section and SUSHI will not generate any page entries.
+# The page file name is used as the key. If title is not provided,
+# then the title will be generated from the file name.  If a
+# generation value is not provided, it will be inferred from the
+# file name extension.  Any subproperties that are valid filenames
+# with supported extensions (e.g., .md/.xml) will be treated as
+# sub-pages.
+pages:
+  index.md:
+    title: Example Home
+  implementation.xml:
+  examples.xml:
+    title: Examples Overview
+    simpleExamples.xml:
+    complexExamples.xml:
+
+# The ImplementationGuide resource defines several other properties
+# not represented above. These properties can be used as-is and
+# should follow the format defined in ImplementationGuide:
+# * meta
+# * implicitRules
+# * language
+# * text
+# * contained
+# * extension
+# * modifierExtension
+# * experimental
+# * useContext
+# * copyright
+# * packageId
+
+# The menu property will be used to generate the input/menu.xml file.
+# The menu is represented as a simple structure where the YAML key
+# is the menu item name and the value is the URL. The IG publisher
+# currently only supports one level deep on sub-menus.
+# To provide a custom menu.xml file, do not include this property and
+# include a `menu.xml` file in input/includes.
+# TO CONSIDER: If no menu data is provided, can we generate the menu
+# based on the pages order or should we just generate a very standard
+# menu (since there may be too many pages to fit in a menu).
+menu:
+  Home: index.html
+  Artifacts:
+    Profiles: artifacts.html#2
+    Extensions: artifacts.html#3
+    Value Sets: artifacts.html#4
+  Downloads: downloads.html
+  History: http://hl7.org/fhir/us/example/history.html
+  FHIR Spec: new-tab external http://hl7.org/fhir/R4/index.html
+
+# The parameters property represents IG.definition.parameter. Rather
+# than a list of code/value pairs (as in the ImplementationGuide
+# resource), the code is the YAML key. If a parameter allows repeating
+# values, the value in the YAML should be a sequence/array. For a
+# partial list of allowed parameters see:
+# https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
+parameters:
+  excludettl: true
+  validation: [allow-any-extensions, no-broken-links]
+
+# The history property corresponds to package-list.json. SUSHI will
+# use the existing top-level properties in its config to populate the
+# top-level package-list.json properties: packageId, canonical, title,
+# and introduction. Authors that wish to provide different values can
+# supply them as properties under history. All other properties under
+# history are assumed to be versions. To provide a custom package-list.json
+# file, remove this property and include a package-list.json file in ig-data.
+history:
+  # The current version is special. If the author provides only a
+  # single value, it is assumed to be the URL path to the current
+  # build. The following default values will then be used:
+  #   desc: Continuous Integration Build (latest in version control)
+  #   status: ci-build
+  #   current: true
+  current: http://build.fhir.org/ig/HL7/example-ig/
+  # All other versions need each of their values fully specified.
+  # See: https://confluence.hl7.org/pages/viewpage.action?pageId=66928420#FHIRIGPackageListdoco-PublicationObject
+  1.0.0:
+    fhirversion: 4.0.1
+    date: 2020-03-06
+    desc: STU 1 Release
+    path: https://hl7.org/fhir/us/example/STU1/
+    status: trial-use
+    sequence: STU 1
+    current: true
+  0.9.1:
+    fhirversion: 4.0.0
+    date: 2019-06-10
+    desc: Initial STU ballot (Sep 2019 Ballot)
+    path: https://hl7.org/fhir/us/example/2019Sep/
+    status: ballot
+    sequence: STU 1
+
+# The indexPageContent property is used to generate a basic index.md file. To provide a
+# custom index file, do not include this property and include an index.md or index.xml file
+# in input/pages/ or input/pagecontent folders.
+indexPageContent: Example Index Page Content
+
+# The FSHOnly flag indicates if only FSH resources should be exported.
+# If set to true, no IG related content will be generated.
+# The default value for this property is false.
+FSHOnly: false

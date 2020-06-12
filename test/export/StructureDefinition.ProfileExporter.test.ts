@@ -5,6 +5,7 @@ import { Profile } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -22,11 +23,7 @@ describe('ProfileExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], {
-      name: 'test',
-      version: '0.0.1',
-      canonical: 'http://example.com'
-    });
+    const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);

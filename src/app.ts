@@ -3,12 +3,15 @@
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
+import chalk from 'chalk';
+import { pad, padStart, sample, padEnd } from 'lodash';
 import { FSHTank } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
 import { logger, stats, Type } from './utils';
 import { loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
+import { Configuration } from './fshtypes';
 import {
   findInputDir,
   ensureOutputDir,
@@ -19,8 +22,6 @@ import {
   getRawFSHes,
   getIgDataPath
 } from './utils/Processing';
-import { pad, padStart, sample, padEnd } from 'lodash';
-import chalk from 'chalk';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -63,14 +64,14 @@ async function app() {
   const isIgPubContext = path.parse(input).base === 'fsh';
   const outDir = ensureOutputDir(input, program.out, isIgPubContext);
 
-  let config: any;
+  let config: Configuration;
   try {
     config = readConfig(input);
   } catch {
     process.exit(1);
   }
 
-  // Load external dependencies
+  // Load dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs = loadExternalDependencies(defs, config);
 
@@ -102,11 +103,11 @@ async function app() {
   const outPackage = exportFHIR(tank, defs);
   writeFHIRResources(outDir, outPackage, program.snapshot);
 
-  // If igDataPath exists, generate an IG, otherwise, generate resources only
-  let isIG = false;
-  const igDataPath = getIgDataPath(input);
-  if (igDataPath) {
-    isIG = true;
+  // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
+  if (config.FSHOnly) {
+    logger.info('Exporting FSH definitions only. No IG related content will be exported.');
+  } else {
+    const igDataPath = getIgDataPath(input);
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);
@@ -114,7 +115,7 @@ async function app() {
   }
 
   console.log();
-  printResults(outPackage, isIG);
+  printResults(outPackage, !config.FSHOnly);
 
   const exitCode = stats.numError > 0 ? 1 : 0;
   process.exit(exitCode);

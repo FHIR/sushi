@@ -6,19 +6,14 @@ import { StructureDefinition } from '../../src/fhirtypes';
 import { MasterFisher } from '../../src/utils/MasterFisher';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import path from 'path';
+import { minimalConfig } from './minimalConfig';
 
 describe('MasterFisher', () => {
   let fisher: MasterFisher;
   beforeAll(() => {
-    const config = {
-      name: 'test',
-      canonical: 'http://example.org',
-      version: '0.0.1'
-    };
-
     const doc1 = new FSHDocument('doc.fsh');
-    doc1.aliases.set('TankProfile1', 'http://example.org/StructureDefinition/prf1');
-    doc1.aliases.set('PkgProfile3', 'http://example.org/StructureDefinition/profile3');
+    doc1.aliases.set('TankProfile1', 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1');
+    doc1.aliases.set('PkgProfile3', 'http://hl7.org/fhir/us/minimal/StructureDefinition/profile3');
     doc1.aliases.set('FHIRPatient', 'http://hl7.org/fhir/StructureDefinition/Patient');
     doc1.profiles.set('Profile1', new Profile('Profile1'));
     doc1.profiles.get('Profile1').id = 'prf1';
@@ -35,21 +30,21 @@ describe('MasterFisher', () => {
     );
     doc1.profiles.get('Practitioner').id = 'my-dr';
     doc1.profiles.get('Practitioner').parent = 'Practitioner';
-    const tank = new FSHTank([doc1], config);
+    const tank = new FSHTank([doc1], minimalConfig);
 
-    const pkg = new Package(config);
+    const pkg = new Package(tank.config);
     const profile3 = new StructureDefinition();
     profile3.name = 'Profile3';
     profile3.id = 'profile3';
     profile3.type = 'Condition';
-    profile3.url = 'http://example.org/StructureDefinition/profile3';
+    profile3.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/profile3';
     profile3.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile3.fhirVersion = '4.0.1';
     const profile4 = new StructureDefinition();
     profile4.name = 'MyVitalSigns';
     profile4.id = 'vitalsigns';
     profile4.type = 'Observation';
-    profile4.url = 'http://example.org/StructureDefinition/vitalsigns';
+    profile4.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/vitalsigns';
     profile4.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Observation';
     profile4.fhirVersion = '4.0.1';
     pkg.profiles.push(profile3, profile4);
@@ -73,7 +68,7 @@ describe('MasterFisher', () => {
       id: 'prf1',
       name: 'Profile1',
       sdType: 'Procedure',
-      url: 'http://example.org/StructureDefinition/prf1',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
       parent: 'Procedure'
     });
   });
@@ -87,7 +82,7 @@ describe('MasterFisher', () => {
       id: 'Profile2',
       name: 'Profile2',
       sdType: 'Observation',
-      url: 'http://example.org/StructureDefinition/Profile2',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Profile2',
       parent: 'bp'
     });
   });
@@ -107,7 +102,7 @@ describe('MasterFisher', () => {
       id: 'my-dr',
       name: 'Practitioner',
       sdType: undefined,
-      url: 'http://example.org/StructureDefinition/my-dr',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-dr',
       parent: 'Practitioner'
     });
   });
@@ -122,7 +117,7 @@ describe('MasterFisher', () => {
       id: 'profile3',
       name: 'Profile3',
       sdType: 'Condition',
-      url: 'http://example.org/StructureDefinition/profile3',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/profile3',
       parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
     });
   });
@@ -152,7 +147,7 @@ describe('MasterFisher', () => {
       id: 'vitalsigns',
       name: 'MyVitalSigns',
       sdType: 'Observation',
-      url: 'http://example.org/StructureDefinition/vitalsigns',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/vitalsigns',
       parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
     });
   });
@@ -166,7 +161,7 @@ describe('MasterFisher', () => {
       id: 'my-org',
       name: 'Organization',
       sdType: 'Organization',
-      url: 'http://example.org/StructureDefinition/my-org',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-org',
       parent: 'http://hl7.org/fhir/StructureDefinition/Organization'
     });
   });

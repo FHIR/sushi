@@ -1,14 +1,13 @@
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { CodeableConcept, Reference, BackboneElement } from './dataTypes';
+import { CodeableConcept, Reference, BackboneElement, DomainResource } from './dataTypes';
 
-export type ImplementationGuide = {
+export type ImplementationGuide = DomainResource & {
   resourceType: 'ImplementationGuide';
-  id: string;
   url: string;
   version?: string;
   name: string;
   title?: string;
-  status: 'draft' | 'active' | 'retired' | 'unknown';
+  status: ImplementationGuideStatus;
   experimental?: boolean;
   date?: string;
   publisher?: string;
@@ -26,8 +25,10 @@ export type ImplementationGuide = {
   manifest?: ImplementationGuideManifest;
 };
 
+export type ImplementationGuideStatus = 'draft' | 'active' | 'retired' | 'unknown';
+
 export type ImplementationGuideDependsOn = BackboneElement & {
-  uri: string;
+  uri?: string; // optional for Configuration usecase where packageId is used instead
   packageId?: string;
   version?: string;
 };
@@ -51,7 +52,7 @@ export type ImplementationGuideDefinitionGrouping = {
 };
 
 export type ImplementationGuideDefinitionResource = {
-  reference: Reference;
+  reference?: Reference; // optional to support Configuration use case where key is the reference
   fhirVersion?: string[];
   name?: string;
   description?: string;
@@ -63,8 +64,8 @@ export type ImplementationGuideDefinitionResource = {
 export type ImplementationGuideDefinitionPage = {
   nameUrl?: string;
   nameReference?: Reference;
-  title: string;
-  generation: ImplementationGuideDefinitionPageGeneration;
+  title?: string; // optional to support Configuration use case where title has a default
+  generation?: ImplementationGuideDefinitionPageGeneration; // optional to support Configuration...
   page?: ImplementationGuideDefinitionPage[];
 };
 

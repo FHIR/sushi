@@ -7,19 +7,15 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
-  Mapping
+  Mapping,
+  Configuration
 } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
-import { Config } from '../fshtypes/Config';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
 import { CaretValueRule } from '../fshtypes/rules';
 
 export class FSHTank implements Fishable {
-  constructor(
-    public readonly docs: FSHDocument[],
-    public readonly config: Config,
-    public readonly root?: string
-  ) {}
+  constructor(public readonly docs: FSHDocument[], public readonly config: Configuration) {}
 
   /**
    * Gets all profiles in the tank
