@@ -162,7 +162,8 @@ describe('ensureConfiguration', () => {
           current: true
         }
       },
-      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG',
+      FSHOnly: true
     });
 
     // Test at least one of the comments
@@ -237,7 +238,8 @@ describe('ensureConfiguration', () => {
           current: true
         }
       },
-      indexPageContent: ''
+      indexPageContent: '',
+      FSHOnly: true
     });
   });
 
@@ -335,7 +337,8 @@ describe('ensureConfiguration', () => {
           current: true
         }
       },
-      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
+      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG',
+      FSHOnly: true
     });
   });
 

@@ -370,6 +370,12 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
     );
   }
 
+  // FSHOnly - in SUSHI 0.12.x, presence or absence of ig-data indicated if you wanted an IG or not.
+  // But don't ever set FSHOnly when creating config.yaml "from scratch".
+  if (!fs.existsSync(path.join(root, 'ig-data')) && !isFromScratch) {
+    setPairs.push(new YAMLPair('FSHOnly', true));
+  }
+
   setPairs.forEach(p => contents.add(p));
   commentedPairs.forEach(p => contents.add(p));
 
