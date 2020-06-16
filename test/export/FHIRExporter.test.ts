@@ -5,7 +5,7 @@ import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
 import { Instance, Profile } from '../../src/fshtypes';
 import { CaretValueRule } from '../../src/fshtypes/rules';
-import { TestFisher } from '../testhelpers';
+import { TestFisher, loggerSpy } from '../testhelpers';
 
 describe('FHIRExporter', () => {
   it('should output empty results with empty input', () => {
@@ -40,6 +40,7 @@ describe('FHIRExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       doc = new FSHDocument('fileName');
       const input = new FSHTank([doc], minimalConfig);
       const pkg = new Package(input.config);
@@ -85,6 +86,20 @@ describe('FHIRExporter', () => {
         resourceType: 'Observation',
         id: 'myObservation'
       });
+    });
+
+    it('should log an error when a profile tries to contain a resource that does not exist', () => {
+      const profile = new Profile('ContainingProfile');
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = 'oops-no-resource';
+      profile.rules.push(caretValueRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.export();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Could not find a resource named oops-no-resource/s
+      );
     });
   });
 });
