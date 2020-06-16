@@ -25,38 +25,66 @@ describe('FHIRExporter', () => {
     );
   });
 
-  it('should allow a profile to contain an inline resource', () => {
-    const defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+  describe('#containedResources', () => {
+    let defs: FHIRDefinitions;
+    let doc: FSHDocument;
+    let exporter: FHIRExporter;
 
-    const doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
-    const exporter = new FHIRExporter(input, pkg, fisher);
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+    });
 
-    const instance = new Instance('myResource');
-    instance.instanceOf = 'Observation';
-    doc.instances.set(instance.name, instance);
+    beforeEach(() => {
+      doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      exporter = new FHIRExporter(input, pkg, fisher);
+    });
 
-    const profile = new Profile('ContainingProfile');
-    const caretValueRule = new CaretValueRule('');
-    caretValueRule.caretPath = 'contained';
-    caretValueRule.value = 'myResource';
-    profile.rules.push(caretValueRule);
-    doc.profiles.set(profile.name, profile);
+    it('should allow a profile to contain a defined resource', () => {
+      const profile = new Profile('ContainingProfile');
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = 'allergyintolerance-clinical';
+      profile.rules.push(caretValueRule);
+      doc.profiles.set(profile.name, profile);
 
-    const result = exporter.export();
+      const result = exporter.export();
 
-    expect(result.profiles.length).toBe(1);
-    expect(result.profiles[0].contained.length).toBe(1);
-    expect(result.profiles[0].contained[0]).toEqual({
-      resourceType: 'Observation',
-      id: 'myResource'
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].contained.length).toBe(1);
+      const containedResource = result.profiles[0].contained[0];
+      expect(containedResource).toEqual(
+        defs.allValueSets().find(vs => vs.id === 'allergyintolerance-clinical')
+      );
+    });
+
+    it('should allow a profile to contain an inline resource', () => {
+      const instance = new Instance('myObservation');
+      instance.instanceOf = 'Observation';
+      doc.instances.set(instance.name, instance);
+
+      const profile = new Profile('ContainingProfile');
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = 'myObservation';
+      profile.rules.push(caretValueRule);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].contained.length).toBe(1);
+      expect(result.profiles[0].contained[0]).toEqual({
+        resourceType: 'Observation',
+        id: 'myObservation'
+      });
     });
   });
 });

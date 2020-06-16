@@ -2,7 +2,8 @@ import {
   StructureDefinition,
   ElementDefinition,
   ElementDefinitionBindingStrength,
-  idRegex
+  idRegex,
+  InstanceDefinition
 } from '../fhirtypes';
 import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
@@ -225,11 +226,25 @@ export class StructureDefinitionExporter implements Fishable {
       for (const rule of rules) {
         if (typeof rule.value === 'string') {
           const fishedValue = this.fishForFHIR(rule.value);
+          // an inline instance will fish up an InstanceDefinition, which can be used directly.
+          // other instances will fish up an Object, which needs to be turned into an InstanceDefinition.
+          // an InstanceDefinition needs a resourceType, so check for that property.
           if (fishedValue) {
-            try {
-              sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
-            } catch (e) {
-              logger.error(e, rule.sourceInfo);
+            if (fishedValue instanceof InstanceDefinition) {
+              try {
+                sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
+              } catch (e) {
+                logger.error(e, rule.sourceInfo);
+              }
+            } else if (fishedValue instanceof Object && fishedValue.resourceType) {
+              const fishedInstance = InstanceDefinition.fromJSON(fishedValue);
+              try {
+                sd.setInstancePropertyByPath(rule.caretPath, fishedInstance, this);
+              } catch (e) {
+                logger.error(e, rule.sourceInfo);
+              }
+            } else {
+              logger.error(`Could not find a resource named ${rule.value}.`, rule.sourceInfo);
             }
           } else {
             logger.error(`Could not find a resource named ${rule.value}.`, rule.sourceInfo);
