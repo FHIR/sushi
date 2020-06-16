@@ -11,7 +11,8 @@ import {
   ParentDeclaredAsProfileNameError,
   InvalidFHIRIdError,
   InvalidExtensionParentError,
-  ParentDeclaredAsProfileIdError
+  ParentDeclaredAsProfileIdError,
+  MismatchedTypeError
 } from '../errors';
 import {
   CardRule,
@@ -37,6 +38,8 @@ import { Package } from './Package';
  * The operations and structure of both exporters are very similar, so they currently share an exporter.
  */
 export class StructureDefinitionExporter implements Fishable {
+  deferredRules = new Map<StructureDefinition, CaretValueRule[]>();
+
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
@@ -173,7 +176,23 @@ export class StructureDefinitionExporter implements Fishable {
             if (rule.path !== '') {
               element.setInstancePropertyByPath(rule.caretPath, rule.value, this);
             } else {
-              structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
+              try {
+                structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
+              } catch (e) {
+                if (
+                  e instanceof MismatchedTypeError &&
+                  e.valueType === 'string' &&
+                  e.elementType === 'Resource'
+                ) {
+                  if (this.deferredRules.has(structDef)) {
+                    this.deferredRules.get(structDef).push(rule);
+                  } else {
+                    this.deferredRules.set(structDef, [rule]);
+                  }
+                } else {
+                  throw e;
+                }
+              }
             }
           } else if (rule instanceof ObeysRule) {
             const invariant = this.tank.fish(rule.invariant, Type.Invariant) as Invariant;
@@ -199,6 +218,25 @@ export class StructureDefinitionExporter implements Fishable {
         );
       }
     }
+  }
+
+  applyDeferredRules() {
+    this.deferredRules.forEach((rules, sd) => {
+      for (const rule of rules) {
+        if (typeof rule.value === 'string') {
+          const fishedValue = this.fishForFHIR(rule.value);
+          if (fishedValue) {
+            try {
+              sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
+            } catch (e) {
+              logger.error(e, rule.sourceInfo);
+            }
+          } else {
+            logger.error(`Could not find a resource named ${rule.value}.`, rule.sourceInfo);
+          }
+        }
+      }
+    });
   }
 
   /**

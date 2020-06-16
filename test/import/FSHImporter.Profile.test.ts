@@ -1483,6 +1483,17 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         assertCaretValueRule(profile.rules[0], 'status', 'short', 'Non-breaking');
       });
+
+      it('should add resources to the contained array using a CaretValueRule', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * ^contained = myResource
+        `;
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        assertCaretValueRule(profile.rules[0], '', 'contained', 'myResource');
+      });
     });
 
     describe('#obeysRule', () => {

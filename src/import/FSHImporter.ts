@@ -1232,6 +1232,8 @@ export class FSHImporter extends FSHVisitor {
     // Get the caret path, but slice off the starting ^
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
+    caretValueRule.isInstance =
+      ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
     return caretValueRule;
   }
 

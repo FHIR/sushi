@@ -1793,8 +1793,8 @@ describe('InstanceExporter', () => {
         // * entry ^slicing.discriminator.type = #value
         // * entry contains Patient 0..1
         // * entry[PatientsOnly].resource only Patient
-        // * contained contains PatientOrOrganization 0..1
-        // * contained[PatientOrOrganization] only Patient or Organization
+        // * entry contains PatientOrOrganization 0..1
+        // * entry[PatientOrOrganization] only Patient or Organization
         bundle.rules.push(
           caretRule,
           containsRule,

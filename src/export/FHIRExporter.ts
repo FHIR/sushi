@@ -40,6 +40,7 @@ export class FHIRExporter {
     this.valueSetExporter.export();
     this.codeSystemExporter.export();
     this.instanceExporter.export();
+    this.structureDefinitionExporter.applyDeferredRules();
     this.mappingExporter.export();
 
     return this.pkg;
