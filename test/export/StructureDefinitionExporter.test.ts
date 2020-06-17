@@ -1595,7 +1595,7 @@ describe('StructureDefinitionExporter', () => {
     // Quantity is the first ancestor of Duration and Age
 
     // * value[x] only Duration or Age
-    // * value[x].comparator = #>
+    // * value[x].comparator = #>=
 
     const extension = new Extension('QuantifiedExtension');
 
