@@ -48,11 +48,12 @@ describe('FHIRExporter', () => {
       exporter = new FHIRExporter(input, pkg, fisher);
     });
 
-    it('should allow a profile to contain a defined resource', () => {
+    it('should allow a profile to contain a defined FHIR resource', () => {
       const profile = new Profile('ContainingProfile');
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'allergyintolerance-clinical';
+      caretValueRule.isInstance = true;
       profile.rules.push(caretValueRule);
       doc.profiles.set(profile.name, profile);
 
@@ -66,7 +67,7 @@ describe('FHIRExporter', () => {
       );
     });
 
-    it('should allow a profile to contain an inline resource', () => {
+    it('should allow a profile to contain a FSH resource', () => {
       const instance = new Instance('myObservation');
       instance.instanceOf = 'Observation';
       doc.instances.set(instance.name, instance);
@@ -75,6 +76,7 @@ describe('FHIRExporter', () => {
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'myObservation';
+      caretValueRule.isInstance = true;
       profile.rules.push(caretValueRule);
       doc.profiles.set(profile.name, profile);
 
@@ -88,11 +90,35 @@ describe('FHIRExporter', () => {
       });
     });
 
+    it('should log an error when a profile tries to contain an instance that is not a resource', () => {
+      const instance = new Instance('MyCodeable');
+      instance.instanceOf = 'CodeableConcept';
+      instance.usage = 'Inline';
+      doc.instances.set(instance.name, instance);
+
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Patient';
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained[0]';
+      caretValueRule.value = 'MyCodeable';
+      caretValueRule.isInstance = true;
+      profile.rules.push(caretValueRule);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].contained).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Could not find a resource named MyCodeable/s
+      );
+    });
+
     it('should log an error when a profile tries to contain a resource that does not exist', () => {
       const profile = new Profile('ContainingProfile');
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'oops-no-resource';
+      caretValueRule.isInstance = true;
       profile.rules.push(caretValueRule);
       doc.profiles.set(profile.name, profile);
 

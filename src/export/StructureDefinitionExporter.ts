@@ -180,11 +180,7 @@ export class StructureDefinitionExporter implements Fishable {
               try {
                 structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
               } catch (e) {
-                if (
-                  e instanceof MismatchedTypeError &&
-                  e.valueType === 'string' &&
-                  e.elementType === 'Resource'
-                ) {
+                if (e instanceof MismatchedTypeError && rule.isInstance) {
                   if (this.deferredRules.has(structDef)) {
                     this.deferredRules.get(structDef).push(rule);
                   } else {
@@ -228,9 +224,13 @@ export class StructureDefinitionExporter implements Fishable {
           const fishedValue = this.fishForFHIR(rule.value);
           // an inline instance will fish up an InstanceDefinition, which can be used directly.
           // other instances will fish up an Object, which needs to be turned into an InstanceDefinition.
-          // an InstanceDefinition needs a resourceType, so check for that property.
+          // an InstanceDefinition of a resource needs a resourceType, so check for that property.
+          // if we can't find a resourceType or an sdType, we have a non-resource Instance, which is no good
           if (fishedValue) {
-            if (fishedValue instanceof InstanceDefinition) {
+            if (
+              fishedValue instanceof InstanceDefinition &&
+              (fishedValue.resourceType || fishedValue._instanceMeta?.sdType)
+            ) {
               try {
                 sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
               } catch (e) {
@@ -244,10 +244,10 @@ export class StructureDefinitionExporter implements Fishable {
                 logger.error(e, rule.sourceInfo);
               }
             } else {
-              logger.error(`Could not find a resource named ${rule.value}.`, rule.sourceInfo);
+              logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
             }
           } else {
-            logger.error(`Could not find a resource named ${rule.value}.`, rule.sourceInfo);
+            logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
           }
         }
       }

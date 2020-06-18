@@ -146,6 +146,7 @@ describe('ProfileExporter', () => {
     const caretValueRule = new CaretValueRule('');
     caretValueRule.caretPath = 'contained';
     caretValueRule.value = 'myResource';
+    caretValueRule.isInstance = true;
     profile.rules.push(caretValueRule);
     doc.profiles.set(profile.name, profile);
 
