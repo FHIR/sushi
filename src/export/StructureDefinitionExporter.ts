@@ -12,8 +12,7 @@ import {
   ParentDeclaredAsProfileNameError,
   InvalidFHIRIdError,
   InvalidExtensionParentError,
-  ParentDeclaredAsProfileIdError,
-  MismatchedTypeError
+  ParentDeclaredAsProfileIdError
 } from '../errors';
 import {
   CardRule,
@@ -177,18 +176,14 @@ export class StructureDefinitionExporter implements Fishable {
             if (rule.path !== '') {
               element.setInstancePropertyByPath(rule.caretPath, rule.value, this);
             } else {
-              try {
-                structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
-              } catch (e) {
-                if (e instanceof MismatchedTypeError && rule.isInstance) {
-                  if (this.deferredRules.has(structDef)) {
-                    this.deferredRules.get(structDef).push(rule);
-                  } else {
-                    this.deferredRules.set(structDef, [rule]);
-                  }
+              if (rule.isInstance) {
+                if (this.deferredRules.has(structDef)) {
+                  this.deferredRules.get(structDef).push(rule);
                 } else {
-                  throw e;
+                  this.deferredRules.set(structDef, [rule]);
                 }
+              } else {
+                structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
               }
             }
           } else if (rule instanceof ObeysRule) {
@@ -227,10 +222,7 @@ export class StructureDefinitionExporter implements Fishable {
           // an InstanceDefinition of a resource needs a resourceType, so check for that property.
           // if we can't find a resourceType or an sdType, we have a non-resource Instance, which is no good
           if (fishedValue) {
-            if (
-              fishedValue instanceof InstanceDefinition &&
-              (fishedValue.resourceType || fishedValue._instanceMeta?.sdType)
-            ) {
+            if (fishedValue instanceof InstanceDefinition && fishedValue.resourceType) {
               try {
                 sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
               } catch (e) {

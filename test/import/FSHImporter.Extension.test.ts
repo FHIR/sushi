@@ -318,7 +318,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertCaretValueRule(extension.rules[0], 'id', 'short', 'foo');
+        assertCaretValueRule(extension.rules[0], 'id', 'short', 'foo', false);
       });
     });
 

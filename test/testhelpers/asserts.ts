@@ -106,13 +106,15 @@ export function assertCaretValueRule(
   rule: Rule,
   path: string,
   caretPath: string,
-  value: FixedValueType
+  value: FixedValueType,
+  isInstance: boolean
 ): void {
   expect(rule).toBeInstanceOf(CaretValueRule);
   const caretValueRule = rule as CaretValueRule;
   expect(caretValueRule.path).toBe(path);
   expect(caretValueRule.caretPath).toBe(caretPath);
   expect(caretValueRule.value).toEqual(value);
+  expect(caretValueRule.isInstance).toBe(isInstance);
 }
 
 export function assertObeysRule(rule: Rule, path: string, invariant: string) {
