@@ -28,7 +28,8 @@ import {
   MultipleStandardsStatusError,
   InvalidMappingError,
   InvalidFHIRIdError,
-  DuplicateSliceError
+  DuplicateSliceError,
+  NonAbstractParentOfSpecializationError
 } from '../errors';
 import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -771,6 +772,7 @@ export class ElementDefinition {
     // type itself or any of its parents.  For example, a BloodPressure profile could match on
     // an Observation already having a BP profile, an Observation type w/ no profiles, a
     // DomainResource type w/ no profiles, or a Resource type w/ no profiles.
+    let specializationOfNonAbstractType = false;
     for (const md of lineage) {
       if (type.isReference) {
         // References always have a code 'Reference' w/ the referenced type's defining URL set as
@@ -787,6 +789,13 @@ export class ElementDefinition {
         matchedType = targetTypes.find(t2 => {
           const matchesUnprofiledResource = t2.code === md.id && isEmpty(t2.profile);
           const matchesProfile = t2.code === md.sdType && t2.profile?.includes(md.url);
+          // True if we match an unprofiled type that is not abstract, is a parent, and that we are
+          // specializing (the type does not match the sdType of the type to match)
+          specializationOfNonAbstractType =
+            matchesUnprofiledResource &&
+            !md.abstract &&
+            md.id !== lineage[0].id &&
+            md.id !== lineage[0].sdType;
           return matchesUnprofiledResource || matchesProfile;
         });
       }
@@ -801,6 +810,8 @@ export class ElementDefinition {
         type.isReference ? `Reference(${type.type})` : type.type,
         targetTypes
       );
+    } else if (specializationOfNonAbstractType) {
+      throw new NonAbstractParentOfSpecializationError(type.type, matchedType.code);
     }
 
     return {

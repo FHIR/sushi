@@ -1597,20 +1597,19 @@ describe('StructureDefinitionExporter', () => {
     // * value[x] only Duration or Age
     // * value[x].comparator = #>=
 
-    const profile = new Profile('QuantifiedObservation');
-    profile.parent = 'Observation';
+    const extension = new Extension('QuantifiedExtension');
 
     const onlyRule = new OnlyRule('value[x]');
     onlyRule.types = [{ type: 'Duration' }, { type: 'Age' }];
-    profile.rules.push(onlyRule);
+    extension.rules.push(onlyRule);
 
     const fixedValueRule = new FixedValueRule('value[x].comparator');
     fixedValueRule.fixedValue = new FshCode('>=');
-    profile.rules.push(fixedValueRule);
+    extension.rules.push(fixedValueRule);
 
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-    const fixedElement = sd.findElement('Observation.value[x].comparator');
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const fixedElement = sd.findElement('Extension.value[x].comparator');
     expect(fixedElement.patternCode).toBe('>=');
   });
 

@@ -129,6 +129,7 @@ describe('MasterFisher', () => {
 
     const resultMD = fisher.fishForMetadata('Patient');
     expect(resultMD).toEqual({
+      abstract: false,
       id: 'Patient',
       name: 'Patient',
       sdType: 'Patient',
