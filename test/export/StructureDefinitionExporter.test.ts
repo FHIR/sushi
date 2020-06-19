@@ -3853,6 +3853,21 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
+  it('should include the children of primitive elements when serializing to JSON', () => {
+    const profile = new Profile('SpecialUrlId');
+    profile.parent = 'Observation';
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'url.id';
+    rule.value = 'my-id';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const json = sd.toJSON();
+    expect(json).toHaveProperty('_url', { id: 'my-id' });
+  });
+
   it.skip('should not change sliceName based on a CaretValueRule', () => {
     const profile = new Profile('NameChange');
     profile.parent = 'resprate';
