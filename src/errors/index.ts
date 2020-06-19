@@ -43,3 +43,4 @@ export * from './ParentDeclaredAsProfileIdError';
 export * from './InvalidResourceTypeError';
 export * from './InvalidExtensionParentError';
 export * from './InvalidTypeAccessError';
+export * from './NonAbstractParentOfSpecializationError';

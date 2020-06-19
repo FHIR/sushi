@@ -522,5 +522,18 @@ describe('ElementDefinition', () => {
       }).toThrow(/No definition for the type "VitalBillboards" could be found./);
       expect(clone).toEqual(hasMember);
     });
+
+    it('should throw NonAbstractParentError when constraining a non-abstract parent to a specialization of it', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const clone = cloneDeep(valueX);
+      expect(() => {
+        const valueConstraint = new OnlyRule('value[x]');
+        valueConstraint.types = [{ type: 'Duration' }];
+        clone.constrainType(valueConstraint, fisher);
+      }).toThrow(
+        /The type Quantity is not abstract, so it cannot be constrained to the specialization Duration/
+      );
+      expect(clone).toEqual(valueX);
+    });
   });
 });
