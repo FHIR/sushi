@@ -1,7 +1,8 @@
 import {
   assertValueSetConceptComponent,
   assertValueSetFilterComponent,
-  assertCaretValueRule
+  assertCaretValueRule,
+  assertInsertRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode, VsOperator } from '../../src/fshtypes';
@@ -831,6 +832,30 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        ValueSet: MyVS
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const vs = result.valueSets.get('MyVS');
+        expect(vs.rules).toHaveLength(1);
+        assertInsertRule(vs.rules[0], ['MyRuleSet']);
+      });
+
+      it('should parse an insert rule with multiple RuleSets', () => {
+        const input = `
+        ValueSet: MyVS
+        * insert MyRuleSet1 and MyRuleSet2
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const vs = result.valueSets.get('MyVS');
+        expect(vs.rules).toHaveLength(1);
+        assertInsertRule(vs.rules[0], ['MyRuleSet1', 'MyRuleSet2']);
       });
     });
   });

@@ -1,7 +1,7 @@
 import { FshEntity } from './FshEntity';
 import { FshConcept } from './FshConcept';
 import { CodeSystemDuplicateCodeError } from '../errors/CodeSystemDuplicateCodeError';
-import { CaretValueRule } from './rules';
+import { CaretValueRule, InsertRule } from './rules';
 
 /**
  * For more information about a CodeSystem in FHIR,
@@ -12,7 +12,7 @@ export class FshCodeSystem extends FshEntity {
   title?: string;
   description?: string;
   concepts: FshConcept[];
-  rules: CaretValueRule[];
+  rules: (CaretValueRule | InsertRule)[];
 
   constructor(public name: string) {
     super();

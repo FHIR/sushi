@@ -1,5 +1,5 @@
 import { importSingleText } from '../testhelpers/importSingleText';
-import { assertMappingRule } from '../testhelpers/asserts';
+import { assertMappingRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
 
@@ -218,6 +218,30 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /Do not specify a system for mapping language.*File: Mapping\.fsh.*Line: 3\D*/s
         );
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        Mapping: MyMapping
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const mapping = result.mappings.get('MyMapping');
+        expect(mapping.rules).toHaveLength(1);
+        assertInsertRule(mapping.rules[0], ['MyRuleSet']);
+      });
+
+      it('should parse an insert rule with multiple RuleSets', () => {
+        const input = `
+        Mapping: MyMapping
+        * insert MyRuleSet1 and MyRuleSet2
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const mapping = result.mappings.get('MyMapping');
+        expect(mapping.rules).toHaveLength(1);
+        assertInsertRule(mapping.rules[0], ['MyRuleSet1', 'MyRuleSet2']);
       });
     });
   });

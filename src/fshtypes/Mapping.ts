@@ -1,5 +1,6 @@
 import { FshEntity } from '.';
 import { MappingRule } from './rules/MappingRule';
+import { InsertRule } from './rules';
 
 /**
  * The Mapping class is used to contain mapping info for SDs
@@ -10,7 +11,7 @@ export class Mapping extends FshEntity {
   target?: string;
   description?: string;
   title?: string;
-  rules: MappingRule[];
+  rules: (MappingRule | InsertRule)[];
 
   constructor(public name: string) {
     super();

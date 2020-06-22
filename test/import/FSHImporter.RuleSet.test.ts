@@ -1,5 +1,10 @@
 import { importSingleText } from '../testhelpers/importSingleText';
-import { assertValueSetRule, assertFixedValueRule, assertCardRule } from '../testhelpers/asserts';
+import {
+  assertValueSetRule,
+  assertFixedValueRule,
+  assertCardRule,
+  assertInsertRule
+} from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
@@ -51,6 +56,33 @@ describe('FSHImporter', () => {
         'required'
       );
       assertFixedValueRule(ruleSet.rules[1], 'active', true, true);
+      assertCardRule(ruleSet.rules[2], 'contact', 1, '1');
+    });
+
+    it('should parse a RuleSet with an insert rule', () => {
+      const input = `
+        RuleSet: RuleRuleSet
+        * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
+        * insert OtherRuleSet
+        * contact 1..1
+        `;
+      const result = importSingleText(input, 'Rules.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('RuleRuleSet');
+      expect(ruleSet.name).toBe('RuleRuleSet');
+      expect(ruleSet.sourceInfo.location).toEqual({
+        startLine: 2,
+        startColumn: 9,
+        endLine: 5,
+        endColumn: 22
+      });
+      assertValueSetRule(
+        ruleSet.rules[0],
+        'gender',
+        'https://www.hl7.org/fhir/valueset-administrative-gender.html',
+        'required'
+      );
+      assertInsertRule(ruleSet.rules[1], ['OtherRuleSet']);
       assertCardRule(ruleSet.rules[2], 'contact', 1, '1');
     });
 

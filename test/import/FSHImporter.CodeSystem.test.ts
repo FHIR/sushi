@@ -1,5 +1,5 @@
 import { importSingleText } from '../testhelpers/importSingleText';
-import { assertCaretValueRule } from '../testhelpers/asserts';
+import { assertCaretValueRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('FSHImporter', () => {
@@ -353,6 +353,30 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        CodeSystem: MyCS
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const cs = result.codeSystems.get('MyCS');
+        expect(cs.rules).toHaveLength(1);
+        assertInsertRule(cs.rules[0], ['MyRuleSet']);
+      });
+
+      it('should parse an insert rule with multiple RuleSets', () => {
+        const input = `
+        ValueSet: MyCS
+        * insert MyRuleSet1 and MyRuleSet2
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const cs = result.valueSets.get('MyCS');
+        expect(cs.rules).toHaveLength(1);
+        assertInsertRule(cs.rules[0], ['MyRuleSet1', 'MyRuleSet2']);
       });
     });
   });

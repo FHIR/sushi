@@ -6,7 +6,8 @@ import {
   assertCaretValueRule,
   assertObeysRule,
   assertContainsRule,
-  assertFixedValueRule
+  assertFixedValueRule,
+  assertInsertRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -334,6 +335,30 @@ describe('FSHImporter', () => {
         expect(extension.rules).toHaveLength(2);
         assertObeysRule(extension.rules[0], 'extension', 'inv-1');
         assertObeysRule(extension.rules[1], 'extension', 'inv-2');
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        Extension: MyExtension
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const extension = result.extensions.get('MyExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertInsertRule(extension.rules[0], ['MyRuleSet']);
+      });
+
+      it('should parse an insert rule with multiple RuleSets', () => {
+        const input = `
+        Extension: MyExtension
+        * insert MyRuleSet1 and MyRuleSet2
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const extension = result.extensions.get('MyExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertInsertRule(extension.rules[0], ['MyRuleSet1', 'MyRuleSet2']);
       });
     });
   });

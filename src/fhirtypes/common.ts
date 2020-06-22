@@ -231,7 +231,9 @@ export function replaceReferences(
     // If we can't find a matching instance, just leave the reference as is
     if (instance && instanceMeta) {
       // If the instance has a rule setting id, that overrides instance.id
-      const idRule = instance.rules.find(r => r.path === 'id');
+      const idRule = instance.rules.find(
+        r => r.path === 'id' && r instanceof FixedValueRule
+      ) as FixedValueRule;
       const id = idRule?.fixedValue ?? instance.id;
       clone = cloneDeep(rule);
       const fv = clone.fixedValue as FshReference;

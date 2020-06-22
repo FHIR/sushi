@@ -43,7 +43,7 @@ export interface SdMetadataContext extends ParserRuleContext {
 export interface InstanceContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   instanceMetadata(): InstanceMetadataContext[];
-  fixedValueRule(): FixedValueRuleContext[];
+  instanceRule(): InstanceRuleContext[];
 }
 
 export interface InstanceMetadataContext extends ParserRuleContext {
@@ -54,11 +54,16 @@ export interface InstanceMetadataContext extends ParserRuleContext {
   mixins(): MixinsContext;
 }
 
+export interface InstanceRuleContext extends ParserRuleContext {
+  fixedValueRule(): FixedValueRuleContext;
+  insertRule(): InsertRuleContext;
+}
+
 export interface ValueSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   vsMetadata(): VsMetadataContext[];
   vsComponent(): VsComponentContext[];
-  caretValueRule(): CaretValueRuleContext[];
+  vsRule(): VsRuleContext[];
 }
 
 export interface VsMetadataContext extends ParserRuleContext {
@@ -67,17 +72,26 @@ export interface VsMetadataContext extends ParserRuleContext {
   description(): DescriptionContext;
 }
 
+export interface VsRuleContext extends ParserRuleContext {
+  caretValueRule(): CaretValueRuleContext;
+  insertRule(): InsertRuleContext;
+}
+
 export interface CodeSystemContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   csMetadata(): CsMetadataContext[];
   concept(): ConceptContext[];
-  caretValueRule(): CaretValueRuleContext[];
+  csRule(): CsRuleContext[];
 }
 
 export interface CsMetadataContext extends ParserRuleContext {
   id(): IdContext;
   title(): TitleContext;
   description(): DescriptionContext;
+}
+export interface CsRuleContext extends ParserRuleContext {
+  caretValueRule(): CaretValueRuleContext;
+  insertRule(): InsertRuleContext;
 }
 
 export interface InvariantContext extends ParserRuleContext {
@@ -100,7 +114,7 @@ export interface RuleSetContext extends ParserRuleContext {
 export interface MappingContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   mappingMetadata(): MappingMetadataContext[];
-  mappingRule(): MappingRuleContext[];
+  mappingEntityRule(): MappingEntityRuleContext[];
 }
 
 export interface MappingMetadataContext extends ParserRuleContext {
@@ -109,6 +123,11 @@ export interface MappingMetadataContext extends ParserRuleContext {
   source(): SourceContext;
   target(): TargetContext;
   title(): TitleContext;
+}
+
+export interface MappingEntityRuleContext extends ParserRuleContext {
+  mappingRule(): MappingRuleContext;
+  insertRule(): InsertRuleContext;
 }
 
 export interface ParentContext extends ParserRuleContext {
@@ -170,6 +189,7 @@ export interface SdRuleContext extends ParserRuleContext {
   onlyRule(): OnlyRuleContext;
   obeysRule(): ObeysRuleContext;
   caretValueRule(): CaretValueRuleContext;
+  insertRule(): InsertRuleContext;
 }
 
 export interface PathContext extends ParserRuleContext {
@@ -306,6 +326,10 @@ export interface CaretValueRuleContext extends ParserRuleContext {
   path(): PathContext;
   caretPath(): CaretPathContext;
   value(): ValueContext;
+}
+
+export interface InsertRuleContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext[];
 }
 
 export interface MappingRuleContext extends ParserRuleContext {

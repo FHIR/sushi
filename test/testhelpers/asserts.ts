@@ -11,7 +11,8 @@ import {
   ContainsRuleItem,
   CaretValueRule,
   ObeysRule,
-  MappingRule
+  MappingRule,
+  InsertRule
 } from '../../src/fshtypes/rules';
 import {
   ValueSetComponent,
@@ -122,6 +123,13 @@ export function assertObeysRule(rule: Rule, path: string, invariant: string) {
   const obeysRule = rule as ObeysRule;
   expect(obeysRule.path).toBe(path);
   expect(obeysRule.invariant).toBe(invariant);
+}
+
+export function assertInsertRule(rule: Rule, ruleSets: string[]) {
+  expect(rule).toBeInstanceOf(InsertRule);
+  const insertRule = rule as InsertRule;
+  expect(insertRule.path).toBe('');
+  expect(insertRule.ruleSets).toEqual(ruleSets);
 }
 
 export function assertMappingRule(

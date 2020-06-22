@@ -42,7 +42,8 @@ import {
   ContainsRuleItem,
   CaretValueRule,
   ObeysRule,
-  MappingRule
+  MappingRule,
+  InsertRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -320,7 +321,7 @@ export class FSHImporter extends FSHVisitor {
       });
     } else {
       try {
-        this.parseInstance(instance, ctx.instanceMetadata(), ctx.fixedValueRule());
+        this.parseInstance(instance, ctx.instanceMetadata(), ctx.instanceRule());
         this.currentDoc.instances.set(instance.name, instance);
       } catch (e) {
         logger.error(e.message, instance.sourceInfo);
@@ -331,7 +332,7 @@ export class FSHImporter extends FSHVisitor {
   private parseInstance(
     instance: Instance,
     metaCtx: pc.InstanceMetadataContext[] = [],
-    ruleCtx: pc.FixedValueRuleContext[] = []
+    ruleCtx: pc.InstanceRuleContext[] = []
   ): void {
     const seenPairs: Map<InstanceMetadataKey, string | string[]> = new Map();
     metaCtx
@@ -365,8 +366,8 @@ export class FSHImporter extends FSHVisitor {
     if (!instance.instanceOf) {
       throw new RequiredMetadataError('InstanceOf', 'Instance', instance.name);
     }
-    ruleCtx.forEach(fvRule => {
-      instance.rules.push(this.visitFixedValueRule(fvRule));
+    ruleCtx.forEach(instanceRule => {
+      instance.rules.push(this.visitInstanceRule(instanceRule));
     });
   }
 
@@ -380,7 +381,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent(), ctx.caretValueRule());
+      this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent(), ctx.vsRule());
       this.currentDoc.valueSets.set(valueSet.name, valueSet);
     }
   }
@@ -389,7 +390,7 @@ export class FSHImporter extends FSHVisitor {
     valueSet: FshValueSet,
     metaCtx: pc.VsMetadataContext[] = [],
     componentCtx: pc.VsComponentContext[] = [],
-    caretValueRuleCtx: pc.CaretValueRuleContext[] = []
+    vsRuleCtx: pc.VsRuleContext[] = []
   ) {
     const seenPairs: Map<VsMetadataKey, string> = new Map();
     metaCtx
@@ -439,17 +440,10 @@ export class FSHImporter extends FSHVisitor {
           valueSet.components.push(vsComponent);
         }
       });
-    caretValueRuleCtx.forEach(caretValueRule => {
-      const rule = this.visitCaretValueRule(caretValueRule);
-      if (rule.path) {
-        logger.error(
-          'Caret rule on ValueSet cannot contain path before ^, skipping rule.',
-          rule.sourceInfo
-        );
-      } else {
-        valueSet.rules.push(this.visitCaretValueRule(caretValueRule));
-      }
+    vsRuleCtx.forEach(vsRule => {
+      valueSet.rules.push(this.visitVsRule(vsRule));
     });
+    valueSet.rules = valueSet.rules.filter(rule => rule);
   }
 
   visitCodeSystem(ctx: pc.CodeSystemContext) {
@@ -462,7 +456,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.concept(), ctx.caretValueRule());
+      this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.concept(), ctx.csRule());
       this.currentDoc.codeSystems.set(codeSystem.name, codeSystem);
     }
   }
@@ -471,7 +465,7 @@ export class FSHImporter extends FSHVisitor {
     codeSystem: FshCodeSystem,
     metaCtx: pc.CsMetadataContext[] = [],
     conceptCtx: pc.ConceptContext[] = [],
-    caretValueRuleCtx: pc.CaretValueRuleContext[] = []
+    csRuleCtx: pc.CsRuleContext[] = []
   ) {
     const seenPairs: Map<CsMetadataKey, string> = new Map();
     metaCtx
@@ -506,17 +500,10 @@ export class FSHImporter extends FSHVisitor {
         logger.error(e.message, newConcept.sourceInfo);
       }
     });
-    caretValueRuleCtx.forEach(caretValueRule => {
-      const rule = this.visitCaretValueRule(caretValueRule);
-      if (rule.path) {
-        logger.error(
-          'Caret rule on CodeSystem cannot contain path before ^, skipping rule.',
-          rule.sourceInfo
-        );
-      } else {
-        codeSystem.rules.push(this.visitCaretValueRule(caretValueRule));
-      }
+    csRuleCtx.forEach(csRule => {
+      codeSystem.rules.push(this.visitCsRule(csRule));
     });
+    codeSystem.rules = codeSystem.rules.filter(rule => rule);
   }
 
   visitInvariant(ctx: pc.InvariantContext) {
@@ -601,7 +588,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseMapping(mapping, ctx.mappingMetadata(), ctx.mappingRule());
+      this.parseMapping(mapping, ctx.mappingMetadata(), ctx.mappingEntityRule());
       this.currentDoc.mappings.set(mapping.name, mapping);
     }
   }
@@ -609,7 +596,7 @@ export class FSHImporter extends FSHVisitor {
   parseMapping(
     mapping: Mapping,
     metaCtx: pc.MappingMetadataContext[] = [],
-    ruleCtx: pc.MappingRuleContext[] = []
+    ruleCtx: pc.MappingEntityRuleContext[] = []
   ): void {
     const seenPairs: Map<MappingMetadataKey, string> = new Map();
     metaCtx
@@ -638,7 +625,7 @@ export class FSHImporter extends FSHVisitor {
         }
       });
     ruleCtx.forEach(mappingRule => {
-      mapping.rules.push(this.visitMappingRule(mappingRule));
+      mapping.rules.push(this.visitMappingEntityRule(mappingRule));
     });
   }
 
@@ -883,12 +870,62 @@ export class FSHImporter extends FSHVisitor {
       return [this.visitCaretValueRule(ctx.caretValueRule())];
     } else if (ctx.obeysRule()) {
       return this.visitObeysRule(ctx.obeysRule());
+    } else if (ctx.insertRule()) {
+      return [this.visitInsertRule(ctx.insertRule())];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
       location: this.extractStartStop(ctx)
     });
     return [];
+  }
+
+  visitInstanceRule(ctx: pc.InstanceRuleContext): FixedValueRule | InsertRule {
+    if (ctx.fixedValueRule()) {
+      return this.visitFixedValueRule(ctx.fixedValueRule());
+    } else if (ctx.insertRule()) {
+      return this.visitInsertRule(ctx.insertRule());
+    }
+  }
+
+  visitVsRule(ctx: pc.VsRuleContext): CaretValueRule | InsertRule {
+    if (ctx.caretValueRule()) {
+      const rule = this.visitCaretValueRule(ctx.caretValueRule());
+      if (rule.path) {
+        logger.error(
+          'Caret rule on ValueSet cannot contain path before ^, skipping rule.',
+          rule.sourceInfo
+        );
+      } else {
+        return this.visitCaretValueRule(ctx.caretValueRule());
+      }
+    } else if (ctx.insertRule()) {
+      return this.visitInsertRule(ctx.insertRule());
+    }
+  }
+
+  visitCsRule(ctx: pc.CsRuleContext): CaretValueRule | InsertRule {
+    if (ctx.caretValueRule()) {
+      const rule = this.visitCaretValueRule(ctx.caretValueRule());
+      if (rule.path) {
+        logger.error(
+          'Caret rule on CodeSystem cannot contain path before ^, skipping rule.',
+          rule.sourceInfo
+        );
+      } else {
+        return this.visitCaretValueRule(ctx.caretValueRule());
+      }
+    } else if (ctx.insertRule()) {
+      return this.visitInsertRule(ctx.insertRule());
+    }
+  }
+
+  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule {
+    if (ctx.mappingRule()) {
+      return this.visitMappingRule(ctx.mappingRule());
+    } else if (ctx.insertRule()) {
+      return this.visitInsertRule(ctx.insertRule());
+    }
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1248,6 +1285,12 @@ export class FSHImporter extends FSHVisitor {
       rules.push(obeysRule);
     });
     return rules;
+  }
+
+  visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
+    const insertRule = new InsertRule();
+    ctx.SEQUENCE().map(ruleSet => insertRule.ruleSets.push(ruleSet.getText()));
+    return insertRule;
   }
 
   visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {
