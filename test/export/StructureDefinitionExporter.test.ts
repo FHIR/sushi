@@ -20,7 +20,8 @@ import {
   FixedValueRule,
   ContainsRule,
   CaretValueRule,
-  ObeysRule
+  ObeysRule,
+  InsertRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
@@ -3991,6 +3992,40 @@ describe('StructureDefinitionExporter', () => {
 
       expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
+  });
+
+  describe('#insertRules', () => {
+    let profile: Profile;
+    let ruleSet: RuleSet;
+
+    beforeEach(() => {
+      profile = new Profile('Foo').withFile('Instance.fsh').withLocation([5, 6, 7, 16]);
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      ruleSet = new RuleSet('Bar');
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+    });
+
+    it('should apply rules from a single level insert rule', () => {
+      // RuleSet: Bar
+      // * ^title = "Wow fancy"
+      //
+      // Instance: Foo
+      // InstanceOf: Observation
+      // * insert Bar
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      ruleSet.rules.push(nameRule);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSets = ['Bar'];
+      profile.rules.push(insertRule);
+
+      const exported = exporter.exportStructDef(profile);
+      expect(exported.title).toBe('Wow fancy');
     });
   });
 });

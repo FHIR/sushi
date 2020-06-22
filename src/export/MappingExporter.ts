@@ -4,6 +4,7 @@ import { logger, Type, MasterFisher } from '../utils';
 import { Mapping } from '../fshtypes';
 import { StructureDefinition, idRegex } from '../fhirtypes';
 import { InvalidFHIRIdError } from '../errors';
+import { MappingRule } from '../fshtypes/rules';
 import { groupBy, pickBy } from 'lodash';
 
 export class MappingExporter {
@@ -40,7 +41,7 @@ export class MappingExporter {
    * @param {Mapping} fshDefinition - The Mapping definition
    */
   private setMappingRules(structDef: StructureDefinition, fshDefinition: Mapping): void {
-    for (const rule of fshDefinition.rules) {
+    for (const rule of fshDefinition.rules as MappingRule[]) {
       const element = structDef.findElementByPath(rule.path, this.fisher);
       if (element) {
         try {

@@ -29,7 +29,8 @@ import {
   replaceReferences,
   splitOnPathPeriods,
   applyMixinRules,
-  cleanResource
+  cleanResource,
+  applyInsertRules
 } from '../fhirtypes/common';
 import { Package } from './Package';
 
@@ -472,6 +473,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     applyMixinRules(fshDefinition, this.tank);
+    applyInsertRules(fshDefinition, this.tank);
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);

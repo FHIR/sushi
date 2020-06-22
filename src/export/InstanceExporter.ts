@@ -13,6 +13,7 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
 import { cloneDeep } from 'lodash';
+import { FixedValueRule } from '../fshtypes/rules';
 
 export class InstanceExporter implements Fishable {
   constructor(
@@ -26,7 +27,7 @@ export class InstanceExporter implements Fishable {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
-    let rules = fshInstanceDef.rules.map(r => cloneDeep(r));
+    let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as FixedValueRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
       r.path = r.path.replace(/\[0+\]/g, '');

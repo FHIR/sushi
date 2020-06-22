@@ -6,7 +6,7 @@ import {
   ValueSet,
   CodeSystem
 } from '.';
-import { FixedValueRule, Rule } from '../fshtypes/rules';
+import { FixedValueRule, Rule, InsertRule } from '../fshtypes/rules';
 import {
   FshReference,
   Instance,
@@ -14,7 +14,10 @@ import {
   FshCode,
   Profile,
   Extension,
-  RuleSet
+  RuleSet,
+  FshValueSet,
+  FshCodeSystem,
+  Mapping
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -354,6 +357,46 @@ export function applyMixinRules(
     }
   });
   fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
+}
+
+export function applyInsertRules(
+  fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
+  tank: FSHTank,
+  seenRuleSets: string[] = []
+): void {
+  const expandedRules: Rule[] = [];
+  fshDefinition.rules.forEach(rule => {
+    if (rule instanceof InsertRule) {
+      const ruleSets = rule.ruleSets.map(ruleSet => {
+        const foundRuleSet = tank.fish(ruleSet, Type.RuleSet) as RuleSet;
+        if (!foundRuleSet) {
+          logger.error(`Unable to find definition for RuleSet ${ruleSet}.`, rule.sourceInfo);
+        }
+        return foundRuleSet;
+      });
+      ruleSets
+        .filter(ruleSet => ruleSet)
+        .forEach(ruleSet => {
+          if (seenRuleSets.includes(ruleSet.name)) {
+            logger.error(
+              `Inserting ${ruleSet.name} will cause a circular dependency, so the rule will be ignored`,
+              rule.sourceInfo
+            );
+          } else {
+            seenRuleSets.push(ruleSet.name);
+            applyInsertRules(ruleSet, tank, seenRuleSets);
+            ruleSet.rules.forEach(ruleSetRule => {
+              ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
+              ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
+              expandedRules.push(ruleSetRule);
+            });
+          }
+        });
+    } else {
+      expandedRules.push(rule);
+    }
+  });
+  fshDefinition.rules = expandedRules;
 }
 
 /**

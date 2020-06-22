@@ -84,7 +84,7 @@ export class CodeSystemExporter {
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
-    this.setCaretRules(codeSystem, fshDefinition.rules);
+    this.setCaretRules(codeSystem, fshDefinition.rules as CaretValueRule[]);
     this.setConcepts(codeSystem, fshDefinition);
 
     // check for another code system with the same id
