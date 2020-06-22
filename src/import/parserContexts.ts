@@ -266,7 +266,8 @@ export interface RatioPartContext extends ParserRuleContext {
   quantity(): QuantityContext;
 }
 export interface ReferenceContext extends ParserRuleContext {
-  REFERENCE(): ParserRuleContext;
+  OR_REFERENCE(): ParserRuleContext;
+  PIPE_REFERENCE(): ParserRuleContext;
   STRING(): ParserRuleContext;
 }
 

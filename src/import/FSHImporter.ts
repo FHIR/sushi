@@ -1144,18 +1144,41 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitReference(ctx: pc.ReferenceContext): FshReference {
-    const ref = new FshReference(
-      this.aliasAwareValue(ctx.REFERENCE(), this.parseReference(ctx.REFERENCE().getText())[0])
-    )
-      .withLocation(this.extractStartStop(ctx))
-      .withFile(this.currentFile);
+    let ref: FshReference;
+    if (ctx.OR_REFERENCE()) {
+      ref = new FshReference(
+        this.aliasAwareValue(
+          ctx.OR_REFERENCE(),
+          this.parseOrReference(ctx.OR_REFERENCE().getText())[0]
+        )
+      );
+    } else {
+      ref = new FshReference(
+        this.aliasAwareValue(
+          ctx.PIPE_REFERENCE(),
+          this.parsePipeReference(ctx.PIPE_REFERENCE().getText())[0]
+        )
+      );
+      logger.warn(
+        'Using "|" to list references is deprecated. Please use "or" to list references.',
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    ref.withLocation(this.extractStartStop(ctx)).withFile(this.currentFile);
     if (ctx.STRING()) {
       ref.display = this.extractString(ctx.STRING());
     }
     return ref;
   }
 
-  private parseReference(reference: string): string[] {
+  private parseOrReference(reference: string): string[] {
+    return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s+or\s+/);
+  }
+
+  private parsePipeReference(reference: string): string[] {
     return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s*\|\s*/);
   }
 
@@ -1169,10 +1192,25 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
       if (t.reference()) {
-        const references = this.parseReference(t.reference().REFERENCE().getText());
+        let referenceToken: ParserRuleContext;
+        let references: string[];
+        if (t.reference().OR_REFERENCE()) {
+          referenceToken = t.reference().OR_REFERENCE();
+          references = this.parseOrReference(referenceToken.getText());
+        } else {
+          referenceToken = t.reference().PIPE_REFERENCE();
+          references = this.parsePipeReference(referenceToken.getText());
+          logger.warn(
+            'Using "|" to list references is deprecated. Please use "or" to list references.',
+            {
+              file: this.currentFile,
+              location: this.extractStartStop(ctx)
+            }
+          );
+        }
         references.forEach(r =>
           onlyRule.types.push({
-            type: this.aliasAwareValue(t.reference().REFERENCE(), r),
+            type: this.aliasAwareValue(referenceToken, r),
             isReference: true
           })
         );

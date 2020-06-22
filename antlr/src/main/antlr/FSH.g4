@@ -77,7 +77,7 @@ code:               CODE STRING?;
 concept:            STAR code (STRING | MULTILINE_STRING)?;
 quantity:           NUMBER UNIT;
 ratio:              ratioPart COLON ratioPart;
-reference:          REFERENCE STRING?;
+reference:          (OR_REFERENCE | PIPE_REFERENCE) STRING?;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
 targetType:         SEQUENCE | reference;
@@ -168,7 +168,8 @@ TIME:               [0-9][0-9](':'[0-9][0-9](':'[0-9][0-9]('.'[0-9]+)?)?)?('Z' |
 CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
 
                  //  Reference       (        ITEM         |         ITEM         )
-REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
+OR_REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
+PIPE_REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
 
                  //  ^  NON-WHITESPACE
 CARET_SEQUENCE:     '^' NONWS+;

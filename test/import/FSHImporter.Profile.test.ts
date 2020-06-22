@@ -1225,7 +1225,7 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * performer only Reference(Organization | CareTeam)
+        * performer only Reference(Organization or CareTeam)
         `;
 
         const result = importSingleText(input);
@@ -1259,6 +1259,27 @@ describe('FSHImporter', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/Coding' },
           { type: 'string' },
           { type: 'http://hl7.org/fhir/StructureDefinition/Quantity' }
+        );
+      });
+
+      it('should log a warning when references are listed with pipes', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only Reference(Organization | CareTeam)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isReference: true },
+          { type: 'CareTeam', isReference: true }
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
         );
       });
     });
