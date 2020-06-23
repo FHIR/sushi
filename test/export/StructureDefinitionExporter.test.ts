@@ -4021,7 +4021,7 @@ describe('StructureDefinitionExporter', () => {
       ruleSet.rules.push(nameRule);
 
       const insertRule = new InsertRule();
-      insertRule.ruleSets = ['Bar'];
+      insertRule.ruleSet = 'Bar';
       profile.rules.push(insertRule);
 
       const exported = exporter.exportStructDef(profile);

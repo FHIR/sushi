@@ -236,19 +236,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const instance = result.instances.get('MyPatient');
         expect(instance.rules).toHaveLength(1);
-        assertInsertRule(instance.rules[0], ['MyRuleSet']);
-      });
-
-      it('should parse an insert rule with multiple RuleSets', () => {
-        const input = `
-        Instance: MyPatient
-        InstanceOf: Patient
-        * insert MyRuleSet1 and MyRuleSet2
-        `;
-        const result = importSingleText(input, 'Insert.fsh');
-        const instance = result.instances.get('MyPatient');
-        expect(instance.rules).toHaveLength(1);
-        assertInsertRule(instance.rules[0], ['MyRuleSet1', 'MyRuleSet2']);
+        assertInsertRule(instance.rules[0], 'MyRuleSet');
       });
     });
 

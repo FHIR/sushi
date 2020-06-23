@@ -85,7 +85,7 @@ describe('FSHImporter', () => {
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',
         'required'
       );
-      assertInsertRule(ruleSet.rules[1] as Rule, ['OtherRuleSet']);
+      assertInsertRule(ruleSet.rules[1] as Rule, 'OtherRuleSet');
       assertCardRule(ruleSet.rules[2] as Rule, 'contact', 1, '1');
     });
 

@@ -335,7 +335,7 @@ export interface CaretValueRuleContext extends ParserRuleContext {
 }
 
 export interface InsertRuleContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext[];
+  SEQUENCE(): ParserRuleContext;
 }
 
 export interface MappingRuleContext extends ParserRuleContext {

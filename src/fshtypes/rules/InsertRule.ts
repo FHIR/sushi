@@ -1,10 +1,9 @@
 import { Rule } from './Rule';
 
 export class InsertRule extends Rule {
-  ruleSets: string[];
+  ruleSet: string;
 
   constructor() {
     super('');
-    this.ruleSets = [];
   }
 }

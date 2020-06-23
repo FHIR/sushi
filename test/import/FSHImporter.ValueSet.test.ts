@@ -840,18 +840,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const vs = result.valueSets.get('MyVS');
         expect(vs.rules).toHaveLength(1);
-        assertInsertRule(vs.rules[0] as Rule, ['MyRuleSet']);
-      });
-
-      it('should parse an insert rule with multiple RuleSets', () => {
-        const input = `
-        ValueSet: MyVS
-        * insert MyRuleSet1 and MyRuleSet2
-        `;
-        const result = importSingleText(input, 'Insert.fsh');
-        const vs = result.valueSets.get('MyVS');
-        expect(vs.rules).toHaveLength(1);
-        assertInsertRule(vs.rules[0] as Rule, ['MyRuleSet1', 'MyRuleSet2']);
+        assertInsertRule(vs.rules[0] as Rule, 'MyRuleSet');
       });
     });
   });

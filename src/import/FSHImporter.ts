@@ -1295,7 +1295,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
     const insertRule = new InsertRule();
-    ctx.SEQUENCE().map(ruleSet => insertRule.ruleSets.push(ruleSet.getText()));
+    insertRule.ruleSet = ctx.SEQUENCE().getText();
     return insertRule;
   }
 

@@ -347,18 +347,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const extension = result.extensions.get('MyExtension');
         expect(extension.rules).toHaveLength(1);
-        assertInsertRule(extension.rules[0], ['MyRuleSet']);
-      });
-
-      it('should parse an insert rule with multiple RuleSets', () => {
-        const input = `
-        Extension: MyExtension
-        * insert MyRuleSet1 and MyRuleSet2
-        `;
-        const result = importSingleText(input, 'Insert.fsh');
-        const extension = result.extensions.get('MyExtension');
-        expect(extension.rules).toHaveLength(1);
-        assertInsertRule(extension.rules[0], ['MyRuleSet1', 'MyRuleSet2']);
+        assertInsertRule(extension.rules[0], 'MyRuleSet');
       });
     });
   });

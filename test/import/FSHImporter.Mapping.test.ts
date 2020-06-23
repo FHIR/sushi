@@ -230,18 +230,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const mapping = result.mappings.get('MyMapping');
         expect(mapping.rules).toHaveLength(1);
-        assertInsertRule(mapping.rules[0], ['MyRuleSet']);
-      });
-
-      it('should parse an insert rule with multiple RuleSets', () => {
-        const input = `
-        Mapping: MyMapping
-        * insert MyRuleSet1 and MyRuleSet2
-        `;
-        const result = importSingleText(input, 'Insert.fsh');
-        const mapping = result.mappings.get('MyMapping');
-        expect(mapping.rules).toHaveLength(1);
-        assertInsertRule(mapping.rules[0], ['MyRuleSet1', 'MyRuleSet2']);
+        assertInsertRule(mapping.rules[0], 'MyRuleSet');
       });
     });
   });

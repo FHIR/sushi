@@ -40,7 +40,7 @@ describe('applyInsertRules', () => {
     ruleSet1.rules.push(cardRule);
 
     const insertRule = new InsertRule();
-    insertRule.ruleSets = ['Bar'];
+    insertRule.ruleSet = 'Bar';
     profile.rules.push(insertRule);
 
     applyInsertRules(profile, tank);
@@ -69,7 +69,7 @@ describe('applyInsertRules', () => {
     focusRule.min = 1;
     focusRule.max = '1';
     const insertRule = new InsertRule();
-    insertRule.ruleSets = ['Bar'];
+    insertRule.ruleSet = 'Bar';
 
     ruleSet1.rules.push(subjectRule);
     profile.rules.push(categoryRule, insertRule, focusRule);
@@ -89,7 +89,8 @@ describe('applyInsertRules', () => {
     //
     // Profile: Foo
     // Parent: Observation
-    // * insert Bar and Baz
+    // * insert Bar
+    // * insert Baz
     const subjectRule = new CardRule('subject');
     subjectRule.min = 1;
     subjectRule.max = '1';
@@ -99,9 +100,11 @@ describe('applyInsertRules', () => {
     focusRule.max = '1';
     ruleSet2.rules.push(focusRule);
 
-    const insertRule = new InsertRule();
-    insertRule.ruleSets = ['Bar', 'Baz'];
-    profile.rules.push(insertRule);
+    const barRule = new InsertRule();
+    barRule.ruleSet = 'Bar';
+    const bazRule = new InsertRule();
+    bazRule.ruleSet = 'Baz';
+    profile.rules.push(barRule, bazRule);
 
     applyInsertRules(profile, tank);
     expect(profile.rules).toHaveLength(2);
@@ -129,9 +132,9 @@ describe('applyInsertRules', () => {
     focusRule.min = 1;
     focusRule.max = '1';
     const insertBazRule = new InsertRule();
-    insertBazRule.ruleSets = ['Baz'];
+    insertBazRule.ruleSet = 'Baz';
     const insertBarRule = new InsertRule();
-    insertBarRule.ruleSets = ['Bar'];
+    insertBarRule.ruleSet = 'Bar';
 
     ruleSet1.rules.push(categoryRule, insertBazRule);
     ruleSet2.rules.push(subjectRule);
@@ -157,9 +160,9 @@ describe('applyInsertRules', () => {
     subjectRule.min = 1;
     subjectRule.max = '1';
     const insertBazRule = new InsertRule();
-    insertBazRule.ruleSets = ['Baz'];
+    insertBazRule.ruleSet = 'Baz';
     const insertBarRule = new InsertRule().withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
-    insertBarRule.ruleSets = ['Bar'];
+    insertBarRule.ruleSet = 'Bar';
 
     ruleSet1.rules.push(insertBazRule);
     ruleSet2.rules.push(insertBarRule, subjectRule);
@@ -174,25 +177,21 @@ describe('applyInsertRules', () => {
   });
 
   it('should log an error when a ruleSet cannot be found', () => {
-    // RuleSet: Bar
-    // * category 1..1
-    //
     // Profile: Foo
     // Parent: Observation
-    // * insert Bam and Bar
+    // * insert Bam
     const cardRule = new CardRule('category');
     cardRule.min = 1;
     cardRule.max = '1';
     ruleSet1.rules.push(cardRule);
 
     const insertRule = new InsertRule().withFile('NoBam.fsh').withLocation([1, 2, 3, 4]);
-    insertRule.ruleSets = ['Bam', 'Bar'];
+    insertRule.ruleSet = 'Bam';
     profile.rules.push(insertRule);
 
     applyInsertRules(profile, tank);
 
-    expect(profile.rules).toHaveLength(1);
-    assertCardRule(profile.rules[0], 'category', 1, '1');
+    expect(profile.rules).toHaveLength(0);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Unable to find definition for RuleSet Bam.*File: NoBam\.fsh.*Line: 1 - 3\D*/s
     );

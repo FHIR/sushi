@@ -367,31 +367,25 @@ export function applyInsertRules(
   const expandedRules: Rule[] = [];
   fshDefinition.rules.forEach(rule => {
     if (rule instanceof InsertRule) {
-      const ruleSets = rule.ruleSets.map(ruleSet => {
-        const foundRuleSet = tank.fish(ruleSet, Type.RuleSet) as RuleSet;
-        if (!foundRuleSet) {
-          logger.error(`Unable to find definition for RuleSet ${ruleSet}.`, rule.sourceInfo);
+      const ruleSet = tank.fish(rule.ruleSet, Type.RuleSet) as RuleSet;
+      if (ruleSet) {
+        if (seenRuleSets.includes(ruleSet.name)) {
+          logger.error(
+            `Inserting ${ruleSet.name} will cause a circular dependency, so the rule will be ignored`,
+            rule.sourceInfo
+          );
+        } else {
+          seenRuleSets.push(ruleSet.name);
+          applyInsertRules(ruleSet, tank, seenRuleSets);
+          ruleSet.rules.forEach(ruleSetRule => {
+            ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
+            ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
+            expandedRules.push(ruleSetRule);
+          });
         }
-        return foundRuleSet;
-      });
-      ruleSets
-        .filter(ruleSet => ruleSet)
-        .forEach(ruleSet => {
-          if (seenRuleSets.includes(ruleSet.name)) {
-            logger.error(
-              `Inserting ${ruleSet.name} will cause a circular dependency, so the rule will be ignored`,
-              rule.sourceInfo
-            );
-          } else {
-            seenRuleSets.push(ruleSet.name);
-            applyInsertRules(ruleSet, tank, seenRuleSets);
-            ruleSet.rules.forEach(ruleSetRule => {
-              ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
-              ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
-              expandedRules.push(ruleSetRule);
-            });
-          }
-        });
+      } else {
+        logger.error(`Unable to find definition for RuleSet ${rule.ruleSet}.`, rule.sourceInfo);
+      }
     } else {
       expandedRules.push(rule);
     }
