@@ -1143,24 +1143,28 @@ export class FSHImporter extends FSHVisitor {
     return this.visitQuantity(ctx.quantity());
   }
 
+  // This function is called when fixing a value, and a value can only be set
+  // to a specific reference, not a choice of references.
   visitReference(ctx: pc.ReferenceContext): FshReference {
     let ref: FshReference;
+    let parsedReferences: string[];
     if (ctx.OR_REFERENCE()) {
-      ref = new FshReference(
-        this.aliasAwareValue(
-          ctx.OR_REFERENCE(),
-          this.parseOrReference(ctx.OR_REFERENCE().getText())[0]
-        )
-      );
+      parsedReferences = this.parseOrReference(ctx.OR_REFERENCE().getText());
+      ref = new FshReference(this.aliasAwareValue(ctx.OR_REFERENCE(), parsedReferences[0]));
     } else {
-      ref = new FshReference(
-        this.aliasAwareValue(
-          ctx.PIPE_REFERENCE(),
-          this.parsePipeReference(ctx.PIPE_REFERENCE().getText())[0]
-        )
-      );
+      parsedReferences = this.parsePipeReference(ctx.PIPE_REFERENCE().getText());
+      ref = new FshReference(this.aliasAwareValue(ctx.PIPE_REFERENCE(), parsedReferences[0]));
       logger.warn(
         'Using "|" to list references is deprecated. Please use "or" to list references.',
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    if (parsedReferences.length > 1) {
+      logger.error(
+        'Multiple choices of references are not allowed when setting a value. Only the first choice will be used.',
         {
           file: this.currentFile,
           location: this.extractStartStop(ctx)

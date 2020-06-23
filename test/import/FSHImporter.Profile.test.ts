@@ -1143,6 +1143,27 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
+      it('should log an error when a fixed value Reference rule has a choice of references', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * basedOn = Reference(cakeProfile or pieProfile)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedReference = new FshReference('cakeProfile')
+          .withLocation([5, 21, 5, 56])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Multiple choices of references are not allowed when setting a value.*Line: 5\D*/s
+        );
+      });
+
       it('should parse fixed values that are an alias', () => {
         const input = `
         Alias: EXAMPLE = http://example.org
