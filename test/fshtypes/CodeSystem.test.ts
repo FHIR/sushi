@@ -9,7 +9,6 @@ describe('CodeSystem', () => {
       expect(cs.id).toBe('MyCodeSystem');
       expect(cs.title).toBeUndefined();
       expect(cs.description).toBeUndefined();
-      expect(cs.concepts).toBeEmpty();
       expect(cs.rules).toBeEmpty();
     });
   });

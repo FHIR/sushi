@@ -3,9 +3,12 @@ import {
   assertValueSetRule,
   assertFixedValueRule,
   assertCardRule,
-  assertInsertRule
+  assertInsertRule,
+  assertValueSetConceptComponent
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { Rule } from '../../src/fshtypes/rules';
+import { FshCode, FshConcept } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
   beforeAll(() => {
@@ -29,7 +32,7 @@ describe('FSHImporter', () => {
         endColumn: 23
       });
       expect(ruleSet.sourceInfo.file).toBe('OneRule.fsh');
-      assertFixedValueRule(ruleSet.rules[0], 'active', true);
+      assertFixedValueRule(ruleSet.rules[0] as Rule, 'active', true);
     });
 
     it('should parse a RuleSet with multiple rules', () => {
@@ -50,13 +53,13 @@ describe('FSHImporter', () => {
         endColumn: 22
       });
       assertValueSetRule(
-        ruleSet.rules[0],
+        ruleSet.rules[0] as Rule,
         'gender',
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',
         'required'
       );
-      assertFixedValueRule(ruleSet.rules[1], 'active', true, true);
-      assertCardRule(ruleSet.rules[2], 'contact', 1, '1');
+      assertFixedValueRule(ruleSet.rules[1] as Rule, 'active', true, true);
+      assertCardRule(ruleSet.rules[2] as Rule, 'contact', 1, '1');
     });
 
     it('should parse a RuleSet with an insert rule', () => {
@@ -77,13 +80,45 @@ describe('FSHImporter', () => {
         endColumn: 22
       });
       assertValueSetRule(
-        ruleSet.rules[0],
+        ruleSet.rules[0] as Rule,
         'gender',
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',
         'required'
       );
-      assertInsertRule(ruleSet.rules[1], ['OtherRuleSet']);
-      assertCardRule(ruleSet.rules[2], 'contact', 1, '1');
+      assertInsertRule(ruleSet.rules[1] as Rule, ['OtherRuleSet']);
+      assertCardRule(ruleSet.rules[2] as Rule, 'contact', 1, '1');
+    });
+
+    it('should parse a RuleSet with rules, ValueSetComponents, and FshConcepts', () => {
+      const input = `
+        RuleSet: RuleRuleSet
+        * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
+        * #bear from system ZOO
+        * #lion
+        `;
+      const result = importSingleText(input, 'Rules.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('RuleRuleSet');
+      expect(ruleSet.name).toBe('RuleRuleSet');
+      expect(ruleSet.sourceInfo.location).toEqual({
+        startLine: 2,
+        startColumn: 9,
+        endLine: 5,
+        endColumn: 15
+      });
+      assertValueSetRule(
+        ruleSet.rules[0] as Rule,
+        'gender',
+        'https://www.hl7.org/fhir/valueset-administrative-gender.html',
+        'required'
+      );
+      assertValueSetConceptComponent(ruleSet.rules[1], 'ZOO', undefined, [
+        new FshCode('bear', 'ZOO').withLocation([4, 11, 4, 15]).withFile('Rules.fsh')
+      ]);
+      const concept = ruleSet.rules[2];
+      expect(concept).toEqual(
+        new FshConcept('lion').withFile('Rules.fsh').withLocation([5, 9, 5, 15])
+      );
     });
 
     it('should log an error when parsing a mixin with no rules', () => {
@@ -115,7 +150,7 @@ describe('FSHImporter', () => {
       expect(result.ruleSets.size).toBe(1);
       const ruleSet = result.ruleSets.get('SameRuleSet');
       expect(ruleSet.rules.length).toBe(1);
-      assertCardRule(ruleSet.rules[0], 'gender', 0, '0');
+      assertCardRule(ruleSet.rules[0] as Rule, 'gender', 0, '0');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /RuleSet named SameRuleSet already exists/s
       );

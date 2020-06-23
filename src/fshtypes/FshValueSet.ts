@@ -10,13 +10,11 @@ export class FshValueSet extends FshEntity {
   id: string;
   title?: string;
   description?: string;
-  components: ValueSetComponent[];
-  rules: (CaretValueRule | InsertRule)[];
+  rules: (ValueSetComponent | CaretValueRule | InsertRule)[];
 
   constructor(public name: string) {
     super();
     this.id = name;
-    this.components = [];
     this.rules = [];
   }
 }

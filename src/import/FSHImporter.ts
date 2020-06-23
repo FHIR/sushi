@@ -381,7 +381,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsComponent(), ctx.vsRule());
+      this.parseValueSet(valueSet, ctx.vsMetadata(), ctx.vsRule());
       this.currentDoc.valueSets.set(valueSet.name, valueSet);
     }
   }
@@ -389,7 +389,6 @@ export class FSHImporter extends FSHVisitor {
   private parseValueSet(
     valueSet: FshValueSet,
     metaCtx: pc.VsMetadataContext[] = [],
-    componentCtx: pc.VsComponentContext[] = [],
     vsRuleCtx: pc.VsRuleContext[] = []
   ) {
     const seenPairs: Map<VsMetadataKey, string> = new Map();
@@ -417,31 +416,27 @@ export class FSHImporter extends FSHVisitor {
           valueSet.description = pair.value;
         }
       });
-    componentCtx
-      .map(vsComponentCtx => this.visitVsComponent(vsComponentCtx))
-      .forEach(vsComponent => {
-        // if vsComponent is a concept component,
-        // we may be able to merge its concepts into an existing concept component.
-        if (vsComponent instanceof ValueSetConceptComponent) {
-          const matchedComponent = valueSet.components.find(existingComponent => {
-            return (
-              existingComponent instanceof ValueSetConceptComponent &&
-              vsComponent.inclusion == existingComponent.inclusion &&
-              vsComponent.from.system == existingComponent.from.system &&
-              isEqual(sortBy(vsComponent.from.valueSets), sortBy(existingComponent.from.valueSets))
-            );
-          }) as ValueSetConceptComponent;
-          if (matchedComponent) {
-            matchedComponent.concepts.push(...vsComponent.concepts);
-          } else {
-            valueSet.components.push(vsComponent);
-          }
-        } else {
-          valueSet.components.push(vsComponent);
-        }
-      });
     vsRuleCtx.forEach(vsRule => {
-      valueSet.rules.push(this.visitVsRule(vsRule));
+      const rule = this.visitVsRule(vsRule);
+      // if rule is a concept component,
+      // we may be able to merge its concepts into an existing concept component.
+      if (rule instanceof ValueSetConceptComponent) {
+        const matchedComponent = valueSet.rules.find(existingComponent => {
+          return (
+            existingComponent instanceof ValueSetConceptComponent &&
+            rule.inclusion == existingComponent.inclusion &&
+            rule.from.system == existingComponent.from.system &&
+            isEqual(sortBy(rule.from.valueSets), sortBy(existingComponent.from.valueSets))
+          );
+        }) as ValueSetConceptComponent;
+        if (matchedComponent) {
+          matchedComponent.concepts.push(...rule.concepts);
+        } else {
+          valueSet.rules.push(rule);
+        }
+      } else {
+        valueSet.rules.push(rule);
+      }
     });
     valueSet.rules = valueSet.rules.filter(rule => rule);
   }
@@ -456,7 +451,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.concept(), ctx.csRule());
+      this.parseCodeSystem(codeSystem, ctx.csMetadata(), ctx.csRule());
       this.currentDoc.codeSystems.set(codeSystem.name, codeSystem);
     }
   }
@@ -464,7 +459,6 @@ export class FSHImporter extends FSHVisitor {
   private parseCodeSystem(
     codeSystem: FshCodeSystem,
     metaCtx: pc.CsMetadataContext[] = [],
-    conceptCtx: pc.ConceptContext[] = [],
     csRuleCtx: pc.CsRuleContext[] = []
   ) {
     const seenPairs: Map<CsMetadataKey, string> = new Map();
@@ -492,16 +486,17 @@ export class FSHImporter extends FSHVisitor {
           codeSystem.description = pair.value;
         }
       });
-    conceptCtx.forEach(conceptCtx => {
-      const newConcept = this.visitConcept(conceptCtx);
-      try {
-        codeSystem.addConcept(newConcept);
-      } catch (e) {
-        logger.error(e.message, newConcept.sourceInfo);
+    csRuleCtx.forEach(ruleCtx => {
+      const rule = this.visitCsRule(ruleCtx);
+      if (rule instanceof FshConcept) {
+        try {
+          codeSystem.addConcept(rule);
+        } catch (e) {
+          logger.error(e.message, rule.sourceInfo);
+        }
+      } else {
+        codeSystem.rules.push(rule);
       }
-    });
-    csRuleCtx.forEach(csRule => {
-      codeSystem.rules.push(this.visitCsRule(csRule));
     });
     codeSystem.rules = codeSystem.rules.filter(rule => rule);
   }
@@ -567,14 +562,20 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseRuleSet(ruleSet, ctx.sdRule());
+      this.parseRuleSet(ruleSet, ctx.ruleSetRule());
       this.currentDoc.ruleSets.set(ruleSet.name, ruleSet);
     }
   }
 
-  parseRuleSet(ruleSet: RuleSet, rules: pc.SdRuleContext[]) {
-    rules.forEach(sdRule => {
-      ruleSet.rules.push(...this.visitSdRule(sdRule));
+  parseRuleSet(ruleSet: RuleSet, rules: pc.RuleSetRuleContext[]) {
+    rules.forEach(rule => {
+      if (rule.sdRule()) {
+        ruleSet.rules.push(...this.visitSdRule(rule.sdRule()));
+      } else if (rule.vsComponent()) {
+        ruleSet.rules.push(this.visitVsComponent(rule.vsComponent()));
+      } else if (rule.concept()) {
+        ruleSet.rules.push(this.visitConcept(rule.concept()));
+      }
     });
   }
 
@@ -888,7 +889,10 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitVsRule(ctx: pc.VsRuleContext): CaretValueRule | InsertRule {
+  visitVsRule(ctx: pc.VsRuleContext): ValueSetComponent | CaretValueRule | InsertRule {
+    if (ctx.vsComponent()) {
+      return this.visitVsComponent(ctx.vsComponent());
+    }
     if (ctx.caretValueRule()) {
       const rule = this.visitCaretValueRule(ctx.caretValueRule());
       if (rule.path) {
@@ -904,8 +908,10 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitCsRule(ctx: pc.CsRuleContext): CaretValueRule | InsertRule {
-    if (ctx.caretValueRule()) {
+  visitCsRule(ctx: pc.CsRuleContext): FshConcept | CaretValueRule | InsertRule {
+    if (ctx.concept()) {
+      return this.visitConcept(ctx.concept());
+    } else if (ctx.caretValueRule()) {
       const rule = this.visitCaretValueRule(ctx.caretValueRule());
       if (rule.path) {
         logger.error(

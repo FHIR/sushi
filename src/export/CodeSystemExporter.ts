@@ -1,7 +1,7 @@
 import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
 import { setPropertyOnInstance } from '../fhirtypes/common';
-import { FshCodeSystem } from '../fshtypes';
+import { FshCodeSystem, FshConcept } from '../fshtypes';
 import { CaretValueRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, Type } from '../utils';
@@ -24,9 +24,9 @@ export class CodeSystemExporter {
     codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
 
-  private setConcepts(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
-    if (fshDefinition.concepts.length > 0) {
-      codeSystem.concept = fshDefinition.concepts.map(concept => {
+  private setConcepts(codeSystem: CodeSystem, concepts: FshConcept[]): void {
+    if (concepts.length > 0) {
+      codeSystem.concept = concepts.map(concept => {
         const codeSystemConcept: CodeSystemConcept = { code: concept.code };
         if (concept.display) codeSystemConcept.display = concept.display;
         if (concept.definition) codeSystemConcept.definition = concept.definition;
@@ -84,8 +84,14 @@ export class CodeSystemExporter {
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
-    this.setCaretRules(codeSystem, fshDefinition.rules as CaretValueRule[]);
-    this.setConcepts(codeSystem, fshDefinition);
+    this.setCaretRules(
+      codeSystem,
+      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
+    );
+    this.setConcepts(
+      codeSystem,
+      fshDefinition.rules.filter(rule => rule instanceof FshConcept) as FshConcept[]
+    );
 
     // check for another code system with the same id
     // see https://www.hl7.org/fhir/resource.html#id

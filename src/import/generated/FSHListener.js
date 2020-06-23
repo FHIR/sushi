@@ -182,6 +182,15 @@ FSHListener.prototype.exitRuleSet = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#ruleSetRule.
+FSHListener.prototype.enterRuleSetRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#ruleSetRule.
+FSHListener.prototype.exitRuleSetRule = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#mapping.
 FSHListener.prototype.enterMapping = function(ctx) {
 };

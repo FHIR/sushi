@@ -17,14 +17,15 @@ instanceRule:       fixedValueRule | insertRule;
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
 
-valueSet:           KW_VALUESET SEQUENCE vsMetadata* (vsRule | vsComponent)*;
+valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsRule*;
 vsMetadata:         id | title | description;
-vsRule:             caretValueRule | insertRule;
-codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* (csRule | concept)*;
+vsRule:             vsComponent | caretValueRule | insertRule;
+codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* csRule*;
 csMetadata:         id | title | description;
-csRule:             caretValueRule | insertRule;
+csRule:             concept | caretValueRule | insertRule;
 
-ruleSet:            KW_RULESET SEQUENCE sdRule+;
+ruleSet:            KW_RULESET SEQUENCE ruleSetRule+;
+ruleSetRule:        sdRule | concept | vsComponent;
 
 mapping:            KW_MAPPING SEQUENCE mappingMetadata* (mappingEntityRule)*;
 mappingMetadata:    id | source | target | description | title;
@@ -157,6 +158,7 @@ NUMBER:             [+\-]? [0-9]+('.' [0-9]+)?;
 
                  //   '  UCUM UNIT   '
 UNIT:               '\'' (~[\\'])* '\'';
+
 
                  // SYSTEM     #  SYSTEM
 CODE:               SEQUENCE? '#' (SEQUENCE | CONCEPT_STRING);

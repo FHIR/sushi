@@ -1,10 +1,10 @@
-import { FshEntity } from './FshEntity';
 import { FshCode } from './FshCode';
+import { Rule } from './rules/Rule';
 
-export class ValueSetComponent extends FshEntity {
+export class ValueSetComponent extends Rule {
   public from: ValueSetComponentFrom = {};
   constructor(public inclusion: boolean) {
-    super();
+    super('');
   }
 }
 

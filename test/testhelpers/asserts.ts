@@ -148,7 +148,7 @@ export function assertMappingRule(
 }
 
 export function assertValueSetConceptComponent(
-  component: ValueSetComponent,
+  component: ValueSetComponent | Rule,
   fromSystem: string,
   fromValueSets: string[],
   concepts: FshCode[],
@@ -163,7 +163,7 @@ export function assertValueSetConceptComponent(
 }
 
 export function assertValueSetFilterComponent(
-  component: ValueSetComponent,
+  component: ValueSetComponent | Rule,
   fromSystem: string,
   fromValueSets: string[],
   filters: ValueSetFilter[],

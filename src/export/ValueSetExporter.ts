@@ -150,8 +150,14 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
-    this.setCaretRules(vs, fshDefinition.rules as CaretValueRule[]);
-    this.setCompose(vs, fshDefinition.components);
+    this.setCaretRules(
+      vs,
+      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
+    );
+    this.setCompose(
+      vs,
+      fshDefinition.rules.filter(rule => rule instanceof ValueSetComponent) as ValueSetComponent[]
+    );
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);
     }

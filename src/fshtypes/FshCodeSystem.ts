@@ -11,20 +11,22 @@ export class FshCodeSystem extends FshEntity {
   id: string;
   title?: string;
   description?: string;
-  concepts: FshConcept[];
-  rules: (CaretValueRule | InsertRule)[];
+  rules: (FshConcept | CaretValueRule | InsertRule)[];
 
   constructor(public name: string) {
     super();
     this.id = name;
-    this.concepts = [];
     this.rules = [];
   }
 
   addConcept(newConcept: FshConcept) {
-    if (this.concepts.find(existingConcept => existingConcept.code == newConcept.code)) {
+    if (
+      this.rules
+        .filter(rule => rule instanceof FshConcept)
+        .find((existingConcept: FshConcept) => existingConcept.code == newConcept.code)
+    ) {
       throw new CodeSystemDuplicateCodeError(this.id, newConcept.code);
     }
-    this.concepts.push(newConcept);
+    this.rules.push(newConcept);
   }
 }

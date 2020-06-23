@@ -62,7 +62,6 @@ export interface InstanceRuleContext extends ParserRuleContext {
 export interface ValueSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   vsMetadata(): VsMetadataContext[];
-  vsComponent(): VsComponentContext[];
   vsRule(): VsRuleContext[];
 }
 
@@ -73,6 +72,7 @@ export interface VsMetadataContext extends ParserRuleContext {
 }
 
 export interface VsRuleContext extends ParserRuleContext {
+  vsComponent(): VsComponentContext;
   caretValueRule(): CaretValueRuleContext;
   insertRule(): InsertRuleContext;
 }
@@ -80,7 +80,6 @@ export interface VsRuleContext extends ParserRuleContext {
 export interface CodeSystemContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   csMetadata(): CsMetadataContext[];
-  concept(): ConceptContext[];
   csRule(): CsRuleContext[];
 }
 
@@ -90,6 +89,7 @@ export interface CsMetadataContext extends ParserRuleContext {
   description(): DescriptionContext;
 }
 export interface CsRuleContext extends ParserRuleContext {
+  concept(): ConceptContext;
   caretValueRule(): CaretValueRuleContext;
   insertRule(): InsertRuleContext;
 }
@@ -108,7 +108,13 @@ export interface InvariantMetadataContext extends ParserRuleContext {
 
 export interface RuleSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
-  sdRule(): SdRuleContext[];
+  ruleSetRule(): RuleSetRuleContext[];
+}
+
+export interface RuleSetRuleContext extends ParserRuleContext {
+  sdRule(): SdRuleContext;
+  vsComponent(): VsComponentContext;
+  concept(): ConceptContext;
 }
 
 export interface MappingContext extends ParserRuleContext {
