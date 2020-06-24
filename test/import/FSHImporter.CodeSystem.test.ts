@@ -1,8 +1,7 @@
 import { importSingleText } from '../testhelpers/importSingleText';
 import { assertCaretValueRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { FshConcept } from '../../src/fshtypes';
-import { Rule, CaretValueRule, InsertRule } from '../../src/fshtypes/rules';
+import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
   describe('CodeSystem', () => {
@@ -159,8 +158,8 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(1);
-        expect(codeSystem.rules[0]).toBeInstanceOf(FshConcept);
-        const concept = codeSystem.rules[0] as FshConcept;
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        const concept = codeSystem.rules[0] as ConceptRule;
         expect(concept.code).toBe('lion');
         expect(concept.display).toBeUndefined();
         expect(concept.definition).toBeUndefined();
@@ -183,8 +182,8 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(1);
-        expect(codeSystem.rules[0]).toBeInstanceOf(FshConcept);
-        const concept = codeSystem.rules[0] as FshConcept;
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        const concept = codeSystem.rules[0] as ConceptRule;
         expect(concept.code).toBe('tiger');
         expect(concept.display).toBe('Tiger');
         expect(concept.definition).toBeUndefined();
@@ -207,8 +206,8 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(1);
-        expect(codeSystem.rules[0]).toBeInstanceOf(FshConcept);
-        const concept = codeSystem.rules[0] as FshConcept;
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        const concept = codeSystem.rules[0] as ConceptRule;
         expect(concept.code).toBe('bear');
         expect(concept.display).toBe('Bear');
         expect(concept.definition).toBe('A member of family Ursidae.');
@@ -234,8 +233,8 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(1);
-        expect(codeSystem.rules[0]).toBeInstanceOf(FshConcept);
-        const concept = codeSystem.rules[0] as FshConcept;
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        const concept = codeSystem.rules[0] as ConceptRule;
         expect(concept.code).toBe('gorilla');
         expect(concept.display).toBe('Gorilla');
         const expectedDefinition = [
@@ -264,8 +263,8 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(3);
-        expect(codeSystem.rules[0]).toBeInstanceOf(FshConcept);
-        let concept = codeSystem.rules[0] as FshConcept;
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        let concept = codeSystem.rules[0] as ConceptRule;
         expect(concept.code).toBe('lion');
         expect(concept.display).toBeUndefined();
         expect(concept.definition).toBeUndefined();
@@ -276,8 +275,8 @@ describe('FSHImporter', () => {
           endColumn: 15
         });
         expect(concept.sourceInfo.file).toBe('Zoo.fsh');
-        expect(codeSystem.rules[1]).toBeInstanceOf(FshConcept);
-        concept = codeSystem.rules[1] as FshConcept;
+        expect(codeSystem.rules[1]).toBeInstanceOf(ConceptRule);
+        concept = codeSystem.rules[1] as ConceptRule;
         expect(concept.code).toBe('tiger');
         expect(concept.display).toBe('Tiger');
         expect(concept.definition).toBeUndefined();
@@ -288,8 +287,8 @@ describe('FSHImporter', () => {
           endColumn: 24
         });
         expect(concept.sourceInfo.file).toBe('Zoo.fsh');
-        expect(codeSystem.rules[2]).toBeInstanceOf(FshConcept);
-        concept = codeSystem.rules[2] as FshConcept;
+        expect(codeSystem.rules[2]).toBeInstanceOf(ConceptRule);
+        concept = codeSystem.rules[2] as ConceptRule;
         expect(concept.code).toBe('bear');
         expect(concept.display).toBe('Bear');
         expect(concept.definition).toBe('A member of family Ursidae.');
@@ -328,9 +327,9 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(3);
-        expect((codeSystem.rules[0] as FshConcept).code).toBe('goat');
-        expect((codeSystem.rules[1] as FshConcept).code).toBe('bat');
-        expect((codeSystem.rules[2] as FshConcept).code).toBe('jackalope');
+        expect((codeSystem.rules[0] as ConceptRule).code).toBe('goat');
+        expect((codeSystem.rules[1] as ConceptRule).code).toBe('bat');
+        expect((codeSystem.rules[2] as ConceptRule).code).toBe('jackalope');
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 5\D*/s);
       });
@@ -355,8 +354,8 @@ describe('FSHImporter', () => {
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         const codeSystem = result.codeSystems.get('ZOO');
-        expect(codeSystem.rules[0]).toBeInstanceOf(FshConcept);
-        const concept = codeSystem.rules[0] as FshConcept;
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        const concept = codeSystem.rules[0] as ConceptRule;
         expect(concept.code).toBe('lion');
         expect(concept.sourceInfo.file).toBe('Zoo.fsh');
         assertCaretValueRule(

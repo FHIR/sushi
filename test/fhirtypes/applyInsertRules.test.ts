@@ -1,9 +1,10 @@
 import { FSHTank, FSHDocument } from '../../src/import';
-import { Profile, RuleSet, FshConcept, FshCode, FshValueSet } from '../../src/fshtypes';
-import { InsertRule, CardRule } from '../../src/fshtypes/rules';
+import { Profile, RuleSet, FshCode, FshValueSet } from '../../src/fshtypes';
+import { InsertRule, CardRule, ConceptRule } from '../../src/fshtypes/rules';
 import { loggerSpy, assertCardRule, assertValueSetConceptComponent } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
+
 describe('applyInsertRules', () => {
   let doc: FSHDocument;
   let tank: FSHTank;
@@ -56,7 +57,7 @@ describe('applyInsertRules', () => {
     // Profile: Foo
     // Parent: Observation
     // * insert Bar
-    const concept = new FshConcept('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
+    const concept = new ConceptRule('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
     ruleSet1.rules.push(concept);
 
     const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
@@ -67,7 +68,7 @@ describe('applyInsertRules', () => {
 
     expect(profile.rules).toHaveLength(0);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /FshConcept.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 5 - 7\D*/s
+      /ConceptRule.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 5 - 7\D*/s
     );
   });
 
@@ -169,7 +170,7 @@ describe('applyInsertRules', () => {
     assertCardRule(profile.rules[2], 'focus', 1, '1');
   });
 
-  it('should convert a FshConcept to a ValueSetConceptComponent when applying to a FshValueSet', () => {
+  it('should convert a ConceptRule to a ValueSetConceptComponent when applying to a FshValueSet', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear"
     //
@@ -178,7 +179,7 @@ describe('applyInsertRules', () => {
     const vs = new FshValueSet('Foo').withFile('VS.fsh').withLocation([5, 6, 7, 16]);
     doc.valueSets.set(vs.name, vs);
 
-    const concept = new FshConcept('bear', 'brown bear');
+    const concept = new ConceptRule('bear', 'brown bear');
     concept.system = 'ZOO';
     ruleSet1.rules.push(concept);
 
@@ -198,7 +199,7 @@ describe('applyInsertRules', () => {
     );
   });
 
-  it('should not convert a FshConcept with a definition to a ValueSetConceptComponent when applying to a FshValueSet', () => {
+  it('should not convert a ConceptRule with a definition to a ValueSetConceptComponent when applying to a FshValueSet', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear" "brown bears are kind of scary"
     //
@@ -207,7 +208,7 @@ describe('applyInsertRules', () => {
     const vs = new FshValueSet('Foo').withFile('VS.fsh').withLocation([5, 6, 7, 16]);
     doc.valueSets.set(vs.name, vs);
 
-    const concept = new FshConcept('bear', 'brown bear', 'brown bears are kind of scary')
+    const concept = new ConceptRule('bear', 'brown bear', 'brown bears are kind of scary')
       .withFile('Concept.fsh')
       .withLocation([1, 2, 3, 4]);
     concept.system = 'ZOO';
@@ -221,17 +222,17 @@ describe('applyInsertRules', () => {
 
     expect(vs.rules).toHaveLength(0);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /FshConcept.*FshValueSet.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 1 - 3\D*/s
+      /ConceptRule.*FshValueSet.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 1 - 3\D*/s
     );
   });
 
-  it('should not convert a FshConcept to a ValueSetConceptComponent when applying to a Profile', () => {
+  it('should not convert a ConceptRule to a ValueSetConceptComponent when applying to a Profile', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear"
     //
     // Profile: Foo
     // * insert Bar
-    const concept = new FshConcept('bear', 'brown bear')
+    const concept = new ConceptRule('bear', 'brown bear')
       .withFile('Concept.fsh')
       .withLocation([1, 2, 3, 4]);
     concept.system = 'ZOO';
@@ -245,7 +246,7 @@ describe('applyInsertRules', () => {
 
     expect(profile.rules).toHaveLength(0);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /FshConcept.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 1 - 3\D*/s
+      /ConceptRule.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 1 - 3\D*/s
     );
   });
 

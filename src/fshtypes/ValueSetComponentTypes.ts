@@ -1,20 +1,4 @@
-import { FshCode } from './FshCode';
-import { Rule } from './rules/Rule';
-
-export class ValueSetComponent extends Rule {
-  public from: ValueSetComponentFrom = {};
-  constructor(public inclusion: boolean) {
-    super('');
-  }
-}
-
-export class ValueSetConceptComponent extends ValueSetComponent {
-  public concepts: FshCode[] = [];
-}
-
-export class ValueSetFilterComponent extends ValueSetComponent {
-  public filters: ValueSetFilter[] = [];
-}
+import { FshCode } from '.';
 
 export type ValueSetComponentFrom = {
   system?: string;

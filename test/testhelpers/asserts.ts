@@ -12,14 +12,11 @@ import {
   CaretValueRule,
   ObeysRule,
   MappingRule,
-  InsertRule
+  InsertRule,
+  ValueSetConceptComponentRule,
+  ValueSetFilterComponentRule
 } from '../../src/fshtypes/rules';
-import {
-  ValueSetConceptComponent,
-  FshCode,
-  ValueSetFilterComponent,
-  ValueSetFilter
-} from '../../src/fshtypes';
+import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 
 export function assertCardRule(rule: Rule, path: string, min: number, max: number | string): void {
   expect(rule).toBeInstanceOf(CardRule);
@@ -153,8 +150,8 @@ export function assertValueSetConceptComponent(
   concepts: FshCode[],
   included = true
 ): void {
-  expect(component).toBeInstanceOf(ValueSetConceptComponent);
-  const conceptComponent = component as ValueSetConceptComponent;
+  expect(component).toBeInstanceOf(ValueSetConceptComponentRule);
+  const conceptComponent = component as ValueSetConceptComponentRule;
   expect(conceptComponent.from.system).toBe(fromSystem);
   expect(conceptComponent.from.valueSets).toEqual(fromValueSets);
   expect(conceptComponent.concepts).toEqual(concepts);
@@ -168,8 +165,8 @@ export function assertValueSetFilterComponent(
   filters: ValueSetFilter[],
   included = true
 ): void {
-  expect(component).toBeInstanceOf(ValueSetFilterComponent);
-  const filterComponent = component as ValueSetFilterComponent;
+  expect(component).toBeInstanceOf(ValueSetFilterComponentRule);
+  const filterComponent = component as ValueSetFilterComponentRule;
   expect(filterComponent.from.system).toBe(fromSystem);
   expect(filterComponent.from.valueSets).toEqual(fromValueSets);
   expect(filterComponent.filters).toEqual(filters);

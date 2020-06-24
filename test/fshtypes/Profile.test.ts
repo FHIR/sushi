@@ -1,8 +1,6 @@
 import 'jest-extended';
 import { Profile } from '../../src/fshtypes/Profile';
-import { CardRule } from '../../src/fshtypes/rules';
-import { FshConcept } from '../../src/fshtypes';
-
+import { CardRule, ConceptRule } from '../../src/fshtypes/rules';
 describe('Profile', () => {
   describe('#constructor', () => {
     it('should set the properties correctly', () => {
@@ -23,7 +21,7 @@ describe('Profile', () => {
 
     it('should not allow a rule that is on the disallowed list', () => {
       const p = new Profile('MyProfile');
-      expect(p.ruleIsAllowed(new FshConcept('foo'))).toBeFalse();
+      expect(p.ruleIsAllowed(new ConceptRule('foo'))).toBeFalse();
     });
   });
 });

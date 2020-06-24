@@ -1,7 +1,6 @@
 import { FshEntity } from './FshEntity';
-import { FshConcept } from './FshConcept';
 import { CodeSystemDuplicateCodeError } from '../errors/CodeSystemDuplicateCodeError';
-import { CaretValueRule, InsertRule, Rule } from './rules';
+import { CaretValueRule, InsertRule, Rule, ConceptRule } from './rules';
 
 /**
  * For more information about a CodeSystem in FHIR,
@@ -11,7 +10,7 @@ export class FshCodeSystem extends FshEntity {
   id: string;
   title?: string;
   description?: string;
-  rules: (FshConcept | CaretValueRule | InsertRule)[];
+  rules: (ConceptRule | CaretValueRule | InsertRule)[];
 
   constructor(public name: string) {
     super();
@@ -19,11 +18,11 @@ export class FshCodeSystem extends FshEntity {
     this.rules = [];
   }
 
-  addConcept(newConcept: FshConcept) {
+  addConcept(newConcept: ConceptRule) {
     if (
       this.rules
-        .filter(rule => rule instanceof FshConcept)
-        .find((existingConcept: FshConcept) => existingConcept.code == newConcept.code)
+        .filter(rule => rule instanceof ConceptRule)
+        .find((existingConcept: ConceptRule) => existingConcept.code == newConcept.code)
     ) {
       throw new CodeSystemDuplicateCodeError(this.id, newConcept.code);
     }
@@ -31,6 +30,6 @@ export class FshCodeSystem extends FshEntity {
   }
 
   ruleIsAllowed(rule: Rule) {
-    return rule instanceof FshConcept || rule instanceof CaretValueRule;
+    return rule instanceof ConceptRule || rule instanceof CaretValueRule;
   }
 }

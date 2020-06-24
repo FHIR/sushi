@@ -1,8 +1,7 @@
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem, FshCode, RuleSet } from '../../src/fshtypes';
-import { FshConcept } from '../../src/fshtypes/FshConcept';
-import { CaretValueRule, InsertRule, FixedValueRule } from '../../src/fshtypes/rules';
+import { CaretValueRule, InsertRule, FixedValueRule, ConceptRule } from '../../src/fshtypes/rules';
 import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
@@ -85,8 +84,8 @@ describe('CodeSystemExporter', () => {
 
   it('should export a code system with a concept with only a code', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
-    const myCode = new FshConcept('myCode');
-    const anotherCode = new FshConcept('anotherCode');
+    const myCode = new ConceptRule('myCode');
+    const anotherCode = new ConceptRule('anotherCode');
     codeSystem.rules = [myCode, anotherCode];
     doc.codeSystems.set(codeSystem.name, codeSystem);
     const exported = exporter.export().codeSystems;
@@ -106,8 +105,8 @@ describe('CodeSystemExporter', () => {
 
   it('should export a code system with a concept with a code, display, and definition', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
-    const myCode = new FshConcept('myCode', 'My code', 'This is the formal definition of my code');
-    const anotherCode = new FshConcept(
+    const myCode = new ConceptRule('myCode', 'My code', 'This is the formal definition of my code');
+    const anotherCode = new ConceptRule(
       'anotherCode',
       'A second code',
       'More details about this code'
@@ -247,7 +246,7 @@ describe('CodeSystemExporter', () => {
     rule2.caretPath = 'count';
     rule2.value = 5;
     codeSystem.rules.push(rule2);
-    codeSystem.rules.push(...[new FshConcept('myCode'), new FshConcept('anotherCode')]);
+    codeSystem.rules.push(...[new ConceptRule('myCode'), new ConceptRule('anotherCode')]);
     doc.codeSystems.set(codeSystem.name, codeSystem);
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
@@ -269,7 +268,7 @@ describe('CodeSystemExporter', () => {
       endColumn: 12
     };
     codeSystem.rules.push(rule);
-    codeSystem.rules.push(...[new FshConcept('myCode'), new FshConcept('anotherCode')]);
+    codeSystem.rules.push(...[new ConceptRule('myCode'), new ConceptRule('anotherCode')]);
     doc.codeSystems.set(codeSystem.name, codeSystem);
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
@@ -308,7 +307,7 @@ describe('CodeSystemExporter', () => {
     rule.caretPath = 'content';
     rule.value = new FshCode('fragment', 'http://hl7.org/fhir/codesystem-content-mode');
     codeSystem.rules.push(rule);
-    codeSystem.rules.push(...[new FshConcept('myCode'), new FshConcept('anotherCode')]);
+    codeSystem.rules.push(...[new ConceptRule('myCode'), new ConceptRule('anotherCode')]);
     doc.codeSystems.set(codeSystem.name, codeSystem);
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);

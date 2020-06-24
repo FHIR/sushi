@@ -10,8 +10,7 @@ import {
   FshValueSet,
   FshCodeSystem,
   Invariant,
-  RuleSet,
-  FshConcept
+  RuleSet
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -22,7 +21,8 @@ import {
   ContainsRule,
   CaretValueRule,
   ObeysRule,
-  InsertRule
+  InsertRule,
+  ConceptRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
@@ -4075,7 +4075,7 @@ describe('StructureDefinitionExporter', () => {
       // Profile: Foo
       // Parent: Observation
       // * insert Bar
-      const concept = new FshConcept('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
+      const concept = new ConceptRule('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
       const nameRule = new CaretValueRule('');
       nameRule.caretPath = 'title';
       nameRule.value = 'Wow fancy';
@@ -4089,7 +4089,7 @@ describe('StructureDefinitionExporter', () => {
       // CaretRule is still applied
       expect(exported.title).toBe('Wow fancy');
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /FshConcept.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+        /ConceptRule.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
   });

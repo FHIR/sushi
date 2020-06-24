@@ -1,7 +1,6 @@
 import 'jest-extended';
 import { Extension } from '../../src/fshtypes/Extension';
-import { CardRule } from '../../src/fshtypes/rules';
-import { FshConcept } from '../../src/fshtypes';
+import { CardRule, ConceptRule } from '../../src/fshtypes/rules';
 
 describe('Extension', () => {
   describe('#constructor', () => {
@@ -23,7 +22,7 @@ describe('Extension', () => {
 
     it('should not allow a rule that is on the disallowed list', () => {
       const e = new Extension('MyExtension');
-      expect(e.ruleIsAllowed(new FshConcept('foo'))).toBeFalse();
+      expect(e.ruleIsAllowed(new ConceptRule('foo'))).toBeFalse();
     });
   });
 });

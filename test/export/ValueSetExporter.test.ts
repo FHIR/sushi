@@ -1,20 +1,18 @@
 import { ValueSetExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
-import {
-  FshValueSet,
-  ValueSetFilterComponent,
-  ValueSetConceptComponent,
-  FshCode,
-  VsOperator,
-  FshCodeSystem,
-  ValueSetComponent,
-  RuleSet
-} from '../../src/fshtypes';
+import { FshValueSet, FshCode, VsOperator, FshCodeSystem, RuleSet } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import path from 'path';
-import { CaretValueRule, InsertRule, FixedValueRule } from '../../src/fshtypes/rules';
+import {
+  CaretValueRule,
+  InsertRule,
+  FixedValueRule,
+  ValueSetComponentRule,
+  ValueSetConceptComponentRule,
+  ValueSetFilterComponentRule
+} from '../../src/fshtypes/rules';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('ValueSetExporter', () => {
@@ -171,7 +169,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a component from a system', () => {
     const valueSet = new FshValueSet('DinnerVS');
-    const component = new ValueSetConceptComponent(true);
+    const component = new ValueSetConceptComponentRule(true);
     component.from = { system: 'http://food.org/food' };
     valueSet.rules.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
@@ -192,7 +190,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a component from a named system', () => {
     const valueSet = new FshValueSet('DinnerVS');
-    const component = new ValueSetConceptComponent(true);
+    const component = new ValueSetConceptComponentRule(true);
     component.from = { system: 'FoodCS' };
     valueSet.rules.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
@@ -216,7 +214,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a component from a value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
-    const component = new ValueSetConceptComponent(true);
+    const component = new ValueSetConceptComponentRule(true);
     component.from = {
       valueSets: [
         'http://food.org/food/ValueSet/hot-food',
@@ -249,7 +247,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a component from a value set with a version', () => {
     const valueSet = new FshValueSet('DinnerVS');
-    const component = new ValueSetConceptComponent(true);
+    const component = new ValueSetConceptComponentRule(true);
     component.from = {
       valueSets: ['http://food.org/food/ValueSet/hot-food|1.2.3']
     };
@@ -276,7 +274,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a component from a named value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
-    const component = new ValueSetConceptComponent(true);
+    const component = new ValueSetConceptComponentRule(true);
     component.from = {
       valueSets: ['HotFoodVS', 'ColdFoodVS']
     };
@@ -312,7 +310,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a concept component with at least one concept', () => {
     const valueSet = new FshValueSet('DinnerVS');
-    const component = new ValueSetConceptComponent(true);
+    const component = new ValueSetConceptComponentRule(true);
     component.from = { system: 'http://food.org/food' };
     component.concepts.push(
       new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
@@ -349,11 +347,11 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a concept component where the concept system includes a version', () => {
     const valueSet = new FshValueSet('BreakfastVS');
-    const toastComponent = new ValueSetConceptComponent(true);
+    const toastComponent = new ValueSetConceptComponentRule(true);
     toastComponent.from = { system: 'http://food.org/food|2.0.1' };
     toastComponent.concepts.push(new FshCode('Toast', 'http://food.org/food|2.0.1'));
     valueSet.rules.push(toastComponent);
-    const juiceComponent = new ValueSetConceptComponent(true);
+    const juiceComponent = new ValueSetConceptComponentRule(true);
     juiceComponent.from = { system: 'http://food.org/beverage|1.1|x' };
     juiceComponent.concepts.push(new FshCode('Orange juice', 'http://food.org/beverage|1.1|x'));
     valueSet.rules.push(juiceComponent);
@@ -386,7 +384,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a filter component with a regex filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
-    const component = new ValueSetFilterComponent(true);
+    const component = new ValueSetFilterComponentRule(true);
     component.from = { system: 'http://food.org/food' };
     component.filters.push({
       property: 'display',
@@ -423,7 +421,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a filter component with a code filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
-    const component = new ValueSetFilterComponent(true);
+    const component = new ValueSetFilterComponentRule(true);
     component.from = { system: 'http://food.org/food' };
     component.filters.push({
       property: 'concept',
@@ -460,7 +458,7 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that includes a filter component with a string filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
-    const component = new ValueSetFilterComponent(true);
+    const component = new ValueSetFilterComponentRule(true);
     component.from = { system: 'http://food.org/food' };
     component.filters.push({
       property: 'version',
@@ -497,12 +495,12 @@ describe('ValueSetExporter', () => {
 
   it('should export a value set that excludes a component', () => {
     const valueSet = new FshValueSet('DinnerVS');
-    const includedComponent = new ValueSetFilterComponent(true);
+    const includedComponent = new ValueSetFilterComponentRule(true);
     includedComponent.from = {
       system: 'http://food.org/food',
       valueSets: ['http://food.org/food/ValueSet/baked', 'http://food.org/food/ValueSet/grilled']
     };
-    const excludedComponent = new ValueSetConceptComponent(false);
+    const excludedComponent = new ValueSetConceptComponentRule(false);
     excludedComponent.from = { system: 'http://food.org/food' };
     excludedComponent.concepts.push(
       new FshCode('Cake', 'http://food.org/food', 'A delicious treat for special occasions.')
@@ -548,7 +546,7 @@ describe('ValueSetExporter', () => {
     const valueSet = new FshValueSet('BreakfastVS')
       .withFile('Breakfast.fsh')
       .withLocation([2, 8, 4, 25]);
-    const candyFilter = new ValueSetFilterComponent(false);
+    const candyFilter = new ValueSetFilterComponentRule(false);
     candyFilter.from = { valueSets: ['CandyVS'] };
     valueSet.rules.push(candyFilter);
     doc.valueSets.set(valueSet.name, valueSet);
@@ -561,7 +559,7 @@ describe('ValueSetExporter', () => {
     const valueSet = new FshValueSet('BreakfastVS')
       .withFile('Breakfast.fsh')
       .withLocation([2, 8, 4, 25]);
-    const component = new ValueSetComponent(true);
+    const component = new ValueSetComponentRule(true);
     component.from = { system: 'notAUri' };
     valueSet.rules.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
@@ -576,7 +574,7 @@ describe('ValueSetExporter', () => {
     const valueSet = new FshValueSet('BreakfastVS')
       .withFile('Breakfast.fsh')
       .withLocation([2, 8, 4, 25]);
-    const component = new ValueSetComponent(true);
+    const component = new ValueSetComponentRule(true);
     component.from = { valueSets: ['notAUri'] };
     valueSet.rules.push(component);
     doc.valueSets.set(valueSet.name, valueSet);
@@ -629,7 +627,7 @@ describe('ValueSetExporter', () => {
 
   it('should use the url specified in a CaretValueRule when referencing a named value set', () => {
     const lunchVS = new FshValueSet('LunchVS');
-    const lunchFilterComponent = new ValueSetFilterComponent(true);
+    const lunchFilterComponent = new ValueSetFilterComponentRule(true);
     lunchFilterComponent.from = {
       valueSets: ['SandwichVS']
     };
@@ -653,7 +651,7 @@ describe('ValueSetExporter', () => {
 
   it('should use the url specified in a CaretValueRule when referencing a named code system', () => {
     const lunchVS = new FshValueSet('LunchVS');
-    const lunchFilterComponent = new ValueSetFilterComponent(true);
+    const lunchFilterComponent = new ValueSetFilterComponentRule(true);
     lunchFilterComponent.from = {
       system: 'FoodCS'
     };

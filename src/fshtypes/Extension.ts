@@ -1,7 +1,6 @@
 import { Rule } from './rules/Rule';
 import { FshEntity } from './FshEntity';
-import { InsertRule, MappingRule } from './rules';
-import { ValueSetComponent, FshConcept } from '.';
+import { InsertRule, MappingRule, ValueSetComponentRule, ConceptRule } from './rules';
 import { SdRule } from './Profile';
 
 export class Extension extends FshEntity {
@@ -27,8 +26,8 @@ export class Extension extends FshEntity {
     return !(
       rule instanceof InsertRule ||
       rule instanceof MappingRule ||
-      rule instanceof ValueSetComponent ||
-      rule instanceof FshConcept
+      rule instanceof ValueSetComponentRule ||
+      rule instanceof ConceptRule
     );
   }
 }

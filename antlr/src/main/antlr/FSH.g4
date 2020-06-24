@@ -159,7 +159,6 @@ NUMBER:             [+\-]? [0-9]+('.' [0-9]+)?;
                  //   '  UCUM UNIT   '
 UNIT:               '\'' (~[\\'])* '\'';
 
-
                  // SYSTEM     #  SYSTEM
 CODE:               SEQUENCE? '#' (SEQUENCE | CONCEPT_STRING);
 

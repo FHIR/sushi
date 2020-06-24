@@ -6,7 +6,13 @@ import {
   ValueSet,
   CodeSystem
 } from '.';
-import { FixedValueRule, Rule, InsertRule } from '../fshtypes/rules';
+import {
+  FixedValueRule,
+  Rule,
+  InsertRule,
+  ConceptRule,
+  ValueSetConceptComponentRule
+} from '../fshtypes/rules';
 import {
   FshReference,
   Instance,
@@ -18,9 +24,7 @@ import {
   FshValueSet,
   FshCodeSystem,
   Mapping,
-  SdRule,
-  FshConcept,
-  ValueSetConceptComponent
+  SdRule
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -372,6 +376,11 @@ export function applyMixinRules(
   fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
 }
 
+/**
+ * Adds insert rules onto a Profile, Extension, or Instance
+ * @param fshDefinition - The definition to apply rules on
+ * @param tank - The FSHTank containing the fshDefinition
+ */
 export function applyInsertRules(
   fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
   tank: FSHTank,
@@ -392,11 +401,11 @@ export function applyInsertRules(
           applyInsertRules(ruleSet, tank, seenRuleSets);
           ruleSet.rules.forEach(ruleSetRule => {
             // On the import side, a rule that is intended to be a ValueSetConceptComponent can
-            // be imported as a FshConcept because the syntax is identical. If this is the case,
-            // create a ValueSetConceptComponent that corresponds to the FshConcept, and use that
+            // be imported as a ConceptRule because the syntax is identical. If this is the case,
+            // create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that
             if (
               fshDefinition instanceof FshValueSet &&
-              ruleSetRule instanceof FshConcept &&
+              ruleSetRule instanceof ConceptRule &&
               ruleSetRule.definition == null
             ) {
               const relatedCode = new FshCode(
@@ -404,8 +413,8 @@ export function applyInsertRules(
                 ruleSetRule.system,
                 ruleSetRule.display
               );
-              ruleSetRule = new ValueSetConceptComponent(true);
-              (ruleSetRule as ValueSetConceptComponent).concepts = [relatedCode];
+              ruleSetRule = new ValueSetConceptComponentRule(true);
+              (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
             }
             ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
             ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;

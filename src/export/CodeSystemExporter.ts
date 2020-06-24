@@ -1,8 +1,8 @@
 import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
-import { FshCodeSystem, FshConcept } from '../fshtypes';
-import { CaretValueRule } from '../fshtypes/rules';
+import { FshCodeSystem } from '../fshtypes';
+import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, Type } from '../utils';
 import { Package } from '.';
@@ -24,7 +24,7 @@ export class CodeSystemExporter {
     codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
 
-  private setConcepts(codeSystem: CodeSystem, concepts: FshConcept[]): void {
+  private setConcepts(codeSystem: CodeSystem, concepts: ConceptRule[]): void {
     if (concepts.length > 0) {
       codeSystem.concept = concepts.map(concept => {
         const codeSystemConcept: CodeSystemConcept = { code: concept.code };
@@ -91,7 +91,7 @@ export class CodeSystemExporter {
     );
     this.setConcepts(
       codeSystem,
-      fshDefinition.rules.filter(rule => rule instanceof FshConcept) as FshConcept[]
+      fshDefinition.rules.filter(rule => rule instanceof ConceptRule) as ConceptRule[]
     );
 
     // check for another code system with the same id

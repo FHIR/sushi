@@ -9,7 +9,6 @@ import {
   Profile,
   Extension,
   FshCode,
-  FshConcept,
   FshQuantity,
   FshRatio,
   FshReference,
@@ -17,9 +16,6 @@ import {
   Instance,
   InstanceUsage,
   FshValueSet,
-  ValueSetComponent,
-  ValueSetConceptComponent,
-  ValueSetFilterComponent,
   ValueSetComponentFrom,
   ValueSetFilter,
   VsOperator,
@@ -43,7 +39,11 @@ import {
   CaretValueRule,
   ObeysRule,
   MappingRule,
-  InsertRule
+  InsertRule,
+  ConceptRule,
+  ValueSetComponentRule,
+  ValueSetConceptComponentRule,
+  ValueSetFilterComponentRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -420,15 +420,15 @@ export class FSHImporter extends FSHVisitor {
       const rule = this.visitVsRule(vsRule);
       // if rule is a concept component,
       // we may be able to merge its concepts into an existing concept component.
-      if (rule instanceof ValueSetConceptComponent) {
+      if (rule instanceof ValueSetConceptComponentRule) {
         const matchedComponent = valueSet.rules.find(existingComponent => {
           return (
-            existingComponent instanceof ValueSetConceptComponent &&
+            existingComponent instanceof ValueSetConceptComponentRule &&
             rule.inclusion == existingComponent.inclusion &&
             rule.from.system == existingComponent.from.system &&
             isEqual(sortBy(rule.from.valueSets), sortBy(existingComponent.from.valueSets))
           );
-        }) as ValueSetConceptComponent;
+        }) as ValueSetConceptComponentRule;
         if (matchedComponent) {
           matchedComponent.concepts.push(...rule.concepts);
         } else {
@@ -488,7 +488,7 @@ export class FSHImporter extends FSHVisitor {
       });
     csRuleCtx.forEach(ruleCtx => {
       const rule = this.visitCsRule(ruleCtx);
-      if (rule instanceof FshConcept) {
+      if (rule instanceof ConceptRule) {
         try {
           codeSystem.addConcept(rule);
         } catch (e) {
@@ -889,7 +889,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitVsRule(ctx: pc.VsRuleContext): ValueSetComponent | CaretValueRule | InsertRule {
+  visitVsRule(ctx: pc.VsRuleContext): ValueSetComponentRule | CaretValueRule | InsertRule {
     if (ctx.vsComponent()) {
       return this.visitVsComponent(ctx.vsComponent());
     }
@@ -908,7 +908,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitCsRule(ctx: pc.CsRuleContext): FshConcept | CaretValueRule | InsertRule {
+  visitCsRule(ctx: pc.CsRuleContext): ConceptRule | CaretValueRule | InsertRule {
     if (ctx.concept()) {
       return this.visitConcept(ctx.concept());
     } else if (ctx.caretValueRule()) {
@@ -1134,9 +1134,9 @@ export class FSHImporter extends FSHVisitor {
     return concept;
   }
 
-  visitConcept(ctx: pc.ConceptContext): FshConcept {
+  visitConcept(ctx: pc.ConceptContext): ConceptRule {
     const codePart = this.visitCode(ctx.code());
-    const concept = new FshConcept(codePart.code, codePart.display)
+    const concept = new ConceptRule(codePart.code, codePart.display)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (codePart.system) {
@@ -1145,7 +1145,7 @@ export class FSHImporter extends FSHVisitor {
         concept.sourceInfo
       );
       // If this is on a ruleset, and if this rule is then used on a ValueSet, this could actually
-      // be a ValueSetConceptComponent, and not a FshConcept, in which case we should carry through
+      // be a ValueSetConceptComponent, and not a ConceptRule, in which case we should carry through
       // the system
       concept.system = codePart.system;
     }
@@ -1298,7 +1298,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
-    const insertRule = new InsertRule();
+    const insertRule = new InsertRule()
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
     insertRule.ruleSet = ctx.SEQUENCE().getText();
     return insertRule;
   }
@@ -1326,16 +1328,16 @@ export class FSHImporter extends FSHVisitor {
     return mappingRule;
   }
 
-  visitVsComponent(ctx: pc.VsComponentContext): ValueSetComponent {
+  visitVsComponent(ctx: pc.VsComponentContext): ValueSetComponentRule {
     const inclusion = ctx.KW_EXCLUDE() == null;
-    let vsComponent: ValueSetConceptComponent | ValueSetFilterComponent;
+    let vsComponent: ValueSetConceptComponentRule | ValueSetFilterComponentRule;
     if (ctx.vsConceptComponent()) {
-      vsComponent = new ValueSetConceptComponent(inclusion);
+      vsComponent = new ValueSetConceptComponentRule(inclusion);
       [vsComponent.concepts, vsComponent.from] = this.visitVsConceptComponent(
         ctx.vsConceptComponent()
       );
     } else if (ctx.vsFilterComponent()) {
-      vsComponent = new ValueSetFilterComponent(inclusion);
+      vsComponent = new ValueSetFilterComponentRule(inclusion);
       [vsComponent.filters, vsComponent.from] = this.visitVsFilterComponent(
         ctx.vsFilterComponent()
       );

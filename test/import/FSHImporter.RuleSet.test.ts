@@ -7,8 +7,8 @@ import {
   assertValueSetConceptComponent
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { Rule } from '../../src/fshtypes/rules';
-import { FshCode, FshConcept } from '../../src/fshtypes';
+import { Rule, ConceptRule } from '../../src/fshtypes/rules';
+import { FshCode } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
   beforeAll(() => {
@@ -89,7 +89,7 @@ describe('FSHImporter', () => {
       assertCardRule(ruleSet.rules[2] as Rule, 'contact', 1, '1');
     });
 
-    it('should parse a RuleSet with rules, ValueSetComponents, and FshConcepts', () => {
+    it('should parse a RuleSet with rules, ValueSetComponents, and ConceptRules', () => {
       const input = `
         RuleSet: RuleRuleSet
         * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
@@ -117,7 +117,7 @@ describe('FSHImporter', () => {
       ]);
       const concept = ruleSet.rules[2];
       expect(concept).toEqual(
-        new FshConcept('lion').withFile('Rules.fsh').withLocation([5, 9, 5, 15])
+        new ConceptRule('lion').withFile('Rules.fsh').withLocation([5, 9, 5, 15])
       );
     });
 

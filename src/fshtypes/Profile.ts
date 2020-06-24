@@ -10,10 +10,10 @@ import {
   ContainsRule,
   ObeysRule,
   OnlyRule,
-  ValueSetRule
+  ValueSetRule,
+  ConceptRule,
+  ValueSetComponentRule
 } from './rules';
-import { ValueSetComponent } from './ValueSetComponent';
-import { FshConcept } from './FshConcept';
 
 export class Profile extends FshEntity {
   id: string;
@@ -34,8 +34,8 @@ export class Profile extends FshEntity {
     return !(
       rule instanceof InsertRule ||
       rule instanceof MappingRule ||
-      rule instanceof ValueSetComponent ||
-      rule instanceof FshConcept
+      rule instanceof ValueSetComponentRule ||
+      rule instanceof ConceptRule
     );
   }
 }

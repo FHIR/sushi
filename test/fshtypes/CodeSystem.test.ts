@@ -1,7 +1,6 @@
 import 'jest-extended';
 import { FshCodeSystem } from '../../src/fshtypes/FshCodeSystem';
-import { CardRule } from '../../src/fshtypes/rules';
-import { FshConcept } from '../../src/fshtypes';
+import { CardRule, ConceptRule } from '../../src/fshtypes/rules';
 
 describe('CodeSystem', () => {
   describe('#constructor', () => {
@@ -18,7 +17,7 @@ describe('CodeSystem', () => {
   describe('#ruleIsAllowed', () => {
     it('should allow a rule that is on the allowed list', () => {
       const cs = new FshCodeSystem('MyCodeSystem');
-      expect(cs.ruleIsAllowed(new FshConcept('foo'))).toBeTrue();
+      expect(cs.ruleIsAllowed(new ConceptRule('foo'))).toBeTrue();
     });
 
     it('should not allow a rule that is not on the allowed list', () => {
