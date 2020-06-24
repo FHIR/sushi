@@ -3994,6 +3994,44 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
     });
+
+    it('should emit a warning whenever a mixin is used', () => {
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      mixin.rules.push(nameRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      // mixins are still applied
+      expect(sd.title).toBe('Wow fancy');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of the "Mixins" keyword/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/\* insert Bar/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
+
+    it('should emit a warning whenever multiple mixins are used', () => {
+      const nameRule1 = new CaretValueRule('');
+      nameRule1.caretPath = 'title';
+      nameRule1.value = 'Wow fancy';
+      mixin.rules.push(nameRule1);
+
+      const mixin2 = new RuleSet('Baz');
+      doc.ruleSets.set(mixin2.name, mixin2);
+      const nameRule2 = new CaretValueRule('');
+      nameRule2.caretPath = 'title';
+      nameRule2.value = 'Wow fancier title';
+      mixin2.rules.push(nameRule2);
+      profile.mixins.push('Baz');
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      // mixins are still applied
+      expect(sd.title).toBe('Wow fancier title');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of the "Mixins" keyword/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/\* insert Bar.*insert Baz/s);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
   });
 
   describe('#insertRules', () => {

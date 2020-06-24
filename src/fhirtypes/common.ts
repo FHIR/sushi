@@ -334,6 +334,16 @@ export function applyMixinRules(
   fshDefinition: Profile | Extension | Instance,
   tank: FSHTank
 ): void {
+  if (fshDefinition.mixins.length > 0) {
+    const insertString = '* insert ' + fshDefinition.mixins.join('\n* insert ') + '\n';
+    logger.warn(
+      'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
+        'Instead, use the "insert" keyword, which can be placed anywhere in a list of rules to indicate ' +
+        'the exact location rules should be inserted. The RuleSets added here with the "Mixin" keyword can ' +
+        `be added with the "insert" keyword by adding the following rule(s):\n${insertString}`,
+      fshDefinition.sourceInfo
+    );
+  }
   // Rules are added to beginning of rules array, so add the last mixin rules first
   const mixedInRules: SdRule[] = [];
   fshDefinition.mixins.forEach(mixinName => {
