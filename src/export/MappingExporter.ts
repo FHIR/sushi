@@ -5,6 +5,7 @@ import { Mapping } from '../fshtypes';
 import { StructureDefinition, idRegex } from '../fhirtypes';
 import { InvalidFHIRIdError } from '../errors';
 import { MappingRule } from '../fshtypes/rules';
+import { applyInsertRules } from '../fhirtypes/common';
 import { groupBy, pickBy } from 'lodash';
 
 export class MappingExporter {
@@ -70,6 +71,7 @@ export class MappingExporter {
     ) as StructureDefinition;
     if (sourceStructDef) {
       this.setMetadata(sourceStructDef, fshDefinition);
+      applyInsertRules(fshDefinition, this.tank);
       this.setMappingRules(sourceStructDef, fshDefinition);
     } else {
       logger.error(`Unable to find source "${fshDefinition.source}".`, fshDefinition.sourceInfo);

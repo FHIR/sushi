@@ -1,7 +1,7 @@
 import { FSHTank, FSHDocument } from '../../src/import';
-import { Profile, RuleSet } from '../../src/fshtypes';
+import { Profile, RuleSet, FshConcept, FshCode, FshValueSet } from '../../src/fshtypes';
 import { InsertRule, CardRule } from '../../src/fshtypes/rules';
-import { loggerSpy, assertCardRule } from '../testhelpers';
+import { loggerSpy, assertCardRule, assertValueSetConceptComponent } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
 describe('applyInsertRules', () => {
@@ -47,6 +47,28 @@ describe('applyInsertRules', () => {
 
     expect(profile.rules).toHaveLength(1);
     assertCardRule(profile.rules[0], 'category', 1, '1');
+  });
+
+  it('should not apply rules from a single level insert rule that are not valid', () => {
+    // RuleSet: Bar
+    // * #bear
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * insert Bar
+    const concept = new FshConcept('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /FshConcept.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 5 - 7\D*/s
+    );
   });
 
   it('should apply rules from a single level insert rule in correct order', () => {
@@ -145,6 +167,86 @@ describe('applyInsertRules', () => {
     assertCardRule(profile.rules[0], 'category', 1, '1');
     assertCardRule(profile.rules[1], 'subject', 1, '1');
     assertCardRule(profile.rules[2], 'focus', 1, '1');
+  });
+
+  it('should convert a FshConcept to a ValueSetConceptComponent when applying to a FshValueSet', () => {
+    // RuleSet: Bar
+    // * ZOO#bear "brown bear"
+    //
+    // ValueSet: Foo
+    // * insert Bar
+    const vs = new FshValueSet('Foo').withFile('VS.fsh').withLocation([5, 6, 7, 16]);
+    doc.valueSets.set(vs.name, vs);
+
+    const concept = new FshConcept('bear', 'brown bear');
+    concept.system = 'ZOO';
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule();
+    insertRule.ruleSet = 'Bar';
+    vs.rules.push(insertRule);
+
+    applyInsertRules(vs, tank);
+
+    expect(vs.rules).toHaveLength(1);
+    assertValueSetConceptComponent(
+      vs.rules[0],
+      undefined,
+      undefined,
+      [new FshCode('bear', 'ZOO', 'brown bear')],
+      true
+    );
+  });
+
+  it('should not convert a FshConcept with a definition to a ValueSetConceptComponent when applying to a FshValueSet', () => {
+    // RuleSet: Bar
+    // * ZOO#bear "brown bear" "brown bears are kind of scary"
+    //
+    // ValueSet: Foo
+    // * insert Bar
+    const vs = new FshValueSet('Foo').withFile('VS.fsh').withLocation([5, 6, 7, 16]);
+    doc.valueSets.set(vs.name, vs);
+
+    const concept = new FshConcept('bear', 'brown bear', 'brown bears are kind of scary')
+      .withFile('Concept.fsh')
+      .withLocation([1, 2, 3, 4]);
+    concept.system = 'ZOO';
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
+    insertRule.ruleSet = 'Bar';
+    vs.rules.push(insertRule);
+
+    applyInsertRules(vs, tank);
+
+    expect(vs.rules).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /FshConcept.*FshValueSet.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 1 - 3\D*/s
+    );
+  });
+
+  it('should not convert a FshConcept to a ValueSetConceptComponent when applying to a Profile', () => {
+    // RuleSet: Bar
+    // * ZOO#bear "brown bear"
+    //
+    // Profile: Foo
+    // * insert Bar
+    const concept = new FshConcept('bear', 'brown bear')
+      .withFile('Concept.fsh')
+      .withLocation([1, 2, 3, 4]);
+    concept.system = 'ZOO';
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /FshConcept.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 1 - 3\D*/s
+    );
   });
 
   it('should ignore insert rules that cause a circular dependency, and log an error', () => {

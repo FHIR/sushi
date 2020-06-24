@@ -10,7 +10,8 @@ import {
   FshValueSet,
   FshCodeSystem,
   Invariant,
-  RuleSet
+  RuleSet,
+  FshConcept
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -4000,7 +4001,7 @@ describe('StructureDefinitionExporter', () => {
     let ruleSet: RuleSet;
 
     beforeEach(() => {
-      profile = new Profile('Foo').withFile('Instance.fsh').withLocation([5, 6, 7, 16]);
+      profile = new Profile('Foo');
       profile.parent = 'Observation';
       doc.profiles.set(profile.name, profile);
 
@@ -4008,12 +4009,12 @@ describe('StructureDefinitionExporter', () => {
       doc.ruleSets.set(ruleSet.name, ruleSet);
     });
 
-    it('should apply rules from a single level insert rule', () => {
+    it('should apply rules from an insert rule', () => {
       // RuleSet: Bar
       // * ^title = "Wow fancy"
       //
-      // Instance: Foo
-      // InstanceOf: Observation
+      // Profile: Foo
+      // Parent: Observation
       // * insert Bar
       const nameRule = new CaretValueRule('');
       nameRule.caretPath = 'title';
@@ -4026,6 +4027,32 @@ describe('StructureDefinitionExporter', () => {
 
       const exported = exporter.exportStructDef(profile);
       expect(exported.title).toBe('Wow fancy');
+    });
+
+    it('should log an error and not apply rules from an invalid insert rule', () => {
+      // RuleSet: Bar
+      // * #lion
+      // * ^title = "Wow fancy"
+      //
+      // Profile: Foo
+      // Parent: Observation
+      // * insert Bar
+      const concept = new FshConcept('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      ruleSet.rules.push(concept, nameRule);
+
+      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      insertRule.ruleSet = 'Bar';
+      profile.rules.push(insertRule);
+
+      const exported = exporter.exportStructDef(profile);
+      // CaretRule is still applied
+      expect(exported.title).toBe('Wow fancy');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /FshConcept.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+      );
     });
   });
 });

@@ -1,6 +1,6 @@
 import { FshEntity } from './FshEntity';
 import { ValueSetComponent } from './ValueSetComponent';
-import { CaretValueRule, InsertRule } from './rules';
+import { CaretValueRule, InsertRule, Rule } from './rules';
 
 /**
  * For more information about the composition of a ValueSet,
@@ -16,5 +16,9 @@ export class FshValueSet extends FshEntity {
     super();
     this.id = name;
     this.rules = [];
+  }
+
+  ruleIsAllowed(rule: Rule) {
+    return rule instanceof ValueSetComponent || rule instanceof CaretValueRule;
   }
 }

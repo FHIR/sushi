@@ -18,7 +18,7 @@ import { ValueSetComposeError, InvalidUriError } from '../errors';
 import { Package } from '.';
 import { MasterFisher, Type } from '../utils';
 import { CaretValueRule } from '../fshtypes/rules';
-import { setPropertyOnInstance } from '../fhirtypes/common';
+import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 
 export class ValueSetExporter {
@@ -150,6 +150,7 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
+    applyInsertRules(fshDefinition, this.tank);
     this.setCaretRules(
       vs,
       fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]

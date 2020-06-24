@@ -1,5 +1,6 @@
 import 'jest-extended';
 import { Instance } from '../../src/fshtypes/Instance';
+import { FixedValueRule, CardRule } from '../../src/fshtypes/rules';
 
 describe('Instance', () => {
   describe('#constructor', () => {
@@ -11,6 +12,18 @@ describe('Instance', () => {
       expect(p.title).toBeUndefined();
       expect(p.mixins).toBeEmpty();
       expect(p.rules).toBeEmpty();
+    });
+  });
+
+  describe('#ruleIsAllowed', () => {
+    it('should allow a rule that is on the allowed list', () => {
+      const i = new Instance('MyInstance');
+      expect(i.ruleIsAllowed(new FixedValueRule('foo'))).toBeTrue();
+    });
+
+    it('should not allow a rule that is not on the allowed list', () => {
+      const i = new Instance('MyInstance');
+      expect(i.ruleIsAllowed(new CardRule('foo'))).toBeFalse();
     });
   });
 });

@@ -17,7 +17,10 @@ import {
   RuleSet,
   FshValueSet,
   FshCodeSystem,
-  Mapping
+  Mapping,
+  SdRule,
+  FshConcept,
+  ValueSetConceptComponent
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -332,7 +335,7 @@ export function applyMixinRules(
   tank: FSHTank
 ): void {
   // Rules are added to beginning of rules array, so add the last mixin rules first
-  const mixedInRules: Rule[] = [];
+  const mixedInRules: SdRule[] = [];
   fshDefinition.mixins.forEach(mixinName => {
     const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
     if (ruleSet) {
@@ -351,7 +354,7 @@ export function applyMixinRules(
         }
         return true;
       });
-      mixedInRules.push(...rules);
+      mixedInRules.push(...(rules as SdRule[]));
     } else {
       logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
     }
@@ -378,9 +381,32 @@ export function applyInsertRules(
           seenRuleSets.push(ruleSet.name);
           applyInsertRules(ruleSet, tank, seenRuleSets);
           ruleSet.rules.forEach(ruleSetRule => {
+            // On the import side, a rule that is intended to be a ValueSetConceptComponent can
+            // be imported as a FshConcept because the syntax is identical. If this is the case,
+            // create a ValueSetConceptComponent that corresponds to the FshConcept, and use that
+            if (
+              fshDefinition instanceof FshValueSet &&
+              ruleSetRule instanceof FshConcept &&
+              ruleSetRule.definition == null
+            ) {
+              const relatedCode = new FshCode(
+                ruleSetRule.code,
+                ruleSetRule.system,
+                ruleSetRule.display
+              );
+              ruleSetRule = new ValueSetConceptComponent(true);
+              (ruleSetRule as ValueSetConceptComponent).concepts = [relatedCode];
+            }
             ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
             ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
-            expandedRules.push(ruleSetRule);
+            if (fshDefinition.ruleIsAllowed(ruleSetRule)) {
+              expandedRules.push(ruleSetRule);
+            } else {
+              logger.error(
+                `Rule of type ${ruleSetRule.constructor.name} cannot be applied to entity of type ${fshDefinition.constructor.name}`,
+                ruleSetRule.sourceInfo
+              );
+            }
           });
         }
       } else {

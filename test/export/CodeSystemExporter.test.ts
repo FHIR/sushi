@@ -1,8 +1,8 @@
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
-import { FshCodeSystem, FshCode } from '../../src/fshtypes';
+import { FshCodeSystem, FshCode, RuleSet } from '../../src/fshtypes';
 import { FshConcept } from '../../src/fshtypes/FshConcept';
-import { CaretValueRule } from '../../src/fshtypes/rules';
+import { CaretValueRule, InsertRule, FixedValueRule } from '../../src/fshtypes/rules';
 import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
@@ -334,5 +334,67 @@ describe('CodeSystemExporter', () => {
       status: 'active'
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
+  });
+
+  describe('#insertRules', () => {
+    let cs: FshCodeSystem;
+    let ruleSet: RuleSet;
+
+    beforeEach(() => {
+      cs = new FshCodeSystem('Foo');
+      doc.codeSystems.set(cs.name, cs);
+
+      ruleSet = new RuleSet('Bar');
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+    });
+
+    it('should apply rules from an insert rule', () => {
+      // RuleSet: Bar
+      // * ^title = "Wow fancy"
+      //
+      // CodeSystem: Foo
+      // * insert Bar
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      ruleSet.rules.push(nameRule);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      cs.rules.push(insertRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.title).toBe('Wow fancy');
+    });
+
+    it('should log an error and not apply rules from an invalid insert rule', () => {
+      // RuleSet: Bar
+      // * experimental = true
+      // * ^title = "Wow fancy"
+      //
+      // CodeSystem: Foo
+      // * insert Bar
+      const valueRule = new FixedValueRule('experimental')
+        .withFile('Value.fsh')
+        .withLocation([1, 2, 3, 4]);
+      valueRule.fixedValue = true;
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      ruleSet.rules.push(valueRule, nameRule);
+
+      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      insertRule.ruleSet = 'Bar';
+      cs.rules.push(insertRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      // CaretRule is still applied
+      expect(exported.title).toBe('Wow fancy');
+      // experimental is not set to true
+      expect(exported.experimental).toBeFalsy();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /FixedValueRule.*FshCodeSystem.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+      );
+    });
   });
 });

@@ -28,10 +28,10 @@ import {
   Invariant,
   RuleSet,
   Mapping,
-  isInstanceUsage
+  isInstanceUsage,
+  SdRule
 } from '../fshtypes';
 import {
-  Rule,
   CardRule,
   FlagRule,
   ValueSetRule,
@@ -844,7 +844,7 @@ export class FSHImporter extends FSHVisitor {
     return concept;
   }
 
-  visitSdRule(ctx: pc.SdRuleContext): Rule[] {
+  visitSdRule(ctx: pc.SdRuleContext): SdRule[] {
     if (ctx.cardRule()) {
       return this.visitCardRule(ctx.cardRule());
     } else if (ctx.flagRule()) {
@@ -1144,6 +1144,10 @@ export class FSHImporter extends FSHVisitor {
         'Do not include the system when listing concepts for a code system.',
         concept.sourceInfo
       );
+      // If this is on a ruleset, and if this rule is then used on a ValueSet, this could actually
+      // be a ValueSetConceptComponent, and not a FshConcept, in which case we should carry through
+      // the system
+      concept.system = codePart.system;
     }
     if (ctx.STRING()) {
       concept.definition = this.extractString(ctx.STRING());

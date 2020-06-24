@@ -1,6 +1,6 @@
 import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
-import { setPropertyOnInstance } from '../fhirtypes/common';
+import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { FshCodeSystem, FshConcept } from '../fshtypes';
 import { CaretValueRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
@@ -84,6 +84,7 @@ export class CodeSystemExporter {
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
+    applyInsertRules(fshDefinition, this.tank);
     this.setCaretRules(
       codeSystem,
       fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]

@@ -15,7 +15,6 @@ import {
   InsertRule
 } from '../../src/fshtypes/rules';
 import {
-  ValueSetComponent,
   ValueSetConceptComponent,
   FshCode,
   ValueSetFilterComponent,
@@ -148,7 +147,7 @@ export function assertMappingRule(
 }
 
 export function assertValueSetConceptComponent(
-  component: ValueSetComponent | Rule,
+  component: Rule,
   fromSystem: string,
   fromValueSets: string[],
   concepts: FshCode[],
@@ -163,7 +162,7 @@ export function assertValueSetConceptComponent(
 }
 
 export function assertValueSetFilterComponent(
-  component: ValueSetComponent | Rule,
+  component: Rule,
   fromSystem: string,
   fromValueSets: string[],
   filters: ValueSetFilter[],
