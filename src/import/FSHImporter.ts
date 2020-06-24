@@ -1635,6 +1635,9 @@ export class FSHImporter extends FSHVisitor {
     const str = stringCtx.getText();
     return str
       .slice(1, str.length - 1)
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
       .replace(/\\\\/g, '\\')
       .replace(/\\"/g, '"');
   }
@@ -1655,6 +1658,10 @@ export class FSHImporter extends FSHVisitor {
 
     // split into lines so we can process them to determine what leading spaces to trim
     let lines = mlstr.split(/\r?\n/);
+
+    lines = lines.map(
+      l => (l = l.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t'))
+    );
 
     // if the first line is only whitespace, remove it
     if (lines[0].search(/\S/) === -1) {
