@@ -172,7 +172,7 @@ describe('FSHImporter', () => {
       it('should parse a value set with a list of concepts', () => {
         const input = `
         ValueSet: ZooVS
-        * #hippo "Hippopotamus", #crocodile "Crocodile" from system ZOO
+        * #hippo "Hippopotamus" and #crocodile "Crocodile" from system ZOO
         `;
 
         const result = importSingleText(input, 'Zoo.fsh');
@@ -181,17 +181,17 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
           new FshCode('hippo', 'ZOO', 'Hippopotamus')
-            .withLocation([3, 11, 3, 55])
+            .withLocation([3, 11, 3, 31])
             .withFile('Zoo.fsh'),
           new FshCode('crocodile', 'ZOO', 'Crocodile')
-            .withLocation([3, 11, 3, 55])
+            .withLocation([3, 37, 3, 58])
             .withFile('Zoo.fsh')
         ]);
         expect(valueSet.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
           endLine: 3,
-          endColumn: 71
+          endColumn: 74
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
@@ -200,7 +200,7 @@ describe('FSHImporter', () => {
         const input = `
         ValueSet: ZooVS
         * ZOO#hippo "Hippopotamus"
-        * #crocodile "Crocodile", #emu "Emu" from system ZOO
+        * #crocodile "Crocodile" and #emu "Emu" from system ZOO
         * ZOO#alligator "Alligator" from valueset ReptileVS
         * CRYPTID#jackalope "Jackalope"
         * exclude ZOO#lion "Lion"
@@ -216,9 +216,9 @@ describe('FSHImporter', () => {
             .withLocation([3, 11, 3, 34])
             .withFile('Zoo.fsh'),
           new FshCode('crocodile', 'ZOO', 'Crocodile')
-            .withLocation([4, 11, 4, 44])
+            .withLocation([4, 11, 4, 32])
             .withFile('Zoo.fsh'),
-          new FshCode('emu', 'ZOO', 'Emu').withLocation([4, 11, 4, 44]).withFile('Zoo.fsh')
+          new FshCode('emu', 'ZOO', 'Emu').withLocation([4, 38, 4, 47]).withFile('Zoo.fsh')
         ]);
         assertValueSetConceptComponent(
           valueSet.components[1],
@@ -274,7 +274,7 @@ describe('FSHImporter', () => {
       it('should log an error when a concept component with a list of concepts does not have a system', () => {
         const input = `
         ValueSet: ZooVS
-        * #hippo "Hippopotamus", #crocodile "Crocodile"
+        * #hippo "Hippopotamus" and #crocodile "Crocodile"
         `;
 
         const result = importSingleText(input, 'Zoo.fsh');
@@ -296,6 +296,26 @@ describe('FSHImporter', () => {
         expect(valueSet.components.length).toBe(1);
         assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
+      });
+
+      it('should log a warning when concepts are listed with commas', () => {
+        const input = `
+        ValueSet: ZooVS
+        * #hippo, #crocodile , #emu from system ZOO
+        `;
+
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.components.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
+          new FshCode('crocodile', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
+          new FshCode('emu', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh')
+        ]);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Using "," to list concepts is deprecated/s
+        );
       });
     });
 
@@ -323,7 +343,7 @@ describe('FSHImporter', () => {
         const input = `
         ValueSet: ZooVS
         * codes from valueset FirstZooVS
-        * codes from valueset SecondZooVS , ThirdZooVS
+        * codes from valueset SecondZooVS and ThirdZooVS
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -340,7 +360,7 @@ describe('FSHImporter', () => {
           startLine: 2,
           startColumn: 9,
           endLine: 4,
-          endColumn: 54
+          endColumn: 56
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
@@ -369,7 +389,7 @@ describe('FSHImporter', () => {
       it('should parse a value set that includes all codes from a system and other value sets', () => {
         const input = `
         ValueSet: ZooVS
-        * codes from system ZOO and valueset NorthZooVS, SouthZooVS
+        * codes from system ZOO and valueset NorthZooVS and SouthZooVS
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -385,9 +405,29 @@ describe('FSHImporter', () => {
           startLine: 2,
           startColumn: 9,
           endLine: 3,
-          endColumn: 67
+          endColumn: 70
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should log a warning when valuesets are listed with commas', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from valueset FirstZooVS, SecondZooVS
+        `;
+
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        assertValueSetFilterComponent(
+          valueSet.components[0],
+          undefined,
+          ['FirstZooVS', 'SecondZooVS'],
+          []
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Using "," to list valuesets is deprecated/s
+        );
       });
 
       it('should parse a value set that uses filter operator =', () => {
