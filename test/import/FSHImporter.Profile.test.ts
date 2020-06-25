@@ -45,7 +45,7 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
+        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
         `;
 
         const result = importSingleText(input);
@@ -61,8 +61,21 @@ describe('FSHImporter', () => {
           startLine: 2,
           startColumn: 9,
           endLine: 7,
-          endColumn: 46
+          endColumn: 55
         });
+      });
+
+      it('should log a warning when mixins are listed with commas', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
+        `;
+        const result = importSingleText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
       });
 
       it('should properly parse a multi-string description', () => {
@@ -148,7 +161,7 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        Mixins: Mixin1, Mixin2, Mixin1
+        Mixins: Mixin1 and Mixin2 and Mixin1
         `;
 
         const result = importSingleText(input, 'Dupe.fsh');
@@ -504,9 +517,9 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category , value[x], component MS
-        * subject, focus ?!
-        * interpretation, note N
+        * category and value[x] and component MS
+        * subject and focus ?!
+        * interpretation and note N
         `;
 
         const result = importSingleText(input);
@@ -588,8 +601,8 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * category, value[x], component MS SU N
-        * subject, focus ?! SU TU
+        * category and value[x] and component MS SU N
+        * subject and focus ?! SU TU
         `;
 
         const result = importSingleText(input);
@@ -645,6 +658,49 @@ describe('FSHImporter', () => {
           undefined,
           undefined
         );
+      });
+
+      it('should log a warning when paths are listed with commas', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category, value[x] , component MS SU N
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(3);
+        assertFlagRule(
+          profile.rules[0],
+          'category',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[1],
+          'value[x]',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        assertFlagRule(
+          profile.rules[2],
+          'component',
+          true,
+          true,
+          undefined,
+          undefined,
+          true,
+          undefined
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list paths is deprecated/s);
       });
     });
 
@@ -1144,6 +1200,27 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
+      it('should log an error when a fixed value Reference rule has a choice of references', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * basedOn = Reference(cakeProfile or pieProfile)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedReference = new FshReference('cakeProfile')
+          .withLocation([5, 21, 5, 56])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Multiple choices of references are not allowed when setting a value.*Line: 5\D*/s
+        );
+      });
+
       it('should parse fixed values that are an alias', () => {
         const input = `
         Alias: EXAMPLE = http://example.org
@@ -1226,7 +1303,7 @@ describe('FSHImporter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * performer only Reference(Organization | CareTeam)
+        * performer only Reference(Organization or CareTeam)
         `;
 
         const result = importSingleText(input);
@@ -1260,6 +1337,27 @@ describe('FSHImporter', () => {
           { type: 'http://hl7.org/fhir/StructureDefinition/Coding' },
           { type: 'string' },
           { type: 'http://hl7.org/fhir/StructureDefinition/Quantity' }
+        );
+      });
+
+      it('should log a warning when references are listed with pipes', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only Reference(Organization | CareTeam)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isReference: true },
+          { type: 'CareTeam', isReference: true }
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
         );
       });
     });

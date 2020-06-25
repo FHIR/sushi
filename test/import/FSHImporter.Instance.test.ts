@@ -148,6 +148,20 @@ describe('FSHImporter', () => {
         const input = `
         Instance: MyObservation
         InstanceOf: Observation
+        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
+        `;
+        const result = importSingleText(input);
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyObservation');
+        expect(instance.name).toBe('MyObservation');
+        expect(instance.instanceOf).toBe('Observation');
+        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
+      });
+
+      it('should log a warning when mixins are listed with commas', () => {
+        const input = `
+        Instance: MyObservation
+        InstanceOf: Observation
         Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
         `;
         const result = importSingleText(input);
@@ -156,6 +170,7 @@ describe('FSHImporter', () => {
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
       });
     });
 

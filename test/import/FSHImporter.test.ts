@@ -161,9 +161,9 @@ describe('FSHImporter', () => {
     const input = `
     Profile: TrialOperationDefinition
     Parent: OperationDefinition
-    * system, type TU
-    * instance, system, type SU
-    * instance, system MS
+    * system and type TU
+    * instance and system and type SU
+    * instance and system MS
     `;
     const result = importSingleText(input, 'TrialOperationDefinition.fsh');
     const profile = result.profiles.get('TrialOperationDefinition');
