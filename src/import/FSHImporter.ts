@@ -776,26 +776,30 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitMixins(ctx: pc.MixinsContext): string[] {
+    let mixins: string[];
     if (ctx.COMMA_DELIMITED_SEQUENCES()) {
-      let mixins = ctx
+      logger.warn('Using "," to list mixins is deprecated. Please use "and" when listing mixins.', {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+      mixins = ctx
         .COMMA_DELIMITED_SEQUENCES()
         .getText()
         .split(/\s*,\s*/);
-
-      mixins = mixins.filter((m, i) => {
-        const duplicated = mixins.indexOf(m) !== i;
-        if (duplicated) {
-          logger.warn(`Detected duplicated Mixin: ${m}. Ignoring duplicates.`, {
-            location: this.extractStartStop(ctx),
-            file: this.currentFile
-          });
-        }
-        return !duplicated;
-      });
-      return mixins;
     } else {
-      return [ctx.SEQUENCE().getText()];
+      mixins = ctx.SEQUENCE().map(sequence => sequence.getText());
     }
+    mixins = mixins.filter((m, i) => {
+      const duplicated = mixins.indexOf(m) !== i;
+      if (duplicated) {
+        logger.warn(`Detected duplicated Mixin: ${m}. Ignoring duplicates.`, {
+          location: this.extractStartStop(ctx),
+          file: this.currentFile
+        });
+      }
+      return !duplicated;
+    });
+    return mixins;
   }
 
   visitUsage(ctx: pc.UsageContext): InstanceUsage {
@@ -946,9 +950,13 @@ export class FSHImporter extends FSHVisitor {
 
   visitFlagRule(ctx: pc.FlagRuleContext): FlagRule[] {
     let paths: string[];
-    if (ctx.path()) {
-      paths = [this.visitPath(ctx.path())];
+    if (ctx.path().length > 0) {
+      paths = ctx.path().map(path => this.visitPath(path));
     } else if (ctx.paths()) {
+      logger.warn('Using "," to list paths is deprecated. Please use "and" to list paths.', {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx.paths())
+      });
       paths = this.visitPaths(ctx.paths());
     }
 
@@ -1295,8 +1303,8 @@ export class FSHImporter extends FSHVisitor {
     const from: ValueSetComponentFrom = ctx.vsComponentFrom()
       ? this.visitVsComponentFrom(ctx.vsComponentFrom())
       : {};
-    if (ctx.code()) {
-      const singleCode = this.visitCode(ctx.code());
+    if (ctx.code().length === 1) {
+      const singleCode = this.visitCode(ctx.code()[0]);
       if (singleCode.system && from.system) {
         logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
           file: this.currentFile,
@@ -1317,7 +1325,24 @@ export class FSHImporter extends FSHVisitor {
           }
         );
       }
+    } else if (ctx.code().length > 1) {
+      if (from.system) {
+        ctx.code().forEach(code => {
+          const newCode = this.visitCode(code);
+          newCode.system = from.system;
+          concepts.push(newCode);
+        });
+      } else {
+        logger.error('System is required when listing concepts in a value set component', {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        });
+      }
     } else if (ctx.COMMA_DELIMITED_CODES()) {
+      logger.warn('Using "," to list concepts is deprecated. Please use "and" to list concepts.', {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
       if (from.system) {
         const codes = ctx
           .COMMA_DELIMITED_CODES()
@@ -1398,9 +1423,19 @@ export class FSHImporter extends FSHVisitor {
       from.system = this.aliasAwareValue(ctx.vsFromSystem().SEQUENCE());
     }
     if (ctx.vsFromValueset()) {
-      if (ctx.vsFromValueset().SEQUENCE()) {
-        from.valueSets = [this.aliasAwareValue(ctx.vsFromValueset().SEQUENCE())];
+      if (ctx.vsFromValueset().SEQUENCE().length > 0) {
+        from.valueSets = ctx
+          .vsFromValueset()
+          .SEQUENCE()
+          .map(sequence => this.aliasAwareValue(sequence));
       } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
+        logger.warn(
+          'Using "," to list valuesets is deprecated. Please use "and" to list valuesets.',
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx)
+          }
+        );
         from.valueSets = ctx
           .vsFromValueset()
           .COMMA_DELIMITED_SEQUENCES()

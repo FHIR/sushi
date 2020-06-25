@@ -134,7 +134,7 @@ export interface UsageContext extends ParserRuleContext {
 
 export interface MixinsContext extends ParserRuleContext {
   COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext[];
 }
 
 export interface ExpressionContext extends ParserRuleContext {
@@ -192,7 +192,7 @@ export interface CardRuleContext extends ParserRuleContext {
 }
 
 export interface FlagRuleContext extends ParserRuleContext {
-  path(): PathContext;
+  path(): PathContext[];
   paths(): PathsContext;
   flag(): FlagContext[];
 }
@@ -320,7 +320,7 @@ export interface VsComponentContext extends ParserRuleContext {
 }
 
 export interface VsConceptComponentContext extends ParserRuleContext {
-  code(): CodeContext;
+  code(): CodeContext[];
   vsComponentFrom(): VsComponentFromContext;
   COMMA_DELIMITED_CODES(): ParserRuleContext;
 }
@@ -345,7 +345,7 @@ export interface VsFromSystemContext extends ParserRuleContext {
 
 export interface VsFromValuesetContext extends ParserRuleContext {
   KW_VSREFERENCE(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext[];
   COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
 }
 

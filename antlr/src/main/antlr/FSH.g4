@@ -36,14 +36,14 @@ xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF SEQUENCE;
 usage:              KW_USAGE CODE;
-mixins:             KW_MIXINS (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
+mixins:             KW_MIXINS ((SEQUENCE KW_AND)* SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 source:             KW_SOURCE SEQUENCE;
 target:             KW_TARGET STRING;
 
 
 // RULES
 cardRule:           STAR path CARD flag*;
-flagRule:           STAR (path | paths) flag+;
+flagRule:           STAR ((path KW_AND)* path | paths) flag+;
 valueSetRule:       STAR path KW_UNITS? KW_FROM SEQUENCE strength?;
 fixedValueRule:     STAR path KW_UNITS? EQUAL value KW_EXACTLY?;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
@@ -55,11 +55,12 @@ mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 // VALUESET COMPONENTS
 vsComponent:        STAR KW_EXCLUDE? ( vsConceptComponent | vsFilterComponent );
 vsConceptComponent: code vsComponentFrom?
+                    | (code KW_AND)+ code vsComponentFrom
                     | COMMA_DELIMITED_CODES vsComponentFrom;
 vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
 vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValueset (KW_AND vsFromSystem)?);
 vsFromSystem:       KW_SYSTEM SEQUENCE;
-vsFromValueset:     KW_VSREFERENCE (SEQUENCE | COMMA_DELIMITED_SEQUENCES);
+vsFromValueset:     KW_VSREFERENCE ((SEQUENCE KW_AND)* SEQUENCE | COMMA_DELIMITED_SEQUENCES);
 vsFilterList:       (vsFilterDefinition KW_AND)* vsFilterDefinition;
 vsFilterDefinition: SEQUENCE vsFilterOperator vsFilterValue?;
 vsFilterOperator:   EQUAL | SEQUENCE;
