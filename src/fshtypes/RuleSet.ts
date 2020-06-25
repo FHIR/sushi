@@ -1,6 +1,5 @@
 import { FshEntity } from '.';
 import { Rule } from './rules/Rule';
-import { InsertRule } from './rules';
 
 /**
  * The RuleSet class is used to represent re-usable groups of rules
@@ -19,9 +18,5 @@ export class RuleSet extends FshEntity {
    */
   get id() {
     return this.name;
-  }
-
-  ruleIsAllowed(rule: Rule) {
-    return !(rule instanceof InsertRule);
   }
 }

@@ -1,6 +1,5 @@
 import { FshEntity } from '.';
-import { MappingRule } from './rules/MappingRule';
-import { InsertRule, Rule } from './rules';
+import { InsertRule, MappingRule } from './rules';
 
 /**
  * The Mapping class is used to contain mapping info for SDs
@@ -17,9 +16,5 @@ export class Mapping extends FshEntity {
     super();
     this.id = name; // init same as name
     this.rules = [];
-  }
-
-  ruleIsAllowed(rule: Rule) {
-    return rule instanceof MappingRule;
   }
 }

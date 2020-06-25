@@ -41,14 +41,12 @@ export class CodeSystemExporter {
     );
     for (const rule of rules) {
       try {
-        if (rule instanceof CaretValueRule) {
-          const { fixedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-            rule.caretPath,
-            rule.value,
-            this.fisher
-          );
-          setPropertyOnInstance(codeSystem, pathParts, fixedValue);
-        }
+        const { fixedValue, pathParts } = csStructureDefinition.validateValueAtPath(
+          rule.caretPath,
+          rule.value,
+          this.fisher
+        );
+        setPropertyOnInstance(codeSystem, pathParts, fixedValue);
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
@@ -84,6 +82,7 @@ export class CodeSystemExporter {
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
+    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
     this.setCaretRules(
       codeSystem,

@@ -11,7 +11,8 @@ import {
   Rule,
   InsertRule,
   ConceptRule,
-  ValueSetConceptComponentRule
+  ValueSetConceptComponentRule,
+  SdRule
 } from '../fshtypes/rules';
 import {
   FshReference,
@@ -24,7 +25,7 @@ import {
   FshValueSet,
   FshCodeSystem,
   Mapping,
-  SdRule
+  isAllowedRule
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -339,7 +340,7 @@ export function applyMixinRules(
   tank: FSHTank
 ): void {
   if (fshDefinition.mixins.length > 0) {
-    const insertString = '* insert ' + fshDefinition.mixins.join('\n* insert ') + '\n';
+    const insertString = fshDefinition.mixins.map(m => `* insert ${m}`).join('\n');
     logger.warn(
       'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
         'Instead, use the "insert" keyword, which can be placed anywhere in a list of rules to indicate ' +
@@ -388,51 +389,55 @@ export function applyInsertRules(
 ): void {
   const expandedRules: Rule[] = [];
   fshDefinition.rules.forEach(rule => {
-    if (rule instanceof InsertRule) {
-      const ruleSet = tank.fish(rule.ruleSet, Type.RuleSet) as RuleSet;
-      if (ruleSet) {
-        if (seenRuleSets.includes(ruleSet.name)) {
-          logger.error(
-            `Inserting ${ruleSet.name} will cause a circular dependency, so the rule will be ignored`,
-            rule.sourceInfo
-          );
-        } else {
-          seenRuleSets.push(ruleSet.name);
-          applyInsertRules(ruleSet, tank, seenRuleSets);
-          ruleSet.rules.forEach(ruleSetRule => {
-            // On the import side, a rule that is intended to be a ValueSetConceptComponent can
-            // be imported as a ConceptRule because the syntax is identical. If this is the case,
-            // create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that
-            if (
-              fshDefinition instanceof FshValueSet &&
-              ruleSetRule instanceof ConceptRule &&
-              ruleSetRule.definition == null
-            ) {
-              const relatedCode = new FshCode(
-                ruleSetRule.code,
-                ruleSetRule.system,
-                ruleSetRule.display
-              );
-              ruleSetRule = new ValueSetConceptComponentRule(true);
-              (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
-            }
-            ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
-            ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
-            if (fshDefinition.ruleIsAllowed(ruleSetRule)) {
-              expandedRules.push(ruleSetRule);
-            } else {
-              logger.error(
-                `Rule of type ${ruleSetRule.constructor.name} cannot be applied to entity of type ${fshDefinition.constructor.name}`,
-                ruleSetRule.sourceInfo
-              );
-            }
-          });
-        }
-      } else {
-        logger.error(`Unable to find definition for RuleSet ${rule.ruleSet}.`, rule.sourceInfo);
-      }
-    } else {
+    if (!(rule instanceof InsertRule)) {
       expandedRules.push(rule);
+      return;
+    }
+    const ruleSet = tank.fish(rule.ruleSet, Type.RuleSet) as RuleSet;
+    if (ruleSet) {
+      if (seenRuleSets.includes(ruleSet.name)) {
+        logger.error(
+          `Inserting ${ruleSet.name} will cause a circular dependency, so the rule will be ignored`,
+          rule.sourceInfo
+        );
+        return;
+      }
+      // seenRuleSets.push(ruleSet.name);
+      // RuleSets may contain other RuleSets via insert rules on themselves, so before applying the rules
+      // from a RuleSet, we must first recursively expand any insert rules on that RuleSet
+      applyInsertRules(ruleSet, tank, [...seenRuleSets, ruleSet.name]);
+      ruleSet.rules.forEach(ruleSetRule => {
+        // On the import side, a rule that is intended to be a ValueSetConceptComponent can
+        // be imported as a ConceptRule because the syntax is identical. If this is the case,
+        // create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that
+        if (fshDefinition instanceof FshValueSet && ruleSetRule instanceof ConceptRule) {
+          if (ruleSetRule.definition != null) {
+            logger.warn(
+              'ValueSet concepts should not include a definition, only system, code, and display are supported. The definition will be ignored.',
+              ruleSetRule.sourceInfo
+            );
+          }
+          const relatedCode = new FshCode(
+            ruleSetRule.code,
+            ruleSetRule.system,
+            ruleSetRule.display
+          );
+          ruleSetRule = new ValueSetConceptComponentRule(true);
+          (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
+        }
+        ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
+        ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
+        if (isAllowedRule(fshDefinition, ruleSetRule)) {
+          expandedRules.push(ruleSetRule);
+        } else {
+          logger.error(
+            `Rule of type ${ruleSetRule.constructor.name} cannot be applied to entity of type ${fshDefinition.constructor.name}`,
+            ruleSetRule.sourceInfo
+          );
+        }
+      });
+    } else {
+      logger.error(`Unable to find definition for RuleSet ${rule.ruleSet}.`, rule.sourceInfo);
     }
   });
   fshDefinition.rules = expandedRules;

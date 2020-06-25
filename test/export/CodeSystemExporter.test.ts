@@ -254,7 +254,7 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getAllLogs('warn').length).toBe(0);
   });
 
-  it('should warn when ^count does not match number of rules in #complete CodeSystem', () => {
+  it('should warn when ^count does not match number of concepts in #complete CodeSystem', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     // NOTE: CS defaults to #complete so we don't need to explicitly set it
     const rule = new CaretValueRule('');
@@ -364,6 +364,24 @@ describe('CodeSystemExporter', () => {
 
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.title).toBe('Wow fancy');
+    });
+
+    it('should update count when applying concepts from an insert rule', () => {
+      // RuleSet: Bar
+      // * #lion
+      //
+      // CodeSystem: Foo
+      // * insert Bar
+      const concept = new ConceptRule('lion');
+      ruleSet.rules.push(concept);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      cs.rules.push(insertRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('lion');
+      expect(exported.count).toBe(1);
     });
 
     it('should log an error and not apply rules from an invalid insert rule', () => {

@@ -135,6 +135,29 @@ describe('applyInsertRules', () => {
     assertCardRule(profile.rules[1], 'focus', 1, '1');
   });
 
+  it('should apply rules from repeated single level insert rules in correct order', () => {
+    // RuleSet: Bar
+    // * status 1..1
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * insert Bar
+    // * insert Bar
+    const subjectRule = new CardRule('subject');
+    subjectRule.min = 1;
+    subjectRule.max = '1';
+    ruleSet1.rules.push(subjectRule);
+
+    const barRule = new InsertRule();
+    barRule.ruleSet = 'Bar';
+    profile.rules.push(barRule, barRule);
+
+    applyInsertRules(profile, tank);
+    expect(profile.rules).toHaveLength(2);
+    assertCardRule(profile.rules[0], 'subject', 1, '1');
+    assertCardRule(profile.rules[1], 'subject', 1, '1');
+  });
+
   it('should apply rules from a nested insert rule in the correct order', () => {
     // RuleSet: Bar
     // * category ..1
@@ -170,6 +193,43 @@ describe('applyInsertRules', () => {
     assertCardRule(profile.rules[2], 'focus', 1, '1');
   });
 
+  it('should apply rules from a nested insert rule even when they repeat', () => {
+    // RuleSet: Bar
+    // * category ..1
+    // * insert Baz
+    // RuleSet: Baz
+    // * subject 1..
+    // Profile: Foo
+    // Parent: Observation
+    // * insert Baz
+    // * insert Bar
+    // * focus ..1
+    const categoryRule = new CardRule('category');
+    categoryRule.min = 1;
+    categoryRule.max = '1';
+    const subjectRule = new CardRule('subject');
+    subjectRule.min = 1;
+    subjectRule.max = '1';
+    const focusRule = new CardRule('focus');
+    focusRule.min = 1;
+    focusRule.max = '1';
+    const insertBazRule = new InsertRule();
+    insertBazRule.ruleSet = 'Baz';
+    const insertBarRule = new InsertRule();
+    insertBarRule.ruleSet = 'Bar';
+
+    ruleSet1.rules.push(categoryRule, insertBazRule);
+    ruleSet2.rules.push(subjectRule);
+    profile.rules.push(insertBazRule, insertBarRule, focusRule);
+
+    applyInsertRules(profile, tank);
+    expect(profile.rules).toHaveLength(4);
+    assertCardRule(profile.rules[0], 'subject', 1, '1');
+    assertCardRule(profile.rules[1], 'category', 1, '1');
+    assertCardRule(profile.rules[2], 'subject', 1, '1');
+    assertCardRule(profile.rules[3], 'focus', 1, '1');
+  });
+
   it('should convert a ConceptRule to a ValueSetConceptComponent when applying to a FshValueSet', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear"
@@ -199,7 +259,7 @@ describe('applyInsertRules', () => {
     );
   });
 
-  it('should not convert a ConceptRule with a definition to a ValueSetConceptComponent when applying to a FshValueSet', () => {
+  it('should convert a ConceptRule with a definition to a ValueSetConceptComponent and log a warning when applying to a FshValueSet', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear" "brown bears are kind of scary"
     //
@@ -220,9 +280,16 @@ describe('applyInsertRules', () => {
 
     applyInsertRules(vs, tank);
 
-    expect(vs.rules).toHaveLength(0);
-    expect(loggerSpy.getLastMessage('error')).toMatch(
-      /ConceptRule.*FshValueSet.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Line: 1 - 3\D*/s
+    expect(vs.rules).toHaveLength(1);
+    assertValueSetConceptComponent(
+      vs.rules[0],
+      undefined,
+      undefined,
+      [new FshCode('bear', 'ZOO', 'brown bear')],
+      true
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /ValueSet concepts should not include a definition, only system, code, and display are supported.*File: Concept\.fsh.*Line: 1 - 3\D*/s
     );
   });
 

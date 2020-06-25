@@ -473,6 +473,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     applyMixinRules(fshDefinition, this.tank);
+    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 

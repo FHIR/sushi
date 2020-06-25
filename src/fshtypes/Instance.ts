@@ -1,4 +1,4 @@
-import { FixedValueRule, InsertRule, Rule } from './rules';
+import { FixedValueRule, InsertRule } from './rules';
 import { FshEntity } from './FshEntity';
 
 export class Instance extends FshEntity {
@@ -16,10 +16,6 @@ export class Instance extends FshEntity {
     this.mixins = [];
     this.rules = [];
     this.usage = 'Example'; // init to Example (default)
-  }
-
-  ruleIsAllowed(rule: Rule) {
-    return rule instanceof FixedValueRule;
   }
 }
 

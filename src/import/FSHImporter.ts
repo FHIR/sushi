@@ -24,8 +24,7 @@ import {
   Invariant,
   RuleSet,
   Mapping,
-  isInstanceUsage,
-  SdRule
+  isInstanceUsage
 } from '../fshtypes';
 import {
   CardRule,
@@ -43,7 +42,8 @@ import {
   ConceptRule,
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule
+  ValueSetFilterComponentRule,
+  SdRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
@@ -434,11 +434,10 @@ export class FSHImporter extends FSHVisitor {
         } else {
           valueSet.rules.push(rule);
         }
-      } else {
+      } else if (rule) {
         valueSet.rules.push(rule);
       }
     });
-    valueSet.rules = valueSet.rules.filter(rule => rule);
   }
 
   visitCodeSystem(ctx: pc.CodeSystemContext) {
@@ -494,11 +493,10 @@ export class FSHImporter extends FSHVisitor {
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
         }
-      } else {
+      } else if (rule) {
         codeSystem.rules.push(rule);
       }
     });
-    codeSystem.rules = codeSystem.rules.filter(rule => rule);
   }
 
   visitInvariant(ctx: pc.InvariantContext) {

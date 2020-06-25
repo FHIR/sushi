@@ -1,7 +1,5 @@
-import { Rule } from './rules/Rule';
 import { FshEntity } from './FshEntity';
-import { InsertRule, MappingRule, ValueSetComponentRule, ConceptRule } from './rules';
-import { SdRule } from './Profile';
+import { SdRule } from './rules';
 
 export class Extension extends FshEntity {
   id: string;
@@ -20,14 +18,5 @@ export class Extension extends FshEntity {
     this.parent = 'Extension'; // init to 'Extension'
     this.mixins = [];
     this.rules = [];
-  }
-
-  ruleIsAllowed(rule: Rule) {
-    return !(
-      rule instanceof InsertRule ||
-      rule instanceof MappingRule ||
-      rule instanceof ValueSetComponentRule ||
-      rule instanceof ConceptRule
-    );
   }
 }

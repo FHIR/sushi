@@ -42,6 +42,8 @@ export class MappingExporter {
    * @param {Mapping} fshDefinition - The Mapping definition
    */
   private setMappingRules(structDef: StructureDefinition, fshDefinition: Mapping): void {
+    // Before applying mapping rules, applyInsertRules will expand any insert rules into mapping rules
+    applyInsertRules(fshDefinition, this.tank);
     for (const rule of fshDefinition.rules as MappingRule[]) {
       const element = structDef.findElementByPath(rule.path, this.fisher);
       if (element) {
@@ -71,7 +73,6 @@ export class MappingExporter {
     ) as StructureDefinition;
     if (sourceStructDef) {
       this.setMetadata(sourceStructDef, fshDefinition);
-      applyInsertRules(fshDefinition, this.tank);
       this.setMappingRules(sourceStructDef, fshDefinition);
     } else {
       logger.error(`Unable to find source "${fshDefinition.source}".`, fshDefinition.sourceInfo);

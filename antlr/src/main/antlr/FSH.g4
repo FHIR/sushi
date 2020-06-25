@@ -27,7 +27,7 @@ csRule:             concept | caretValueRule | insertRule;
 ruleSet:            KW_RULESET SEQUENCE ruleSetRule+;
 ruleSetRule:        sdRule | concept | vsComponent;
 
-mapping:            KW_MAPPING SEQUENCE mappingMetadata* (mappingEntityRule)*;
+mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingEntityRule*;
 mappingMetadata:    id | source | target | description | title;
 mappingEntityRule:  mappingRule | insertRule;
 

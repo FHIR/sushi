@@ -28,6 +28,8 @@ export class InstanceExporter implements Fishable {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
+    // The fshInstanceDef.rules list may contain insert rules, which will be expanded to FixedValueRules
+    applyInsertRules(fshInstanceDef, this.tank);
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as FixedValueRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
@@ -274,7 +276,6 @@ export class InstanceExporter implements Fishable {
     this.pkg.instances.push(instanceDef);
 
     applyMixinRules(fshDefinition, this.tank);
-    applyInsertRules(fshDefinition, this.tank);
     // Set Fixed values based on the FSH rules and the Structure Definition
     instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     instanceDef.validateId(fshDefinition.sourceInfo);

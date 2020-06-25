@@ -151,6 +151,7 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
+    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
     this.setCaretRules(
       vs,
