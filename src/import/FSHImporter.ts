@@ -1151,19 +1151,46 @@ export class FSHImporter extends FSHVisitor {
     return this.visitQuantity(ctx.quantity());
   }
 
+  // This function is called when fixing a value, and a value can only be set
+  // to a specific reference, not a choice of references.
   visitReference(ctx: pc.ReferenceContext): FshReference {
-    const ref = new FshReference(
-      this.aliasAwareValue(ctx.REFERENCE(), this.parseReference(ctx.REFERENCE().getText())[0])
-    )
-      .withLocation(this.extractStartStop(ctx))
-      .withFile(this.currentFile);
+    let ref: FshReference;
+    let parsedReferences: string[];
+    if (ctx.OR_REFERENCE()) {
+      parsedReferences = this.parseOrReference(ctx.OR_REFERENCE().getText());
+      ref = new FshReference(this.aliasAwareValue(ctx.OR_REFERENCE(), parsedReferences[0]));
+    } else {
+      parsedReferences = this.parsePipeReference(ctx.PIPE_REFERENCE().getText());
+      ref = new FshReference(this.aliasAwareValue(ctx.PIPE_REFERENCE(), parsedReferences[0]));
+      logger.warn(
+        'Using "|" to list references is deprecated. Please use "or" to list references.',
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    if (parsedReferences.length > 1) {
+      logger.error(
+        'Multiple choices of references are not allowed when setting a value. Only the first choice will be used.',
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    ref.withLocation(this.extractStartStop(ctx)).withFile(this.currentFile);
     if (ctx.STRING()) {
       ref.display = this.extractString(ctx.STRING());
     }
     return ref;
   }
 
-  private parseReference(reference: string): string[] {
+  private parseOrReference(reference: string): string[] {
+    return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s+or\s+/);
+  }
+
+  private parsePipeReference(reference: string): string[] {
     return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s*\|\s*/);
   }
 
@@ -1177,10 +1204,25 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
       if (t.reference()) {
-        const references = this.parseReference(t.reference().REFERENCE().getText());
+        let referenceToken: ParserRuleContext;
+        let references: string[];
+        if (t.reference().OR_REFERENCE()) {
+          referenceToken = t.reference().OR_REFERENCE();
+          references = this.parseOrReference(referenceToken.getText());
+        } else {
+          referenceToken = t.reference().PIPE_REFERENCE();
+          references = this.parsePipeReference(referenceToken.getText());
+          logger.warn(
+            'Using "|" to list references is deprecated. Please use "or" to list references.',
+            {
+              file: this.currentFile,
+              location: this.extractStartStop(ctx)
+            }
+          );
+        }
         references.forEach(r =>
           onlyRule.types.push({
-            type: this.aliasAwareValue(t.reference().REFERENCE(), r),
+            type: this.aliasAwareValue(referenceToken, r),
             isReference: true
           })
         );
