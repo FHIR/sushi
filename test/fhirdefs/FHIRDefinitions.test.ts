@@ -289,6 +289,7 @@ describe('FHIRDefinitions', () => {
     it('should find base FHIR resources', () => {
       const conditionByID = defs.fishForMetadata('Condition', Type.Resource);
       expect(conditionByID).toEqual({
+        abstract: false,
         id: 'Condition',
         name: 'Condition',
         sdType: 'Condition',
@@ -303,6 +304,7 @@ describe('FHIRDefinitions', () => {
     it('should find base FHIR primitive types', () => {
       const booleanByID = defs.fishForMetadata('boolean', Type.Type);
       expect(booleanByID).toEqual({
+        abstract: false,
         id: 'boolean',
         name: 'boolean',
         sdType: 'boolean',
@@ -317,6 +319,7 @@ describe('FHIRDefinitions', () => {
     it('should find base FHIR complex types', () => {
       const addressByID = defs.fishForMetadata('Address', Type.Type);
       expect(addressByID).toEqual({
+        abstract: false,
         id: 'Address',
         name: 'Address',
         sdType: 'Address',
@@ -331,6 +334,7 @@ describe('FHIRDefinitions', () => {
     it('should find base FHIR profiles', () => {
       const vitalSignsByID = defs.fishForMetadata('vitalsigns', Type.Profile);
       expect(vitalSignsByID).toEqual({
+        abstract: false,
         id: 'vitalsigns',
         name: 'observation-vitalsigns',
         sdType: 'Observation',
@@ -349,6 +353,7 @@ describe('FHIRDefinitions', () => {
         Type.Extension
       );
       expect(maidenNameExtensionByID).toEqual({
+        abstract: false,
         id: 'patient-mothersMaidenName',
         name: 'mothersMaidenName',
         sdType: 'Extension',
@@ -511,6 +516,7 @@ describe('FHIRDefinitions', () => {
     it('should globally find any definition', () => {
       const conditionByID = defs.fishForMetadata('Condition');
       expect(conditionByID).toEqual({
+        abstract: false,
         id: 'Condition',
         name: 'Condition',
         sdType: 'Condition',
@@ -523,6 +529,7 @@ describe('FHIRDefinitions', () => {
 
       const booleanByID = defs.fishForMetadata('boolean');
       expect(booleanByID).toEqual({
+        abstract: false,
         id: 'boolean',
         name: 'boolean',
         sdType: 'boolean',
@@ -535,6 +542,7 @@ describe('FHIRDefinitions', () => {
 
       const addressByID = defs.fishForMetadata('Address');
       expect(addressByID).toEqual({
+        abstract: false,
         id: 'Address',
         name: 'Address',
         sdType: 'Address',
@@ -547,6 +555,7 @@ describe('FHIRDefinitions', () => {
 
       const vitalSignsProfileByID = defs.fishForMetadata('vitalsigns');
       expect(vitalSignsProfileByID).toEqual({
+        abstract: false,
         id: 'vitalsigns',
         name: 'observation-vitalsigns',
         sdType: 'Observation',
@@ -560,6 +569,7 @@ describe('FHIRDefinitions', () => {
 
       const maidenNameExtensionByID = defs.fishForMetadata('patient-mothersMaidenName');
       expect(maidenNameExtensionByID).toEqual({
+        abstract: false,
         id: 'patient-mothersMaidenName',
         name: 'mothersMaidenName',
         sdType: 'Extension',

@@ -845,7 +845,7 @@ describe('FSHImporter', () => {
           `;
         const result = importSingleText(input);
         const valueSet = result.valueSets.get('ZooVS');
-        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo');
+        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo', false);
       });
 
       it('should parse a value set that uses CaretValueRules alongside components', () => {
@@ -859,7 +859,7 @@ describe('FSHImporter', () => {
         assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
           new FshCode('bear', 'ZOO').withLocation([3, 11, 3, 18]).withFile('Simple.fsh')
         ]);
-        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo');
+        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo', false);
       });
 
       it('should log an error when a CaretValueRule contains a path before ^', () => {

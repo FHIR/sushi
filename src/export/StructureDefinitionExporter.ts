@@ -2,7 +2,8 @@ import {
   StructureDefinition,
   ElementDefinition,
   ElementDefinitionBindingStrength,
-  idRegex
+  idRegex,
+  InstanceDefinition
 } from '../fhirtypes';
 import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
@@ -37,6 +38,8 @@ import { Package } from './Package';
  * The operations and structure of both exporters are very similar, so they currently share an exporter.
  */
 export class StructureDefinitionExporter implements Fishable {
+  deferredRules = new Map<StructureDefinition, CaretValueRule[]>();
+
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
@@ -173,7 +176,15 @@ export class StructureDefinitionExporter implements Fishable {
             if (rule.path !== '') {
               element.setInstancePropertyByPath(rule.caretPath, rule.value, this);
             } else {
-              structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
+              if (rule.isInstance) {
+                if (this.deferredRules.has(structDef)) {
+                  this.deferredRules.get(structDef).push(rule);
+                } else {
+                  this.deferredRules.set(structDef, [rule]);
+                }
+              } else {
+                structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
+              }
             }
           } else if (rule instanceof ObeysRule) {
             const invariant = this.tank.fish(rule.invariant, Type.Invariant) as Invariant;
@@ -199,6 +210,40 @@ export class StructureDefinitionExporter implements Fishable {
         );
       }
     }
+  }
+
+  applyDeferredRules() {
+    this.deferredRules.forEach((rules, sd) => {
+      for (const rule of rules) {
+        if (typeof rule.value === 'string') {
+          const fishedValue = this.fishForFHIR(rule.value);
+          // an inline instance will fish up an InstanceDefinition, which can be used directly.
+          // other instances will fish up an Object, which needs to be turned into an InstanceDefinition.
+          // an InstanceDefinition of a resource needs a resourceType, so check for that property.
+          // if we can't find a resourceType or an sdType, we have a non-resource Instance, which is no good
+          if (fishedValue) {
+            if (fishedValue instanceof InstanceDefinition && fishedValue.resourceType) {
+              try {
+                sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
+              } catch (e) {
+                logger.error(e, rule.sourceInfo);
+              }
+            } else if (fishedValue instanceof Object && fishedValue.resourceType) {
+              const fishedInstance = InstanceDefinition.fromJSON(fishedValue);
+              try {
+                sd.setInstancePropertyByPath(rule.caretPath, fishedInstance, this);
+              } catch (e) {
+                logger.error(e, rule.sourceInfo);
+              }
+            } else {
+              logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
+            }
+          } else {
+            logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
+          }
+        }
+      }
+    });
   }
 
   /**

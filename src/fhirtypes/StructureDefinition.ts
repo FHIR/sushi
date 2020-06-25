@@ -8,7 +8,8 @@ import {
   CannotResolvePathError,
   InvalidElementAccessError,
   MissingSnapshotError,
-  InvalidResourceTypeError
+  InvalidResourceTypeError,
+  InvalidTypeAccessError
 } from '../errors';
 import {
   getArrayIndex,
@@ -286,6 +287,10 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
+    const parentName = this.type;
+    if (path === 'type' && value !== parentName) {
+      throw new InvalidTypeAccessError();
+    }
     setPropertyOnDefinitionInstance(this, path, value, fisher);
   }
 
@@ -329,6 +334,12 @@ export class StructureDefinition {
       if (this[prop] !== undefined) {
         // @ts-ignore
         j[prop] = cloneDeep(this[prop]);
+      }
+      // children of primitive properties are located by an underscore-prefixed property name
+      // @ts-ignore
+      if (this[`_${prop}`] !== undefined) {
+        // @ts-ignore
+        j[`_${prop}`] = cloneDeep(this[`_${prop}`]);
       }
     }
 

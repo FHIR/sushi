@@ -1499,13 +1499,14 @@ describe('FSHImporter', () => {
         `;
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        assertCaretValueRule(profile.rules[0], '', 'description', 'foo');
-        assertCaretValueRule(profile.rules[1], '', 'experimental', false);
+        assertCaretValueRule(profile.rules[0], '', 'description', 'foo', false);
+        assertCaretValueRule(profile.rules[1], '', 'experimental', false, false);
         assertCaretValueRule(
           profile.rules[2],
           '',
           'keyword[0]',
-          new FshCode('bar', 'foo', 'baz').withLocation([6, 25, 6, 37]).withFile('')
+          new FshCode('bar', 'foo', 'baz').withLocation([6, 25, 6, 37]).withFile(''),
+          false
         );
       });
 
@@ -1519,13 +1520,14 @@ describe('FSHImporter', () => {
         `;
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        assertCaretValueRule(profile.rules[0], 'status', 'short', 'foo');
-        assertCaretValueRule(profile.rules[1], 'status', 'sliceIsConstraining', false);
+        assertCaretValueRule(profile.rules[0], 'status', 'short', 'foo', false);
+        assertCaretValueRule(profile.rules[1], 'status', 'sliceIsConstraining', false, false);
         assertCaretValueRule(
           profile.rules[2],
           'status',
           'code[0]',
-          new FshCode('bar', 'foo', 'baz').withLocation([6, 29, 6, 41]).withFile('')
+          new FshCode('bar', 'foo', 'baz').withLocation([6, 29, 6, 41]).withFile(''),
+          false
         );
       });
 
@@ -1537,7 +1539,18 @@ describe('FSHImporter', () => {
         `;
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        assertCaretValueRule(profile.rules[0], 'status', 'short', 'Non-breaking');
+        assertCaretValueRule(profile.rules[0], 'status', 'short', 'Non-breaking', false);
+      });
+
+      it('should add resources to the contained array using a CaretValueRule', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * ^contained = myResource
+        `;
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        assertCaretValueRule(profile.rules[0], '', 'contained', 'myResource', true);
       });
     });
 

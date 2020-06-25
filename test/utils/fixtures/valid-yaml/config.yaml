@@ -1,0 +1,25 @@
+# ╭──────────────────────────────ImplementationGuide-sushi-test.json───────────────────────────────╮
+# │  The properties below are used to create the ImplementationGuide resource. For a list of       │
+# │  supported properties, see:                                                                    │
+# │  http://build.fhir.org/ig/HL7/fhir-shorthand/branches/beta/sushi.html#ig-development           │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+id: sushi-test
+canonical: http://hl7.org/fhir/sushi-test
+version: 0.1.0
+name: FSHTestIG
+title: FSH Test IG
+status: active
+publisher: James Tuna
+contact:
+  - name: Bill Cod
+    telecom:
+      - system: url
+        value: https://capecodfishermen.org/
+      - system: email
+        value: cod@reef.gov
+description: Provides a simple example of how FSH can be used to create an IG
+license: CC0-1.0
+fhirVersion: 4.0.1
+dependencies:
+  hl7.fhir.us.core: 3.1.0
+  hl7.fhir.uv.vhdir: current

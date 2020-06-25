@@ -7,6 +7,7 @@ import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import path from 'path';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('CodeSystemExporter', () => {
   let defs: FHIRDefinitions;
@@ -24,11 +25,7 @@ describe('CodeSystemExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], {
-      name: 'test',
-      version: '0.0.1',
-      canonical: 'http://example.com'
-    });
+    const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new CodeSystemExporter(input, pkg, fisher);
@@ -51,8 +48,8 @@ describe('CodeSystemExporter', () => {
       id: 'MyCodeSystem',
       status: 'active',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/MyCodeSystem',
-      version: '0.0.1'
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem',
+      version: '1.0.0'
     });
   });
 
@@ -70,10 +67,10 @@ describe('CodeSystemExporter', () => {
       id: 'CodeSystem1',
       status: 'active',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/CodeSystem1',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CodeSystem1',
       title: 'My Fancy Code System',
       description: 'Lots of important details about my fancy code system',
-      version: '0.0.1'
+      version: '1.0.0'
     });
   });
 
@@ -100,8 +97,8 @@ describe('CodeSystemExporter', () => {
       id: 'MyCodeSystem',
       status: 'active',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/MyCodeSystem',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem',
+      version: '1.0.0',
       count: 2,
       concept: [{ code: 'myCode' }, { code: 'anotherCode' }]
     });
@@ -125,8 +122,8 @@ describe('CodeSystemExporter', () => {
       id: 'MyCodeSystem',
       status: 'active',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/MyCodeSystem',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem',
+      version: '1.0.0',
       count: 2,
       concept: [
         {
@@ -233,8 +230,8 @@ describe('CodeSystemExporter', () => {
       id: 'CaretCodeSystem',
       name: 'CaretCodeSystem',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/CaretCodeSystem',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      version: '1.0.0',
       status: 'active',
       publisher: 'carat'
     });
@@ -332,8 +329,8 @@ describe('CodeSystemExporter', () => {
       id: 'CaretCodeSystem',
       name: 'CaretCodeSystem',
       content: 'complete',
-      url: 'http://example.com/CodeSystem/CaretCodeSystem',
-      version: '0.0.1',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      version: '1.0.0',
       status: 'active'
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);

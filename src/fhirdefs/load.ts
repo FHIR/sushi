@@ -127,6 +127,7 @@ export async function loadDependency(
         sync: true,
         strict: true
       });
+      cleanCachedPackage(targetDirectory);
       // Now try to load again from the path
       loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
     } else {
@@ -140,6 +141,30 @@ export async function loadDependency(
   }
   logger.info(`Loaded package ${fullPackageName}`);
   return FHIRDefs;
+}
+
+/**
+ * This function takes a package which contains contents at the same level as the "package" folder, and nests
+ * all that content within the "package" folder.
+ *
+ * A package should have the format described here https://confluence.hl7.org/pages/viewpage.action?pageId=35718629#NPMPackageSpecification-Format
+ * in which all contents are within the "package" folder. Some packages (ex US Core 3.1.0) have an incorrect format in which folders
+ * are not sub-folders of "package", but are instead at the same level. The IG Publisher fixes these packages as described
+ * https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/dev.20dependencies, so SUSHI should as well.
+ *
+ * @param {string} packageDirectory - The directory containing the package
+ */
+export function cleanCachedPackage(packageDirectory: string): void {
+  if (fs.existsSync(path.join(packageDirectory, 'package'))) {
+    fs.readdirSync(packageDirectory)
+      .filter(file => file !== 'package')
+      .forEach(file => {
+        fs.renameSync(
+          path.join(packageDirectory, file),
+          path.join(packageDirectory, 'package', file)
+        );
+      });
+  }
 }
 
 /**

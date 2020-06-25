@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
-import { FSHTank, RawFSH, importText } from '../import';
+import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
 import { cloneDeep } from 'lodash';
 import { Package } from '../export';
 import {
@@ -16,6 +16,7 @@ import {
   filterExtensionInstances,
   filterProfileInstances
 } from './InstanceDefinitionUtils';
+import { Configuration } from '../fshtypes';
 
 export function findInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
@@ -53,29 +54,18 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
   return outDir;
 }
 
-export function readConfig(input: string): any {
-  // Check that package.json exists
-  const packagePath = path.join(input, 'package.json');
-  if (!fs.existsSync(packagePath)) {
-    logger.error('No package.json in FSH definition folder.');
+export function readConfig(input: string): Configuration {
+  const configPath = ensureConfiguration(input);
+  if (configPath == null || !fs.existsSync(configPath)) {
+    logger.error('No config.yaml in FSH definition folder.');
     throw Error;
   }
-
-  // Parse package.json
-  let config: any;
-  try {
-    config = fs.readJSONSync(packagePath);
-  } catch (e) {
-    logger.error(`The package.json file is not valid JSON: ${packagePath}`);
-    throw e;
-  }
-
-  // Ensure FHIR R4 is added as a dependency
-  const fhirR4Dependency = config.dependencies?.['hl7.fhir.r4.core'];
-  if (fhirR4Dependency !== '4.0.1') {
+  const configYaml = fs.readFileSync(configPath, 'utf8');
+  const config = importConfiguration(configYaml, configPath);
+  if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
-      'The package.json must specify FHIR R4 as a dependency. Be sure to' +
-        ' add "hl7.fhir.r4.core": "4.0.1" to the dependencies list.'
+      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
+        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
     );
     throw Error;
   }
@@ -84,17 +74,22 @@ export function readConfig(input: string): any {
 
 export function loadExternalDependencies(
   defs: FHIRDefinitions,
-  config: any
+  config: Configuration
 ): Promise<FHIRDefinitions | void>[] {
+  // Add FHIR R4 to the dependencies so it is loaded
+  const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
+  dependencies.push({ packageId: 'hl7.fhir.r4.core', version: '4.0.1' });
+
+  // Load dependencies
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
-  for (const dep of Object.keys(config?.dependencies ?? {})) {
+  for (const dep of dependencies) {
     dependencyDefs.push(
-      loadDependency(dep, config.dependencies[dep], defs)
+      loadDependency(dep.packageId, dep.version, defs)
         .then(def => {
           return def;
         })
         .catch(e => {
-          logger.error(`Failed to load ${dep}#${config.dependencies[dep]}: ${e.message}`);
+          logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
         })
     );
   }
@@ -119,19 +114,13 @@ export function getRawFSHes(input: string): RawFSH[] {
   return rawFSHes;
 }
 
-export function fillTank(rawFSHes: RawFSH[], config: any): FSHTank {
+export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   logger.info('Importing FSH text...');
   const docs = importText(rawFSHes);
   return new FSHTank(docs, config);
 }
 
 export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {
-  fs.writeFileSync(
-    path.join(outDir, 'package.json'),
-    JSON.stringify(outPackage.config, null, 2),
-    'utf8'
-  );
-
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const writeResources = (
@@ -163,15 +152,6 @@ export function writeFHIRResources(outDir: string, outPackage: Package, snapshot
   writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
-}
-
-export function getIgDataPath(input: string): string {
-  const igDataPath = path.resolve(input, 'ig-data');
-  if (fs.existsSync(igDataPath)) {
-    return igDataPath;
-  } else {
-    return null;
-  }
 }
 
 function getFilesRecursive(dir: string): string[] {

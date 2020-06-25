@@ -1,10 +1,12 @@
+import path from 'path';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Profile } from '../../src/fshtypes';
+import { Profile, Instance } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
-import path from 'path';
+import { minimalConfig } from '../utils/minimalConfig';
+import { CaretValueRule } from '../../src/fshtypes/rules';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -22,11 +24,7 @@ describe('ProfileExporter', () => {
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], {
-      name: 'test',
-      version: '0.0.1',
-      canonical: 'http://example.com'
-    });
+    const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
@@ -137,5 +135,26 @@ describe('ProfileExporter', () => {
     expect(exported[2].name).toBe('Foo');
     expect(exported[1].baseDefinition === exported[0].url);
     expect(exported[2].baseDefinition === exported[1].url);
+  });
+
+  it('should defer adding an instance to a profile as a contained resource', () => {
+    const instance = new Instance('myResource');
+    instance.instanceOf = 'Observation';
+    doc.instances.set(instance.name, instance);
+
+    const profile = new Profile('ContainingProfile');
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'contained';
+    caretValueRule.value = 'myResource';
+    caretValueRule.isInstance = true;
+    profile.rules.push(caretValueRule);
+    doc.profiles.set(profile.name, profile);
+
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contained).toBeUndefined();
+    expect(exporter.deferredRules.size).toBe(1);
+    expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredRules.get(exported[0])).toContain(caretValueRule);
   });
 });

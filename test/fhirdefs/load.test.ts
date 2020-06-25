@@ -1,4 +1,9 @@
-import { loadFromPath, loadDependency, loadCustomResources } from '../../src/fhirdefs/load';
+import {
+  loadFromPath,
+  loadDependency,
+  loadCustomResources,
+  cleanCachedPackage
+} from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { Type } from '../../src/utils';
 import { TestFisher, loggerSpy } from '../testhelpers';
@@ -329,5 +334,45 @@ describe('#loadCustomResources', () => {
     expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
       /Invalid file.*resources.*XML format not supported/
     );
+  });
+});
+
+describe('#cleanCachedPackage', () => {
+  let renameSpy: jest.SpyInstance;
+  let cachePath: string;
+
+  beforeAll(() => {
+    renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation(() => {});
+    cachePath = path.join(__dirname, 'fixtures');
+  });
+
+  beforeEach(() => {
+    renameSpy.mockClear();
+  });
+
+  it('should move all contents of a package into the "package" folder', () => {
+    const packagePath = path.join(cachePath, 'sushi-test-wrong-format#current');
+    cleanCachedPackage(packagePath);
+    expect(renameSpy.mock.calls.length).toBe(2);
+    expect(renameSpy.mock.calls).toContainEqual([
+      path.join(packagePath, 'other'),
+      path.join(packagePath, 'package', 'other')
+    ]);
+    expect(renameSpy.mock.calls).toContainEqual([
+      path.join(packagePath, 'StructureDefinition-MyPatient.json'),
+      path.join(packagePath, 'package', 'StructureDefinition-MyPatient.json')
+    ]);
+  });
+
+  it('should do nothing if the package does not have a "package" folder', () => {
+    const packagePath = path.join(cachePath, 'sushi-test-no-package#current');
+    cleanCachedPackage(packagePath);
+    expect(renameSpy.mock.calls.length).toBe(0);
+  });
+
+  it('should do nothing if the package is correctly structured', () => {
+    const packagePath = path.join(cachePath, 'sushi-test#current');
+    cleanCachedPackage(packagePath);
+    expect(renameSpy.mock.calls.length).toBe(0);
   });
 });

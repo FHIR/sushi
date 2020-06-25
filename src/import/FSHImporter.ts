@@ -56,6 +56,7 @@ import {
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
+import { parseCodeLexeme } from './parseCodeLexeme';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -852,25 +853,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private parseCodeLexeme(conceptText: string, parentCtx: ParserRuleContext): FshCode {
-    const splitPoint = conceptText.match(/(^|[^\\])(\\\\)*#/);
-    let system: string, code: string;
-    if (splitPoint == null) {
-      system = '';
-      code = conceptText.slice(1);
-    } else {
-      system = conceptText.slice(0, splitPoint.index) + splitPoint[0].slice(0, -1);
-      code = conceptText.slice(splitPoint.index + splitPoint[0].length);
-    }
-    system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
-    if (code.startsWith('"')) {
-      code = code
-        .slice(1, code.length - 1)
-        .replace(/\\\\/g, '\\')
-        .replace(/\\"/g, '"');
-    }
-    const concept = new FshCode(code);
-    if (system.length > 0) {
-      concept.system = this.aliasAwareValue(parentCtx, system);
+    const concept = parseCodeLexeme(conceptText);
+    if (concept.system?.length > 0) {
+      concept.system = this.aliasAwareValue(parentCtx, concept.system);
     }
     return concept;
   }
@@ -1255,6 +1240,8 @@ export class FSHImporter extends FSHVisitor {
     // Get the caret path, but slice off the starting ^
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
+    caretValueRule.isInstance =
+      ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
     return caretValueRule;
   }
 

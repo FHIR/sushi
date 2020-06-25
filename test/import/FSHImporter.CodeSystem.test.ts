@@ -328,7 +328,7 @@ describe('FSHImporter', () => {
           `;
         const result = importSingleText(input);
         const codeSystem = result.codeSystems.get('ZOO');
-        assertCaretValueRule(codeSystem.rules[0], '', 'publisher', 'Matt');
+        assertCaretValueRule(codeSystem.rules[0], '', 'publisher', 'Matt', false);
       });
 
       it('should parse a code system that uses CaretValueRules alongside concepts', () => {
@@ -341,7 +341,7 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.concepts[0].code).toBe('lion');
         expect(codeSystem.concepts[0].sourceInfo.file).toBe('Zoo.fsh');
-        assertCaretValueRule(codeSystem.rules[0], '', 'publisher', 'Damon');
+        assertCaretValueRule(codeSystem.rules[0], '', 'publisher', 'Damon', false);
       });
 
       it('should log an error when a CaretValueRule contains a path before ^', () => {
