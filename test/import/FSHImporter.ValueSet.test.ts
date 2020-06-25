@@ -309,8 +309,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
           new FshCode('hippo', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
           new FshCode('crocodile', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
           new FshCode('emu', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh')
@@ -417,7 +417,7 @@ describe('FSHImporter', () => {
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         assertValueSetFilterComponent(
-          valueSet.components[0],
+          valueSet.rules[0],
           undefined,
           ['FirstZooVS', 'SecondZooVS'],
           []

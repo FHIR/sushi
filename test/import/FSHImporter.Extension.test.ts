@@ -63,18 +63,6 @@ describe('FSHImporter', () => {
         });
       });
 
-      it('should log a warning when mixins are listed with commas', () => {
-        const input = `
-        Extension: SomeExtension
-        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
-        `;
-        const result = importSingleText(input);
-        expect(result.extensions.size).toBe(1);
-        const extension = result.extensions.get('SomeExtension');
-        expect(extension.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
-      });
-
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Extension: SomeExtension
