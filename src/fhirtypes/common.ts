@@ -6,7 +6,14 @@ import {
   ValueSet,
   CodeSystem
 } from '.';
-import { FixedValueRule, Rule } from '../fshtypes/rules';
+import {
+  FixedValueRule,
+  Rule,
+  InsertRule,
+  ConceptRule,
+  ValueSetConceptComponentRule,
+  SdRule
+} from '../fshtypes/rules';
 import {
   FshReference,
   Instance,
@@ -14,7 +21,11 @@ import {
   FshCode,
   Profile,
   Extension,
-  RuleSet
+  RuleSet,
+  FshValueSet,
+  FshCodeSystem,
+  Mapping,
+  isAllowedRule
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -231,7 +242,9 @@ export function replaceReferences(
     // If we can't find a matching instance, just leave the reference as is
     if (instance && instanceMeta) {
       // If the instance has a rule setting id, that overrides instance.id
-      const idRule = instance.rules.find(r => r.path === 'id');
+      const idRule = instance.rules.find(
+        r => r.path === 'id' && r instanceof FixedValueRule
+      ) as FixedValueRule;
       const id = idRule?.fixedValue ?? instance.id;
       clone = cloneDeep(rule);
       const fv = clone.fixedValue as FshReference;
@@ -326,8 +339,18 @@ export function applyMixinRules(
   fshDefinition: Profile | Extension | Instance,
   tank: FSHTank
 ): void {
+  if (fshDefinition.mixins.length > 0) {
+    const insertString = fshDefinition.mixins.map(m => `* insert ${m}`).join('\n');
+    logger.warn(
+      'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
+        'Instead, use the "insert" keyword, which can be placed anywhere in a list of rules to indicate ' +
+        'the exact location rules should be inserted. The RuleSets added here with the "Mixin" keyword can ' +
+        `be added with the "insert" keyword by adding the following rule(s):\n${insertString}`,
+      fshDefinition.sourceInfo
+    );
+  }
   // Rules are added to beginning of rules array, so add the last mixin rules first
-  const mixedInRules: Rule[] = [];
+  const mixedInRules: SdRule[] = [];
   fshDefinition.mixins.forEach(mixinName => {
     const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
     if (ruleSet) {
@@ -346,12 +369,77 @@ export function applyMixinRules(
         }
         return true;
       });
-      mixedInRules.push(...rules);
+      mixedInRules.push(...(rules as SdRule[]));
     } else {
       logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
     }
   });
   fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
+}
+
+/**
+ * Adds insert rules onto a Profile, Extension, or Instance
+ * @param fshDefinition - The definition to apply rules on
+ * @param tank - The FSHTank containing the fshDefinition
+ */
+export function applyInsertRules(
+  fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
+  tank: FSHTank,
+  seenRuleSets: string[] = []
+): void {
+  const expandedRules: Rule[] = [];
+  fshDefinition.rules.forEach(rule => {
+    if (!(rule instanceof InsertRule)) {
+      expandedRules.push(rule);
+      return;
+    }
+    const ruleSet = tank.fish(rule.ruleSet, Type.RuleSet) as RuleSet;
+    if (ruleSet) {
+      if (seenRuleSets.includes(ruleSet.name)) {
+        logger.error(
+          `Inserting ${ruleSet.name} will cause a circular dependency, so the rule will be ignored`,
+          rule.sourceInfo
+        );
+        return;
+      }
+      // RuleSets may contain other RuleSets via insert rules on themselves, so before applying the rules
+      // from a RuleSet, we must first recursively expand any insert rules on that RuleSet
+      applyInsertRules(ruleSet, tank, [...seenRuleSets, ruleSet.name]);
+      ruleSet.rules.forEach(ruleSetRule => {
+        // On the import side, a rule that is intended to be a ValueSetConceptComponent can
+        // be imported as a ConceptRule because the syntax is identical. If this is the case,
+        // create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that
+        if (fshDefinition instanceof FshValueSet && ruleSetRule instanceof ConceptRule) {
+          if (ruleSetRule.definition != null) {
+            logger.warn(
+              'ValueSet concepts should not include a definition, only system, code, and display are supported. The definition will be ignored.',
+              ruleSetRule.sourceInfo
+            );
+          }
+          const relatedCode = new FshCode(
+            ruleSetRule.code,
+            ruleSetRule.system,
+            ruleSetRule.display
+          );
+          ruleSetRule = new ValueSetConceptComponentRule(true);
+          (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
+        }
+        ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
+        ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
+        if (isAllowedRule(fshDefinition, ruleSetRule)) {
+          expandedRules.push(ruleSetRule);
+        } else {
+          logger.error(
+            `Rule of type ${ruleSetRule.constructor.name} cannot be applied to entity of type ${fshDefinition.constructor.name}`,
+            ruleSetRule.sourceInfo
+          );
+        }
+      });
+    } else {
+      logger.error(`Unable to find definition for RuleSet ${rule.ruleSet}.`, rule.sourceInfo);
+    }
+  });
+  fshDefinition.rules = expandedRules;
 }
 
 /**

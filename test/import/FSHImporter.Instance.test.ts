@@ -1,4 +1,4 @@
-import { assertFixedValueRule } from '../testhelpers/asserts';
+import { assertFixedValueRule, assertInsertRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -157,24 +157,9 @@ describe('FSHImporter', () => {
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
       });
-
-      it('should log a warning when mixins are listed with commas', () => {
-        const input = `
-        Instance: MyObservation
-        InstanceOf: Observation
-        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
-        `;
-        const result = importSingleText(input);
-        expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
-        expect(instance.name).toBe('MyObservation');
-        expect(instance.instanceOf).toBe('Observation');
-        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
-      });
     });
 
-    describe('#rules', () => {
+    describe('#fixedValueRule', () => {
       it('should parse an instance with fixed value rules', () => {
         const input = `
         Instance: SamplePatient
@@ -238,6 +223,20 @@ describe('FSHImporter', () => {
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.rules.length).toBe(1);
         assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, false, true);
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        Instance: MyPatient
+        InstanceOf: Patient
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const instance = result.instances.get('MyPatient');
+        expect(instance.rules).toHaveLength(1);
+        assertInsertRule(instance.rules[0], 'MyRuleSet');
       });
     });
 

@@ -1,11 +1,13 @@
 import {
   assertValueSetConceptComponent,
   assertValueSetFilterComponent,
-  assertCaretValueRule
+  assertCaretValueRule,
+  assertInsertRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode, VsOperator } from '../../src/fshtypes';
 import { importSingleText } from '../testhelpers/importSingleText';
+import { Rule } from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
   describe('ValueSet', () => {
@@ -106,8 +108,8 @@ describe('FSHImporter', () => {
         expect(valueSet.name).toBe('SimpleVS');
         expect(valueSet.id).toBe('SimpleVS');
         expect(valueSet.description).toBeUndefined();
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
           new FshCode('bear', 'ZOO').withLocation([3, 11, 3, 18]).withFile('Simple.fsh')
         ]);
         expect(valueSet.sourceInfo.location).toEqual({
@@ -128,8 +130,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
           new FshCode('hippo', 'ZOO', 'Hippopotamus')
             .withLocation([3, 11, 3, 31])
             .withFile('Zoo.fsh')
@@ -154,8 +156,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], 'http://aquarium.org', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'http://aquarium.org', undefined, [
           new FshCode('octopus', 'http://aquarium.org', 'Octopus')
             .withLocation([5, 11, 5, 28])
             .withFile('Zoo.fsh')
@@ -178,8 +180,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
           new FshCode('hippo', 'ZOO', 'Hippopotamus')
             .withLocation([3, 11, 3, 31])
             .withFile('Zoo.fsh'),
@@ -196,7 +198,7 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
-      it('should merge concept components when possible', () => {
+      it('should merge concept rules when possible', () => {
         const input = `
         ValueSet: ZooVS
         * ZOO#hippo "Hippopotamus"
@@ -210,8 +212,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(5);
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(5);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
           new FshCode('hippo', 'ZOO', 'Hippopotamus')
             .withLocation([3, 11, 3, 34])
             .withFile('Zoo.fsh'),
@@ -221,7 +223,7 @@ describe('FSHImporter', () => {
           new FshCode('emu', 'ZOO', 'Emu').withLocation([4, 38, 4, 47]).withFile('Zoo.fsh')
         ]);
         assertValueSetConceptComponent(
-          valueSet.components[1],
+          valueSet.rules[1],
           'ZOO',
           ['ReptileVS'],
           [
@@ -230,13 +232,13 @@ describe('FSHImporter', () => {
               .withFile('Zoo.fsh')
           ]
         );
-        assertValueSetConceptComponent(valueSet.components[2], 'CRYPTID', undefined, [
+        assertValueSetConceptComponent(valueSet.rules[2], 'CRYPTID', undefined, [
           new FshCode('jackalope', 'CRYPTID', 'Jackalope')
             .withLocation([6, 11, 6, 39])
             .withFile('Zoo.fsh')
         ]);
         assertValueSetConceptComponent(
-          valueSet.components[3],
+          valueSet.rules[3],
           'ZOO',
           undefined,
           [
@@ -246,7 +248,7 @@ describe('FSHImporter', () => {
           false
         );
         assertValueSetConceptComponent(
-          valueSet.components[4],
+          valueSet.rules[4],
           'ZOO',
           ['ReptileVS'],
           [
@@ -266,8 +268,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], undefined, undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], undefined, undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
@@ -280,8 +282,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], undefined, undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], undefined, undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
@@ -293,8 +295,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
@@ -307,8 +309,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
           new FshCode('hippo', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
           new FshCode('crocodile', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
           new FshCode('emu', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh')
@@ -328,8 +330,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(valueSet.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
@@ -348,10 +350,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(2);
-        assertValueSetFilterComponent(valueSet.components[0], undefined, ['FirstZooVS'], []);
+        expect(valueSet.rules.length).toBe(2);
+        assertValueSetFilterComponent(valueSet.rules[0], undefined, ['FirstZooVS'], []);
         assertValueSetFilterComponent(
-          valueSet.components[1],
+          valueSet.rules[1],
           undefined,
           ['SecondZooVS', 'ThirdZooVS'],
           []
@@ -375,8 +377,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], undefined, ['FirstZooVS'], []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], undefined, ['FirstZooVS'], []);
         expect(valueSet.sourceInfo.location).toEqual({
           startLine: 4,
           startColumn: 9,
@@ -394,13 +396,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(
-          valueSet.components[0],
-          'ZOO',
-          ['NorthZooVS', 'SouthZooVS'],
-          []
-        );
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', ['NorthZooVS', 'SouthZooVS'], []);
         expect(valueSet.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
@@ -420,7 +417,7 @@ describe('FSHImporter', () => {
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         assertValueSetFilterComponent(
-          valueSet.components[0],
+          valueSet.rules[0],
           undefined,
           ['FirstZooVS', 'SecondZooVS'],
           []
@@ -438,8 +435,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'version',
             operator: VsOperator.EQUALS,
@@ -456,8 +453,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"=".*string/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
@@ -470,8 +467,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Ursines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllUrsinesVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'concept',
             operator: VsOperator.IS_A,
@@ -490,8 +487,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Ursines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllUrsinesVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"is-a".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Ursines\.fsh.*Line: 3\D*/s);
       });
@@ -504,8 +501,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'concept',
             operator: VsOperator.DESCENDENT_OF,
@@ -524,8 +521,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'concept',
             operator: VsOperator.DESCENDENT_OF,
@@ -544,8 +541,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Felines.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AllFelinesVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"descendent-of".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Felines\.fsh.*Line: 3\D*/s);
       });
@@ -558,8 +555,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'NonCanine.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NonCanineVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'concept',
             operator: VsOperator.IS_NOT_A,
@@ -578,8 +575,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'NonCanine.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NonCanineVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"is-not-a".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: NonCanine\.fsh.*Line: 3\D*/s);
       });
@@ -592,8 +589,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'MostlyDogs.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ProbablyDogsVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'display',
             operator: VsOperator.REGEX,
@@ -610,8 +607,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'MostlyDogs.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ProbablyDogsVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"regex".*regex/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: MostlyDogs\.fsh.*Line: 3\D*/s);
       });
@@ -624,8 +621,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'CatDog.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('CatAndDogVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'concept',
             operator: VsOperator.IN,
@@ -642,8 +639,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'CatDog.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('CatAndDogVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"in".*string/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: CatDog\.fsh.*Line: 3\D*/s);
       });
@@ -656,8 +653,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'NoGoose.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NoGooseVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'concept',
             operator: VsOperator.NOT_IN,
@@ -674,8 +671,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'NoGoose.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('NoGooseVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"not-in".*string/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoGoose\.fsh.*Line: 3\D*/s);
       });
@@ -688,8 +685,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Mustelids.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('MustelidVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'concept',
             operator: VsOperator.GENERALIZES,
@@ -708,8 +705,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Mustelids.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('MustelidVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"generalizes".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Mustelids\.fsh.*Line: 3\D*/s);
       });
@@ -723,15 +720,15 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(2);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(2);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'display',
             operator: VsOperator.EXISTS,
             value: true
           }
         ]);
-        assertValueSetFilterComponent(valueSet.components[1], 'ZOO', undefined, [
+        assertValueSetFilterComponent(valueSet.rules[1], 'ZOO', undefined, [
           {
             property: 'version',
             operator: VsOperator.EXISTS,
@@ -748,8 +745,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/"exists".*boolean/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
@@ -762,8 +759,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooTwoVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, [
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'version',
             operator: VsOperator.REGEX,
@@ -786,10 +783,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Available.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('AvailableVS');
-        expect(valueSet.components.length).toBe(2);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(2);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         assertValueSetFilterComponent(
-          valueSet.components[1],
+          valueSet.rules[1],
           undefined,
           ['UnavailableAnimalVS'],
           [],
@@ -805,8 +802,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
@@ -818,8 +815,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], 'ZOO', undefined, []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
@@ -831,8 +828,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.components.length).toBe(1);
-        assertValueSetFilterComponent(valueSet.components[0], undefined, ['OtherZooVS'], []);
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], undefined, ['OtherZooVS'], []);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
     });
@@ -845,10 +842,10 @@ describe('FSHImporter', () => {
           `;
         const result = importSingleText(input);
         const valueSet = result.valueSets.get('ZooVS');
-        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo', false);
+        assertCaretValueRule(valueSet.rules[0] as Rule, '', 'publisher', 'foo', false);
       });
 
-      it('should parse a value set that uses CaretValueRules alongside components', () => {
+      it('should parse a value set that uses CaretValueRules alongside rules', () => {
         const input = `
         ValueSet: SimpleVS
         * ZOO#bear
@@ -856,10 +853,10 @@ describe('FSHImporter', () => {
         `;
         const result = importSingleText(input, 'Simple.fsh');
         const valueSet = result.valueSets.get('SimpleVS');
-        assertValueSetConceptComponent(valueSet.components[0], 'ZOO', undefined, [
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
           new FshCode('bear', 'ZOO').withLocation([3, 11, 3, 18]).withFile('Simple.fsh')
         ]);
-        assertCaretValueRule(valueSet.rules[0], '', 'publisher', 'foo', false);
+        assertCaretValueRule(valueSet.rules[1] as Rule, '', 'publisher', 'foo', false);
       });
 
       it('should log an error when a CaretValueRule contains a path before ^', () => {
@@ -871,6 +868,19 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        ValueSet: MyVS
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const vs = result.valueSets.get('MyVS');
+        expect(vs.rules).toHaveLength(1);
+        assertInsertRule(vs.rules[0] as Rule, 'MyRuleSet');
       });
     });
   });

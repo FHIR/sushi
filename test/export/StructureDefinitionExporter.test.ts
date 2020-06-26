@@ -20,7 +20,9 @@ import {
   FixedValueRule,
   ContainsRule,
   CaretValueRule,
-  ObeysRule
+  ObeysRule,
+  InsertRule,
+  ConceptRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
@@ -3991,6 +3993,104 @@ describe('StructureDefinitionExporter', () => {
 
       expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
+
+    it('should emit a warning whenever a mixin is used', () => {
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      mixin.rules.push(nameRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      // mixins are still applied
+      expect(sd.title).toBe('Wow fancy');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of the "Mixins" keyword/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/\* insert Bar/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
+
+    it('should emit a warning whenever multiple mixins are used', () => {
+      const nameRule1 = new CaretValueRule('');
+      nameRule1.caretPath = 'title';
+      nameRule1.value = 'Wow fancy';
+      mixin.rules.push(nameRule1);
+
+      const mixin2 = new RuleSet('Baz');
+      doc.ruleSets.set(mixin2.name, mixin2);
+      const nameRule2 = new CaretValueRule('');
+      nameRule2.caretPath = 'title';
+      nameRule2.value = 'Wow fancier title';
+      mixin2.rules.push(nameRule2);
+      profile.mixins.push('Baz');
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      // mixins are still applied
+      expect(sd.title).toBe('Wow fancier title');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of the "Mixins" keyword/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/\* insert Bar.*insert Baz/s);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
+    });
+  });
+
+  describe('#insertRules', () => {
+    let profile: Profile;
+    let ruleSet: RuleSet;
+
+    beforeEach(() => {
+      profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      ruleSet = new RuleSet('Bar');
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+    });
+
+    it('should apply rules from an insert rule', () => {
+      // RuleSet: Bar
+      // * ^title = "Wow fancy"
+      //
+      // Profile: Foo
+      // Parent: Observation
+      // * insert Bar
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      ruleSet.rules.push(nameRule);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      profile.rules.push(insertRule);
+
+      const exported = exporter.exportStructDef(profile);
+      expect(exported.title).toBe('Wow fancy');
+    });
+
+    it('should log an error and not apply rules from an invalid insert rule', () => {
+      // RuleSet: Bar
+      // * #lion
+      // * ^title = "Wow fancy"
+      //
+      // Profile: Foo
+      // Parent: Observation
+      // * insert Bar
+      const concept = new ConceptRule('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'title';
+      nameRule.value = 'Wow fancy';
+      ruleSet.rules.push(concept, nameRule);
+
+      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      insertRule.ruleSet = 'Bar';
+      profile.rules.push(insertRule);
+
+      const exported = exporter.exportStructDef(profile);
+      // CaretRule is still applied
+      expect(exported.title).toBe('Wow fancy');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /ConceptRule.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+      );
     });
   });
 });

@@ -15,7 +15,8 @@ import {
   ContainsRule,
   CardRule,
   OnlyRule,
-  CaretValueRule
+  CaretValueRule,
+  InsertRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
@@ -2286,6 +2287,66 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
       expect(loggerSpy.getLastMessage()).toMatch(
         /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
+      );
+    });
+  });
+
+  describe('#insertRules', () => {
+    let instance: Instance;
+    let ruleSet: RuleSet;
+
+    beforeEach(() => {
+      instance = new Instance('Foo');
+      instance.instanceOf = 'Resource';
+      doc.instances.set(instance.name, instance);
+
+      ruleSet = new RuleSet('Bar');
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+    });
+
+    it('should apply rules from an insert rule', () => {
+      // RuleSet: Bar
+      // * id = "my-id"
+      //
+      // Instance: Foo
+      // InstanceOf: Resource
+      // * insert Bar
+      const valueRule = new FixedValueRule('id');
+      valueRule.fixedValue = 'my-id';
+      ruleSet.rules.push(valueRule);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      instance.rules.push(insertRule);
+
+      const exported = exporter.exportInstance(instance);
+      expect(exported.id).toBe('my-id');
+    });
+
+    it('should log an error and not apply rules from an invalid insert rule', () => {
+      // RuleSet: Bar
+      // * ^title = "Wow fancy"
+      // * id = "my-id"
+      //
+      // Instance: Foo
+      // InstanceOf: Resource
+      // * insert Bar
+      const caretRule = new CaretValueRule('').withFile('Caret.fsh').withLocation([1, 2, 3, 4]);
+      caretRule.caretPath = 'title';
+      caretRule.value = 'Wow fancy';
+      const valueRule = new FixedValueRule('id');
+      valueRule.fixedValue = 'my-id';
+      ruleSet.rules.push(caretRule, valueRule);
+
+      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      insertRule.ruleSet = 'Bar';
+      instance.rules.push(insertRule);
+
+      const exported = exporter.exportInstance(instance);
+      // valueRule is still applied
+      expect(exported.id).toBe('my-id');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /CaretValueRule.*Instance.*File: Caret\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
   });
