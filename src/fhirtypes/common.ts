@@ -402,7 +402,6 @@ export function applyInsertRules(
         );
         return;
       }
-      // seenRuleSets.push(ruleSet.name);
       // RuleSets may contain other RuleSets via insert rules on themselves, so before applying the rules
       // from a RuleSet, we must first recursively expand any insert rules on that RuleSet
       applyInsertRules(ruleSet, tank, [...seenRuleSets, ruleSet.name]);

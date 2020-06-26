@@ -75,5 +75,5 @@ export function isAllowedRule(
   fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
   rule: Rule
 ): boolean {
-  return allowedRulesMap.get(fshDefinition.constructor)?.find(r => rule instanceof r) != null;
+  return allowedRulesMap.get(fshDefinition.constructor)?.some(r => rule instanceof r);
 }
