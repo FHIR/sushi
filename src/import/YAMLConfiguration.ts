@@ -298,6 +298,15 @@ export type YAMLConfigurationJurisdiction =
 export type YAMLConfigurationDependencyMap = {
   [key: string]:
     | ImplementationGuideDependsOn['version'] // string
+    | number // YAML will parse some versions as numbers (e.g., 1.2)
+    | YAMLConfigurationDependencyDetails;
+};
+
+export type YAMLConfigurationDependencyDetails = {
+  id: ImplementationGuideDependsOn['id']; // string
+  uri: ImplementationGuideDependsOn['uri']; // string
+  version:
+    | ImplementationGuideDependsOn['version'] // string
     | number; // YAML will parse some versions as numbers (e.g., 1.2)
 };
 

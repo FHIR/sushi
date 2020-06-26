@@ -536,8 +536,24 @@ function parseDependencies(
   if (yamlDependencies == null) {
     return;
   }
-  return Object.entries(yamlDependencies).map(([packageId, version]) => {
-    return { packageId, version: `${version}` };
+  return Object.entries(yamlDependencies).map(([packageId, versionOrDetails]) => {
+    if (typeof versionOrDetails === 'string' || typeof versionOrDetails === 'number') {
+      return { packageId, version: `${versionOrDetails}` };
+    } else if (versionOrDetails == null) {
+      // this is an error condition, but we'll just make it an incomplete dependency and
+      // handle the error later
+      return { packageId };
+    }
+    // else it's the complex object
+    return removeUndefinedValues({
+      id: versionOrDetails.id,
+      packageId,
+      uri: versionOrDetails.uri,
+      version:
+        typeof versionOrDetails.version === 'number'
+          ? `${versionOrDetails.version}`
+          : versionOrDetails.version
+    });
   });
 }
 
