@@ -411,6 +411,19 @@ describe('FSHImporter', () => {
     );
   });
 
+  it('should properly parse a string with an escaped newline', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    Description: "Here is an escaped \\\\n newline character."
+    `;
+
+    const result = importSingleText(input);
+    expect(result.profiles.size).toBe(1);
+    const profile = result.profiles.get('ObservationProfile');
+    expect(profile.description).toEqual('Here is an escaped \n newline character.');
+  });
+
   it('should properly parse a multiline string with newline, return, and tab characters', () => {
     const input = `
     Profile: ObservationProfile
