@@ -826,23 +826,24 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should parse value set rules on Quantity with units keyword', () => {
+      it('should ignore the units keyword and log a warning when parsing value set rules on Quantity', () => {
         const input = `
-
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity units from http://unitsofmeasure.org
         `;
 
-        const result = importSingleText(input);
+        const result = importSingleText(input, 'UselessQuant.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         assertValueSetRule(
           profile.rules[0],
           'valueQuantity',
           'http://unitsofmeasure.org',
-          'required',
-          true
+          'required'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /The "units" keyword is deprecated and has no effect.*File: UselessQuant\.fsh.*Line: 4\D*/s
         );
       });
     });
@@ -1004,21 +1005,23 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode, true);
       });
 
-      it('should parse fixed value FSHCode rule with units on Quantity', () => {
+      it('should ignore the units keyword and log a warning when parsing a fixed value FSHCode rule with units on Quantity', () => {
         const input = `
-
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity units = http://unitsofmeasure.org#cGy
         `;
 
-        const result = importSingleText(input);
+        const result = importSingleText(input, 'UselessUnits.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
-          .withLocation([5, 33, 5, 61])
-          .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode, false, true);
+          .withLocation([4, 33, 4, 61])
+          .withFile('UselessUnits.fsh');
+        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /The "units" keyword is deprecated and has no effect.*File: UselessUnits\.fsh.*Line: 4\D*/s
+        );
       });
 
       it('should parse fixed value Quantity rule', () => {

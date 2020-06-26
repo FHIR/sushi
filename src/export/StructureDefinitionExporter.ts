@@ -135,12 +135,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.fixValue(
-              replacedRule.fixedValue,
-              replacedRule.exactly,
-              replacedRule.units,
-              this
-            );
+            element.fixValue(replacedRule.fixedValue, replacedRule.exactly, this);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(
               rule.mustSupport,
@@ -155,7 +150,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainType(rule, this, target);
           } else if (rule instanceof ValueSetRule) {
             const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
-            element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength, rule.units);
+            element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
             const isExtension = element.type?.length === 1 && element.type[0].code === 'Extension';
             if (isExtension) {

@@ -8,7 +8,6 @@ describe('FixedValueRule', () => {
       expect(c.path).toBe('component.code');
       expect(c.fixedValue).toBeUndefined();
       expect(c.exactly).toBeUndefined();
-      expect(c.units).toBeUndefined();
       expect(c.isInstance).toBeUndefined();
     });
   });

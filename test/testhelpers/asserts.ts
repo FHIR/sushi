@@ -54,15 +54,13 @@ export function assertValueSetRule(
   rule: Rule,
   path: string,
   valueSet: string,
-  strength: string,
-  units = false
+  strength: string
 ): void {
   expect(rule).toBeInstanceOf(ValueSetRule);
   const valueSetRule = rule as ValueSetRule;
   expect(valueSetRule.path).toBe(path);
   expect(valueSetRule.valueSet).toBe(valueSet);
   expect(valueSetRule.strength).toBe(strength);
-  expect(valueSetRule.units).toBe(units);
 }
 
 export function assertFixedValueRule(
@@ -70,7 +68,6 @@ export function assertFixedValueRule(
   path: string,
   value: FixedValueType,
   exactly = false,
-  units = false,
   isInstance = false
 ): void {
   expect(rule).toBeInstanceOf(FixedValueRule);
@@ -78,7 +75,6 @@ export function assertFixedValueRule(
   expect(fixedValueRule.path).toBe(path);
   expect(fixedValueRule.fixedValue).toEqual(value);
   expect(fixedValueRule.exactly).toBe(exactly);
-  expect(fixedValueRule.units).toBe(units);
   expect(fixedValueRule.isInstance).toEqual(isInstance);
 }
 

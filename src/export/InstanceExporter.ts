@@ -97,7 +97,6 @@ export class InstanceExporter implements Fishable {
           rule.path,
           rule.fixedValue,
           this.fisher,
-          rule.units,
           inlineResourceTypes
         );
         // Record each valid rule in a map

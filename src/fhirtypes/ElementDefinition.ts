@@ -23,7 +23,6 @@ import {
   NarrowingRootCardinalityError,
   SliceTypeRemovalError,
   InvalidUriError,
-  InvalidUnitsError,
   FixedToPatternError,
   MultipleStandardsStatusError,
   InvalidMappingError,
@@ -1045,13 +1044,11 @@ export class ElementDefinition {
    * @see {@link http://hl7.org/fhir/R4/terminologies.html#strength}
    * @param {string} vsURI - the value set URI to bind
    * @param {string} strength - the strength of the binding (e.g., 'required')
-   * @param {boolean} units - True if the units keyword is used on this rule
    * @throws {BindingStrengthError} when the binding can't be applied because it is looser than the existing binding
    * @throws {CodedTypeNotFoundError} - when the binding can't be applied because the element is the wrong type
    * @throws {InvalidUriError} when the value set uri is not valid
-   * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength, units = false): void {
+  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength): void {
     // Check if this is a valid type to be bound against
     const validTypes = this.findTypesByCode(
       'code',
@@ -1101,24 +1098,17 @@ export class ElementDefinition {
       strength,
       valueSet: vsURI
     };
-
-    // Units error should not stop binding, but must still be logged
-    if (units && !validTypes.find(t => t.code === 'Quantity')) {
-      throw new InvalidUnitsError(this.id);
-    }
   }
 
   /**
    * Fixes a value to an ElementDefinition
    * @param {FixedValueType} value - The value to fix
    * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
-   * @param {boolean} units - True if the units keyword is used on this rule
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
-   * @throws {InvalidUnitsError} when the "units" keyword is used on a non-Quantity type
    */
-  fixValue(value: FixedValueType, exactly = false, units = false, fisher?: Fishable): void {
+  fixValue(value: FixedValueType, exactly = false, fisher?: Fishable): void {
     let type: string;
     if (value instanceof FshCode) {
       type = 'Code';
@@ -1210,12 +1200,6 @@ export class ElementDefinition {
         this.constrainCardinality(1, '');
       }
     });
-
-    // Units error should not stop fixing value, but must still be logged
-    const types = this.findTypesByCode('Quantity');
-    if (units && types.length === 0) {
-      throw new InvalidUnitsError(this.id);
-    }
   }
 
   /**
