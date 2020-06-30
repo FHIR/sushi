@@ -121,6 +121,30 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Simple.fsh');
       });
 
+      it('should ignore optional include for code components', () => {
+        const input = `
+        ValueSet: SimpleVS
+        * include ZOO#bear
+        `;
+        const result = importSingleText(input, 'Simple.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('SimpleVS');
+        expect(valueSet.name).toBe('SimpleVS');
+        expect(valueSet.id).toBe('SimpleVS');
+        expect(valueSet.description).toBeUndefined();
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+          new FshCode('bear', 'ZOO').withLocation([3, 19, 3, 26]).withFile('Simple.fsh')
+        ]);
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 26
+        });
+        expect(valueSet.sourceInfo.file).toBe('Simple.fsh');
+      });
+
       it('should parse a value set with a concept specified as #code from SYSTEM', () => {
         const input = `
         ValueSet: ZooVS
@@ -300,6 +324,16 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
+      it('should log an error when both include and exclude are used on the same line', () => {
+        const input = `
+        ValueSet: ZooVS
+        * include exclude ZOO#bear
+        `;
+        importSingleText(input, 'Zoo.fsh');
+        expect(loggerSpy.getLastMessage('error')).toMatch(/extraneous input/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
+      });
+
       it('should log a warning when concepts are listed with commas', () => {
         const input = `
         ValueSet: ZooVS
@@ -337,6 +371,25 @@ describe('FSHImporter', () => {
           startColumn: 9,
           endLine: 3,
           endColumn: 31
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should ignore optional include for filter components', () => {
+        const input = `
+        ValueSet: ZooVS
+        * include codes from system ZOO
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 39
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
