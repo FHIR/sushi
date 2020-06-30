@@ -6,7 +6,8 @@ import {
   assertValueSetRule,
   assertContainsRule,
   assertCaretValueRule,
-  assertObeysRule
+  assertObeysRule,
+  assertInsertRule
 } from '../testhelpers/asserts';
 import { FshCode, FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -62,19 +63,6 @@ describe('FSHImporter', () => {
           endLine: 7,
           endColumn: 55
         });
-      });
-
-      it('should log a warning when mixins are listed with commas', () => {
-        const input = `
-        Profile: ObservationProfile
-        Parent: Observation
-        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
-        `;
-        const result = importSingleText(input);
-        expect(result.profiles.size).toBe(1);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
       });
 
       it('should properly parse a multi-string description', () => {
@@ -1650,6 +1638,20 @@ describe('FSHImporter', () => {
         assertObeysRule(profile.rules[0], 'category', 'SomeInvariant');
         assertObeysRule(profile.rules[1], 'category', 'ThisInvariant');
         assertObeysRule(profile.rules[2], 'category', 'ThatInvariant');
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MyRuleSet');
       });
     });
   });

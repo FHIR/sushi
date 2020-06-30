@@ -5,20 +5,18 @@ import {
   StructureDefinition
 } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
-import {
-  FshValueSet,
-  ValueSetComponent,
-  ValueSetConceptComponent,
-  ValueSetFilterComponent,
-  FshCode,
-  ValueSetFilterValue
-} from '../fshtypes';
+import { FshValueSet, FshCode, ValueSetFilterValue } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError, InvalidUriError } from '../errors';
 import { Package } from '.';
 import { MasterFisher, Type } from '../utils';
-import { CaretValueRule } from '../fshtypes/rules';
-import { setPropertyOnInstance } from '../fhirtypes/common';
+import {
+  CaretValueRule,
+  ValueSetComponentRule,
+  ValueSetConceptComponentRule,
+  ValueSetFilterComponentRule
+} from '../fshtypes/rules';
+import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 
 export class ValueSetExporter {
@@ -38,7 +36,7 @@ export class ValueSetExporter {
     valueSet.url = `${this.tank.config.canonical}/ValueSet/${valueSet.id}`;
   }
 
-  private setCompose(valueSet: ValueSet, components: ValueSetComponent[]) {
+  private setCompose(valueSet: ValueSet, components: ValueSetComponentRule[]) {
     if (components.length > 0) {
       valueSet.compose = {
         include: [],
@@ -68,7 +66,7 @@ export class ValueSetExporter {
             }
           });
         }
-        if (component instanceof ValueSetConceptComponent && component.concepts.length > 0) {
+        if (component instanceof ValueSetConceptComponentRule && component.concepts.length > 0) {
           composeElement.concept = component.concepts.map(concept => {
             const composeConcept: ValueSetComposeConcept = {
               code: concept.code
@@ -78,7 +76,10 @@ export class ValueSetExporter {
             }
             return composeConcept;
           });
-        } else if (component instanceof ValueSetFilterComponent && component.filters.length > 0) {
+        } else if (
+          component instanceof ValueSetFilterComponentRule &&
+          component.filters.length > 0
+        ) {
           composeElement.filter = component.filters.map(filter => {
             return {
               property: filter.property.toString(),
@@ -150,8 +151,18 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
-    this.setCaretRules(vs, fshDefinition.rules);
-    this.setCompose(vs, fshDefinition.components);
+    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
+    applyInsertRules(fshDefinition, this.tank);
+    this.setCaretRules(
+      vs,
+      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
+    );
+    this.setCompose(
+      vs,
+      fshDefinition.rules.filter(
+        rule => rule instanceof ValueSetComponentRule
+      ) as ValueSetComponentRule[]
+    );
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);
     }

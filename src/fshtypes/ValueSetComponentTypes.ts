@@ -1,20 +1,4 @@
-import { FshEntity } from './FshEntity';
-import { FshCode } from './FshCode';
-
-export class ValueSetComponent extends FshEntity {
-  public from: ValueSetComponentFrom = {};
-  constructor(public inclusion: boolean) {
-    super();
-  }
-}
-
-export class ValueSetConceptComponent extends ValueSetComponent {
-  public concepts: FshCode[] = [];
-}
-
-export class ValueSetFilterComponent extends ValueSetComponent {
-  public filters: ValueSetFilter[] = [];
-}
+import { FshCode } from '.';
 
 export type ValueSetComponentFrom = {
   system?: string;
