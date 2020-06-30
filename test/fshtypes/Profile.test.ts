@@ -1,6 +1,5 @@
 import 'jest-extended';
 import { Profile } from '../../src/fshtypes/Profile';
-
 describe('Profile', () => {
   describe('#constructor', () => {
     it('should set the properties correctly', () => {

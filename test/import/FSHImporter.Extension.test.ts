@@ -6,7 +6,8 @@ import {
   assertCaretValueRule,
   assertObeysRule,
   assertContainsRule,
-  assertFixedValueRule
+  assertFixedValueRule,
+  assertInsertRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -60,18 +61,6 @@ describe('FSHImporter', () => {
           endLine: 7,
           endColumn: 55
         });
-      });
-
-      it('should log a warning when mixins are listed with commas', () => {
-        const input = `
-        Extension: SomeExtension
-        Mixins: Mixin1 , Mixin2,Mixin3, Mixin4
-        `;
-        const result = importSingleText(input);
-        expect(result.extensions.size).toBe(1);
-        const extension = result.extensions.get('SomeExtension');
-        expect(extension.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list mixins is deprecated/s);
       });
 
       it('should only apply each metadata attribute the first time it is declared', () => {
@@ -346,6 +335,19 @@ describe('FSHImporter', () => {
         expect(extension.rules).toHaveLength(2);
         assertObeysRule(extension.rules[0], 'extension', 'inv-1');
         assertObeysRule(extension.rules[1], 'extension', 'inv-2');
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule with a single RuleSet', () => {
+        const input = `
+        Extension: MyExtension
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const extension = result.extensions.get('MyExtension');
+        expect(extension.rules).toHaveLength(1);
+        assertInsertRule(extension.rules[0], 'MyRuleSet');
       });
     });
   });

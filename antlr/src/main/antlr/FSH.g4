@@ -8,23 +8,28 @@ alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 profile:            KW_PROFILE SEQUENCE sdMetadata+ sdRule*;
 extension:          KW_EXTENSION SEQUENCE sdMetadata* sdRule*;
 sdMetadata:         parent | id | title | description | mixins;
-sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule;
+sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule;
 
-instance:           KW_INSTANCE SEQUENCE instanceMetadata* fixedValueRule*;
+instance:           KW_INSTANCE SEQUENCE instanceMetadata* instanceRule*;
 instanceMetadata:   instanceOf | title | description | usage | mixins;
+instanceRule:       fixedValueRule | insertRule;
 
 invariant:          KW_INVARIANT SEQUENCE invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
 
-valueSet:           KW_VALUESET SEQUENCE vsMetadata* (caretValueRule | vsComponent)*;
+valueSet:           KW_VALUESET SEQUENCE vsMetadata* vsRule*;
 vsMetadata:         id | title | description;
-codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* (caretValueRule | concept)*;
+vsRule:             vsComponent | caretValueRule | insertRule;
+codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* csRule*;
 csMetadata:         id | title | description;
+csRule:             concept | caretValueRule | insertRule;
 
-ruleSet:            KW_RULESET SEQUENCE sdRule+;
+ruleSet:            KW_RULESET SEQUENCE ruleSetRule+;
+ruleSetRule:        sdRule | concept | vsComponent;
 
-mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingRule*;
+mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingEntityRule*;
 mappingMetadata:    id | source | target | description | title;
+mappingEntityRule:  mappingRule | insertRule;
 
 // METADATA FIELDS
 parent:             KW_PARENT SEQUENCE;
@@ -51,6 +56,7 @@ onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
+insertRule:         STAR KW_INSERT SEQUENCE;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR KW_EXCLUDE? ( vsConceptComponent | vsFilterComponent );
@@ -131,6 +137,7 @@ KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
 KW_UNITS:           'units';
 KW_EXACTLY:         '(' WS* 'exactly' WS* ')';
+KW_INSERT:          'insert';
 
 // SYMBOLS
 EQUAL:              '=';

@@ -66,6 +66,12 @@ FSHVisitor.prototype.visitInstanceMetadata = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#instanceRule.
+FSHVisitor.prototype.visitInstanceRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#invariant.
 FSHVisitor.prototype.visitInvariant = function(ctx) {
   return this.visitChildren(ctx);
@@ -90,6 +96,12 @@ FSHVisitor.prototype.visitVsMetadata = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#vsRule.
+FSHVisitor.prototype.visitVsRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#codeSystem.
 FSHVisitor.prototype.visitCodeSystem = function(ctx) {
   return this.visitChildren(ctx);
@@ -102,8 +114,20 @@ FSHVisitor.prototype.visitCsMetadata = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#csRule.
+FSHVisitor.prototype.visitCsRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#ruleSet.
 FSHVisitor.prototype.visitRuleSet = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#ruleSetRule.
+FSHVisitor.prototype.visitRuleSetRule = function(ctx) {
   return this.visitChildren(ctx);
 };
 
@@ -116,6 +140,12 @@ FSHVisitor.prototype.visitMapping = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#mappingMetadata.
 FSHVisitor.prototype.visitMappingMetadata = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#mappingEntityRule.
+FSHVisitor.prototype.visitMappingEntityRule = function(ctx) {
   return this.visitChildren(ctx);
 };
 
@@ -242,6 +272,12 @@ FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#mappingRule.
 FSHVisitor.prototype.visitMappingRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#insertRule.
+FSHVisitor.prototype.visitInsertRule = function(ctx) {
   return this.visitChildren(ctx);
 };
 

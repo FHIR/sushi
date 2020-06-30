@@ -5,8 +5,8 @@ import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import path from 'path';
 import { StructureDefinition } from '../../src/fhirtypes';
-import { Mapping } from '../../src/fshtypes';
-import { MappingRule } from '../../src/fshtypes/rules';
+import { Mapping, RuleSet } from '../../src/fshtypes';
+import { MappingRule, InsertRule, FixedValueRule } from '../../src/fshtypes/rules';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('MappingExporter', () => {
@@ -293,6 +293,72 @@ describe('MappingExporter', () => {
       expect(exported.identity).toBe('MyMapping');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Invalid mapping, mapping.identity and mapping.map are 1..1 and must be set.*File: BadRule\.fsh.*Line: 1\D*/s
+      );
+    });
+  });
+
+  describe('#insertRules', () => {
+    let mapping: Mapping;
+    let ruleSet: RuleSet;
+
+    beforeEach(() => {
+      mapping = new Mapping('Foo');
+      mapping.source = 'MyObservation';
+      doc.mappings.set(mapping.name, mapping);
+
+      ruleSet = new RuleSet('Bar');
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+    });
+
+    it('should apply rules from an insert rule', () => {
+      // RuleSet: Bar
+      // * status -> Observation.otherStatus
+      //
+      // Mapping: Foo
+      // * insert Bar
+      const mapRule = new MappingRule('status');
+      mapRule.map = 'Observation.otherStatus';
+      ruleSet.rules.push(mapRule);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      mapping.rules.push(insertRule);
+
+      exporter.export();
+      const status = observation.elements.find(e => e.id === 'Observation.status');
+      const exported = status.mapping.slice(-1)[0];
+      expect(exported.map).toBe('Observation.otherStatus');
+      expect(exported.identity).toBe('Foo');
+    });
+
+    it('should log an error and not apply rules from an invalid insert rule', () => {
+      // RuleSet: Bar
+      // * experimental = true
+      // * status -> Observation.otherStatus
+      //
+      // Mapping: Foo
+      // * insert Bar
+      const valueRule = new FixedValueRule('experimental')
+        .withFile('Value.fsh')
+        .withLocation([1, 2, 3, 4]);
+      valueRule.fixedValue = true;
+      const mapRule = new MappingRule('status');
+      mapRule.map = 'Observation.otherStatus';
+      ruleSet.rules.push(mapRule);
+      ruleSet.rules.push(valueRule, mapRule);
+
+      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      insertRule.ruleSet = 'Bar';
+      mapping.rules.push(insertRule);
+
+      exporter.export();
+      // mapping rule is still applied
+      const status = observation.elements.find(e => e.id === 'Observation.status');
+      const exported = status.mapping.slice(-1)[0];
+      expect(exported.map).toBe('Observation.otherStatus');
+      expect(exported.identity).toBe('Foo');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /FixedValueRule.*Mapping.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
   });

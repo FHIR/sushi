@@ -1,8 +1,8 @@
 import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
-import { setPropertyOnInstance } from '../fhirtypes/common';
+import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
-import { CaretValueRule } from '../fshtypes/rules';
+import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, Type } from '../utils';
 import { Package } from '.';
@@ -24,9 +24,9 @@ export class CodeSystemExporter {
     codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
 
-  private setConcepts(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
-    if (fshDefinition.concepts.length > 0) {
-      codeSystem.concept = fshDefinition.concepts.map(concept => {
+  private setConcepts(codeSystem: CodeSystem, concepts: ConceptRule[]): void {
+    if (concepts.length > 0) {
+      codeSystem.concept = concepts.map(concept => {
         const codeSystemConcept: CodeSystemConcept = { code: concept.code };
         if (concept.display) codeSystemConcept.display = concept.display;
         if (concept.definition) codeSystemConcept.definition = concept.definition;
@@ -41,14 +41,12 @@ export class CodeSystemExporter {
     );
     for (const rule of rules) {
       try {
-        if (rule instanceof CaretValueRule) {
-          const { fixedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-            rule.caretPath,
-            rule.value,
-            this.fisher
-          );
-          setPropertyOnInstance(codeSystem, pathParts, fixedValue);
-        }
+        const { fixedValue, pathParts } = csStructureDefinition.validateValueAtPath(
+          rule.caretPath,
+          rule.value,
+          this.fisher
+        );
+        setPropertyOnInstance(codeSystem, pathParts, fixedValue);
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
@@ -84,8 +82,16 @@ export class CodeSystemExporter {
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
-    this.setCaretRules(codeSystem, fshDefinition.rules);
-    this.setConcepts(codeSystem, fshDefinition);
+    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
+    applyInsertRules(fshDefinition, this.tank);
+    this.setCaretRules(
+      codeSystem,
+      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
+    );
+    this.setConcepts(
+      codeSystem,
+      fshDefinition.rules.filter(rule => rule instanceof ConceptRule) as ConceptRule[]
+    );
 
     // check for another code system with the same id
     // see https://www.hl7.org/fhir/resource.html#id

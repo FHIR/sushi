@@ -1,5 +1,5 @@
-import { Rule } from './rules/Rule';
 import { FshEntity } from './FshEntity';
+import { SdRule } from './rules';
 
 export class Extension extends FshEntity {
   id: string;
@@ -7,7 +7,7 @@ export class Extension extends FshEntity {
   title?: string;
   description?: string;
   mixins?: string[];
-  rules: Rule[];
+  rules: SdRule[];
 
   constructor(public name: string) {
     super();

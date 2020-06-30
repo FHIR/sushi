@@ -11,15 +11,12 @@ import {
   ContainsRuleItem,
   CaretValueRule,
   ObeysRule,
-  MappingRule
+  MappingRule,
+  InsertRule,
+  ValueSetConceptComponentRule,
+  ValueSetFilterComponentRule
 } from '../../src/fshtypes/rules';
-import {
-  ValueSetComponent,
-  ValueSetConceptComponent,
-  FshCode,
-  ValueSetFilterComponent,
-  ValueSetFilter
-} from '../../src/fshtypes';
+import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 
 export function assertCardRule(rule: Rule, path: string, min: number, max: number | string): void {
   expect(rule).toBeInstanceOf(CardRule);
@@ -124,6 +121,13 @@ export function assertObeysRule(rule: Rule, path: string, invariant: string) {
   expect(obeysRule.invariant).toBe(invariant);
 }
 
+export function assertInsertRule(rule: Rule, ruleSet: string) {
+  expect(rule).toBeInstanceOf(InsertRule);
+  const insertRule = rule as InsertRule;
+  expect(insertRule.path).toBe('');
+  expect(insertRule.ruleSet).toBe(ruleSet);
+}
+
 export function assertMappingRule(
   rule: Rule,
   path: string,
@@ -140,14 +144,14 @@ export function assertMappingRule(
 }
 
 export function assertValueSetConceptComponent(
-  component: ValueSetComponent,
+  component: Rule,
   fromSystem: string,
   fromValueSets: string[],
   concepts: FshCode[],
   included = true
 ): void {
-  expect(component).toBeInstanceOf(ValueSetConceptComponent);
-  const conceptComponent = component as ValueSetConceptComponent;
+  expect(component).toBeInstanceOf(ValueSetConceptComponentRule);
+  const conceptComponent = component as ValueSetConceptComponentRule;
   expect(conceptComponent.from.system).toBe(fromSystem);
   expect(conceptComponent.from.valueSets).toEqual(fromValueSets);
   expect(conceptComponent.concepts).toEqual(concepts);
@@ -155,14 +159,14 @@ export function assertValueSetConceptComponent(
 }
 
 export function assertValueSetFilterComponent(
-  component: ValueSetComponent,
+  component: Rule,
   fromSystem: string,
   fromValueSets: string[],
   filters: ValueSetFilter[],
   included = true
 ): void {
-  expect(component).toBeInstanceOf(ValueSetFilterComponent);
-  const filterComponent = component as ValueSetFilterComponent;
+  expect(component).toBeInstanceOf(ValueSetFilterComponentRule);
+  const filterComponent = component as ValueSetFilterComponentRule;
   expect(filterComponent.from.system).toBe(fromSystem);
   expect(filterComponent.from.valueSets).toEqual(fromValueSets);
   expect(filterComponent.filters).toEqual(filters);
