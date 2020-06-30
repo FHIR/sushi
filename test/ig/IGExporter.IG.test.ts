@@ -799,7 +799,8 @@ describe('IGExporter', () => {
       expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
       expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
       expect(directoryContents.get('extensions')).toEqual([
-        'StructureDefinition-patient-birthPlace.json'
+        'StructureDefinition-patient-birthPlace.json',
+        'StructureDefinition-patient-birthPlaceXML.xml'
       ]);
       expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
       expect(directoryContents.get('profiles')).toEqual([
@@ -852,7 +853,14 @@ describe('IGExporter', () => {
         reference: {
           reference: 'StructureDefinition/patient-birthPlace'
         },
-        name: 'birthPlace', // Use name over ID
+        name: 'Birth Place', // Use title
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/patient-birthPlaceXML'
+        },
+        name: 'Birth Place', // Use title
         exampleBoolean: false
       });
     });
