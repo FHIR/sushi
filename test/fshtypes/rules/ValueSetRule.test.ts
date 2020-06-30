@@ -8,7 +8,6 @@ describe('ValueSetRule', () => {
       expect(c.path).toBe('component.code');
       expect(c.valueSet).toBeUndefined();
       expect(c.strength).toBeUndefined();
-      expect(c.units).toBeUndefined();
     });
   });
 });
