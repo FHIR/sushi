@@ -550,9 +550,9 @@ function parseDependencies(
       packageId,
       uri: versionOrDetails.uri,
       version:
-        typeof versionOrDetails.version === 'number'
+        typeof versionOrDetails.version === 'string' || typeof versionOrDetails.version === 'number'
           ? `${versionOrDetails.version}`
-          : versionOrDetails.version
+          : undefined
     });
   });
 }

@@ -159,7 +159,7 @@ export class IGExporter {
     if (this.config.dependencies?.length) {
       const igs = this.fhirDefs.allImplementationGuides();
       for (const dependency of this.config.dependencies) {
-        const dependsEntry: ImplementationGuideDependsOn = this.fixDependsOn(dependency, igs);
+        const dependsEntry = this.fixDependsOn(dependency, igs);
         if (dependsEntry) {
           this.ig.dependsOn.push(dependsEntry);
         }
@@ -185,13 +185,13 @@ export class IGExporter {
    * Fixes a dependsOn entry by specifying its uri (if not yet specified) and generating an id (if
    * not yet specified). Will also ensure that required properties (uri/version) are available.
    * If it cannot ensure a valid dependsOn entry, it will return undefined.
-   * @param dependency {ImplementationGuideDependsOn} - the dependency to fix
-   * @param igs {List<Object>} - the IGs to search when finding the dependency URI
+   * @param dependency - the dependency to fix
+   * @param igs - the IGs to search when finding the dependency URI
    * @returns the fixed dependency or null if it can't be fixed
    */
   private fixDependsOn(dependency: ImplementationGuideDependsOn, igs: any[]) {
     // Clone it so we don't mutate the original
-    const dependsOn: ImplementationGuideDependsOn = cloneDeep(dependency);
+    const dependsOn = cloneDeep(dependency);
 
     if (dependsOn.version == null) {
       // No need for the detailed log message since we already logged one in the package loader.
