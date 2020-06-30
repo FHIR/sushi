@@ -72,17 +72,6 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw InvalidUnitsError when using the units keyword on a non-Quantity', () => {
-      const code = medication.elements.find(e => e.id === 'Medication.code');
-      expect(() => {
-        code.fixValue(new FshCode('mycode', 'https://code.com'), false, true);
-      }).toThrow(/units.*Medication.code/);
-      // Units error should not stop value from still being fixed
-      expect(code.patternCodeableConcept).toEqual({
-        coding: [{ code: 'mycode', system: 'https://code.com' }]
-      });
-    });
-
     it('should ensure that minimum cardinality is 1 when fixing a value mentioned in a parent slice discriminator', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };

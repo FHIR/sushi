@@ -222,7 +222,7 @@ describe('FSHImporter', () => {
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.rules.length).toBe(1);
-        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, false, true);
+        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
       });
     });
 

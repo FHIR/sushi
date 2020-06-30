@@ -1329,7 +1329,6 @@ describe('StructureDefinition', () => {
           'contained[0].gender',
           gender,
           fisher,
-          false,
           ['Patient']
         );
         expect(fixedValue).toBe('F');
@@ -1344,13 +1343,12 @@ describe('StructureDefinition', () => {
         const {
           fixedValue,
           pathParts
-        } = respRate.validateValueAtPath(
-          'contained[0].entry[0].resource.gender',
-          gender,
-          fisher,
-          false,
-          ['Bundle', null, 'Patient', null]
-        );
+        } = respRate.validateValueAtPath('contained[0].entry[0].resource.gender', gender, fisher, [
+          'Bundle',
+          null,
+          'Patient',
+          null
+        ]);
         expect(fixedValue).toBe('F');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
@@ -1369,7 +1367,6 @@ describe('StructureDefinition', () => {
           'contained[0].entry[0].resource.entry[0].resource.gender',
           gender,
           fisher,
-          false,
           ['Bundle', null, 'Bundle', null, 'Patient', null]
         );
         expect(fixedValue).toBe('F');
@@ -1388,7 +1385,7 @@ describe('StructureDefinition', () => {
         const {
           fixedValue,
           pathParts
-        } = respRate.validateValueAtPath('contained[0].valueQuantity.unit', unit, fisher, false, [
+        } = respRate.validateValueAtPath('contained[0].valueQuantity.unit', unit, fisher, [
           'http://hl7.org/fhir/StructureDefinition/resprate',
           null,
           null
@@ -1404,20 +1401,19 @@ describe('StructureDefinition', () => {
       it('should not allow overriding a Resource constrained to Patient with a non-Patient path', () => {
         const system = 'http://hello.com';
         expect(() =>
-          respRate.validateValueAtPath('contained[0].system', system, fisher, false, ['Patient'])
+          respRate.validateValueAtPath('contained[0].system', system, fisher, ['Patient'])
         ).toThrow('The element or path you referenced does not exist: contained[0].system');
       });
 
       it('should not allow overriding a Resource constrained to Patient with a non-Patient path inside a Resource', () => {
         const system = 'http://hello.com';
         expect(() =>
-          respRate.validateValueAtPath(
-            'contained[0].entry[0].resource.system',
-            system,
-            fisher,
-            false,
-            ['Bundle', null, 'Patient', null]
-          )
+          respRate.validateValueAtPath('contained[0].entry[0].resource.system', system, fisher, [
+            'Bundle',
+            null,
+            'Patient',
+            null
+          ])
         ).toThrow(
           'The element or path you referenced does not exist: contained[0].entry[0].resource.system'
         );
@@ -1426,7 +1422,7 @@ describe('StructureDefinition', () => {
       it('should not allow overriding a Patient with an Observation', () => {
         const method = new FshCode('man', 'http://method.com');
         expect(() =>
-          respRate.validateValueAtPath('contained[PatientsOnly].method', method, fisher, false, [
+          respRate.validateValueAtPath('contained[PatientsOnly].method', method, fisher, [
             'Observation'
           ])
         ).toThrow(
@@ -1437,9 +1433,7 @@ describe('StructureDefinition', () => {
       it('should not allow overriding a Resource constrained to a non-FHIR Resource', () => {
         const system = 'http://hello.com';
         expect(() =>
-          respRate.validateValueAtPath('contained[0].system', system, fisher, false, [
-            'CodeableConcept'
-          ])
+          respRate.validateValueAtPath('contained[0].system', system, fisher, ['CodeableConcept'])
         ).toThrow('The element or path you referenced does not exist: contained[0].system');
       });
 

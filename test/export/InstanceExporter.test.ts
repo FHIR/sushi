@@ -1467,21 +1467,6 @@ describe('InstanceExporter', () => {
       });
     });
 
-    // Units keyword
-    it('should log an error when fixing to a non-Quantity with the units keyword', () => {
-      const barRule = new FixedValueRule('gender')
-        .withFile('PatientInstance.fsh')
-        .withLocation([1, 2, 3, 4]);
-      barRule.fixedValue = new FshCode('mycode', 'http:/mysystem.com');
-      barRule.units = true;
-      patientInstance.rules.push(barRule);
-      const exported = exportInstance(patientInstance);
-      expect(exported.gender).toBeUndefined();
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /units.*Patient.gender.*File: PatientInstance.fsh.*Line: 1 - 3\D*/s
-      );
-    });
-
     // Validating required elements
     it('should log an error when a required element is not present', () => {
       const cardRule = new CardRule('active');
