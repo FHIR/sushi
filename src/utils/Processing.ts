@@ -83,6 +83,20 @@ export function loadExternalDependencies(
   // Load dependencies
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
   for (const dep of dependencies) {
+    if (dep.version == null) {
+      logger.error(
+        `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
+          'config.yaml, either use the simple dependency format:\n\n' +
+          'dependencies:\n' +
+          `  ${dep.packageId}: current\n\n` +
+          'or use the detailed dependency format to specify other properties as well:\n\n' +
+          'dependencies:\n' +
+          `  ${dep.packageId}:\n` +
+          `    uri: ${dep.uri ?? 'http://my-fhir-ig.org/ImplementationGuide/123'}\n` +
+          '    version: current'
+      );
+      continue;
+    }
     dependencyDefs.push(
       loadDependency(dep.packageId, dep.version, defs)
         .then(def => {

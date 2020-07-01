@@ -86,7 +86,15 @@ describe('importConfiguration', () => {
           ]
         }
       ],
-      dependencies: [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }],
+      dependencies: [
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+        {
+          id: 'mcode',
+          packageId: 'hl7.fhir.us.mcode',
+          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+          version: '1.0.0'
+        }
+      ],
       global: [
         {
           type: 'Patient',
