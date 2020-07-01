@@ -1638,12 +1638,12 @@ export class FSHImporter extends FSHVisitor {
     // Replace escaped characters
     const splitBackslash = strNoQuotes.split(/\\\\/g);
     const replacedBackslash = splitBackslash.map(substrBackslash => {
-      const splitQuote = substrBackslash.split(/\\"/g);
-      const replacedQuote = splitQuote.map(substrQuote => {
-        // Replace newline, return, tab characters only if they were not preceded by a backslash to escape the escape character
-        return substrQuote.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t');
-      });
-      return replacedQuote.join('"');
+      // Replace quote, newline, return, tab characters only if they were not preceded by a backslash to escape the escape character
+      return substrBackslash
+        .replace(/\\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\t/g, '\t');
     });
     return replacedBackslash.join('\\');
   }
