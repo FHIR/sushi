@@ -1,14 +1,16 @@
 //#!/usr/bin/env node
-
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
-import { FSHTank } from './import';
+import chalk from 'chalk';
+import { pad, padStart, sample, padEnd } from 'lodash';
+import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
 import { logger, stats, Type } from './utils';
 import { loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
+import { Configuration } from './fshtypes';
 import {
   findInputDir,
   ensureOutputDir,
@@ -16,108 +18,105 @@ import {
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
-  getRawFSHes,
-  getIgDataPath
+  getRawFSHes
 } from './utils/Processing';
-import { pad, padStart, sample, padEnd } from 'lodash';
-import chalk from 'chalk';
 
 // playgroundApp().catch(e => {
 //   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
 //   process.exit(1);
 // });
-export class Hello {
-  constructor() {
-    console.log('Hello');
-  }
-}
 
 export async function playgroundApp(input: string) {
-  console.log('hi');
-  // program.name('sushi');
-  // // .usage('[path-to-fsh-defs] [options]')
-  // // .option('-o, --out <out>', 'the path to the output folder')
-  // // .option('-d, --debug', 'output extra debugging information')
-  // // .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
-  // // .version(getVersion(), '-v, --version', 'print SUSHI version')
-  // // .on('--help', () => {
-  // //   console.log('');
-  // //   console.log('Additional information:');
-  // //   console.log('  [path-to-fsh-defs]');
-  // //   console.log('    Default: "."');
-  // //   console.log('    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
-  // //   console.log('  -o, --out <out>');
-  // //   console.log('    Default: "build"');
-  // //   console.log('    If fsh/ subdirectory present, default output is one directory above fsh/');
-  // // })
-  // // .arguments('[path-to-fsh-defs]')
-  // // .action(function (pathToFshDefs) {
-  // //   input = pathToFshDefs;
-  // // })
-  // // .parse(process.argv);
+  // program
+  //   .name('sushi')
+  //   .usage('[path-to-fsh-defs] [options]')
+  //   .option('-o, --out <out>', 'the path to the output folder')
+  //   .option('-d, --debug', 'output extra debugging information')
+  //   .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+  //   .version(getVersion(), '-v, --version', 'print SUSHI version')
+  //   .on('--help', () => {
+  //     console.log('');
+  //     console.log('Additional information:');
+  //     console.log('  [path-to-fsh-defs]');
+  //     console.log('    Default: "."');
+  //     console.log('    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
+  //     console.log('  -o, --out <out>');
+  //     console.log('    Default: "build"');
+  //     console.log('    If fsh/ subdirectory present, default output is one directory above fsh/');
+  //   })
+  //   .arguments('[path-to-fsh-defs]')
+  //   .action(function (pathToFshDefs) {
+  //     input = pathToFshDefs;
+  //   })
+  //   .parse(process.argv);
 
-  // // if (program.debug) logger.level = 'debug';
+  // if (program.debug) logger.level = 'debug';
 
-  // // logger.info(`Running SUSHI ${getVersion()}`);
+  // logger.info(`Running SUSHI ${getVersion()}`);
 
-  // // input = findInputDir(input);
+  // input = findInputDir(input);
 
-  // // If a fsh subdirectory is used, we are in an IG Publisher context
-  // // const isIgPubContext = path.parse(input).base === 'fsh';
-  // // const outDir = ensureOutputDir(input, program.out, isIgPubContext);
+  //If a fsh subdirectory is used, we are in an IG Publisher context
+  // const isIgPubContext = path.parse(input).base === 'fsh';
+  // const outDir = ensureOutputDir(input, program.out, isIgPubContext);
 
-  // let config: any;
-  // try {
-  //   config = readConfig(input);
-  // } catch {
-  //   process.exit(1);
-  // }
+  let config: Configuration;
+  try {
+    config = readConfig(input);
+  } catch {
+    console.log('uh oh, error with config');
+    // process.exit(1);
+  }
 
-  // // Load external dependencies
-  // const defs = new FHIRDefinitions();
+  // Load dependencies
+  const defs = new FHIRDefinitions();
+  // This is where we probably will need to load everything into memory from indexDB
   // const dependencyDefs = loadExternalDependencies(defs, config);
 
   // // Load custom resources specified in ig-data folder
-  // // loadCustomResources(input, defs);
+  // Probably don't need this
+  // loadCustomResources(input, defs);
 
-  // let tank: FSHTank;
-  // try {
-  //   const rawFSH = getRawFSHes(input);
-  //   tank = fillTank(rawFSH, config);
-  // } catch {
-  //   program.outputHelp();
-  //   process.exit(1);
-  // }
-  // // await Promise.all(dependencyDefs);
+  let tank: FSHTank;
+  try {
+    const rawFSH = [new RawFSH(input)];
+    tank = fillTank(rawFSH, config);
+    console.log(tank);
+  } catch (e) {
+    console.log(e);
+    // program.outputHelp();
+    // process.exit(1);
+  }
+  // await Promise.all(dependencyDefs);
 
-  // // Check for StructureDefinition
-  // // const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
-  // // if (structDef?.version !== '4.0.1') {
-  // //   logger.error(
-  // //     'StructureDefinition resource not found for v4.0.1. The FHIR R4 package in local cache' +
-  // //       ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
-  // //       ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
-  // //   );
-  // //   process.exit(1);
-  // // }
+  //Check for StructureDefinition
+  // const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
+  // if (structDef?.version !== '4.0.1') {
+  //   logger.error(
+  //     'StructureDefinition resource not found for v4.0.1. The FHIR R4 package in local cache' +
+  //       ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
+  //       ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
+  //   );
+  //process.exit(1);
 
   // logger.info('Converting FSH to FHIR resources...');
-  // const outPackage = exportFHIR(tank, defs);
-  // //writeFHIRResources(outDir, outPackage, program.snapshot);
+  const outPackage = exportFHIR(tank, defs);
+  console.log(outPackage);
+  // writeFHIRResources(outDir, outPackage, program.snapshot);
 
-  // // If igDataPath exists, generate an IG, otherwise, generate resources only
-  // let isIG = false;
-  // const igDataPath = getIgDataPath(input);
-  // if (igDataPath) {
-  //   isIG = true;
+  // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
+  // if (config.FSHOnly) {
+  //   logger.info('Exporting FSH definitions only. No IG related content will be exported.');
+  // } else {
+  //   const igDataPath = path.resolve(input, 'ig-data');
   //   logger.info('Assembling Implementation Guide sources...');
-  //   //const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
-  //   //igExporter.export(outDir);
+  //   const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
+  //   gExporter.export(outDir);
   //   logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
   // }
 
   // console.log();
-  // printResults(outPackage, isIG);
+  // printResults(outPackage, !config.FSHOnly);
 
   // const exitCode = stats.numError > 0 ? 1 : 0;
   // process.exit(exitCode);

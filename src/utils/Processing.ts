@@ -55,21 +55,30 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
 }
 
 export function readConfig(input: string): Configuration {
-  const configPath = ensureConfiguration(input);
-  if (configPath == null || !fs.existsSync(configPath)) {
-    logger.error('No config.yaml in FSH definition folder.');
-    throw Error;
-  }
-  const configYaml = fs.readFileSync(configPath, 'utf8');
-  const config = importConfiguration(configYaml, configPath);
-  if (!config.fhirVersion.includes('4.0.1')) {
-    logger.error(
-      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
-        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
-    );
-    throw Error;
-  }
-  return config;
+  const yamlContents =
+    'id: fhir.us.minimal\ncanonical: http://hl7.org/fhir/us/minimal\nname: MinimalIG\nstatus: draft\nversion: 1.0.0\nfhirVersion: 4.0.1\ncopyrightYear: 2020+\nreleaseLabel: Build CI\ntemplate: hl7.fhir.template#0.0.5';
+
+  const defaultPlaygroundConfigYaml = importConfiguration(
+    yamlContents,
+    '/test/import/fixtures/minimal-config.yaml'
+  );
+
+  // const configPath = ensureConfiguration(input);
+  // if (configPath == null || !fs.existsSync(configPath)) {
+  //   logger.error('No config.yaml in FSH definition folder.');
+  //   throw Error;
+  // }
+  // const configYaml = fs.readFileSync(configPath, 'utf8');
+  // const config = importConfiguration(configYaml, configPath);
+  // if (!config.fhirVersion.includes('4.0.1')) {
+  //   logger.error(
+  //     'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
+  //       ' add "fhirVersion: 4.0.1" to the config.yaml file.'
+  //   );
+  //   throw Error;
+  // }
+
+  return defaultPlaygroundConfigYaml;
 }
 
 export function loadExternalDependencies(
@@ -98,18 +107,18 @@ export function loadExternalDependencies(
 
 export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
-  // try {
-  //   files = getFilesRecursive(input);
-  // } catch {
-  //   logger.error('Invalid path to FSH definition folder.');
-  //   throw Error;
-  // }
+  try {
+    files = getFilesRecursive(input);
+  } catch {
+    logger.error('Invalid path to FSH definition folder.');
+    throw Error;
+  }
   const rawFSHes = files
-    // .filter(file => file.endsWith('.fsh'))
-    .map(input => {
-      // const filePath = path.resolve(file);
-      // const fileContent = fs.readFileSync(filePath, 'utf8');
-      return new RawFSH(input);
+    .filter(file => file.endsWith('.fsh'))
+    .map(file => {
+      const filePath = path.resolve(file);
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      return new RawFSH(fileContent, filePath);
     });
   return rawFSHes;
 }
