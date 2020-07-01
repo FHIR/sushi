@@ -107,18 +107,18 @@ export function loadExternalDependencies(
 
 export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
-  try {
-    files = getFilesRecursive(input);
-  } catch {
-    logger.error('Invalid path to FSH definition folder.');
-    throw Error;
-  }
+  // try {
+  //   files = getFilesRecursive(input);
+  // } catch {
+  //   logger.error('Invalid path to FSH definition folder.');
+  //   throw Error;
+  // }
   const rawFSHes = files
-    .filter(file => file.endsWith('.fsh'))
-    .map(file => {
-      const filePath = path.resolve(file);
-      const fileContent = fs.readFileSync(filePath, 'utf8');
-      return new RawFSH(fileContent, filePath);
+    // .filter(file => file.endsWith('.fsh'))
+    .map(input => {
+      // const filePath = path.resolve(file);
+      // const fileContent = fs.readFileSync(filePath, 'utf8');
+      return new RawFSH(input);
     });
   return rawFSHes;
 }
