@@ -4,6 +4,7 @@ import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import {
   Profile,
   Extension,
+  FshCanonical,
   FshCode,
   FshReference,
   Instance,
@@ -1567,6 +1568,58 @@ describe('StructureDefinitionExporter', () => {
         system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
       }
     ]);
+  });
+
+  it('should apply a FixedValue rule with an valid Canonical entity defined in FSH', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('VeryRealCodeSystem');
+    profile.rules.push(rule);
+
+    const realCodeSystem = new FshCodeSystem('VeryRealCodeSystem');
+    doc.codeSystems.set(realCodeSystem.name, realCodeSystem);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/us/minimal/CodeSystem/VeryRealCodeSystem'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a FixedValue rule with Canonical of a FHIR entity', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('MedicationRequest');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/StructureDefinition/MedicationRequest'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should not apply a FixedValue rule with an invalid Canonical entity and log an error', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('FakeCodeSystem');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot use canonical URL of FakeCodeSystem because it does not exist.\D*/s
+    );
   });
 
   it('should use the url specified in a CaretValueRule when referencing a named code system', () => {

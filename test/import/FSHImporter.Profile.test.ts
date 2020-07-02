@@ -9,7 +9,7 @@ import {
   assertObeysRule,
   assertInsertRule
 } from '../testhelpers/asserts';
-import { FshCode, FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
+import { FshCanonical, FshCode, FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
 
@@ -1209,6 +1209,27 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Multiple choices of references are not allowed when setting a value.*Line: 5\D*/s
         );
+      });
+
+      it('should parse fixed value using Canonical', () => {
+        const input = `
+        CodeSystem: Example
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(Example)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('Example')
+          .withLocation([8, 32, 8, 49])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
       it('should parse fixed values that are an alias', () => {

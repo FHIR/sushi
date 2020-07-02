@@ -8,6 +8,7 @@ import { FSHParser } from './generated/FSHParser';
 import {
   Profile,
   Extension,
+  FshCanonical,
   FshCode,
   FshQuantity,
   FshRatio,
@@ -1119,6 +1120,10 @@ export class FSHImporter extends FSHVisitor {
       return this.visitReference(ctx.reference());
     }
 
+    if (ctx.canonical()) {
+      return this.visitCanonical(ctx.canonical());
+    }
+
     if (ctx.code()) {
       return this.visitCode(ctx.code());
     }
@@ -1243,6 +1248,18 @@ export class FSHImporter extends FSHVisitor {
 
   private parsePipeReference(reference: string): string[] {
     return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s*\|\s*/);
+  }
+
+  visitCanonical(ctx: pc.CanonicalContext): FshCanonical {
+    const canonicalText = this.parseCanonical(ctx.CANONICAL().getText());
+    const fshCanonical = new FshCanonical(canonicalText)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    return fshCanonical;
+  }
+
+  private parseCanonical(canonical: string): string {
+    return canonical.slice(canonical.indexOf('(') + 1, canonical.length - 1);
   }
 
   visitBool(ctx: pc.BoolContext): boolean {
