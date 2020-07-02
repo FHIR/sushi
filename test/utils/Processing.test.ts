@@ -197,6 +197,20 @@ describe('Processing', () => {
         );
       });
     });
+
+    it('should log an error when a dependency has no specified version', () => {
+      const badDependencyConfig = cloneDeep(minimalConfig);
+      badDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.r4.core' }];
+      const defs = new FHIRDefinitions();
+      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
+      return Promise.all(dependencyDefs).then(() => {
+        expect(defs.packages.length).toBe(1);
+        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Failed to load hl7\.fhir\.r4\.core: No version specified\./s
+        );
+      });
+    });
   });
 
   describe('#getRawFSHes()', () => {
