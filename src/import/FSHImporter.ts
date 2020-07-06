@@ -1051,7 +1051,12 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
-    vsRule.units = ctx.KW_UNITS() != null;
+    if (ctx.KW_UNITS()) {
+      logger.warn(
+        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
+        vsRule.sourceInfo
+      );
+    }
     return vsRule;
   }
 
@@ -1072,7 +1077,12 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());
     fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
-    fixedValueRule.units = ctx.KW_UNITS() != null;
+    if (ctx.KW_UNITS()) {
+      logger.warn(
+        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
+        fixedValueRule.sourceInfo
+      );
+    }
     fixedValueRule.isInstance =
       ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
     return fixedValueRule;
@@ -1623,10 +1633,19 @@ export class FSHImporter extends FSHVisitor {
 
   private extractString(stringCtx: ParserRuleContext): string {
     const str = stringCtx.getText();
-    return str
-      .slice(1, str.length - 1)
-      .replace(/\\\\/g, '\\')
-      .replace(/\\"/g, '"');
+    const strNoQuotes = str.slice(1, str.length - 1); // Strip surrounding quotes
+
+    // Replace escaped characters
+    const splitBackslash = strNoQuotes.split(/\\\\/g);
+    const replacedBackslash = splitBackslash.map(substrBackslash => {
+      // Replace quote, newline, return, tab characters only if they were not preceded by a backslash to escape the escape character
+      return substrBackslash
+        .replace(/\\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\t/g, '\t');
+    });
+    return replacedBackslash.join('\\');
   }
 
   /**
@@ -1645,6 +1664,10 @@ export class FSHImporter extends FSHVisitor {
 
     // split into lines so we can process them to determine what leading spaces to trim
     let lines = mlstr.split(/\r?\n/);
+
+    lines = lines.map(
+      l => (l = l.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t'))
+    );
 
     // if the first line is only whitespace, remove it
     if (lines[0].search(/\S/) === -1) {

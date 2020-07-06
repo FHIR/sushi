@@ -433,7 +433,6 @@ export class StructureDefinition {
    * @param {string} path - The path to the ElementDefinition to fix
    * @param {any} value - The value to fix; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @param {boolean} units - If the value uses the units keyword
    * @param {inlineResourceTypes} - Types that will be used to replace Resource elements
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
@@ -443,7 +442,6 @@ export class StructureDefinition {
     path: string,
     value: any,
     fisher: Fishable,
-    units = false,
     inlineResourceTypes: string[] = []
   ): { fixedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
@@ -556,7 +554,6 @@ export class StructureDefinition {
               inlinePath,
               value,
               fisher,
-              units,
               inlineResourceTypes.slice(i + 1)
             );
             return {
@@ -585,7 +582,7 @@ export class StructureDefinition {
       // fixValue will throw if it fails, but skip the check if value is null
       if (value != null) {
         // exactly must be true so that we always test fixing with the more strict fixed[x] approach
-        clone.fixValue(value, true, units, fisher);
+        clone.fixValue(value, true, fisher);
       }
       // If there is a fixedValue or patternValue, find it and return it
       const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));

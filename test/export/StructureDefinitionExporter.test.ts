@@ -920,27 +920,6 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Strict\.fsh.*Line: 9\D*/s);
   });
 
-  it('should not apply a ValueSetRule on a non-Quantity with units keyword', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'Observation';
-
-    const rule = new ValueSetRule('code').withFile('Fixed.fsh').withLocation([4, 18, 4, 28]);
-    rule.valueSet = 'http://system.com';
-    rule.strength = 'required';
-    rule.units = true;
-    profile.rules.push(rule);
-
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-    const fixedCode = sd.findElement('Observation.code');
-
-    expect(fixedCode.binding.valueSet).toBe('http://system.com'); // Still bound
-    expect(fixedCode.binding.strength).toBe('required');
-    expect(loggerSpy.getLastMessage()).toMatch(
-      /units.*Observation.code.*File: Fixed\.fsh.*Line: 4\D*/s
-    );
-  });
-
   // Only Rule
   it('should apply a correct OnlyRule on a non-reference choice', () => {
     const profile = new Profile('Foo');
@@ -1683,26 +1662,6 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
     expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
-  });
-
-  it('should not apply a FixedValueRule on a non-Quantity with units keyword', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'Observation';
-
-    const rule = new FixedValueRule('code').withFile('Fixed.fsh').withLocation([4, 18, 4, 28]);
-    rule.fixedValue = new FshCode('mycode', 'http://mysystem.com');
-    rule.units = true;
-    profile.rules.push(rule);
-
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-    const fixedCode = sd.findElement('Observation.code');
-    expect(fixedCode.patternCodeableConcept).toEqual({
-      coding: [{ system: 'http://mysystem.com', code: 'mycode' }]
-    }); // Code still set
-    expect(loggerSpy.getLastMessage()).toMatch(
-      /units.*Observation.code.*File: Fixed\.fsh.*Line: 4\D*/s
-    );
   });
 
   // Contains Rule

@@ -59,7 +59,7 @@ mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 insertRule:         STAR KW_INSERT SEQUENCE;
 
 // VALUESET COMPONENTS
-vsComponent:        STAR KW_EXCLUDE? ( vsConceptComponent | vsFilterComponent );
+vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );
 vsConceptComponent: code vsComponentFrom?
                     | (code KW_AND)+ code vsComponentFrom
                     | COMMA_DELIMITED_CODES vsComponentFrom;
@@ -130,6 +130,7 @@ KW_OR:              'or';
 KW_OBEYS:           'obeys';
 KW_TRUE:            'true';
 KW_FALSE:           'false';
+KW_INCLUDE:         'include';
 KW_EXCLUDE:         'exclude';
 KW_CODES:           'codes';
 KW_WHERE:           'where';
@@ -149,7 +150,7 @@ ARROW:              '->';
 // PATTERNS
 
                  //  "    CHARS    "
-STRING:             '"' (~[\\"] | '\\"' | '\\\\')* '"';
+STRING:             '"' (~[\\"] | '\\r' | '\\n' | '\\t' | '\\"' | '\\\\')* '"';
 
                  //  """ CHARS """
 MULTILINE_STRING:   '"""' .*? '"""';

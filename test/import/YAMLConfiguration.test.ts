@@ -49,7 +49,12 @@ describe('YAMLConfiguration', () => {
       ]);
       expect(config.jurisdiction).toBe('urn:iso:std:iso:3166#US "United States of America"');
       expect(config.dependencies).toEqual({
-        'hl7.fhir.us.core': '3.1.0'
+        'hl7.fhir.us.core': '3.1.0',
+        'hl7.fhir.us.mcode': {
+          id: 'mcode',
+          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+          version: '1.0.0'
+        }
       });
       expect(config.global).toEqual({
         Patient: 'http://example.org/fhir/StructureDefinition/my-patient-profile',
