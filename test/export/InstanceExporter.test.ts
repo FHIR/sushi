@@ -1769,16 +1769,16 @@ describe('InstanceExporter', () => {
         }
       );
       // * generalPractitioner.extension contains
-      //   http://hl7.org/fhir/us/core/StructureDefinition/us-core-direct named direct-email 0..1
+      //   http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName named mothers-maiden-name 0..1
       const containsRule = new ContainsRule('generalPractitioner.extension');
       containsRule.items.push({
-        name: 'direct-email',
-        type: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-direct'
+        name: 'mothers-maiden-name',
+        type: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
       });
-      const directCard = new CardRule('generalPractitioner.extension[direct-email]');
-      directCard.min = 0;
-      directCard.max = '1';
-      patient.rules.push(containsRule, directCard);
+      const extensionCard = new CardRule('generalPractitioner.extension[mothers-maiden-name]');
+      extensionCard.min = 0;
+      extensionCard.max = '1';
+      patient.rules.push(containsRule, extensionCard);
 
       // * generalPractitioner[0] = Reference(my-doctor)
       const gp = new FixedValueRule('generalPractitioner[0]');
@@ -1786,11 +1786,11 @@ describe('InstanceExporter', () => {
       // * generalPractitioner[1] = Reference(gp-org1)
       const gpOrg = new FixedValueRule('generalPractitioner[1]');
       gpOrg.fixedValue = new FshReference('gp-org1');
-      // * generalPractitioner[1].extension[direct-email].valueBoolean = true
+      // * generalPractitioner[1].extension[mothers-maiden-name].valueString = "Belnades"
       const directValue = new FixedValueRule(
-        'generalPractitioner[1].extension[direct-email].valueBoolean'
+        'generalPractitioner[1].extension[mothers-maiden-name].valueString'
       );
-      directValue.fixedValue = true;
+      directValue.fixedValue = 'Belnades';
       patientInstance.rules.push(gp, gpOrg, directValue);
 
       sdExporter.export();
@@ -1804,8 +1804,8 @@ describe('InstanceExporter', () => {
         reference: 'gp-org1',
         extension: [
           {
-            url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-direct',
-            valueBoolean: true
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+            valueString: 'Belnades'
           }
         ]
       });
