@@ -104,7 +104,7 @@ export function setImpliedPropertiesOnInstance(
           const impliedPaths = getAllImpliedPaths(
             associatedEl,
             // Implied paths are found via the index free path
-            finalPath.replace(/\[[-+]?\d+\]/g, '')
+            finalPath.replace(/\[[-+]?\d+\]$/g, '')
           );
           [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundFixedValue));
         }
@@ -459,15 +459,17 @@ export function getAllImpliedPaths(element: ElementDefinition, path: string): st
   const parentPaths = [];
   const parent = element.parent();
   if (parent) {
+    const nextPath = splitOnPathPeriods(path)
+      .slice(0, -1)
+      .join('.')
+      .replace(/\[[-+]?\d+\]$/g, '');
     if (parent.min === 0) {
       // If the parent has min = 0, then the path above this point has no additional implied paths
       // so add the path to this point to the parentPaths
-      parentPaths.push(splitOnPathPeriods(path).slice(0, -1).join('.'));
+      parentPaths.push(nextPath);
     } else {
       // If min >= 1, the parent or its parents my have implied paths, recursively find those
-      parentPaths.push(
-        ...getAllImpliedPaths(parent, splitOnPathPeriods(path).slice(0, -1).join('.'))
-      );
+      parentPaths.push(...getAllImpliedPaths(parent, nextPath));
     }
   } else {
     parentPaths.push('');

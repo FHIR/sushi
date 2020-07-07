@@ -1755,6 +1755,62 @@ describe('InstanceExporter', () => {
       expect(exportedBundledPatient).toHaveLength(1);
     });
 
+    it('should only add optional children of list elements and the implied elements of those children to entries in the list that fix values on those children', () => {
+      // * generalPractitioner only Reference(Practitioner | Organization)
+      const onlyRule = new OnlyRule('generalPractitioner');
+      onlyRule.types.push(
+        {
+          type: 'Practitioner',
+          isReference: true
+        },
+        {
+          type: 'Organization',
+          isReference: true
+        }
+      );
+      // * generalPractitioner.extension contains
+      //   http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName named mothers-maiden-name 0..1
+      const containsRule = new ContainsRule('generalPractitioner.extension');
+      containsRule.items.push({
+        name: 'mothers-maiden-name',
+        type: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+      });
+      const extensionCard = new CardRule('generalPractitioner.extension[mothers-maiden-name]');
+      extensionCard.min = 0;
+      extensionCard.max = '1';
+      patient.rules.push(containsRule, extensionCard);
+
+      // * generalPractitioner[0] = Reference(my-doctor)
+      const gp = new FixedValueRule('generalPractitioner[0]');
+      gp.fixedValue = new FshReference('my-doctor');
+      // * generalPractitioner[1] = Reference(gp-org1)
+      const gpOrg = new FixedValueRule('generalPractitioner[1]');
+      gpOrg.fixedValue = new FshReference('gp-org1');
+      // * generalPractitioner[1].extension[mothers-maiden-name].valueString = "Belnades"
+      const directValue = new FixedValueRule(
+        'generalPractitioner[1].extension[mothers-maiden-name].valueString'
+      );
+      directValue.fixedValue = 'Belnades';
+      patientInstance.rules.push(gp, gpOrg, directValue);
+
+      sdExporter.export();
+      const result = exportInstance(patientInstance);
+      expect(result.generalPractitioner.length).toBe(2);
+      expect(result.generalPractitioner[0]).toEqual({
+        reference: 'my-doctor'
+      });
+      expect(result.generalPractitioner[0].extension).toBeUndefined();
+      expect(result.generalPractitioner[1]).toEqual({
+        reference: 'gp-org1',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+            valueString: 'Belnades'
+          }
+        ]
+      });
+    });
+
     describe('#Inline Instances', () => {
       beforeEach(() => {
         const inlineInstance = new Instance('MyInlinePatient');
