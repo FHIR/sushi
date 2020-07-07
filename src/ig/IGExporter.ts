@@ -935,9 +935,7 @@ export class IGExporter {
                 igPath,
                 'input',
                 pathEnd,
-                `${resourceJSON.resourceType}-${resourceJSON.id}.${file.slice(
-                  file.lastIndexOf('.') + 1
-                )}`
+                `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
               );
               this.copyAsIs(inputPath, outputPath);
             }

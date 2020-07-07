@@ -7,7 +7,7 @@ import tar from 'tar';
 import axios from 'axios';
 import temp from 'temp';
 import { logger } from '../utils';
-import { Fhir } from 'fhir/fhir';
+import { Fhir as FHIRConverter } from 'fhir/fhir';
 
 /**
  * Loads a dependency from user FHIR cache or from online
@@ -185,7 +185,7 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
     'vocabulary',
     'examples'
   ];
-  const converter = new Fhir();
+  const converter = new FHIRConverter();
   for (const pathEnd of pathEnds) {
     let invalidFile = false;
     const dirPath = path.join(input, 'ig-data', 'input', pathEnd);
@@ -194,10 +194,10 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
       for (const file of files) {
         let resourceJSON: any;
         try {
-          if (file.endsWith('.xml')) {
-            resourceJSON = converter.xmlToObj(fs.readFileSync(path.join(dirPath, file)).toString());
-          } else if (file.endsWith('.json')) {
+          if (file.endsWith('.json')) {
             resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+          } else if (file.endsWith('xml')) {
+            resourceJSON = converter.xmlToObj(fs.readFileSync(path.join(dirPath, file)).toString());
           } else {
             invalidFile = true;
             continue;
