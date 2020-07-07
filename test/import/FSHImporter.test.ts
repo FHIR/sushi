@@ -396,6 +396,59 @@ describe('FSHImporter', () => {
     expect(profile.parent).toBe('Observation');
   });
 
+  it('should properly parse a string with newline, return, and tab characters', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    Description: "Here is a \\n new line with some \\t tabbed information. \\r The end."
+    `;
+
+    const result = importSingleText(input);
+    expect(result.profiles.size).toBe(1);
+    const profile = result.profiles.get('ObservationProfile');
+    expect(profile.description).toEqual(
+      'Here is a \n new line with some \t tabbed information. \r The end.'
+    );
+  });
+
+  it('should properly parse a string with an escaped newline', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    Description: "Here is an escaped \\\\n newline character."
+    `;
+
+    const result = importSingleText(input);
+    expect(result.profiles.size).toBe(1);
+    const profile = result.profiles.get('ObservationProfile');
+    expect(profile.description).toEqual('Here is an escaped \\n newline character.');
+  });
+
+  it('should properly parse a multiline string with newline, return, and tab characters', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    Description:
+      """
+      This is a multi-string description
+      with a couple of special characters.
+
+      This special paragraph has info on a \\n new line. And it has some \\t tabbed information. \\r The end.
+      """
+    `;
+
+    const result = importSingleText(input);
+    expect(result.profiles.size).toBe(1);
+    const profile = result.profiles.get('ObservationProfile');
+    const expectedDescriptionLines = [
+      'This is a multi-string description',
+      'with a couple of special characters.',
+      '',
+      'This special paragraph has info on a \n new line. And it has some \t tabbed information. \r The end.'
+    ];
+    expect(profile.description).toBe(expectedDescriptionLines.join('\n'));
+  });
+
   it('should log info messages during import', () => {
     const input = '';
     importSingleText(input);

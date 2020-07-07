@@ -1162,16 +1162,15 @@ export class ElementDefinition {
         break;
       case 'Reference':
         value = value as FshReference;
-        if (value.sdType) {
+        // If no targetProfile is present, there is nothing to check the value against, so just fix it
+        if (value.sdType && this.type[0].targetProfile) {
           const validTypes: string[] = [];
-          this.type.forEach(t =>
-            t.targetProfile.forEach(tp => {
-              const tpType = fisher.fishForMetadata(tp)?.sdType;
-              if (tpType) {
-                validTypes.push(tpType);
-              }
-            })
-          );
+          this.type[0].targetProfile.forEach(tp => {
+            const tpType = fisher.fishForMetadata(tp)?.sdType;
+            if (tpType) {
+              validTypes.push(tpType);
+            }
+          });
 
           const referenceLineage = this.getTypeLineage(value.sdType, fisher);
           if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {

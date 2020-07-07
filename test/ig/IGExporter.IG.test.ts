@@ -7,7 +7,8 @@ import {
   InstanceDefinition,
   CodeSystem,
   ImplementationGuideDefinitionResource,
-  ImplementationGuide
+  ImplementationGuide,
+  ImplementationGuideDependsOn
 } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Configuration } from '../../src/fshtypes';
@@ -99,7 +100,13 @@ describe('IGExporter', () => {
         description: 'Provides a simple example of how FSH can be used to create an IG',
         dependencies: [
           { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
-          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' },
+          {
+            packageId: 'hl7.fhir.us.mcode',
+            uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+            id: 'mcode',
+            version: '1.0.0'
+          }
         ],
         status: 'active',
         template: 'fhir.base.template',
@@ -211,6 +218,13 @@ describe('IGExporter', () => {
             uri: 'http://hl7.org/fhir/uv/vhdir/ImplementationGuide/hl7.core.uv.vhdir',
             packageId: 'hl7.fhir.uv.vhdir',
             version: 'current'
+          },
+          // mCODE tests that it works with the url and id explicitly provided in the config
+          {
+            id: 'mcode',
+            uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+            packageId: 'hl7.fhir.us.mcode',
+            version: '1.0.0'
           }
         ],
         definition: {
@@ -304,6 +318,59 @@ describe('IGExporter', () => {
           ]
         }
       });
+    });
+
+    it('should issue an error when a dependency url cannot be inferred', () => {
+      config.dependencies = [
+        // NOTE: Will not find mCODE IG URL because we didn't load the mcode IG
+        { packageId: 'hl7.fhir.us.mcode', version: '1.0.0' },
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Failed to add hl7\.fhir\.us\.mcode:1\.0\.0 to ImplementationGuide instance .* IG URL/
+      );
+      // Ensure US Core is exported but mCODE is not
+      expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
+    it('should issue an error when a dependency version is not provided', () => {
+      config.dependencies = [
+        // NOTE: version is intentionally missing
+        {
+          packageId: 'hl7.fhir.us.mcode',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core'
+        },
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Failed to add hl7\.fhir\.us\.mcode to ImplementationGuide instance .* no version/
+      );
+      // Ensure US Core is exported but mCODE is not
+      expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
     });
 
     it('should override generated resource attributes with configured attributes', () => {

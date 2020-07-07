@@ -1,7 +1,7 @@
 import path from 'path';
 import ini from 'ini';
 import { EOL } from 'os';
-import { sortBy, words, pad, padEnd, repeat, orderBy } from 'lodash';
+import { sortBy, words, pad, padEnd, repeat, orderBy, cloneDeep } from 'lodash';
 import { titleCase } from 'title-case';
 import {
   statSync,
@@ -24,7 +24,8 @@ import {
   ValueSet,
   CodeSystem,
   InstanceDefinition,
-  ImplementationGuideDefinitionPage
+  ImplementationGuideDefinitionPage,
+  ImplementationGuideDependsOn
 } from '../fhirtypes';
 import { ConfigurationMenuItem } from '../fshtypes';
 import { logger, Type } from '../utils';
@@ -157,29 +158,9 @@ export class IGExporter {
     if (this.config.dependencies?.length) {
       const igs = this.fhirDefs.allImplementationGuides();
       for (const dependency of this.config.dependencies) {
-        const dependencyIG = igs.find(
-          ig =>
-            ig.packageId === dependency.packageId &&
-            (ig.version === dependency.version ||
-              'current' === dependency.version ||
-              'dev' === dependency.version)
-        );
-        if (dependencyIG?.url) {
-          this.ig.dependsOn.push({
-            uri: dependencyIG.url,
-            packageId: dependency.packageId,
-            // packageId should be "a..z, A..Z, 0..9, and _ and it must start with a..z | A..Z" per
-            // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/SUSHI.200.2E12.2E7/near/199193333
-            // depId should be [A-Za-z0-9\-\.]{1,64}, so we replace . and - with _ and prepend "id_" if it does not start w/ a-z|A-Z
-            id: /[A-Za-z]/.test(dependency.packageId[0])
-              ? dependency.packageId.replace(/\.|-/g, '_')
-              : 'id_' + dependency.packageId.replace(/\.|-/g, '_'),
-            version: dependency.version
-          });
-        } else {
-          logger.error(
-            `Failed to add ${dependency.packageId}:${dependency.version} to ImplementationGuide instance.  Could not determine its canonical URL from the FHIR cache.`
-          );
+        const dependsEntry = this.fixDependsOn(dependency, igs);
+        if (dependsEntry) {
+          this.ig.dependsOn.push(dependsEntry);
         }
       }
     } else {
@@ -197,6 +178,65 @@ export class IGExporter {
     if (!this.config.templates?.length) {
       delete this.ig.definition.template;
     }
+  }
+
+  /**
+   * Fixes a dependsOn entry by specifying its uri (if not yet specified) and generating an id (if
+   * not yet specified). Will also ensure that required properties (uri/version) are available.
+   * If it cannot ensure a valid dependsOn entry, it will return undefined.
+   * @param dependency - the dependency to fix
+   * @param igs - the IGs to search when finding the dependency URI
+   * @returns the fixed dependency or null if it can't be fixed
+   */
+  private fixDependsOn(dependency: ImplementationGuideDependsOn, igs: any[]) {
+    // Clone it so we don't mutate the original
+    const dependsOn = cloneDeep(dependency);
+
+    if (dependsOn.version == null) {
+      // No need for the detailed log message since we already logged one in the package loader.
+      logger.error(
+        `Failed to add ${dependency.packageId} to ImplementationGuide instance because no ` +
+          'version was specified in your config.yaml.'
+      );
+      return;
+    }
+
+    if (dependsOn.uri == null) {
+      // Need to find the URI from the IG in the FHIR cache
+      const dependencyIG = igs.find(
+        ig =>
+          ig.packageId === dependsOn.packageId &&
+          (ig.version === dependsOn.version ||
+            'current' === dependsOn.version ||
+            'dev' === dependsOn.version)
+      );
+      dependsOn.uri = dependencyIG?.url;
+
+      if (dependsOn.uri == null) {
+        logger.error(
+          `Failed to add ${dependsOn.packageId}:${dependsOn.version} to ` +
+            'ImplementationGuide instance because SUSHI could not find the IG URL in the ' +
+            'dependency IG. To specify the IG URL in your config.yaml, use the dependency ' +
+            'details format:\n\n' +
+            'dependencies:\n' +
+            `  ${dependsOn.packageId}:\n` +
+            '    uri: http://my-fhir-ig.org/ImplementationGuide/123\n' +
+            `    version: ${dependsOn.version}`
+        );
+        return;
+      }
+    }
+
+    if (dependsOn.id == null) {
+      // packageId should be "a..z, A..Z, 0..9, and _ and it must start with a..z | A..Z" per
+      // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/SUSHI.200.2E12.2E7/near/199193333
+      // depId should be [A-Za-z0-9\-\.]{1,64}, so we replace . and - with _ and prepend "id_" if it does not start w/ a-z|A-Z
+      dependsOn.id = /[A-Za-z]/.test(dependsOn.packageId[0])
+        ? dependsOn.packageId.replace(/\.|-/g, '_')
+        : 'id_' + dependsOn.packageId.replace(/\.|-/g, '_');
+    }
+
+    return dependsOn;
   }
 
   /**
