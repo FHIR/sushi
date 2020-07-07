@@ -248,7 +248,7 @@ export function replaceReferences(
       const id = idRule?.fixedValue ?? instance.id;
       clone = cloneDeep(rule);
       const fv = clone.fixedValue as FshReference;
-      fv.reference = `${instanceMeta.sdType}/${id}`;
+      fv.reference = instance.usage === 'Inline' ? `#${id}` : `${instanceMeta.sdType}/${id}`;
       fv.sdType = instanceMeta.sdType;
     }
   } else if (rule.fixedValue instanceof FshCode) {

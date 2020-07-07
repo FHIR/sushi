@@ -1501,6 +1501,30 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should apply a Reference FixedValueRule and replace the Reference to an inline instance', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Patient';
+    instance.usage = 'Inline';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new FixedValueRule('subject');
+    rule.fixedValue = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const fixedSubject = sd.findElement('Observation.subject');
+
+    expect(fixedSubject.patternReference).toEqual({
+      reference: '#bar-id'
+    });
+  });
+
   it('should not apply a Reference FixedValueRule with invalid type and log an error', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
