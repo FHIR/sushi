@@ -1075,6 +1075,21 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should fix a reference when the type has no targetProfile', () => {
+      const referencedPatientInstance = new Instance('ReferencedPatient');
+      referencedPatientInstance.instanceOf = 'Patient';
+      doc.instances.set(referencedPatientInstance.name, referencedPatientInstance);
+
+      const fixedRefRule = new FixedValueRule('extension.valueReference');
+      fixedRefRule.fixedValue = new FshReference('ReferencedPatient');
+      patientInstance.rules.push(fixedRefRule); // * extension.valueReference = Reference(BasePatient)
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension[0].valueReference).toEqual({
+        reference: 'Patient/ReferencedPatient'
+      });
+    });
+
     it('should log an error when an invalid reference is fixed', () => {
       const observationInstance = new Instance('TestObservation');
       observationInstance.instanceOf = 'Observation';
