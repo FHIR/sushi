@@ -1370,7 +1370,7 @@ describe('IGExporter', () => {
       const imagesDir = fs.readdirSync(path.join(tempOut, 'input', 'images'));
       // No hidden files should be copied over
       expect(imagesDir).toEqual(['Shorty.png']);
-      const pageContentDir = fs.readdirSync(path.join(tempOut, 'input', 'pageContent'));
+      const pageContentDir = fs.readdirSync(path.join(tempOut, 'input', 'pagecontent'));
       expect(pageContentDir).toEqual(['index.md']);
       const includesDir = fs.readdirSync(path.join(tempOut, 'input', 'includes'));
       expect(includesDir).toEqual(['menu.xml']);
