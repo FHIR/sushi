@@ -248,7 +248,7 @@ export function replaceReferences(
       const id = idRule?.fixedValue ?? instance.id;
       clone = cloneDeep(rule);
       const fv = clone.fixedValue as FshReference;
-      fv.reference = instance.usage === 'Inline' ? `#${id}` : `${instanceMeta.sdType}/${id}`;
+      fv.reference = `${instanceMeta.sdType}/${id}`;
       fv.sdType = instanceMeta.sdType;
     }
   } else if (rule.fixedValue instanceof FshCode) {
@@ -328,6 +328,17 @@ export function cleanResource(
     (o, p) => (o[p] = o[p].fixedValue),
     skipFn
   );
+
+  // Update references to any contained resources to be #id instead of resourceType/id
+  resourceDef.contained?.forEach((containedResource: any) => {
+    const referenceString = `${containedResource.resourceType}/${containedResource.id}`;
+    replaceField(
+      resourceDef,
+      (o, p) => o[p] === referenceString,
+      (o, p) => (o[p] = `#${containedResource.id}`),
+      skipFn
+    );
+  });
 }
 
 /**
