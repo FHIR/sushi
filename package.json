@@ -3,7 +3,7 @@
   "version": "0.13.2",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
-    "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files",
+    "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files && cp src/import/generated/*.d.ts dist/import/generated/",
     "build:watch": "tsc -w",
     "build:grammar": "bash antlr/gradlew -p antlr generateGrammarSource",
     "test": "jest --maxWorkers=4 --coverage",
@@ -28,11 +28,11 @@
     "type": "git",
     "url": "https://github.com/fhir/sushi.git"
   },
-  "main": "dist/app.js",
+  "main": "dist/index.js",
   "bin": {
     "sushi": "dist/app.js"
   },
-  "types": "dist/app.d.ts",
+  "types": "dist/index.d.ts",
   "files": [
     "dist/**/*.{js,json,d.ts}",
     "dist/ig/files/**/*",
