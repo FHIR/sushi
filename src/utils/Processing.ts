@@ -126,35 +126,41 @@ export async function loadExternalDependenciesPlayground(
     let database: any;
     let objectStore: any;
     const version = 1;
-    let OpenIDBRequest = indexedDB.deleteDatabase('FSH Playground Dependencies');
-    console.log(OpenIDBRequest);
-    OpenIDBRequest = indexedDB.open('FSH Playground Dependencies', version);
-    console.log(OpenIDBRequest);
+    let shouldUnzip = false;
+    // let OpenIDBRequest = indexedDB.deleteDatabase('FSH Playground Dependencies');
+    // console.log(OpenIDBRequest);
+    const OpenIDBRequest = indexedDB.open('FSH Playground Dependencies', version);
+    // console.log(OpenIDBRequest);
     // If successful the database exists
     OpenIDBRequest.onsuccess = async function (event) {
       console.log('Database exists, converting to FHIR Definitions...');
       // @ts-ignore
       database = event.target.result;
+      const resources: any[] = [];
+      if (shouldUnzip) {
+        await unzipDependencies(resources);
+        await loadDependenciesInStorage(database, resources);
+      }
       const finalDefs = await loadIntoDefsPlayground(FHIRdefs, database);
       console.log(finalDefs);
       resolve(finalDefs);
     };
     // If upgrade is needed to the version, the database does not yet exist
-    OpenIDBRequest.onupgradeneeded = async function (event) {
+    OpenIDBRequest.onupgradeneeded = function (event) {
       console.log('Created database, now filling database...');
-      let resources: any[] = [];
-      resources = await unzipDependencies(resources);
-      console.log('here');
-      console.log(resources);
+      shouldUnzip = true;
+      // let resources: any[] = [];
+      // resources = await unzipDependencies(resources);
+      // console.log('here');
+      // console.log(resources);
       // @ts-ignore
       database = event.target.result;
       console.log('made database');
       // @ts-ignore
       objectStore = database.createObjectStore('resources', { keyPath: 'url' });
-      objectStore.transaction.oncomplete = async function () {
+      objectStore.transaction.oncomplete = function () {
         // load unzipped json files into indexDB database
         console.log('Moving resources into indexdDB');
-        await loadDependenciesInStorage(database, resources);
         console.log('Finished, should go to onSuccess');
       };
     };
