@@ -67,6 +67,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
+    "@types/tar-stream": "^2.1.0",
     "antlr4": "^4.8.0",
     "axios": "^0.19.2",
     "chalk": "^3.0.0",
@@ -78,6 +79,7 @@
     "markdown-table": "^2.0.0",
     "sax": "^1.2.4",
     "tar": "^5.0.5",
+    "tar-stream": "^2.1.2",
     "temp": "^0.9.1",
     "title-case": "^3.0.2",
     "valid-url": "^1.0.9",

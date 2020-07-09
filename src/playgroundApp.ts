@@ -15,10 +15,11 @@ import {
   findInputDir,
   ensureOutputDir,
   readConfig,
-  loadExternalDependencies,
+  loadExternalDependenciesPlayground,
   fillTank,
   writeFHIRResources,
-  getRawFSHes
+  getRawFSHes,
+  readConfigPlayground
 } from './utils/Processing';
 
 // playgroundApp().catch(e => {
@@ -62,7 +63,7 @@ export async function playgroundApp(input: string) {
 
   let config: Configuration;
   try {
-    config = readConfig(input);
+    config = readConfigPlayground(input);
   } catch {
     console.log('uh oh, error with config');
     // process.exit(1);
@@ -72,24 +73,25 @@ export async function playgroundApp(input: string) {
   const defs = new FHIRDefinitions();
   // This is where we probably will need to load everything into memory from indexDB
   // const dependencyDefs = loadExternalDependencies(defs, config);
-
+  const dependencyDefs = await loadExternalDependenciesPlayground(defs);
   // // Load custom resources specified in ig-data folder
   // Probably don't need this
   // loadCustomResources(input, defs);
+  //await Promise.all(dependencyDefs);
+  console.dir(dependencyDefs);
 
   let tank: FSHTank;
   try {
     const rawFSH = [new RawFSH(input)];
     tank = fillTank(rawFSH, config);
-    console.log(tank);
   } catch (e) {
     console.log(e);
     // program.outputHelp();
     // process.exit(1);
   }
-  // await Promise.all(dependencyDefs);
+  // await Promise(dependencyDefs);
 
-  //Check for StructureDefinition
+  // Check for StructureDefinition
   // const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
   // if (structDef?.version !== '4.0.1') {
   //   logger.error(
@@ -97,11 +99,11 @@ export async function playgroundApp(input: string) {
   //       ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
   //       ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
   //   );
-  //process.exit(1);
+  // }
 
   // logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  console.log(outPackage);
+  // console.log(outPackage);
   // writeFHIRResources(outDir, outPackage, program.snapshot);
 
   // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
@@ -122,96 +124,96 @@ export async function playgroundApp(input: string) {
   // process.exit(exitCode);
 }
 
-function getVersion(): string {
-  const packageJSONPath = path.join(__dirname, '..', 'package.json');
-  if (fs.existsSync(packageJSONPath)) {
-    const packageJSON = fs.readJSONSync(packageJSONPath);
-    return `v${packageJSON.version}`;
-  }
-  return 'unknown';
-}
+// function getVersion(): string {
+//   const packageJSONPath = path.join(__dirname, '..', 'package.json');
+//   if (fs.existsSync(packageJSONPath)) {
+//     const packageJSON = fs.readJSONSync(packageJSONPath);
+//     return `v${packageJSON.version}`;
+//   }
+//   return 'unknown';
+// }
 
-function printResults(pkg: Package, isIG: boolean) {
-  // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
-  const prNum = pad(pkg.profiles.length.toString(), 8);
-  const extnNum = pad(pkg.extensions.length.toString(), 10);
-  const vstNum = pad(pkg.valueSets.length.toString(), 9);
-  const cdsysNum = pad(pkg.codeSystems.length.toString(), 11);
-  const insNum = pad(pkg.instances.length.toString(), 9);
-  const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''}`, 13);
-  const wrNumMsg = padStart(`${stats.numWarn} Warning${stats.numWarn !== 1 ? 's' : ''}`, 12);
-  let resultStatus: ResultStatus;
-  if (stats.numError === 0 && stats.numWarn === 0) {
-    resultStatus = 'clean';
-  } else if (stats.numError > 0) {
-    resultStatus = 'errors';
-  } else {
-    resultStatus = 'warnings';
-  }
-  const aWittyMessageInvolvingABadFishPun = padEnd(sample(MESSAGE_MAP[resultStatus]), 36);
-  const clr = COLOR_MAP[resultStatus];
+// function printResults(pkg: Package, isIG: boolean) {
+//   // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
+//   const prNum = pad(pkg.profiles.length.toString(), 8);
+//   const extnNum = pad(pkg.extensions.length.toString(), 10);
+//   const vstNum = pad(pkg.valueSets.length.toString(), 9);
+//   const cdsysNum = pad(pkg.codeSystems.length.toString(), 11);
+//   const insNum = pad(pkg.instances.length.toString(), 9);
+//   const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''}`, 13);
+//   const wrNumMsg = padStart(`${stats.numWarn} Warning${stats.numWarn !== 1 ? 's' : ''}`, 12);
+//   let resultStatus: ResultStatus;
+//   if (stats.numError === 0 && stats.numWarn === 0) {
+//     resultStatus = 'clean';
+//   } else if (stats.numError > 0) {
+//     resultStatus = 'errors';
+//   } else {
+//     resultStatus = 'warnings';
+//   }
+//   const aWittyMessageInvolvingABadFishPun = padEnd(sample(MESSAGE_MAP[resultStatus]), 36);
+//   const clr = COLOR_MAP[resultStatus];
 
-  // NOTE: Doing some funky things w/ strings on some lines to keep overall alignment in the code
-  const results = [
-    clr('╔' + '════════════════════════ SUSHI RESULTS ══════════════════════════' + '' + '╗'),
-    clr('║') + ' ╭──────────┬────────────┬───────────┬─────────────┬───────────╮ ' + clr('║'),
-    clr('║') + ' │ Profiles │ Extensions │ ValueSets │ CodeSystems │ Instances │ ' + clr('║'),
-    clr('║') + ' ├──────────┼────────────┼───────────┼─────────────┼───────────┤ ' + clr('║'),
-    clr('║') + ` │ ${prNum} │ ${extnNum} │ ${vstNum} │ ${cdsysNum} │ ${insNum} │ ` + clr('║'),
-    clr('║') + ' ╰──────────┴────────────┴───────────┴─────────────┴───────────╯ ' + clr('║'),
-    clr('║' + '                                                                 ' + '' + '║'),
-    clr('║') + ' See SUSHI-GENERATED-FILES.md for details on generated IG files. ' + clr('║'),
-    clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
-    clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
-    clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
-  ];
-  if (!isIG) {
-    results.splice(7, 1);
-  }
-  results.forEach(r => console.log(r));
-}
+//   // NOTE: Doing some funky things w/ strings on some lines to keep overall alignment in the code
+//   const results = [
+//     clr('╔' + '════════════════════════ SUSHI RESULTS ══════════════════════════' + '' + '╗'),
+//     clr('║') + ' ╭──────────┬────────────┬───────────┬─────────────┬───────────╮ ' + clr('║'),
+//     clr('║') + ' │ Profiles │ Extensions │ ValueSets │ CodeSystems │ Instances │ ' + clr('║'),
+//     clr('║') + ' ├──────────┼────────────┼───────────┼─────────────┼───────────┤ ' + clr('║'),
+//     clr('║') + ` │ ${prNum} │ ${extnNum} │ ${vstNum} │ ${cdsysNum} │ ${insNum} │ ` + clr('║'),
+//     clr('║') + ' ╰──────────┴────────────┴───────────┴─────────────┴───────────╯ ' + clr('║'),
+//     clr('║' + '                                                                 ' + '' + '║'),
+//     clr('║') + ' See SUSHI-GENERATED-FILES.md for details on generated IG files. ' + clr('║'),
+//     clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
+//     clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
+//     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
+//   ];
+//   if (!isIG) {
+//     results.splice(7, 1);
+//   }
+//   results.forEach(r => console.log(r));
+// }
 
-type ResultStatus = 'clean' | 'warnings' | 'errors';
+// type ResultStatus = 'clean' | 'warnings' | 'errors';
 
-const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
-  clean: [
-    'That went swimmingly!',
-    'O-fish-ally error free!',
-    "Nice! You're totally krilling it!",
-    'Cool and So-fish-ticated!',
-    'Well hooked and landed!',
-    'You earned a PhD in Ichthyology!',
-    'You rock, lobster!',
-    'Everything is ship-shape!',
-    'Ex-clam-ation point!',
-    'Ac-clam-ations!',
-    'Fin-tastic job!'
-  ],
-  warnings: [
-    'Not bad, but you cod do batter!',
-    'Something smells fishy...',
-    'Warnings... Water those about?',
-    'Looks like you are casting about.',
-    'A bit pitchy, but tuna-ble.'
-  ],
-  errors: [
-    'Ick! Errors!',
-    'Some-fin went wrong...',
-    'Unfor-tuna-tely, there are errors.',
-    'That really smelt.',
-    'You spawned some errors.',
-    'Just keep swimming, Dory.',
-    'This is the one that got away.',
-    'The docs might be bene-fish-al.',
-    'This was a turtle disaster.',
-    'Something went eely wrong there.'
-  ]
-};
+// const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
+//   clean: [
+//     'That went swimmingly!',
+//     'O-fish-ally error free!',
+//     "Nice! You're totally krilling it!",
+//     'Cool and So-fish-ticated!',
+//     'Well hooked and landed!',
+//     'You earned a PhD in Ichthyology!',
+//     'You rock, lobster!',
+//     'Everything is ship-shape!',
+//     'Ex-clam-ation point!',
+//     'Ac-clam-ations!',
+//     'Fin-tastic job!'
+//   ],
+//   warnings: [
+//     'Not bad, but you cod do batter!',
+//     'Something smells fishy...',
+//     'Warnings... Water those about?',
+//     'Looks like you are casting about.',
+//     'A bit pitchy, but tuna-ble.'
+//   ],
+//   errors: [
+//     'Ick! Errors!',
+//     'Some-fin went wrong...',
+//     'Unfor-tuna-tely, there are errors.',
+//     'That really smelt.',
+//     'You spawned some errors.',
+//     'Just keep swimming, Dory.',
+//     'This is the one that got away.',
+//     'The docs might be bene-fish-al.',
+//     'This was a turtle disaster.',
+//     'Something went eely wrong there.'
+//   ]
+// };
 
-const COLOR_MAP: { [key in ResultStatus]: chalk.Chalk } = {
-  clean: chalk.green,
-  warnings: chalk.rgb(179, 98, 0),
-  errors: chalk.red
-};
+// const COLOR_MAP: { [key in ResultStatus]: chalk.Chalk } = {
+//   clean: chalk.green,
+//   warnings: chalk.rgb(179, 98, 0),
+//   errors: chalk.red
+// };
 
 export default playgroundApp;
