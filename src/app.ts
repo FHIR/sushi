@@ -57,7 +57,7 @@ async function app() {
 
   if (program.debug) logger.level = 'debug';
 
-  logger.info(`Running SUSHI ${getVersion()}`);
+  logger.info(`Running ${getVersion()}`);
 
   input = findInputDir(input);
 
@@ -126,7 +126,7 @@ function getVersion(): string {
   const packageJSONPath = path.join(__dirname, '..', 'package.json');
   if (fs.existsSync(packageJSONPath)) {
     const sushiVersion = fs.readJSONSync(packageJSONPath)?.version;
-    return `v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
+    return `SUSHI v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
   }
   return 'unknown';
 }
