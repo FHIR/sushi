@@ -126,7 +126,7 @@ function getVersion(): string {
   const packageJSONPath = path.join(__dirname, '..', 'package.json');
   if (fs.existsSync(packageJSONPath)) {
     const sushiVersion = fs.readJSONSync(packageJSONPath)?.version;
-    return `SUSHI v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
+    return `v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
   }
   return 'unknown';
 }
