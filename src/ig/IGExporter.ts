@@ -420,7 +420,7 @@ export class IGExporter {
                 generation: page.fileType === 'md' ? 'markdown' : 'html'
               });
             }
-          } else {
+          } else if (!junk.is(path.basename(pagePath))) {
             invalidFileTypeIncluded = true;
           }
         });
@@ -463,7 +463,7 @@ export class IGExporter {
             path.join(outputPageContentPath, contentFile)
           );
           const fileType = contentFile.slice(contentFile.lastIndexOf('.') + 1);
-          if (!(fileType === 'md' || fileType === 'xml')) {
+          if (!(fileType === 'md' || fileType === 'xml') && !junk.is(path.basename(contentFile))) {
             invalidFileTypeIncluded = true;
           }
         }

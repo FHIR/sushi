@@ -1363,6 +1363,7 @@ describe('IGExporter', () => {
         path.resolve(fixtures, 'ig-data'),
         false
       );
+      loggerSpy.reset();
     });
 
     it('should avoid copying over extra system files', () => {
@@ -1372,6 +1373,7 @@ describe('IGExporter', () => {
       expect(imagesDir).toEqual(['Shorty.png']);
       const pageContentDir = fs.readdirSync(path.join(tempOut, 'input', 'pagecontent'));
       expect(pageContentDir).toEqual(['index.md']);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       const includesDir = fs.readdirSync(path.join(tempOut, 'input', 'includes'));
       expect(includesDir).toEqual(['menu.xml']);
     });
