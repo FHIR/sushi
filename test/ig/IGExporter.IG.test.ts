@@ -1372,6 +1372,7 @@ describe('IGExporter', () => {
       expect(imagesDir).toEqual(['Shorty.png']);
       const pageContentDir = fs.readdirSync(path.join(tempOut, 'input', 'pagecontent'));
       expect(pageContentDir).toEqual(['index.md']);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       const includesDir = fs.readdirSync(path.join(tempOut, 'input', 'includes'));
       expect(includesDir).toEqual(['menu.xml']);
     });
