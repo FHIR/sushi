@@ -1363,6 +1363,7 @@ describe('IGExporter', () => {
         path.resolve(fixtures, 'ig-data'),
         false
       );
+      loggerSpy.reset();
     });
 
     it('should avoid copying over extra system files', () => {
