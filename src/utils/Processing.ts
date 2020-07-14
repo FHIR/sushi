@@ -1,10 +1,14 @@
 import path from 'path';
 import fs from 'fs-extra';
+import readlineSync from 'readline-sync';
 import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
 import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
 import { cloneDeep } from 'lodash';
+import { Document } from 'yaml';
+import { YAMLMap } from 'yaml/types';
+import { YAMLPair } from '../import/ensureConfiguration';
 import { Package } from '../export';
 import {
   filterInlineInstances,
@@ -166,6 +170,66 @@ export function writeFHIRResources(outDir: string, outPackage: Package, snapshot
   writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
+}
+
+/**
+ * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
+ */
+export function init(): void {
+  const doc = new Document();
+  const contents = new YAMLMap();
+  // @ts-ignore See: https://github.com/eemeli/yaml/issues/156
+  doc.contents = contents;
+  // Create the default config.yaml file
+  contents.add(new YAMLPair('id', 'fhir.example'));
+  contents.add(new YAMLPair('canonical', 'http://example.org'));
+  contents.add(new YAMLPair('name', 'ExampleIG'));
+  contents.add(new YAMLPair('status', 'draft'));
+  contents.add(new YAMLPair('version', '1.0.0'));
+  contents.add(new YAMLPair('fhirVersion', '4.0.1'));
+  contents.add(new YAMLPair('copyrightYear', '2020+'));
+  contents.add(new YAMLPair('releaseLabel', 'Build CI'));
+  contents.add(new YAMLPair('template', 'fhir.base.template#0.1.0'));
+  contents.add(new YAMLPair('menu', { Home: 'index.html', Artifacts: 'artifacts.html' }));
+
+  logger.info(
+    'This tool will initialize a SUSHI project by creating all necessary files to build a simple IG. ' +
+      'The content of this IG will be simple default values, and should be updated. ' +
+      'The tool will now interactively create a config.yaml file for your project.'
+  );
+
+  // Accept user input for certain fields
+  ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
+    const userValue = readlineSync.question(
+      `${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${contents.get(field)}): `
+    );
+    if (userValue) {
+      contents.set(field, userValue);
+    }
+  });
+
+  // Write init directory out, including user made config.yaml, files in utils/init-project, and build scripts from ig/files
+  const outputDir = path.resolve('.', contents.get('name'));
+  const initProjectDir = path.join(__dirname, 'init-project');
+  if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
+    logger.info('Aborting initialization.');
+    return;
+  }
+  logger.info(`Adding files to ${outputDir}`);
+  // Copy files from init-project, only now renaming to .gitignore to avoid this file being treated
+  // as a .gitignore file by git and npm
+  fs.copySync(initProjectDir, outputDir);
+  fs.renameSync(path.join(outputDir, 'init-gitignore.txt'), path.join(outputDir, '.gitignore'));
+  // Write the generated config.yaml file
+  fs.writeFileSync(path.join(outputDir, 'fsh', 'config.yaml'), doc.toString());
+  // Add the _updatePublisher, _genonce, and _gencontinuous scripts
+  const scriptsDir = path.join(__dirname, '..', 'ig', 'files');
+  const scriptsDirContents = fs.readdirSync(scriptsDir);
+  scriptsDirContents
+    .filter(file => file.startsWith('_'))
+    .forEach(file => {
+      fs.copyFileSync(path.join(scriptsDir, file), path.join(outputDir, file));
+    });
 }
 
 function getFilesRecursive(dir: string): string[] {

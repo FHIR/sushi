@@ -3,13 +3,15 @@ import path from 'path';
 import temp from 'temp';
 import { minimalConfig } from './minimalConfig';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import readlineSync from 'readline-sync';
 import {
   findInputDir,
   ensureOutputDir,
   readConfig,
   loadExternalDependencies,
   getRawFSHes,
-  writeFHIRResources
+  writeFHIRResources,
+  init
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -17,7 +19,6 @@ import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
-
 describe('Processing', () => {
   temp.track();
 
@@ -382,6 +383,153 @@ describe('Processing', () => {
 
     it('should write an info message with the number of instances exported', () => {
       expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
+    });
+  });
+
+  describe('#init()', () => {
+    let readlineSpy: jest.SpyInstance;
+    let yesNoSpy: jest.SpyInstance;
+    let copySpy: jest.SpyInstance;
+    let renameSpy: jest.SpyInstance;
+    let writeSpy: jest.SpyInstance;
+    let copyFileSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      readlineSpy = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
+      yesNoSpy = jest.spyOn(readlineSync, 'keyInYN').mockImplementation(() => true);
+      copySpy = jest.spyOn(fs, 'copySync').mockImplementation(() => {});
+      renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation(() => {});
+      writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+      copyFileSpy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+      readlineSpy.mockClear();
+      yesNoSpy.mockClear();
+      copySpy.mockClear();
+      renameSpy.mockClear();
+      writeSpy.mockClear();
+      copyFileSpy.mockClear();
+    });
+
+    it('should initialize a default project when no user input is given', () => {
+      init();
+      expect(readlineSpy.mock.calls).toEqual([
+        ['Name (Default: ExampleIG): '],
+        ['Id (Default: fhir.example): '],
+        ['Canonical (Default: http://example.org): '],
+        ['Status (Default: draft): '],
+        ['Version (Default: 1.0.0): ']
+      ]);
+      expect(yesNoSpy.mock.calls).toHaveLength(1);
+      expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
+
+      expect(copySpy.mock.calls).toHaveLength(1);
+      expect(copySpy.mock.calls[0][0]).toMatch(/.*init-project/);
+      expect(copySpy.mock.calls[0][1]).toMatch(/.*ExampleIG/);
+
+      expect(renameSpy.mock.calls).toHaveLength(1);
+      expect(renameSpy.mock.calls[0][0]).toMatch(/.*ExampleIG.*init-gitignore\.txt/);
+      expect(renameSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*\.gitignore/);
+
+      expect(writeSpy.mock.calls).toHaveLength(1);
+      expect(writeSpy.mock.calls[0][0]).toMatch(/.*config\.yaml/);
+      expect(writeSpy.mock.calls[0][1]).toBe(
+        'id: fhir.example\n' +
+          'canonical: http://example.org\n' +
+          'name: ExampleIG\n' +
+          'status: draft\n' +
+          'version: 1.0.0\n' +
+          'fhirVersion: 4.0.1\n' +
+          'copyrightYear: 2020+\n' +
+          'releaseLabel: Build CI\n' +
+          'template: fhir.base.template#0.1.0\n' +
+          'menu:\n' +
+          '  Home: index.html\n' +
+          '  Artifacts: artifacts.html\n'
+      );
+
+      expect(copyFileSpy.mock.calls).toHaveLength(6);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*_gencontinuous\.bat/);
+      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*_gencontinuous\.sh/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*_genonce\.bat/);
+      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*ExampleIG.*_genonce\.sh/);
+      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*ExampleIG.*_updatePublisher\.bat/);
+      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*ExampleIG.*_updatePublisher\.sh/);
+    });
+
+    it('should initialize a project with user input', () => {
+      readlineSpy.mockImplementation((question: string) => {
+        if (question.startsWith('Name')) {
+          return 'MyNonDefaultName';
+        } else if (question.startsWith('Id')) {
+          return 'foo.bar';
+        } else if (question.startsWith('Canonical')) {
+          return 'http://foo.com';
+        } else if (question.startsWith('Status')) {
+          return 'active';
+        } else if (question.startsWith('Version')) {
+          return '2.0.0';
+        }
+      });
+      init();
+      expect(readlineSpy.mock.calls).toEqual([
+        ['Name (Default: ExampleIG): '],
+        ['Id (Default: fhir.example): '],
+        ['Canonical (Default: http://example.org): '],
+        ['Status (Default: draft): '],
+        ['Version (Default: 1.0.0): ']
+      ]);
+      expect(yesNoSpy.mock.calls).toHaveLength(1);
+      expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
+
+      expect(copySpy.mock.calls).toHaveLength(1);
+      expect(copySpy.mock.calls[0][0]).toMatch(/.*init-project/);
+      expect(copySpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName/);
+
+      expect(renameSpy.mock.calls).toHaveLength(1);
+      expect(renameSpy.mock.calls[0][0]).toMatch(/.*MyNonDefaultName.*init-gitignore\.txt/);
+      expect(renameSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
+
+      expect(writeSpy.mock.calls).toHaveLength(1);
+      expect(writeSpy.mock.calls[0][0]).toMatch(/.*config\.yaml/);
+      expect(writeSpy.mock.calls[0][1]).toBe(
+        'id: foo.bar\n' +
+          'canonical: http://foo.com\n' +
+          'name: MyNonDefaultName\n' +
+          'status: active\n' +
+          'version: 2.0.0\n' +
+          'fhirVersion: 4.0.1\n' +
+          'copyrightYear: 2020+\n' +
+          'releaseLabel: Build CI\n' +
+          'template: fhir.base.template#0.1.0\n' +
+          'menu:\n' +
+          '  Home: index.html\n' +
+          '  Artifacts: artifacts.html\n'
+      );
+
+      expect(copyFileSpy.mock.calls).toHaveLength(6);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.bat/);
+      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.sh/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*MyNonDefaultName.*_genonce\.bat/);
+      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*MyNonDefaultName.*_genonce\.sh/);
+      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.bat/);
+      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.sh/);
+    });
+
+    it('should abort initalizing a project when the user does not confirm', () => {
+      yesNoSpy.mockImplementation(() => false);
+      init();
+      expect(readlineSpy.mock.calls).toEqual([
+        ['Name (Default: ExampleIG): '],
+        ['Id (Default: fhir.example): '],
+        ['Canonical (Default: http://example.org): '],
+        ['Status (Default: draft): '],
+        ['Version (Default: 1.0.0): ']
+      ]);
+      expect(yesNoSpy.mock.calls).toHaveLength(1);
+      expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
+      expect(copySpy.mock.calls).toHaveLength(0);
+      expect(writeSpy.mock.calls).toHaveLength(0);
+      expect(copyFileSpy.mock.calls).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('info')).toBe('Aborting initialization.');
     });
   });
 });
