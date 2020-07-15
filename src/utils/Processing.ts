@@ -5,7 +5,7 @@ import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
 import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
 import { Package } from '../export';
 import {
@@ -174,10 +174,13 @@ export function writeFHIRResources(outDir: string, outPackage: Package, snapshot
  * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
  */
 export function init(): void {
-  logger.info(
-    'This tool will initialize a SUSHI project by creating all necessary files to build a simple IG. ' +
-      'The content of this IG will be simple default values, and should be updated. ' +
-      'The tool will now interactively create a config.yaml file for your project.'
+  console.log(
+    '\n╭──────────────────────────────────────────────────────────╮\n' +
+      '│ This interactive tool will use your answers to create a  │\n' +
+      "│ working SUSHI project configured with your project's     │\n" +
+      '│ basic information. See the SUSHI documentation for more  │\n' +
+      '│ guidance on project structure and configuration.         │\n' +
+      '╰──────────────────────────────────────────────────────────╯\n'
   );
 
   const configDoc = YAML.parseDocument(
@@ -194,20 +197,20 @@ export function init(): void {
   });
   // Ensure copyrightYear is accurate
   configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
+  const projectName = configDoc.get('name');
 
   // Write init directory out, including user made config.yaml, files in utils/init-project, and build scripts from ig/files
-  const outputDir = path.resolve('.', configDoc.get('name'));
+  const outputDir = path.resolve('.', projectName);
   const initProjectDir = path.join(__dirname, 'init-project');
   if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
-    logger.info('Aborting initialization.');
+    console.log('\nAborting Initialization.\n');
     return;
   }
 
-  logger.info(`Adding files to ${outputDir}`);
   // Add index.md content, updating to reflect the user given name
   const indexPageContent = fs
     .readFileSync(path.join(initProjectDir, 'index.md'), 'utf-8')
-    .replace('ExampleIG', configDoc.get('name'));
+    .replace('ExampleIG', projectName);
   fs.ensureDirSync(path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent'));
   fs.writeFileSync(
     path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent', 'index.md'),
@@ -232,6 +235,23 @@ export function init(): void {
     .forEach(file => {
       fs.copyFileSync(path.join(scriptsDir, file), path.join(outputDir, file));
     });
+
+  const maxLength = 31;
+  const printName =
+    projectName.length > maxLength ? projectName.slice(0, maxLength - 3) + '...' : projectName;
+  console.log(
+    '\n╭──────────────────────────────────────────────────────────╮\n' +
+      `│ Project initialized at: ./${padEnd(printName, maxLength)}│\n` +
+      '├──────────────────────────────────────────────────────────┤\n' +
+      '│ Now try this:                                            │\n' +
+      '│                                                          │\n' +
+      `│ > cd ${padEnd(printName, maxLength + 21)}│\n` +
+      '│ > sushi .                                                │\n' +
+      '│                                                          │\n' +
+      '│ For guidance on project structure and configuration see  │\n' +
+      '│ the SUSHI documentation:  https://fshschool.org/sushi    │\n' +
+      '╰──────────────────────────────────────────────────────────╯\n'
+  );
 }
 
 function getFilesRecursive(dir: string): string[] {

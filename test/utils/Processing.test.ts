@@ -392,6 +392,7 @@ describe('Processing', () => {
     let writeSpy: jest.SpyInstance;
     let copyFileSpy: jest.SpyInstance;
     let ensureDirSpy: jest.SpyInstance;
+    let consoleSpy: jest.SpyInstance;
 
     beforeEach(() => {
       readlineSpy = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
@@ -399,11 +400,13 @@ describe('Processing', () => {
       writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
       copyFileSpy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
       ensureDirSpy = jest.spyOn(fs, 'ensureDirSync').mockImplementation(() => undefined);
+      consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       readlineSpy.mockClear();
       yesNoSpy.mockClear();
       writeSpy.mockClear();
       copyFileSpy.mockClear();
       ensureDirSpy.mockClear();
+      consoleSpy.mockClear();
     });
 
     it('should initialize a default project when no user input is given', () => {
@@ -428,22 +431,10 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls[0][1]).toMatch(/# ExampleIG/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
       expect(writeSpy.mock.calls[1][1]).toBe(
-        '# The properties below are used to create the ImplementationGuide resource. For a list of supported\n' +
-          '# properties, see: http://build.fhir.org/ig/HL7/fhir-shorthand/sushi.html#configuration-file\n' +
-          'id: fhir.example\n' +
-          'canonical: http://example.org\n' +
-          'name: ExampleIG\n' +
-          'status: draft\n' +
-          'version: 0.1.0\n' +
-          'fhirVersion: 4.0.1\n' +
-          `copyrightYear: ${new Date().getFullYear()}+\n` +
-          'releaseLabel: ci-build\n' +
-          '# To use a provided ig-data/ig.ini file, delete the "template" property below.\n' +
-          'template: fhir.base.template#current\n' +
-          '# To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.\n' +
-          'menu:\n' +
-          '  Home: index.html\n' +
-          '  Artifacts: artifacts.html\n'
+        fs.readFileSync(
+          path.join(__dirname, 'fixtures', 'init-config', 'default-config.yaml'),
+          'utf-8'
+        )
       );
 
       expect(copyFileSpy.mock.calls).toHaveLength(8);
@@ -492,24 +483,11 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyNonDefaultName/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
       expect(writeSpy.mock.calls[1][1]).toBe(
-        '# The properties below are used to create the ImplementationGuide resource. For a list of supported\n' +
-          '# properties, see: http://build.fhir.org/ig/HL7/fhir-shorthand/sushi.html#configuration-file\n' +
-          'id: foo.bar\n' +
-          'canonical: http://foo.com\n' +
-          'name: MyNonDefaultName\n' +
-          'status: active\n' +
-          'version: 2.0.0\n' +
-          'fhirVersion: 4.0.1\n' +
-          `copyrightYear: ${new Date().getFullYear()}+\n` +
-          'releaseLabel: ci-build\n' +
-          '# To use a provided ig-data/ig.ini file, delete the "template" property below.\n' +
-          'template: fhir.base.template#current\n' +
-          '# To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.\n' +
-          'menu:\n' +
-          '  Home: index.html\n' +
-          '  Artifacts: artifacts.html\n'
+        fs.readFileSync(
+          path.join(__dirname, 'fixtures', 'init-config', 'user-input-config.yaml'),
+          'utf-8'
+        )
       );
-
       expect(copyFileSpy.mock.calls).toHaveLength(8);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
@@ -523,6 +501,7 @@ describe('Processing', () => {
 
     it('should abort initalizing a project when the user does not confirm', () => {
       yesNoSpy.mockImplementation(() => false);
+
       init();
       expect(readlineSpy.mock.calls).toEqual([
         ['Name (Default: ExampleIG): '],
@@ -536,7 +515,7 @@ describe('Processing', () => {
       expect(ensureDirSpy.mock.calls).toHaveLength(0);
       expect(writeSpy.mock.calls).toHaveLength(0);
       expect(copyFileSpy.mock.calls).toHaveLength(0);
-      expect(loggerSpy.getLastMessage('info')).toBe('Aborting initialization.');
+      expect(consoleSpy.mock.calls.slice(-1)[0]).toEqual(['\nAborting Initialization.\n']);
     });
   });
 });

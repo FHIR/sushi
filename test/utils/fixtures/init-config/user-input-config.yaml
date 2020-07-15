@@ -3,11 +3,11 @@
 # │  supported properties, see:                                                                    │
 # │  http://build.fhir.org/ig/HL7/fhir-shorthand/branches/beta/sushi.html#ig-development           │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
-id: fhir.example
-canonical: http://example.org
-name: ExampleIG
-status: draft
-version: 0.1.0
+id: foo.bar
+canonical: http://foo.com
+name: MyNonDefaultName
+status: active
+version: 2.0.0
 fhirVersion: 4.0.1
 copyrightYear: 2020+
 releaseLabel: ci-build
