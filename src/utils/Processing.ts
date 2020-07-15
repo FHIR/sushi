@@ -119,7 +119,6 @@ export async function loadExternalDependenciesPlayground(
 ): Promise<FHIRDefinitions> {
   return new Promise((resolve, reject) => {
     let database: any;
-    let objectStore: any;
     let shouldUnzip = false;
     let finalDefs: FHIRDefinitions;
     const OpenIDBRequest = indexedDB.open('FSH Playground Dependencies', version);
@@ -141,7 +140,9 @@ export async function loadExternalDependenciesPlayground(
       // @ts-ignore
       database = event.target.result;
       // @ts-ignore
-      objectStore = database.createObjectStore('resources', { keyPath: ['id', 'resourceType'] });
+      database.createObjectStore('resources', {
+        keyPath: ['id', 'resourceType']
+      });
     };
     // Checks if there is an error
     OpenIDBRequest.onerror = function (event) {

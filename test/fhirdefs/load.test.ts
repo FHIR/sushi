@@ -352,13 +352,11 @@ describe('#loadDependenciesInStorage', () => {
         { id: 2, resourceType: 'string' }
       ];
       let database: any;
-      let objectStore: any;
-      let databaseValue: any;
       const OpenDB = indexedDB.open('Test Database');
       OpenDB.onupgradeneeded = event => {
         //@ts-ignore
         database = event.target.result;
-        objectStore = database.createObjectStore('resources', { keyPath: ['id', 'resourceType'] });
+        database.createObjectStore('resources', { keyPath: ['id', 'resourceType'] });
       };
       OpenDB.onsuccess = async event => {
         //@ts-ignore
@@ -392,13 +390,11 @@ describe('#loadIntoDefsPlayground', () => {
       const FHIRdefs = new FHIRDefinitions();
       let finalDefs: FHIRDefinitions;
       let database: any;
-      let objectStore: any;
-      let databaseValue: any;
       const OpenDB = indexedDB.open('Test Database');
       OpenDB.onupgradeneeded = event => {
         //@ts-ignore
         database = event.target.result;
-        objectStore = database.createObjectStore('resources', { keyPath: ['id', 'resourceType'] });
+        database.createObjectStore('resources', { keyPath: ['id', 'resourceType'] });
       };
       OpenDB.onsuccess = async event => {
         //@ts-ignore

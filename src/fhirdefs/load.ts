@@ -10,8 +10,6 @@ import http from 'http';
 import axios from 'axios';
 import temp from 'temp';
 import { logger } from '../utils';
-import { resourceUsage } from 'process';
-import { AnyCnameRecord, AnyPtrRecord } from 'dns';
 
 /**
  * Loads a dependency from user FHIR cache or from online
@@ -149,7 +147,7 @@ export async function loadDependency(
 }
 
 export function unzipDependencies(resources: any): Promise<any> {
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     http.get('http://packages.fhir.org/hl7.fhir.r4.core/4.0.1', function (res) {
       // @ts-ignore
       const extract = tarStream.extract();

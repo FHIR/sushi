@@ -15,7 +15,6 @@ import {
   fillTank
 } from '../../src/utils/Processing';
 import { RawFSH } from '../../src/import/RawFSH';
-import { Type } from '../../src/utils';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
@@ -23,9 +22,6 @@ import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '.
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
 import 'fake-indexeddb/auto';
-import { doesNotReject } from 'assert';
-import { exit } from 'process';
-import { Server } from 'http';
 
 describe('Processing', () => {
   temp.track();
