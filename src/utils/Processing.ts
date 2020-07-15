@@ -6,9 +6,7 @@ import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
 import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
 import { cloneDeep } from 'lodash';
-import { Document } from 'yaml';
-import { YAMLMap } from 'yaml/types';
-import { YAMLPair } from '../import/ensureConfiguration';
+import YAML from 'yaml';
 import { Package } from '../export';
 import {
   filterInlineInstances,
@@ -176,52 +174,56 @@ export function writeFHIRResources(outDir: string, outPackage: Package, snapshot
  * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
  */
 export function init(): void {
-  const doc = new Document();
-  const contents = new YAMLMap();
-  // @ts-ignore See: https://github.com/eemeli/yaml/issues/156
-  doc.contents = contents;
-  // Create the default config.yaml file
-  contents.add(new YAMLPair('id', 'fhir.example'));
-  contents.add(new YAMLPair('canonical', 'http://example.org'));
-  contents.add(new YAMLPair('name', 'ExampleIG'));
-  contents.add(new YAMLPair('status', 'draft'));
-  contents.add(new YAMLPair('version', '1.0.0'));
-  contents.add(new YAMLPair('fhirVersion', '4.0.1'));
-  contents.add(new YAMLPair('copyrightYear', '2020+'));
-  contents.add(new YAMLPair('releaseLabel', 'Build CI'));
-  contents.add(new YAMLPair('template', 'fhir.base.template#0.1.0'));
-  contents.add(new YAMLPair('menu', { Home: 'index.html', Artifacts: 'artifacts.html' }));
-
   logger.info(
     'This tool will initialize a SUSHI project by creating all necessary files to build a simple IG. ' +
       'The content of this IG will be simple default values, and should be updated. ' +
       'The tool will now interactively create a config.yaml file for your project.'
   );
 
+  const configDoc = YAML.parseDocument(
+    fs.readFileSync(path.join(__dirname, 'init-project', 'config.yaml'), 'utf-8')
+  );
   // Accept user input for certain fields
   ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
     const userValue = readlineSync.question(
-      `${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${contents.get(field)}): `
+      `${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${configDoc.get(field)}): `
     );
     if (userValue) {
-      contents.set(field, userValue);
+      configDoc.set(field, userValue);
     }
   });
+  // Ensure copyrightYear is accurate
+  configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
 
   // Write init directory out, including user made config.yaml, files in utils/init-project, and build scripts from ig/files
-  const outputDir = path.resolve('.', contents.get('name'));
+  const outputDir = path.resolve('.', configDoc.get('name'));
   const initProjectDir = path.join(__dirname, 'init-project');
   if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
     logger.info('Aborting initialization.');
     return;
   }
+
   logger.info(`Adding files to ${outputDir}`);
-  // Copy files from init-project, only now renaming to .gitignore to avoid this file being treated
-  // as a .gitignore file by git and npm
-  fs.copySync(initProjectDir, outputDir);
-  fs.renameSync(path.join(outputDir, 'init-gitignore.txt'), path.join(outputDir, '.gitignore'));
-  // Write the generated config.yaml file
-  fs.writeFileSync(path.join(outputDir, 'fsh', 'config.yaml'), doc.toString());
+  // Add index.md content, updating to reflect the user given name
+  const indexPageContent = fs
+    .readFileSync(path.join(initProjectDir, 'index.md'), 'utf-8')
+    .replace('ExampleIG', configDoc.get('name'));
+  fs.ensureDirSync(path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent'));
+  fs.writeFileSync(
+    path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent', 'index.md'),
+    indexPageContent
+  );
+  // Add the config
+  fs.writeFileSync(path.join(outputDir, 'fsh', 'config.yaml'), configDoc.toString());
+  // Copy over remaining static files
+  fs.copyFileSync(
+    path.join(initProjectDir, 'patient.fsh'),
+    path.join(outputDir, 'fsh', 'patient.fsh')
+  );
+  fs.copyFileSync(
+    path.join(initProjectDir, 'init-gitignore.txt'),
+    path.join(outputDir, '.gitignore')
+  );
   // Add the _updatePublisher, _genonce, and _gencontinuous scripts
   const scriptsDir = path.join(__dirname, '..', 'ig', 'files');
   const scriptsDirContents = fs.readdirSync(scriptsDir);

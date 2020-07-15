@@ -3,4 +3,4 @@
 // SUSHI will look for definitions in any file using the .fsh ending.
 Profile: MyPatient
 Parent: Patient
-* name.family = "Shorty"
+* name 1..* MS

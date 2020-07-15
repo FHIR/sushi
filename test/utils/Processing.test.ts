@@ -389,24 +389,21 @@ describe('Processing', () => {
   describe('#init()', () => {
     let readlineSpy: jest.SpyInstance;
     let yesNoSpy: jest.SpyInstance;
-    let copySpy: jest.SpyInstance;
-    let renameSpy: jest.SpyInstance;
     let writeSpy: jest.SpyInstance;
     let copyFileSpy: jest.SpyInstance;
+    let ensureDirSpy: jest.SpyInstance;
 
     beforeEach(() => {
       readlineSpy = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
       yesNoSpy = jest.spyOn(readlineSync, 'keyInYN').mockImplementation(() => true);
-      copySpy = jest.spyOn(fs, 'copySync').mockImplementation(() => {});
-      renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation(() => {});
       writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
       copyFileSpy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+      ensureDirSpy = jest.spyOn(fs, 'ensureDirSync').mockImplementation(() => undefined);
       readlineSpy.mockClear();
       yesNoSpy.mockClear();
-      copySpy.mockClear();
-      renameSpy.mockClear();
       writeSpy.mockClear();
       copyFileSpy.mockClear();
+      ensureDirSpy.mockClear();
     });
 
     it('should initialize a default project when no user input is given', () => {
@@ -416,43 +413,48 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 1.0.0): ']
+        ['Version (Default: 0.1.0): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
 
-      expect(copySpy.mock.calls).toHaveLength(1);
-      expect(copySpy.mock.calls[0][0]).toMatch(/.*init-project/);
-      expect(copySpy.mock.calls[0][1]).toMatch(/.*ExampleIG/);
+      expect(ensureDirSpy.mock.calls).toHaveLength(1);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
+        /.*ExampleIG.*fsh.*ig-data.*input.*pagecontent/
+      );
 
-      expect(renameSpy.mock.calls).toHaveLength(1);
-      expect(renameSpy.mock.calls[0][0]).toMatch(/.*ExampleIG.*init-gitignore\.txt/);
-      expect(renameSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*\.gitignore/);
-
-      expect(writeSpy.mock.calls).toHaveLength(1);
-      expect(writeSpy.mock.calls[0][0]).toMatch(/.*config\.yaml/);
-      expect(writeSpy.mock.calls[0][1]).toBe(
-        'id: fhir.example\n' +
+      expect(writeSpy.mock.calls).toHaveLength(2);
+      expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
+      expect(writeSpy.mock.calls[0][1]).toMatch(/# ExampleIG/);
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
+      expect(writeSpy.mock.calls[1][1]).toBe(
+        '# The properties below are used to create the ImplementationGuide resource. For a list of supported\n' +
+          '# properties, see: http://build.fhir.org/ig/HL7/fhir-shorthand/sushi.html#configuration-file\n' +
+          'id: fhir.example\n' +
           'canonical: http://example.org\n' +
           'name: ExampleIG\n' +
           'status: draft\n' +
-          'version: 1.0.0\n' +
+          'version: 0.1.0\n' +
           'fhirVersion: 4.0.1\n' +
-          'copyrightYear: 2020+\n' +
-          'releaseLabel: Build CI\n' +
-          'template: fhir.base.template#0.1.0\n' +
+          `copyrightYear: ${new Date().getFullYear()}+\n` +
+          'releaseLabel: ci-build\n' +
+          '# To use a provided ig-data/ig.ini file, delete the "template" property below.\n' +
+          'template: fhir.base.template#current\n' +
+          '# To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.\n' +
           'menu:\n' +
           '  Home: index.html\n' +
           '  Artifacts: artifacts.html\n'
       );
 
-      expect(copyFileSpy.mock.calls).toHaveLength(6);
-      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*_gencontinuous\.bat/);
-      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*_gencontinuous\.sh/);
-      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*_genonce\.bat/);
-      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*ExampleIG.*_genonce\.sh/);
-      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*ExampleIG.*_updatePublisher\.bat/);
-      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*ExampleIG.*_updatePublisher\.sh/);
+      expect(copyFileSpy.mock.calls).toHaveLength(8);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*fsh.*patient.fsh/);
+      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*\.gitignore/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*_gencontinuous\.bat/);
+      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*ExampleIG.*_gencontinuous\.sh/);
+      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*ExampleIG.*_genonce\.bat/);
+      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*ExampleIG.*_genonce\.sh/);
+      expect(copyFileSpy.mock.calls[6][1]).toMatch(/.*ExampleIG.*_updatePublisher\.bat/);
+      expect(copyFileSpy.mock.calls[7][1]).toMatch(/.*ExampleIG.*_updatePublisher\.sh/);
     });
 
     it('should initialize a project with user input', () => {
@@ -475,43 +477,48 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 1.0.0): ']
+        ['Version (Default: 0.1.0): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
 
-      expect(copySpy.mock.calls).toHaveLength(1);
-      expect(copySpy.mock.calls[0][0]).toMatch(/.*init-project/);
-      expect(copySpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName/);
+      expect(ensureDirSpy.mock.calls).toHaveLength(1);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
+        /.*MyNonDefaultName.*fsh.*ig-data.*input.*pagecontent/
+      );
 
-      expect(renameSpy.mock.calls).toHaveLength(1);
-      expect(renameSpy.mock.calls[0][0]).toMatch(/.*MyNonDefaultName.*init-gitignore\.txt/);
-      expect(renameSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
-
-      expect(writeSpy.mock.calls).toHaveLength(1);
-      expect(writeSpy.mock.calls[0][0]).toMatch(/.*config\.yaml/);
-      expect(writeSpy.mock.calls[0][1]).toBe(
-        'id: foo.bar\n' +
+      expect(writeSpy.mock.calls).toHaveLength(2);
+      expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
+      expect(writeSpy.mock.calls[0][1]).toMatch(/# MyNonDefaultName/);
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
+      expect(writeSpy.mock.calls[1][1]).toBe(
+        '# The properties below are used to create the ImplementationGuide resource. For a list of supported\n' +
+          '# properties, see: http://build.fhir.org/ig/HL7/fhir-shorthand/sushi.html#configuration-file\n' +
+          'id: foo.bar\n' +
           'canonical: http://foo.com\n' +
           'name: MyNonDefaultName\n' +
           'status: active\n' +
           'version: 2.0.0\n' +
           'fhirVersion: 4.0.1\n' +
-          'copyrightYear: 2020+\n' +
-          'releaseLabel: Build CI\n' +
-          'template: fhir.base.template#0.1.0\n' +
+          `copyrightYear: ${new Date().getFullYear()}+\n` +
+          'releaseLabel: ci-build\n' +
+          '# To use a provided ig-data/ig.ini file, delete the "template" property below.\n' +
+          'template: fhir.base.template#current\n' +
+          '# To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.\n' +
           'menu:\n' +
           '  Home: index.html\n' +
           '  Artifacts: artifacts.html\n'
       );
 
-      expect(copyFileSpy.mock.calls).toHaveLength(6);
-      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.bat/);
-      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.sh/);
-      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*MyNonDefaultName.*_genonce\.bat/);
-      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*MyNonDefaultName.*_genonce\.sh/);
-      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.bat/);
-      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.sh/);
+      expect(copyFileSpy.mock.calls).toHaveLength(8);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
+      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.bat/);
+      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.sh/);
+      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*MyNonDefaultName.*_genonce\.bat/);
+      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*MyNonDefaultName.*_genonce\.sh/);
+      expect(copyFileSpy.mock.calls[6][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.bat/);
+      expect(copyFileSpy.mock.calls[7][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.sh/);
     });
 
     it('should abort initalizing a project when the user does not confirm', () => {
@@ -522,11 +529,11 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 1.0.0): ']
+        ['Version (Default: 0.1.0): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
-      expect(copySpy.mock.calls).toHaveLength(0);
+      expect(ensureDirSpy.mock.calls).toHaveLength(0);
       expect(writeSpy.mock.calls).toHaveLength(0);
       expect(copyFileSpy.mock.calls).toHaveLength(0);
       expect(loggerSpy.getLastMessage('info')).toBe('Aborting initialization.');

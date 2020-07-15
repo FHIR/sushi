@@ -21,7 +21,7 @@ import { pad, padEnd } from 'lodash';
  * A pair that automatically wraps the key in a node so we can attach a comment.
  * @see https://github.com/eemeli/yaml/issues/157
  */
-export class YAMLPair extends Pair {
+class YAMLPair extends Pair {
   constructor(key: string, value: any) {
     super(createNode(key), value);
   }
