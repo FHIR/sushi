@@ -7,6 +7,7 @@ import tar from 'tar';
 import axios from 'axios';
 import temp from 'temp';
 import { logger } from '../utils';
+import { Fhir as FHIRConverter } from 'fhir/fhir';
 
 /**
  * Loads a dependency from user FHIR cache or from online
@@ -184,21 +185,30 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
     'vocabulary',
     'examples'
   ];
+  const converter = new FHIRConverter();
   for (const pathEnd of pathEnds) {
-    let xmlFile = false;
     let invalidFile = false;
     const dirPath = path.join(input, 'ig-data', 'input', pathEnd);
     if (fs.existsSync(dirPath)) {
       const files = fs.readdirSync(dirPath);
       for (const file of files) {
         let resourceJSON: any;
-        if (file.endsWith('.json')) {
-          resourceJSON = fs.readJSONSync(path.join(dirPath, file));
-        } else {
-          xmlFile = xmlFile || file.endsWith('.xml');
-          invalidFile = true;
+        try {
+          if (file.endsWith('.json')) {
+            resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+          } else if (file.endsWith('xml')) {
+            resourceJSON = converter.xmlToObj(fs.readFileSync(path.join(dirPath, file)).toString());
+          } else {
+            invalidFile = true;
+            continue;
+          }
+        } catch (e) {
+          logger.error(`Loading ${file} failed with the following error:\n${e.message}`);
           continue;
         }
+        // All resources are added to the predefined map, so that this map can later be used to
+        // access predefined resources in the IG Exporter
+        defs.addPredefinedResource(file, resourceJSON);
         if (pathEnd !== 'examples') {
           // add() will only add resources of resourceType:
           // StructureDefinition, ValueSet, CodeSystem, or ImplementationGuide
@@ -207,11 +217,9 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
       }
     }
     if (invalidFile) {
-      let message = `Invalid file detected in directory ${dirPath}. Input FHIR definitions must be JSON.`;
-      if (xmlFile) {
-        message += ' XML format not supported.';
-      }
-      logger.error(message);
+      logger.error(
+        `Invalid file detected in directory ${dirPath}. Input FHIR definitions must be JSON or XML.`
+      );
     }
   }
 }
