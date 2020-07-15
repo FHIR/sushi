@@ -44,7 +44,7 @@ export async function playgroundApp(input: string) {
   }
 
   const outPackage = exportFHIR(tank, defs);
-  console.log(outPackage);
+  return outPackage;
   //TODO - Write/output this JSON outPackage
   // writeFHIRResources(outDir, outPackage, program.snapshot);
 }
