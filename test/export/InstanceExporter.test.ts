@@ -1043,6 +1043,26 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should fix a reference to a contained resource using a relative reference', () => {
+      const orgInstance = new Instance('TestOrganization');
+      orgInstance.instanceOf = 'Organization';
+      const fixedIdRule = new FixedValueRule('id');
+      fixedIdRule.fixedValue = 'org-id';
+      orgInstance.rules.push(fixedIdRule);
+      const containedRule = new FixedValueRule('contained');
+      containedRule.fixedValue = 'TestOrganization';
+      containedRule.isInstance = true;
+      const fixedRefRule = new FixedValueRule('managingOrganization');
+      fixedRefRule.fixedValue = new FshReference('TestOrganization');
+      patientInstance.rules.push(containedRule, fixedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+      doc.instances.set(orgInstance.name, orgInstance);
+      const exported = exportInstance(patientInstance);
+      expect(exported.managingOrganization).toEqual({
+        reference: '#org-id'
+      });
+    });
+
     it('should fix a reference without replacing if the referred Instance does not exist', () => {
       const fixedRefRule = new FixedValueRule('managingOrganization');
       fixedRefRule.fixedValue = new FshReference('http://hl7.org/fhir/us/minimal');

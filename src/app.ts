@@ -22,6 +22,8 @@ import {
   getRawFSHes
 } from './utils/Processing';
 
+const FSH_VERSION = '0.13.x';
+
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
   process.exit(1);
@@ -55,7 +57,7 @@ async function app() {
 
   if (program.debug) logger.level = 'debug';
 
-  logger.info(`Running SUSHI ${getVersion()}`);
+  logger.info(`Running ${getVersion()}`);
 
   input = findInputDir(input);
 
@@ -123,8 +125,8 @@ async function app() {
 function getVersion(): string {
   const packageJSONPath = path.join(__dirname, '..', 'package.json');
   if (fs.existsSync(packageJSONPath)) {
-    const packageJSON = fs.readJSONSync(packageJSONPath);
-    return `v${packageJSON.version}`;
+    const sushiVersion = fs.readJSONSync(packageJSONPath)?.version;
+    return `SUSHI v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
   }
   return 'unknown';
 }

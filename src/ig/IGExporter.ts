@@ -15,6 +15,7 @@ import {
   readFileSync
 } from 'fs-extra';
 import table from 'markdown-table';
+import junk from 'junk';
 import { Package } from '../export';
 import {
   ImplementationGuide,
@@ -418,7 +419,7 @@ export class IGExporter {
                 generation: page.fileType === 'md' ? 'markdown' : 'html'
               });
             }
-          } else {
+          } else if (!junk.is(path.basename(pagePath))) {
             invalidFileTypeIncluded = true;
           }
         });
@@ -461,7 +462,7 @@ export class IGExporter {
             path.join(outputPageContentPath, contentFile)
           );
           const fileType = contentFile.slice(contentFile.lastIndexOf('.') + 1);
-          if (!(fileType === 'md' || fileType === 'xml')) {
+          if (!(fileType === 'md' || fileType === 'xml') && !junk.is(path.basename(contentFile))) {
             invalidFileTypeIncluded = true;
           }
         }
@@ -621,7 +622,10 @@ export class IGExporter {
     const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
     if (existsSync(inputImagesPath)) {
       const outputPath = path.join(igPath, 'input', 'images');
-      this.copyAsIs(inputImagesPath, outputPath);
+      const files = readdirSync(inputImagesPath);
+      files.forEach(file => {
+        this.copyAsIs(path.join(inputImagesPath, file), path.join(outputPath, file));
+      });
     }
   }
 
@@ -1341,7 +1345,7 @@ export class IGExporter {
    * @param filter {(string) => boolean} - a filter indicating the files to copy
    */
   private copyAsIs(inputPath: string, outputPath: string, filter?: (src: string) => boolean): void {
-    if (!existsSync(inputPath)) {
+    if (!existsSync(inputPath) || junk.is(path.basename(inputPath))) {
       return;
     }
 

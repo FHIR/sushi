@@ -1349,4 +1349,41 @@ describe('IGExporter', () => {
       expect(pageContentFiles).toContain('4_2_rocks.md');
     });
   });
+
+  describe('#hidden-files-ig', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+
+    beforeAll(() => {
+      fixtures = path.join(__dirname, 'fixtures', 'hidden-files-ig');
+    });
+
+    beforeEach(() => {
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      pkg = new Package(config);
+      exporter = new IGExporter(
+        pkg,
+        new FHIRDefinitions(),
+        path.resolve(fixtures, 'ig-data'),
+        false
+      );
+      loggerSpy.reset();
+    });
+
+    it('should avoid copying over extra system files', () => {
+      exporter.export(tempOut);
+      const imagesDir = fs.readdirSync(path.join(tempOut, 'input', 'images'));
+      // No hidden files should be copied over
+      expect(imagesDir).toEqual(['Shorty.png']);
+      const pageContentDir = fs.readdirSync(path.join(tempOut, 'input', 'pagecontent'));
+      expect(pageContentDir).toEqual(['index.md']);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      const includesDir = fs.readdirSync(path.join(tempOut, 'input', 'includes'));
+      expect(includesDir).toEqual(['menu.xml']);
+    });
+  });
 });
