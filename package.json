@@ -58,6 +58,7 @@
     "acorn": "^7.1.1",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.10.1",
+    "fake-indexeddb": "^3.1.0",
     "jest": "^25.2.4",
     "jest-extended": "^0.11.5",
     "opener": "^1.5.1",

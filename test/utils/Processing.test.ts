@@ -9,14 +9,23 @@ import {
   readConfig,
   loadExternalDependencies,
   getRawFSHes,
-  writeFHIRResources
+  writeFHIRResources,
+  loadExternalDependenciesPlayground,
+  readConfigPlayground,
+  fillTank
 } from '../../src/utils/Processing';
+import { RawFSH } from '../../src/import/RawFSH';
+import { Type } from '../../src/utils';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
+import 'fake-indexeddb/auto';
+import { doesNotReject } from 'assert';
+import { exit } from 'process';
+import { Server } from 'http';
 
 describe('Processing', () => {
   temp.track();
@@ -86,6 +95,15 @@ describe('Processing', () => {
       const outputDir = ensureOutputDir(input, undefined, true);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
+    });
+  });
+
+  describe('#readConfigPlayground', () => {
+    it('should hard code the preferred config', () => {
+      const config = readConfigPlayground();
+      expect(config.fhirVersion).toEqual(['4.0.1']);
+      expect(config.id).toEqual('fhir.us.minimal');
+      expect(config.FSHOnly).toBe(false);
     });
   });
 
@@ -199,6 +217,71 @@ describe('Processing', () => {
     });
   });
 
+  describe('#loadExternalDependenciesPlayground()', () => {
+    beforeAll(done => {
+      done();
+    });
+    afterAll(done => {
+      done();
+    });
+
+    it('should log an error when it fails to make the database', () => {
+      const defs = new FHIRDefinitions();
+      const version = -1;
+      const dependencyDefs = loadExternalDependenciesPlayground(defs, version);
+      return expect(dependencyDefs).rejects.toThrow(TypeError);
+    });
+
+    it('should create a new database when one does not yet exist', async () => {
+      const defs = new FHIRDefinitions();
+      const version = 2;
+      const unzipSpy = jest.spyOn(loadModule, 'unzipDependencies').mockImplementation(() => {
+        return undefined;
+      });
+      const loadDefsSpy = jest
+        .spyOn(loadModule, 'loadDependenciesInStorage')
+        .mockImplementation(() => {
+          return undefined;
+        });
+      const loadIntoPlaygroundSpy = jest
+        .spyOn(loadModule, 'loadIntoDefsPlayground')
+        .mockImplementation(() => {
+          return undefined;
+        });
+      const dependencyDefs = loadExternalDependenciesPlayground(defs, version);
+      await dependencyDefs;
+      expect(unzipSpy).toBeCalled();
+      expect(loadDefsSpy).toBeCalled();
+      expect(loadIntoPlaygroundSpy).toBeCalled();
+    }, 99999999);
+
+    it('should not make a new database, but instead should load the existing data into FHIRDefs', () => {
+      const defs = new FHIRDefinitions();
+      const version = 1;
+      const unzipSpy = jest.spyOn(loadModule, 'unzipDependencies').mockImplementation(() => {
+        return undefined;
+      });
+      const loadDefsSpy = jest
+        .spyOn(loadModule, 'loadDependenciesInStorage')
+        .mockImplementation(() => {
+          return undefined;
+        });
+      const loadIntoPlaygroundSpy = jest
+        .spyOn(loadModule, 'loadIntoDefsPlayground')
+        .mockImplementation(() => {
+          return undefined;
+        });
+      const dbRequest = indexedDB.open('FSH Playground Dependencies', version);
+      dbRequest.onsuccess = async () => {
+        const dependencyDefs = loadExternalDependenciesPlayground(defs, version);
+        await dependencyDefs;
+        expect(unzipSpy).toBeCalledTimes(0);
+        expect(loadDefsSpy).toBeCalledTimes(0);
+        expect(loadIntoPlaygroundSpy).toBeCalled();
+      };
+    }, 99999999);
+  });
+
   describe('#getRawFSHes()', () => {
     it('should return a RawFSH for each file in the input directory that ends with .fsh', () => {
       const input = path.join(__dirname, 'fixtures', 'fsh-files');
@@ -220,6 +303,18 @@ describe('Processing', () => {
         getRawFSHes(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Invalid path to FSH definition folder\./s);
+    });
+  });
+
+  describe('#filltank', () => {
+    it('should translate rawFSH and fill tank', () => {
+      const input =
+        'Alias: SCT = http://snomed.info/sct Profile:FishPatient Parent:Patient Id:fish-patient Title: "Fish Patient" Description: "A patient that is a type of fish."';
+      const rawFSH = [new RawFSH(input)];
+      const config = readConfigPlayground();
+      const tank = fillTank(rawFSH, config);
+      expect(tank.docs.length).toEqual(1);
+      expect(tank.config.fhirVersion).toEqual(['4.0.1']);
     });
   });
 

@@ -1,8 +1,5 @@
 import path from 'path';
 import fs from 'fs-extra';
-import tarStream from 'tar-stream';
-import zlib from 'zlib';
-import http from 'http';
 import { logger } from './FSHLogger';
 import {
   loadDependency,
@@ -62,7 +59,7 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
   return outDir;
 }
 
-export function readConfigPlayground(input: string): Configuration {
+export function readConfigPlayground(): Configuration {
   const yamlContents =
     'id: fhir.us.minimal\ncanonical: http://hl7.org/fhir/us/minimal\nname: MinimalIG\nstatus: draft\nversion: 1.0.0\nfhirVersion: 4.0.1\ncopyrightYear: 2020+\nreleaseLabel: Build CI\ntemplate: hl7.fhir.template#0.0.5';
 
@@ -117,23 +114,17 @@ export function loadExternalDependencies(
 }
 
 export async function loadExternalDependenciesPlayground(
-  FHIRdefs: FHIRDefinitions
+  FHIRdefs: FHIRDefinitions,
+  version: number
 ): Promise<FHIRDefinitions> {
-  // Add FHIR R4 to the dependencies so it is loaded
-  // const dependencies = [].slice(); // slice so we don't modify actual config;
-  // dependencies.push({ packageId: 'hl7.fhir.r4.core', version: '4.0.1' });
   return new Promise((resolve, reject) => {
     let database: any;
     let objectStore: any;
-    const version = 1;
     let shouldUnzip = false;
-    // let OpenIDBRequest = indexedDB.deleteDatabase('FSH Playground Dependencies');
-    // console.log(OpenIDBRequest);
+    let finalDefs: FHIRDefinitions;
     const OpenIDBRequest = indexedDB.open('FSH Playground Dependencies', version);
-    // console.log(OpenIDBRequest);
     // If successful the database exists
     OpenIDBRequest.onsuccess = async function (event) {
-      console.log('Database exists, converting to FHIR Definitions...');
       // @ts-ignore
       database = event.target.result;
       const resources: any[] = [];
@@ -141,36 +132,22 @@ export async function loadExternalDependenciesPlayground(
         await unzipDependencies(resources);
         await loadDependenciesInStorage(database, resources);
       }
-      const finalDefs = await loadIntoDefsPlayground(FHIRdefs, database);
-      console.log(finalDefs);
+      finalDefs = await loadIntoDefsPlayground(FHIRdefs, database);
       resolve(finalDefs);
     };
     // If upgrade is needed to the version, the database does not yet exist
     OpenIDBRequest.onupgradeneeded = function (event) {
-      console.log('Created database, now filling database...');
       shouldUnzip = true;
-      // let resources: any[] = [];
-      // resources = await unzipDependencies(resources);
-      // console.log('here');
-      // console.log(resources);
       // @ts-ignore
       database = event.target.result;
-      console.log('made database');
       // @ts-ignore
-      objectStore = database.createObjectStore('resources', { keyPath: 'url' });
-      objectStore.transaction.oncomplete = function () {
-        // load unzipped json files into indexDB database
-        console.log('Moving resources into indexdDB');
-        console.log('Finished, should go to onSuccess');
-      };
+      objectStore = database.createObjectStore('resources', { keyPath: ['id', 'resourceType'] });
     };
     // Checks if there is an error
     OpenIDBRequest.onerror = function (event) {
-      reject('Failed to make database');
+      reject(event);
     };
   });
-  // const indexDBDependencies = unzipDependenciesPlayground(defs);
-  // return await indexDBDependencies;
 }
 
 export function getRawFSHes(input: string): RawFSH[] {

@@ -148,99 +148,6 @@ export async function loadDependency(
   return FHIRDefs;
 }
 
-// export function unzipDependenciesPlayground(FHIRdefs: FHIRDefinitions): Promise<FHIRDefinitions> {
-//   return new Promise((resolve, reject) => {
-//     let database: any;
-//     let objectStore: any;
-//     const version = 1;
-//     let OpenIDBRequest = indexedDB.deleteDatabase('FSH Playground Dependencies');
-//     OpenIDBRequest = indexedDB.open('FSH Playground Dependencies', version);
-//     // Checks if there is an error
-//     OpenIDBRequest.onerror = function (event) {
-//       reject('Failed to make database');
-//     };
-//     // If successful the database exists
-//     OpenIDBRequest.onsuccess = function (event) {
-//       console.log('onSuccess version is: ' + database.version);
-//       console.log('Database exists, converting to FHIR Definitions...');
-//       // @ts-ignore
-//       database = event.target.result;
-//       const getData = database
-//         .transaction(['resources'], 'readonly')
-//         .objectStore('resources', { keyPath: 'url' })
-//         .openCursor();
-//       // @ts-ignore
-//       getData.onerror = function (event) {
-//         console.log('There is an error getting data out!');
-//       };
-//       getData.onsuccess = function () {
-//         const FHIRDefs = loadIntoDefsPlayground(getData, FHIRdefs);
-//         resolve(FHIRDefs);
-//       };
-//     };
-//     // If upgrade is needed to the version, the database does not yet exist
-//     OpenIDBRequest.onupgradeneeded = async function (event) {
-//       await new Promise((finish, stop) => {
-//         const resources: any[] = [];
-//         console.log('step 1');
-//         // @ts-ignore
-//         database = event.target.result;
-//         // Create objectStore in indexDB
-//         console.log('step 2');
-//         // @ts-ignore
-//         objectStore = database.createObjectStore('resources', { keyPath: 'url' });
-//         // objectStore.transaction.oncomplete = function (event) {
-//         console.log('Filling database; step 3');
-//         http.get('http://packages.fhir.org/hl7.fhir.r4.core/4.0.1', function (res) {
-//           // @ts-ignore
-//           const extract = tarStream.extract();
-//           // Unzip files
-//           extract.on('entry', function (header, stream, next) {
-//             let buf = '';
-//             // @ts-ignore
-//             stream.on('data', function (chunk) {
-//               buf += chunk.toString();
-//             });
-//             stream.on('end', function () {
-//               try {
-//                 const resource = JSON.parse(buf);
-//                 if (resource.kind === 'resource') {
-//                   resources.push(resource);
-//                 }
-//               } catch (e) {}
-//               next();
-//             });
-//             stream.resume();
-//             // @ts-ignore
-//           });
-//           extract.on('finish', async function () {
-//             // load unzipped json files into indexDB database
-//             console.log('Moving resources into indexdDB');
-//             await loadDependenciesInStorage(database, resources);
-//             console.log('Finished, should go to onSuccess');
-//             finish();
-//             // Here is the portion we convert the database to FHIRDefinitions
-//             console.log('Okay now we move them to the defs');
-//             const getData = database
-//               .transaction(['resources'], 'readonly')
-//               .objectStore('resources', { keyPath: 'url' })
-//               .openCursor();
-//             // @ts-ignore
-//             getData.onerror = function (event) {
-//               console.log('There is an error getting data out!');
-//             };
-//             getData.onsuccess = function () {
-//               const FHIRDefs = loadIntoDefsPlayground(getData, FHIRdefs);
-//               resolve(FHIRDefs);
-//             };
-//           });
-//           res.pipe(zlib.createGunzip()).pipe(extract);
-//         });
-//       });
-//     };
-//   });
-// }
-
 export function unzipDependencies(resources: any): Promise<any> {
   return new Promise((resolve, reject) => {
     http.get('http://packages.fhir.org/hl7.fhir.r4.core/4.0.1', function (res) {
@@ -256,7 +163,7 @@ export function unzipDependencies(resources: any): Promise<any> {
         stream.on('end', function () {
           try {
             const resource = JSON.parse(buf);
-            if (resource.kind === 'resource') {
+            if (resource.resourceType) {
               resources.push(resource);
             }
           } catch (e) {}
@@ -275,19 +182,20 @@ export function unzipDependencies(resources: any): Promise<any> {
 
 export function loadDependenciesInStorage(database: any, resources: any[]) {
   return new Promise((resolve, reject) => {
-    // Make new transaction for indexDB
     // Loads parsed json into indexDB
     const transaction = database.transaction(['resources'], 'readwrite');
     transaction.oncomplete = () => {
-      console.log('All done adding data');
+      resolve();
     };
-    const objectStore = transaction.objectStore('resources');
+    // @ts-ignore
+    transaction.onerror = event => {
+      reject(event);
+    };
+    const objectStore = transaction.objectStore('resources', { keyPath: ['id', 'resourceType'] });
     // @ts-ignore
     resources.forEach(res => {
       objectStore.add(res);
     });
-    console.log(database);
-    resolve();
   });
 }
 
@@ -295,26 +203,25 @@ export function loadIntoDefsPlayground(
   FHIRdefs: FHIRDefinitions,
   database: any
 ): Promise<FHIRDefinitions> {
-  // Create iterator and loop through database
-  // Add each piece of data into a FHIR Definition
-  // Here is the portion we convert the database to FHIRDefinitions
+  // Convert database data into FHIR Definitions
   return new Promise((resolve, reject) => {
-    console.log('Okay now we move them to the defs');
     const getData = database
       .transaction(['resources'], 'readonly')
-      .objectStore('resources', { keyPath: 'url' })
+      .objectStore('resources', { keyPath: ['id', 'resourceType'] })
       .openCursor();
     // @ts-ignore
-    getData.onerror = function (event) {
-      console.log('There is an error getting data out!');
+    getData.onerror = function () {
+      reject('There is an error getting data out!');
     };
     getData.onsuccess = function () {
+      // @ts-ignore
       const iterator = getData.result;
       if (iterator) {
         FHIRdefs.add(iterator.value);
         iterator.continue();
+      } else {
+        resolve(FHIRdefs);
       }
-      resolve(FHIRdefs);
     };
   });
 }
