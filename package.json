@@ -71,6 +71,7 @@
     "axios": "^0.19.2",
     "chalk": "^3.0.0",
     "commander": "^4.1.1",
+    "fhir": "^4.7.9",
     "fs-extra": "^8.1.0",
     "html-minifier": "^4.0.0",
     "ini": "^1.3.5",

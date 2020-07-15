@@ -9,6 +9,7 @@ export class FHIRDefinitions implements Fishable {
   private valueSets: Map<string, any>;
   private codeSystems: Map<string, any>;
   private implementationGuides: Map<string, any>;
+  private predefinedResources: Map<string, any>;
   packages: string[];
 
   constructor() {
@@ -20,6 +21,7 @@ export class FHIRDefinitions implements Fishable {
     this.valueSets = new Map();
     this.codeSystems = new Map();
     this.implementationGuides = new Map();
+    this.predefinedResources = new Map();
   }
 
   size(): number {
@@ -91,6 +93,14 @@ export class FHIRDefinitions implements Fishable {
     } else if (definition.resourceType === 'ImplementationGuide') {
       addDefinitionToMap(definition, this.implementationGuides);
     }
+  }
+
+  addPredefinedResource(file: string, definition: any): void {
+    this.predefinedResources.set(file, definition);
+  }
+
+  getPredefinedResource(file: string): any {
+    return this.predefinedResources.get(file);
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
