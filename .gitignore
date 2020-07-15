@@ -12,7 +12,6 @@ pids
 logs
 results
 tmp
-/build*
 
 # Build
 public/css/main.css
