@@ -430,11 +430,13 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# ExampleIG/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
-      expect(writeSpy.mock.calls[1][1]).toBe(
-        fs.readFileSync(
-          path.join(__dirname, 'fixtures', 'init-config', 'default-config.yaml'),
-          'utf-8'
-        )
+      expect(writeSpy.mock.calls[1][1].replace(/[\n\r]/g, '')).toBe(
+        fs
+          .readFileSync(
+            path.join(__dirname, 'fixtures', 'init-config', 'default-config.yaml'),
+            'utf-8'
+          )
+          .replace(/[\n\r]/g, '')
       );
 
       expect(copyFileSpy.mock.calls).toHaveLength(8);
@@ -482,11 +484,13 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyNonDefaultName/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
-      expect(writeSpy.mock.calls[1][1]).toBe(
-        fs.readFileSync(
-          path.join(__dirname, 'fixtures', 'init-config', 'user-input-config.yaml'),
-          'utf-8'
-        )
+      expect(writeSpy.mock.calls[1][1].replace(/[\n\r]/g, '')).toBe(
+        fs
+          .readFileSync(
+            path.join(__dirname, 'fixtures', 'init-config', 'user-input-config.yaml'),
+            'utf-8'
+          )
+          .replace(/[\n\r]/g, '')
       );
       expect(copyFileSpy.mock.calls).toHaveLength(8);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
