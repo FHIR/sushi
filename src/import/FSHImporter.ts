@@ -1259,7 +1259,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private parseCanonical(canonical: string): string {
-    return canonical.slice(canonical.indexOf('(') + 1, canonical.length - 1);
+    return canonical.slice(canonical.indexOf('(') + 1, canonical.length - 1).trim();
   }
 
   visitBool(ctx: pc.BoolContext): boolean {

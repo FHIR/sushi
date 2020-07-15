@@ -1570,7 +1570,7 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
-  it('should apply a FixedValue rule with an valid Canonical entity defined in FSH', () => {
+  it('should apply a FixedValue rule with a valid Canonical entity defined in FSH', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
     const rule = new FixedValueRule('code.coding.system');

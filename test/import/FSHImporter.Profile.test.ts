@@ -1232,6 +1232,27 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
+      it('should parse fixed value using Canonical with spaces around entity name', () => {
+        const input = `
+        CodeSystem: SpaceyExample
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(   SpaceyExample )
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('SpaceyExample') // No spaces are included in the entityName
+          .withLocation([8, 32, 8, 59])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+      });
+
       it('should parse fixed values that are an alias', () => {
         const input = `
         Alias: EXAMPLE = http://example.org

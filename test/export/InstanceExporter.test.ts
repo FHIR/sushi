@@ -1191,7 +1191,7 @@ describe('InstanceExporter', () => {
     });
 
     // Fixing using Canonical
-    it('should apply a FixedValue rule with an valid Canonical entity defined in FSH', () => {
+    it('should apply a FixedValue rule with a valid Canonical entity defined in FSH', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';
       doc.instances.set(observationInstance.name, observationInstance);
