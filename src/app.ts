@@ -63,7 +63,7 @@ async function app() {
   }
   if (program.debug) logger.level = 'debug';
 
-  logger.info(`Running SUSHI ${getVersion()}`);
+  logger.info(`Running ${getVersion()}`);
 
   input = findInputDir(input);
 

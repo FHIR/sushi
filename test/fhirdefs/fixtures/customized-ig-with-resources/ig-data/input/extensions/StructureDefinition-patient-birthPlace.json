@@ -18,6 +18,7 @@
   "status": "draft",
   "date": "2019-11-01T09:29:23+11:00",
   "publisher": "HL7",
+  "description": "The registered place of birth of the patient. A sytem may use the address.text if they don't store the birthPlace address in discrete elements.",
   "fhirVersion": "4.0.1",
   "mapping": [
     {

@@ -1043,16 +1043,18 @@ describe('InstanceExporter', () => {
       });
     });
 
-    it('should fix an inline reference while resolving the Instance being referred to', () => {
+    it('should fix a reference to a contained resource using a relative reference', () => {
       const orgInstance = new Instance('TestOrganization');
       orgInstance.instanceOf = 'Organization';
-      orgInstance.usage = 'Inline';
       const fixedIdRule = new FixedValueRule('id');
       fixedIdRule.fixedValue = 'org-id';
       orgInstance.rules.push(fixedIdRule);
+      const containedRule = new FixedValueRule('contained');
+      containedRule.fixedValue = 'TestOrganization';
+      containedRule.isInstance = true;
       const fixedRefRule = new FixedValueRule('managingOrganization');
       fixedRefRule.fixedValue = new FshReference('TestOrganization');
-      patientInstance.rules.push(fixedRefRule);
+      patientInstance.rules.push(containedRule, fixedRefRule);
       doc.instances.set(patientInstance.name, patientInstance);
       doc.instances.set(orgInstance.name, orgInstance);
       const exported = exportInstance(patientInstance);
