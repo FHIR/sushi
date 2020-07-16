@@ -4,6 +4,7 @@ import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import {
   Instance,
   Profile,
+  FshCanonical,
   FshCode,
   FshReference,
   Extension,
@@ -1043,16 +1044,18 @@ describe('InstanceExporter', () => {
       });
     });
 
-    it('should fix an inline reference while resolving the Instance being referred to', () => {
+    it('should fix a reference to a contained resource using a relative reference', () => {
       const orgInstance = new Instance('TestOrganization');
       orgInstance.instanceOf = 'Organization';
-      orgInstance.usage = 'Inline';
       const fixedIdRule = new FixedValueRule('id');
       fixedIdRule.fixedValue = 'org-id';
       orgInstance.rules.push(fixedIdRule);
+      const containedRule = new FixedValueRule('contained');
+      containedRule.fixedValue = 'TestOrganization';
+      containedRule.isInstance = true;
       const fixedRefRule = new FixedValueRule('managingOrganization');
       fixedRefRule.fixedValue = new FshReference('TestOrganization');
-      patientInstance.rules.push(fixedRefRule);
+      patientInstance.rules.push(containedRule, fixedRefRule);
       doc.instances.set(patientInstance.name, patientInstance);
       doc.instances.set(orgInstance.name, orgInstance);
       const exported = exportInstance(patientInstance);
@@ -1184,6 +1187,56 @@ describe('InstanceExporter', () => {
       expect(exported.subject).toEqual(undefined);
       expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
         /The type "Reference\(Resource\)" does not match any of the allowed types\D*/s
+      );
+    });
+
+    // Fixing using Canonical
+    it('should apply a FixedValue rule with a valid Canonical entity defined in FSH', () => {
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const fixedValueRule = new FixedValueRule('code.coding.system');
+      fixedValueRule.fixedValue = new FshCanonical('VeryRealCodeSystem');
+      observationInstance.rules.push(fixedValueRule);
+
+      const realCodeSystem = new FshCodeSystem('VeryRealCodeSystem');
+      doc.codeSystems.set(realCodeSystem.name, realCodeSystem);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.code).toEqual({
+        coding: [{ system: 'http://hl7.org/fhir/us/minimal/CodeSystem/VeryRealCodeSystem' }]
+      });
+    });
+
+    it('should apply a FixedValue rule with Canonical of a FHIR entity', () => {
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const fixedValueRule = new FixedValueRule('code.coding.system');
+      fixedValueRule.fixedValue = new FshCanonical('MedicationRequest');
+      observationInstance.rules.push(fixedValueRule);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.code).toEqual({
+        coding: [{ system: 'http://hl7.org/fhir/StructureDefinition/MedicationRequest' }]
+      });
+    });
+
+    it('should not apply a FixedValue rule with an invalid Canonical entity and log an error', () => {
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const fixedValueRule = new FixedValueRule('code.coding.system');
+      fixedValueRule.fixedValue = new FshCanonical('FakeCodeSystem');
+      observationInstance.rules.push(fixedValueRule);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.code).toEqual(undefined);
+      expect(loggerSpy.getFirstMessage('error')).toMatch(
+        /Cannot use canonical URL of FakeCodeSystem because it does not exist.\D*/s
       );
     });
 

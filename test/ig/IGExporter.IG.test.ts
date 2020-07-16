@@ -866,7 +866,8 @@ describe('IGExporter', () => {
       expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
       expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
       expect(directoryContents.get('extensions')).toEqual([
-        'StructureDefinition-patient-birthPlace.json'
+        'StructureDefinition-patient-birthPlace.json',
+        'StructureDefinition-patient-birthPlaceXML.xml'
       ]);
       expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
       expect(directoryContents.get('profiles')).toEqual([
@@ -919,7 +920,14 @@ describe('IGExporter', () => {
         reference: {
           reference: 'StructureDefinition/patient-birthPlace'
         },
-        name: 'birthPlace', // Use name over ID
+        name: 'Birth Place', // Use title
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/patient-birthPlaceXML'
+        },
+        name: 'Birth Place', // Use title
         exampleBoolean: false
       });
     });
@@ -1339,6 +1347,43 @@ describe('IGExporter', () => {
       expect(pageContentFiles).toContain('2_rocks.md');
       expect(pageContentFiles).toContain('3_index.md');
       expect(pageContentFiles).toContain('4_2_rocks.md');
+    });
+  });
+
+  describe('#hidden-files-ig', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+
+    beforeAll(() => {
+      fixtures = path.join(__dirname, 'fixtures', 'hidden-files-ig');
+    });
+
+    beforeEach(() => {
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      pkg = new Package(config);
+      exporter = new IGExporter(
+        pkg,
+        new FHIRDefinitions(),
+        path.resolve(fixtures, 'ig-data'),
+        false
+      );
+      loggerSpy.reset();
+    });
+
+    it('should avoid copying over extra system files', () => {
+      exporter.export(tempOut);
+      const imagesDir = fs.readdirSync(path.join(tempOut, 'input', 'images'));
+      // No hidden files should be copied over
+      expect(imagesDir).toEqual(['Shorty.png']);
+      const pageContentDir = fs.readdirSync(path.join(tempOut, 'input', 'pagecontent'));
+      expect(pageContentDir).toEqual(['index.md']);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      const includesDir = fs.readdirSync(path.join(tempOut, 'input', 'includes'));
+      expect(includesDir).toEqual(['menu.xml']);
     });
   });
 });

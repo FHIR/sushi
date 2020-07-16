@@ -4,6 +4,7 @@ import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import {
   Profile,
   Extension,
+  FshCanonical,
   FshCode,
   FshReference,
   Instance,
@@ -88,7 +89,29 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.language).toBeUndefined();
     expect(exported.text).toBeUndefined();
     expect(exported.contained).toBeUndefined(); // inherited from Observation
-    expect(exported.extension).toBeUndefined();
+    // NOTE: The following extensions are stripped out as uninherited extensions:
+    // {
+    //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    //   valueCode: "normative"
+    // },
+    // {
+    //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+    //   valueCode: "4.0.0"
+    // },
+    // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 5 },
+    // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'oo' }
+    //
+    // BUT the following two extensions should remain:
+    expect(exported.extension).toEqual([
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
+        valueString: 'Clinical.Diagnostics'
+      },
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
+        valueCode: 'patient'
+      }
+    ]);
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
@@ -257,7 +280,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.language).toBeUndefined();
     expect(exported.text).toBeUndefined();
     expect(exported.contained).toBeUndefined(); // inherited from patient-mothersMaidenName
-    expect(exported.extension).toBeUndefined();
+    expect(exported.extension).toBeUndefined(); // uninherited extensions are filtered out
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
@@ -1501,30 +1524,6 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
-  it('should apply a Reference FixedValueRule and replace the Reference to an inline instance', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'Observation';
-
-    const instance = new Instance('Bar');
-    instance.id = 'bar-id';
-    instance.instanceOf = 'Patient';
-    instance.usage = 'Inline';
-    doc.instances.set(instance.name, instance);
-
-    const rule = new FixedValueRule('subject');
-    rule.fixedValue = new FshReference('Bar');
-    profile.rules.push(rule);
-
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-
-    const fixedSubject = sd.findElement('Observation.subject');
-
-    expect(fixedSubject.patternReference).toEqual({
-      reference: '#bar-id'
-    });
-  });
-
   it('should not apply a Reference FixedValueRule with invalid type and log an error', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -1569,6 +1568,58 @@ describe('StructureDefinitionExporter', () => {
         system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
       }
     ]);
+  });
+
+  it('should apply a FixedValue rule with a valid Canonical entity defined in FSH', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('VeryRealCodeSystem');
+    profile.rules.push(rule);
+
+    const realCodeSystem = new FshCodeSystem('VeryRealCodeSystem');
+    doc.codeSystems.set(realCodeSystem.name, realCodeSystem);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/us/minimal/CodeSystem/VeryRealCodeSystem'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a FixedValue rule with Canonical of a FHIR entity', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('MedicationRequest');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/StructureDefinition/MedicationRequest'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should not apply a FixedValue rule with an invalid Canonical entity and log an error', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('FakeCodeSystem');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot use canonical URL of FakeCodeSystem because it does not exist.\D*/s
+    );
   });
 
   it('should use the url specified in a CaretValueRule when referencing a named code system', () => {
@@ -2362,7 +2413,9 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const extensionElement = sd.extension[0];
+    const extensionElement = sd.extension.find(
+      e => e.url === 'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialExtension'
+    );
     expect(extensionElement).toBeDefined();
     expect(extensionElement).toEqual({
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialExtension',
