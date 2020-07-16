@@ -78,13 +78,14 @@ paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
-value:              SEQUENCE | STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | code | quantity | ratio | bool ;
+value:              SEQUENCE | STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | canonical | code | quantity | ratio | bool ;
 item:               SEQUENCE (KW_NAMED SEQUENCE)? CARD flag*;
 code:               CODE STRING?;
 concept:            STAR code (STRING | MULTILINE_STRING)?;
 quantity:           NUMBER UNIT;
 ratio:              ratioPart COLON ratioPart;
 reference:          (OR_REFERENCE | PIPE_REFERENCE) STRING?;
+canonical:          CANONICAL;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
 targetType:         SEQUENCE | reference;
@@ -179,6 +180,9 @@ CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
                  //  Reference       (        ITEM         |         ITEM         )
 OR_REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
 PIPE_REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
+
+                 // Canonical(Item)
+CANONICAL:         'Canonical' WS* '(' WS* SEQUENCE WS* ')';
 
                  //  ^  NON-WHITESPACE
 CARET_SEQUENCE:     '^' NONWS+;

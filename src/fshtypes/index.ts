@@ -2,6 +2,7 @@ export * from './FshCodeSystem';
 export * from './PackageJSON';
 export * from './Extension';
 export * from './Instance';
+export * from './FshCanonical';
 export * from './FshCode';
 export * from './FshEntity';
 export * from './FshQuantity';

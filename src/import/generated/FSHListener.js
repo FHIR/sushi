@@ -614,6 +614,15 @@ FSHListener.prototype.exitReference = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#canonical.
+FSHListener.prototype.enterCanonical = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#canonical.
+FSHListener.prototype.exitCanonical = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#ratioPart.
 FSHListener.prototype.enterRatioPart = function(ctx) {
 };
