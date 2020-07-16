@@ -12,7 +12,6 @@ import {
   chmodSync,
   existsSync,
   readdirSync,
-  readJSONSync,
   readFileSync
 } from 'fs-extra';
 import table from 'markdown-table';
@@ -892,10 +891,8 @@ export class IGExporter {
       if (existsSync(dirPath)) {
         const files = readdirSync(dirPath);
         for (const file of files) {
-          let resourceJSON: InstanceDefinition;
-          if (file.endsWith('.json')) {
-            resourceJSON = readJSONSync(path.join(dirPath, file));
-
+          const resourceJSON: InstanceDefinition = this.fhirDefs.getPredefinedResource(file);
+          if (resourceJSON) {
             if (resourceJSON.resourceType == null || resourceJSON.id == null) {
               logger.error(
                 `Resource at ${path.join(dirPath, file)} must define resourceType and id.`
@@ -982,7 +979,7 @@ export class IGExporter {
                 igPath,
                 'input',
                 pathEnd,
-                `${resourceJSON.resourceType}-${resourceJSON.id}.json`
+                `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
               );
               this.copyAsIs(inputPath, outputPath);
             }

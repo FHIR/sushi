@@ -317,22 +317,63 @@ describe('#loadCustomResources', () => {
   let defs: FHIRDefinitions;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    const fixtures = path.join(__dirname, '..', 'ig', 'fixtures', 'customized-ig-with-resources');
+    const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
     loadCustomResources(fixtures, defs);
   });
 
-  it('should load custom resources', () => {
+  it('should load custom JSON and XML resources', () => {
     // Only StructureDefinitions, ValueSets, and CodeSystems are loaded in
-    expect(defs.size()).toBe(10);
-    expect(defs.allExtensions().some(e => e.id === 'patient-birthPlace')).toBeTruthy();
-    expect(defs.allProfiles().some(e => e.id === 'MyPatient')).toBeTruthy();
-    expect(defs.allProfiles().some(e => e.id === 'MyTitlePatient')).toBeTruthy();
-    expect(defs.allValueSets().some(e => e.id === 'MyVS')).toBeTruthy();
+    const profiles = defs.allProfiles();
+    const valueSets = defs.allValueSets();
+    const extensions = defs.allExtensions();
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0].id).toBe('MyPatient');
+    expect(valueSets).toHaveLength(1);
+    expect(valueSets[0].id).toBe('MyVS');
+    // Each extension has 3 entries, one for url, one for id, and one for name
+    expect(extensions).toHaveLength(6);
+    const birthPlace = extensions.find(e => e.id === 'patient-birthPlace');
+    const birthPlaceFromXML = extensions.find(e => e.id === 'patient-birthPlaceXML');
+    // The extension converted from xml should match the native json extension
+    // except for the identifying fields
+    Object.keys(birthPlaceFromXML).forEach(key => {
+      let expectedValue = birthPlace[key];
+      if (key === 'id' || key === 'url' || key === 'name') {
+        expectedValue += 'XML';
+      }
+      expect(birthPlaceFromXML[key]).toEqual(expectedValue);
+    });
   });
 
-  it('should log an error for invalid input files', () => {
-    expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
-      /Invalid file.*resources.*XML format not supported/
+  it('should add all predefined resources to the FHIRDefs with file information', () => {
+    expect(defs.getPredefinedResource('CapabilityStatement-MyCS.json').id).toBe('MyCS');
+    expect(defs.getPredefinedResource('Patient-MyPatient.json').id).toBe('MyPatient');
+    expect(defs.getPredefinedResource('StructureDefinition-patient-birthPlace.json').id).toBe(
+      'patient-birthPlace'
+    );
+    expect(defs.getPredefinedResource('StructureDefinition-patient-birthPlaceXML.xml').id).toBe(
+      'patient-birthPlaceXML'
+    );
+    expect(defs.getPredefinedResource('StructureDefinition-MyLM.json').id).toBe('MyLM');
+    expect(defs.getPredefinedResource('OperationDefinition-MyOD.json').id).toBe('MyOD');
+    expect(defs.getPredefinedResource('StructureDefinition-MyPatient.json').id).toBe('MyPatient');
+    expect(defs.getPredefinedResource('Patient-BazPatient.json').id).toBe('BazPatient');
+    expect(defs.getPredefinedResource('ValueSet-MyVS.json').id).toBe('MyVS');
+  });
+
+  it('should log an error for non JSON or XML input files', () => {
+    expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(/Invalid file.*resources/);
+  });
+
+  it('should log an error for invalid XML files', () => {
+    expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
+      /Loading InvalidFile.xml failed with the following error:/
+    );
+  });
+
+  it('should log an error for invalid JSON files', () => {
+    expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(
+      /Loading InvalidFile.json failed with the following error:/
     );
   });
 });
