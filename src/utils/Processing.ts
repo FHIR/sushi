@@ -178,8 +178,7 @@ export function init(): void {
     '\n╭──────────────────────────────────────────────────────────╮\n' +
       '│ This interactive tool will use your answers to create a  │\n' +
       "│ working SUSHI project configured with your project's     │\n" +
-      '│ basic information. See the SUSHI documentation for more  │\n' +
-      '│ guidance on project structure and configuration.         │\n' +
+      '│ basic information.                                       │\n' +
       '╰──────────────────────────────────────────────────────────╯\n'
   );
 

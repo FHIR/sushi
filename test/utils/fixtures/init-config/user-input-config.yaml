@@ -1,7 +1,6 @@
 # ╭──────────────────────────────────────ImplementationGuide───────────────────────────────────────╮
 # │  The properties below are used to create the ImplementationGuide resource. For a list of       │
-# │  supported properties, see:                                                                    │
-# │  http://build.fhir.org/ig/HL7/fhir-shorthand/branches/beta/sushi.html#ig-development           │
+# │  supported properties, see: https://fshschool.org/sushi/configuration/                         │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 id: foo.bar
 canonical: http://foo.com
