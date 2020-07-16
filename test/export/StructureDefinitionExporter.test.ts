@@ -88,7 +88,29 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.language).toBeUndefined();
     expect(exported.text).toBeUndefined();
     expect(exported.contained).toBeUndefined(); // inherited from Observation
-    expect(exported.extension).toBeUndefined();
+    // NOTE: The following extensions are stripped out as uninherited extensions:
+    // {
+    //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    //   valueCode: "normative"
+    // },
+    // {
+    //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+    //   valueCode: "4.0.0"
+    // },
+    // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 5 },
+    // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'oo' }
+    //
+    // BUT the following two extensions should remain:
+    expect(exported.extension).toEqual([
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
+        valueString: 'Clinical.Diagnostics'
+      },
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
+        valueCode: 'patient'
+      }
+    ]);
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
@@ -257,7 +279,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.language).toBeUndefined();
     expect(exported.text).toBeUndefined();
     expect(exported.contained).toBeUndefined(); // inherited from patient-mothersMaidenName
-    expect(exported.extension).toBeUndefined();
+    expect(exported.extension).toBeUndefined(); // uninherited extensions are filtered out
     expect(exported.modifierExtension).toBeUndefined();
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
     expect(exported.identifier).toBeUndefined();
@@ -2338,7 +2360,9 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const extensionElement = sd.extension[0];
+    const extensionElement = sd.extension.find(
+      e => e.url === 'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialExtension'
+    );
     expect(extensionElement).toBeDefined();
     expect(extensionElement).toEqual({
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialExtension',
