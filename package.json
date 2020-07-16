@@ -16,7 +16,7 @@
     "check": "npm run test && npm run lint && npm run prettier",
     "prepare": "npm run build",
     "prepublishOnly": "npm run check",
-    "fixGrammarTypes": "node build/fixGrammarTypes.js"
+    "fixGrammarTypes": "node dev/fixGrammarTypes.js"
   },
   "contributors": [
     "Julia Afeltra <jafeltra@mitre.org>",
