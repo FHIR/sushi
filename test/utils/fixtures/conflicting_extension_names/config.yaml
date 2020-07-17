@@ -1,0 +1,60 @@
+# ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+# │  ACTION REQUIRED: REVIEW AND EDIT THIS FILE TO ENSURE IT ACCURATELY REFLECTS YOUR PROJECT!     │
+# │                                                                                                │
+# │  This file was generated from your existing project files and will be used for SUSHI           │
+# │  configuration from now on. You may delete your package.json as it is no longer needed.        │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+# ╭─────────────────────────────────ImplementationGuide-fish.json──────────────────────────────────╮
+# │  The properties below are used to create the ImplementationGuide resource. For a list of       │
+# │  supported properties, see:                                                                    │
+# │  http://build.fhir.org/ig/HL7/fhir-shorthand/branches/beta/sushi.html#ig-development           │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+id: GenoVic
+canonical: http://genovic.org.au/fhir/ImplementationGuide/GenoVic
+version: 1
+name: GenoVic
+title: Fish Implementation Guide
+status: active #draft
+publisher: Melbourne Genomics Health Alliance
+experimental: false
+#contact:
+#  - name: Bill Cod
+#    telecom:
+#      - system: email
+#        value: cod@reef.gov
+description: Guidance for those integrating with the GenoVic genomics ordering platform
+license: not-open-source
+fhirVersion: 4.0.1
+parameters:
+  show-inherited-invariants: true
+copyrightYear: 2020+
+releaseLabel: GenoVIC
+dependencies:
+  hl7.fhir.us.core: 3.1.0
+FSHOnly: false
+# ╭─────────────────────────────────────────────ig.ini─────────────────────────────────────────────╮
+# │  To control the ig.ini using this config, uncomment and set the "template" property.           │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+template: fhir.base.template
+
+# ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
+# │  To control the menu.xml using this config, uncomment and set the "menu" property.             │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+# menu:
+#   IG Home: index.html
+#   Table of Contents: toc.html
+#   Artifacts Summary: artifacts.html
+#   Other Resources:
+#     "FHIR Spec ": new-tab external {{site.data.fhir.path}}index.html
+
+# ╭───────────────────────────────────────package-list.json────────────────────────────────────────╮
+# │  To control the package-list.json using this config, uncomment and set the "history" property. │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+# history:
+#   current:
+#     version: current
+#     desc: Draft
+#     path: http://example.org/fhir/fish
+#     status: ci-build
+#     current: true
