@@ -40,6 +40,7 @@ describe('MasterFisher', () => {
     profile3.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/profile3';
     profile3.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile3.fhirVersion = '4.0.1';
+    profile3.version = '1.0.0';
     const profile4 = new StructureDefinition();
     profile4.name = 'MyVitalSigns';
     profile4.id = 'vitalsigns';
@@ -69,7 +70,8 @@ describe('MasterFisher', () => {
       name: 'Profile1',
       sdType: 'Procedure',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
-      parent: 'Procedure'
+      parent: 'Procedure',
+      version: '1.0.0'
     });
   });
 
@@ -83,7 +85,8 @@ describe('MasterFisher', () => {
       name: 'Profile2',
       sdType: 'Observation',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Profile2',
-      parent: 'bp'
+      parent: 'bp',
+      version: '1.0.0'
     });
   });
 
@@ -103,7 +106,8 @@ describe('MasterFisher', () => {
       name: 'Practitioner',
       sdType: undefined,
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-dr',
-      parent: 'Practitioner'
+      parent: 'Practitioner',
+      version: '1.0.0'
     });
   });
 
@@ -118,7 +122,8 @@ describe('MasterFisher', () => {
       name: 'Profile3',
       sdType: 'Condition',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/profile3',
-      parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
+      parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
+      version: '1.0.0'
     });
   });
 
@@ -164,7 +169,8 @@ describe('MasterFisher', () => {
       name: 'Organization',
       sdType: 'Organization',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-org',
-      parent: 'http://hl7.org/fhir/StructureDefinition/Organization'
+      parent: 'http://hl7.org/fhir/StructureDefinition/Organization',
+      version: '1.0.0'
     });
   });
 

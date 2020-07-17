@@ -1613,7 +1613,30 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
-  it('should log an error when a version cannot be found for a Canonical entity', () => {
+  it('should use the config specified version when a version cannot be found for a Canonical entity', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('VeryRealCodeSystem')
+      .withFile('Real.fsh')
+      .withLocation([1, 2, 3, 4]);
+    rule.fixedValue.useEntityVersion = true;
+    profile.rules.push(rule);
+
+    const realCodeSystem = new FshCodeSystem('VeryRealCodeSystem');
+    doc.codeSystems.set(realCodeSystem.name, realCodeSystem);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    // still should set the value
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/us/minimal/CodeSystem/VeryRealCodeSystem|1.0.0'
+    );
+  });
+
+  it('should log an error when no version can be found for a Canonical entity', () => {
+    delete fisher.tank.config.version;
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
     const rule = new FixedValueRule('code.coding.system');

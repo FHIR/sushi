@@ -259,6 +259,8 @@ export class FSHTank implements Fishable {
         return rule.value.toString();
       }
     }
+    // If no rules override, config version is used
+    return this.config.version;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

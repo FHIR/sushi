@@ -241,23 +241,27 @@ describe('FSHTank', () => {
       id: 'prf1',
       name: 'Profile1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
-      parent: 'Observation'
+      parent: 'Observation',
+      version: '1.0.0'
     };
     const ext1MD: Metadata = {
       id: 'ext1',
       name: 'Extension1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ext1',
-      parent: 'Extension2'
+      parent: 'Extension2',
+      version: '1.0.0'
     };
     const vs1MD: Metadata = {
       id: 'vs1',
       name: 'ValueSet1',
-      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1'
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1',
+      version: '1.0.0'
     };
     const cs1MD: Metadata = {
       id: 'cs1',
       name: 'CodeSystem1',
-      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1'
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1',
+      version: '1.0.0'
     };
     const inst1MD: Metadata = {
       id: 'inst1',
@@ -481,6 +485,10 @@ describe('FSHTank', () => {
       caretRule.value = '1.2.3';
       vs1.rules.push(caretRule);
       expect(tank.fishForMetadata('ValueSet1', Type.ValueSet).version).toBe('1.2.3');
+    });
+
+    it('should use config version on a FshValueSet when one is not specified', () => {
+      expect(tank.fishForMetadata('ValueSet1', Type.ValueSet).version).toBe('1.0.0');
     });
 
     it('should find a version on a FshCodeSystem when one is specified', () => {
