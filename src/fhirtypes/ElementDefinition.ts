@@ -1185,7 +1185,7 @@ export class ElementDefinition {
       case 'Canonical':
         value = value as FshCanonical;
         // Get the canonical url of the entity
-        const canonicalUrl = fisher.fishForMetadata(
+        const meta = fisher.fishForMetadata(
           value.entityName,
           Type.Resource,
           Type.Type,
@@ -1194,9 +1194,23 @@ export class ElementDefinition {
           Type.ValueSet,
           Type.CodeSystem,
           Type.Instance
-        )?.url;
+        );
+        let canonicalUrl = meta?.url;
         if (!canonicalUrl) {
           throw new InvalidCanonicalUrlError(value.entityName);
+        }
+        if (value.useEntityVersion) {
+          if (meta.version) {
+            canonicalUrl += `|${meta.version}`;
+          } else {
+            // Just log an error, don't throw, since we can still set the canonicalUrl at least
+            logger.error(
+              `Unable to find version for ${value.entityName}. Canonical will be specified with no version.`,
+              value.sourceInfo
+            );
+          }
+        } else if (value.version) {
+          canonicalUrl += `|${value.version}`;
         }
         this.fixString(canonicalUrl, exactly);
         break;

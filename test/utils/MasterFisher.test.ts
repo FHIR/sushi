@@ -134,7 +134,8 @@ describe('MasterFisher', () => {
       name: 'Patient',
       sdType: 'Patient',
       url: 'http://hl7.org/fhir/StructureDefinition/Patient',
-      parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource'
+      parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+      version: '4.0.1'
     });
   });
 

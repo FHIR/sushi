@@ -182,7 +182,7 @@ OR_REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE W
 PIPE_REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
 
                  // Canonical(Item)
-CANONICAL:         'Canonical' WS* '(' WS* SEQUENCE WS* ')';
+CANONICAL:         'Canonical' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)? ')';
 
                  //  ^  NON-WHITESPACE
 CARET_SEQUENCE:     '^' NONWS+;

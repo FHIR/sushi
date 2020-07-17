@@ -1253,6 +1253,94 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
+      it('should parse fixed value using Canonical with a version', () => {
+        const input = `
+        CodeSystem: Example
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(Example|1.2.3)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('Example')
+          .withLocation([8, 32, 8, 55])
+          .withFile('');
+        expectedCanonical.version = '1.2.3';
+        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+      });
+
+      it('should parse fixed value using Canonical with spaces around the version', () => {
+        const input = `
+        CodeSystem: Example
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(  Example | 1.2.3  )
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('Example')
+          .withLocation([8, 32, 8, 61])
+          .withFile('');
+        expectedCanonical.version = '1.2.3';
+        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+      });
+
+      it('should parse fixed value using Canonical with a version which contains a |', () => {
+        const input = `
+        CodeSystem: Example
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(  Example | 1.2.3|aWeirdVersion  )
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('Example')
+          .withLocation([8, 32, 8, 75])
+          .withFile('');
+        expectedCanonical.version = '1.2.3|aWeirdVersion';
+        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+      });
+
+      it('should parse fixed value using Canonical with the default version', () => {
+        const input = `
+        CodeSystem: Example
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(Example|version)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('Example')
+          .withLocation([8, 32, 8, 57])
+          .withFile('');
+        expectedCanonical.useEntityVersion = true;
+        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+      });
+
       it('should parse fixed values that are an alias', () => {
         const input = `
         Alias: EXAMPLE = http://example.org

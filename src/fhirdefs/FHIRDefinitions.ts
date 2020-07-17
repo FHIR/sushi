@@ -156,7 +156,8 @@ export class FHIRDefinitions implements Fishable {
         sdType: result.type as string,
         url: result.url as string,
         parent: result.baseDefinition as string,
-        abstract: result.abstract as boolean
+        abstract: result.abstract as boolean,
+        version: result.version as string
       };
     }
   }

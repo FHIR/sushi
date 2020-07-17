@@ -208,6 +208,14 @@ export class FSHTank implements Fishable {
       } else if (result instanceof FshCodeSystem) {
         meta.url = this.getMetadataUrl(result, 'CodeSystem');
       }
+      if (
+        result instanceof Profile ||
+        result instanceof Extension ||
+        result instanceof FshValueSet ||
+        result instanceof FshCodeSystem
+      ) {
+        meta.version = this.getMetadataVersion(result);
+      }
       return meta;
     }
     return;
@@ -234,6 +242,23 @@ export class FSHTank implements Fishable {
       }
     }
     return `${this.config.canonical}/${fhirType}/${result.id}`;
+  }
+
+  /**
+   * Determines the version to use for the fished-up FHIR entity.
+   * If a caret value rule has been applied to the entity's version, use the
+   * value specified in that rule.
+   * Otherwise, assume there is no version.
+   *
+   * @param {Profile | Extension | FshValueSet | FshCodeSystem} result - The FHIR entity that was fished up
+   * @returns {string} - The version of the FHIR entity
+   */
+  getMetadataVersion(result: Profile | Extension | FshValueSet | FshCodeSystem): string {
+    for (const rule of result.rules) {
+      if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'version') {
+        return rule.value.toString();
+      }
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

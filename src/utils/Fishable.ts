@@ -18,6 +18,7 @@ export interface Metadata {
   url?: string;
   parent?: string;
   abstract?: boolean;
+  version?: string;
 }
 
 export interface Fishable {

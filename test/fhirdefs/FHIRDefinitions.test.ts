@@ -294,7 +294,8 @@ describe('FHIRDefinitions', () => {
         name: 'Condition',
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
-        parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource'
+        parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+        version: '4.0.1'
       });
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Condition', Type.Resource)
@@ -309,7 +310,8 @@ describe('FHIRDefinitions', () => {
         name: 'boolean',
         sdType: 'boolean',
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Element'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element',
+        version: '4.0.1'
       });
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/boolean', Type.Type)
@@ -324,7 +326,8 @@ describe('FHIRDefinitions', () => {
         name: 'Address',
         sdType: 'Address',
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Element'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element',
+        version: '4.0.1'
       });
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Address', Type.Type)
@@ -339,7 +342,8 @@ describe('FHIRDefinitions', () => {
         name: 'observation-vitalsigns',
         sdType: 'Observation',
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('observation-vitalsigns', Type.Profile)).toEqual(vitalSignsByID);
       expect(
@@ -358,7 +362,8 @@ describe('FHIRDefinitions', () => {
         name: 'mothersMaidenName',
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('mothersMaidenName', Type.Extension)).toEqual(
         maidenNameExtensionByID
@@ -379,7 +384,8 @@ describe('FHIRDefinitions', () => {
       expect(allergyStatusValueSetByID).toEqual({
         id: 'allergyintolerance-clinical',
         name: 'AllergyIntoleranceClinicalStatusCodes',
-        url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical'
+        url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes', Type.ValueSet)).toEqual(
         allergyStatusValueSetByID
@@ -400,7 +406,8 @@ describe('FHIRDefinitions', () => {
       expect(allergyStatusCodeSystemByID).toEqual({
         id: 'allergyintolerance-clinical',
         name: 'AllergyIntoleranceClinicalStatusCodes',
-        url: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        url: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1'
       });
       expect(
         defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes', Type.CodeSystem)
@@ -521,7 +528,8 @@ describe('FHIRDefinitions', () => {
         name: 'Condition',
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
-        parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource'
+        parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Condition')).toEqual(
         conditionByID
@@ -534,7 +542,8 @@ describe('FHIRDefinitions', () => {
         name: 'boolean',
         sdType: 'boolean',
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Element'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/boolean')).toEqual(
         booleanByID
@@ -547,7 +556,8 @@ describe('FHIRDefinitions', () => {
         name: 'Address',
         sdType: 'Address',
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Element'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Address')).toEqual(
         addressByID
@@ -560,7 +570,8 @@ describe('FHIRDefinitions', () => {
         name: 'observation-vitalsigns',
         sdType: 'Observation',
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('observation-vitalsigns')).toEqual(vitalSignsProfileByID);
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/vitalsigns')).toEqual(
@@ -574,7 +585,8 @@ describe('FHIRDefinitions', () => {
         name: 'mothersMaidenName',
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('mothersMaidenName')).toEqual(maidenNameExtensionByID);
       expect(
@@ -587,7 +599,8 @@ describe('FHIRDefinitions', () => {
       expect(allergyStatusValueSetByID).toEqual({
         id: 'allergyintolerance-clinical',
         name: 'AllergyIntoleranceClinicalStatusCodes',
-        url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical'
+        url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes')).toEqual(
         allergyStatusValueSetByID
@@ -600,7 +613,8 @@ describe('FHIRDefinitions', () => {
       expect(w3cProvenanceCodeSystemByID).toEqual({
         id: 'w3c-provenance-activity-type',
         name: 'W3cProvenanceActivityType',
-        url: 'http://hl7.org/fhir/w3c-provenance-activity-type'
+        url: 'http://hl7.org/fhir/w3c-provenance-activity-type',
+        version: '4.0.1'
       });
       expect(defs.fishForMetadata('W3cProvenanceActivityType')).toEqual(
         w3cProvenanceCodeSystemByID

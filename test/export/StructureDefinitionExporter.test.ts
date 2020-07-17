@@ -1589,6 +1589,56 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should apply a FixedValue rule with a valid Canonical entity defined in FSH with a version', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('VeryRealCodeSystem');
+    rule.fixedValue.useEntityVersion = true;
+    profile.rules.push(rule);
+
+    const realCodeSystem = new FshCodeSystem('VeryRealCodeSystem');
+    const caretRule = new CaretValueRule('');
+    caretRule.caretPath = 'version';
+    caretRule.value = '1.2.3';
+    realCodeSystem.rules.push(caretRule);
+    doc.codeSystems.set(realCodeSystem.name, realCodeSystem);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/us/minimal/CodeSystem/VeryRealCodeSystem|1.2.3'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should log an error when a version cannot be found for a Canonical entity', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('VeryRealCodeSystem')
+      .withFile('Real.fsh')
+      .withLocation([1, 2, 3, 4]);
+    rule.fixedValue.useEntityVersion = true;
+    profile.rules.push(rule);
+
+    const realCodeSystem = new FshCodeSystem('VeryRealCodeSystem');
+    doc.codeSystems.set(realCodeSystem.name, realCodeSystem);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    // still should set the value
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/us/minimal/CodeSystem/VeryRealCodeSystem'
+    );
+    // but an error should be logged
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Unable to find version for VeryRealCodeSystem.*File: Real\.fsh.*Line: 1 - 3\D*/s
+    );
+  });
+
   it('should apply a FixedValue rule with Canonical of a FHIR entity', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
@@ -1601,6 +1651,41 @@ describe('StructureDefinitionExporter', () => {
     const fixedSystem = sd.findElement('Observation.code.coding.system');
     expect(fixedSystem.patternUri).toEqual(
       'http://hl7.org/fhir/StructureDefinition/MedicationRequest'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a FixedValue rule with Canonical of a FHIR entity with a version', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('MedicationRequest');
+    rule.fixedValue.useEntityVersion = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/StructureDefinition/MedicationRequest|4.0.1'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a FixedValue rule with Canonical of a FHIR entity with a given version', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('MedicationRequest');
+    rule.fixedValue.version = '3.2.1';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    // Use the specified version instead of the version on MedicationRequest
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/StructureDefinition/MedicationRequest|3.2.1'
     );
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
