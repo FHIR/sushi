@@ -320,6 +320,25 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.derivation).toBe('constraint');
   });
 
+  it('should export sub-extensions, with similar starting names and different types', () => {
+    const ruleString = new OnlyRule('value[x]');
+    ruleString.types = [{ type: 'string' }];
+    const ruleDecimal = new OnlyRule('value[x]');
+    ruleDecimal.types = [{ type: 'decimal' }];
+    const extensionParent = new Extension('Parent');
+    const extensionFooFoo = new Extension('FooFoo');
+    const extensionFooBar = new Extension('FooBar');
+    extensionFooFoo.parent = 'Parent';
+    extensionFooBar.parent = 'Parent';
+    extensionFooFoo.rules.push(ruleString);
+    extensionFooBar.rules.push(ruleDecimal);
+    doc.extensions.set(extensionParent.name, extensionParent);
+    doc.extensions.set(extensionFooFoo.name, extensionFooFoo);
+    doc.extensions.set(extensionFooBar.name, extensionFooBar);
+    const exported = exporter.export().extensions;
+    expect(exported.length).toBe(2);
+  });
+
   it('should not hardcode in the default context if parent already had a context', () => {
     // NOTE: This is a temporary test to ensure that we don't overwrite a valid context with our
     // "default" context.  In the (near) future, however, we should do away with our default
