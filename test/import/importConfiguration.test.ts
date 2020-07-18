@@ -228,14 +228,22 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.id).toBe('my-id');
     });
-    it('should report an error and throw if id is missing', () => {
+
+    it('should report an error and throw if id is missing when FSHOnly is false', () => {
       delete minYAML.id;
       expect(() => importConfiguration(minYAML, 'test-config.yaml')).toThrow(
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to generate an IG: id\.\s*File: test-config\.yaml/
       );
+    });
+
+    it('should not report an error and throw if id is missing when FSHOnly is true', () => {
+      delete minYAML.id;
+      minYAML.FSHOnly = true;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.id).toBeUndefined();
     });
   });
 
@@ -407,7 +415,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -437,15 +445,6 @@ describe('importConfiguration', () => {
       minYAML.version = 1.2; // YAML parse will interpret 1.2 as a number, not a string
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.version).toBe('1.2');
-    });
-    it('should report an error and throw if version is missing', () => {
-      delete minYAML.version;
-      expect(() => importConfiguration(minYAML, 'test-config.yaml')).toThrow(
-        'Minimal config not met'
-      );
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
-      );
     });
   });
 
@@ -1307,7 +1306,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
     it('should report an error and throw if fhirVersion is an empty array', () => {
@@ -1316,7 +1315,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to start processing FSH: id, version, canonical, fhirVersion\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to start processing FSH: canonical, fhirVersion\.\s*File: test-config\.yaml/
       );
     });
   });

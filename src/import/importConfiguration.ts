@@ -46,8 +46,9 @@ import {
 } from '../fhirtypes';
 import { FshCode } from '../fshtypes';
 
-const MINIMAL_CONFIG_PROPERTIES = ['id', 'version', 'canonical', 'fhirVersion'];
+const MINIMAL_CONFIG_PROPERTIES = ['canonical', 'fhirVersion'];
 // Properties that are only relevant when an IG is going to be generated from output, and have no informational purpose
+const MINIMAL_IG_ONLY_PROPERTIES = ['id'];
 const IG_ONLY_PROPERTIES = [
   'contained',
   'extension',
@@ -94,6 +95,22 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     logger.error(
       'SUSHI minimally requires the following configuration properties to start processing FSH: ' +
         MINIMAL_CONFIG_PROPERTIES.join(', ') +
+        '.',
+      { file }
+    );
+    throw new Error('Minimal config not met');
+  }
+  // There are some properties that are required to generate an IG
+  if (
+    !yaml.FSHOnly &&
+    MINIMAL_IG_ONLY_PROPERTIES.some(
+      (p: keyof YAMLConfiguration) =>
+        yaml[p] == null || (Array.isArray(yaml[p]) && (yaml[p] as any[]).length === 0)
+    )
+  ) {
+    logger.error(
+      'SUSHI minimally requires the following configuration properties to generate an IG: ' +
+        MINIMAL_IG_ONLY_PROPERTIES.join(', ') +
         '.',
       { file }
     );
