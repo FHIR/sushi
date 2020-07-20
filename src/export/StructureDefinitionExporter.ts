@@ -34,6 +34,16 @@ import {
 } from '../fhirtypes/common';
 import { Package } from './Package';
 
+// Extensions that should not be inherited by derived profiles
+// See: https://jira.hl7.org/browse/FHIR-27535
+const UNINHERITED_EXTENSIONS = [
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-explicit-type-name',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg'
+];
+
 /**
  * The StructureDefinitionExporter is the class for exporting Profiles and Extensions.
  * The operations and structure of both exporters are very similar, so they currently share an exporter.
@@ -67,8 +77,18 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.language;
     delete structDef.text;
     delete structDef.contained;
-    delete structDef.extension; // see https://github.com/FHIR/sushi/issues/116
-    delete structDef.modifierExtension;
+    structDef.extension = structDef.extension?.filter(e => !UNINHERITED_EXTENSIONS.includes(e.url));
+    if (!structDef.extension?.length) {
+      // for consistency, delete rather than leaving null-valued
+      delete structDef.extension;
+    }
+    structDef.modifierExtension = structDef.modifierExtension?.filter(
+      e => !UNINHERITED_EXTENSIONS.includes(e.url)
+    );
+    if (!structDef.modifierExtension?.length) {
+      // for consistency, delete rather than leaving null-valued
+      delete structDef.modifierExtension;
+    }
     structDef.url = `${this.tank.config.canonical}/StructureDefinition/${structDef.id}`;
     delete structDef.identifier;
     structDef.version = this.tank.config.version; // can be overridden using a rule
