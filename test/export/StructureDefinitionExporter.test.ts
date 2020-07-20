@@ -321,26 +321,31 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should export sub-extensions, with similar starting names and different types', () => {
-    const ruleString = new OnlyRule('value[x]');
+    const ruleString = new OnlyRule('extension[FooFoo].value[x]');
     ruleString.types = [{ type: 'string' }];
-    const ruleDecimal = new OnlyRule('value[x]');
+    const ruleDecimal = new OnlyRule('extension[FooBar].value[x]');
     ruleDecimal.types = [{ type: 'decimal' }];
-    const extensionParent = new Extension('Parent');
-    const extensionFooFoo = new Extension('FooFoo');
-    const extensionFooBar = new Extension('FooBar');
-    extensionFooFoo.parent = 'Parent';
-    extensionFooBar.parent = 'Parent';
-    extensionFooFoo.rules.push(ruleString);
-    extensionFooBar.rules.push(ruleDecimal);
-    //TODO loops
-    doc.extensions.set(extensionParent.name, extensionParent);
-    doc.extensions.set(extensionFooFoo.name, extensionFooFoo);
-    doc.extensions.set(extensionFooBar.name, extensionFooBar);
-    exporter.export();
+    const exParent = new Extension('Parent');
 
-    const exported = pkg.extensions[3];
-    expect(exported.name).toBe('FooBar');
-    expect(exported.id).toBe('FooBar');
+
+    const FooFooCardRule = new CardRule('extension[FooFoo]');
+    FooFooCardRule.min = 1;
+    FooFooCardRule.max = '1'; // * extension[sliceB].extension 1..1
+
+    const FooBarCardRule = new CardRule('extension[FooBar]');
+    FooBarCardRule.min = 0;
+    FooBarCardRule.max = '1'; // * extension[sliceB].extension 0..0 
+  
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = [{ name: 'FooFoo' },{ name: 'FooBar' }];
+
+    exParent.rules.push(containsRule,FooFooCardRule,FooBarCardRule,ruleString,ruleDecimal);
+
+    exporter.exportStructDef(exParent);
+    const sd = pkg.extensions[0];
+    const extension = sd.elements.find(e => e.id === 'Extension.extension:FooBar.value[x]');
+    expect(extension.type[0].code).toBe('decimal');
+
   });
 
   it('should not hardcode in the default context if parent already had a context', () => {
