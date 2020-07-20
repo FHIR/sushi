@@ -1636,6 +1636,7 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should log an error when no version can be found for a Canonical entity', () => {
+    const originalVersion = fisher.tank.config.version;
     delete fisher.tank.config.version;
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
@@ -1660,6 +1661,7 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Unable to find version for VeryRealCodeSystem.*File: Real\.fsh.*Line: 1 - 3\D*/s
     );
+    fisher.tank.config.version = originalVersion;
   });
 
   it('should apply a FixedValue rule with Canonical of a FHIR entity', () => {
