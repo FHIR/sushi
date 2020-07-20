@@ -332,11 +332,15 @@ describe('StructureDefinitionExporter', () => {
     extensionFooBar.parent = 'Parent';
     extensionFooFoo.rules.push(ruleString);
     extensionFooBar.rules.push(ruleDecimal);
+    //TODO loops
     doc.extensions.set(extensionParent.name, extensionParent);
     doc.extensions.set(extensionFooFoo.name, extensionFooFoo);
     doc.extensions.set(extensionFooBar.name, extensionFooBar);
-    const exported = exporter.export().extensions;
-    expect(exported.length).toBe(2);
+    exporter.export();
+
+    const exported = pkg.extensions[3];
+    expect(exported.name).toBe('FooBar');
+    expect(exported.id).toBe('FooBar');
   });
 
   it('should not hardcode in the default context if parent already had a context', () => {
