@@ -12,7 +12,9 @@ import {
   InsertRule,
   ConceptRule,
   ValueSetConceptComponentRule,
-  SdRule
+  SdRule,
+  CaretValueRule,
+  FixedValueType
 } from '../fshtypes/rules';
 import {
   FshReference,
@@ -225,13 +227,14 @@ export function getArrayIndex(pathPart: PathPart): number {
  * @returns {FixedValueRule} a clone of the rule if replacing is done, otherwise the original rule
  */
 export function replaceReferences(
-  rule: FixedValueRule,
+  rule: FixedValueRule | CaretValueRule,
   tank: FSHTank,
   fisher: Fishable
-): FixedValueRule {
-  let clone: FixedValueRule;
-  if (rule.fixedValue instanceof FshReference) {
-    const instance = tank.fish(rule.fixedValue.reference, Type.Instance) as Instance;
+): FixedValueRule | CaretValueRule {
+  let clone: FixedValueRule | CaretValueRule;
+  const value = getRuleValue(rule);
+  if (value instanceof FshReference) {
+    const instance = tank.fish(value.reference, Type.Instance) as Instance;
     const instanceMeta = fisher.fishForMetadata(
       instance?.instanceOf,
       Type.Resource,
@@ -247,20 +250,33 @@ export function replaceReferences(
       ) as FixedValueRule;
       const id = idRule?.fixedValue ?? instance.id;
       clone = cloneDeep(rule);
-      const fv = clone.fixedValue as FshReference;
+      const fv = getRuleValue(clone) as FshReference;
       fv.reference = `${instanceMeta.sdType}/${id}`;
       fv.sdType = instanceMeta.sdType;
     }
-  } else if (rule.fixedValue instanceof FshCode) {
-    const codeSystem = tank.fish(rule.fixedValue.system, Type.CodeSystem);
+  } else if (value instanceof FshCode) {
+    const codeSystem = tank.fish(value.system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
     if (codeSystem && codeSystemMeta) {
       clone = cloneDeep(rule);
-      const fv = clone.fixedValue as FshCode;
+      const fv = getRuleValue(clone) as FshCode;
       fv.system = codeSystemMeta.url;
     }
   }
   return clone ?? rule;
+}
+
+/**
+ * Function to get a value from a rule that has a value (FixedValue or CaretValue)
+ * @param rule - The rule to get a value from
+ * @returns - The value on the rule
+ */
+function getRuleValue(rule: FixedValueRule | CaretValueRule): FixedValueType {
+  if (rule instanceof FixedValueRule) {
+    return rule.fixedValue;
+  } else if (rule instanceof CaretValueRule) {
+    return rule.value;
+  }
 }
 
 /**
