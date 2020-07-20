@@ -327,25 +327,23 @@ describe('StructureDefinitionExporter', () => {
     ruleDecimal.types = [{ type: 'decimal' }];
     const exParent = new Extension('Parent');
 
-
     const FooFooCardRule = new CardRule('extension[FooFoo]');
     FooFooCardRule.min = 1;
     FooFooCardRule.max = '1'; // * extension[sliceB].extension 1..1
 
     const FooBarCardRule = new CardRule('extension[FooBar]');
     FooBarCardRule.min = 0;
-    FooBarCardRule.max = '1'; // * extension[sliceB].extension 0..0 
-  
-    const containsRule = new ContainsRule('extension');
-    containsRule.items = [{ name: 'FooFoo' },{ name: 'FooBar' }];
+    FooBarCardRule.max = '1'; // * extension[sliceB].extension 0..0
 
-    exParent.rules.push(containsRule,FooFooCardRule,FooBarCardRule,ruleString,ruleDecimal);
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = [{ name: 'FooFoo' }, { name: 'FooBar' }];
+
+    exParent.rules.push(containsRule, FooFooCardRule, FooBarCardRule, ruleString, ruleDecimal);
 
     exporter.exportStructDef(exParent);
     const sd = pkg.extensions[0];
     const extension = sd.elements.find(e => e.id === 'Extension.extension:FooBar.value[x]');
     expect(extension.type[0].code).toBe('decimal');
-
   });
 
   it('should not hardcode in the default context if parent already had a context', () => {
