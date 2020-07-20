@@ -1,0 +1,24 @@
+# ╭──────────────────────────────────────ImplementationGuide───────────────────────────────────────╮
+# │  The properties below are used to create the ImplementationGuide resource. For a list of       │
+# │  supported properties, see: https://fshschool.org/sushi/configuration/                         │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+id: fhir.example
+canonical: http://example.org
+name: ExampleIG
+status: draft
+version: 0.1.0
+fhirVersion: 4.0.1
+copyrightYear: 2020+
+releaseLabel: ci-build
+
+# ╭─────────────────────────────────────────────ig.ini─────────────────────────────────────────────╮
+# │  To use a provided ig-data/ig.ini file, delete the "template" property below.                  │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+template: fhir.base.template#current
+
+# ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
+# │  To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.     │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+menu:
+  Home: index.html
+  Artifacts: artifacts.html
