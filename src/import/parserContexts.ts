@@ -261,6 +261,7 @@ export interface ValueContext extends ParserRuleContext {
   DATETIME(): ParserRuleContext;
   TIME(): ParserRuleContext;
   reference(): ReferenceContext;
+  canonical(): CanonicalContext;
   code(): CodeContext;
   quantity(): QuantityContext;
   ratio(): RatioContext;
@@ -295,6 +296,10 @@ export interface ReferenceContext extends ParserRuleContext {
   OR_REFERENCE(): ParserRuleContext;
   PIPE_REFERENCE(): ParserRuleContext;
   STRING(): ParserRuleContext;
+}
+
+export interface CanonicalContext extends ParserRuleContext {
+  CANONICAL(): ParserRuleContext;
 }
 
 export interface BoolContext extends ParserRuleContext {

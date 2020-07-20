@@ -4,7 +4,7 @@ import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
-import { FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
+import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
 import { FixedValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
@@ -12,6 +12,7 @@ import {
   ValueAlreadyFixedError,
   NoSingleTypeError,
   MismatchedTypeError,
+  InvalidCanonicalUrlError,
   InvalidCardinalityError,
   InvalidTypeError,
   SlicingDefinitionError,
@@ -1118,6 +1119,8 @@ export class ElementDefinition {
       type = 'Ratio';
     } else if (value instanceof FshReference) {
       type = 'Reference';
+    } else if (value instanceof FshCanonical) {
+      type = 'Canonical';
     } else if (typeof value === 'object') {
       type = value.constructor?.name;
     } else {
@@ -1178,6 +1181,24 @@ export class ElementDefinition {
           }
         }
         this.fixFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
+        break;
+      case 'Canonical':
+        value = value as FshCanonical;
+        // Get the canonical url of the entity
+        const canonicalUrl = fisher.fishForMetadata(
+          value.entityName,
+          Type.Resource,
+          Type.Type,
+          Type.Profile,
+          Type.Extension,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Instance
+        )?.url;
+        if (!canonicalUrl) {
+          throw new InvalidCanonicalUrlError(value.entityName);
+        }
+        this.fixString(canonicalUrl, exactly);
         break;
       default:
         throw new MismatchedTypeError(type, value, this.type[0].code);
