@@ -343,14 +343,14 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.derivation).toBe('constraint');
   });
 
-  it('should export sub-extensions, with similar starting names and different types', () => {
-    const ruleString = new OnlyRule('extension[FooFoo].value[x]');
+  it.skip('should export sub-extensions, with similar starting names and different types', () => {
+    const ruleString = new OnlyRule('extension[Foo].value[x]');
     ruleString.types = [{ type: 'string' }];
     const ruleDecimal = new OnlyRule('extension[FooBar].value[x]');
     ruleDecimal.types = [{ type: 'decimal' }];
     const exParent = new Extension('Parent');
 
-    const FooFooCardRule = new CardRule('extension[FooFoo]');
+    const FooFooCardRule = new CardRule('extension[Foo]');
     FooFooCardRule.min = 1;
     FooFooCardRule.max = '1'; // * extension[sliceB].extension 1..1
 
@@ -359,7 +359,7 @@ describe('StructureDefinitionExporter', () => {
     FooBarCardRule.max = '1'; // * extension[sliceB].extension 0..0
 
     const containsRule = new ContainsRule('extension');
-    containsRule.items = [{ name: 'FooFoo' }, { name: 'FooBar' }];
+    containsRule.items = [{ name: 'Foo' }, { name: 'FooBar' }];
 
     exParent.rules.push(containsRule, FooFooCardRule, FooBarCardRule, ruleString, ruleDecimal);
 
