@@ -1649,7 +1649,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
-    const str = stringCtx.getText();
+    const str = stringCtx?.getText() ?? '""'; // default to empty string if stringCtx is null
     const strNoQuotes = str.slice(1, str.length - 1); // Strip surrounding quotes
 
     // Replace escaped characters
