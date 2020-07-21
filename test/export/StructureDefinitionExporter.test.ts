@@ -343,6 +343,32 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.derivation).toBe('constraint');
   });
 
+  it.skip('should export sub-extensions, with similar starting names and different types', () => {
+    const ruleString = new OnlyRule('extension[Foo].value[x]');
+    ruleString.types = [{ type: 'string' }];
+    const ruleDecimal = new OnlyRule('extension[FooBar].value[x]');
+    ruleDecimal.types = [{ type: 'decimal' }];
+    const exParent = new Extension('Parent');
+
+    const FooFooCardRule = new CardRule('extension[Foo]');
+    FooFooCardRule.min = 1;
+    FooFooCardRule.max = '1'; // * extension[sliceB].extension 1..1
+
+    const FooBarCardRule = new CardRule('extension[FooBar]');
+    FooBarCardRule.min = 0;
+    FooBarCardRule.max = '1'; // * extension[sliceB].extension 0..0
+
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = [{ name: 'Foo' }, { name: 'FooBar' }];
+
+    exParent.rules.push(containsRule, FooFooCardRule, FooBarCardRule, ruleString, ruleDecimal);
+
+    exporter.exportStructDef(exParent);
+    const sd = pkg.extensions[0];
+    const extension = sd.elements.find(e => e.id === 'Extension.extension:FooBar.value[x]');
+    expect(extension.type[0].code).toBe('decimal');
+  });
+
   it('should not hardcode in the default context if parent already had a context', () => {
     // NOTE: This is a temporary test to ensure that we don't overwrite a valid context with our
     // "default" context.  In the (near) future, however, we should do away with our default
