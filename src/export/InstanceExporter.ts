@@ -35,7 +35,7 @@ export class InstanceExporter implements Fishable {
     rules.forEach(r => {
       r.path = r.path.replace(/\[0+\]/g, '');
     });
-    rules = rules.map(r => replaceReferences(r, this.tank, this.fisher) as FixedValueRule);
+    rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
     // Convert strings in fixedValueRules to instances
     rules = rules.filter(r => {
       if (r.isInstance) {
