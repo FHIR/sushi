@@ -1190,6 +1190,24 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
+      it('should parse fixed value Reference rule with whitespace', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * basedOn = Reference(   fooProfile   )
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedReference = new FshReference('fooProfile')
+          .withLocation([5, 21, 5, 47])
+          .withFile('');
+        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+      });
+
       it('should log an error when a fixed value Reference rule has a choice of references', () => {
         const input = `
 
@@ -1415,6 +1433,24 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an only rule with a reference to multiple types with whitespace', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only Reference(   Organization    or  CareTeam)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isReference: true },
+          { type: 'CareTeam', isReference: true }
+        );
+      });
+
       it('should allow and translate aliases for only types', () => {
         const input = `
         Alias: QUANTITY = http://hl7.org/fhir/StructureDefinition/Quantity
@@ -1443,6 +1479,27 @@ describe('FSHImporter', () => {
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(Organization | CareTeam)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isReference: true },
+          { type: 'CareTeam', isReference: true }
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        );
+      });
+
+      it('should log a warning when references are listed with pipes with whitespace', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only Reference(   Organization  |   CareTeam)
         `;
 
         const result = importSingleText(input);
