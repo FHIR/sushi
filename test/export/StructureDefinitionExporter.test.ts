@@ -343,7 +343,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.derivation).toBe('constraint');
   });
 
-  it.skip('should export sub-extensions, with similar starting names and different types', () => {
+  it('should export sub-extensions, with similar starting names and different types', () => {
     const ruleString = new OnlyRule('extension[Foo].value[x]');
     ruleString.types = [{ type: 'string' }];
     const ruleDecimal = new OnlyRule('extension[FooBar].value[x]');
