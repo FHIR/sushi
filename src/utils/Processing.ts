@@ -1,10 +1,12 @@
 import path from 'path';
 import fs from 'fs-extra';
+import readlineSync from 'readline-sync';
 import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
 import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, padEnd } from 'lodash';
+import YAML from 'yaml';
 import { Package } from '../export';
 import {
   filterInlineInstances,
@@ -166,6 +168,89 @@ export function writeFHIRResources(outDir: string, outPackage: Package, snapshot
   writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
+}
+
+/**
+ * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
+ */
+export function init(): void {
+  console.log(
+    '\n╭──────────────────────────────────────────────────────────╮\n' +
+      '│ This interactive tool will use your answers to create a  │\n' +
+      "│ working SUSHI project configured with your project's     │\n" +
+      '│ basic information.                                       │\n' +
+      '╰──────────────────────────────────────────────────────────╯\n'
+  );
+
+  const configDoc = YAML.parseDocument(
+    fs.readFileSync(path.join(__dirname, 'init-project', 'config.yaml'), 'utf-8')
+  );
+  // Accept user input for certain fields
+  ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
+    const userValue = readlineSync.question(
+      `${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${configDoc.get(field)}): `
+    );
+    if (userValue) {
+      configDoc.set(field, userValue);
+    }
+  });
+  // Ensure copyrightYear is accurate
+  configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
+  const projectName = configDoc.get('name');
+
+  // Write init directory out, including user made config.yaml, files in utils/init-project, and build scripts from ig/files
+  const outputDir = path.resolve('.', projectName);
+  const initProjectDir = path.join(__dirname, 'init-project');
+  if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
+    console.log('\nAborting Initialization.\n');
+    return;
+  }
+
+  // Add index.md content, updating to reflect the user given name
+  const indexPageContent = fs
+    .readFileSync(path.join(initProjectDir, 'index.md'), 'utf-8')
+    .replace('ExampleIG', projectName);
+  fs.ensureDirSync(path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent'));
+  fs.writeFileSync(
+    path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent', 'index.md'),
+    indexPageContent
+  );
+  // Add the config
+  fs.writeFileSync(path.join(outputDir, 'fsh', 'config.yaml'), configDoc.toString());
+  // Copy over remaining static files
+  fs.copyFileSync(
+    path.join(initProjectDir, 'patient.fsh'),
+    path.join(outputDir, 'fsh', 'patient.fsh')
+  );
+  fs.copyFileSync(
+    path.join(initProjectDir, 'init-gitignore.txt'),
+    path.join(outputDir, '.gitignore')
+  );
+  // Add the _updatePublisher, _genonce, and _gencontinuous scripts
+  const scriptsDir = path.join(__dirname, '..', 'ig', 'files');
+  const scriptsDirContents = fs.readdirSync(scriptsDir);
+  scriptsDirContents
+    .filter(file => file.startsWith('_'))
+    .forEach(file => {
+      fs.copyFileSync(path.join(scriptsDir, file), path.join(outputDir, file));
+    });
+
+  const maxLength = 31;
+  const printName =
+    projectName.length > maxLength ? projectName.slice(0, maxLength - 3) + '...' : projectName;
+  console.log(
+    '\n╭──────────────────────────────────────────────────────────╮\n' +
+      `│ Project initialized at: ./${padEnd(printName, maxLength)}│\n` +
+      '├──────────────────────────────────────────────────────────┤\n' +
+      '│ Now try this:                                            │\n' +
+      '│                                                          │\n' +
+      `│ > cd ${padEnd(printName, maxLength + 21)}│\n` +
+      '│ > sushi .                                                │\n' +
+      '│                                                          │\n' +
+      '│ For guidance on project structure and configuration see  │\n' +
+      '│ the SUSHI documentation:  https://fshschool.org/sushi    │\n' +
+      '╰──────────────────────────────────────────────────────────╯\n'
+  );
 }
 
 function getFilesRecursive(dir: string): string[] {

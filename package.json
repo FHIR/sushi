@@ -3,7 +3,7 @@
   "version": "0.14.0",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
-    "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files && npm run fixGrammarTypes",
+    "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files && cp -r src/utils/init-project dist/utils/init-project && npm run fixGrammarTypes",
     "build:watch": "tsc -w",
     "build:grammar": "bash antlr/gradlew -p antlr generateGrammarSource",
     "test": "jest --maxWorkers=4 --coverage",
@@ -37,6 +37,7 @@
   "files": [
     "dist/**/*.{js,json,d.ts}",
     "dist/ig/files/**/*",
+    "dist/utils/init-project/**/*",
     "antlr/**/*.g4"
   ],
   "license": "Apache-2.0",
@@ -48,6 +49,7 @@
     "@types/lodash": "^4.14.149",
     "@types/markdown-table": "^2.0.0",
     "@types/node": "^12.12.34",
+    "@types/readline-sync": "^1.4.3",
     "@types/sax": "^1.2.1",
     "@types/tar": "^4.0.3",
     "@types/temp": "^0.8.34",
@@ -79,6 +81,7 @@
     "junk": "^3.1.0",
     "lodash": "^4.17.19",
     "markdown-table": "^2.0.0",
+    "readline-sync": "^1.4.10",
     "sax": "^1.2.4",
     "tar": "^5.0.5",
     "temp": "^0.9.1",
