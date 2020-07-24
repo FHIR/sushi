@@ -1090,6 +1090,11 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValue(ctx: pc.ValueContext): FixedValueType {
+    // In cases where the parser encounters an error, ctx might be null
+    if (ctx == null) {
+      return;
+    }
+
     if (ctx.SEQUENCE()) {
       return this.aliasAwareValue(ctx, ctx.SEQUENCE().getText());
     }
@@ -1351,7 +1356,7 @@ export class FSHImporter extends FSHVisitor {
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
     caretValueRule.isInstance =
-      ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
+      ctx.value()?.SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
     return caretValueRule;
   }
 

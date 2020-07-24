@@ -24,7 +24,8 @@ export class FSHErrorListener extends ErrorListener {
     };
 
     // Now attempt to detect known patterns and improve the error messages
-    const previousToken = getPreviousNonWsToken(recognizer, offendingSymbol);
+    const oneTokenBack = getPreviousNonWsToken(recognizer, offendingSymbol);
+    const twoTokensBack = getPreviousNonWsToken(recognizer, oneTokenBack);
 
     // ########################################################################
     // # Missing space around =                                               #
@@ -32,27 +33,34 @@ export class FSHErrorListener extends ErrorListener {
 
     // Alias: MyAlias =http://myserver.com/
     // > missing '=' at '=http://myserver.com/'
-    if (/^missing '='/.test(msg) && /^=/.test(offendingSymbol.text)) {
+    if (
+      /^missing '='/.test(msg) &&
+      /^=/.test(offendingSymbol.text) &&
+      !/^\^/.test(oneTokenBack?.text)
+    ) {
       message =
         "Alias declarations must include at least one space both before and after the '=' sign";
     }
 
     // Alias: MyAlias= http://myserver.com/
     // > missing '=' at 'http://myserver.com/'
-    else if (/^missing '='/.test(msg) && /=$/.test(previousToken.text)) {
+    else if (/^missing '='/.test(msg) && /^[^\^].*=$/.test(oneTokenBack?.text)) {
       message =
         "Alias declarations must include at least one space both before and after the '=' sign";
       // Need to adjust the location to match the previous token (where '=' is)
-      location = getTokenLocation(previousToken);
+      location = getTokenLocation(oneTokenBack);
     }
 
     // Alias: MyAlias=http://myserver.com/
-    // > msg => mismatched input '<EOF>' expecting '='
-    else if (/^mismatched input .+ expecting '='$/.test(msg)) {
+    // > mismatched input '<EOF>' expecting '='
+    else if (
+      /^mismatched input .+ expecting '='$/.test(msg) &&
+      /^[^\^].*=/.test(oneTokenBack?.text)
+    ) {
       message =
         "Alias declarations must include at least one space both before and after the '=' sign";
       // Need to adjust the location to match the previous token (where '=' is)
-      location = getTokenLocation(previousToken);
+      location = getTokenLocation(oneTokenBack);
     }
 
     // * active= true
@@ -64,6 +72,52 @@ export class FSHErrorListener extends ErrorListener {
     else if (/^no viable alternative at input '.*((\S=)|(=\S))/.test(msg)) {
       message =
         "Assignment rules must include at least one space both before and after the '=' sign";
+    }
+
+    // * component ^short ="Component1"
+    // > 'missing '=' at '="Component1"''
+    else if (
+      /^missing '='/.test(msg) &&
+      /^=/.test(offendingSymbol.text) &&
+      /^\^/.test(oneTokenBack?.text)
+    ) {
+      message =
+        "Assignment rules must include at least one space both before and after the '=' sign";
+    }
+
+    // * component ^short ="A component"
+    // > extraneous input 'component\"' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING}
+    else if (
+      /^extraneous input/.test(msg) &&
+      /^\^/.test(twoTokensBack?.text) &&
+      /^=/.test(oneTokenBack?.text)
+    ) {
+      message =
+        "Assignment rules must include at least one space both before and after the '=' sign";
+      // Need to adjust the location to match the previous token (where '=' is)
+      location = getTokenLocation(oneTokenBack);
+    }
+
+    // * component ^short= "Component1"
+    // > 'missing '=' at '"Component1"''
+    // * component ^short= "A component"
+    // > missing '=' at '"A component"'
+    // * component ^short="A component"
+    // > missing '=' at 'component"'
+    else if (/^missing '='/.test(msg) && /^\^.+=/.test(oneTokenBack?.text)) {
+      message =
+        "Assignment rules must include at least one space both before and after the '=' sign";
+      // Need to adjust the location to match the previous token (where '=' is)
+      location = getTokenLocation(oneTokenBack);
+    }
+
+    // * component ^short="Component1"
+    // > 'mismatched input '<EOF>' expecting '=''
+    else if (/^mismatched input .+ expecting '='$/.test(msg) && /^\^.+=/.test(oneTokenBack?.text)) {
+      message =
+        "Assignment rules must include at least one space both before and after the '=' sign";
+      // Need to adjust the location to match the previous token (where '=' is)
+      location = getTokenLocation(oneTokenBack);
     }
 
     // ########################################################################
@@ -78,16 +132,16 @@ export class FSHErrorListener extends ErrorListener {
       message =
         "Mapping rules must include at least one space both before and after the '->' operator";
       // Need to adjust the location to match the previous token (where '=' is)
-      location = getTokenLocation(previousToken);
+      location = getTokenLocation(oneTokenBack);
     }
 
     // * identifier-> "Patient.identifier"
     // > missing '->' at '"Patient.identifier"'
-    else if (/^missing '->'/.test(msg) && /->$/.test(previousToken.text)) {
+    else if (/^missing '->'/.test(msg) && /->$/.test(oneTokenBack?.text)) {
       message =
         "Mapping rules must include at least one space both before and after the '->' operator";
       // Need to adjust the location to match the previous token (where '=' is)
-      location = getTokenLocation(previousToken);
+      location = getTokenLocation(oneTokenBack);
     }
 
     // ########################################################################
@@ -108,15 +162,19 @@ export class FSHErrorListener extends ErrorListener {
 /**
  * Gets the previous non-whitespace token, which may be needed to help interpret the error
  * @param recognizer - the Recognizer instance provided by ANTLR
- * @param offendingSymbol - the token that triggered the error
+ * @param token - the token ahead of the token we want returned
  * @returns the previous non-WS token or undefined if there is no previous non-WS token
  */
-function getPreviousNonWsToken(recognizer: Recognizer, offendingSymbol: Token): Token | undefined {
-  for (let i = offendingSymbol.tokenIndex - 1; i >= 0; i--) {
+function getPreviousNonWsToken(recognizer: Recognizer, token: Token): Token | undefined {
+  if (token == null) {
+    return;
+  }
+
+  for (let i = token.tokenIndex - 1; i >= 0; i--) {
     // @ts-ignore _input is private, but we need it
-    const token = recognizer._input.tokens[i];
-    if (/\S/.test(token.text)) {
-      return token;
+    const previousToken = recognizer._input.tokens[i];
+    if (/\S/.test(previousToken.text)) {
+      return previousToken;
     }
   }
 }

@@ -76,6 +76,18 @@ describe('FSHErrorListener', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
     );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Profile: SampleObservation
+    Parent: Observation
+    * valueString= "My Value"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
   });
 
   it('should make sense of errors due to no space after = in an assignment rule', () => {
@@ -88,6 +100,18 @@ describe('FSHErrorListener', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
     );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Profile: SampleObservation
+    Parent: Observation
+    * valueString ="My Value"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
   });
 
   it('should make sense of errors due to no space around = in an assignment rule', () => {
@@ -97,6 +121,90 @@ describe('FSHErrorListener', () => {
     * component=FOO#bar
     `;
     importSingleText(input, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Profile: SampleObservation
+    Parent: Observation
+    * valueString="My Value"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should make sense of errors due to no space before = in a caret rule', () => {
+    const input = `
+    Profile: SampleObservation
+    Parent: Observation
+    * component ^short= "Component1"
+    `;
+    importSingleText(input, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Profile: SampleObservation
+    Parent: Observation
+    * component ^short= "A component"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should make sense of errors due to no space after = in a caret rule', () => {
+    const input = `
+    Profile: SampleObservation
+    Parent: Observation
+    * component ^short ="Component1"
+    `;
+    importSingleText(input, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Profile: SampleObservation
+    Parent: Observation
+    * component ^short ="A component"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should make sense of errors due to no space around = in a caret rule', () => {
+    const input = `
+    Profile: SampleObservation
+    Parent: Observation
+    * component ^short="Component1"
+    `;
+    importSingleText(input, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Profile: SampleObservation
+    Parent: Observation
+    * component ^short="A component"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
     );
@@ -119,6 +227,21 @@ describe('FSHErrorListener', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Mapping rules must include at least one space both before and after the '->' operator.*File: Invalid\.fsh.*Line: 7\D*/s
     );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Mapping:  USCorePatientToArgonaut
+    Source:   USCorePatient
+    Target:   "http://unknown.org/Argonaut-DQ-DSTU2"
+    Title:    "Argonaut DSTU2"
+    Id:       argonaut-dq-dstu2
+    * identifier ->"Patient identifier"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Mapping rules must include at least one space both before and after the '->' operator.*File: Invalid\.fsh.*Line: 7\D*/s
+    );
   });
 
   it('should make sense of errors due to no space before -> in a mapping rule', () => {
@@ -134,6 +257,21 @@ describe('FSHErrorListener', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Mapping rules must include at least one space both before and after the '->' operator.*File: Invalid\.fsh.*Line: 7\D*/s
     );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Mapping:  USCorePatientToArgonaut
+    Source:   USCorePatient
+    Target:   "http://unknown.org/Argonaut-DQ-DSTU2"
+    Title:    "Argonaut DSTU2"
+    Id:       argonaut-dq-dstu2
+    * identifier-> "Patient identifier"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Mapping rules must include at least one space both before and after the '->' operator.*File: Invalid\.fsh.*Line: 7\D*/s
+    );
   });
 
   it('should make sense of errors due to no space around -> in a mapping rule', () => {
@@ -146,6 +284,21 @@ describe('FSHErrorListener', () => {
     * identifier->"Patient.identifier"
     `;
     importSingleText(input, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Mapping rules must include at least one space both before and after the '->' operator.*File: Invalid\.fsh.*Line: 7\D*/s
+    );
+
+    // Test with a multi-word string as well since sometimes that results in a different error
+    loggerSpy.reset();
+    const input2 = `
+    Mapping:  USCorePatientToArgonaut
+    Source:   USCorePatient
+    Target:   "http://unknown.org/Argonaut-DQ-DSTU2"
+    Title:    "Argonaut DSTU2"
+    Id:       argonaut-dq-dstu2
+    * identifier->"Patient identifier"
+    `;
+    importSingleText(input2, 'Invalid.fsh');
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Mapping rules must include at least one space both before and after the '->' operator.*File: Invalid\.fsh.*Line: 7\D*/s
     );
