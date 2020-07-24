@@ -1251,15 +1251,21 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCanonical(ctx: pc.CanonicalContext): FshCanonical {
-    const canonicalText = this.parseCanonical(ctx.CANONICAL().getText());
+    const [canonicalText, versionText] = this.parseCanonical(ctx.CANONICAL().getText());
     const fshCanonical = new FshCanonical(canonicalText)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+    if (versionText) {
+      fshCanonical.version = versionText;
+    }
     return fshCanonical;
   }
 
-  private parseCanonical(canonical: string): string {
-    return canonical.slice(canonical.indexOf('(') + 1, canonical.length - 1).trim();
+  private parseCanonical(canonical: string): string[] {
+    return canonical
+      .slice(canonical.indexOf('(') + 1, canonical.length - 1)
+      .split(/\s*\|\s*(.+)/)
+      .map(str => str.trim());
   }
 
   visitBool(ctx: pc.BoolContext): boolean {
