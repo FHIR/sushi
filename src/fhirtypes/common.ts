@@ -226,7 +226,11 @@ export function getArrayIndex(pathPart: PathPart): number {
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  * @returns {FixedValueRule} a clone of the rule if replacing is done, otherwise the original rule
  */
-export function replaceReferences<T>(rule: T, tank: FSHTank, fisher: Fishable): T {
+export function replaceReferences<T extends FixedValueRule | CaretValueRule>(
+  rule: T,
+  tank: FSHTank,
+  fisher: Fishable
+): T {
   let clone: T;
   const value = getRuleValue(rule);
   if (value instanceof FshReference) {
@@ -267,7 +271,7 @@ export function replaceReferences<T>(rule: T, tank: FSHTank, fisher: Fishable): 
  * @param rule - The rule to get a value from
  * @returns - The value on the rule
  */
-function getRuleValue(rule: any): FixedValueType {
+function getRuleValue(rule: FixedValueRule | CaretValueRule): FixedValueType {
   if (rule instanceof FixedValueRule) {
     return rule.fixedValue;
   } else if (rule instanceof CaretValueRule) {
