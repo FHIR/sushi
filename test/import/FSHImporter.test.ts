@@ -27,24 +27,6 @@ describe('FSHImporter', () => {
     expect(result.extensions.size).toBe(0);
   });
 
-  it('should report mismatched input errors from antlr', () => {
-    const input = `
-    Profile: MismatchedPizza
-    Pizza: Large
-    `;
-    importSingleText(input, 'Pizza.fsh');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Pizza\.fsh.*Line: 3\D*/s);
-  });
-
-  it('should report extraneous input errors from antlr', () => {
-    const input = `
-    Profile: Something Spaced
-    Parent: Spacious
-    `;
-    importSingleText(input, 'Space.fsh');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Space\.fsh.*Line: 2\D*/s);
-  });
-
   it('should recover from extraneous input errors from antlr', () => {
     const input = `
     OOPS!
@@ -337,10 +319,10 @@ describe('FSHImporter', () => {
     Description: """
     This
       Description
-      
+
         Looks
           Like
-          
+
             A
               Staircase
                 """`;
@@ -463,7 +445,7 @@ describe('FSHImporter', () => {
   it('should avoid crashing and log error messages because of mismatched input', () => {
     const input = `
     Profile: "BadProfile"
-  
+
     Profile: BetterProfile
     Id: "BadId"
     Description: BadDescription
