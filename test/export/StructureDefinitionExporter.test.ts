@@ -2449,6 +2449,98 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should apply a Reference CaretValueRule on an SD and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Organization';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'identifier[0].assigner';
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(sd.identifier[0].assigner).toEqual({
+      reference: 'Organization/bar-id'
+    });
+  });
+
+  it('should apply a Reference CaretValueRule on an ED and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Organization';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new CaretValueRule('subject');
+    rule.caretPath = 'patternReference';
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const ed = sd.elements.find(e => e.id === 'Observation.subject');
+
+    expect(ed.patternReference).toEqual({
+      reference: 'Organization/bar-id'
+    });
+  });
+
+  it('should apply a CodeSystem CaretValueRule on an SD and replace the CodeSystem', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const cs = new FshCodeSystem('Bar');
+    cs.id = 'bar-id';
+    doc.codeSystems.set(cs.name, cs);
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'jurisdiction';
+    rule.value = new FshCode('foo', 'Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(sd.jurisdiction[0].coding[0]).toEqual({
+      code: 'foo',
+      system: 'http://hl7.org/fhir/us/minimal/CodeSystem/bar-id'
+    });
+  });
+
+  it('should apply a CodeSystem CaretValueRule on an ED and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const cs = new FshCodeSystem('Bar');
+    cs.id = 'bar-id';
+    doc.codeSystems.set(cs.name, cs);
+
+    const rule = new CaretValueRule('subject');
+    rule.caretPath = 'code';
+    rule.value = new FshCode('foo', 'Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const ed = sd.elements.find(e => e.id === 'Observation.subject');
+
+    expect(ed.code[0]).toEqual({
+      code: 'foo',
+      system: 'http://hl7.org/fhir/us/minimal/CodeSystem/bar-id'
+    });
+  });
+
   // ObeysRule
   it('should apply an ObeysRule at the specified path', () => {
     const profile = new Profile('Foo');

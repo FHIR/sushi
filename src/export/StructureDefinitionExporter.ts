@@ -189,17 +189,22 @@ export class StructureDefinitionExporter implements Fishable {
               });
             }
           } else if (rule instanceof CaretValueRule) {
-            if (rule.path !== '') {
-              element.setInstancePropertyByPath(rule.caretPath, rule.value, this);
+            const replacedRule = replaceReferences(rule, this.tank, this);
+            if (replacedRule.path !== '') {
+              element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
             } else {
-              if (rule.isInstance) {
+              if (replacedRule.isInstance) {
                 if (this.deferredRules.has(structDef)) {
-                  this.deferredRules.get(structDef).push(rule);
+                  this.deferredRules.get(structDef).push(replacedRule);
                 } else {
-                  this.deferredRules.set(structDef, [rule]);
+                  this.deferredRules.set(structDef, [replacedRule]);
                 }
               } else {
-                structDef.setInstancePropertyByPath(rule.caretPath, rule.value, this);
+                structDef.setInstancePropertyByPath(
+                  replacedRule.caretPath,
+                  replacedRule.value,
+                  this
+                );
               }
             }
           } else if (rule instanceof ObeysRule) {
