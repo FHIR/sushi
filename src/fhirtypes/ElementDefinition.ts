@@ -419,7 +419,7 @@ export class ElementDefinition {
 
   getSlices() {
     return this.structDef.elements.filter(
-      e => e.id !== this.id && e.path === this.path && e.id.startsWith(this.id)
+      e => e.id !== this.id && e.path === this.path && e.id.startsWith(`${this.id}:`)
     );
   }
 

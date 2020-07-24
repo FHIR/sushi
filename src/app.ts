@@ -19,7 +19,8 @@ import {
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
-  getRawFSHes
+  getRawFSHes,
+  init
 } from './utils/Processing';
 
 const FSH_VERSION = '0.13.x';
@@ -38,6 +39,7 @@ async function app() {
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .option('-i, --init', 'initialize a SUSHI project')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .on('--help', () => {
       console.log('');
@@ -55,6 +57,10 @@ async function app() {
     })
     .parse(process.argv);
 
+  if (program.init) {
+    init();
+    process.exit(0);
+  }
   if (program.debug) logger.level = 'debug';
 
   logger.info(`Running ${getVersion()}`);

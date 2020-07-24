@@ -343,6 +343,32 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.derivation).toBe('constraint');
   });
 
+  it('should export sub-extensions, with similar starting names and different types', () => {
+    const ruleString = new OnlyRule('extension[Foo].value[x]');
+    ruleString.types = [{ type: 'string' }];
+    const ruleDecimal = new OnlyRule('extension[FooBar].value[x]');
+    ruleDecimal.types = [{ type: 'decimal' }];
+    const exParent = new Extension('Parent');
+
+    const FooFooCardRule = new CardRule('extension[Foo]');
+    FooFooCardRule.min = 1;
+    FooFooCardRule.max = '1'; // * extension[sliceB].extension 1..1
+
+    const FooBarCardRule = new CardRule('extension[FooBar]');
+    FooBarCardRule.min = 0;
+    FooBarCardRule.max = '1'; // * extension[sliceB].extension 0..0
+
+    const containsRule = new ContainsRule('extension');
+    containsRule.items = [{ name: 'Foo' }, { name: 'FooBar' }];
+
+    exParent.rules.push(containsRule, FooFooCardRule, FooBarCardRule, ruleString, ruleDecimal);
+
+    exporter.exportStructDef(exParent);
+    const sd = pkg.extensions[0];
+    const extension = sd.elements.find(e => e.id === 'Extension.extension:FooBar.value[x]');
+    expect(extension.type[0].code).toBe('decimal');
+  });
+
   it('should not hardcode in the default context if parent already had a context', () => {
     // NOTE: This is a temporary test to ensure that we don't overwrite a valid context with our
     // "default" context.  In the (near) future, however, we should do away with our default
@@ -2438,6 +2464,98 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionElement).toEqual({
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialExtension',
       valueString: 'This is the special extension on the structure definition.'
+    });
+  });
+
+  it('should apply a Reference CaretValueRule on an SD and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Organization';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'identifier[0].assigner';
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(sd.identifier[0].assigner).toEqual({
+      reference: 'Organization/bar-id'
+    });
+  });
+
+  it('should apply a Reference CaretValueRule on an ED and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Organization';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new CaretValueRule('subject');
+    rule.caretPath = 'patternReference';
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const ed = sd.elements.find(e => e.id === 'Observation.subject');
+
+    expect(ed.patternReference).toEqual({
+      reference: 'Organization/bar-id'
+    });
+  });
+
+  it('should apply a CodeSystem CaretValueRule on an SD and replace the CodeSystem', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const cs = new FshCodeSystem('Bar');
+    cs.id = 'bar-id';
+    doc.codeSystems.set(cs.name, cs);
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'jurisdiction';
+    rule.value = new FshCode('foo', 'Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(sd.jurisdiction[0].coding[0]).toEqual({
+      code: 'foo',
+      system: 'http://hl7.org/fhir/us/minimal/CodeSystem/bar-id'
+    });
+  });
+
+  it('should apply a CodeSystem CaretValueRule on an ED and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const cs = new FshCodeSystem('Bar');
+    cs.id = 'bar-id';
+    doc.codeSystems.set(cs.name, cs);
+
+    const rule = new CaretValueRule('subject');
+    rule.caretPath = 'code';
+    rule.value = new FshCode('foo', 'Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const ed = sd.elements.find(e => e.id === 'Observation.subject');
+
+    expect(ed.code[0]).toEqual({
+      code: 'foo',
+      system: 'http://hl7.org/fhir/us/minimal/CodeSystem/bar-id'
     });
   });
 

@@ -29,6 +29,7 @@ Options:
   -o, --out <out>  the path to the output folder
   -d, --debug      output extra debugging information
   -s, --snapshot   generate snapshot in Structure Definition output (default: false)
+  -i, --init       initialize a SUSHI project
   -v, --version    print SUSHI version
   -h, --help       output usage information
 
