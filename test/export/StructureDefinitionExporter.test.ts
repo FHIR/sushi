@@ -1631,6 +1631,24 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should apply a FixedValue rule with Canonical of a FHIR entity with a given version', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new FixedValueRule('code.coding.system');
+    rule.fixedValue = new FshCanonical('MedicationRequest');
+    rule.fixedValue.version = '3.2.1';
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    // Use the specified version instead of the version on MedicationRequest
+    expect(fixedSystem.patternUri).toEqual(
+      'http://hl7.org/fhir/StructureDefinition/MedicationRequest|3.2.1'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should not apply a FixedValue rule with an invalid Canonical entity and log an error', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
@@ -2446,6 +2464,98 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionElement).toEqual({
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialExtension',
       valueString: 'This is the special extension on the structure definition.'
+    });
+  });
+
+  it('should apply a Reference CaretValueRule on an SD and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Organization';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'identifier[0].assigner';
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(sd.identifier[0].assigner).toEqual({
+      reference: 'Organization/bar-id'
+    });
+  });
+
+  it('should apply a Reference CaretValueRule on an ED and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Organization';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new CaretValueRule('subject');
+    rule.caretPath = 'patternReference';
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const ed = sd.elements.find(e => e.id === 'Observation.subject');
+
+    expect(ed.patternReference).toEqual({
+      reference: 'Organization/bar-id'
+    });
+  });
+
+  it('should apply a CodeSystem CaretValueRule on an SD and replace the CodeSystem', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const cs = new FshCodeSystem('Bar');
+    cs.id = 'bar-id';
+    doc.codeSystems.set(cs.name, cs);
+
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'jurisdiction';
+    rule.value = new FshCode('foo', 'Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(sd.jurisdiction[0].coding[0]).toEqual({
+      code: 'foo',
+      system: 'http://hl7.org/fhir/us/minimal/CodeSystem/bar-id'
+    });
+  });
+
+  it('should apply a CodeSystem CaretValueRule on an ED and replace the Reference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+
+    const cs = new FshCodeSystem('Bar');
+    cs.id = 'bar-id';
+    doc.codeSystems.set(cs.name, cs);
+
+    const rule = new CaretValueRule('subject');
+    rule.caretPath = 'code';
+    rule.value = new FshCode('foo', 'Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const ed = sd.elements.find(e => e.id === 'Observation.subject');
+
+    expect(ed.code[0]).toEqual({
+      code: 'foo',
+      system: 'http://hl7.org/fhir/us/minimal/CodeSystem/bar-id'
     });
   });
 
