@@ -1319,28 +1319,6 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse fixed value using Canonical with the default version', () => {
-        const input = `
-        CodeSystem: Example
-        * #first
-        * #second
-
-        Profile: ObservationProfile
-        Parent: Observation
-        * code.coding.system = Canonical(Example|version)
-        `;
-
-        const result = importSingleText(input);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-
-        const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 57])
-          .withFile('');
-        expectedCanonical.useEntityVersion = true;
-        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
-      });
-
       it('should parse fixed values that are an alias', () => {
         const input = `
         Alias: EXAMPLE = http://example.org

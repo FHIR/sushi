@@ -1255,9 +1255,7 @@ export class FSHImporter extends FSHVisitor {
     const fshCanonical = new FshCanonical(canonicalText)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (versionText === 'version') {
-      fshCanonical.useEntityVersion = true;
-    } else if (versionText) {
+    if (versionText) {
       fshCanonical.version = versionText;
     }
     return fshCanonical;

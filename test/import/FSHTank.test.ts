@@ -12,7 +12,6 @@ import {
 } from '../../src/fshtypes';
 import { Type, Metadata } from '../../src/utils/Fishable';
 import { minimalConfig } from '../utils/minimalConfig';
-import { CaretValueRule } from '../../src/fshtypes/rules';
 
 describe('FSHTank', () => {
   let tank: FSHTank;
@@ -241,27 +240,23 @@ describe('FSHTank', () => {
       id: 'prf1',
       name: 'Profile1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
-      parent: 'Observation',
-      version: '1.0.0'
+      parent: 'Observation'
     };
     const ext1MD: Metadata = {
       id: 'ext1',
       name: 'Extension1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ext1',
-      parent: 'Extension2',
-      version: '1.0.0'
+      parent: 'Extension2'
     };
     const vs1MD: Metadata = {
       id: 'vs1',
       name: 'ValueSet1',
-      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1',
-      version: '1.0.0'
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1'
     };
     const cs1MD: Metadata = {
       id: 'cs1',
       name: 'CodeSystem1',
-      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1',
-      version: '1.0.0'
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1'
     };
     const inst1MD: Metadata = {
       id: 'inst1',
@@ -458,46 +453,6 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
-    });
-
-    it('should find a version on a Profile when one is specified', () => {
-      const profile1 = tank.fish('Profile1', Type.Profile) as Profile;
-      const caretRule = new CaretValueRule('');
-      caretRule.caretPath = 'version';
-      caretRule.value = '1.2.3';
-      profile1.rules.push(caretRule);
-      expect(tank.fishForMetadata('Profile1', Type.Profile).version).toBe('1.2.3');
-    });
-
-    it('should find a version on an Extension when one is specified', () => {
-      const ext1 = tank.fish('Extension1', Type.Extension) as Extension;
-      const caretRule = new CaretValueRule('');
-      caretRule.caretPath = 'version';
-      caretRule.value = '1.2.3';
-      ext1.rules.push(caretRule);
-      expect(tank.fishForMetadata('Extension1', Type.Extension).version).toBe('1.2.3');
-    });
-
-    it('should find a version on a FshValueSet when one is specified', () => {
-      const vs1 = tank.fish('ValueSet1', Type.ValueSet) as FshValueSet;
-      const caretRule = new CaretValueRule('');
-      caretRule.caretPath = 'version';
-      caretRule.value = '1.2.3';
-      vs1.rules.push(caretRule);
-      expect(tank.fishForMetadata('ValueSet1', Type.ValueSet).version).toBe('1.2.3');
-    });
-
-    it('should use config version on a FshValueSet when one is not specified', () => {
-      expect(tank.fishForMetadata('ValueSet1', Type.ValueSet).version).toBe('1.0.0');
-    });
-
-    it('should find a version on a FshCodeSystem when one is specified', () => {
-      const cs1 = tank.fish('CodeSystem1', Type.CodeSystem) as FshCodeSystem;
-      const caretRule = new CaretValueRule('');
-      caretRule.caretPath = 'version';
-      caretRule.value = '1.2.3';
-      cs1.rules.push(caretRule);
-      expect(tank.fishForMetadata('CodeSystem1', Type.CodeSystem).version).toBe('1.2.3');
     });
   });
 

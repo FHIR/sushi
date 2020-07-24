@@ -286,8 +286,7 @@ describe('Package', () => {
       expect(soupsValueSetByID).toEqual({
         id: 'soup-flavors',
         name: 'Soups',
-        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
-        version: '4.0.1'
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors'
       });
       expect(pkg.fishForMetadata('Soups', Type.ValueSet)).toEqual(soupsValueSetByID);
       expect(
@@ -300,8 +299,7 @@ describe('Package', () => {
       expect(numericsCodeSystemByID).toEqual({
         id: 'numerics',
         name: 'Numbers',
-        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
-        version: '4.0.1'
+        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics'
       });
       expect(pkg.fishForMetadata('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
       expect(
@@ -406,8 +404,7 @@ describe('Package', () => {
       expect(soupsValueSetByID).toEqual({
         id: 'soup-flavors',
         name: 'Soups',
-        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
-        version: '4.0.1'
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors'
       });
       expect(pkg.fishForMetadata('Soups')).toEqual(soupsValueSetByID);
       expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors')).toEqual(
@@ -418,8 +415,7 @@ describe('Package', () => {
       expect(numericsCodeSystemByID).toEqual({
         id: 'numerics',
         name: 'Numbers',
-        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
-        version: '4.0.1'
+        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics'
       });
       expect(pkg.fishForMetadata('Numbers')).toEqual(numericsCodeSystemByID);
       expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/CodeSystem/numerics')).toEqual(
