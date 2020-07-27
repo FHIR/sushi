@@ -1248,11 +1248,17 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private parseOrReference(reference: string): string[] {
-    return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s+or\s+/);
+    return reference
+      .slice(reference.indexOf('(') + 1, reference.length - 1)
+      .split(/\s+or\s+/)
+      .map(r => r.trim());
   }
 
   private parsePipeReference(reference: string): string[] {
-    return reference.slice(reference.indexOf('(') + 1, reference.length - 1).split(/\s*\|\s*/);
+    return reference
+      .slice(reference.indexOf('(') + 1, reference.length - 1)
+      .split(/\s*\|\s*/)
+      .map(r => r.trim());
   }
 
   visitCanonical(ctx: pc.CanonicalContext): FshCanonical {
