@@ -12,7 +12,7 @@ import {
 } from '../fshtypes';
 import flatMap from 'lodash/flatMap';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
-import { CaretValueRule } from '../fshtypes/rules';
+import { getUrlFromFshDefinition } from '../fhirtypes/common';
 
 export class FSHTank implements Fishable {
   constructor(public readonly docs: FSHDocument[], public readonly config: Configuration) {}
@@ -140,7 +140,7 @@ export class FSHTank implements Fishable {
             p =>
               p.name === item ||
               p.id === item ||
-              `${this.config.canonical}/StructureDefinition/${p.id}` === item
+              getUrlFromFshDefinition(p, this.config.canonical) === item
           );
           break;
         case Type.Extension:
@@ -148,7 +148,7 @@ export class FSHTank implements Fishable {
             e =>
               e.name === item ||
               e.id === item ||
-              `${this.config.canonical}/StructureDefinition/${e.id}` === item
+              getUrlFromFshDefinition(e, this.config.canonical) === item
           );
           break;
         case Type.ValueSet:
@@ -156,15 +156,15 @@ export class FSHTank implements Fishable {
             vs =>
               vs.name === item ||
               vs.id === item ||
-              `${this.config.canonical}/ValueSet/${vs.id}` === item
+              getUrlFromFshDefinition(vs, this.config.canonical) === item
           );
           break;
         case Type.CodeSystem:
           result = this.getAllCodeSystems().find(
-            vs =>
-              vs.name === item ||
-              vs.id === item ||
-              `${this.config.canonical}/CodeSystem/${vs.id}` === item
+            cs =>
+              cs.name === item ||
+              cs.id === item ||
+              getUrlFromFshDefinition(cs, this.config.canonical) === item
           );
           break;
         case Type.Instance:
@@ -201,39 +201,14 @@ export class FSHTank implements Fishable {
         name: result.name
       };
       if (result instanceof Profile || result instanceof Extension) {
-        meta.url = this.getMetadataUrl(result, 'StructureDefinition');
+        meta.url = getUrlFromFshDefinition(result, this.config.canonical);
         meta.parent = result.parent;
-      } else if (result instanceof FshValueSet) {
-        meta.url = this.getMetadataUrl(result, 'ValueSet');
-      } else if (result instanceof FshCodeSystem) {
-        meta.url = this.getMetadataUrl(result, 'CodeSystem');
+      } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
+        meta.url = getUrlFromFshDefinition(result, this.config.canonical);
       }
       return meta;
     }
     return;
-  }
-
-  /**
-   * Determines the URL to use to refer to a fished-up FHIR entity.
-   * If a caret value rule has been applied to the entity's url, use the
-   * value specified in that rule.
-   * Otherwise, use the default url based on the configured canonical url.
-   *
-   * @param {Profile | Extension | FshValueSet | FshCodeSystem} result - The FHIR entity that was fished up
-   * @param {string} fhirType - The entity's type as a string for building the default URL
-   * @returns {string} - The URL to use to refer to the FHIR entity
-   */
-  getMetadataUrl(
-    result: Profile | Extension | FshValueSet | FshCodeSystem,
-    fhirType: string
-  ): string {
-    for (const rule of result.rules) {
-      if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url') {
-        // this value should only be a string, but that might change at some point
-        return rule.value.toString();
-      }
-    }
-    return `${this.config.canonical}/${fhirType}/${result.id}`;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
