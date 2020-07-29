@@ -183,6 +183,8 @@ export class ElementDefinition {
   patternCoding: Coding;
   fixedQuantity: Quantity;
   patternQuantity: Quantity;
+  fixedAge: Quantity;
+  patternAge: Quantity;
   fixedRatio: Ratio;
   patternRatio: Ratio;
   fixedReference: Reference;
@@ -1158,7 +1160,7 @@ export class ElementDefinition {
       case 'Quantity':
         value = value as FshQuantity;
         // Special case quantity to support compatible specializations (like Age), but try to do it
-        // in a flexible way (without hard-coding every specializations here).
+        // in a flexible way (without hard-coding every specialization here).
         let providedType = 'Quantity';
         const actualType = this.type[0].code;
         if (actualType !== 'Quantity') {

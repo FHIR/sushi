@@ -59,7 +59,6 @@ describe('ElementDefinition', () => {
         new FshQuantity(42.0, new FshCode('a', 'http://unitsofmeasure.org')),
         fisher
       );
-      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
       expect(valueX.patternAge).toEqual({
         value: 42.0,
         code: 'a',

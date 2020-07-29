@@ -64,13 +64,11 @@ describe('ElementDefinition', () => {
       const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
       onsetX.type = [new ElementDefinitionType('Age')];
       onsetX.fixValue(fshQuantityAge, false, fisher);
-      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
       expect(onsetX.patternAge).toEqual({
         value: 42.0,
         code: 'a',
         system: 'http://unitsofmeasure.org'
       });
-      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
       expect(onsetX.fixedAge).toBeUndefined();
     });
 
@@ -78,13 +76,11 @@ describe('ElementDefinition', () => {
       const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
       onsetX.type = [new ElementDefinitionType('Age')];
       onsetX.fixValue(fshQuantityAge, true, fisher);
-      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
       expect(onsetX.fixedAge).toEqual({
         value: 42.0,
         code: 'a',
         system: 'http://unitsofmeasure.org'
       });
-      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
       expect(onsetX.patternAge).toBeUndefined();
     });
 
