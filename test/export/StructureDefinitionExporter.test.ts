@@ -1993,6 +1993,92 @@ describe('StructureDefinitionExporter', () => {
     expect(extensionSliceValueX.type).toEqual([new ElementDefinitionType('Quantity')]);
   });
 
+  it('should apply a ContainsRule of an extension with an overridden URL', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set('Foo', profile);
+
+    const extBar = new Extension('Bar');
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'url';
+    caretValueRule.value = 'http://different-url.com/StructureDefinition/Bar';
+    extBar.rules.push(caretValueRule);
+    doc.extensions.set('Bar', extBar);
+
+    const constainsRule = new ContainsRule('extension');
+    constainsRule.items = [{ name: 'bar', type: 'Bar' }];
+    profile.rules.push(constainsRule);
+
+    const onlyRule = new OnlyRule('extension[bar].value[x]');
+    onlyRule.types = [{ type: 'Quantity' }];
+    profile.rules.push(onlyRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:bar');
+    const extensionSliceUrl = sd.elements.find(e => e.id === 'Observation.extension:bar.url');
+    const extensionSliceValueX = sd.elements.find(
+      e => e.id === 'Observation.extension:bar.value[x]'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('http://different-url.com/StructureDefinition/Bar');
+    expect(extensionSliceValueX).toBeDefined();
+    expect(extensionSliceValueX.type).toEqual([new ElementDefinitionType('Quantity')]);
+  });
+
+  it('should apply a ContainsRule of an extension with an overridden URL by URL', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'Observation';
+    doc.profiles.set('Foo', profile);
+
+    const extBar = new Extension('Bar');
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'url';
+    caretValueRule.value = 'http://different-url.com/StructureDefinition/Bar';
+    extBar.rules.push(caretValueRule);
+    doc.extensions.set('Bar', extBar);
+
+    const constainsRule = new ContainsRule('extension');
+    constainsRule.items = [{ name: 'bar', type: 'Bar' }];
+    profile.rules.push(constainsRule);
+
+    const onlyRule = new OnlyRule(
+      'extension[http://different-url.com/StructureDefinition/Bar].value[x]'
+    );
+    onlyRule.types = [{ type: 'Quantity' }];
+    profile.rules.push(onlyRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+
+    const extension = sd.elements.find(e => e.id === 'Observation.extension');
+    const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:bar');
+    const extensionSliceUrl = sd.elements.find(e => e.id === 'Observation.extension:bar.url');
+    const extensionSliceValueX = sd.elements.find(
+      e => e.id === 'Observation.extension:bar.value[x]'
+    );
+
+    expect(extension.slicing).toBeDefined();
+    expect(extension.slicing.discriminator.length).toBe(1);
+    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(extensionSlice).toBeDefined();
+    expect(extensionSliceUrl).toBeDefined();
+    expect(extensionSliceUrl.fixedUri).toBe('http://different-url.com/StructureDefinition/Bar');
+    expect(extensionSliceValueX).toBeDefined();
+    expect(extensionSliceValueX.type).toEqual([new ElementDefinitionType('Quantity')]);
+  });
+
   it('should apply multiple ContainsRule on an element with defined slicing', () => {
     const profile = new Profile('Foo');
     profile.parent = 'resprate';
