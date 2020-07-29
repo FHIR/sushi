@@ -3,7 +3,7 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { TestFisher } from '../testhelpers';
-import { FshCode } from '../../src/fshtypes';
+import { FshCode, FshQuantity } from '../../src/fshtypes';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -45,8 +45,26 @@ describe('ElementDefinition', () => {
     });
 
     it('should set a nested instance property which must be created', () => {
-      status.setInstancePropertyByPath('patternQuantity.value', 1.2, fisher);
-      expect(status.patternQuantity.value).toBe(1.2);
+      // This isn't how you would normally do this, but it's useful for testing this part of the logic
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.setInstancePropertyByPath('patternQuantity.value', 1.2, fisher);
+      expect(valueX.patternQuantity.value).toBe(1.2);
+    });
+
+    it('should set a Quantity on a Quantity specialization instance property (e.g., Age)', () => {
+      // This isn't how you would normally do this, but it's useful for testing this part of the logic
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      valueX.setInstancePropertyByPath(
+        'patternAge',
+        new FshQuantity(42.0, new FshCode('a', 'http://unitsofmeasure.org')),
+        fisher
+      );
+      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
+      expect(valueX.patternAge).toEqual({
+        value: 42.0,
+        code: 'a',
+        system: 'http://unitsofmeasure.org'
+      });
     });
 
     it('should not set an instance property which is being fixed incorrectly', () => {

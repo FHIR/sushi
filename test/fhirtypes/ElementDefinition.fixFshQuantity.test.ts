@@ -5,12 +5,15 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshQuantity, FshCode } from '../../src/fshtypes';
 import { TestFisher } from '../testhelpers';
+import { ElementDefinitionType } from '../../src/fhirtypes';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
+  let condition: StructureDefinition;
   let observation: StructureDefinition;
   let fshQuantity1: FshQuantity;
   let fshQuantity2: FshQuantity;
+  let fshQuantityAge: FshQuantity;
   let fisher: TestFisher;
 
   beforeAll(() => {
@@ -26,6 +29,8 @@ describe('ElementDefinition', () => {
     observation = fisher.fishForStructureDefinition('Observation');
     fshQuantity1 = new FshQuantity(1.23, new FshCode('mm', 'http://unitsofmeasure.org'));
     fshQuantity2 = new FshQuantity(1.24, new FshCode('mm', 'http://unitsofmeasure.org'));
+    condition = fisher.fishForStructureDefinition('Condition');
+    fshQuantityAge = new FshQuantity(42.0, new FshCode('a', 'http://unitsofmeasure.org'));
   });
 
   describe('#fixFshQuantity', () => {
@@ -53,6 +58,34 @@ describe('ElementDefinition', () => {
         system: 'http://unitsofmeasure.org'
       });
       expect(referenceRangeLow.patternQuantity).toBeUndefined();
+    });
+
+    it('should fix a FshQuantity to a quantity specialization', () => {
+      const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
+      onsetX.type = [new ElementDefinitionType('Age')];
+      onsetX.fixValue(fshQuantityAge, false, fisher);
+      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
+      expect(onsetX.patternAge).toEqual({
+        value: 42.0,
+        code: 'a',
+        system: 'http://unitsofmeasure.org'
+      });
+      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
+      expect(onsetX.fixedAge).toBeUndefined();
+    });
+
+    it('should fix a FshQuantity to a quantity specialization (exactly)', () => {
+      const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
+      onsetX.type = [new ElementDefinitionType('Age')];
+      onsetX.fixValue(fshQuantityAge, true, fisher);
+      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
+      expect(onsetX.fixedAge).toEqual({
+        value: 42.0,
+        code: 'a',
+        system: 'http://unitsofmeasure.org'
+      });
+      // @ts-ignore we don't elaborate over all possible pattern[x] in ElementDefinition
+      expect(onsetX.patternAge).toBeUndefined();
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
