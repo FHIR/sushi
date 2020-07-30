@@ -124,7 +124,17 @@ describe('Processing', () => {
           { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
           { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
         ],
-        FSHOnly: false
+        FSHOnly: false,
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
+          }
+        ]
       });
     });
 
