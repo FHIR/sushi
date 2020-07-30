@@ -566,6 +566,15 @@ describe('StructureDefinition', () => {
       expect(foundRoot.id).toBe('Observation.category:VSCat.coding');
     });
 
+    it('should find a child that must be unrolled of an element with slices that contain the name of that element', () => {
+      const coding = respRate.findElement('Observation.code.coding');
+      // the codingSlice slice contains the name of the base element, coding, this was causing unrolling of children to fail
+      // since the codingSlice element was not correctly differentiated from the code.coding element
+      coding.addSlice('codingSlice');
+      const codingSliceId = respRate.findElementByPath('code.coding.system.id', fisher);
+      expect(codingSliceId).toBeDefined();
+    });
+
     it('should find a slice that only exists on a sliced element child', () => {
       const coding = respRate.findElementByPath('category.coding', fisher);
       coding.slicing = {
