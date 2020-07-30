@@ -48,7 +48,7 @@ import { FshCode } from '../fshtypes';
 
 const MINIMAL_CONFIG_PROPERTIES = ['canonical', 'fhirVersion'];
 // Properties that are only relevant when an IG is going to be generated from output, and have no informational purpose
-const MINIMAL_IG_ONLY_PROPERTIES = ['id'];
+const MINIMAL_IG_ONLY_PROPERTIES = ['id', 'name', 'status', 'copyrightYear', 'releaseLabel'];
 const IG_ONLY_PROPERTIES = [
   'contained',
   'extension',
@@ -86,31 +86,27 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
   }
 
   // There are a few properties that are absolutely required if we are to have *any* success at all
-  if (
-    MINIMAL_CONFIG_PROPERTIES.some(
-      (p: keyof YAMLConfiguration) =>
-        yaml[p] == null || (Array.isArray(yaml[p]) && (yaml[p] as any[]).length === 0)
-    )
-  ) {
-    logger.error(
-      'SUSHI minimally requires the following configuration properties to start processing FSH: ' +
-        MINIMAL_CONFIG_PROPERTIES.join(', ') +
-        '.',
-      { file }
-    );
-    throw new Error('Minimal config not met');
+  const minimalProperties = yaml.FSHOnly
+    ? MINIMAL_CONFIG_PROPERTIES
+    : [...MINIMAL_CONFIG_PROPERTIES, ...MINIMAL_IG_ONLY_PROPERTIES];
+  const missingProperties = minimalProperties.filter(
+    (p: keyof YAMLConfiguration) =>
+      yaml[p] == null || (Array.isArray(yaml[p]) && (yaml[p] as any[]).length === 0)
+  );
+  // the copyrightYear and releaseLabel properties permit alternate spellings as all lowercase,
+  // so if only those are missing, check for the lowercase version before logging an error.
+  if (missingProperties.includes('copyrightYear') && yaml.copyrightyear) {
+    missingProperties.splice(missingProperties.indexOf('copyrightYear'), 1);
   }
-  // There are some properties that are required to generate an IG
-  if (
-    !yaml.FSHOnly &&
-    MINIMAL_IG_ONLY_PROPERTIES.some(
-      (p: keyof YAMLConfiguration) =>
-        yaml[p] == null || (Array.isArray(yaml[p]) && (yaml[p] as any[]).length === 0)
-    )
-  ) {
+  if (missingProperties.includes('releaseLabel') && yaml.releaselabel) {
+    missingProperties.splice(missingProperties.indexOf('releaseLabel'), 1);
+  }
+  if (missingProperties.length > 0) {
     logger.error(
-      'SUSHI minimally requires the following configuration properties to generate an IG: ' +
-        MINIMAL_IG_ONLY_PROPERTIES.join(', ') +
+      `SUSHI minimally requires the following configuration properties to ${
+        yaml.FSHOnly ? 'start processing FSH' : 'generate an IG'
+      }: ` +
+        minimalProperties.join(', ') +
         '.',
       { file }
     );
