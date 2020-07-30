@@ -30,7 +30,8 @@ import {
   splitOnPathPeriods,
   applyMixinRules,
   cleanResource,
-  applyInsertRules
+  applyInsertRules,
+  getUrlFromFshDefinition
 } from '../fhirtypes/common';
 import { Package } from './Package';
 
@@ -89,7 +90,7 @@ export class StructureDefinitionExporter implements Fishable {
       // for consistency, delete rather than leaving null-valued
       delete structDef.modifierExtension;
     }
-    structDef.url = `${this.tank.config.canonical}/StructureDefinition/${structDef.id}`;
+    structDef.url = getUrlFromFshDefinition(fshDefinition, this.tank.config.canonical);
     delete structDef.identifier;
     structDef.version = this.tank.config.version; // can be overridden using a rule
     structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
