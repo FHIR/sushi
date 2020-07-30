@@ -552,6 +552,36 @@ export function isInheritedResource(
   }
 }
 
+/**
+ * Determines the formal FHIR URL to use to refer to this entity (for example when fishing).
+ * If a caret value rule has been applied to the entity's url, use the value specified in that
+ * rule. Otherwise, use the default url based on the configured canonical url.
+ *
+ * @param fshDefinition - The FSH definition that the returned URL refers to
+ * @param canonical - The canonical URL for the FSH project
+ * @returns {string} - The URL to use to refer to the FHIR entity
+ */
+export function getUrlFromFshDefinition(
+  fshDefinition: Profile | Extension | FshValueSet | FshCodeSystem,
+  canonical: string
+): string {
+  for (const rule of fshDefinition.rules) {
+    if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url') {
+      // this value should only be a string, but that might change at some point
+      return rule.value.toString();
+    }
+  }
+  let fhirType: string;
+  if (fshDefinition instanceof FshValueSet) {
+    fhirType = 'ValueSet';
+  } else if (fshDefinition instanceof FshCodeSystem) {
+    fhirType = 'CodeSystem';
+  } else {
+    fhirType = 'StructureDefinition';
+  }
+  return `${canonical}/${fhirType}/${fshDefinition.id}`;
+}
+
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
 export class HasName {
