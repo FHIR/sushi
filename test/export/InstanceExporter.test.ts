@@ -9,7 +9,8 @@ import {
   FshReference,
   Extension,
   FshCodeSystem,
-  RuleSet
+  RuleSet,
+  FshQuantity
 } from '../../src/fshtypes';
 import {
   FixedValueRule,
@@ -1277,6 +1278,26 @@ describe('InstanceExporter', () => {
           system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
+    });
+
+    // Fixing Quantities to Quantity specializations (e.g., Age)
+    it('should fix a Quantity to a Quantity specialization', () => {
+      const conditionInstance = new Instance('SomeCondition');
+      conditionInstance.instanceOf = 'Condition';
+      const fixedAgeRule = new FixedValueRule('onsetAge');
+      fixedAgeRule.fixedValue = new FshQuantity(
+        42.0,
+        new FshCode('a', 'http://unitsofmeasure.org', 'years')
+      );
+      conditionInstance.rules.push(fixedAgeRule);
+      doc.instances.set(conditionInstance.name, conditionInstance);
+      const exported = exportInstance(conditionInstance);
+      expect(exported.onsetAge).toEqual({
+        value: 42.0,
+        code: 'a',
+        system: 'http://unitsofmeasure.org',
+        unit: 'years'
+      });
     });
 
     // Sliced elements

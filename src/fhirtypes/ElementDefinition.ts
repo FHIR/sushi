@@ -183,6 +183,8 @@ export class ElementDefinition {
   patternCoding: Coding;
   fixedQuantity: Quantity;
   patternQuantity: Quantity;
+  fixedAge: Quantity;
+  patternAge: Quantity;
   fixedRatio: Ratio;
   patternRatio: Ratio;
   fixedReference: Reference;
@@ -1157,7 +1159,21 @@ export class ElementDefinition {
         break;
       case 'Quantity':
         value = value as FshQuantity;
-        this.fixFHIRValue(value.toString(), value.toFHIRQuantity(), exactly, 'Quantity');
+        // Special case quantity to support compatible specializations (like Age), but try to do it
+        // in a flexible way (without hard-coding every specialization here).
+        let providedType = 'Quantity';
+        const actualType = this.type[0].code;
+        if (actualType !== 'Quantity') {
+          const actualTypeSD = fisher?.fishForFHIR(actualType, Type.Type);
+          if (actualTypeSD?.baseDefinition === 'http://hl7.org/fhir/StructureDefinition/Quantity') {
+            // We treat every quantity instance as compatible w/ every specialization. This is not
+            // strictly true, but in order to validate it, we'd need to either support/process the
+            // FHIRPath rules or hard-code a bunch of special case logic here. Instead, let the IG
+            // Publisher deal with this extra validation and just pass it through here.
+            providedType = actualType;
+          }
+        }
+        this.fixFHIRValue(value.toString(), value.toFHIRQuantity(), exactly, providedType);
         break;
       case 'Ratio':
         value = value as FshRatio;
