@@ -3,7 +3,7 @@
   "version": "0.15.0",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
-    "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files && cp -r src/utils/init-project dist/utils/init-project && npm run fixGrammarTypes",
+    "build": "rm -rf dist && tsc && cp -r src/ig/files dist/ig/files && cp -r src/utils/init-project dist/utils/init-project",
     "build:watch": "tsc -w",
     "build:grammar": "bash antlr/gradlew -p antlr generateGrammarSource",
     "test": "jest --maxWorkers=4 --coverage",
@@ -15,7 +15,7 @@
     "prettier:fix": "prettier --write \"**/*.{js,ts}\"",
     "check": "npm run test && npm run lint && npm run prettier",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run check",
+    "prepublishOnly": "npm run check && npm run fixGrammarTypes",
     "fixGrammarTypes": "ts-node dev/fixGrammarTypes.ts"
   },
   "contributors": [
