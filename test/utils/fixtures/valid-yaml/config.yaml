@@ -9,6 +9,8 @@ version: 0.1.0
 name: FSHTestIG
 title: FSH Test IG
 status: active
+copyrightYear: 2020
+releaseLabel: CI Build
 publisher: James Tuna
 contact:
   - name: Bill Cod
