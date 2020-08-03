@@ -132,7 +132,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to patternp[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const addressInstance = new InstanceDefinition();
       addressInstance._instanceMeta.name = 'USPostalAddress';
       addressInstance._instanceMeta.sdType = 'Address';

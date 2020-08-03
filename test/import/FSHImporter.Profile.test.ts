@@ -1352,7 +1352,7 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'identifier.system', 'http://example.org');
       });
 
-      it('should parsing fixed value Resource rule', () => {
+      it('should parse a fixed value Resource rule', () => {
         const input = `
 
         Profile: ObservationProfile
