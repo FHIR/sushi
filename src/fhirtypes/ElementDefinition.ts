@@ -185,6 +185,10 @@ export class ElementDefinition {
   patternQuantity: Quantity;
   fixedAge: Quantity;
   patternAge: Quantity;
+  fixedAddress: InstanceDefinition;
+  patternAddress: InstanceDefinition;
+  fixedPeriod: InstanceDefinition;
+  patternPeriod: InstanceDefinition;
   fixedRatio: Ratio;
   patternRatio: Ratio;
   fixedReference: Reference;
@@ -1218,6 +1222,16 @@ export class ElementDefinition {
           canonicalUrl += `|${value.version}`;
         }
         this.fixString(canonicalUrl, exactly);
+        break;
+      case 'InstanceDefinition':
+        value = value as InstanceDefinition;
+        const stringVal = JSON.stringify(value);
+        this.fixFHIRValue(
+          stringVal,
+          value.toJSON(),
+          exactly,
+          value._instanceMeta.sdType ?? value.resourceType
+        );
         break;
       default:
         throw new MismatchedTypeError(type, value, this.type[0].code);

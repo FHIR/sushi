@@ -852,16 +852,7 @@ export class FSHImporter extends FSHVisitor {
       return [this.visitValueSetRule(ctx.valueSetRule())];
     } else if (ctx.fixedValueRule()) {
       const rule = this.visitFixedValueRule(ctx.fixedValueRule());
-      if (rule.isInstance) {
-        const sourceInfo = { location: this.extractStartStop(ctx), file: this.currentFile };
-        logger.error(
-          'Resources cannot be added inline to a Profile or Extension, skipping rule.',
-          sourceInfo
-        );
-        return [];
-      } else {
-        return [rule];
-      }
+      return [rule];
     } else if (ctx.onlyRule()) {
       return [this.visitOnlyRule(ctx.onlyRule())];
     } else if (ctx.containsRule()) {

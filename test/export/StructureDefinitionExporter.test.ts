@@ -1666,6 +1666,49 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should apply an instance FixedValueRule and replace the instance', () => {
+    const profile = new Profile('USPatient');
+    profile.parent = 'Patient';
+    const rule = new FixedValueRule('address');
+    rule.fixedValue = 'USPostalAddress';
+    rule.isInstance = true;
+    profile.rules.push(rule); // * address = USPostalAddress
+    doc.profiles.set(profile.name, profile);
+
+    const instance = new Instance('USPostalAddress');
+    instance.instanceOf = 'Address';
+    instance.usage = 'Inline';
+    const fixCountry = new FixedValueRule('country');
+    fixCountry.fixedValue = 'US';
+    instance.rules.push(fixCountry); // * country = "US"
+    doc.instances.set(instance.name, instance);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedAddress = sd.findElement('Patient.address');
+    expect(fixedAddress.patternAddress).toEqual({ country: 'US' });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should not apply an instance FixedValueRule when the instance cannot be found', () => {
+    const profile = new Profile('USPatient');
+    profile.parent = 'Patient';
+    const rule = new FixedValueRule('address');
+    rule.fixedValue = 'FakeInstance';
+    rule.isInstance = true;
+    profile.rules.push(rule); // * address = FakeInstance
+    doc.profiles.set(profile.name, profile);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const fixedAddress = sd.findElement('Patient.address');
+    expect(fixedAddress.patternAddress).toBeUndefined();
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot find definition for Instance: FakeInstance. Skipping rule.\D*/s
+    );
+  });
+
   it('should use the url specified in a CaretValueRule when referencing a named code system', () => {
     const profile = new Profile('LightObservation');
     profile.parent = 'Observation';

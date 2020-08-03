@@ -5,8 +5,9 @@ import {
   idRegex,
   InstanceDefinition
 } from '../fhirtypes';
-import { Profile, Extension, Invariant } from '../fshtypes';
+import { Profile, Extension, Instance, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
+import { InstanceExporter } from '../export';
 import {
   ParentNotDefinedError,
   ParentDeclaredAsProfileNameError,
@@ -156,6 +157,34 @@ export class StructureDefinitionExporter implements Fishable {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
+            if (rule.isInstance) {
+              let instance = this.pkg.fish(
+                rule.fixedValue as string,
+                Type.Instance
+              ) as InstanceDefinition;
+              if (instance == null) {
+                // If we find a FSH definition, then we can export and fish for it again
+                const fshDefinition = this.tank.fish(
+                  rule.fixedValue as string,
+                  Type.Instance
+                ) as Instance;
+                if (fshDefinition) {
+                  const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+                  instanceExporter.exportInstance(fshDefinition as Instance);
+                  instance = this.pkg.fish(
+                    rule.fixedValue as string,
+                    Type.Instance
+                  ) as InstanceDefinition;
+                }
+              }
+              if (instance == null) {
+                logger.error(
+                  `Cannot find definition for Instance: ${rule.fixedValue}. Skipping rule.`
+                );
+                continue;
+              }
+              rule.fixedValue = instance;
+            }
             const replacedRule = replaceReferences(rule, this.tank, this);
             element.fixValue(replacedRule.fixedValue, replacedRule.exactly, this);
           } else if (rule instanceof FlagRule) {
