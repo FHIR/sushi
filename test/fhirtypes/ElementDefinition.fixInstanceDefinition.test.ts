@@ -1,5 +1,4 @@
 import path from 'path';
-import { cloneDeep } from 'lodash';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition, InstanceDefinition } from '../../src/fhirtypes';
@@ -9,7 +8,6 @@ describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let patient: StructureDefinition;
   let observation: StructureDefinition;
-  let location: StructureDefinition;
   let fisher: TestFisher;
 
   beforeAll(() => {
@@ -24,7 +22,6 @@ describe('ElementDefinition', () => {
   beforeEach(() => {
     patient = fisher.fishForStructureDefinition('Patient');
     observation = fisher.fishForStructureDefinition('Observation');
-    // location = fisher.fishForStructureDefinition('Location');
   });
 
   describe('#fixInstance', () => {

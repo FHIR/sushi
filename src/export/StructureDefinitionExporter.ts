@@ -5,7 +5,7 @@ import {
   idRegex,
   InstanceDefinition
 } from '../fhirtypes';
-import { Profile, Extension, Instance, Invariant } from '../fshtypes';
+import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
 import {
@@ -158,25 +158,8 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
             if (rule.isInstance) {
-              let instance = this.pkg.fish(
-                rule.fixedValue as string,
-                Type.Instance
-              ) as InstanceDefinition;
-              if (instance == null) {
-                // If we find a FSH definition, then we can export and fish for it again
-                const fshDefinition = this.tank.fish(
-                  rule.fixedValue as string,
-                  Type.Instance
-                ) as Instance;
-                if (fshDefinition) {
-                  const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-                  instanceExporter.exportInstance(fshDefinition as Instance);
-                  instance = this.pkg.fish(
-                    rule.fixedValue as string,
-                    Type.Instance
-                  ) as InstanceDefinition;
-                }
-              }
+              const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+              const instance = instanceExporter.fishForFHIR(rule.fixedValue as string);
               if (instance == null) {
                 logger.error(
                   `Cannot find definition for Instance: ${rule.fixedValue}. Skipping rule.`
