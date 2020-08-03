@@ -1127,8 +1127,8 @@ export class ElementDefinition {
       type = 'Reference';
     } else if (value instanceof FshCanonical) {
       type = 'Canonical';
-    } else if (typeof value === 'object') {
-      type = value.constructor?.name;
+    } else if (value instanceof InstanceDefinition) {
+      type = 'InstanceDefinition';
     } else {
       type = typeof value;
     }
@@ -1234,6 +1234,7 @@ export class ElementDefinition {
         );
         break;
       default:
+        type = (typeof value === 'object' && value.constructor?.name) ?? type;
         throw new MismatchedTypeError(type, value, this.type[0].code);
     }
 
