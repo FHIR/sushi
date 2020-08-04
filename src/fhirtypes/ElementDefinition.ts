@@ -185,6 +185,10 @@ export class ElementDefinition {
   patternQuantity: Quantity;
   fixedAge: Quantity;
   patternAge: Quantity;
+  fixedAddress: InstanceDefinition;
+  patternAddress: InstanceDefinition;
+  fixedPeriod: InstanceDefinition;
+  patternPeriod: InstanceDefinition;
   fixedRatio: Ratio;
   patternRatio: Ratio;
   fixedReference: Reference;
@@ -1123,8 +1127,8 @@ export class ElementDefinition {
       type = 'Reference';
     } else if (value instanceof FshCanonical) {
       type = 'Canonical';
-    } else if (typeof value === 'object') {
-      type = value.constructor?.name;
+    } else if (value instanceof InstanceDefinition) {
+      type = 'InstanceDefinition';
     } else {
       type = typeof value;
     }
@@ -1219,7 +1223,18 @@ export class ElementDefinition {
         }
         this.fixString(canonicalUrl, exactly);
         break;
+      case 'InstanceDefinition':
+        value = value as InstanceDefinition;
+        const stringVal = JSON.stringify(value);
+        this.fixFHIRValue(
+          stringVal,
+          value.toJSON(),
+          exactly,
+          value._instanceMeta.sdType ?? value.resourceType
+        );
+        break;
       default:
+        type = (typeof value === 'object' && value.constructor?.name) ?? type;
         throw new MismatchedTypeError(type, value, this.type[0].code);
     }
 

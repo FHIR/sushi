@@ -7,6 +7,7 @@ import {
 } from '../fhirtypes';
 import { Profile, Extension, Invariant } from '../fshtypes';
 import { FSHTank } from '../import';
+import { InstanceExporter } from '../export';
 import {
   ParentNotDefinedError,
   ParentDeclaredAsProfileNameError,
@@ -156,6 +157,17 @@ export class StructureDefinitionExporter implements Fishable {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
           } else if (rule instanceof FixedValueRule) {
+            if (rule.isInstance) {
+              const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+              const instance = instanceExporter.fishForFHIR(rule.fixedValue as string);
+              if (instance == null) {
+                logger.error(
+                  `Cannot find definition for Instance: ${rule.fixedValue}. Skipping rule.`
+                );
+                continue;
+              }
+              rule.fixedValue = instance;
+            }
             const replacedRule = replaceReferences(rule, this.tank, this);
             element.fixValue(replacedRule.fixedValue, replacedRule.exactly, this);
           } else if (rule instanceof FlagRule) {

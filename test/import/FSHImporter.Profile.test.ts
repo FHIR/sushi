@@ -1352,7 +1352,7 @@ describe('FSHImporter', () => {
         assertFixedValueRule(profile.rules[0], 'identifier.system', 'http://example.org');
       });
 
-      it('should log an error and skip the rule when parsing fixed value Resource rule', () => {
+      it('should parse a fixed value Resource rule', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1362,10 +1362,8 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(0);
-        expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Resources cannot be added inline to a Profile or Extension, skipping rule\..*Line: 5\D*/s
-        );
+        expect(profile.rules).toHaveLength(1);
+        assertFixedValueRule(profile.rules[0], 'contained[0]', 'SomeInstance', false, true);
       });
     });
 
