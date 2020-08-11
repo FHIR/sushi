@@ -952,7 +952,10 @@ export class ElementDefinition {
     }
     for (const [typeCode, currentMatches] of currentTypeMatches) {
       const newType = cloneDeep(type);
-      newType.code = typeCode;
+      // never change the code of an id or url element
+      if (!(this.path.endsWith('.id') || this.path.endsWith('.url'))) {
+        newType.code = typeCode;
+      }
       this.applyProfiles(newType, targetType, currentMatches);
       intersection.push(newType);
     }
