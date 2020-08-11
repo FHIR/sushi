@@ -59,7 +59,11 @@ const IG_ONLY_PROPERTIES = [
   'parameters',
   'template',
   'templates',
-  'menu'
+  'menu',
+  'copyrightyear',
+  'copyrightYear',
+  'releaseLabel',
+  'releaselabel'
 ];
 
 /**
@@ -166,7 +170,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
 
   if (yaml.FSHOnly) {
     // If no IG is being generated, emit warning when IG specific properties are used in config
-    const unusedProperties = Object.keys(config).filter((p: keyof Configuration) =>
+    const unusedProperties = Object.keys(yaml).filter((p: keyof YAMLConfiguration) =>
       IG_ONLY_PROPERTIES.includes(p)
     );
     if (unusedProperties.length > 0) {
