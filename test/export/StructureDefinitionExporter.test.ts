@@ -1848,6 +1848,71 @@ describe('StructureDefinitionExporter', () => {
     expect(diff.max).toBe('*');
   });
 
+  it('should apply a ContainsRule on a slice with defined slicing', () => {
+    // Profile: Foo
+    // Parent: resprate
+    // * code.coding contains fooSlice
+    // * code.coding[fooSlice] ^slicing.discriminator.type = #pattern
+    // * code.coding[fooSlice] contains barReslice
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const sliceRule = new ContainsRule('code.coding');
+    sliceRule.items = [{ name: 'fooSlice' }];
+    const caretRule = new CaretValueRule('code.coding[fooSlice]');
+    caretRule.caretPath = 'slicing.discriminator.type';
+    caretRule.value = new FshCode('pattern');
+    const resliceRule = new ContainsRule('code.coding[fooSlice]');
+    resliceRule.items = [{ name: 'barReslice' }];
+    profile.rules.push(sliceRule, caretRule, resliceRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
+
+    const barReslice = sd.elements.find(
+      e => e.id === 'Observation.code.coding:fooSlice/barReslice'
+    );
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 2);
+    expect(barReslice).toBeDefined();
+    const diff = barReslice.calculateDiff();
+    expect(diff.min).toBe(0);
+    expect(diff.max).toBe('*');
+  });
+
+  it('should apply a ContainsRule on an extension with defined slicing', () => {
+    // Profile: Foo
+    // Parent: resprate
+    // * extension contains bar
+    // * extension[bar] ^slicing.discriminator.type = #pattern
+    // * extension[bar] contains barReslice
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const sliceRule = new ContainsRule('extension');
+    sliceRule.items = [{ name: 'bar' }];
+    const caretRule = new CaretValueRule('extension[bar]');
+    caretRule.caretPath = 'slicing.discriminator.type';
+    caretRule.value = new FshCode('pattern');
+    const resliceRule = new ContainsRule('extension[bar]');
+    resliceRule.items = [{ name: 'barReslice' }];
+    profile.rules.push(sliceRule, caretRule, resliceRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
+
+    const barReslice = sd.elements.find(e => e.id === 'Observation.extension:bar/barReslice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 6);
+    expect(barReslice).toBeDefined();
+    const diff = barReslice.calculateDiff();
+    expect(diff.min).toBe(0);
+    expect(diff.max).toBe('*');
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should apply a ContainsRule of a defined extension on an extension element', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';

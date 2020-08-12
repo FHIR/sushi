@@ -1799,7 +1799,7 @@ export class ElementDefinition {
 
     const slice = this.clone(true);
     delete slice.slicing;
-    slice.id = `${this.id}:${name}`;
+    slice.id = this.sliceName ? `${this.id}/${name}` : `${this.id}:${name}`;
 
     // if a slice with the same id already exists, don't add it again
     const existingSlice = this.structDef.findElement(slice.id);
@@ -1816,7 +1816,7 @@ export class ElementDefinition {
     // Capture the original so that the differential only contains changes from this point on.
     slice.captureOriginal();
 
-    slice.sliceName = name;
+    slice.sliceName = this.sliceName ? `${this.sliceName}/${name}` : name;
     // When we slice, we do not inherit min cardinality, but rather make it 0
     // Allows multiple slices to be defined without violating cardinality of sliced element
     // Cardinality can be later narrowed by card constraints, which check validity of narrowing

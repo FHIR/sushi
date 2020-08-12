@@ -306,6 +306,61 @@ describe('ElementDefinition', () => {
       expect(observation.elements[valueXIdx + 2]).toEqual(integer);
     });
 
+    it('should reslice when slicing a slice', () => {
+      const component = observation.elements.find(e => e.id === 'Observation.component');
+      const lastComponentIndex = findLastIndex(observation.elements, e =>
+        e.id.startsWith('Observation.component.')
+      );
+      component.sliceIt('pattern', 'code', false, 'open');
+      const systolicBP = component.addSlice('SystolicBP');
+      const diastolicBP = component.addSlice('DiastolicBP');
+      systolicBP.sliceIt('pattern', 'interpretation', false, 'open');
+      const fooSlice = systolicBP.addSlice('Foo');
+      expect(fooSlice.id).toBe('Observation.component:SystolicBP/Foo');
+      expect(fooSlice.path).toBe('Observation.component');
+      expect(fooSlice.slicing).toBeUndefined();
+      expect(fooSlice.sliceName).toBe('SystolicBP/Foo');
+      expect(fooSlice.min).toBe(0);
+      expect(fooSlice.max).toBe('*');
+      expect(fooSlice.type).toHaveLength(1);
+      expect(fooSlice.type[0]).toEqual(new ElementDefinitionType('BackboneElement'));
+      const fooDiff = fooSlice.calculateDiff();
+      expect(fooDiff.min).toBe(0);
+      expect(fooDiff.max).toBe('*');
+      expect(observation.elements[lastComponentIndex + 1]).toEqual(systolicBP);
+      expect(observation.elements[lastComponentIndex + 2]).toEqual(fooSlice);
+      expect(observation.elements[lastComponentIndex + 3]).toEqual(diastolicBP);
+    });
+
+    it('should reslice when slicing a reslice', () => {
+      const component = observation.elements.find(e => e.id === 'Observation.component');
+      const lastComponentIndex = findLastIndex(observation.elements, e =>
+        e.id.startsWith('Observation.component.')
+      );
+      component.sliceIt('pattern', 'code', false, 'open');
+      const systolicBP = component.addSlice('SystolicBP');
+      const diastolicBP = component.addSlice('DiastolicBP');
+      systolicBP.sliceIt('pattern', 'interpretation', false, 'open');
+      const fooSlice = systolicBP.addSlice('Foo');
+      fooSlice.sliceIt('pattern', 'dataAbsentReason', false, 'open');
+      const barSlice = fooSlice.addSlice('Bar');
+      expect(barSlice.id).toBe('Observation.component:SystolicBP/Foo/Bar');
+      expect(barSlice.path).toBe('Observation.component');
+      expect(barSlice.slicing).toBeUndefined();
+      expect(barSlice.sliceName).toBe('SystolicBP/Foo/Bar');
+      expect(barSlice.min).toBe(0);
+      expect(barSlice.max).toBe('*');
+      expect(barSlice.type).toHaveLength(1);
+      expect(barSlice.type[0]).toEqual(new ElementDefinitionType('BackboneElement'));
+      const barDiff = barSlice.calculateDiff();
+      expect(barDiff.min).toBe(0);
+      expect(barDiff.max).toBe('*');
+      expect(observation.elements[lastComponentIndex + 1]).toEqual(systolicBP);
+      expect(observation.elements[lastComponentIndex + 2]).toEqual(fooSlice);
+      expect(observation.elements[lastComponentIndex + 3]).toEqual(barSlice);
+      expect(observation.elements[lastComponentIndex + 4]).toEqual(diastolicBP);
+    });
+
     it('should throw when no slicing is present', () => {
       const component = observation.elements.find(e => e.id === 'Observation.component');
       // NOTE: intentionally not adding a slicing

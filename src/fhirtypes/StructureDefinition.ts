@@ -1,5 +1,6 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
+import escapeRegExp from 'lodash/escapeRegExp';
 import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
@@ -133,12 +134,13 @@ export class StructureDefinition {
     let lastMatchId = '';
     for (; i < this.elements.length; i++) {
       const currentId = this.elements[i].id;
-      if (element.id.startsWith(`${currentId}.`) || element.id.startsWith(`${currentId}:`)) {
+      if (new RegExp(`${escapeRegExp(currentId)}[.:/]`).test(element.id)) {
         lastMatchId = currentId;
       } else if (
-        (!currentId.startsWith(`${lastMatchId}.`) && !currentId.startsWith(`${lastMatchId}:`)) ||
+        !new RegExp(`${escapeRegExp(lastMatchId)}[./:]`).test(currentId) ||
         // If element is not a slice at this level, and the currentId is a slice, break to add children before slices
-        (element.id.startsWith(`${lastMatchId}.`) && currentId.startsWith(`${lastMatchId}:`))
+        (new RegExp(`${escapeRegExp(lastMatchId)}[.]`).test(element.id) &&
+          new RegExp(`${escapeRegExp(lastMatchId)}[:/]`).test(currentId))
       ) {
         break;
       }
