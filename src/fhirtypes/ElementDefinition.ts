@@ -1288,6 +1288,17 @@ export class ElementDefinition {
       throw new ValueAlreadyFixedError(fshValue, type, JSON.stringify(currentElementValue));
     }
 
+    // Children of elements with complex types such as Quantity may already have fixed values
+    this.children().forEach(child => this.checkChildFixedValue(child, fhirValue));
+
+    // if this is a slice, make sure that nothing on this.slicedElement() is being violated
+    const slicedElement = this.slicedElement();
+    if (slicedElement) {
+      slicedElement
+        .children()
+        .forEach(child => slicedElement.checkChildFixedValue(child, fhirValue));
+    }
+
     // If we made it this far, fix the value using fixed[x] or pattern[x] as appropriate
     if (exactly) {
       // @ts-ignore: Type 'any' is not assignable to type 'never'
@@ -1297,6 +1308,33 @@ export class ElementDefinition {
       // @ts-ignore: Type 'any' is not assignable to type 'never'
       this[patternX] = fhirValue;
       // NOTE: No need to delete fixed[x], as changing from fixed[x] to pattern[x] is not allowed
+    }
+  }
+
+  private checkChildFixedValue(child: ElementDefinition, fhirValue: any) {
+    const childType = child.type[0].code;
+    const fixedX = `fixed${upperFirst(childType)}` as keyof ElementDefinition;
+    const patternX = `pattern${upperFirst(childType)}` as keyof ElementDefinition;
+    const currentChildValue = child[fixedX] ?? child[patternX];
+    if (currentChildValue != null) {
+      // find the element on fhirValue that would get assigned to the child
+      const childPath = child.id.replace(`${this.id}.`, '').split('.');
+      let newChildValue = fhirValue;
+      for (const pathPart of childPath) {
+        if (newChildValue != null) {
+          newChildValue = newChildValue[pathPart];
+        }
+      }
+      if (newChildValue != null) {
+        const childCompareFn = typeof newChildValue === 'object' ? isMatch : isEqual;
+        if (!childCompareFn(newChildValue, currentChildValue)) {
+          throw new ValueAlreadyFixedError(
+            newChildValue,
+            childType,
+            JSON.stringify(currentChildValue)
+          );
+        }
+      }
     }
   }
 

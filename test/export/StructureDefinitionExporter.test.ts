@@ -11,7 +11,8 @@ import {
   FshValueSet,
   FshCodeSystem,
   Invariant,
-  RuleSet
+  RuleSet,
+  FshQuantity
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -1824,6 +1825,103 @@ describe('StructureDefinitionExporter', () => {
     expect(baseCode.patternCodeableConcept).toBeUndefined();
     expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
     expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
+  });
+
+  it('should not apply a FixedValueRule to a parent element when it would conflict with a child element', () => {
+    // Profile: MyObs
+    // Parent: Observation
+    // * valueQuantity.value = 20
+    // * valueQuantity = 10 'mm'
+    const profile = new Profile('MyObs');
+    profile.parent = 'Observation';
+    const valueRule = new FixedValueRule('valueQuantity.value')
+      .withFile('Fixed.fsh')
+      .withLocation([3, 8, 3, 29]);
+    valueRule.fixedValue = 20;
+    const quantityRule = new FixedValueRule('valueQuantity')
+      .withFile('Fixed.fsh')
+      .withLocation([4, 8, 4, 27]);
+    quantityRule.fixedValue = new FshQuantity(10, new FshCode('mm', 'http://unitsofmeasure.org'));
+    profile.rules.push(valueRule, quantityRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const childElement = sd.findElement('Observation.value[x]:valueQuantity.value');
+    const parentElement = sd.findElement('Observation.value[x]:valueQuantity');
+
+    expect(childElement.patternDecimal).toBe(20);
+    expect(parentElement.patternQuantity).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot fix 10 to this element.*File: Fixed\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should not apply a FixedValueRule to a slice when it would conflict with a child of the list element', () => {
+    // Instance: CustomPostalAddress
+    // InstanceOf: Address
+    // Usage: #inline
+    // * period.start = "2020-04-01"
+    const customPostalAddress = new Instance('CustomPostalAddress');
+    customPostalAddress.instanceOf = 'Address';
+    customPostalAddress.usage = 'Inline';
+    const customStart = new FixedValueRule('period.start');
+    customStart.fixedValue = '2020-04-01';
+
+    customPostalAddress.rules.push(customStart);
+    doc.instances.set(customPostalAddress.name, customPostalAddress);
+
+    // Profile: MovingPatient
+    // Parent: Patient
+    // * address.period.start = "1998-07-04"
+    // * address ^slicing.discriminator[0].type = #pattern
+    // * address ^slicing.discriminator[0].path = "$this"
+    // * address ^slicing.rules = #open
+    // * address contains RecentAddress 1..1
+    // * address[RecentAddress] = CustomPostalAddress // this rule should not be applied
+    const movingPatient = new Profile('MovingPatient');
+    movingPatient.parent = 'Patient';
+    const movingStart = new FixedValueRule('address.period.start');
+    movingStart.fixedValue = '1998-07-04';
+    const slicingType = new CaretValueRule('address');
+    slicingType.caretPath = 'slicing.discriminator[0].type';
+    slicingType.value = new FshCode('pattern');
+    const slicingPath = new CaretValueRule('address');
+    slicingPath.caretPath = 'slicing.discriminator[0].path';
+    slicingPath.value = 'code';
+    const slicingRules = new CaretValueRule('address');
+    slicingRules.caretPath = 'slicing.rules';
+    slicingRules.value = new FshCode('open');
+    const recentAddress = new ContainsRule('address');
+    recentAddress.items.push({ name: 'RecentAddress' });
+    const recentCard = new CardRule('address[RecentAddress]');
+    recentCard.min = 1;
+    recentCard.max = '1';
+    const recentInstance = new FixedValueRule('address[RecentAddress]')
+      .withFile('Fixed.fsh')
+      .withLocation([8, 9, 8, 54]);
+    recentInstance.fixedValue = 'CustomPostalAddress';
+    recentInstance.isInstance = true;
+
+    movingPatient.rules.push(
+      movingStart,
+      slicingType,
+      slicingPath,
+      slicingRules,
+      recentAddress,
+      recentCard,
+      recentInstance
+    );
+
+    exporter.exportStructDef(movingPatient);
+    const sd = pkg.profiles[0];
+    const periodStartElement = sd.findElement('Patient.address.period.start');
+    const addressSliceElement = sd.findElement('Patient.address:RecentAddress');
+
+    expect(periodStartElement.patternDateTime).toBe('1998-07-04');
+    expect(addressSliceElement.patternAddress).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot fix 2020-04-01 to this element.*File: Fixed\.fsh.*Line: 8\D*/s
+    );
   });
 
   // Contains Rule
