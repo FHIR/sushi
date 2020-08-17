@@ -134,13 +134,13 @@ export class StructureDefinition {
     let lastMatchId = '';
     for (; i < this.elements.length; i++) {
       const currentId = this.elements[i].id;
-      if (new RegExp(`${escapeRegExp(currentId)}[.:/]`).test(element.id)) {
+      if (new RegExp(`^${escapeRegExp(currentId)}[.:/]`).test(element.id)) {
         lastMatchId = currentId;
       } else if (
-        !new RegExp(`${escapeRegExp(lastMatchId)}[./:]`).test(currentId) ||
+        !new RegExp(`^${escapeRegExp(lastMatchId)}[./:]`).test(currentId) ||
         // If element is not a slice at this level, and the currentId is a slice, break to add children before slices
-        (new RegExp(`${escapeRegExp(lastMatchId)}[.]`).test(element.id) &&
-          new RegExp(`${escapeRegExp(lastMatchId)}[:/]`).test(currentId))
+        (new RegExp(`^${escapeRegExp(lastMatchId)}[.]`).test(element.id) &&
+          new RegExp(`^${escapeRegExp(lastMatchId)}[:/]`).test(currentId))
       ) {
         break;
       }
