@@ -2261,7 +2261,7 @@ describe('importConfiguration', () => {
       minYAML.FSHOnly = true;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /The following properties are unused and only relevant for IG creation: contained, parameters, template, menu.*File: test-config.yaml/s
+        /The following properties are unused and only relevant for IG creation: copyrightYear, releaseLabel, template, menu, contained.*File: test-config.yaml/s
       );
       expect(config.FSHOnly).toBe(true);
     });
