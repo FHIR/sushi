@@ -1,4 +1,12 @@
-import { isEmpty, isEqual, isMatch, cloneDeep, upperFirst, intersectionWith } from 'lodash';
+import {
+  isEmpty,
+  isEqual,
+  isMatch,
+  cloneDeep,
+  upperFirst,
+  intersectionWith,
+  flatten
+} from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -1317,24 +1325,26 @@ export class ElementDefinition {
     const patternX = `pattern${upperFirst(childType)}` as keyof ElementDefinition;
     const currentChildValue = child[fixedX] ?? child[patternX];
     if (currentChildValue != null) {
-      // find the element on fhirValue that would get assigned to the child
+      // find the element on fhirValue that would get assigned to the child.
+      // sometimes, there may be arrays inside complex object types, such as CodeableConcept.
+      // therefore, flatten those arrays as the path is traversed so that all possible new values are found.
       const childPath = child.id.replace(`${this.id}.`, '').split('.');
-      let newChildValue = fhirValue;
+      let newChildValue = [fhirValue];
       for (const pathPart of childPath) {
-        if (newChildValue != null) {
-          newChildValue = newChildValue[pathPart];
-        }
+        newChildValue = flatten(
+          newChildValue.map(value => {
+            return value?.[pathPart];
+          })
+        );
       }
-      if (newChildValue != null) {
-        const childCompareFn = typeof newChildValue === 'object' ? isMatch : isEqual;
-        if (!childCompareFn(newChildValue, currentChildValue)) {
-          throw new ValueAlreadyFixedError(
-            newChildValue,
-            childType,
-            JSON.stringify(currentChildValue)
-          );
+      newChildValue.forEach(value => {
+        if (value != null) {
+          const childCompareFn = typeof value === 'object' ? isMatch : isEqual;
+          if (!childCompareFn(value, currentChildValue)) {
+            throw new ValueAlreadyFixedError(value, childType, JSON.stringify(currentChildValue));
+          }
         }
-      }
+      });
     }
   }
 

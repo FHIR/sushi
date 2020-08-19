@@ -1856,6 +1856,32 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should not apply a FixedValueRule to a complex typed element when it would conflict with a child element present in an array in the type', () => {
+    // Profile: MyObs
+    // Parent: Observation
+    // * valueCodeableConcept.coding.code = #pancake
+    // * valueCodeableConcept = #waffle // this rule should not be applied
+    const profile = new Profile('MyObs');
+    profile.parent = 'Observation';
+    const innerRule = new FixedValueRule('valueCodeableConcept.coding.code');
+    innerRule.fixedValue = new FshCode('pancake');
+    const outerRule = new FixedValueRule('valueCodeableConcept')
+      .withFile('Fixed.fsh')
+      .withLocation([4, 9, 4, 33]);
+    outerRule.fixedValue = new FshCode('waffle');
+    profile.rules.push(innerRule, outerRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const innerElement = sd.findElement('Observation.value[x]:valueCodeableConcept.coding.code');
+    const outerElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+    expect(innerElement.patternCode).toBe('pancake');
+    expect(outerElement.patternCodeableConcept).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot fix waffle to this element.*File: Fixed\.fsh.*Line: 4\D*/s
+    );
+  });
+
   it('should not apply a FixedValueRule to a slice when it would conflict with a child of the list element', () => {
     // Instance: CustomPostalAddress
     // InstanceOf: Address
