@@ -19,6 +19,7 @@ import {
   filterProfileInstances
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
+import { extractConfiguration } from '../import/extractConfiguration';
 
 export function findInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
@@ -59,8 +60,16 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
 export function readConfig(input: string): Configuration {
   const configPath = ensureConfiguration(input);
   if (configPath == null || !fs.existsSync(configPath)) {
-    logger.error('No config.yaml in FSH definition folder.');
-    throw Error;
+    const config = extractConfiguration(input);
+    if (config) {
+      return config;
+    } else {
+      logger.error(
+        'No config.yaml in FSH definition folder, and no configuration could' +
+          ' be extracted from an ImplementationGuide JSON file.'
+      );
+      throw Error;
+    }
   }
   const configYaml = fs.readFileSync(configPath, 'utf8');
   const config = importConfiguration(configYaml, configPath);

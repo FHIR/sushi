@@ -138,6 +138,15 @@ describe('Processing', () => {
       });
     });
 
+    it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent', () => {
+      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only', 'fsh');
+      const config = readConfig(input);
+      expect(config).toEqual({
+        FSHOnly: true,
+        canonical: 'http://example.org'
+      });
+    });
+
     it('should log and throw an error when config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
