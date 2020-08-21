@@ -1328,7 +1328,7 @@ export class ElementDefinition {
       // find the element on fhirValue that would get assigned to the child.
       // sometimes, there may be arrays inside complex object types, such as CodeableConcept.
       // therefore, flatten those arrays as the path is traversed so that all possible new values are found.
-      const childPath = child.id.replace(`${this.id}.`, '').split('.');
+      const childPath = child.path.replace(`${this.path}.`, '').split('.');
       let newChildValue = [fhirValue];
       for (const pathPart of childPath) {
         newChildValue = flatten(
