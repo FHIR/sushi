@@ -941,6 +941,7 @@ export class ElementDefinition {
   ) {
     const intersection: ElementDefinitionType[] = [];
     const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
+    const fhirPathPrimitive = /^http:\/\/hl7\.org\/fhirpath\/System\./;
     for (const match of matches) {
       // If the original element type is a Reference, keep it a reference, otherwise take on the
       // input type's type code (as represented in its StructureDefinition.type).
@@ -952,8 +953,8 @@ export class ElementDefinition {
     }
     for (const [typeCode, currentMatches] of currentTypeMatches) {
       const newType = cloneDeep(type);
-      // never change the code of an id or url element
-      if (!(this.path.endsWith('.id') || this.path.endsWith('.url'))) {
+      // never change the code of a FHIRPath primitive
+      if (!fhirPathPrimitive.test(type.getActualCode())) {
         newType.code = typeCode;
       }
       this.applyProfiles(newType, targetType, currentMatches);
