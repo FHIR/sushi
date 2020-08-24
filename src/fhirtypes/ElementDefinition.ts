@@ -949,6 +949,7 @@ export class ElementDefinition {
   ) {
     const intersection: ElementDefinitionType[] = [];
     const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
+    const fhirPathPrimitive = /^http:\/\/hl7\.org\/fhirpath\/System\./;
     for (const match of matches) {
       // If the original element type is a Reference, keep it a reference, otherwise take on the
       // input type's type code (as represented in its StructureDefinition.type).
@@ -960,7 +961,10 @@ export class ElementDefinition {
     }
     for (const [typeCode, currentMatches] of currentTypeMatches) {
       const newType = cloneDeep(type);
-      newType.code = typeCode;
+      // never change the code of a FHIRPath primitive
+      if (!fhirPathPrimitive.test(type.getActualCode())) {
+        newType.code = typeCode;
+      }
       this.applyProfiles(newType, targetType, currentMatches);
       intersection.push(newType);
     }
@@ -1847,7 +1851,7 @@ export class ElementDefinition {
 
     const slice = this.clone(true);
     delete slice.slicing;
-    slice.id = `${this.id}:${name}`;
+    slice.id = this.sliceName ? `${this.id}/${name}` : `${this.id}:${name}`;
 
     // if a slice with the same id already exists, don't add it again
     const existingSlice = this.structDef.findElement(slice.id);
@@ -1864,7 +1868,7 @@ export class ElementDefinition {
     // Capture the original so that the differential only contains changes from this point on.
     slice.captureOriginal();
 
-    slice.sliceName = name;
+    slice.sliceName = this.sliceName ? `${this.sliceName}/${name}` : name;
     // When we slice, we do not inherit min cardinality, but rather make it 0
     // Allows multiple slices to be defined without violating cardinality of sliced element
     // Cardinality can be later narrowed by card constraints, which check validity of narrowing
