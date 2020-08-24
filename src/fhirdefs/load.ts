@@ -197,8 +197,7 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
           if (file.startsWith('.')) {
             // Ignore hidden files on *nix, like `.DS_Store` on macOS
             continue;
-          }
-          else if (file.endsWith('.json')) {
+          } else if (file.endsWith('.json')) {
             resourceJSON = fs.readJSONSync(path.join(dirPath, file));
           } else if (file.endsWith('xml')) {
             resourceJSON = converter.xmlToObj(fs.readFileSync(path.join(dirPath, file)).toString());
