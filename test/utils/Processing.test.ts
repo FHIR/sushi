@@ -143,7 +143,8 @@ describe('Processing', () => {
       const config = readConfig(input);
       expect(config).toEqual({
         FSHOnly: true,
-        canonical: 'http://example.org'
+        canonical: 'http://example.org',
+        fhirVersion: ['4.0.1']
       });
     });
 

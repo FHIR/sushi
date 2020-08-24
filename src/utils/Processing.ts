@@ -59,20 +59,20 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
 
 export function readConfig(input: string): Configuration {
   const configPath = ensureConfiguration(input);
+  let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
-    const config = extractConfiguration(input);
-    if (config) {
-      return config;
-    } else {
-      logger.error(
-        'No config.yaml in FSH definition folder, and no configuration could' +
-          ' be extracted from an ImplementationGuide JSON file.'
-      );
-      throw Error;
-    }
+    config = extractConfiguration(input);
+  } else {
+    const configYaml = fs.readFileSync(configPath, 'utf8');
+    config = importConfiguration(configYaml, configPath);
   }
-  const configYaml = fs.readFileSync(configPath, 'utf8');
-  const config = importConfiguration(configYaml, configPath);
+  if (!config) {
+    logger.error(
+      'No config.yaml in FSH definition folder, and no configuration could' +
+        ' be extracted from an ImplementationGuide JSON file.'
+    );
+    throw Error;
+  }
   if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
       'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
