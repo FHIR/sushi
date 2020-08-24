@@ -464,6 +464,24 @@ describe('StructureDefinition', () => {
       expect(resprate.elements).toHaveLength(originalLength + 1);
       expect(resprate.elements[14].id).toBe('Observation.category.coding');
     });
+
+    it('should add resliced elements in the right place', () => {
+      const originalLength = resprate.elements.length;
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo'));
+      expect(resprate.elements).toHaveLength(originalLength + 1);
+      expect(resprate.elements[26].id).toBe('Observation.category:VSCat/foo');
+    });
+
+    it('should add children of resliced elements in the right place', () => {
+      const originalLength = resprate.elements.length;
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo'));
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo/bar'));
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo.extension'));
+      expect(resprate.elements).toHaveLength(originalLength + 3);
+      expect(resprate.elements[26].id).toBe('Observation.category:VSCat/foo');
+      expect(resprate.elements[27].id).toBe('Observation.category:VSCat/foo.extension');
+      expect(resprate.elements[28].id).toBe('Observation.category:VSCat/foo/bar');
+    });
   });
 
   describe('#findElement', () => {
