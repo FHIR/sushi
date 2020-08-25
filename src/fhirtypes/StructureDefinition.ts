@@ -672,7 +672,12 @@ export class StructureDefinition {
         // NOTE: The spec is somewhat inconsistent on handling choice slicing, we decided on this
         // approach per consistency with 4.0.1 observation-vitalsigns profiles and per this post
         // https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/.
-        matchingXElement.sliceIt('type', '$this', false, 'open');
+        matchingXElement.sliceIt(
+          'type',
+          '$this',
+          matchingXElement.slicing?.ordered,
+          matchingXElement.slicing?.rules
+        );
         // Get the sliceName for the new element
         const newSlice = matchingXElement.addSlice(sliceName, matchingType);
         return newSlice;
