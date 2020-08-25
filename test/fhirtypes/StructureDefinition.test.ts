@@ -464,6 +464,24 @@ describe('StructureDefinition', () => {
       expect(resprate.elements).toHaveLength(originalLength + 1);
       expect(resprate.elements[14].id).toBe('Observation.category.coding');
     });
+
+    it('should add resliced elements in the right place', () => {
+      const originalLength = resprate.elements.length;
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo'));
+      expect(resprate.elements).toHaveLength(originalLength + 1);
+      expect(resprate.elements[26].id).toBe('Observation.category:VSCat/foo');
+    });
+
+    it('should add children of resliced elements in the right place', () => {
+      const originalLength = resprate.elements.length;
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo'));
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo/bar'));
+      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo.extension'));
+      expect(resprate.elements).toHaveLength(originalLength + 3);
+      expect(resprate.elements[26].id).toBe('Observation.category:VSCat/foo');
+      expect(resprate.elements[27].id).toBe('Observation.category:VSCat/foo.extension');
+      expect(resprate.elements[28].id).toBe('Observation.category:VSCat/foo/bar');
+    });
   });
 
   describe('#findElement', () => {
@@ -666,6 +684,21 @@ describe('StructureDefinition', () => {
       expect(valueQuantity.min).toBe(0);
       expect(valueX.slicing).toBeDefined();
       expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
+      expect(valueX.slicing.ordered).toBe(false);
+      expect(valueX.slicing.rules).toBe('open');
+      expect(observation.elements.length).toBe(originalLength + 1);
+    });
+
+    it('should preserve existing slicing when making a non-existent choice element explicit', () => {
+      const originalLength = observation.elements.length;
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      expect(valueX.slicing).toBeUndefined();
+      valueX.slicing = { ordered: true, rules: 'closed' };
+      observation.findElementByPath('valueQuantity', fisher);
+      expect(valueX.slicing).toBeDefined();
+      expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
+      expect(valueX.slicing.ordered).toBe(true);
+      expect(valueX.slicing.rules).toBe('closed');
       expect(observation.elements.length).toBe(originalLength + 1);
     });
 

@@ -11,7 +11,8 @@ import {
   FshValueSet,
   FshCodeSystem,
   Invariant,
-  RuleSet
+  RuleSet,
+  FshQuantity
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -1392,6 +1393,45 @@ describe('StructureDefinitionExporter', () => {
     expect(lastMessage).toMatch(/File: FooQuantity\.fsh.*Line: 6 - 11\D*/s);
   });
 
+  it('should apply an OnlyRule to constrain an id element', () => {
+    const specialString = new Profile('SpecialString');
+    specialString.parent = 'string';
+    doc.profiles.set(specialString.name, specialString);
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const onlyRule = new OnlyRule('code.id');
+    onlyRule.types = [{ type: 'SpecialString' }];
+    profile.rules.push(onlyRule);
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const codeId = sd.findElement('Observation.code.id');
+    expect(codeId.type.length).toBe(1);
+    expect(codeId.type[0].getActualCode()).toBe('http://hl7.org/fhirpath/System.String');
+    expect(codeId.type[0].profile.length).toBe(1);
+    expect(codeId.type[0].profile[0]).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialString'
+    );
+  });
+
+  it('should apply an OnlyRule to constrain a url element', () => {
+    const specialUri = new Profile('SpecialUri');
+    specialUri.parent = 'uri';
+    doc.profiles.set(specialUri.name, specialUri);
+    const extension = new Extension('SpecialExtension');
+    const onlyRule = new OnlyRule('url');
+    onlyRule.types = [{ type: 'SpecialUri' }];
+    extension.rules.push(onlyRule);
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const url = sd.findElement('Extension.url');
+    expect(url.type.length).toBe(1);
+    expect(url.type[0].getActualCode()).toBe('http://hl7.org/fhirpath/System.String');
+    expect(url.type[0].profile.length).toBe(1);
+    expect(url.type[0].profile[0]).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/SpecialUri'
+    );
+  });
+
   it('should not apply an incorrect OnlyRule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -1826,6 +1866,220 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
   });
 
+  it('should not apply a FixedValueRule to a parent element when it would conflict with a child element', () => {
+    // Profile: MyObs
+    // Parent: Observation
+    // * valueQuantity.value = 20
+    // * valueQuantity = 10 'mm'
+    const profile = new Profile('MyObs');
+    profile.parent = 'Observation';
+    const valueRule = new FixedValueRule('valueQuantity.value')
+      .withFile('Fixed.fsh')
+      .withLocation([3, 8, 3, 29]);
+    valueRule.fixedValue = 20;
+    const quantityRule = new FixedValueRule('valueQuantity')
+      .withFile('Fixed.fsh')
+      .withLocation([4, 8, 4, 27]);
+    quantityRule.fixedValue = new FshQuantity(10, new FshCode('mm', 'http://unitsofmeasure.org'));
+    profile.rules.push(valueRule, quantityRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const childElement = sd.findElement('Observation.value[x]:valueQuantity.value');
+    const parentElement = sd.findElement('Observation.value[x]:valueQuantity');
+
+    expect(childElement.patternDecimal).toBe(20);
+    expect(parentElement.patternQuantity).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot fix 10 to this element.*File: Fixed\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should not apply a FixedValueRule to a complex typed element when it would conflict with a child element present in an array in the type', () => {
+    // Profile: MyObs
+    // Parent: Observation
+    // * valueCodeableConcept.coding.code = #pancake
+    // * valueCodeableConcept = #waffle // this rule should not be applied
+    const profile = new Profile('MyObs');
+    profile.parent = 'Observation';
+    const innerRule = new FixedValueRule('valueCodeableConcept.coding.code');
+    innerRule.fixedValue = new FshCode('pancake');
+    const outerRule = new FixedValueRule('valueCodeableConcept')
+      .withFile('Fixed.fsh')
+      .withLocation([4, 9, 4, 33]);
+    outerRule.fixedValue = new FshCode('waffle');
+    profile.rules.push(innerRule, outerRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const innerElement = sd.findElement('Observation.value[x]:valueCodeableConcept.coding.code');
+    const outerElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+    expect(innerElement.patternCode).toBe('pancake');
+    expect(outerElement.patternCodeableConcept).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot fix waffle to this element.*File: Fixed\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should not apply a FixedValueRule to a slice when it would conflict with a child of the list element', () => {
+    // Instance: CustomPostalAddress
+    // InstanceOf: Address
+    // Usage: #inline
+    // * period.start = "2020-04-01"
+    const customPostalAddress = new Instance('CustomPostalAddress');
+    customPostalAddress.instanceOf = 'Address';
+    customPostalAddress.usage = 'Inline';
+    const customStart = new FixedValueRule('period.start');
+    customStart.fixedValue = '2020-04-01';
+
+    customPostalAddress.rules.push(customStart);
+    doc.instances.set(customPostalAddress.name, customPostalAddress);
+
+    // Profile: MovingPatient
+    // Parent: Patient
+    // * address.period.start = "1998-07-04"
+    // * address ^slicing.discriminator[0].type = #pattern
+    // * address ^slicing.discriminator[0].path = "$this"
+    // * address ^slicing.rules = #open
+    // * address contains RecentAddress 1..1
+    // * address[RecentAddress] = CustomPostalAddress // this rule should not be applied
+    const movingPatient = new Profile('MovingPatient');
+    movingPatient.parent = 'Patient';
+    const movingStart = new FixedValueRule('address.period.start');
+    movingStart.fixedValue = '1998-07-04';
+    const slicingType = new CaretValueRule('address');
+    slicingType.caretPath = 'slicing.discriminator[0].type';
+    slicingType.value = new FshCode('pattern');
+    const slicingPath = new CaretValueRule('address');
+    slicingPath.caretPath = 'slicing.discriminator[0].path';
+    slicingPath.value = 'code';
+    const slicingRules = new CaretValueRule('address');
+    slicingRules.caretPath = 'slicing.rules';
+    slicingRules.value = new FshCode('open');
+    const recentAddress = new ContainsRule('address');
+    recentAddress.items.push({ name: 'RecentAddress' });
+    const recentCard = new CardRule('address[RecentAddress]');
+    recentCard.min = 1;
+    recentCard.max = '1';
+    const recentInstance = new FixedValueRule('address[RecentAddress]')
+      .withFile('Fixed.fsh')
+      .withLocation([8, 9, 8, 54]);
+    recentInstance.fixedValue = 'CustomPostalAddress';
+    recentInstance.isInstance = true;
+
+    movingPatient.rules.push(
+      movingStart,
+      slicingType,
+      slicingPath,
+      slicingRules,
+      recentAddress,
+      recentCard,
+      recentInstance
+    );
+
+    exporter.exportStructDef(movingPatient);
+    const sd = pkg.profiles[0];
+    const periodStartElement = sd.findElement('Patient.address.period.start');
+    const addressSliceElement = sd.findElement('Patient.address:RecentAddress');
+
+    expect(periodStartElement.patternDateTime).toBe('1998-07-04');
+    expect(addressSliceElement.patternAddress).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot fix 2020-04-01 to this element.*File: Fixed\.fsh.*Line: 8\D*/s
+    );
+  });
+
+  it('should not apply a FixedValueRule to a slice when it would conflict with a child slice of the list element', () => {
+    // Instance: CustomPostalAddress
+    // InstanceOf: Address
+    // Usage: #inline
+    // * line[0] = "First part of address"
+    const customPostalAddress = new Instance('CustomPostalAddress');
+    customPostalAddress.instanceOf = 'Address';
+    customPostalAddress.usage = 'Inline';
+    const customLine = new FixedValueRule('line[0]');
+    customLine.fixedValue = 'First part of address';
+    customPostalAddress.rules.push(customLine);
+    doc.instances.set(customPostalAddress.name, customPostalAddress);
+
+    // Profile: CustomPatient
+    // Parent: Patient
+    // * address.line ^slicing.discriminator[0].type = #pattern
+    // * address.line ^slicing.discriminator[0].path = "$this"
+    // * address.line ^slicing.rules = #open
+    // * address.line contains SpecificLine 1..1
+    // * address.line[SpecificLine] = "Specific part of address"
+    // * address ^slicing.discriminator[0].type = #pattern
+    // * address ^slicing.discriminator[0].path = "$this"
+    // * address ^slicing.rules = #open
+    // * address contains RecentAddress 1..1
+    // * address[RecentAddress] = CustomPostalAddress // this rule should not be applied
+    const customPatient = new Profile('CustomPatient');
+    customPatient.parent = 'Patient';
+
+    const slicingTypeLine = new CaretValueRule('address.line');
+    slicingTypeLine.caretPath = 'slicing.discriminator[0].type';
+    slicingTypeLine.value = new FshCode('pattern');
+    const slicingPathLine = new CaretValueRule('address.line');
+    slicingPathLine.caretPath = 'slicing.discriminator[0].path';
+    slicingPathLine.value = 'code';
+    const slicingRulesLine = new CaretValueRule('address.line');
+    slicingRulesLine.caretPath = 'slicing.rules';
+    slicingRulesLine.value = new FshCode('open');
+    const containsSpecificLine = new ContainsRule('address.line');
+    containsSpecificLine.items.push({ name: 'SpecificLine' });
+    const specificLineCard = new CardRule('address.line[SpecificLine]');
+    specificLineCard.min = 1;
+    specificLineCard.max = '1';
+    const specificLine = new FixedValueRule('address.line[SpecificLine]');
+    specificLine.fixedValue = 'Specific part of address';
+
+    const slicingType = new CaretValueRule('address');
+    slicingType.caretPath = 'slicing.discriminator[0].type';
+    slicingType.value = new FshCode('pattern');
+    const slicingPath = new CaretValueRule('address');
+    slicingPath.caretPath = 'slicing.discriminator[0].path';
+    slicingPath.value = 'code';
+    const slicingRules = new CaretValueRule('address');
+    slicingRules.caretPath = 'slicing.rules';
+    slicingRules.value = new FshCode('open');
+    const recentAddress = new ContainsRule('address');
+    recentAddress.items.push({ name: 'RecentAddress' });
+    const recentCard = new CardRule('address[RecentAddress]');
+    recentCard.min = 1;
+    recentCard.max = '1';
+    const recentInstance = new FixedValueRule('address[RecentAddress]')
+      .withFile('Fixed.fsh')
+      .withLocation([12, 9, 12, 54]);
+    recentInstance.fixedValue = 'CustomPostalAddress';
+    recentInstance.isInstance = true;
+
+    customPatient.rules.push(
+      slicingTypeLine,
+      slicingPathLine,
+      slicingRulesLine,
+      containsSpecificLine,
+      specificLineCard,
+      specificLine,
+      slicingType,
+      slicingPath,
+      slicingRules,
+      recentAddress,
+      recentCard,
+      recentInstance
+    );
+
+    exporter.exportStructDef(customPatient);
+    const sd = pkg.profiles[0];
+    const addressLineElement = sd.findElement('Patient.address.line:SpecificLine');
+    const addressSliceElement = sd.findElement('Patient.address:RecentAddress');
+    expect(addressLineElement.patternString).toBeDefined();
+    expect(addressSliceElement.patternAddress).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot fix First part of address to this element.*File: Fixed\.fsh.*Line: 12\D*/s
+    );
+  });
+
   // Contains Rule
   it('should apply a ContainsRule on an element with defined slicing', () => {
     const profile = new Profile('Foo');
@@ -1846,6 +2100,71 @@ describe('StructureDefinitionExporter', () => {
     const diff = barSlice.calculateDiff();
     expect(diff.min).toBe(0);
     expect(diff.max).toBe('*');
+  });
+
+  it('should apply a ContainsRule on a slice with defined slicing', () => {
+    // Profile: Foo
+    // Parent: resprate
+    // * code.coding contains fooSlice
+    // * code.coding[fooSlice] ^slicing.discriminator.type = #pattern
+    // * code.coding[fooSlice] contains barReslice
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const sliceRule = new ContainsRule('code.coding');
+    sliceRule.items = [{ name: 'fooSlice' }];
+    const caretRule = new CaretValueRule('code.coding[fooSlice]');
+    caretRule.caretPath = 'slicing.discriminator.type';
+    caretRule.value = new FshCode('pattern');
+    const resliceRule = new ContainsRule('code.coding[fooSlice]');
+    resliceRule.items = [{ name: 'barReslice' }];
+    profile.rules.push(sliceRule, caretRule, resliceRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
+
+    const barReslice = sd.elements.find(
+      e => e.id === 'Observation.code.coding:fooSlice/barReslice'
+    );
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 2);
+    expect(barReslice).toBeDefined();
+    const diff = barReslice.calculateDiff();
+    expect(diff.min).toBe(0);
+    expect(diff.max).toBe('*');
+  });
+
+  it('should apply a ContainsRule on an extension with defined slicing', () => {
+    // Profile: Foo
+    // Parent: resprate
+    // * extension contains bar
+    // * extension[bar] ^slicing.discriminator.type = #pattern
+    // * extension[bar] contains barReslice
+    const profile = new Profile('Foo');
+    profile.parent = 'resprate';
+
+    const sliceRule = new ContainsRule('extension');
+    sliceRule.items = [{ name: 'bar' }];
+    const caretRule = new CaretValueRule('extension[bar]');
+    caretRule.caretPath = 'slicing.discriminator.type';
+    caretRule.value = new FshCode('pattern');
+    const resliceRule = new ContainsRule('extension[bar]');
+    resliceRule.items = [{ name: 'barReslice' }];
+    profile.rules.push(sliceRule, caretRule, resliceRule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
+
+    const barReslice = sd.elements.find(e => e.id === 'Observation.extension:bar/barReslice');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 6);
+    expect(barReslice).toBeDefined();
+    const diff = barReslice.calculateDiff();
+    expect(diff.min).toBe(0);
+    expect(diff.max).toBe('*');
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
   it('should apply a ContainsRule of a defined extension on an extension element', () => {
