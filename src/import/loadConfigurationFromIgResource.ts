@@ -11,7 +11,7 @@ import { logger } from '../utils';
  * @param input - path to the input directory
  * @returns {Configuration} the extracted configuration
  */
-export function extractConfiguration(input: string): Configuration | null {
+export function loadConfigurationFromIgResource(input: string): Configuration | null {
   // First, look in the ig.ini file for a path to the IG resource
   let igPath: string;
   const igIniPath = path.join(input, '..', 'ig.ini');

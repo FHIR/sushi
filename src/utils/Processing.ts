@@ -4,7 +4,13 @@ import readlineSync from 'readline-sync';
 import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
-import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
+import {
+  FSHTank,
+  RawFSH,
+  importText,
+  ensureConfigurationFile,
+  importConfiguration
+} from '../import';
 import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
 import { Package } from '../export';
@@ -19,7 +25,7 @@ import {
   filterProfileInstances
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
-import { extractConfiguration } from '../import/extractConfiguration';
+import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
 
 export function findInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
@@ -58,10 +64,10 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
 }
 
 export function readConfig(input: string): Configuration {
-  const configPath = ensureConfiguration(input);
+  const configPath = ensureConfigurationFile(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
-    config = extractConfiguration(input);
+    config = loadConfigurationFromIgResource(input);
   } else {
     const configYaml = fs.readFileSync(configPath, 'utf8');
     config = importConfiguration(configYaml, configPath);
