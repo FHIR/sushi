@@ -317,7 +317,13 @@ describe('#loadCustomResources', () => {
   let defs: FHIRDefinitions;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
+    const fixtures = path.join(
+      __dirname,
+      'fixtures',
+      'customized-ig-with-resources',
+      'ig-data',
+      'input'
+    );
     loadCustomResources(fixtures, defs);
   });
 

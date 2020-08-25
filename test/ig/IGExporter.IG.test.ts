@@ -817,7 +817,7 @@ describe('IGExporter', () => {
         defs
       );
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(fixtures, defs);
+      loadCustomResources(path.join(fixtures, 'ig-data', 'input'), defs);
     });
 
     beforeEach(() => {
