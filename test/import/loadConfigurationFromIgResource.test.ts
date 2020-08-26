@@ -84,7 +84,7 @@ describe('loadConfigurationFromIgResource', () => {
   });
 
   it('should return null when there are two potentially valid IG files', () => {
-    const inputPath = path.join(__dirname, 'fixtures', 'ig-JSON-and-ig-XML', 'fsh');
+    const inputPath = path.join(__dirname, 'fixtures', 'ig-XML-and-ig-JSON', 'fsh');
     expect(loadConfigurationFromIgResource(inputPath)).toBeNull();
   });
 

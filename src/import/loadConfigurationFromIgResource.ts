@@ -33,6 +33,7 @@ export function loadConfigurationFromIgResource(input: string): Configuration | 
   // Go through each possible path, and check each xml/json file to see if they are an IG resource
   const fhirConverter = new FHIRConverter();
   let igResource: ImplementationGuide;
+  let multipleIgs = false;
   possibleIgPaths.forEach(filePath => {
     let fileContent;
     if (path.extname(filePath) === '.json') {
@@ -42,15 +43,13 @@ export function loadConfigurationFromIgResource(input: string): Configuration | 
     }
     if (fileContent?.resourceType === 'ImplementationGuide') {
       // If 2 possible IG resources are found, we cannot tell which to use, so return
-      if (igResource) {
-        return null;
-      }
+      multipleIgs = igResource != null;
       igResource = fileContent;
       igPath = filePath;
     }
   });
   // Extract the configuration from the resource
-  if (igResource && igResource.url) {
+  if (igResource && igResource.url && !multipleIgs) {
     logger.info(`Extracting FSHOnly configuration from ${igPath}.`);
     return {
       canonical: igResource.url.replace(/\/ImplementationGuide.*/, ''),
