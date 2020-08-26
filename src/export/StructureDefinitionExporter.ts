@@ -43,7 +43,8 @@ const UNINHERITED_EXTENSIONS = [
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-explicit-type-name',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg'
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary'
 ];
 
 /**
