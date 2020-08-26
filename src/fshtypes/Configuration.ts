@@ -64,7 +64,7 @@ export type Configuration = {
   packageId?: string;
 
   license?: string;
-  fhirVersion?: string[];
+  fhirVersion: string[];
   dependencies?: ImplementationGuideDependsOn[];
   global?: ImplementationGuideGlobal[];
 
