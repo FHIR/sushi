@@ -83,7 +83,10 @@ async function app() {
   const dependencyDefs = loadExternalDependencies(defs, config);
 
   // Load custom resources specified in ig-data folder
-  loadCustomResources(input, defs);
+  loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
+  if (isIgPubContext && !fs.existsSync(path.join(input, 'ig-data'))) {
+    loadCustomResources(path.join(input, '..', 'input'), defs);
+  }
 
   let tank: FSHTank;
   try {
