@@ -84,7 +84,7 @@ async function app() {
 
   // Load custom resources specified in ig-data folder
   loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
-  if (isIgPubContext) {
+  if (isIgPubContext && !fs.existsSync(path.join(input, 'ig-data'))) {
     loadCustomResources(path.join(input, '..', 'input'), defs);
   }
 
