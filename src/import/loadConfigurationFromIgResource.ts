@@ -43,7 +43,13 @@ export function loadConfigurationFromIgResource(input: string): Configuration | 
     }
     if (fileContent?.resourceType === 'ImplementationGuide') {
       // If 2 possible IG resources are found, we cannot tell which to use, so return
-      multipleIgs = igResource != null;
+      if (igResource != null) {
+        multipleIgs = true;
+        logger.error(
+          'Multiple possible ImplementationGuide resources in "input" folder, so no configuration can be extracted.' +
+            ' Ensure only one ImplementationGuide resource is in the "input" folder, or give the path to the desired resource in ig.ini.'
+        );
+      }
       igResource = fileContent;
       igPath = filePath;
     }
