@@ -192,7 +192,7 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'Ex-clam-ation point!',
     'Ac-clam-ations!',
     'Fin-tastic job!',
-    'You dolphinitely have the hang of this!'
+    "You're dolphinitely doing great!"
   ],
   warnings: [
     'Not bad, but you cod do batter!',
