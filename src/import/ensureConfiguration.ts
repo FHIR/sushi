@@ -50,19 +50,29 @@ class CommentPair extends YAMLPair {
 }
 
 /**
- * Checks for a config.yaml or config.yml file. If it finds one, it returns its path, otherwise it creates one
+ * Checks for a sushi-config.yaml or sushi-config.yml file. If it finds one, it returns its path, otherwise it creates one
  * and then returns the new file's path.
  * @param root - the root path of the FSH Tank
  * @param allowFromScratch - create a config file from scratch even if package.json isn't found
  * @returns {string|undefined} path to the config file or undefined if it couldn't find or create one
  */
 export function ensureConfiguration(root: string, allowFromScratch = false): string {
-  const configPath = [path.join(root, 'config.yaml'), path.join(root, 'config.yml')].find(
-    fs.existsSync
-  );
+  const configPath = [
+    path.join(root, 'sushi-config.yaml'),
+    path.join(root, 'sushi-config.yml'),
+    path.join(root, 'config.yaml'),
+    path.join(root, 'config.yml')
+  ].find(fs.existsSync);
   if (configPath) {
     // The config already exists, so return it
     logger.info(`Using configuration file: ${path.resolve(configPath)}`);
+    if (!path.basename(configPath).match(/sushi/)) {
+      logger.warn(
+        `Use of ${path.basename(
+          configPath
+        )} is deprecated and will be removed in a future release. Please rename configuration file to "sushi-config.yaml".`
+      );
+    }
     return configPath;
   }
 
@@ -71,7 +81,7 @@ export function ensureConfiguration(root: string, allowFromScratch = false): str
 }
 
 /**
- * Creates a new config.yaml file using available other configs (package.json, ig.ini, package-list.json, menu.xml)
+ * Creates a new sushi-config.yaml file using available other configs (package.json, ig.ini, package-list.json, menu.xml)
  * @param root - the root path of the FSH Tank
  * @param allowFromScratch - create a config file from scratch even if package.json isn't found
  * @returns {string|undefined} path to the config file or undefined if it couldn't find or create one
@@ -90,7 +100,7 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
   }
 
   // Create the new YAML document
-  const configPath = path.join(root, 'config.yaml');
+  const configPath = path.join(root, 'sushi-config.yaml');
   const doc = new Document();
   const contents = new YAMLMap();
   // @ts-ignore See: https://github.com/eemeli/yaml/issues/156
@@ -371,7 +381,7 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
   }
 
   // FSHOnly - in SUSHI 0.12.x, presence or absence of ig-data indicated if you wanted an IG or not.
-  // But don't ever set FSHOnly when creating config.yaml "from scratch".
+  // But don't ever set FSHOnly when creating sushi-config.yaml "from scratch".
   if (!fs.existsSync(path.join(root, 'ig-data')) && !isFromScratch) {
     setPairs.push(new YAMLPair('FSHOnly', true));
   }

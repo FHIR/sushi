@@ -17,20 +17,37 @@ describe('ensureConfiguration', () => {
     loggerSpy.reset();
   });
 
-  it('should return the path to a pre-existing config.yaml', () => {
-    const tank = path.join(__dirname, 'fixtures', 'existing-config-yaml');
+  it('should return the path to a pre-existing sushi-config.yaml', () => {
+    const tank = path.join(__dirname, 'fixtures', 'existing-sushi-config-yaml');
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     // Generating a config causes a warning, so there should be NO warnings in this case
     expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
   });
 
-  it('should return the path to a pre-existing config.yml', () => {
+  it('should return the path to a pre-existing sushi-config.yml', () => {
+    const tank = path.join(__dirname, 'fixtures', 'existing-sushi-config-yml');
+    const configPath = ensureConfiguration(tank);
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yml'));
+    // Generating a config causes a warning, so there should be NO warnings in this case
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
+  it('should return the path to a pre-existing config.yaml and log a warning', () => {
+    const tank = path.join(__dirname, 'fixtures', 'existing-config-yaml');
+    const configPath = ensureConfiguration(tank);
+    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of config\.yaml is deprecated/);
+  });
+
+  it('should return the path to a pre-existing config.yml and log a warning', () => {
     const tank = path.join(__dirname, 'fixtures', 'existing-config-yml');
     const configPath = ensureConfiguration(tank);
     expect(configPath).toBe(path.join(tank, 'config.yml'));
     // Generating a config causes a warning, so there should be NO warnings in this case
-    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of config\.yml is deprecated/);
   });
 
   it('should return undefined on an empty folder when fromScratch is false', () => {
@@ -44,7 +61,7 @@ describe('ensureConfiguration', () => {
   it('should generate a default config on an empty folder when fromScratch is true', () => {
     const tank = temp.mkdirSync('sushi-test');
     const configPath = ensureConfiguration(tank, true);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -116,7 +133,7 @@ describe('ensureConfiguration', () => {
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-only'), tank);
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -199,7 +216,7 @@ describe('ensureConfiguration', () => {
 
     // ensureConfiguration
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -266,7 +283,7 @@ describe('ensureConfiguration', () => {
 
     // ensureConfiguration
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -347,7 +364,7 @@ describe('ensureConfiguration', () => {
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-ig-ini'), tank);
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -424,7 +441,7 @@ describe('ensureConfiguration', () => {
 
     // ensureConfiguration
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -481,7 +498,7 @@ describe('ensureConfiguration', () => {
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-package-list'), tank);
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -583,7 +600,7 @@ describe('ensureConfiguration', () => {
 
     // ensureConfiguration
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -658,7 +675,7 @@ describe('ensureConfiguration', () => {
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-menu-xml'), tank);
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -746,7 +763,7 @@ describe('ensureConfiguration', () => {
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-index-md'), tank);
     const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'config.yaml'));
+    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
     );
@@ -795,6 +812,6 @@ describe('ensureConfiguration', () => {
       // indexPageContent should not exist since the provided index.md is used
     });
 
-    // Nothing is added as a commented pair to the config.yaml because there is not configuration equivalent
+    // Nothing is added as a commented pair to the sushi-config.yaml because there is not configuration equivalent
   });
 });
