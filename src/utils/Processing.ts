@@ -75,7 +75,7 @@ export function readConfig(input: string): Configuration {
   if (!config) {
     logger.error(
       'No config.yaml in FSH definition folder, and no configuration could' +
-        ' be extracted from an ImplementationGuide JSON file.'
+        ' be extracted from an ImplementationGuide resource.'
     );
     throw Error;
   }
