@@ -56,7 +56,7 @@ class CommentPair extends YAMLPair {
  * @param allowFromScratch - create a config file from scratch even if package.json isn't found
  * @returns {string|undefined} path to the config file or undefined if it couldn't find or create one
  */
-export function ensureConfiguration(root: string, allowFromScratch = false): string {
+export function ensureConfigurationFile(root: string, allowFromScratch = false): string {
   const configPath = [path.join(root, 'config.yaml'), path.join(root, 'config.yml')].find(
     fs.existsSync
   );

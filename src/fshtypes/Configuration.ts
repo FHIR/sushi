@@ -27,9 +27,9 @@ import {
  * @see {@link https://github.com/FHIR/sample-ig/blob/master/input/includes/menu.xml}
  */
 export type Configuration = {
-  filePath: string;
+  filePath?: string;
   canonical: string;
-  id: string;
+  id?: string;
   meta?: Meta;
   implicitRules?: string;
   language?: string;
@@ -38,10 +38,10 @@ export type Configuration = {
   extension?: Extension[];
   modifierExtension?: Extension[];
   url?: string;
-  version: string;
-  name: string;
+  version?: string;
+  name?: string;
   title?: string;
-  status: ImplementationGuideStatus;
+  status?: ImplementationGuideStatus;
   experimental?: boolean;
   date?: string;
 

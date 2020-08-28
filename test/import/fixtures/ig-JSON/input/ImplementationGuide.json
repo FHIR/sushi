@@ -1,0 +1,14 @@
+{
+  "resourceType": "ImplementationGuide",
+  "url": "http://example.org/ImplementationGuide",
+  "dependsOn": [
+    { "packageId": "foo.bar", "version": "1.2.3" },
+    { "packageId": "bar.foo", "version": "current" },
+    {"packageId": "just.packageId"},
+    {"version": "just.version"}
+  ],
+  "fhirVersion": [
+    "4.0.1"
+  ],
+  "version": "1.0.0"
+}

@@ -3,9 +3,9 @@ import fs from 'fs-extra';
 import temp from 'temp';
 import YAML from 'yaml';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { ensureConfiguration } from '../../src/import';
+import { ensureConfigurationFile } from '../../src/import';
 
-describe('ensureConfiguration', () => {
+describe('ensureConfigurationFile', () => {
   // Track temp files/folders for cleanup
   temp.track();
 
@@ -19,7 +19,7 @@ describe('ensureConfiguration', () => {
 
   it('should return the path to a pre-existing config.yaml', () => {
     const tank = path.join(__dirname, 'fixtures', 'existing-config-yaml');
-    const configPath = ensureConfiguration(tank);
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     // Generating a config causes a warning, so there should be NO warnings in this case
     expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
@@ -27,7 +27,7 @@ describe('ensureConfiguration', () => {
 
   it('should return the path to a pre-existing config.yml', () => {
     const tank = path.join(__dirname, 'fixtures', 'existing-config-yml');
-    const configPath = ensureConfiguration(tank);
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yml'));
     // Generating a config causes a warning, so there should be NO warnings in this case
     expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
@@ -35,7 +35,7 @@ describe('ensureConfiguration', () => {
 
   it('should return undefined on an empty folder when fromScratch is false', () => {
     const tank = temp.mkdirSync('sushi-test');
-    const configPath = ensureConfiguration(tank, false);
+    const configPath = ensureConfigurationFile(tank, false);
     expect(configPath).toBeUndefined();
     // Generating a config causes a warning, so there should be NO warnings in this case
     expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
@@ -43,7 +43,7 @@ describe('ensureConfiguration', () => {
 
   it('should generate a default config on an empty folder when fromScratch is true', () => {
     const tank = temp.mkdirSync('sushi-test');
-    const configPath = ensureConfiguration(tank, true);
+    const configPath = ensureConfigurationFile(tank, true);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -115,7 +115,7 @@ describe('ensureConfiguration', () => {
     // Copy the fixture to a temp folder since we actually create files in the tank
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-only'), tank);
-    const configPath = ensureConfiguration(tank);
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -197,8 +197,8 @@ describe('ensureConfiguration', () => {
     delete packageJSON.license;
     fs.writeJsonSync(path.join(tank, 'package.json'), packageJSON);
 
-    // ensureConfiguration
-    const configPath = ensureConfiguration(tank);
+    // ensureConfigurationFile
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -264,8 +264,8 @@ describe('ensureConfiguration', () => {
     ];
     fs.writeJsonSync(path.join(tank, 'package.json'), packageJSON);
 
-    // ensureConfiguration
-    const configPath = ensureConfiguration(tank);
+    // ensureConfigurationFile
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -346,7 +346,7 @@ describe('ensureConfiguration', () => {
     // Copy the fixture to a temp folder since we actually create files in the tank
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-ig-ini'), tank);
-    const configPath = ensureConfiguration(tank);
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -422,8 +422,8 @@ describe('ensureConfiguration', () => {
     const newIgIni = igIni.split('\n').slice(0, 4).join('\n');
     fs.writeFileSync(path.join(tank, 'ig-data', 'ig.ini'), newIgIni, 'utf8');
 
-    // ensureConfiguration
-    const configPath = ensureConfiguration(tank);
+    // ensureConfigurationFile
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -480,7 +480,7 @@ describe('ensureConfiguration', () => {
     // Copy the fixture to a temp folder since we actually create files in the tank
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-package-list'), tank);
-    const configPath = ensureConfiguration(tank);
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -581,8 +581,8 @@ describe('ensureConfiguration', () => {
     packageList.list[0].desc = 'Continuous Integration Build (latest in version control)';
     fs.writeJsonSync(path.join(tank, 'ig-data', 'package-list.json'), packageList);
 
-    // ensureConfiguration
-    const configPath = ensureConfiguration(tank);
+    // ensureConfigurationFile
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -657,7 +657,7 @@ describe('ensureConfiguration', () => {
     // Copy the fixture to a temp folder since we actually create files in the tank
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-menu-xml'), tank);
-    const configPath = ensureConfiguration(tank);
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
@@ -745,7 +745,7 @@ describe('ensureConfiguration', () => {
     // Copy the fixture to a temp folder since we actually create files in the tank
     const tank = temp.mkdirSync('sushi-test');
     fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-index-md'), tank);
-    const configPath = ensureConfiguration(tank);
+    const configPath = ensureConfigurationFile(tank);
     expect(configPath).toBe(path.join(tank, 'config.yaml'));
     expect(loggerSpy.getLastMessage('warn')).toBe(
       `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
