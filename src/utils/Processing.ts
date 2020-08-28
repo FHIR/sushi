@@ -38,7 +38,6 @@ export function findInputDir(input: string): string {
   const fshSubdirectoryPath = path.join(input, 'fsh');
   if (fs.existsSync(fshSubdirectoryPath)) {
     input = path.join(input, 'fsh');
-    logger.info('fsh/ subdirectory detected and add to input path');
   }
   return input;
 }
@@ -46,7 +45,10 @@ export function findInputDir(input: string): string {
 export function ensureOutputDir(input: string, output: string, isIgPubContext: boolean): string {
   if (isIgPubContext) {
     logger.info(
-      'Current FSH tank conforms to an IG Publisher context. Output will be adjusted accordingly.'
+      'SUSHI detected a "fsh" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n' +
+        '  - the "fsh" directory will be used as the input path\n' +
+        '  - the parent of the "fsh" directory (e.g., "../fsh") will be used as the output path unless otherwise specified with --out option\n' +
+        '  - generation of publisher-related scripts will be suppressed (i.e., assumed to be managed by you)'
     );
   }
   let outDir = output;
