@@ -1,4 +1,12 @@
-import { isEmpty, isEqual, isMatch, cloneDeep, upperFirst, intersectionWith } from 'lodash';
+import {
+  isEmpty,
+  isEqual,
+  isMatch,
+  cloneDeep,
+  upperFirst,
+  intersectionWith,
+  flatten
+} from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
@@ -1292,6 +1300,17 @@ export class ElementDefinition {
       throw new ValueAlreadyFixedError(fshValue, type, JSON.stringify(currentElementValue));
     }
 
+    // Children of elements with complex types such as Quantity may already have fixed values
+    this.children().forEach(child => this.checkChildFixedValue(child, fhirValue));
+
+    // if this is a slice, make sure that nothing on this.slicedElement() is being violated
+    const slicedElement = this.slicedElement();
+    if (slicedElement) {
+      slicedElement
+        .children()
+        .forEach(child => slicedElement.checkChildFixedValue(child, fhirValue));
+    }
+
     // If we made it this far, fix the value using fixed[x] or pattern[x] as appropriate
     if (exactly) {
       // @ts-ignore: Type 'any' is not assignable to type 'never'
@@ -1301,6 +1320,35 @@ export class ElementDefinition {
       // @ts-ignore: Type 'any' is not assignable to type 'never'
       this[patternX] = fhirValue;
       // NOTE: No need to delete fixed[x], as changing from fixed[x] to pattern[x] is not allowed
+    }
+  }
+
+  private checkChildFixedValue(child: ElementDefinition, fhirValue: any) {
+    const childType = child.type[0].code;
+    const fixedX = `fixed${upperFirst(childType)}` as keyof ElementDefinition;
+    const patternX = `pattern${upperFirst(childType)}` as keyof ElementDefinition;
+    const currentChildValue = child[fixedX] ?? child[patternX];
+    if (currentChildValue != null) {
+      // find the element on fhirValue that would get assigned to the child.
+      // sometimes, there may be arrays inside complex object types, such as CodeableConcept.
+      // therefore, flatten those arrays as the path is traversed so that all possible new values are found.
+      const childPath = child.path.replace(`${this.path}.`, '').split('.');
+      let newChildValue = [fhirValue];
+      for (const pathPart of childPath) {
+        newChildValue = flatten(
+          newChildValue.map(value => {
+            return value?.[pathPart];
+          })
+        );
+      }
+      newChildValue.forEach(value => {
+        if (value != null) {
+          const childCompareFn = typeof value === 'object' ? isMatch : isEqual;
+          if (!childCompareFn(value, currentChildValue)) {
+            throw new ValueAlreadyFixedError(value, childType, JSON.stringify(currentChildValue));
+          }
+        }
+      });
     }
   }
 
