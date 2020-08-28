@@ -1,0 +1,12 @@
+
+<ImplementationGuide>
+  <url value="http://example.org/ImplementationGuide"/>
+  <dependsOn>
+    <packageId value="foo.bar"/>
+    <version value="1.2.3"/>
+  </dependsOn>
+  <dependsOn>
+    <packageId value="bar.foo"/>
+    <version value="current"/>
+  </dependsOn>
+</ImplementationGuide>
