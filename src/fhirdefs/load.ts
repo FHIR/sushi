@@ -5,6 +5,7 @@ import path from 'path';
 import os from 'os';
 import tar from 'tar';
 import axios from 'axios';
+import junk from 'junk';
 import temp from 'temp';
 import { logger } from '../utils';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
@@ -194,8 +195,8 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
       for (const file of files) {
         let resourceJSON: any;
         try {
-          if (file.startsWith('.')) {
-            // Ignore hidden files on *nix, like `.DS_Store` on macOS
+          if (junk.is(file)) {
+            // Ignore "junk" files created by the OS, like .DS_Store on macOS and Thumbs.db on Windows
             continue;
           } else if (file.endsWith('.json')) {
             resourceJSON = fs.readJSONSync(path.join(dirPath, file));
