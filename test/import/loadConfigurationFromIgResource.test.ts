@@ -34,7 +34,7 @@ describe('loadConfigurationFromIgResource', () => {
     );
   });
 
-  it('should extract a configuration with a url and dependencies', () => {
+  it('should extract a configuration with a url and other data', () => {
     const inputPath = path.join(__dirname, 'fixtures', 'ig-JSON', 'fsh');
     const config = loadConfigurationFromIgResource(inputPath);
     expect(config).toEqual({
@@ -44,7 +44,8 @@ describe('loadConfigurationFromIgResource', () => {
         { packageId: 'foo.bar', version: '1.2.3' },
         { packageId: 'bar.foo', version: 'current' }
       ],
-      fhirVersion: ['4.0.1']
+      fhirVersion: ['4.0.1'],
+      version: '1.0.0'
     });
     expect(loggerSpy.getLastMessage('info')).toMatch(
       new RegExp(

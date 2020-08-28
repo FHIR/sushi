@@ -61,7 +61,8 @@ export function loadConfigurationFromIgResource(input: string): Configuration | 
       canonical: igResource.url.replace(/\/ImplementationGuide.*/, ''),
       FSHOnly: true,
       dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),
-      fhirVersion: igResource.fhirVersion ?? []
+      fhirVersion: igResource.fhirVersion ?? [],
+      version: igResource.version
     };
   }
   return null;
