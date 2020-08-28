@@ -31,7 +31,6 @@ export function findInputDir(input: string): string {
   const fshSubdirectoryPath = path.join(input, 'fsh');
   if (fs.existsSync(fshSubdirectoryPath)) {
     input = path.join(input, 'fsh');
-    logger.info('fsh/ subdirectory detected and added to input path');
   }
   return input;
 }
