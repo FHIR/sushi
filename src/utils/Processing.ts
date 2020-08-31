@@ -28,17 +28,21 @@ export function findInputDir(input: string): string {
   }
 
   // TODO: Legacy support. Remove when no longer supported.
-  // Use fsh/ subdirectory if not already specified and present
-  const fshSubdirectoryPath = path.join(input, 'fsh');
-  if (fs.existsSync(fshSubdirectoryPath)) {
-    input = path.join(input, 'fsh');
-    return input;
-  }
-
   // Use input/fsh/ subdirectory if not already specified and present
   const inputFshSubdirectoryPath = path.join(input, 'input', 'fsh');
   if (fs.existsSync(inputFshSubdirectoryPath)) {
     input = path.join(input, 'input', 'fsh');
+  }
+
+  // Use fsh/ subdirectory if not already specified and present
+  const fshSubdirectoryPath = path.join(input, 'fsh');
+  if (!fs.existsSync(inputFshSubdirectoryPath) && fs.existsSync(fshSubdirectoryPath)) {
+    input = path.join(input, 'fsh');
+    logger.warn(
+      'SUSHI detected a "fsh" directory that will be used in the input path. \n' +
+        'The top level "fsh" directory is being deprecated. FSH definitions in \n' +
+        '"fsh" should be moved to "input/fsh".'
+    );
   }
   return input;
 }
