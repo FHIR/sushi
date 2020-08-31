@@ -46,10 +46,12 @@ async function app() {
       console.log('Additional information:');
       console.log('  [path-to-fsh-defs]');
       console.log('    Default: "."');
-      console.log('    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
+      console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
       console.log('    Default: "build"');
-      console.log('    If fsh/ subdirectory present, default output is one directory above fsh/');
+      console.log(
+        '    If input/fsh/ subdirectory present, default output is one directory above fsh/'
+      );
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
@@ -67,8 +69,11 @@ async function app() {
 
   input = findInputDir(input);
 
-  // If a fsh subdirectory is used, we are in an IG Publisher context
-  const isIgPubContext = path.parse(input).base === 'fsh';
+  // If an input/fsh subdirectory is used, we are in an IG Publisher context
+  const fshFolder = path.parse(input).base === 'fsh';
+  const inputFshFolder = fshFolder && path.parse(input).dir.endsWith(`${path.sep}input`);
+  // TODO: Legacy support for top level fsh/ subdirectory. When no longer supporting, update to const isIgPubContext = inputFshFolder;
+  const isIgPubContext = fshFolder || inputFshFolder;
   const outDir = ensureOutputDir(input, program.out, isIgPubContext);
 
   let config: Configuration;

@@ -27,7 +27,8 @@ describe('Processing', () => {
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
-      fs.mkdirpSync(path.join(tempRoot, 'has-fsh', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'has-fsh', 'fsh')); // TODO: Legacy support. Remove when no longer supported.
+      fs.mkdirpSync(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
     });
 
@@ -40,10 +41,17 @@ describe('Processing', () => {
       expect(foundInput).toBe('.');
     });
 
+    // TODO: Legacy support. Remove when no longer supported.
     it('should find a path to the fsh subdirectory if present', () => {
       const input = path.join(tempRoot, 'has-fsh');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh', 'fsh'));
+    });
+
+    it('should find a path to the input/fsh subdirectory if present', () => {
+      const input = path.join(tempRoot, 'has-input-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
     });
 
     it('should find a path to the provided directory if the fsh subdirectory is not present', () => {
