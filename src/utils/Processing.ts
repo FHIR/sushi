@@ -27,19 +27,30 @@ export function findInputDir(input: string): string {
     logger.info('path-to-fsh-defs defaulted to current working directory');
   }
 
+  // TODO: Legacy support. Remove when no longer supported.
   // Use fsh/ subdirectory if not already specified and present
   const fshSubdirectoryPath = path.join(input, 'fsh');
   if (fs.existsSync(fshSubdirectoryPath)) {
     input = path.join(input, 'fsh');
-    logger.info('fsh/ subdirectory detected and add to input path');
+    return input;
+  }
+
+  // Use input/fsh/ subdirectory if not already specified and present
+  const inputFshSubdirectoryPath = path.join(input, 'input', 'fsh');
+  if (fs.existsSync(inputFshSubdirectoryPath)) {
+    input = path.join(input, 'input', 'fsh');
   }
   return input;
 }
 
 export function ensureOutputDir(input: string, output: string, isIgPubContext: boolean): string {
   if (isIgPubContext) {
+    // TODO: Message includes information about legacy support for top level fsh folder. Remove when not supported.
     logger.info(
-      'Current FSH tank conforms to an IG Publisher context. Output will be adjusted accordingly.'
+      'SUSHI detected an "input/fsh" or "fsh" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n' +
+        '  - the "input/fsh" or "fsh" directory will be used as the input path\n' +
+        '  - the parent of the "fsh" directory (e.g., "../fsh") will be used as the output path unless otherwise specified with --out option\n' +
+        '  - generation of publisher-related scripts will be suppressed (i.e., assumed to be managed by you)'
     );
   }
   let outDir = output;
