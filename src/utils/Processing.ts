@@ -39,8 +39,8 @@ export function findInputDir(input: string): string {
   if (!fs.existsSync(inputFshSubdirectoryPath) && fs.existsSync(fshSubdirectoryPath)) {
     input = path.join(input, 'fsh');
     logger.warn(
-      'SUSHI detected a "fsh" directory that will be used in the input path. \n' +
-        'The top level "fsh" directory is being deprecated. FSH definitions in \n' +
+      'SUSHI detected a "fsh" directory that will be used in the input path. ' +
+        'The top level "fsh" directory is being deprecated. FSH definitions in ' +
         '"fsh" should be moved to "input/fsh".'
     );
   }
