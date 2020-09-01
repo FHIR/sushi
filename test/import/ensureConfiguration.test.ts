@@ -45,7 +45,6 @@ describe('ensureConfiguration', () => {
     const tank = path.join(__dirname, 'fixtures', 'existing-config-yml');
     const configPath = ensureConfiguration(tank);
     expect(configPath).toBe(path.join(tank, 'config.yml'));
-    // Generating a config causes a warning, so there should be NO warnings in this case
     expect(loggerSpy.getAllLogs('warn')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of config\.yml is deprecated/);
   });
