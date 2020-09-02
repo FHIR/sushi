@@ -13,7 +13,7 @@ describe('FHIRExporter', () => {
     const result = exportFHIR(input, new FHIRDefinitions());
     expect(result).toEqual(
       new Package({
-        filePath: 'config.yaml',
+        filePath: 'sushi-config.yaml',
         id: 'fhir.us.minimal',
         version: '1.0.0',
         canonical: 'http://hl7.org/fhir/us/minimal',

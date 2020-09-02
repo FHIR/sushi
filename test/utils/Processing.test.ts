@@ -95,11 +95,11 @@ describe('Processing', () => {
       loggerSpy.reset();
     });
 
-    it('should return the contents of config.yaml from the input directory', () => {
+    it('should return the contents of sushi-config.yaml from the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       expect(config).toEqual({
-        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'config.yaml'),
+        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
         id: 'sushi-test',
         packageId: 'sushi-test',
         canonical: 'http://hl7.org/fhir/sushi-test',
@@ -148,15 +148,15 @@ describe('Processing', () => {
       });
     });
 
-    it('should log and throw an error when config.yaml is not found in the input directory', () => {
+    it('should log and throw an error when sushi-config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
         readConfig(input);
       }).toThrow();
-      expect(loggerSpy.getLastMessage('error')).toMatch(/No config\.yaml/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/No sushi-config\.yaml/s);
     });
 
-    it('should log and throw an error when the contents of config.yaml are not valid yaml', () => {
+    it('should log and throw an error when the contents of sushi-config.yaml are not valid yaml', () => {
       const input = path.join(__dirname, 'fixtures', 'invalid-yaml');
       expect(() => {
         readConfig(input);
@@ -449,7 +449,7 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls).toHaveLength(2);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# ExampleIG/);
-      expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*sushi-config\.yaml/);
       expect(writeSpy.mock.calls[1][1].replace(/[\n\r]/g, '')).toBe(
         fs
           .readFileSync(
@@ -503,7 +503,7 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls).toHaveLength(2);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyNonDefaultName/);
-      expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*sushi-config\.yaml/);
       expect(writeSpy.mock.calls[1][1].replace(/[\n\r]/g, '')).toBe(
         fs
           .readFileSync(

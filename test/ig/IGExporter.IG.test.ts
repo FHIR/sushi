@@ -90,7 +90,7 @@ describe('IGExporter', () => {
     beforeEach(() => {
       tempOut = temp.mkdirSync('sushi-test');
       config = {
-        filePath: path.join(fixtures, 'config.yml'),
+        filePath: path.join(fixtures, 'sushi-config.yml'),
         id: 'sushi-test',
         canonical: 'http://hl7.org/fhir/sushi-test',
         url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
