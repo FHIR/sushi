@@ -45,6 +45,7 @@ export class IGExporter {
   private readonly configPath: string;
   private readonly outputLog: Map<string, outputLogDetails>;
   private readonly config: Configuration;
+  private readonly configName: string;
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
@@ -54,6 +55,7 @@ export class IGExporter {
     this.outputLog = new Map();
     this.config = pkg.config;
     this.configPath = path.resolve(this.igDataPath, '..', path.basename(this.config.filePath));
+    this.configName = path.basename(this.configPath);
   }
 
   getOutputLogDetails(file: string) {
@@ -197,7 +199,7 @@ export class IGExporter {
       // No need for the detailed log message since we already logged one in the package loader.
       logger.error(
         `Failed to add ${dependency.packageId} to ImplementationGuide instance because no ` +
-          `version was specified in your ${path.basename(this.configPath)}.`
+          `version was specified in your ${this.configName}.`
       );
       return;
     }
@@ -217,9 +219,7 @@ export class IGExporter {
         logger.error(
           `Failed to add ${dependsOn.packageId}:${dependsOn.version} to ` +
             'ImplementationGuide instance because SUSHI could not find the IG URL in the ' +
-            `dependency IG. To specify the IG URL in your ${path.basename(
-              this.configPath
-            )}, use the dependency ` +
+            `dependency IG. To specify the IG URL in your ${this.configName}, use the dependency ` +
             'details format:\n\n' +
             'dependencies:\n' +
             `  ${dependsOn.packageId}:\n` +
@@ -322,32 +322,22 @@ export class IGExporter {
     if (this.config.indexPageContent) {
       ensureDirSync(pageContentExportPath);
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
-        `To change the contents of this file, edit the "indexPageContent" attribute in the tank ${path.basename(
-          this.configPath
-        )} file`,
+        `To change the contents of this file, edit the "indexPageContent" attribute in the tank ${this.configName} file`,
         `or provide your own index file in the ig-data${path.sep}input${path.sep}pagecontent or ig-data${path.sep}input${path.sep}pages folder.`,
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
-      logger.info(
-        `Generated index.md based on "indexPageContent" in ${path.basename(this.configPath)}.`
-      );
+      logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
 
       if (filePath) {
         logger.warn(
-          `Found both an "indexPageContent" property in ${path.basename(
-            this.configPath
-          )} and an index file at ` +
+          `Found both an "indexPageContent" property in ${this.configName} and an index file at ` +
             `ig-data${path.sep}${path.relative(this.igDataPath, filePath)}. ` +
-            `Since the "indexPageContent" property is present in the ${path.basename(
-              this.configPath
-            )}, an index.md file will be generated and ` +
+            `Since the "indexPageContent" property is present in the ${this.configName}, an index.md file will be generated and ` +
             `the ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file will be ` +
-            `ignored. Remove the "indexPageContent" property in ${path.basename(
-              this.configPath
-            )} to use the ` +
+            `ignored. Remove the "indexPageContent" property in ${this.configName} to use the ` +
             `ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file instead.`,
           {
             file: filePath
@@ -677,17 +667,9 @@ export class IGExporter {
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.config.menu) {
       logger.warn(
-        `Found both a "menu" property in ${path.basename(
-          this.configPath
-        )} and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
-          `Since the "menu" property is present in the ${path.basename(
-            this.configPath
-          )}, a menu.xml file will be generated and ` +
-          `the ig-data${path.sep}input${path.sep}includes${
-            path.sep
-          }menu.xml file will be ignored. Remove the "menu" property in ${path.basename(
-            this.configPath
-          )} ` +
+        `Found both a "menu" property in ${this.configName} and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
+          `Since the "menu" property is present in the ${this.configName}, a menu.xml file will be generated and ` +
+          `the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored. Remove the "menu" property in ${this.configName} ` +
           `to use the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file instead.`,
         {
           file: menuXMLDefaultPath
@@ -707,9 +689,7 @@ export class IGExporter {
         `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
         [
-          `To change the contents of this file, edit the "menu" attribute in the tank ${path.basename(
-            this.configPath
-          )} file`,
+          `To change the contents of this file, edit the "menu" attribute in the tank ${this.configName} file`,
           'or provide your own menu.xml in the ig-data/input/includes folder'
         ]
       );
@@ -1117,15 +1097,9 @@ export class IGExporter {
       this.generateIgIni(igPath);
       if (existsSync(inputIniPath)) {
         logger.warn(
-          `Found both a "template" property in ${path.basename(
-            this.configPath
-          )} and an ig.ini file at ig-data${path.sep}ig.ini. ` +
+          `Found both a "template" property in ${this.configName} and an ig.ini file at ig-data${path.sep}ig.ini. ` +
             'Since the "template" property is present in the sushi-config.yaml, an ig.ini file will be generated and ' +
-            `the ig-data${
-              path.sep
-            }ig.ini file will be ignored. Remove the "template" property in ${path.basename(
-              this.configPath
-            )} ` +
+            `the ig-data${path.sep}ig.ini file will be ignored. Remove the "template" property in ${this.configName} ` +
             `to use the ig-data${path.sep}ig.ini file instead.`,
           {
             file: inputIniPath
@@ -1307,17 +1281,9 @@ export class IGExporter {
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
       if (isIgDataPackageList) {
         logger.warn(
-          `Found both a "history" property in ${path.basename(
-            this.configPath
-          )} and a package-list.json file at ig-data${path.sep}package-list.json. ` +
-            `Since the "history" property is present in the ${path.basename(
-              this.configPath
-            )}, a package-list.json file will be generated and ` +
-            `the ig-data${
-              path.sep
-            }package-list.json file will be ignored. Remove the "history" property in ${path.basename(
-              this.configPath
-            )} ` +
+          `Found both a "history" property in ${this.configName} and a package-list.json file at ig-data${path.sep}package-list.json. ` +
+            `Since the "history" property is present in the ${this.configName}, a package-list.json file will be generated and ` +
+            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in ${this.configName} ` +
             `to use the ig-data${path.sep}package-list.json file instead.`,
           {
             file: packageListPath
