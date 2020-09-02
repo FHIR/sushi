@@ -47,6 +47,7 @@ export type ImplementationGuideDefinition = {
 };
 
 export type ImplementationGuideDefinitionGrouping = {
+  id: string;
   name: string;
   description?: string;
 };
