@@ -697,7 +697,24 @@ export class StructureDefinition {
     elements: ElementDefinition[],
     fisher: Fishable
   ): ElementDefinition {
-    let matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    let matchingSlice: ElementDefinition;
+    matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    if (!matchingSlice) {
+      // The element we're looking for may be a reslice of one of the elements to search through.
+      // So, find the original sliced element for that item in the list, and see if the reslice
+      // we're looking for already exists.
+      for (const e of elements) {
+        const connectedSliceElement = e.findConnectedSliceElement();
+        if (connectedSliceElement?.id.endsWith('[x]')) {
+          const matchingExistingSlice = connectedSliceElement
+            ?.getSlices()
+            .find(existing => existing.sliceName === [e.sliceName, ...pathPart.brackets].join('/'));
+          if (matchingExistingSlice) {
+            return matchingExistingSlice;
+          }
+        }
+      }
+    }
     if (!matchingSlice && pathPart.brackets?.length === 1) {
       // If the current element is a child of a slice, the match may exist on the original
       // sliced element, search for that here
