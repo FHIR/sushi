@@ -40,8 +40,17 @@ export function findInputDir(input: string): string {
     input = path.join(input, 'fsh');
     logger.warn(
       'SUSHI detected a "fsh" directory that will be used in the input path. ' +
-        'The top level "fsh" directory is being deprecated. FSH definitions in ' +
-        '"fsh" should be moved to "input/fsh".'
+        'Use of this folder is deprecated and will be removed in a future release. ' +
+        'To migrate to the new folder structure the following changes are needed:\n' +
+        `  - sushi-config.yaml moves to ${path.resolve(
+          input,
+          '..',
+          'input',
+          'fsh',
+          'sushi-config.yaml'
+        )}\n` +
+        `  - ig-data/* files move to ${path.resolve(input, '..')}${path.sep}*\n` +
+        `  - .fsh files move to ${path.resolve(input, 'input', 'fsh')}${path.sep}*`
     );
   }
   return input;

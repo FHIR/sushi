@@ -49,7 +49,7 @@ describe('Processing', () => {
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh', 'fsh'));
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /top level "fsh" directory is being deprecated/s
+        /Use of this folder is deprecated and will be removed in a future release/s
       );
     });
 
