@@ -4,13 +4,7 @@ import readlineSync from 'readline-sync';
 import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
-import {
-  FSHTank,
-  RawFSH,
-  importText,
-  ensureConfigurationFile,
-  importConfiguration
-} from '../import';
+import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
 import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
 import { Package } from '../export';
@@ -66,7 +60,7 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
 }
 
 export function readConfig(input: string): Configuration {
-  const configPath = ensureConfigurationFile(input);
+  const configPath = ensureConfiguration(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
     config = loadConfigurationFromIgResource(input);
@@ -76,15 +70,15 @@ export function readConfig(input: string): Configuration {
   }
   if (!config) {
     logger.error(
-      'No config.yaml in FSH definition folder, and no configuration could' +
+      'No sushi-config.yaml in FSH definition folder, and no configuration could' +
         ' be extracted from an ImplementationGuide resource.'
     );
     throw Error;
   }
   if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
-      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
-        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
+      `The ${path.basename(config.filePath)} must specify FHIR R4 as a fhirVersion. Be sure to` +
+        ` add "fhirVersion: 4.0.1" to the ${path.basename(config.filePath)} file.`
     );
     throw Error;
   }
@@ -105,7 +99,7 @@ export function loadExternalDependencies(
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
-          'config.yaml, either use the simple dependency format:\n\n' +
+          `${path.basename(config.filePath)}, either use the simple dependency format:\n\n` +
           'dependencies:\n' +
           `  ${dep.packageId}: current\n\n` +
           'or use the detailed dependency format to specify other properties as well:\n\n' +
@@ -200,7 +194,7 @@ export function init(): void {
   );
 
   const configDoc = YAML.parseDocument(
-    fs.readFileSync(path.join(__dirname, 'init-project', 'config.yaml'), 'utf-8')
+    fs.readFileSync(path.join(__dirname, 'init-project', 'sushi-config.yaml'), 'utf-8')
   );
   // Accept user input for certain fields
   ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
@@ -215,7 +209,7 @@ export function init(): void {
   configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
   const projectName = configDoc.get('name');
 
-  // Write init directory out, including user made config.yaml, files in utils/init-project, and build scripts from ig/files
+  // Write init directory out, including user made sushi-config.yaml, files in utils/init-project, and build scripts from ig/files
   const outputDir = path.resolve('.', projectName);
   const initProjectDir = path.join(__dirname, 'init-project');
   if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
@@ -233,7 +227,7 @@ export function init(): void {
     indexPageContent
   );
   // Add the config
-  fs.writeFileSync(path.join(outputDir, 'fsh', 'config.yaml'), configDoc.toString());
+  fs.writeFileSync(path.join(outputDir, 'fsh', 'sushi-config.yaml'), configDoc.toString());
   // Copy over remaining static files
   fs.copyFileSync(
     path.join(initProjectDir, 'patient.fsh'),

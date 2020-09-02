@@ -45,15 +45,17 @@ export class IGExporter {
   private readonly configPath: string;
   private readonly outputLog: Map<string, outputLogDetails>;
   private readonly config: Configuration;
+  private readonly configName: string;
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string,
     private readonly isIgPubContext: boolean = false
   ) {
-    this.configPath = path.resolve(this.igDataPath, '..', 'config.yaml');
     this.outputLog = new Map();
     this.config = pkg.config;
+    this.configPath = path.resolve(this.igDataPath, '..', path.basename(this.config.filePath));
+    this.configName = path.basename(this.configPath);
   }
 
   getOutputLogDetails(file: string) {
@@ -197,7 +199,7 @@ export class IGExporter {
       // No need for the detailed log message since we already logged one in the package loader.
       logger.error(
         `Failed to add ${dependency.packageId} to ImplementationGuide instance because no ` +
-          'version was specified in your config.yaml.'
+          `version was specified in your ${this.configName}.`
       );
       return;
     }
@@ -217,7 +219,7 @@ export class IGExporter {
         logger.error(
           `Failed to add ${dependsOn.packageId}:${dependsOn.version} to ` +
             'ImplementationGuide instance because SUSHI could not find the IG URL in the ' +
-            'dependency IG. To specify the IG URL in your config.yaml, use the dependency ' +
+            `dependency IG. To specify the IG URL in your ${this.configName}, use the dependency ` +
             'details format:\n\n' +
             'dependencies:\n' +
             `  ${dependsOn.packageId}:\n` +
@@ -281,8 +283,8 @@ export class IGExporter {
   }
 
   /**
-   * Add the index.md file. Creates an index.md based on the "indexPageContent" in config.yaml.
-   * If the user specified an index file in the ig-data folder, and no "indexPageContent" in config.yaml is specified,
+   * Add the index.md file. Creates an index.md based on the "indexPageContent" in sushi-config.yaml.
+   * If the user specified an index file in the ig-data folder, and no "indexPageContent" in sushi-config.yaml is specified,
    * the file from ig-data is used instead. The provided file may be in one of two locations:
    * ig-data/input/pagecontent or ig-data/input/pages
    *
@@ -320,22 +322,22 @@ export class IGExporter {
     if (this.config.indexPageContent) {
       ensureDirSync(pageContentExportPath);
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
-        'To change the contents of this file, edit the "indexPageContent" attribute in the tank config.yaml file',
+        `To change the contents of this file, edit the "indexPageContent" attribute in the tank ${this.configName} file`,
         `or provide your own index file in the ig-data${path.sep}input${path.sep}pagecontent or ig-data${path.sep}input${path.sep}pages folder.`,
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
-      logger.info('Generated index.md based on "indexPageContent" in config.yaml.');
+      logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
 
       if (filePath) {
         logger.warn(
-          'Found both an "indexPageContent" property in config.yaml and an index file at ' +
+          `Found both an "indexPageContent" property in ${this.configName} and an index file at ` +
             `ig-data${path.sep}${path.relative(this.igDataPath, filePath)}. ` +
-            'Since the "indexPageContent" property is present in the config.yaml, an index.md file will be generated and ' +
+            `Since the "indexPageContent" property is present in the ${this.configName}, an index.md file will be generated and ` +
             `the ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file will be ` +
-            'ignored. Remove the "indexPageContent" property in config.yaml to use the ' +
+            `ignored. Remove the "indexPageContent" property in ${this.configName} to use the ` +
             `ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file instead.`,
           {
             file: filePath
@@ -647,7 +649,7 @@ export class IGExporter {
 
   /**
    * Adds menu.xml
-   * A user can define a menu in config.yaml or provide one in ig-data/input/includes.
+   * A user can define a menu in sushi-config.yaml or provide one in ig-data/input/includes.
    * If neither is provided, the static one SUSHI provides will be used.
    *
    * @param {string} igPath - the path where the IG is exported to
@@ -665,9 +667,9 @@ export class IGExporter {
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.config.menu) {
       logger.warn(
-        `Found both a "menu" property in config.yaml and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
-          'Since the "menu" property is present in the config.yaml, a menu.xml file will be generated and ' +
-          `the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored. Remove the "menu" property in config.yaml ` +
+        `Found both a "menu" property in ${this.configName} and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
+          `Since the "menu" property is present in the ${this.configName}, a menu.xml file will be generated and ` +
+          `the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored. Remove the "menu" property in ${this.configName} ` +
           `to use the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file instead.`,
         {
           file: menuXMLDefaultPath
@@ -687,7 +689,7 @@ export class IGExporter {
         `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
         [
-          'To change the contents of this file, edit the "menu" attribute in the tank config.yaml file',
+          `To change the contents of this file, edit the "menu" attribute in the tank ${this.configName} file`,
           'or provide your own menu.xml in the ig-data/input/includes folder'
         ]
       );
@@ -1084,8 +1086,8 @@ export class IGExporter {
   }
 
   /**
-   * Creates an ig.ini file based on the "template" in config.yaml and exports it to the IG folder.
-   * If the user specified an igi.ini file in the ig-data folder, and no "template" in config.yaml is specified,
+   * Creates an ig.ini file based on the "template" in sushi-config.yaml and exports it to the IG folder.
+   * If the user specified an igi.ini file in the ig-data folder, and no "template" in sushi-config.yaml is specified,
    * the file from ig-data is used instead.
    *
    * @param igPath {string} - the path where the IG is exported to
@@ -1096,9 +1098,9 @@ export class IGExporter {
       this.generateIgIni(igPath);
       if (existsSync(inputIniPath)) {
         logger.warn(
-          `Found both a "template" property in config.yaml and an ig.ini file at ig-data${path.sep}ig.ini. ` +
-            'Since the "template" property is present in the config.yaml, an ig.ini file will be generated and ' +
-            `the ig-data${path.sep}ig.ini file will be ignored. Remove the "template" property in config.yaml ` +
+          `Found both a "template" property in ${this.configName} and an ig.ini file at ig-data${path.sep}ig.ini. ` +
+            'Since the "template" property is present in the sushi-config.yaml, an ig.ini file will be generated and ' +
+            `the ig-data${path.sep}ig.ini file will be ignored. Remove the "template" property in ${this.configName} ` +
             `to use the ig-data${path.sep}ig.ini file instead.`,
           {
             file: inputIniPath
@@ -1123,7 +1125,7 @@ export class IGExporter {
     iniObj.ig = `input/ImplementationGuide-${this.config.id}.json`;
     iniObj.template = this.config.template;
     const comment = [
-      'This ig.ini was generated using the template property in config.yaml. To provide your own',
+      'This ig.ini was generated using the template property in sushi-config.yaml. To provide your own',
       'ig.ini, create an ig.ini file in the ig-data folder with required properties: ig, template.',
       'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
     ];
@@ -1280,9 +1282,9 @@ export class IGExporter {
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
       if (isIgDataPackageList) {
         logger.warn(
-          `Found both a "history" property in config.yaml and a package-list.json file at ig-data${path.sep}package-list.json. ` +
-            'Since the "history" property is present in the config.yaml, a package-list.json file will be generated and ' +
-            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in config.yaml ` +
+          `Found both a "history" property in ${this.configName} and a package-list.json file at ig-data${path.sep}package-list.json. ` +
+            `Since the "history" property is present in the ${this.configName}, a package-list.json file will be generated and ` +
+            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in ${this.configName} ` +
             `to use the ig-data${path.sep}package-list.json file instead.`,
           {
             file: packageListPath

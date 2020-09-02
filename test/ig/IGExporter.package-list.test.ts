@@ -73,7 +73,7 @@ describe('IGExporter', () => {
       const outputLogDetails = exporter.getOutputLogDetails(pkgListPath);
       expect(outputLogDetails.action).toBe('generated');
       expect(outputLogDetails.inputs).toHaveLength(1);
-      expect(outputLogDetails.inputs[0].endsWith('config.yaml')).toBeTruthy();
+      expect(outputLogDetails.inputs[0].endsWith('sushi-config.yaml')).toBeTruthy();
       expect(loggerSpy.getLastMessage('info')).toBe('Generated package-list.json');
     });
 
@@ -113,10 +113,10 @@ describe('IGExporter', () => {
       const outputLogDetails = exporter.getOutputLogDetails(pkgListPath);
       expect(outputLogDetails.action).toBe('generated');
       expect(outputLogDetails.inputs).toHaveLength(1);
-      expect(outputLogDetails.inputs[0].endsWith('config.yaml')).toBeTruthy();
+      expect(outputLogDetails.inputs[0].endsWith('sushi-config.yaml')).toBeTruthy();
       expect(loggerSpy.getLastMessage('info')).toBe('Generated package-list.json');
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /Found both a "history" property in config\.yaml and a package-list\.json file.*File: .*package-list.json/s
+        /Found both a "history" property in sushi-config\.yaml and a package-list\.json file.*File: .*package-list.json/s
       );
     });
 
