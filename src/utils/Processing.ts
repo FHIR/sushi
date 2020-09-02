@@ -47,20 +47,31 @@ export function findInputDir(input: string): string {
   return input;
 }
 
-export function ensureOutputDir(input: string, output: string, isIgPubContext: boolean): string {
-  if (isIgPubContext) {
+export function ensureOutputDir(
+  input: string,
+  output: string,
+  isIgPubContext: boolean,
+  isLegacyIgPubContext: boolean
+): string {
+  if (isIgPubContext || isLegacyIgPubContext) {
     // TODO: Message includes information about legacy support for top level fsh folder. Remove when not supported.
+    const directory = isIgPubContext ? 'input/fsh' : 'fsh';
     logger.info(
-      'SUSHI detected an "input/fsh" or "fsh" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n' +
-        '  - the "input/fsh" or "fsh" directory will be used as the input path\n' +
-        '  - the parent of the "fsh" directory (e.g., "../fsh") will be used as the output path unless otherwise specified with --out option\n' +
+      `SUSHI detected an "${directory}" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n` +
+        `  - the "${directory}" directory will be used as the input path\n` +
+        `  - the parent of the "${directory}" directory will be used as the output path unless otherwise specified with --out option\n` +
         '  - generation of publisher-related scripts will be suppressed (i.e., assumed to be managed by you)'
     );
   }
   let outDir = output;
-  if (isIgPubContext && !output) {
-    // When running in an IG Publisher context, default output is the parent folder of the tank
+  if (isLegacyIgPubContext && !output) {
+    // TODO: Legacy support for top level "fsh" directory. Remove when no longer supported.
+    // When running in a legacy IG Publisher context, default output is the parent folder of the tank
     outDir = path.join(input, '..');
+    logger.info(`No output path specified. Output to ${outDir}`);
+  } else if (isIgPubContext && !output) {
+    // When running in a legacy IG Publisher context, default output is the parent folder of the input/fsh folder
+    outDir = path.join(input, '..', '..');
     logger.info(`No output path specified. Output to ${outDir}`);
   } else if (!output) {
     // Any other time, default output is just to 'build'
@@ -151,13 +162,19 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
-export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {
+export function writeFHIRResources(
+  outDir: string,
+  outPackage: Package,
+  snapshot: boolean,
+  useGeneratedFolder: boolean
+) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const writeResources = (
     folder: string,
     resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
   ) => {
+    folder = useGeneratedFolder ? 'generated' : folder;
     const exportDir = path.join(outDir, 'input', folder);
     resources.forEach(resource => {
       fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {

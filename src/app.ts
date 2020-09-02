@@ -49,9 +49,7 @@ async function app() {
       console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
       console.log('    Default: "build"');
-      console.log(
-        '    If input/fsh/ subdirectory present, default output is one directory above fsh/'
-      );
+      console.log('    If input/fsh/ subdirectory present, default output is to input/generated/');
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
@@ -72,9 +70,10 @@ async function app() {
   // If an input/fsh subdirectory is used, we are in an IG Publisher context
   const fshFolder = path.parse(input).base === 'fsh';
   const inputFshFolder = fshFolder && path.parse(input).dir.endsWith(`${path.sep}input`);
-  // TODO: Legacy support for top level fsh/ subdirectory. When no longer supporting, update to const isIgPubContext = inputFshFolder;
-  const isIgPubContext = fshFolder || inputFshFolder;
-  const outDir = ensureOutputDir(input, program.out, isIgPubContext);
+  const isIgPubContext = inputFshFolder;
+  // TODO: Legacy support for top level fsh/ subdirectory. Remove when no longer supported.
+  const isLegacyIgPubContext = fshFolder && !inputFshFolder;
+  const outDir = ensureOutputDir(input, program.out, isIgPubContext, isLegacyIgPubContext);
 
   let config: Configuration;
   try {
@@ -116,7 +115,8 @@ async function app() {
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  writeFHIRResources(outDir, outPackage, program.snapshot);
+  const useGeneratedFolder = !isLegacyIgPubContext;
+  writeFHIRResources(outDir, outPackage, program.snapshot, useGeneratedFolder);
 
   // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
   if (config.FSHOnly) {
@@ -124,7 +124,12 @@ async function app() {
   } else {
     const igDataPath = path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
-    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
+    const igExporter = new IGExporter(
+      outPackage,
+      defs,
+      igDataPath,
+      isIgPubContext || isLegacyIgPubContext
+    );
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
   }
