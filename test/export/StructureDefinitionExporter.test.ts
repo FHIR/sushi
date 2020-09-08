@@ -4292,6 +4292,71 @@ describe('StructureDefinitionExporter', () => {
       expect(labCode.constraint).toContainEqual(expectedRunning);
       expect(labCode.constraint).toContainEqual(expectedWalking);
     });
+
+    it('should apply rules that modify a slice on a choice element', () => {
+      // Profile: PizzaBusiness
+      // Parent: Practitioner
+      // * extension contains TheBusiness named business 1..1
+      // * extension[business].valueString contains badSlice 0..1
+      // * extension[business].valueString[badSlice] = "The Bad Slice"
+
+      // Extension: TheBusiness
+      // * valueString ^slicing.discriminator.type = #value
+      // * valueString contains goodSlice 0..1
+      // * valueString[goodSlice] = "The Good Slice"
+
+      const extension = new Extension('TheBusiness');
+      const slicingType = new CaretValueRule('valueString');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const valueContains = new ContainsRule('valueString');
+      valueContains.items.push({ name: 'goodSlice' });
+      const valueCard = new CardRule('valueString[goodSlice]');
+      valueCard.min = 0;
+      valueCard.max = '1';
+      const goodValue = new FixedValueRule('valueString[goodSlice]');
+      goodValue.fixedValue = 'The Good Slice';
+      extension.rules.push(slicingType, valueContains, valueCard, goodValue);
+
+      const profile = new Profile('PizzaBusiness');
+      profile.parent = 'Practitioner';
+      const profileContains = new ContainsRule('extension');
+      profileContains.items.push({ name: 'business', type: 'TheBusiness' });
+      const profileCard = new CardRule('extension[business]');
+      profileCard.min = 1;
+      profileCard.max = '1';
+      const businessContains = new ContainsRule('extension[business].valueString');
+      businessContains.items.push({ name: 'badSlice' });
+      const businessCard = new CardRule('extension[business].valueString[badSlice]');
+      businessCard.min = 0;
+      businessCard.max = '1';
+      const badSliceValue = new FixedValueRule('extension[business].valueString[badSlice]');
+      badSliceValue.fixedValue = 'The Bad Slice';
+      profile.rules.push(
+        profileContains,
+        profileCard,
+        businessContains,
+        businessCard,
+        badSliceValue
+      );
+
+      doc.extensions.set(extension.name, extension);
+      doc.profiles.set(profile.name, profile);
+      exporter.export();
+
+      const businessSd = pkg.extensions[0];
+      expect(businessSd).toBeDefined();
+      const goodSliceElement = businessSd.findElement('Extension.value[x]:valueString/goodSlice');
+      expect(goodSliceElement).toBeDefined();
+
+      const pizzaSd = pkg.profiles[0];
+      expect(pizzaSd).toBeDefined();
+      const badSliceElement = pizzaSd.findElement(
+        'Practitioner.extension:business.value[x]:valueString/badSlice'
+      );
+      expect(badSliceElement).toBeDefined();
+    });
+
     it.todo('should have some tests involving slices and CaretValueRule');
   });
 

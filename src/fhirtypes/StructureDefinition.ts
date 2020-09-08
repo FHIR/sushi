@@ -228,7 +228,11 @@ export class StructureDefinition {
           ...unfoldedElements
         ]);
         if (matchingSlice) {
-          newMatchingElements.push(matchingSlice, ...matchingSlice.children());
+          newMatchingElements.push(
+            matchingSlice,
+            ...matchingSlice.children(),
+            ...matchingSlice.getSlices()
+          );
           fhirPathString = matchingSlice.path;
         }
       }
@@ -697,7 +701,8 @@ export class StructureDefinition {
     elements: ElementDefinition[],
     fisher: Fishable
   ): ElementDefinition {
-    let matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    let matchingSlice: ElementDefinition;
+    matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
     if (!matchingSlice && pathPart.brackets?.length === 1) {
       // If the current element is a child of a slice, the match may exist on the original
       // sliced element, search for that here
