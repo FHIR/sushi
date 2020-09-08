@@ -460,8 +460,14 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       expect(content.definition.grouping).toHaveLength(2);
-      expect(content.definition.grouping).toContainEqual({ name: 'MyPatientGroup' });
-      expect(content.definition.grouping).toContainEqual({ name: 'MyObservationGroup' });
+      expect(content.definition.grouping).toContainEqual({
+        id: 'MyPatientGroup',
+        name: 'MyPatientGroup'
+      });
+      expect(content.definition.grouping).toContainEqual({
+        id: 'MyObservationGroup',
+        name: 'MyObservationGroup'
+      });
     });
 
     it('should create groups for each configured group', () => {
@@ -482,10 +488,12 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       expect(content.definition.grouping).toContainEqual({
+        id: 'MyPatientGroup',
         name: 'MyPatientGroup',
         description: 'Group for some patient-related things.'
       });
       expect(content.definition.grouping).toContainEqual({
+        id: 'MyObservationGroup',
         name: 'MyObservationGroup',
         description: 'Group for some observation-related things.'
       });

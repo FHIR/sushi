@@ -1024,6 +1024,7 @@ export class IGExporter {
       }
     } else {
       this.ig.definition.grouping.push({
+        id: name,
         name: name,
         ...(description && { description })
       });
