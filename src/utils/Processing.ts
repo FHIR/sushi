@@ -13,7 +13,7 @@ import {
 } from '../import';
 import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
-import { Package } from '../export';
+import { exportFHIR, Package } from '../export';
 import {
   filterInlineInstances,
   filterExampleInstances,
@@ -26,6 +26,7 @@ import {
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
+import { ImplementationGuideDependsOn } from '../fhirtypes';
 
 export function findInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
@@ -268,6 +269,37 @@ export function init(): void {
       '│ the SUSHI documentation:  https://fshschool.org/sushi    │\n' +
       '╰──────────────────────────────────────────────────────────╯\n'
   );
+}
+
+export async function fshToFhir(
+  input: string,
+  canonical: string,
+  dependencies: ImplementationGuideDependsOn[]
+): Promise<Package> {
+  // silence the logger
+  logger.transports[0].silent = true;
+
+  // set up a config so that sushi can run
+  const config = {
+    canonical,
+    FSHOnly: true,
+    fhirVersion: ['4.0.1'],
+    dependencies
+  };
+
+  // load dependencies
+  const defs = new FHIRDefinitions();
+  await Promise.all(loadExternalDependencies(defs, config));
+
+  // load FSH text into memory
+  const rawFSH = [new RawFSH(input)];
+  const tank = fillTank(rawFSH, config);
+
+  // process FSH text into FHIR
+  const outPackage = exportFHIR(tank, defs);
+
+  // QUESTION: Could just convert to JSON here, not sure which is more useful
+  return outPackage;
 }
 
 function getFilesRecursive(dir: string): string[] {
