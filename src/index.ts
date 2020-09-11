@@ -5,3 +5,4 @@ export * as fshrules from './fshtypes/rules';
 export * as sushiExport from './export';
 export * as sushiImport from './import';
 export * as utils from './utils';
+export * as runSUSHI from './run';
