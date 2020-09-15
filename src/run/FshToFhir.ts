@@ -2,21 +2,27 @@ import { RawFSH } from '../import';
 import { exportFHIR, Package } from '../export';
 import { FHIRDefinitions } from '../fhirdefs';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
-import { fillTank, loadExternalDependencies, logger, errorsAndWarnings } from '../utils';
+import {
+  fillTank,
+  loadExternalDependencies,
+  logger,
+  errorsAndWarnings,
+  ErrorsAndWarnings
+} from '../utils';
 
 export async function fshToFhir(
   input: string,
-  options: fshToFhirOptions
+  options: fshToFhirOptions = {}
 ): Promise<{
   fhir: Package;
-  errors: { message: string; location: string }[];
-  warnings: { message: string; location: string }[];
+  errors: ErrorsAndWarnings['errors'];
+  warnings: ErrorsAndWarnings['warnings'];
 }> {
   // track errors and warnings, and determine log level from options
   errorsAndWarnings.shouldTrack = true;
-  if (options.logLevel == null) {
+  if (options.logLevel == 'silent') {
     logger.transports[0].silent = true;
-  } else {
+  } else if (options.logLevel != null) {
     logger.level = options.logLevel;
   }
 
@@ -40,7 +46,6 @@ export async function fshToFhir(
   // process FSH text into FHIR
   const outPackage = exportFHIR(tank, defs);
 
-  // QUESTION: Could just convert to JSON here, not sure which is more useful
   return {
     fhir: outPackage,
     errors: errorsAndWarnings.errors,
@@ -52,5 +57,8 @@ type fshToFhirOptions = {
   canonical?: string;
   version?: string;
   dependencies?: ImplementationGuideDependsOn[];
-  logLevel?: string;
+  logLevel?: Level;
 };
+
+// Winston levels: https://github.com/winstonjs/winston#logging-levels plus a silent option
+type Level = 'silly' | 'debug' | 'verbose' | 'http' | 'info' | 'warn' | 'error' | 'silent';

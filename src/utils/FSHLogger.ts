@@ -105,10 +105,16 @@ class LoggerStats {
 
 export const stats = new LoggerStats();
 
-class ErrorsAndWarnings {
+export class ErrorsAndWarnings {
   public errors: { message: string; location: string }[] = [];
   public warnings: { message: string; location: string }[] = [];
   public shouldTrack = false;
+
+  reset(): void {
+    this.errors = [];
+    this.warnings = [];
+    this.shouldTrack = false;
+  }
 }
 
 export const errorsAndWarnings = new ErrorsAndWarnings();
