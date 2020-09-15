@@ -1,5 +1,5 @@
 import { Rule } from './Rule';
-import { FixedValueType } from './FixedValueRule';
+import { FixedValueType } from './AssignmentRule';
 
 export class CaretValueRule extends Rule {
   caretPath: string;

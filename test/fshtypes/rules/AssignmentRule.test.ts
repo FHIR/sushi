@@ -1,10 +1,10 @@
 import 'jest-extended';
-import { FixedValueRule } from '../../../src/fshtypes/rules/FixedValueRule';
+import { AssignmentRule } from '../../../src/fshtypes/rules/AssignmentRule';
 
-describe('FixedValueRule', () => {
+describe('AssignmentRule', () => {
   describe('#constructor', () => {
     it('should set the properties correctly', () => {
-      const c = new FixedValueRule('component.code');
+      const c = new AssignmentRule('component.code');
       expect(c.path).toBe('component.code');
       expect(c.fixedValue).toBeUndefined();
       expect(c.exactly).toBeUndefined();

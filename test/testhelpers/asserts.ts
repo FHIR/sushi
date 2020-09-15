@@ -3,7 +3,7 @@ import {
   CardRule,
   FlagRule,
   ValueSetRule,
-  FixedValueRule,
+  AssignmentRule,
   FixedValueType,
   OnlyRule,
   OnlyRuleType,
@@ -67,8 +67,8 @@ export function assertFixedValueRule(
   exactly = false,
   isInstance = false
 ): void {
-  expect(rule).toBeInstanceOf(FixedValueRule);
-  const fixedValueRule = rule as FixedValueRule;
+  expect(rule).toBeInstanceOf(AssignmentRule);
+  const fixedValueRule = rule as AssignmentRule;
   expect(fixedValueRule.path).toBe(path);
   expect(fixedValueRule.fixedValue).toEqual(value);
   expect(fixedValueRule.exactly).toBe(exactly);

@@ -7,7 +7,7 @@ import {
   CodeSystem
 } from '.';
 import {
-  FixedValueRule,
+  AssignmentRule,
   Rule,
   InsertRule,
   ConceptRule,
@@ -221,12 +221,12 @@ export function getArrayIndex(pathPart: PathPart): number {
 /**
  * Replaces references to instances by the correct path to that instance.
  * Replaces references to local code systems by the url for that code system.
- * @param {FixedValueRule} rule - The rule to replace references on
+ * @param {AssignmentRule} rule - The rule to replace references on
  * @param {FSHTank} tank - The tank holding the instances and code systems
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
- * @returns {FixedValueRule} a clone of the rule if replacing is done, otherwise the original rule
+ * @returns {AssignmentRule} a clone of the rule if replacing is done, otherwise the original rule
  */
-export function replaceReferences<T extends FixedValueRule | CaretValueRule>(
+export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
   rule: T,
   tank: FSHTank,
   fisher: Fishable
@@ -246,8 +246,8 @@ export function replaceReferences<T extends FixedValueRule | CaretValueRule>(
     if (instance && instanceMeta) {
       // If the instance has a rule setting id, that overrides instance.id
       const idRule = instance.rules.find(
-        r => r.path === 'id' && r instanceof FixedValueRule
-      ) as FixedValueRule;
+        r => r.path === 'id' && r instanceof AssignmentRule
+      ) as AssignmentRule;
       const id = idRule?.fixedValue ?? instance.id;
       clone = cloneDeep(rule);
       const fv = getRuleValue(clone) as FshReference;
@@ -271,8 +271,8 @@ export function replaceReferences<T extends FixedValueRule | CaretValueRule>(
  * @param rule - The rule to get a value from
  * @returns - The value on the rule
  */
-function getRuleValue(rule: FixedValueRule | CaretValueRule): FixedValueType {
-  if (rule instanceof FixedValueRule) {
+function getRuleValue(rule: AssignmentRule | CaretValueRule): FixedValueType {
+  if (rule instanceof AssignmentRule) {
     return rule.fixedValue;
   } else if (rule instanceof CaretValueRule) {
     return rule.value;
@@ -387,7 +387,7 @@ export function applyMixinRules(
         r.sourceInfo.appliedLocation = fshDefinition.sourceInfo.location;
       });
       const rules = ruleSet.rules.filter(r => {
-        if (fshDefinition instanceof Instance && !(r instanceof FixedValueRule)) {
+        if (fshDefinition instanceof Instance && !(r instanceof AssignmentRule)) {
           logger.error(
             'Rules applied by mixins to an instance must fix a value. Other rules are ignored.',
             r.sourceInfo

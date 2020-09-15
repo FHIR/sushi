@@ -31,7 +31,7 @@ import {
   CardRule,
   FlagRule,
   ValueSetRule,
-  FixedValueRule,
+  AssignmentRule,
   FixedValueType,
   OnlyRule,
   ContainsRule,
@@ -871,7 +871,7 @@ export class FSHImporter extends FSHVisitor {
     return [];
   }
 
-  visitInstanceRule(ctx: pc.InstanceRuleContext): FixedValueRule | InsertRule {
+  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule {
     if (ctx.fixedValueRule()) {
       return this.visitFixedValueRule(ctx.fixedValueRule());
     } else if (ctx.insertRule()) {
@@ -1063,8 +1063,8 @@ export class FSHImporter extends FSHVisitor {
     return 'required';
   }
 
-  visitFixedValueRule(ctx: pc.FixedValueRuleContext): FixedValueRule {
-    const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()))
+  visitFixedValueRule(ctx: pc.FixedValueRuleContext): AssignmentRule {
+    const fixedValueRule = new AssignmentRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     fixedValueRule.fixedValue = this.visitValue(ctx.value());

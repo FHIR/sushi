@@ -17,7 +17,7 @@ import {
 } from '../errors';
 import {
   CardRule,
-  FixedValueRule,
+  AssignmentRule,
   FlagRule,
   OnlyRule,
   ValueSetRule,
@@ -157,7 +157,7 @@ export class StructureDefinitionExporter implements Fishable {
         try {
           if (rule instanceof CardRule) {
             element.constrainCardinality(rule.min, rule.max);
-          } else if (rule instanceof FixedValueRule) {
+          } else if (rule instanceof AssignmentRule) {
             if (rule.isInstance) {
               const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
               const instance = instanceExporter.fishForFHIR(rule.fixedValue as string);

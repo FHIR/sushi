@@ -14,7 +14,7 @@ export type FixedValueType =
   | FshReference
   | InstanceDefinition;
 
-export class FixedValueRule extends Rule {
+export class AssignmentRule extends Rule {
   fixedValue: FixedValueType;
   exactly: boolean;
   isInstance: boolean;

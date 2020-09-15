@@ -5,7 +5,7 @@ import {
   ConceptRule,
   CaretValueRule,
   ContainsRule,
-  FixedValueRule,
+  AssignmentRule,
   FlagRule,
   ObeysRule,
   OnlyRule,
@@ -36,7 +36,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(p, new CardRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new CaretValueRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new ContainsRule('foo'))).toBeTrue();
-      expect(isAllowedRule(p, new FixedValueRule('foo'))).toBeTrue();
+      expect(isAllowedRule(p, new AssignmentRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new OnlyRule('foo'))).toBeTrue();
@@ -60,7 +60,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(e, new CardRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new CaretValueRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new ContainsRule('foo'))).toBeTrue();
-      expect(isAllowedRule(e, new FixedValueRule('foo'))).toBeTrue();
+      expect(isAllowedRule(e, new AssignmentRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new OnlyRule('foo'))).toBeTrue();
@@ -81,7 +81,7 @@ describe('isAllowedRule', () => {
       i = new Instance('Bar');
     });
     it('should allow valid rules on an Instance', () => {
-      expect(isAllowedRule(i, new FixedValueRule('foo'))).toBeTrue();
+      expect(isAllowedRule(i, new AssignmentRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on Instance', () => {
@@ -112,7 +112,7 @@ describe('isAllowedRule', () => {
     });
 
     it('should not allow invalid rules on a FshValueSet', () => {
-      expect(isAllowedRule(v, new FixedValueRule('foo'))).toBeFalse();
+      expect(isAllowedRule(v, new AssignmentRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new MappingRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new InsertRule())).toBeFalse();
       expect(isAllowedRule(v, new ConceptRule('foo'))).toBeFalse();
@@ -136,7 +136,7 @@ describe('isAllowedRule', () => {
     });
 
     it('should not allow invalid rules on a FshCodeSystem', () => {
-      expect(isAllowedRule(c, new FixedValueRule('foo'))).toBeFalse();
+      expect(isAllowedRule(c, new AssignmentRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new MappingRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new InsertRule())).toBeFalse();
       expect(isAllowedRule(c, new CardRule('foo'))).toBeFalse();
@@ -160,7 +160,7 @@ describe('isAllowedRule', () => {
 
     it('should not allow invalid rules on a Maping', () => {
       expect(isAllowedRule(m, new CaretValueRule('foo'))).toBeFalse();
-      expect(isAllowedRule(m, new FixedValueRule('foo'))).toBeFalse();
+      expect(isAllowedRule(m, new AssignmentRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new ConceptRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new InsertRule())).toBeFalse();
       expect(isAllowedRule(m, new CardRule('foo'))).toBeFalse();
@@ -182,7 +182,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(r, new CardRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new CaretValueRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ContainsRule('foo'))).toBeTrue();
-      expect(isAllowedRule(r, new FixedValueRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new AssignmentRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new OnlyRule('foo'))).toBeTrue();
