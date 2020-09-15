@@ -28,27 +28,67 @@ export function findInputDir(input: string): string {
     logger.info('path-to-fsh-defs defaulted to current working directory');
   }
 
+  // TODO: Legacy support. Remove when no longer supported.
+  // Use input/fsh/ subdirectory if not already specified and present
+  const inputFshSubdirectoryPath = path.join(input, 'input', 'fsh');
+  if (fs.existsSync(inputFshSubdirectoryPath)) {
+    input = path.join(input, 'input', 'fsh');
+  }
+
   // Use fsh/ subdirectory if not already specified and present
   const fshSubdirectoryPath = path.join(input, 'fsh');
-  if (fs.existsSync(fshSubdirectoryPath)) {
+  if (!fs.existsSync(inputFshSubdirectoryPath) && fs.existsSync(fshSubdirectoryPath)) {
     input = path.join(input, 'fsh');
+    logger.warn(
+      'SUSHI detected a "fsh" directory that will be used in the input path. ' +
+        'Use of this folder is deprecated and will be removed in a future release. ' +
+        'To migrate to the new folder structure the following changes are needed:\n' +
+        `  - sushi-config.yaml moves to ${path.resolve(
+          input,
+          '..',
+          'input',
+          'fsh',
+          'sushi-config.yaml'
+        )}\n` +
+        `  - ig-data/* files move to ${path.resolve(input, '..')}${path.sep}*\n` +
+        `  - .fsh files move to ${path.resolve(input, 'input', 'fsh')}${path.sep}*`
+    );
   }
   return input;
 }
 
-export function ensureOutputDir(input: string, output: string, isIgPubContext: boolean): string {
-  if (isIgPubContext) {
+export function ensureOutputDir(
+  input: string,
+  output: string,
+  isIgPubContext: boolean,
+  isLegacyIgPubContext: boolean
+): string {
+  if (isIgPubContext || isLegacyIgPubContext) {
+    // TODO: Message includes information about legacy support for top level fsh folder. Remove when not supported.
+    let directory = 'fsh';
+    let article = 'a';
+    let parentDirectory = 'fsh';
+    if (isIgPubContext) {
+      directory = 'input/fsh';
+      article = 'an';
+      parentDirectory = 'input';
+    }
     logger.info(
-      'SUSHI detected a "fsh" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n' +
-        '  - the "fsh" directory will be used as the input path\n' +
-        '  - the parent of the "fsh" directory (e.g., "../fsh") will be used as the output path unless otherwise specified with --out option\n' +
+      `SUSHI detected ${article} "${directory}" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n` +
+        `  - the "${directory}" directory will be used as the input path\n` +
+        `  - the parent of the "${parentDirectory}" directory will be used as the output path unless otherwise specified with --out option\n` +
         '  - generation of publisher-related scripts will be suppressed (i.e., assumed to be managed by you)'
     );
   }
   let outDir = output;
-  if (isIgPubContext && !output) {
-    // When running in an IG Publisher context, default output is the parent folder of the tank
+  if (isLegacyIgPubContext && !output) {
+    // TODO: Legacy support for top level "fsh" directory. Remove when no longer supported.
+    // When running in a legacy IG Publisher context, default output is the parent folder of the tank
     outDir = path.join(input, '..');
+    logger.info(`No output path specified. Output to ${outDir}`);
+  } else if (isIgPubContext && !output) {
+    // When running in an IG Publisher context, default output is the parent folder of the input/fsh folder
+    outDir = path.join(input, '..', '..');
     logger.info(`No output path specified. Output to ${outDir}`);
   } else if (!output) {
     // Any other time, default output is just to 'build'
@@ -147,13 +187,19 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
-export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {
+export function writeFHIRResources(
+  outDir: string,
+  outPackage: Package,
+  snapshot: boolean,
+  useGeneratedFolder: boolean
+) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const writeResources = (
     folder: string,
     resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
   ) => {
+    folder = useGeneratedFolder ? 'generated' : folder;
     const exportDir = path.join(outDir, 'input', folder);
     resources.forEach(resource => {
       fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
