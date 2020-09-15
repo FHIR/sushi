@@ -55,11 +55,18 @@ export function ensureOutputDir(
 ): string {
   if (isIgPubContext || isLegacyIgPubContext) {
     // TODO: Message includes information about legacy support for top level fsh folder. Remove when not supported.
-    const directory = isIgPubContext ? 'input/fsh' : 'fsh';
+    let directory = 'fsh';
+    let article = 'a';
+    let parentDirectory = 'fsh';
+    if (isIgPubContext) {
+      directory = 'input/fsh';
+      article = 'an';
+      parentDirectory = 'input';
+    }
     logger.info(
-      `SUSHI detected an "${directory}" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n` +
+      `SUSHI detected ${article} "${directory}" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n` +
         `  - the "${directory}" directory will be used as the input path\n` +
-        `  - the parent of the "${directory}" directory will be used as the output path unless otherwise specified with --out option\n` +
+        `  - the parent of the "${parentDirectory}" directory will be used as the output path unless otherwise specified with --out option\n` +
         '  - generation of publisher-related scripts will be suppressed (i.e., assumed to be managed by you)'
     );
   }
@@ -70,7 +77,7 @@ export function ensureOutputDir(
     outDir = path.join(input, '..');
     logger.info(`No output path specified. Output to ${outDir}`);
   } else if (isIgPubContext && !output) {
-    // When running in a legacy IG Publisher context, default output is the parent folder of the input/fsh folder
+    // When running in an IG Publisher context, default output is the parent folder of the input/fsh folder
     outDir = path.join(input, '..', '..');
     logger.info(`No output path specified. Output to ${outDir}`);
   } else if (!output) {
