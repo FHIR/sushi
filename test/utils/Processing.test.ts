@@ -516,10 +516,9 @@ describe('Processing', () => {
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
 
-      expect(ensureDirSpy.mock.calls).toHaveLength(1);
-      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
-        /.*ExampleIG.*fsh.*ig-data.*input.*pagecontent/
-      );
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*ExampleIG.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*ExampleIG.*input.*fsh/);
 
       expect(writeSpy.mock.calls).toHaveLength(6);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
@@ -580,10 +579,9 @@ describe('Processing', () => {
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
 
-      expect(ensureDirSpy.mock.calls).toHaveLength(1);
-      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
-        /.*MyNonDefaultName.*fsh.*ig-data.*input.*pagecontent/
-      );
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MyNonDefaultName.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyNonDefaultName.*input.*fsh/);
 
       expect(writeSpy.mock.calls).toHaveLength(6);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
