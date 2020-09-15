@@ -306,6 +306,33 @@ describe('ElementDefinition', () => {
       expect(observation.elements[valueXIdx + 2]).toEqual(integer);
     });
 
+    it('should reduce min to 0 when addings slices for specific types in a choice of types', () => {
+      const valueX = observation.elements.find(e => e.path === 'Observation.value[x]');
+      // set value[x] min to 1 to test that slice mins are reduced to 0 (to allow other choices)
+      valueX.min = 1;
+      valueX.sliceIt('type', '$this', false, 'open');
+      const quantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      const integer = valueX.addSlice('valueInteger', new ElementDefinitionType('integer'));
+      expect(quantity.min).toBe(0);
+      expect(quantity.max).toBe('1');
+      expect(integer.min).toBe(0);
+      expect(integer.max).toBe('1');
+    });
+
+    it('should NOT reduce min to 0 when adding a slice for specific types in a choice of only one type', () => {
+      // NOTE: It's up for debate whether we should make explicit choices when there only is one option anyway,
+      // but for now, we do.  So... we need to test this use case.
+      const valueX = observation.elements.find(e => e.path === 'Observation.value[x]');
+      // Remove all but the Quantity choice from value[x]
+      valueX.type = valueX.type.filter(t => t.code === 'Quantity');
+      // set value[x] min to 1 to test that slice min remains at 1
+      valueX.min = 1;
+      valueX.sliceIt('type', '$this', false, 'open');
+      const quantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      expect(quantity.min).toBe(1);
+      expect(quantity.max).toBe('1');
+    });
+
     it('should reslice when slicing a slice', () => {
       const component = observation.elements.find(e => e.id === 'Observation.component');
       const lastComponentIndex = findLastIndex(observation.elements, e =>
