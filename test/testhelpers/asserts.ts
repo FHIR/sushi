@@ -4,7 +4,7 @@ import {
   FlagRule,
   ValueSetRule,
   AssignmentRule,
-  FixedValueType,
+  AssignmentValueType,
   OnlyRule,
   OnlyRuleType,
   ContainsRule,
@@ -63,7 +63,7 @@ export function assertValueSetRule(
 export function assertFixedValueRule(
   rule: Rule,
   path: string,
-  value: FixedValueType,
+  value: AssignmentValueType,
   exactly = false,
   isInstance = false
 ): void {
@@ -99,7 +99,7 @@ export function assertCaretValueRule(
   rule: Rule,
   path: string,
   caretPath: string,
-  value: FixedValueType,
+  value: AssignmentValueType,
   isInstance: boolean
 ): void {
   expect(rule).toBeInstanceOf(CaretValueRule);

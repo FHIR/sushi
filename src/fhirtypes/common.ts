@@ -14,7 +14,7 @@ import {
   ValueSetConceptComponentRule,
   SdRule,
   CaretValueRule,
-  FixedValueType
+  AssignmentValueType
 } from '../fshtypes/rules';
 import {
   FshReference,
@@ -271,7 +271,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
  * @param rule - The rule to get a value from
  * @returns - The value on the rule
  */
-function getRuleValue(rule: AssignmentRule | CaretValueRule): FixedValueType {
+function getRuleValue(rule: AssignmentRule | CaretValueRule): AssignmentValueType {
   if (rule instanceof AssignmentRule) {
     return rule.fixedValue;
   } else if (rule instanceof CaretValueRule) {

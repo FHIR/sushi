@@ -13,7 +13,7 @@ import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
-import { FixedValueType, OnlyRule } from '../fshtypes/rules';
+import { AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
   CodedTypeNotFoundError,
@@ -1121,13 +1121,13 @@ export class ElementDefinition {
 
   /**
    * Fixes a value to an ElementDefinition
-   * @param {FixedValueType} value - The value to fix
+   * @param {AssignmentValueType} value - The value to fix
    * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
    * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  fixValue(value: FixedValueType, exactly = false, fisher?: Fishable): void {
+  fixValue(value: AssignmentValueType, exactly = false, fisher?: Fishable): void {
     let type: string;
     if (value instanceof FshCode) {
       type = 'Code';

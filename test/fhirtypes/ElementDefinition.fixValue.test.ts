@@ -31,11 +31,11 @@ describe('ElementDefinition', () => {
         e => e.id === 'MedicationRequest.authoredOn'
       );
       expect(() => {
-        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'FixedValueType'
+        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'AssignmentValueType'
         authoredOn.fixValue(new Date()); // Date is not a supported type -- only strings are allowed
       }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
       expect(() => {
-        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'FixedValueType'
+        // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'AssignmentValueType'
         authoredOn.fixValue(new Date(), true); // Date is not a supported type -- only strings are allowed
       }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
     });

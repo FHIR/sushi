@@ -32,7 +32,7 @@ import {
   FlagRule,
   ValueSetRule,
   AssignmentRule,
-  FixedValueType,
+  AssignmentValueType,
   OnlyRule,
   ContainsRule,
   ContainsRuleItem,
@@ -1080,7 +1080,7 @@ export class FSHImporter extends FSHVisitor {
     return fixedValueRule;
   }
 
-  visitValue(ctx: pc.ValueContext): FixedValueType {
+  visitValue(ctx: pc.ValueContext): AssignmentValueType {
     // In cases where the parser encounters an error, ctx might be null
     if (ctx == null) {
       return;

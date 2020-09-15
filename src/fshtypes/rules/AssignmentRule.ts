@@ -3,7 +3,7 @@ import { FshCode, FshQuantity, FshRatio, FshReference } from '../index';
 import { InstanceDefinition } from '../../fhirtypes';
 import { FshCanonical } from '../FshCanonical';
 
-export type FixedValueType =
+export type AssignmentValueType =
   | boolean
   | number
   | string
@@ -15,7 +15,7 @@ export type FixedValueType =
   | InstanceDefinition;
 
 export class AssignmentRule extends Rule {
-  fixedValue: FixedValueType;
+  fixedValue: AssignmentValueType;
   exactly: boolean;
   isInstance: boolean;
 
