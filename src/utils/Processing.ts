@@ -210,17 +210,15 @@ export function init(): void {
   const indexPageContent = fs
     .readFileSync(path.join(initProjectDir, 'index.md'), 'utf-8')
     .replace('ExampleIG', projectName);
-  fs.ensureDirSync(path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent'));
-  fs.writeFileSync(
-    path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent', 'index.md'),
-    indexPageContent
-  );
+  fs.ensureDirSync(path.join(outputDir, 'input', 'pagecontent'));
+  fs.writeFileSync(path.join(outputDir, 'input', 'pagecontent', 'index.md'), indexPageContent);
   // Add the config
-  fs.writeFileSync(path.join(outputDir, 'fsh', 'sushi-config.yaml'), configDoc.toString());
+  fs.writeFileSync(path.join(outputDir, 'sushi-config.yaml'), configDoc.toString());
   // Copy over remaining static files
+  fs.ensureDirSync(path.join(outputDir, 'input', 'fsh'));
   fs.copyFileSync(
     path.join(initProjectDir, 'patient.fsh'),
-    path.join(outputDir, 'fsh', 'patient.fsh')
+    path.join(outputDir, 'input', 'fsh', 'patient.fsh')
   );
   fs.copyFileSync(
     path.join(initProjectDir, 'init-gitignore.txt'),

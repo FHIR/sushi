@@ -431,10 +431,9 @@ describe('Processing', () => {
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
 
-      expect(ensureDirSpy.mock.calls).toHaveLength(1);
-      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
-        /.*ExampleIG.*fsh.*ig-data.*input.*pagecontent/
-      );
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*ExampleIG.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*ExampleIG.*input.*fsh/);
 
       expect(writeSpy.mock.calls).toHaveLength(2);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
@@ -450,7 +449,7 @@ describe('Processing', () => {
       );
 
       expect(copyFileSpy.mock.calls).toHaveLength(8);
-      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*fsh.*patient.fsh/);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*input.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*\.gitignore/);
       expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*_gencontinuous\.bat/);
       expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*ExampleIG.*_gencontinuous\.sh/);
@@ -485,10 +484,9 @@ describe('Processing', () => {
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
 
-      expect(ensureDirSpy.mock.calls).toHaveLength(1);
-      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
-        /.*MyNonDefaultName.*fsh.*ig-data.*input.*pagecontent/
-      );
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MyNonDefaultName.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyNonDefaultName.*input.*fsh/);
 
       expect(writeSpy.mock.calls).toHaveLength(2);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
@@ -503,7 +501,7 @@ describe('Processing', () => {
           .replace(/[\n\r]/g, '')
       );
       expect(copyFileSpy.mock.calls).toHaveLength(8);
-      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*input.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
       expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.bat/);
       expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.sh/);
