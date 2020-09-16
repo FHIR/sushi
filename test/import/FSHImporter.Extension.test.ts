@@ -2,7 +2,7 @@ import {
   assertCardRule,
   assertFlagRule,
   assertOnlyRule,
-  assertValueSetRule,
+  assertBindingRule,
   assertCaretValueRule,
   assertObeysRule,
   assertContainsRule,
@@ -189,7 +189,7 @@ describe('FSHImporter', () => {
       });
     });
 
-    describe('#valueSetRule', () => {
+    describe('#BindingRule', () => {
       it('should parse value set rules w/ names and strength', () => {
         const input = `
         Extension: SomeExtension
@@ -200,7 +200,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertValueSetRule(
+        assertBindingRule(
           extension.rules[0],
           'valueCodeableConcept',
           'ExtensionValueSet',

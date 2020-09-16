@@ -1,5 +1,5 @@
 import { importText, RawFSH } from '../../src/import';
-import { ValueSetRule } from '../../src/fshtypes/rules';
+import { BindingRule } from '../../src/fshtypes/rules';
 import { importSingleText } from '../testhelpers/importSingleText';
 import { loggerSpy } from '../testhelpers';
 
@@ -108,7 +108,7 @@ describe('FSHImporter', () => {
       `;
 
       const result = importSingleText(input);
-      const rule = result.profiles.get('ObservationProfile').rules[0] as ValueSetRule;
+      const rule = result.profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('http://loinc.org');
     });
 
@@ -122,7 +122,7 @@ describe('FSHImporter', () => {
       `;
 
       const result = importSingleText(input);
-      const rule = result.profiles.get('ObservationProfile').rules[0] as ValueSetRule;
+      const rule = result.profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('http://loinc.org');
     });
 
@@ -136,7 +136,7 @@ describe('FSHImporter', () => {
       `;
 
       const result = importSingleText(input);
-      const rule = result.profiles.get('ObservationProfile').rules[0] as ValueSetRule;
+      const rule = result.profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('LAINC');
     });
 
@@ -152,7 +152,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input), new RawFSH(input2)]);
       expect(results.length).toBe(2);
-      const rule = results[0].profiles.get('ObservationProfile').rules[0] as ValueSetRule;
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('http://loinc.org');
     });
 

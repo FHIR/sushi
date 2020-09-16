@@ -2,7 +2,7 @@ import {
   Rule,
   CardRule,
   FlagRule,
-  ValueSetRule,
+  BindingRule,
   AssignmentRule,
   AssignmentValueType,
   OnlyRule,
@@ -47,17 +47,17 @@ export function assertFlagRule(
   expect(flagRule.draft).toBe(draft);
 }
 
-export function assertValueSetRule(
+export function assertBindingRule(
   rule: Rule,
   path: string,
   valueSet: string,
   strength: string
 ): void {
-  expect(rule).toBeInstanceOf(ValueSetRule);
-  const valueSetRule = rule as ValueSetRule;
-  expect(valueSetRule.path).toBe(path);
-  expect(valueSetRule.valueSet).toBe(valueSet);
-  expect(valueSetRule.strength).toBe(strength);
+  expect(rule).toBeInstanceOf(BindingRule);
+  const bindingRule = rule as BindingRule;
+  expect(bindingRule.path).toBe(path);
+  expect(bindingRule.valueSet).toBe(valueSet);
+  expect(bindingRule.strength).toBe(strength);
 }
 
 export function assertAssignmentRule(

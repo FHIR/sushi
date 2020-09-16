@@ -18,7 +18,7 @@ import {
   CardRule,
   FlagRule,
   OnlyRule,
-  ValueSetRule,
+  BindingRule,
   AssignmentRule,
   ContainsRule,
   CaretValueRule,
@@ -849,7 +849,7 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('Junk');
     profile.parent = 'Appointment';
 
-    const vsRule = new ValueSetRule('description');
+    const vsRule = new BindingRule('description');
     vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
@@ -868,7 +868,7 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const vsRule = new ValueSetRule('category');
+    const vsRule = new BindingRule('category');
     vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
@@ -891,7 +891,7 @@ describe('StructureDefinitionExporter', () => {
 
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
-    const vsRule = new ValueSetRule('category');
+    const vsRule = new BindingRule('category');
     vsRule.valueSet = 'CustomCategories';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
@@ -916,7 +916,7 @@ describe('StructureDefinitionExporter', () => {
 
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
-    const vsRule = new ValueSetRule('category');
+    const vsRule = new BindingRule('category');
     vsRule.valueSet = 'CustomCategories';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
@@ -932,7 +932,7 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const vsRule = new ValueSetRule('note').withFile('Codeless.fsh').withLocation([6, 9, 6, 25]);
+    const vsRule = new BindingRule('note').withFile('Codeless.fsh').withLocation([6, 9, 6, 25]);
     vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'extensible';
     profile.rules.push(vsRule);
@@ -951,7 +951,7 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const vsRule = new ValueSetRule('category').withFile('Strict.fsh').withLocation([9, 10, 9, 35]);
+    const vsRule = new BindingRule('category').withFile('Strict.fsh').withLocation([9, 10, 9, 35]);
     vsRule.valueSet = 'http://example.org/fhir/ValueSet/some-valueset';
     vsRule.strength = 'example';
     profile.rules.push(vsRule);
@@ -3805,13 +3805,13 @@ describe('StructureDefinitionExporter', () => {
       expect(labInterpretation.mustSupport).toBe(true);
     });
 
-    it('should apply ValueSetRules on a slice, then a sliced element, with different value sets', () => {
+    it('should apply BindingRules on a slice, then a sliced element, with different value sets', () => {
       // * category[Procedure] from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
       // * category from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
-      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      const procedureValueSet = new BindingRule('category[Procedure]');
       procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       procedureValueSet.strength = 'extensible';
-      const rootValueSet = new ValueSetRule('category');
+      const rootValueSet = new BindingRule('category');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
 
@@ -3833,13 +3833,13 @@ describe('StructureDefinitionExporter', () => {
       expect(procedureCategory.binding).toEqual(mediocreBinding);
     });
 
-    it('should apply ValueSetRules on a sliced element, then a slice, with different value sets', () => {
+    it('should apply BindingRules on a sliced element, then a slice, with different value sets', () => {
       // * category from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
       // * category[Procedure] from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
-      const rootValueSet = new ValueSetRule('category');
+      const rootValueSet = new BindingRule('category');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
-      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      const procedureValueSet = new BindingRule('category[Procedure]');
       procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       procedureValueSet.strength = 'extensible';
 
@@ -3861,13 +3861,13 @@ describe('StructureDefinitionExporter', () => {
       expect(procedureCategory.binding).toEqual(mediocreBinding);
     });
 
-    it('should apply ValueSetRules on a slice, then the sliced element, with the same value set', () => {
+    it('should apply BindingRules on a slice, then the sliced element, with the same value set', () => {
       // * category[Procedure] from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
       // * category from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
-      const procedureValueSet = new ValueSetRule('category[Procedure]');
+      const procedureValueSet = new BindingRule('category[Procedure]');
       procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       procedureValueSet.strength = 'extensible';
-      const rootValueSet = new ValueSetRule('category');
+      const rootValueSet = new BindingRule('category');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
 
@@ -3885,13 +3885,13 @@ describe('StructureDefinitionExporter', () => {
       expect(procedureCategory.binding).toEqual(regularBinding);
     });
 
-    it('should not apply a ValueSetRule on a sliced element that would bind it to the same value set as the root, but more weakly', () => {
+    it('should not apply a BindingRule on a sliced element that would bind it to the same value set as the root, but more weakly', () => {
       // * category from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
       // * category[Procedure] from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
-      const rootValueSet = new ValueSetRule('category');
+      const rootValueSet = new BindingRule('category');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
-      const procedureValueSet = new ValueSetRule('category[Procedure]')
+      const procedureValueSet = new BindingRule('category[Procedure]')
         .withFile('Weaker.fsh')
         .withLocation([4, 8, 4, 23]);
       procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
@@ -3913,13 +3913,13 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 4\D*/s);
     });
 
-    it('should apply ValueSetRules on the child of a slice, then the child of a sliced element, with different value sets', () => {
+    it('should apply BindingRules on the child of a slice, then the child of a sliced element, with different value sets', () => {
       // * component[Lab].code from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
       // * component.code from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
-      const labValueSet = new ValueSetRule('component[Lab].code');
+      const labValueSet = new BindingRule('component[Lab].code');
       labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       labValueSet.strength = 'extensible';
-      const rootValueSet = new ValueSetRule('component.code');
+      const rootValueSet = new BindingRule('component.code');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
 
@@ -3941,16 +3941,16 @@ describe('StructureDefinitionExporter', () => {
       expect(labCode.binding).toEqual(mediocreBinding);
     });
 
-    it('should apply ValueSetRules on the child of a sliced element, then the child of a slice, with different value sets', () => {
+    it('should apply BindingRules on the child of a sliced element, then the child of a slice, with different value sets', () => {
       // * component[Lab].code MS // force creation of element
       // * component.code from http://hl7.org/fhir/us/minimal/ImportantObservationCodes (required)
       // * component[Lab].code from http://hl7.org/fhir/us/minimal/MediocreObservationCodes (extensible)
       const flagRule = new FlagRule('component[Lab].code');
       flagRule.mustSupport = true;
-      const rootValueSet = new ValueSetRule('component.code');
+      const rootValueSet = new BindingRule('component.code');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/ImportantObservationCodes';
       rootValueSet.strength = 'required';
-      const labValueSet = new ValueSetRule('component[Lab].code');
+      const labValueSet = new BindingRule('component[Lab].code');
       labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/MediocreObservationCodes';
       labValueSet.strength = 'extensible';
 
@@ -3972,13 +3972,13 @@ describe('StructureDefinitionExporter', () => {
       expect(labCode.binding).toEqual(mediocreBinding);
     });
 
-    it('should apply ValueSetRules on the child of a slice, then the child of the sliced element, with the same value set', () => {
+    it('should apply BindingRules on the child of a slice, then the child of the sliced element, with the same value set', () => {
       // * component[Lab].code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
       // * component.code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
-      const labValueSet = new ValueSetRule('component[Lab].code');
+      const labValueSet = new BindingRule('component[Lab].code');
       labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       labValueSet.strength = 'extensible';
-      const rootValueSet = new ValueSetRule('component.code');
+      const rootValueSet = new BindingRule('component.code');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
 
@@ -3996,13 +3996,13 @@ describe('StructureDefinitionExporter', () => {
       expect(labCode.binding).toEqual(regularBinding);
     });
 
-    it('should not apply a ValueSetRule on the child of a sliced element that would bind it to the same value set as the child of the root, but more weakly', () => {
+    it('should not apply a BindingRule on the child of a sliced element that would bind it to the same value set as the child of the root, but more weakly', () => {
       // * component.code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (required)
       // * component[Lab].code from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
-      const rootValueSet = new ValueSetRule('component.code');
+      const rootValueSet = new BindingRule('component.code');
       rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
       rootValueSet.strength = 'required';
-      const labValueSet = new ValueSetRule('component[Lab].code')
+      const labValueSet = new BindingRule('component[Lab].code')
         .withFile('Weaker.fsh')
         .withLocation([9, 15, 9, 33]);
       labValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';

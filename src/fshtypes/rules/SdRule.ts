@@ -6,7 +6,7 @@ import {
   FlagRule,
   ObeysRule,
   OnlyRule,
-  ValueSetRule,
+  BindingRule,
   InsertRule
 } from '.';
 
@@ -18,5 +18,5 @@ export type SdRule =
   | FlagRule
   | ObeysRule
   | OnlyRule
-  | ValueSetRule
+  | BindingRule
   | InsertRule;

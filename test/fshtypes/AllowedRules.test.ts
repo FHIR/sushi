@@ -9,7 +9,7 @@ import {
   FlagRule,
   ObeysRule,
   OnlyRule,
-  ValueSetRule,
+  BindingRule,
   MappingRule,
   InsertRule,
   ValueSetComponentRule,
@@ -40,7 +40,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(p, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new OnlyRule('foo'))).toBeTrue();
-      expect(isAllowedRule(p, new ValueSetRule('foo'))).toBeTrue();
+      expect(isAllowedRule(p, new BindingRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on a Profile', () => {
@@ -64,7 +64,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(e, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new OnlyRule('foo'))).toBeTrue();
-      expect(isAllowedRule(e, new ValueSetRule('foo'))).toBeTrue();
+      expect(isAllowedRule(e, new BindingRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on an Extension', () => {
@@ -95,7 +95,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(i, new FlagRule('foo'))).toBeFalse();
       expect(isAllowedRule(i, new ObeysRule('foo'))).toBeFalse();
       expect(isAllowedRule(i, new OnlyRule('foo'))).toBeFalse();
-      expect(isAllowedRule(i, new ValueSetRule('foo'))).toBeFalse();
+      expect(isAllowedRule(i, new BindingRule('foo'))).toBeFalse();
     });
   });
 
@@ -121,7 +121,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(v, new FlagRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new ObeysRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new OnlyRule('foo'))).toBeFalse();
-      expect(isAllowedRule(v, new ValueSetRule('foo'))).toBeFalse();
+      expect(isAllowedRule(v, new BindingRule('foo'))).toBeFalse();
     });
   });
 
@@ -144,7 +144,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(c, new FlagRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new ObeysRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new OnlyRule('foo'))).toBeFalse();
-      expect(isAllowedRule(c, new ValueSetRule('foo'))).toBeFalse();
+      expect(isAllowedRule(c, new BindingRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new ValueSetComponentRule(true))).toBeFalse();
     });
   });
@@ -168,7 +168,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(m, new FlagRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new ObeysRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new OnlyRule('foo'))).toBeFalse();
-      expect(isAllowedRule(m, new ValueSetRule('foo'))).toBeFalse();
+      expect(isAllowedRule(m, new BindingRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new ValueSetComponentRule(true))).toBeFalse();
     });
   });
@@ -186,7 +186,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(r, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new OnlyRule('foo'))).toBeTrue();
-      expect(isAllowedRule(r, new ValueSetRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new BindingRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new MappingRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ValueSetComponentRule(true))).toBeTrue();
       expect(isAllowedRule(r, new ConceptRule('foo'))).toBeTrue();

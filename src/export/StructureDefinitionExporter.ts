@@ -20,7 +20,7 @@ import {
   AssignmentRule,
   FlagRule,
   OnlyRule,
-  ValueSetRule,
+  BindingRule,
   ContainsRule,
   CaretValueRule,
   ObeysRule
@@ -181,7 +181,7 @@ export class StructureDefinitionExporter implements Fishable {
           } else if (rule instanceof OnlyRule) {
             const target = structDef.getReferenceName(rule.path, element);
             element.constrainType(rule, this, target);
-          } else if (rule instanceof ValueSetRule) {
+          } else if (rule instanceof BindingRule) {
             const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
             element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {

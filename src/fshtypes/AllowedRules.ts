@@ -7,7 +7,7 @@ import {
   FlagRule,
   ObeysRule,
   OnlyRule,
-  ValueSetRule,
+  BindingRule,
   ConceptRule,
   ValueSetComponentRule,
   MappingRule,
@@ -25,7 +25,7 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      ValueSetRule
+      BindingRule
     ]
   ],
   [
@@ -38,7 +38,7 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      ValueSetRule
+      BindingRule
     ]
   ],
   [Instance, [AssignmentRule]],
@@ -58,7 +58,7 @@ const allowedRulesMap = new Map<any, any[]>([
       ObeysRule,
       OnlyRule,
       ValueSetComponentRule,
-      ValueSetRule
+      BindingRule
     ]
   ]
 ]);

@@ -1,6 +1,6 @@
 import { importSingleText } from '../testhelpers/importSingleText';
 import {
-  assertValueSetRule,
+  assertBindingRule,
   assertAssignmentRule,
   assertCardRule,
   assertInsertRule,
@@ -52,7 +52,7 @@ describe('FSHImporter', () => {
         endLine: 5,
         endColumn: 22
       });
-      assertValueSetRule(
+      assertBindingRule(
         ruleSet.rules[0] as Rule,
         'gender',
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',
@@ -79,7 +79,7 @@ describe('FSHImporter', () => {
         endLine: 5,
         endColumn: 22
       });
-      assertValueSetRule(
+      assertBindingRule(
         ruleSet.rules[0] as Rule,
         'gender',
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',
@@ -106,7 +106,7 @@ describe('FSHImporter', () => {
         endLine: 5,
         endColumn: 15
       });
-      assertValueSetRule(
+      assertBindingRule(
         ruleSet.rules[0] as Rule,
         'gender',
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',

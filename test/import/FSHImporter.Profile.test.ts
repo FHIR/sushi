@@ -3,7 +3,7 @@ import {
   assertAssignmentRule,
   assertFlagRule,
   assertOnlyRule,
-  assertValueSetRule,
+  assertBindingRule,
   assertContainsRule,
   assertCaretValueRule,
   assertObeysRule,
@@ -691,7 +691,7 @@ describe('FSHImporter', () => {
       });
     });
 
-    describe('#valueSetRule', () => {
+    describe('#BindingRule', () => {
       it('should parse value set rules w/ names and strengths', () => {
         const input = `
         Profile: ObservationProfile
@@ -705,10 +705,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(4);
-        assertValueSetRule(profile.rules[0], 'category', 'CategoryValueSet', 'required');
-        assertValueSetRule(profile.rules[1], 'code', 'CodeValueSet', 'extensible');
-        assertValueSetRule(profile.rules[2], 'valueCodeableConcept', 'ValueValueSet', 'preferred');
-        assertValueSetRule(profile.rules[3], 'component.code', 'ComponentCodeValueSet', 'example');
+        assertBindingRule(profile.rules[0], 'category', 'CategoryValueSet', 'required');
+        assertBindingRule(profile.rules[1], 'code', 'CodeValueSet', 'extensible');
+        assertBindingRule(profile.rules[2], 'valueCodeableConcept', 'ValueValueSet', 'preferred');
+        assertBindingRule(profile.rules[3], 'component.code', 'ComponentCodeValueSet', 'example');
       });
 
       it('should parse value set rules w/ urls and strengths', () => {
@@ -724,25 +724,25 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(4);
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[0],
           'category',
           'http://example.org/fhir/ValueSet/CategoryValueSet',
           'required'
         );
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[1],
           'code',
           'http://example.org/fhir/ValueSet/CodeValueSet',
           'extensible'
         );
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[2],
           'valueCodeableConcept',
           'http://example.org/fhir/ValueSet/ValueValueSet',
           'preferred'
         );
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[3],
           'component.code',
           'http://example.org/fhir/ValueSet/ComponentCodeValueSet',
@@ -768,25 +768,25 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(4);
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[0],
           'category',
           'http://example.org/fhir/ValueSet/CategoryValueSet',
           'required'
         );
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[1],
           'code',
           'http://example.org/fhir/ValueSet/CodeValueSet',
           'extensible'
         );
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[2],
           'valueCodeableConcept',
           'http://example.org/fhir/ValueSet/ValueValueSet',
           'preferred'
         );
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[3],
           'component.code',
           'http://example.org/fhir/ValueSet/ComponentCodeValueSet',
@@ -805,8 +805,8 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(2);
-        assertValueSetRule(profile.rules[0], 'category', 'CategoryValueSet', 'required');
-        assertValueSetRule(
+        assertBindingRule(profile.rules[0], 'category', 'CategoryValueSet', 'required');
+        assertBindingRule(
           profile.rules[1],
           'code',
           'http://example.org/fhir/ValueSet/CodeValueSet',
@@ -824,7 +824,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'UselessQuant.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertValueSetRule(
+        assertBindingRule(
           profile.rules[0],
           'valueQuantity',
           'http://unitsofmeasure.org',

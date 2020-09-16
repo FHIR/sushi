@@ -3,7 +3,7 @@ export * from './AssignmentRule';
 export * from './FlagRule';
 export * from './OnlyRule';
 export * from './Rule';
-export * from './ValueSetRule';
+export * from './BindingRule';
 export * from './ContainsRule';
 export * from './CaretValueRule';
 export * from './ObeysRule';

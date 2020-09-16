@@ -30,7 +30,7 @@ import {
 import {
   CardRule,
   FlagRule,
-  ValueSetRule,
+  BindingRule,
   AssignmentRule,
   AssignmentValueType,
   OnlyRule,
@@ -1037,8 +1037,8 @@ export class FSHImporter extends FSHVisitor {
     return Flag.Unknown;
   }
 
-  visitValueSetRule(ctx: pc.ValueSetRuleContext): ValueSetRule {
-    const vsRule = new ValueSetRule(this.visitPath(ctx.path()))
+  visitValueSetRule(ctx: pc.ValueSetRuleContext): BindingRule {
+    const vsRule = new BindingRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
