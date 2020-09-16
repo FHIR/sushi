@@ -36,10 +36,10 @@ describe('ElementDefinition', () => {
     );
   });
 
-  describe('#fixFshRatio', () => {
-    it('should fix a FshRatio to a Ratio', () => {
+  describe('#assignFshRatio', () => {
+    it('should assign a FshRatio to a Ratio', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(fshRatio);
+      amount.assignValue(fshRatio);
       expect(amount.patternRatio).toEqual({
         numerator: {
           value: 1.2,
@@ -55,9 +55,9 @@ describe('ElementDefinition', () => {
       expect(amount.fixedRatio).toBeUndefined();
     });
 
-    it('should fix a FshRatio to a Ratio (exactly)', () => {
+    it('should assign a FshRatio to a Ratio (exactly)', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(fshRatio, true);
+      amount.assignValue(fshRatio, true);
       expect(amount.fixedRatio).toEqual({
         numerator: {
           value: 1.2,
@@ -73,9 +73,9 @@ describe('ElementDefinition', () => {
       expect(amount.patternRatio).toBeUndefined();
     });
 
-    it('should fix a FshRatio without units to a Ratio', () => {
+    it('should assign a FshRatio without units to a Ratio', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(fshRatioNoUnits);
+      amount.assignValue(fshRatioNoUnits);
       expect(amount.patternRatio).toEqual({
         numerator: {
           value: 1.2
@@ -87,9 +87,9 @@ describe('ElementDefinition', () => {
       expect(amount.fixedRatio).toBeUndefined();
     });
 
-    it('should fix a FshRatio without units to a Ratio (exactly)', () => {
+    it('should assign a FshRatio without units to a Ratio (exactly)', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(fshRatioNoUnits, true);
+      amount.assignValue(fshRatioNoUnits, true);
       expect(amount.fixedRatio).toEqual({
         numerator: {
           value: 1.2
@@ -104,22 +104,22 @@ describe('ElementDefinition', () => {
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixValue(fshRatio);
+        valueX.assignValue(fshRatio);
       }).toThrow(
-        'Cannot fix Ratio value on this element since this element does not have a single type'
+        'Cannot assign Ratio value on this element since this element does not have a single type'
       );
       expect(() => {
-        valueX.fixValue(fshRatio, true);
+        valueX.assignValue(fshRatio, true);
       }).toThrow(
-        'Cannot fix Ratio value on this element since this element does not have a single type'
+        'Cannot assign Ratio value on this element since this element does not have a single type'
       );
     });
 
-    it('should throw RatioAlreadyFixedError when the value is fixed to a different value by pattern[x]', () => {
+    it('should throw RatioAlreadyAssignedError when the value is assigned to a different value by pattern[x]', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(fshRatio);
-      // should be able to fix a Ratio twice in the same way without issue
-      amount.fixValue(fshRatio);
+      amount.assignValue(fshRatio);
+      // should be able to assign a Ratio twice in the same way without issue
+      amount.assignValue(fshRatio);
       expect(amount.patternRatio).toEqual({
         numerator: {
           value: 1.2,
@@ -134,33 +134,33 @@ describe('ElementDefinition', () => {
       });
       // different value
       expect(() => {
-        amount.fixValue(differentFshRatio);
+        amount.assignValue(differentFshRatio);
       }).toThrow(
-        'Cannot fix 1.3 \'mm\' : 3.4 \'cm\' to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
+        'Cannot assign 1.3 \'mm\' : 3.4 \'cm\' to this element; a different Ratio is already assigned: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
       expect(() => {
-        amount.fixValue(differentFshRatio, true);
+        amount.assignValue(differentFshRatio, true);
       }).toThrow(
-        'Cannot fix 1.3 \'mm\' : 3.4 \'cm\' to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
+        'Cannot assign 1.3 \'mm\' : 3.4 \'cm\' to this element; a different Ratio is already assigned: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
       // different units
       expect(() => {
-        amount.fixValue(fshRatioNoUnits);
+        amount.assignValue(fshRatioNoUnits);
       }).toThrow(
-        'Cannot fix 1.2 : 3.4 to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
+        'Cannot assign 1.2 : 3.4 to this element; a different Ratio is already assigned: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
       expect(() => {
-        amount.fixValue(fshRatioNoUnits, true);
+        amount.assignValue(fshRatioNoUnits, true);
       }).toThrow(
-        'Cannot fix 1.2 : 3.4 to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
+        'Cannot assign 1.2 : 3.4 to this element; a different Ratio is already assigned: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
     });
 
-    it('should throw RatioAlreadyFixedError when the value is fixed to a different value by fixed[x]', () => {
+    it('should throw RatioAlreadyAssignedError when the value is assigned to a different value by fixed[x]', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(fshRatio, true);
-      // should be able to fix a Ratio twice in the same way without issue
-      amount.fixValue(fshRatio, true);
+      amount.assignValue(fshRatio, true);
+      // should be able to assign a Ratio twice in the same way without issue
+      amount.assignValue(fshRatio, true);
       expect(amount.fixedRatio).toEqual({
         numerator: {
           value: 1.2,
@@ -175,51 +175,51 @@ describe('ElementDefinition', () => {
       });
       // different value
       expect(() => {
-        amount.fixValue(differentFshRatio, true);
+        amount.assignValue(differentFshRatio, true);
       }).toThrow(
-        'Cannot fix 1.3 \'mm\' : 3.4 \'cm\' to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
+        'Cannot assign 1.3 \'mm\' : 3.4 \'cm\' to this element; a different Ratio is already assigned: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
       // different units
       expect(() => {
-        amount.fixValue(fshRatioNoUnits, true);
+        amount.assignValue(fshRatioNoUnits, true);
       }).toThrow(
-        'Cannot fix 1.2 : 3.4 to this element; a different Ratio is already fixed: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
+        'Cannot assign 1.2 : 3.4 to this element; a different Ratio is already assigned: {"numerator":{"value":1.2,"code":"mm","system":"http://unitsofmeasure.org"},"denominator":{"value":3.4,"code":"cm","system":"http://unitsofmeasure.org"}}.'
       );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const amount = medication.elements.find(e => e.id === 'Medication.amount');
-      amount.fixValue(fshRatio, true);
+      amount.assignValue(fshRatio, true);
       // different value
       expect(() => {
-        amount.fixValue(fshRatio);
+        amount.assignValue(fshRatio);
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedRatio.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedRatio.'
       );
     });
 
-    it('should throw MismatchedTypeError when the value is fixed to a non-Ratio', () => {
+    it('should throw MismatchedTypeError when the value is assigned to a non-Ratio', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       // with units
       expect(() => {
-        status.fixValue(fshRatio);
+        status.assignValue(fshRatio);
       }).toThrow(
         // eslint-disable-next-line
-        "Cannot fix Ratio value: 1.2 'mm' : 3.4 'cm'. Value does not match element type: code"
+        "Cannot assign Ratio value: 1.2 'mm' : 3.4 'cm'. Value does not match element type: code"
       );
       expect(() => {
-        status.fixValue(fshRatio, true);
+        status.assignValue(fshRatio, true);
       }).toThrow(
         // eslint-disable-next-line
-        "Cannot fix Ratio value: 1.2 'mm' : 3.4 'cm'. Value does not match element type: code"
+        "Cannot assign Ratio value: 1.2 'mm' : 3.4 'cm'. Value does not match element type: code"
       );
       // without units
       expect(() => {
-        status.fixValue(fshRatioNoUnits);
-      }).toThrow('Cannot fix Ratio value: 1.2 : 3.4. Value does not match element type: code');
+        status.assignValue(fshRatioNoUnits);
+      }).toThrow('Cannot assign Ratio value: 1.2 : 3.4. Value does not match element type: code');
       expect(() => {
-        status.fixValue(fshRatioNoUnits, true);
-      }).toThrow('Cannot fix Ratio value: 1.2 : 3.4. Value does not match element type: code');
+        status.assignValue(fshRatioNoUnits, true);
+      }).toThrow('Cannot assign Ratio value: 1.2 : 3.4. Value does not match element type: code');
     });
   });
 });

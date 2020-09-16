@@ -38,50 +38,50 @@ describe('ElementDefinition', () => {
     device = fisher.fishForStructureDefinition('Device');
     task = fisher.fishForStructureDefinition('Task');
   });
-  describe('#fixString', () => {
-    // Fixing a string
-    it('should fix a string to a string', () => {
+  describe('#assignString', () => {
+    // Assigning a string
+    it('should assign a string to a string', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
-      batchLotNumber.fixValue('foo bar');
+      batchLotNumber.assignValue('foo bar');
       expect(batchLotNumber.patternString).toBe('foo bar');
       expect(batchLotNumber.fixedString).toBeUndefined();
     });
 
-    it('should fix a string to a string (exactly)', () => {
+    it('should assign a string to a string (exactly)', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
-      batchLotNumber.fixValue('foo bar', true);
+      batchLotNumber.assignValue('foo bar', true);
       expect(batchLotNumber.fixedString).toBe('foo bar');
       expect(batchLotNumber.patternString).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed string by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned string by pattern[x]', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
-      batchLotNumber.fixValue('foo bar');
+      batchLotNumber.assignValue('foo bar');
       expect(batchLotNumber.patternString).toBe('foo bar');
       expect(() => {
-        batchLotNumber.fixValue('bar foo');
+        batchLotNumber.assignValue('bar foo');
       }).toThrow(
-        'Cannot fix "bar foo" to this element; a different string is already fixed: "foo bar".'
+        'Cannot assign "bar foo" to this element; a different string is already assigned: "foo bar".'
       );
       expect(() => {
-        batchLotNumber.fixValue('bar foo', true);
+        batchLotNumber.assignValue('bar foo', true);
       }).toThrow(
-        'Cannot fix "bar foo" to this element; a different string is already fixed: "foo bar".'
+        'Cannot assign "bar foo" to this element; a different string is already assigned: "foo bar".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed string by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned string by assigned[x]', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
-      batchLotNumber.fixValue('foo bar', true);
+      batchLotNumber.assignValue('foo bar', true);
       expect(batchLotNumber.fixedString).toBe('foo bar');
       expect(() => {
-        batchLotNumber.fixValue('bar foo', true);
+        batchLotNumber.assignValue('bar foo', true);
       }).toThrow(
-        'Cannot fix "bar foo" to this element; a different string is already fixed: "foo bar".'
+        'Cannot assign "bar foo" to this element; a different string is already assigned: "foo bar".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing a decimal to a different value set in a parent by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning a decimal to a different value set in a parent by pattern[x]', () => {
       const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
       // @ts-ignore
       identifier.patternIdentifier = { value: 'Foo' };
@@ -91,15 +91,19 @@ describe('ElementDefinition', () => {
       );
       const clone = cloneDeep(identifierValue);
       expect(() => {
-        identifierValue.fixValue('Bar');
-      }).toThrow('Cannot fix "Bar" to this element; a different string is already fixed: "Foo".');
+        identifierValue.assignValue('Bar');
+      }).toThrow(
+        'Cannot assign "Bar" to this element; a different string is already assigned: "Foo".'
+      );
       expect(() => {
-        identifierValue.fixValue('Bar', true);
-      }).toThrow('Cannot fix "Bar" to this element; a different string is already fixed: "Foo".');
+        identifierValue.assignValue('Bar', true);
+      }).toThrow(
+        'Cannot assign "Bar" to this element; a different string is already assigned: "Foo".'
+      );
       expect(clone).toEqual(identifierValue);
     });
 
-    it('should throw ValueAlreadyFixedError when fixing a decimal to a different value set in a parent by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning a decimal to a different value set in a parent by assigned[x]', () => {
       const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
       // @ts-ignore
       identifier.fixedIdentifier = { value: 'Foo' };
@@ -109,852 +113,867 @@ describe('ElementDefinition', () => {
       );
       const clone = cloneDeep(identifierValue);
       expect(() => {
-        identifierValue.fixValue('Bar');
-      }).toThrow('Cannot fix "Bar" to this element; a different string is already fixed: "Foo".');
+        identifierValue.assignValue('Bar');
+      }).toThrow(
+        'Cannot assign "Bar" to this element; a different string is already assigned: "Foo".'
+      );
       expect(() => {
-        identifierValue.fixValue('Bar', true);
-      }).toThrow('Cannot fix "Bar" to this element; a different string is already fixed: "Foo".');
+        identifierValue.assignValue('Bar', true);
+      }).toThrow(
+        'Cannot assign "Bar" to this element; a different string is already assigned: "Foo".'
+      );
       expect(clone).toEqual(identifierValue);
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
-      batchLotNumber.fixValue('foo bar', true);
+      batchLotNumber.assignValue('foo bar', true);
       expect(batchLotNumber.fixedString).toBe('foo bar');
       expect(() => {
-        batchLotNumber.fixValue('foo bar');
+        batchLotNumber.assignValue('foo bar');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedString.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedString.'
       );
     });
 
-    // Fixing a URI
-    it('should fix a string to a uri', () => {
+    // Assigning a URI
+    it('should assign a string to a uri', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
-      url.fixValue('http://example.org');
+      url.assignValue('http://example.org');
       expect(url.patternUri).toBe('http://example.org');
       expect(url.fixedUri).toBeUndefined();
     });
 
-    it('should fix a string to a uri (exactly)', () => {
+    it('should assign a string to a uri (exactly)', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
-      url.fixValue('http://example.org', true);
+      url.assignValue('http://example.org', true);
       expect(url.fixedUri).toBe('http://example.org');
       expect(url.patternUri).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed uri by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned uri by pattern[x]', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
-      url.fixValue('http://example.org');
+      url.assignValue('http://example.org');
       expect(url.patternUri).toBe('http://example.org');
       expect(() => {
-        url.fixValue('http://newexample.com');
+        url.assignValue('http://newexample.com');
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different uri is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different uri is already assigned: "http://example.org".'
       );
       expect(() => {
-        url.fixValue('http://newexample.com', true);
+        url.assignValue('http://newexample.com', true);
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different uri is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different uri is already assigned: "http://example.org".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed uri by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned uri by assigned[x]', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
-      url.fixValue('http://example.org', true);
+      url.assignValue('http://example.org', true);
       expect(url.fixedUri).toBe('http://example.org');
       expect(() => {
-        url.fixValue('http://newexample.com', true);
+        url.assignValue('http://newexample.com', true);
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different uri is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different uri is already assigned: "http://example.org".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
-      url.fixValue('http://example.org', true);
+      url.assignValue('http://example.org', true);
       expect(url.fixedUri).toBe('http://example.org');
       expect(() => {
-        url.fixValue('http://example.com');
+        url.assignValue('http://example.com');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedUri.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedUri.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a uri to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning a uri to an incorrect value', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
       expect(() => {
-        url.fixValue(' ');
-      }).toThrow('Cannot fix string value:  . Value does not match element type: uri');
+        url.assignValue(' ');
+      }).toThrow('Cannot assign string value:  . Value does not match element type: uri');
       expect(() => {
-        url.fixValue(' ', true);
-      }).toThrow('Cannot fix string value:  . Value does not match element type: uri');
+        url.assignValue(' ', true);
+      }).toThrow('Cannot assign string value:  . Value does not match element type: uri');
     });
 
-    // Fixing a URL
-    it('should fix a string to a url', () => {
+    // Assigning a URL
+    it('should assign a string to a url', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
-      url.fixValue('http://example.org');
+      url.assignValue('http://example.org');
       expect(url.patternUrl).toBe('http://example.org');
       expect(url.fixedUrl).toBeUndefined();
     });
 
-    it('should fix a string to a url (exactly)', () => {
+    it('should assign a string to a url (exactly)', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
-      url.fixValue('http://example.org', true);
+      url.assignValue('http://example.org', true);
       expect(url.fixedUrl).toBe('http://example.org');
       expect(url.patternUrl).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed URL by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned URL by pattern[x]', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
-      url.fixValue('http://example.org');
+      url.assignValue('http://example.org');
       expect(url.patternUrl).toBe('http://example.org');
       expect(() => {
-        url.fixValue('http://newexample.com');
+        url.assignValue('http://newexample.com');
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different url is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different url is already assigned: "http://example.org".'
       );
       expect(() => {
-        url.fixValue('http://newexample.com', true);
+        url.assignValue('http://newexample.com', true);
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different url is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different url is already assigned: "http://example.org".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed URL by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned URL by assigned[x]', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
-      url.fixValue('http://example.org', true);
+      url.assignValue('http://example.org', true);
       expect(url.fixedUrl).toBe('http://example.org');
       expect(() => {
-        url.fixValue('http://newexample.com', true);
+        url.assignValue('http://newexample.com', true);
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different url is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different url is already assigned: "http://example.org".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
-      url.fixValue('http://example.org', true);
+      url.assignValue('http://example.org', true);
       expect(url.fixedUrl).toBe('http://example.org');
       expect(() => {
-        url.fixValue('http://newexample.com');
+        url.assignValue('http://newexample.com');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedUrl.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedUrl.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a url to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning a url to an incorrect value', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
       expect(() => {
-        url.fixValue(' ');
-      }).toThrow('Cannot fix string value:  . Value does not match element type: url');
+        url.assignValue(' ');
+      }).toThrow('Cannot assign string value:  . Value does not match element type: url');
       expect(() => {
-        url.fixValue(' ', true);
-      }).toThrow('Cannot fix string value:  . Value does not match element type: url');
+        url.assignValue(' ', true);
+      }).toThrow('Cannot assign string value:  . Value does not match element type: url');
     });
 
-    // Fixing a canonical
-    it('should fix a string to a canonical', () => {
+    // Assigning a canonical
+    it('should assign a string to a canonical', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
-      instantiates.fixValue('http://example.org');
+      instantiates.assignValue('http://example.org');
       expect(instantiates.patternCanonical).toBe('http://example.org');
       expect(instantiates.fixedCanonical).toBeUndefined();
     });
 
-    it('should fix a string to a canonical (exactly)', () => {
+    it('should assign a string to a canonical (exactly)', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
-      instantiates.fixValue('http://example.org', true);
+      instantiates.assignValue('http://example.org', true);
       expect(instantiates.fixedCanonical).toBe('http://example.org');
       expect(instantiates.patternCanonical).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed canonical by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned canonical by pattern[x]', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
-      instantiates.fixValue('http://example.org');
+      instantiates.assignValue('http://example.org');
       expect(instantiates.patternCanonical).toBe('http://example.org');
       expect(() => {
-        instantiates.fixValue('http://newexample.com');
+        instantiates.assignValue('http://newexample.com');
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different canonical is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different canonical is already assigned: "http://example.org".'
       );
       expect(() => {
-        instantiates.fixValue('http://newexample.com', true);
+        instantiates.assignValue('http://newexample.com', true);
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different canonical is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different canonical is already assigned: "http://example.org".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed canonical by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned canonical by assigned[x]', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
-      instantiates.fixValue('http://example.org', true);
+      instantiates.assignValue('http://example.org', true);
       expect(instantiates.fixedCanonical).toBe('http://example.org');
       expect(() => {
-        instantiates.fixValue('http://newexample.com', true);
+        instantiates.assignValue('http://newexample.com', true);
       }).toThrow(
-        'Cannot fix "http://newexample.com" to this element; a different canonical is already fixed: "http://example.org".'
+        'Cannot assign "http://newexample.com" to this element; a different canonical is already assigned: "http://example.org".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
-      instantiates.fixValue('http://example.org', true);
+      instantiates.assignValue('http://example.org', true);
       expect(instantiates.fixedCanonical).toBe('http://example.org');
       expect(() => {
-        instantiates.fixValue('http://example.com');
+        instantiates.assignValue('http://example.com');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedCanonical.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedCanonical.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a canonical to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning a canonical to an incorrect value', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
       expect(() => {
-        instantiates.fixValue(' ');
-      }).toThrow('Cannot fix string value:  . Value does not match element type: canonical');
+        instantiates.assignValue(' ');
+      }).toThrow('Cannot assign string value:  . Value does not match element type: canonical');
       expect(() => {
-        instantiates.fixValue(' ', true);
-      }).toThrow('Cannot fix string value:  . Value does not match element type: canonical');
+        instantiates.assignValue(' ', true);
+      }).toThrow('Cannot assign string value:  . Value does not match element type: canonical');
     });
 
-    // Fixing a base64Binary
-    it('should fix a string to a base64Binary', () => {
+    // Assigning a base64Binary
+    it('should assign a string to a base64Binary', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
+      udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBeUndefined();
     });
 
-    it('should fix a string to a base64Binary (exactly)', () => {
+    it('should assign a string to a base64Binary (exactly)', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
+      udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.patternBase64Binary).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed base64Binary by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned base64Binary by pattern[x]', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
+      udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.patternBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(() => {
-        udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=');
+        udiCarrierCarrierAIDC.assignValue('dGhpcyB0b28=');
       }).toThrow(
-        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
+        'Cannot assign "dGhpcyB0b28=" to this element; a different base64Binary is already assigned: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
       );
       expect(() => {
-        udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=', true);
+        udiCarrierCarrierAIDC.assignValue('dGhpcyB0b28=', true);
       }).toThrow(
-        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
+        'Cannot assign "dGhpcyB0b28=" to this element; a different base64Binary is already assigned: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed base64Binary by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned base64Binary by assigned[x]', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
+      udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(() => {
-        udiCarrierCarrierAIDC.fixValue('dGhpcyB0b28=', true);
+        udiCarrierCarrierAIDC.assignValue('dGhpcyB0b28=', true);
       }).toThrow(
-        'Cannot fix "dGhpcyB0b28=" to this element; a different base64Binary is already fixed: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
+        'Cannot assign "dGhpcyB0b28=" to this element; a different base64Binary is already assigned: "QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
-      udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
+      udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(() => {
-        udiCarrierCarrierAIDC.fixValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
+        udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedBase64Binary.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedBase64Binary.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a base64Binary to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning a base64Binary to an incorrect value', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
       expect(() => {
-        udiCarrierCarrierAIDC.fixValue('Not valid');
+        udiCarrierCarrierAIDC.assignValue('Not valid');
       }).toThrow(
-        'Cannot fix string value: Not valid. Value does not match element type: base64Binary'
+        'Cannot assign string value: Not valid. Value does not match element type: base64Binary'
       );
       expect(() => {
-        udiCarrierCarrierAIDC.fixValue('Not valid', true);
+        udiCarrierCarrierAIDC.assignValue('Not valid', true);
       }).toThrow(
-        'Cannot fix string value: Not valid. Value does not match element type: base64Binary'
+        'Cannot assign string value: Not valid. Value does not match element type: base64Binary'
       );
     });
 
-    // Fixing an instant
-    it('should fix a string to an instant', () => {
+    // Assigning an instant
+    it('should assign a string to an instant', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
-      issued.fixValue('2015-02-07T13:28:17.239+02:00');
+      issued.assignValue('2015-02-07T13:28:17.239+02:00');
       expect(issued.patternInstant).toBe('2015-02-07T13:28:17.239+02:00');
       expect(issued.fixedInstant).toBeUndefined();
     });
 
-    it('should fix a string to an instant (exactly)', () => {
+    it('should assign a string to an instant (exactly)', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
-      issued.fixValue('2015-02-07T13:28:17.239+02:00', true);
+      issued.assignValue('2015-02-07T13:28:17.239+02:00', true);
       expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
       expect(issued.patternInstant).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed instant by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned instant by pattern[x]', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
-      issued.fixValue('2015-02-07T13:28:17.239+02:00');
+      issued.assignValue('2015-02-07T13:28:17.239+02:00');
       expect(issued.patternInstant).toBe('2015-02-07T13:28:17.239+02:00');
       expect(() => {
-        issued.fixValue('2016-02-07T13:28:17.239+02:00');
+        issued.assignValue('2016-02-07T13:28:17.239+02:00');
       }).toThrow(
-        'Cannot fix "2016-02-07T13:28:17.239+02:00" to this element; a different instant is already fixed: "2015-02-07T13:28:17.239+02:00".'
+        'Cannot assign "2016-02-07T13:28:17.239+02:00" to this element; a different instant is already assigned: "2015-02-07T13:28:17.239+02:00".'
       );
       expect(() => {
-        issued.fixValue('2016-02-07T13:28:17.239+02:00', true);
+        issued.assignValue('2016-02-07T13:28:17.239+02:00', true);
       }).toThrow(
-        'Cannot fix "2016-02-07T13:28:17.239+02:00" to this element; a different instant is already fixed: "2015-02-07T13:28:17.239+02:00".'
+        'Cannot assign "2016-02-07T13:28:17.239+02:00" to this element; a different instant is already assigned: "2015-02-07T13:28:17.239+02:00".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed instant by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned instant by assigned[x]', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
-      issued.fixValue('2015-02-07T13:28:17.239+02:00', true);
+      issued.assignValue('2015-02-07T13:28:17.239+02:00', true);
       expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
       expect(() => {
-        issued.fixValue('2016-02-07T13:28:17.239+02:00', true);
+        issued.assignValue('2016-02-07T13:28:17.239+02:00', true);
       }).toThrow(
-        'Cannot fix "2016-02-07T13:28:17.239+02:00" to this element; a different instant is already fixed: "2015-02-07T13:28:17.239+02:00".'
+        'Cannot assign "2016-02-07T13:28:17.239+02:00" to this element; a different instant is already assigned: "2015-02-07T13:28:17.239+02:00".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
-      issued.fixValue('2015-02-07T13:28:17.239+02:00', true);
+      issued.assignValue('2015-02-07T13:28:17.239+02:00', true);
       expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
       expect(() => {
-        issued.fixValue('2015-02-07T13:28:17.239+02:00');
+        issued.assignValue('2015-02-07T13:28:17.239+02:00');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedInstant.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedInstant.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing an instant to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning an instant to an incorrect value', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
       expect(() => {
-        issued.fixValue('2015-02-07');
-      }).toThrow('Cannot fix string value: 2015-02-07. Value does not match element type: instant');
+        issued.assignValue('2015-02-07');
+      }).toThrow(
+        'Cannot assign string value: 2015-02-07. Value does not match element type: instant'
+      );
       expect(() => {
-        issued.fixValue('2015-02-07', true);
-      }).toThrow('Cannot fix string value: 2015-02-07. Value does not match element type: instant');
+        issued.assignValue('2015-02-07', true);
+      }).toThrow(
+        'Cannot assign string value: 2015-02-07. Value does not match element type: instant'
+      );
     });
 
-    // Fixing a date
-    it('should fix a string to a date', () => {
+    // Assigning a date
+    it('should assign a string to a date', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
-      birthDate.fixValue('1905-08-23');
+      birthDate.assignValue('1905-08-23');
       expect(birthDate.patternDate).toBe('1905-08-23');
       expect(birthDate.fixedDate).toBeUndefined();
     });
 
-    it('should fix a string to a date (exactly)', () => {
+    it('should assign a string to a date (exactly)', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
-      birthDate.fixValue('1905-08-23', true);
+      birthDate.assignValue('1905-08-23', true);
       expect(birthDate.fixedDate).toBe('1905-08-23');
       expect(birthDate.patternDate).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed date by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned date by pattern[x]', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
-      birthDate.fixValue('1905-08-23');
+      birthDate.assignValue('1905-08-23');
       expect(birthDate.patternDate).toBe('1905-08-23');
       expect(() => {
-        birthDate.fixValue('1905-08-24');
+        birthDate.assignValue('1905-08-24');
       }).toThrow(
-        'Cannot fix "1905-08-24" to this element; a different date is already fixed: "1905-08-23".'
+        'Cannot assign "1905-08-24" to this element; a different date is already assigned: "1905-08-23".'
       );
       expect(() => {
-        birthDate.fixValue('1905-08-24', true);
+        birthDate.assignValue('1905-08-24', true);
       }).toThrow(
-        'Cannot fix "1905-08-24" to this element; a different date is already fixed: "1905-08-23".'
+        'Cannot assign "1905-08-24" to this element; a different date is already assigned: "1905-08-23".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed date by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned date by assigned[x]', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
-      birthDate.fixValue('1905-08-23', true);
+      birthDate.assignValue('1905-08-23', true);
       expect(birthDate.fixedDate).toBe('1905-08-23');
       expect(() => {
-        birthDate.fixValue('1905-08-24', true);
+        birthDate.assignValue('1905-08-24', true);
       }).toThrow(
-        'Cannot fix "1905-08-24" to this element; a different date is already fixed: "1905-08-23".'
+        'Cannot assign "1905-08-24" to this element; a different date is already assigned: "1905-08-23".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
-      birthDate.fixValue('1905-08-23', true);
+      birthDate.assignValue('1905-08-23', true);
       expect(birthDate.fixedDate).toBe('1905-08-23');
       expect(() => {
-        birthDate.fixValue('1905-08-23');
+        birthDate.assignValue('1905-08-23');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedDate.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedDate.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a date to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning a date to an incorrect value', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
       expect(() => {
-        birthDate.fixValue('2016-02-07T13:28:17.239+02:00');
+        birthDate.assignValue('2016-02-07T13:28:17.239+02:00');
       }).toThrow(
-        'Cannot fix string value: 2016-02-07T13:28:17.239+02:00. Value does not match element type: date'
+        'Cannot assign string value: 2016-02-07T13:28:17.239+02:00. Value does not match element type: date'
       );
       expect(() => {
-        birthDate.fixValue('2016-02-07T13:28:17.239+02:00', true);
+        birthDate.assignValue('2016-02-07T13:28:17.239+02:00', true);
       }).toThrow(
-        'Cannot fix string value: 2016-02-07T13:28:17.239+02:00. Value does not match element type: date'
+        'Cannot assign string value: 2016-02-07T13:28:17.239+02:00. Value does not match element type: date'
       );
     });
 
-    // Fixing a dateTime
-    it('should fix a string to a dateTime', () => {
+    // Assigning a dateTime
+    it('should assign a string to a dateTime', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
-      date.fixValue('2015-02-07T13:28:17-05:00');
+      date.assignValue('2015-02-07T13:28:17-05:00');
       expect(date.patternDateTime).toBe('2015-02-07T13:28:17-05:00');
       expect(date.fixedDateTime).toBeUndefined();
     });
 
-    it('should fix a string to a dateTime (exactly)', () => {
+    it('should assign a string to a dateTime (exactly)', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
-      date.fixValue('2015-02-07T13:28:17-05:00', true);
+      date.assignValue('2015-02-07T13:28:17-05:00', true);
       expect(date.fixedDateTime).toBe('2015-02-07T13:28:17-05:00');
       expect(date.patternDateTime).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed dateTime by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned dateTime by pattern[x]', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
-      date.fixValue('1905-08-23');
+      date.assignValue('1905-08-23');
       expect(date.patternDateTime).toBe('1905-08-23');
       expect(() => {
-        date.fixValue('1905-08-24');
+        date.assignValue('1905-08-24');
       }).toThrow(
-        'Cannot fix "1905-08-24" to this element; a different dateTime is already fixed: "1905-08-23".'
+        'Cannot assign "1905-08-24" to this element; a different dateTime is already assigned: "1905-08-23".'
       );
       expect(() => {
-        date.fixValue('1905-08-24', true);
+        date.assignValue('1905-08-24', true);
       }).toThrow(
-        'Cannot fix "1905-08-24" to this element; a different dateTime is already fixed: "1905-08-23".'
+        'Cannot assign "1905-08-24" to this element; a different dateTime is already assigned: "1905-08-23".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed dateTime by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned dateTime by assigned[x]', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
-      date.fixValue('1905-08-23', true);
+      date.assignValue('1905-08-23', true);
       expect(date.fixedDateTime).toBe('1905-08-23');
       expect(() => {
-        date.fixValue('1905-08-24', true);
+        date.assignValue('1905-08-24', true);
       }).toThrow(
-        'Cannot fix "1905-08-24" to this element; a different dateTime is already fixed: "1905-08-23".'
+        'Cannot assign "1905-08-24" to this element; a different dateTime is already assigned: "1905-08-23".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
-      date.fixValue('1905-08-23', true);
+      date.assignValue('1905-08-23', true);
       expect(date.fixedDateTime).toBe('1905-08-23');
       expect(() => {
-        date.fixValue('1905-08-23');
+        date.assignValue('1905-08-23');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedDateTime.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedDateTime.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a dateTime to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning a dateTime to an incorrect value', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
       expect(() => {
-        date.fixValue('hello there');
+        date.assignValue('hello there');
       }).toThrow(
-        'Cannot fix string value: hello there. Value does not match element type: dateTime'
+        'Cannot assign string value: hello there. Value does not match element type: dateTime'
       );
       expect(() => {
-        date.fixValue('hello there', true);
+        date.assignValue('hello there', true);
       }).toThrow(
-        'Cannot fix string value: hello there. Value does not match element type: dateTime'
+        'Cannot assign string value: hello there. Value does not match element type: dateTime'
       );
     });
 
-    // Fixing a time
-    it('should fix a string to a time', () => {
+    // Assigning a time
+    it('should assign a string to a time', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
-      hoursOfOperationClosingTime.fixValue('12:34:56');
+      hoursOfOperationClosingTime.assignValue('12:34:56');
       expect(hoursOfOperationClosingTime.patternTime).toBe('12:34:56');
       expect(hoursOfOperationClosingTime.fixedTime).toBeUndefined();
     });
 
-    it('should fix a string to a time (exactly)', () => {
+    it('should assign a string to a time (exactly)', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
-      hoursOfOperationClosingTime.fixValue('12:34:56', true);
+      hoursOfOperationClosingTime.assignValue('12:34:56', true);
       expect(hoursOfOperationClosingTime.fixedTime).toBe('12:34:56');
       expect(hoursOfOperationClosingTime.patternTime).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed time by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned time by pattern[x]', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
-      hoursOfOperationClosingTime.fixValue('12:34:56');
+      hoursOfOperationClosingTime.assignValue('12:34:56');
       expect(hoursOfOperationClosingTime.patternTime).toBe('12:34:56');
       expect(() => {
-        hoursOfOperationClosingTime.fixValue('12:34:57');
+        hoursOfOperationClosingTime.assignValue('12:34:57');
       }).toThrow(
-        'Cannot fix "12:34:57" to this element; a different time is already fixed: "12:34:56".'
+        'Cannot assign "12:34:57" to this element; a different time is already assigned: "12:34:56".'
       );
       expect(() => {
-        hoursOfOperationClosingTime.fixValue('12:34:57', true);
+        hoursOfOperationClosingTime.assignValue('12:34:57', true);
       }).toThrow(
-        'Cannot fix "12:34:57" to this element; a different time is already fixed: "12:34:56".'
+        'Cannot assign "12:34:57" to this element; a different time is already assigned: "12:34:56".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed time by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned time by assigned[x]', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
-      hoursOfOperationClosingTime.fixValue('12:34:56', true);
+      hoursOfOperationClosingTime.assignValue('12:34:56', true);
       expect(hoursOfOperationClosingTime.fixedTime).toBe('12:34:56');
       expect(() => {
-        hoursOfOperationClosingTime.fixValue('12:34:57', true);
+        hoursOfOperationClosingTime.assignValue('12:34:57', true);
       }).toThrow(
-        'Cannot fix "12:34:57" to this element; a different time is already fixed: "12:34:56".'
+        'Cannot assign "12:34:57" to this element; a different time is already assigned: "12:34:56".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
-      hoursOfOperationClosingTime.fixValue('12:34:56', true);
+      hoursOfOperationClosingTime.assignValue('12:34:56', true);
       expect(hoursOfOperationClosingTime.fixedTime).toBe('12:34:56');
       expect(() => {
-        hoursOfOperationClosingTime.fixValue('12:34:56');
+        hoursOfOperationClosingTime.assignValue('12:34:56');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedTime.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedTime.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing a time to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning a time to an incorrect value', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
       expect(() => {
-        hoursOfOperationClosingTime.fixValue('hello there');
-      }).toThrow('Cannot fix string value: hello there. Value does not match element type: time');
+        hoursOfOperationClosingTime.assignValue('hello there');
+      }).toThrow(
+        'Cannot assign string value: hello there. Value does not match element type: time'
+      );
       expect(() => {
-        hoursOfOperationClosingTime.fixValue('hello there', true);
-      }).toThrow('Cannot fix string value: hello there. Value does not match element type: time');
+        hoursOfOperationClosingTime.assignValue('hello there', true);
+      }).toThrow(
+        'Cannot assign string value: hello there. Value does not match element type: time'
+      );
     });
 
-    // Fixing an oid
-    it('should fix a string to an oid', () => {
+    // Assigning an oid
+    it('should assign a string to an oid', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
-      inputValueOid.fixValue('urn:oid:1.2.3.4.5');
+      inputValueOid.assignValue('urn:oid:1.2.3.4.5');
       expect(inputValueOid.patternOid).toBe('urn:oid:1.2.3.4.5');
       expect(inputValueOid.fixedOid).toBeUndefined();
     });
 
-    it('should fix a string to an oid (exactly)', () => {
+    it('should assign a string to an oid (exactly)', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
-      inputValueOid.fixValue('urn:oid:1.2.3.4.5', true);
+      inputValueOid.assignValue('urn:oid:1.2.3.4.5', true);
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
       expect(inputValueOid.patternOid).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed oid by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned oid by pattern[x]', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
-      inputValueOid.fixValue('urn:oid:1.2.3.4.5');
+      inputValueOid.assignValue('urn:oid:1.2.3.4.5');
       expect(inputValueOid.patternOid).toBe('urn:oid:1.2.3.4.5');
       expect(() => {
-        inputValueOid.fixValue('urn:oid:1.4.3.2.1');
+        inputValueOid.assignValue('urn:oid:1.4.3.2.1');
       }).toThrow(
-        'Cannot fix "urn:oid:1.4.3.2.1" to this element; a different oid is already fixed: "urn:oid:1.2.3.4.5".'
+        'Cannot assign "urn:oid:1.4.3.2.1" to this element; a different oid is already assigned: "urn:oid:1.2.3.4.5".'
       );
       expect(() => {
-        inputValueOid.fixValue('urn:oid:1.4.3.2.1', true);
+        inputValueOid.assignValue('urn:oid:1.4.3.2.1', true);
       }).toThrow(
-        'Cannot fix "urn:oid:1.4.3.2.1" to this element; a different oid is already fixed: "urn:oid:1.2.3.4.5".'
+        'Cannot assign "urn:oid:1.4.3.2.1" to this element; a different oid is already assigned: "urn:oid:1.2.3.4.5".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed oid by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned oid by assigned[x]', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
-      inputValueOid.fixValue('urn:oid:1.2.3.4.5', true);
+      inputValueOid.assignValue('urn:oid:1.2.3.4.5', true);
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
       expect(() => {
-        inputValueOid.fixValue('urn:oid:1.4.3.2.1', true);
+        inputValueOid.assignValue('urn:oid:1.4.3.2.1', true);
       }).toThrow(
-        'Cannot fix "urn:oid:1.4.3.2.1" to this element; a different oid is already fixed: "urn:oid:1.2.3.4.5".'
+        'Cannot assign "urn:oid:1.4.3.2.1" to this element; a different oid is already assigned: "urn:oid:1.2.3.4.5".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
-      inputValueOid.fixValue('urn:oid:1.2.3.4.5', true);
+      inputValueOid.assignValue('urn:oid:1.2.3.4.5', true);
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
       expect(() => {
-        inputValueOid.fixValue('urn:oid:1.2.3.4.5');
+        inputValueOid.assignValue('urn:oid:1.2.3.4.5');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedOid.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedOid.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing an oid to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning an oid to an incorrect value', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       expect(() => {
-        inputValueOid.fixValue('invalid oid');
-      }).toThrow('Cannot fix string value: invalid oid. Value does not match element type: oid');
+        inputValueOid.assignValue('invalid oid');
+      }).toThrow('Cannot assign string value: invalid oid. Value does not match element type: oid');
       expect(() => {
-        inputValueOid.fixValue('invalid oid', true);
-      }).toThrow('Cannot fix string value: invalid oid. Value does not match element type: oid');
+        inputValueOid.assignValue('invalid oid', true);
+      }).toThrow('Cannot assign string value: invalid oid. Value does not match element type: oid');
     });
 
-    // Fixing an id
-    it('should fix a string to an id', () => {
+    // Assigning an id
+    it('should assign a string to an id', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
-      uid.fixValue('uniqueId123');
+      uid.assignValue('uniqueId123');
       expect(uid.patternId).toBe('uniqueId123');
       expect(uid.fixedId).toBeUndefined();
     });
 
-    it('should fix a string to an id (exactly)', () => {
+    it('should assign a string to an id (exactly)', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
-      uid.fixValue('uniqueId123', true);
+      uid.assignValue('uniqueId123', true);
       expect(uid.fixedId).toBe('uniqueId123');
       expect(uid.patternId).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed id by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned id by pattern[x]', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
-      uid.fixValue('uniqueId123');
+      uid.assignValue('uniqueId123');
       expect(uid.patternId).toBe('uniqueId123');
       expect(() => {
-        uid.fixValue('anotherUniqueId321');
+        uid.assignValue('anotherUniqueId321');
       }).toThrow(
-        'Cannot fix "anotherUniqueId321" to this element; a different id is already fixed: "uniqueId123".'
+        'Cannot assign "anotherUniqueId321" to this element; a different id is already assigned: "uniqueId123".'
       );
       expect(() => {
-        uid.fixValue('anotherUniqueId321', true);
+        uid.assignValue('anotherUniqueId321', true);
       }).toThrow(
-        'Cannot fix "anotherUniqueId321" to this element; a different id is already fixed: "uniqueId123".'
+        'Cannot assign "anotherUniqueId321" to this element; a different id is already assigned: "uniqueId123".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed id by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned id by assigned[x]', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
-      uid.fixValue('uniqueId123', true);
+      uid.assignValue('uniqueId123', true);
       expect(uid.fixedId).toBe('uniqueId123');
       expect(() => {
-        uid.fixValue('anotherUniqueId321', true);
+        uid.assignValue('anotherUniqueId321', true);
       }).toThrow(
-        'Cannot fix "anotherUniqueId321" to this element; a different id is already fixed: "uniqueId123".'
+        'Cannot assign "anotherUniqueId321" to this element; a different id is already assigned: "uniqueId123".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
-      uid.fixValue('uniqueId123', true);
+      uid.assignValue('uniqueId123', true);
       expect(uid.fixedId).toBe('uniqueId123');
       expect(() => {
-        uid.fixValue('uniqueId123');
+        uid.assignValue('uniqueId123');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedId.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedId.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing an id to an incorrect value', () => {
+    it('should throw MismatchedTypeError when assigning an id to an incorrect value', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       expect(() => {
-        uid.fixValue('invalid id');
-      }).toThrow('Cannot fix string value: invalid id. Value does not match element type: id');
+        uid.assignValue('invalid id');
+      }).toThrow('Cannot assign string value: invalid id. Value does not match element type: id');
       expect(() => {
-        uid.fixValue('invalid id', true);
-      }).toThrow('Cannot fix string value: invalid id. Value does not match element type: id');
+        uid.assignValue('invalid id', true);
+      }).toThrow('Cannot assign string value: invalid id. Value does not match element type: id');
     });
 
-    // Fixing markdown
-    it('should fix a string to a markdown', () => {
+    // Assigning markdown
+    it('should assign a string to a markdown', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
-      description.fixValue('`This is code`');
+      description.assignValue('`This is code`');
       expect(description.patternMarkdown).toBe('`This is code`');
       expect(description.fixedMarkdown).toBeUndefined();
     });
 
-    it('should fix a string to a markdown (exactly)', () => {
+    it('should assign a string to a markdown (exactly)', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
-      description.fixValue('`This is code`', true);
+      description.assignValue('`This is code`', true);
       expect(description.fixedMarkdown).toBe('`This is code`');
       expect(description.patternMarkdown).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed markdown by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned markdown by pattern[x]', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
-      description.fixValue('some text');
+      description.assignValue('some text');
       expect(description.patternMarkdown).toBe('some text');
       expect(() => {
-        description.fixValue('other text');
+        description.assignValue('other text');
       }).toThrow(
-        'Cannot fix "other text" to this element; a different markdown is already fixed: "some text".'
+        'Cannot assign "other text" to this element; a different markdown is already assigned: "some text".'
       );
       expect(() => {
-        description.fixValue('other text', true);
+        description.assignValue('other text', true);
       }).toThrow(
-        'Cannot fix "other text" to this element; a different markdown is already fixed: "some text".'
+        'Cannot assign "other text" to this element; a different markdown is already assigned: "some text".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed markdown by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned markdown by assigned[x]', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
-      description.fixValue('some text', true);
+      description.assignValue('some text', true);
       expect(description.fixedMarkdown).toBe('some text');
       expect(() => {
-        description.fixValue('other text', true);
+        description.assignValue('other text', true);
       }).toThrow(
-        'Cannot fix "other text" to this element; a different markdown is already fixed: "some text".'
+        'Cannot assign "other text" to this element; a different markdown is already assigned: "some text".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
-      description.fixValue('some text', true);
+      description.assignValue('some text', true);
       expect(description.fixedMarkdown).toBe('some text');
       expect(() => {
-        description.fixValue('some text');
+        description.assignValue('some text');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedMarkdown.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedMarkdown.'
       );
     });
 
-    // Fixing uuid
-    it('should fix a string to a uuid', () => {
+    // Assigning uuid
+    it('should assign a string to a uuid', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
-      inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+      inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(inputValueUuid.patternUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(inputValueUuid.fixedUuid).toBeUndefined();
     });
 
-    it('should fix a string to a uuid (exactly)', () => {
+    it('should assign a string to a uuid (exactly)', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
-      inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
+      inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(inputValueUuid.patternUuid).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed uuid by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned uuid by pattern[x]', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
-      inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+      inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(inputValueUuid.patternUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(() => {
-        inputValueUuid.fixValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520');
+        inputValueUuid.assignValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520');
       }).toThrow(
-        'Cannot fix "urn:uuid:c123456d-ec9a-4326-a141-556f43239520" to this element; a different uuid is already fixed: "urn:uuid:c757873d-ec9a-4326-a141-556f43239520".'
+        'Cannot assign "urn:uuid:c123456d-ec9a-4326-a141-556f43239520" to this element; a different uuid is already assigned: "urn:uuid:c757873d-ec9a-4326-a141-556f43239520".'
       );
       expect(() => {
-        inputValueUuid.fixValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520', true);
+        inputValueUuid.assignValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520', true);
       }).toThrow(
-        'Cannot fix "urn:uuid:c123456d-ec9a-4326-a141-556f43239520" to this element; a different uuid is already fixed: "urn:uuid:c757873d-ec9a-4326-a141-556f43239520".'
+        'Cannot assign "urn:uuid:c123456d-ec9a-4326-a141-556f43239520" to this element; a different uuid is already assigned: "urn:uuid:c757873d-ec9a-4326-a141-556f43239520".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed uuid by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned uuid by assigned[x]', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
-      inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
+      inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(() => {
-        inputValueUuid.fixValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520', true);
+        inputValueUuid.assignValue('urn:uuid:c123456d-ec9a-4326-a141-556f43239520', true);
       }).toThrow(
-        'Cannot fix "urn:uuid:c123456d-ec9a-4326-a141-556f43239520" to this element; a different uuid is already fixed: "urn:uuid:c757873d-ec9a-4326-a141-556f43239520".'
+        'Cannot assign "urn:uuid:c123456d-ec9a-4326-a141-556f43239520" to this element; a different uuid is already assigned: "urn:uuid:c757873d-ec9a-4326-a141-556f43239520".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
-      inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
+      inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       expect(() => {
-        inputValueUuid.fixValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
+        inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedUuid.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedUuid.'
       );
     });
 
-    // Fixing xhtml
+    // Assigning xhtml
 
-    it('should fix a string to an xhtml', () => {
+    it('should assign a string to an xhtml', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+      narrativeDiv.assignValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
       expect(narrativeDiv.patternXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
       );
     });
 
-    it('should fix a string to an xhtml (exactly)', () => {
+    it('should assign a string to an xhtml (exactly)', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>', true);
+      narrativeDiv.assignValue(
+        '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>',
+        true
+      );
       expect(narrativeDiv.fixedXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
       );
     });
 
-    it('should fix a string to an xhtml and collapse whitespace', () => {
+    it('should assign a string to an xhtml and collapse whitespace', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      narrativeDiv.fixValue(
+      narrativeDiv.assignValue(
         `<div xmlns="http://www.w3.org/1999/xhtml">
 
         Twas     brillig
@@ -968,9 +987,9 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should fix a string to an xhtml and collapse whitespace (exactly)', () => {
+    it('should assign a string to an xhtml and collapse whitespace (exactly)', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      narrativeDiv.fixValue(
+      narrativeDiv.assignValue(
         `<div xmlns="http://www.w3.org/1999/xhtml">
 
         Twas     brillig
@@ -985,83 +1004,89 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed xhtml by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned xhtml by pattern[x]', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+      narrativeDiv.assignValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
       expect(narrativeDiv.patternXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
       );
       expect(() => {
-        narrativeDiv.fixValue(
+        narrativeDiv.assignValue(
           '<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>'
         );
       }).toThrow(
-        'Cannot fix "<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>" to this element; a different xhtml is already fixed: "<div xmlns=\\"http://www.w3.org/1999/xhtml\\">Twas brillig</div>".'
+        'Cannot assign "<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>" to this element; a different xhtml is already assigned: "<div xmlns=\\"http://www.w3.org/1999/xhtml\\">Twas brillig</div>".'
       );
       expect(() => {
-        narrativeDiv.fixValue(
+        narrativeDiv.assignValue(
           '<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>',
           true
         );
       }).toThrow(
-        'Cannot fix "<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>" to this element; a different xhtml is already fixed: "<div xmlns=\\"http://www.w3.org/1999/xhtml\\">Twas brillig</div>".'
+        'Cannot assign "<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>" to this element; a different xhtml is already assigned: "<div xmlns=\\"http://www.w3.org/1999/xhtml\\">Twas brillig</div>".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing an already fixed xhtml by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned xhtml by assigned[x]', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>', true);
+      narrativeDiv.assignValue(
+        '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>',
+        true
+      );
       expect(narrativeDiv.fixedXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
       );
       expect(() => {
-        narrativeDiv.fixValue(
+        narrativeDiv.assignValue(
           '<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>',
           true
         );
       }).toThrow(
-        'Cannot fix "<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>" to this element; a different xhtml is already fixed: "<div xmlns=\\"http://www.w3.org/1999/xhtml\\">Twas brillig</div>".'
+        'Cannot assign "<div xmlns="http://www.w3.org/1999/xhtml">and the slithy toves</div>" to this element; a different xhtml is already assigned: "<div xmlns=\\"http://www.w3.org/1999/xhtml\\">Twas brillig</div>".'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>', true);
+      narrativeDiv.assignValue(
+        '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>',
+        true
+      );
       expect(narrativeDiv.fixedXhtml).toBe(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>'
       );
       expect(() => {
-        narrativeDiv.fixValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+        narrativeDiv.assignValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedXhtml.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedXhtml.'
       );
     });
 
-    it('should throw MismatchedTypeError when fixing to a value that is not valid xhtml', () => {
+    it('should throw MismatchedTypeError when assigning to a value that is not valid xhtml', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       expect(() => {
-        narrativeDiv.fixValue('This is no good');
+        narrativeDiv.assignValue('This is no good');
       }).toThrow(
-        'Cannot fix string value: This is no good. Value does not match element type: xhtml'
+        'Cannot assign string value: This is no good. Value does not match element type: xhtml'
       );
       expect(() => {
-        narrativeDiv.fixValue('This is no good', true);
+        narrativeDiv.assignValue('This is no good', true);
       }).toThrow(
-        'Cannot fix string value: This is no good. Value does not match element type: xhtml'
+        'Cannot assign string value: This is no good. Value does not match element type: xhtml'
       );
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixValue('hello');
+        valueX.assignValue('hello');
       }).toThrow(
-        'Cannot fix string value on this element since this element does not have a single type'
+        'Cannot assign string value on this element since this element does not have a single type'
       );
       expect(() => {
-        valueX.fixValue('hello', true);
+        valueX.assignValue('hello', true);
       }).toThrow(
-        'Cannot fix string value on this element since this element does not have a single type'
+        'Cannot assign string value on this element since this element does not have a single type'
       );
       expect(valueX.patternString).toBeUndefined();
       expect(valueX.fixedString).toBeUndefined();

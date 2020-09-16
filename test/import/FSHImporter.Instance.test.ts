@@ -1,4 +1,4 @@
-import { assertFixedValueRule, assertInsertRule } from '../testhelpers/asserts';
+import { assertAssignmentRule, assertInsertRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -159,8 +159,8 @@ describe('FSHImporter', () => {
       });
     });
 
-    describe('#fixedValueRule', () => {
-      it('should parse an instance with fixed value rules', () => {
+    describe('#assignmentRule', () => {
+      it('should parse an instance with assigned value rules', () => {
         const input = `
         Instance: SamplePatient
         InstanceOf: Patient
@@ -180,16 +180,16 @@ describe('FSHImporter', () => {
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.usage).toBe('Example');
         expect(instance.rules.length).toBe(3);
-        assertFixedValueRule(instance.rules[0], 'name[0].family', 'Georgio');
-        assertFixedValueRule(instance.rules[1], 'name[0].given[0]', 'Manos');
-        assertFixedValueRule(
+        assertAssignmentRule(instance.rules[0], 'name[0].family', 'Georgio');
+        assertAssignmentRule(instance.rules[1], 'name[0].given[0]', 'Manos');
+        assertAssignmentRule(
           instance.rules[2],
           'gender',
           new FshCode('other').withLocation([9, 20, 9, 25]).withFile('')
         );
       });
 
-      it('should parse an instance with fixed values that are an alias', () => {
+      it('should parse an instance with assigned values that are an alias', () => {
         const input = `
         Alias: EXAMPLE = http://example.org
 
@@ -203,10 +203,10 @@ describe('FSHImporter', () => {
         const instance = result.instances.get('PatientExample');
         expect(instance.rules).toHaveLength(1);
         expect(instance.instanceOf).toBe('Patient');
-        assertFixedValueRule(instance.rules[0], 'identifier[0].system', 'http://example.org');
+        assertAssignmentRule(instance.rules[0], 'identifier[0].system', 'http://example.org');
       });
 
-      it('should parse an instance with fixed value resource rules', () => {
+      it('should parse an instance with assigned value resource rules', () => {
         const input = `
         Instance: SamplePatient
         InstanceOf: Patient
@@ -222,7 +222,7 @@ describe('FSHImporter', () => {
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.rules.length).toBe(1);
-        assertFixedValueRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
+        assertAssignmentRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
       });
     });
 

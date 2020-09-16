@@ -60,7 +60,7 @@ export function assertValueSetRule(
   expect(valueSetRule.strength).toBe(strength);
 }
 
-export function assertFixedValueRule(
+export function assertAssignmentRule(
   rule: Rule,
   path: string,
   value: AssignmentValueType,
@@ -68,11 +68,11 @@ export function assertFixedValueRule(
   isInstance = false
 ): void {
   expect(rule).toBeInstanceOf(AssignmentRule);
-  const fixedValueRule = rule as AssignmentRule;
-  expect(fixedValueRule.path).toBe(path);
-  expect(fixedValueRule.value).toEqual(value);
-  expect(fixedValueRule.exactly).toBe(exactly);
-  expect(fixedValueRule.isInstance).toEqual(isInstance);
+  const assignmentRule = rule as AssignmentRule;
+  expect(assignmentRule.path).toBe(path);
+  expect(assignmentRule.value).toEqual(value);
+  expect(assignmentRule.exactly).toBe(exactly);
+  expect(assignmentRule.isInstance).toEqual(isInstance);
 }
 
 export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[]): void {

@@ -24,55 +24,55 @@ describe('ElementDefinition', () => {
     medication = fisher.fishForStructureDefinition('Medication');
   });
 
-  describe('#fixValue', () => {
-    // NOTE: Most fixValue tests are in separate type-specific files.  We only test outliers here.
-    it('should throw MismatchedTypeException when attempting to fix a value with an unsupported type', () => {
+  describe('#assignValue', () => {
+    // NOTE: Most assignValue tests are in separate type-specific files.  We only test outliers here.
+    it('should throw MismatchedTypeException when attempting to assign a value with an unsupported type', () => {
       const authoredOn = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.authoredOn'
       );
       expect(() => {
         // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'AssignmentValueType'
-        authoredOn.fixValue(new Date()); // Date is not a supported type -- only strings are allowed
-      }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
+        authoredOn.assignValue(new Date()); // Date is not a supported type -- only strings are allowed
+      }).toThrow(/Cannot assign Date value.*Value does not match element type: dateTime/);
       expect(() => {
         // @ts-ignore: Argument of type 'Date' is not assignable to parameter of type 'AssignmentValueType'
-        authoredOn.fixValue(new Date(), true); // Date is not a supported type -- only strings are allowed
-      }).toThrow(/Cannot fix Date value.*Value does not match element type: dateTime/);
+        authoredOn.assignValue(new Date(), true); // Date is not a supported type -- only strings are allowed
+      }).toThrow(/Cannot assign Date value.*Value does not match element type: dateTime/);
     });
 
-    it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern', () => {
+    it('should throw ValueAlreadyAssignedError when assigning a value assigned via parent pattern', () => {
       const medicationForm = medication.elements.find(e => e.id === 'Medication.form');
-      medicationForm.fixValue(new FshCode('foo', 'http://thankYouForSettingMe.com'));
+      medicationForm.assignValue(new FshCode('foo', 'http://thankYouForSettingMe.com'));
       const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
       expect(() => {
-        medicationFormCodingSystem.fixValue('http://ohManIWillNeverGetSet.sad');
+        medicationFormCodingSystem.assignValue('http://ohManIWillNeverGetSet.sad');
       }).toThrow(
-        'Cannot fix "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already fixed: "http://thankYouForSettingMe.com".'
+        'Cannot assign "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already assigned: "http://thankYouForSettingMe.com".'
       );
       expect(() => {
-        medicationFormCodingSystem.fixValue('http://ohManIWillNeverGetSet.sad', true);
+        medicationFormCodingSystem.assignValue('http://ohManIWillNeverGetSet.sad', true);
       }).toThrow(
-        'Cannot fix "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already fixed: "http://thankYouForSettingMe.com".'
+        'Cannot assign "http://ohManIWillNeverGetSet.sad" to this element; a different uri is already assigned: "http://thankYouForSettingMe.com".'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing a value fixed via parent pattern to a conflicting array', () => {
+    it('should throw ValueAlreadyAssignedError when assigning a value assigned via parent pattern to a conflicting array', () => {
       const medicationForm = medication.elements.find(e => e.id === 'Medication.form');
       medicationForm.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'bar' }] };
       const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
       expect(() => {
-        medicationFormCodingSystem.fixValue('baz');
+        medicationFormCodingSystem.assignValue('baz');
       }).toThrow(
-        'Cannot fix "baz" to this element; a different uri is already fixed: ["foo","bar"].'
+        'Cannot assign "baz" to this element; a different uri is already assigned: ["foo","bar"].'
       );
       expect(() => {
-        medicationFormCodingSystem.fixValue('baz', true);
+        medicationFormCodingSystem.assignValue('baz', true);
       }).toThrow(
-        'Cannot fix "baz" to this element; a different uri is already fixed: ["foo","bar"].'
+        'Cannot assign "baz" to this element; a different uri is already assigned: ["foo","bar"].'
       );
     });
 
-    it('should ensure that minimum cardinality is 1 when fixing a value mentioned in a parent slice discriminator', () => {
+    it('should ensure that minimum cardinality is 1 when assigning a value mentioned in a parent slice discriminator', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };
       cat.addSlice('mouse');
@@ -81,12 +81,12 @@ describe('ElementDefinition', () => {
         fisher
       );
       expect(catMouseCodingCode.min).toBe(0);
-      catMouseCodingCode.fixValue(new FshCode('cheese'));
+      catMouseCodingCode.assignValue(new FshCode('cheese'));
       expect(catMouseCodingCode.patternCode).toBe('cheese');
       expect(catMouseCodingCode.min).toBe(1);
     });
 
-    it('should ensure that minimum cardinality is 1 when fixing a value mentioned in a slice discriminator', () => {
+    it('should ensure that minimum cardinality is 1 when assigning a value mentioned in a slice discriminator', () => {
       const inUri = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.instantiatesUri'
       );
@@ -94,12 +94,12 @@ describe('ElementDefinition', () => {
       inUri.addSlice('mouse');
       const inUriMouse = medicationRequest.findElementByPath('instantiatesUri[mouse]', fisher);
       expect(inUriMouse.min).toBe(0);
-      inUriMouse.fixValue('http://mice.cheese');
+      inUriMouse.assignValue('http://mice.cheese');
       expect(inUriMouse.patternUri).toBe('http://mice.cheese');
       expect(inUriMouse.min).toBe(1);
     });
 
-    it('should ensure that minimum cardinality is 1 when fixing a value mentioned in the discriminator of a grandparent slice', () => {
+    it('should ensure that minimum cardinality is 1 when assigning a value mentioned in the discriminator of a grandparent slice', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };
       cat.addSlice('mouse');
@@ -111,12 +111,12 @@ describe('ElementDefinition', () => {
         fisher
       );
       expect(catMouseCodingRatCode.min).toBe(0);
-      catMouseCodingRatCode.fixValue(new FshCode('cheese'));
+      catMouseCodingRatCode.assignValue(new FshCode('cheese'));
       expect(catMouseCodingRatCode.patternCode).toBe('cheese');
       expect(catMouseCodingRatCode.min).toBe(1);
     });
 
-    it('should not ensure that minimum cardinality is 1 when fixing a value not mentioned in a slice discriminator', () => {
+    it('should not ensure that minimum cardinality is 1 when assigning a value not mentioned in a slice discriminator', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };
       cat.addSlice('mouse');
@@ -125,12 +125,12 @@ describe('ElementDefinition', () => {
         fisher
       );
       expect(catMouseCodingSystem.min).toBe(0);
-      catMouseCodingSystem.fixValue('http://mice.cheese');
+      catMouseCodingSystem.assignValue('http://mice.cheese');
       expect(catMouseCodingSystem.patternUri).toBe('http://mice.cheese');
       expect(catMouseCodingSystem.min).toBe(0);
     });
 
-    it('should not ensure that minimum cardinality is 1 when fixing a value mentioned in a non value/pattern discriminator', () => {
+    it('should not ensure that minimum cardinality is 1 when assigning a value mentioned in a non value/pattern discriminator', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'exists', path: 'coding.code' }], rules: 'open' };
       cat.addSlice('mouse');
@@ -139,87 +139,87 @@ describe('ElementDefinition', () => {
         fisher
       );
       expect(catMouseCodingCode.min).toBe(0);
-      catMouseCodingCode.fixValue(new FshCode('cheese'));
+      catMouseCodingCode.assignValue(new FshCode('cheese'));
       expect(catMouseCodingCode.patternCode).toBe('cheese');
       expect(catMouseCodingCode.min).toBe(0);
     });
 
-    it('should not ensure that minimum cardinality is 1 when fixing a value with min card > 1 mentioned in a parent slice discriminator', () => {
+    it('should not ensure that minimum cardinality is 1 when assigning a value with min card > 1 mentioned in a parent slice discriminator', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'value', path: 'coding' }], rules: 'open' };
       cat.addSlice('mouse');
       const catMouseCoding = medicationRequest.findElementByPath('category[mouse].coding', fisher);
       catMouseCoding.min = 2;
       expect(catMouseCoding.min).toBe(2);
-      catMouseCoding.fixValue(new FshCode('cheese'));
+      catMouseCoding.assignValue(new FshCode('cheese'));
       expect(catMouseCoding.patternCoding).toEqual({ code: 'cheese' });
       expect(catMouseCoding.min).toBe(2); // We do not try to decrease min to 1
     });
 
-    it('should not ensure that minimum cardinality is 1 when fixing a value with no parent slice discriminator', () => {
+    it('should not ensure that minimum cardinality is 1 when assigning a value with no parent slice discriminator', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { rules: 'open' };
       cat.addSlice('mouse');
       const catMouseCoding = medicationRequest.findElementByPath('category[mouse].coding', fisher);
       expect(catMouseCoding.min).toBe(0);
-      catMouseCoding.fixValue(new FshCode('cheese'));
+      catMouseCoding.assignValue(new FshCode('cheese'));
       expect(catMouseCoding.patternCoding).toEqual({ code: 'cheese' });
       expect(catMouseCoding.min).toBe(0); // We do not increase min, since no discriminator
     });
   });
 
-  describe('#fixedByDirectParent', () => {
+  describe('#assignedByDirectParent', () => {
     it('should find a fixed[x] value from the parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo'), true);
+      statusReason.assignValue(new FshCode('foo'), true);
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
-      const fixedValue = statusReasonCoding.fixedByDirectParent();
-      expect(fixedValue).toEqual([{ code: 'foo' }]);
+      const assignedValue = statusReasonCoding.assignedByDirectParent();
+      expect(assignedValue).toEqual([{ code: 'foo' }]);
     });
 
     it('should find a pattern[x] value from the parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo'));
+      statusReason.assignValue(new FshCode('foo'));
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
-      const patternValue = statusReasonCoding.fixedByDirectParent();
+      const patternValue = statusReasonCoding.assignedByDirectParent();
       expect(patternValue).toEqual([{ code: 'foo' }]);
     });
 
     it('should not find a fixed[x] or pattern[x] value from the parent when none is present', () => {
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
-      const patternValue = statusReasonCoding.fixedByDirectParent();
+      const patternValue = statusReasonCoding.assignedByDirectParent();
       expect(patternValue).toBeUndefined();
     });
 
     it('should return undefined when being run on the root element', () => {
       const root = medicationRequest.elements.find(e => e.id === 'MedicationRequest');
-      const patternValue = root.fixedByDirectParent();
+      const patternValue = root.assignedByDirectParent();
       expect(patternValue).toBeUndefined();
     });
   });
 
-  describe('#fixedByAnyParent', () => {
+  describe('#assignedByAnyParent', () => {
     it('should find a fixed[x] value from a direct parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo'), true);
+      statusReason.assignValue(new FshCode('foo'), true);
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
-      const fixedValue = statusReasonCoding.fixedByAnyParent();
-      expect(fixedValue).toEqual([{ code: 'foo' }]);
+      const assignedValue = statusReasonCoding.assignedByAnyParent();
+      expect(assignedValue).toEqual([{ code: 'foo' }]);
     });
 
     it('should find a pattern[x] value from a direct parent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo'));
+      statusReason.assignValue(new FshCode('foo'));
       const statusReasonCoding = medicationRequest.findElementByPath('statusReason.coding', fisher);
-      const patternValue = statusReasonCoding.fixedByAnyParent();
+      const patternValue = statusReasonCoding.assignedByAnyParent();
       expect(patternValue).toEqual([{ code: 'foo' }]);
     });
 
@@ -234,8 +234,8 @@ describe('ElementDefinition', () => {
         'identifier.period.start',
         fisher
       );
-      const fixedValue = identifierPeriodStart.fixedByAnyParent();
-      expect(fixedValue).toBe('2011-11-11');
+      const assignedValue = identifierPeriodStart.assignedByAnyParent();
+      expect(assignedValue).toBe('2011-11-11');
     });
 
     it('should find a pattern value from a grandparent when it exists', () => {
@@ -249,7 +249,7 @@ describe('ElementDefinition', () => {
         'identifier.period.start',
         fisher
       );
-      const patternValue = identifierPeriodStart.fixedByAnyParent();
+      const patternValue = identifierPeriodStart.assignedByAnyParent();
       expect(patternValue).toBe('2011-11-11');
     });
 
@@ -257,55 +257,55 @@ describe('ElementDefinition', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo', 'http://bar.com'), true);
+      statusReason.assignValue(new FshCode('foo', 'http://bar.com'), true);
       const statusReasonCodingSystem = medicationRequest.findElementByPath(
         'statusReason.coding.system',
         fisher
       );
       // Single element in array
-      let fixedValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(fixedValue).toBe('http://bar.com');
+      let assignedValue = statusReasonCodingSystem.assignedByAnyParent();
+      expect(assignedValue).toBe('http://bar.com');
 
       // Multiple not matching array elements
       statusReason.fixedCodeableConcept = {
         coding: [{ system: 'http://foo.com' }, { system: 'http://bar.com' }]
       };
-      fixedValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(fixedValue).toEqual(['http://foo.com', 'http://bar.com']);
+      assignedValue = statusReasonCodingSystem.assignedByAnyParent();
+      expect(assignedValue).toEqual(['http://foo.com', 'http://bar.com']);
 
       // Multiple matching array elements
       statusReason.fixedCodeableConcept = {
         coding: [{ system: 'http://foo.com' }, { system: 'http://foo.com' }]
       };
-      fixedValue = statusReasonCodingSystem.fixedByAnyParent();
-      expect(fixedValue).toBe('http://foo.com');
+      assignedValue = statusReasonCodingSystem.assignedByAnyParent();
+      expect(assignedValue).toBe('http://foo.com');
     });
 
     it('should find an array pattern value from a grandparent when it exists', () => {
       const statusReason = medicationRequest.elements.find(
         e => e.id === 'MedicationRequest.statusReason'
       );
-      statusReason.fixValue(new FshCode('foo', 'http://bar.com'));
+      statusReason.assignValue(new FshCode('foo', 'http://bar.com'));
       const statusReasonCodingSystem = medicationRequest.findElementByPath(
         'statusReason.coding.system',
         fisher
       );
       // Single element in array
-      let patternValue = statusReasonCodingSystem.fixedByAnyParent();
+      let patternValue = statusReasonCodingSystem.assignedByAnyParent();
       expect(patternValue).toBe('http://bar.com');
 
       // Multiple not matching array elements
       statusReason.patternCodeableConcept = {
         coding: [{ system: 'http://foo.com' }, { system: 'http://bar.com' }]
       };
-      patternValue = statusReasonCodingSystem.fixedByAnyParent();
+      patternValue = statusReasonCodingSystem.assignedByAnyParent();
       expect(patternValue).toEqual(['http://foo.com', 'http://bar.com']);
 
       // Multiple matching array elements
       statusReason.patternCodeableConcept = {
         coding: [{ system: 'http://foo.com' }, { system: 'http://foo.com' }]
       };
-      patternValue = statusReasonCodingSystem.fixedByAnyParent();
+      patternValue = statusReasonCodingSystem.assignedByAnyParent();
       expect(patternValue).toBe('http://foo.com');
     });
 
@@ -314,13 +314,13 @@ describe('ElementDefinition', () => {
         'statusReason.coding.version',
         fisher
       );
-      const value = statusReasonCoding.fixedByAnyParent();
+      const value = statusReasonCoding.assignedByAnyParent();
       expect(value).toBeUndefined();
     });
 
     it('should return undefined when being run on the root element', () => {
       const root = medicationRequest.elements.find(e => e.id === 'MedicationRequest');
-      const patternValue = root.fixedByAnyParent();
+      const patternValue = root.assignedByAnyParent();
       expect(patternValue).toBeUndefined();
     });
   });

@@ -17,7 +17,7 @@ import { AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
   CodedTypeNotFoundError,
-  ValueAlreadyFixedError,
+  ValueAlreadyAssignedError,
   NoSingleTypeError,
   MismatchedTypeError,
   InvalidCanonicalUrlError,
@@ -423,8 +423,8 @@ export class ElementDefinition {
 
   /**
    * This function sets an instance property of an ED if possible
-   * @param {string} path - The path to the ElementDefinition to fix
-   * @param {any} value - The value to fix
+   * @param {string} path - The path to the ElementDefinition to assign
+   * @param {any} value - The value to assign
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
   setInstancePropertyByPath(path: string, value: any, fisher: Fishable): void {
@@ -1120,14 +1120,14 @@ export class ElementDefinition {
   }
 
   /**
-   * Fixes a value to an ElementDefinition
-   * @param {AssignmentValueType} value - The value to fix
+   * Assigns a value to an ElementDefinition
+   * @param {AssignmentValueType} value - The value to assign
    * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  fixValue(value: AssignmentValueType, exactly = false, fisher?: Fishable): void {
+  assignValue(value: AssignmentValueType, exactly = false, fisher?: Fishable): void {
     let type: string;
     if (value instanceof FshCode) {
       type = 'Code';
@@ -1145,12 +1145,12 @@ export class ElementDefinition {
       type = typeof value;
     }
 
-    // We can only fix elements that have a single type, else it is ambiguous
+    // We can only assign elements that have a single type, else it is ambiguous
     if (!this.hasSingleType()) {
       throw new NoSingleTypeError(type);
     }
 
-    // If fixing by pattern, ensure that it's not already fixed by fixed[x], because We can't overrided
+    // If assigning by pattern, ensure that it's not already assigned by fixed[x], because We can't overrided
     // fixed[x] with pattern[x] since pattern[x] is looser
     if (!exactly) {
       const fixedField = Object.entries(this).find(e => e[0].startsWith('fixed') && e[1] != null);
@@ -1159,19 +1159,19 @@ export class ElementDefinition {
       }
     }
 
-    // The approach to fixing may differ based on type...
+    // The approach to assigning may differ based on type...
     switch (type) {
       case 'boolean':
-        this.fixFHIRValue(value.toString(), value, exactly, 'boolean');
+        this.assignFHIRValue(value.toString(), value, exactly, 'boolean');
         break;
       case 'number':
-        this.fixNumber(value as number, exactly);
+        this.assignNumber(value as number, exactly);
         break;
       case 'string':
-        this.fixString(value as string, exactly);
+        this.assignString(value as string, exactly);
         break;
       case 'Code':
-        this.fixFshCode(value as FshCode, exactly);
+        this.assignFshCode(value as FshCode, exactly);
         break;
       case 'Quantity':
         value = value as FshQuantity;
@@ -1189,15 +1189,15 @@ export class ElementDefinition {
             providedType = actualType;
           }
         }
-        this.fixFHIRValue(value.toString(), value.toFHIRQuantity(), exactly, providedType);
+        this.assignFHIRValue(value.toString(), value.toFHIRQuantity(), exactly, providedType);
         break;
       case 'Ratio':
         value = value as FshRatio;
-        this.fixFHIRValue(value.toString(), value.toFHIRRatio(), exactly, 'Ratio');
+        this.assignFHIRValue(value.toString(), value.toFHIRRatio(), exactly, 'Ratio');
         break;
       case 'Reference':
         value = value as FshReference;
-        // If no targetProfile is present, there is nothing to check the value against, so just fix it
+        // If no targetProfile is present, there is nothing to check the value against, so just assign it
         if (value.sdType && this.type[0].targetProfile) {
           const validTypes: string[] = [];
           this.type[0].targetProfile.forEach(tp => {
@@ -1212,7 +1212,7 @@ export class ElementDefinition {
             throw new InvalidTypeError(`Reference(${value.sdType})`, this.type);
           }
         }
-        this.fixFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
+        this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
       case 'Canonical':
         value = value as FshCanonical;
@@ -1233,12 +1233,12 @@ export class ElementDefinition {
         if (value.version) {
           canonicalUrl += `|${value.version}`;
         }
-        this.fixString(canonicalUrl, exactly);
+        this.assignString(canonicalUrl, exactly);
         break;
       case 'InstanceDefinition':
         value = value as InstanceDefinition;
         const stringVal = JSON.stringify(value);
-        this.fixFHIRValue(
+        this.assignFHIRValue(
           stringVal,
           value.toJSON(),
           exactly,
@@ -1251,7 +1251,7 @@ export class ElementDefinition {
     }
 
     // If the element is found in a discriminator.path, then we enforce that it has minimum cardinality 1
-    // since its value is fixed
+    // since its value is assigned
     const parentSlices = [this, ...this.getAllParents().reverse()].filter(el => el.sliceName);
     parentSlices.forEach(parentSlice => {
       const slicedElement = parentSlice.slicedElement();
@@ -1269,20 +1269,20 @@ export class ElementDefinition {
   }
 
   /**
-   * Checks if a FHIR value can be fixed and then fixes it if so. A FHIR value can be fixed on an element if:
-   * - the element isn't already fixed to something else (by fixed[x], pattern[x], or from a parent)
-   * - or the element is already fixed to something that is the same or a subset of the new value
-   *   - e.g., you can fix { code: 'Foo', system: 'http://bar.com' } to an element already fixed to
+   * Checks if a FHIR value can be assigned and then assigns it if so. A FHIR value can be assigned on an element if:
+   * - the element isn't already assigned to something else (by fixed[x], pattern[x], or from a parent)
+   * - or the element is already assigned to something that is the same or a subset of the new value
+   *   - e.g., you can assign { code: 'Foo', system: 'http://bar.com' } to an element already assigned to
    *     { system: 'http://bar.com } because the new value contains the old value (with no conflicts).
    *     This does not work the other way around, however.
    * @param {string} fshValue - The FSH-syntax-formatted value (usually the FSH class .toString())
    * @param {object} fhirValue - The FHIR representation of the FSH value
    * @param {boolean} exactly - Set to true if fixed[x] should be used, otherwise pattern[x] is used
-   * @param {string} type - The FHIR type that is being fixed; will be used to construct fixed[x] and pattern[x] names
-   * @throws {ValueAlreadyFixedError} when the currentElementValue exists and is different than the new value
+   * @param {string} type - The FHIR type that is being assigned; will be used to construct fixed[x] and pattern[x] names
+   * @throws {ValueAlreadyAssignedError} when the currentElementValue exists and is different than the new value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private fixFHIRValue(fshValue: string, fhirValue: any, exactly: boolean, type: string) {
+  private assignFHIRValue(fshValue: string, fhirValue: any, exactly: boolean, type: string) {
     if (this.type[0].code !== type) {
       throw new MismatchedTypeError(type, fshValue, this.type[0].code);
     }
@@ -1291,27 +1291,27 @@ export class ElementDefinition {
     const fixedX = `fixed${upperFirst(type)}` as keyof ElementDefinition;
     const patternX = `pattern${upperFirst(type)}` as keyof ElementDefinition;
 
-    // Find any currently fixed values
-    const currentElementValue = this[fixedX] ?? this[patternX] ?? this.fixedByAnyParent();
+    // Find any currently assigned values
+    const currentElementValue = this[fixedX] ?? this[patternX] ?? this.assignedByAnyParent();
     // For complex types, use isMatch to check if they are a subset, otherwise use isEqual
     const compareFn = typeof fhirValue === 'object' ? isMatch : isEqual;
     if (currentElementValue != null && !compareFn(fhirValue, currentElementValue)) {
       // It's a different value and not a compatible subset (e.g., the new value doesn't contain the old)
-      throw new ValueAlreadyFixedError(fshValue, type, JSON.stringify(currentElementValue));
+      throw new ValueAlreadyAssignedError(fshValue, type, JSON.stringify(currentElementValue));
     }
 
-    // Children of elements with complex types such as Quantity may already have fixed values
-    this.children().forEach(child => this.checkChildFixedValue(child, fhirValue));
+    // Children of elements with complex types such as Quantity may already have assigned values
+    this.children().forEach(child => this.checkChildAssignedValue(child, fhirValue));
 
     // if this is a slice, make sure that nothing on this.slicedElement() is being violated
     const slicedElement = this.slicedElement();
     if (slicedElement) {
       slicedElement
         .children()
-        .forEach(child => slicedElement.checkChildFixedValue(child, fhirValue));
+        .forEach(child => slicedElement.checkChildAssignedValue(child, fhirValue));
     }
 
-    // If we made it this far, fix the value using fixed[x] or pattern[x] as appropriate
+    // If we made it this far, assign the value using fixed[x] or pattern[x] as appropriate
     if (exactly) {
       // @ts-ignore: Type 'any' is not assignable to type 'never'
       this[fixedX] = fhirValue;
@@ -1323,7 +1323,7 @@ export class ElementDefinition {
     }
   }
 
-  private checkChildFixedValue(child: ElementDefinition, fhirValue: any) {
+  private checkChildAssignedValue(child: ElementDefinition, fhirValue: any) {
     const childType = child.type[0].code;
     const fixedX = `fixed${upperFirst(childType)}` as keyof ElementDefinition;
     const patternX = `pattern${upperFirst(childType)}` as keyof ElementDefinition;
@@ -1345,7 +1345,11 @@ export class ElementDefinition {
         if (value != null) {
           const childCompareFn = typeof value === 'object' ? isMatch : isEqual;
           if (!childCompareFn(value, currentChildValue)) {
-            throw new ValueAlreadyFixedError(value, childType, JSON.stringify(currentChildValue));
+            throw new ValueAlreadyAssignedError(
+              value,
+              childType,
+              JSON.stringify(currentChildValue)
+            );
           }
         }
       });
@@ -1353,64 +1357,64 @@ export class ElementDefinition {
   }
 
   /**
-   * Checks if an element is fixed by a fixed[x] or pattern[x] on its direct parent
-   * @returns {any} the value the element is fixed to by its parent, undefined if value is not fixed
+   * Checks if an element is assigned by a fixed[x] or pattern[x] on its direct parent
+   * @returns {any} the value the element is assigned to by its parent, undefined if value is not assigned
    */
-  fixedByDirectParent(): any {
+  assignedByDirectParent(): any {
     const parent = this.parent();
-    const fixedKey = parent
+    const assignedKey = parent
       ? Object.keys(parent).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
       : null;
-    if (fixedKey) {
-      const fixedValue: any = parent[fixedKey as keyof ElementDefinition];
-      return fixedValue[this.path.replace(`${parent.path}.`, '')];
+    if (assignedKey) {
+      const assignedValue: any = parent[assignedKey as keyof ElementDefinition];
+      return assignedValue[this.path.replace(`${parent.path}.`, '')];
     }
   }
 
   /**
-   * Checks if an element is fixed by a pattern[x] on any of its parents
-   * @returns {any} the value the element is fixed to by its parent, undefined if value is not fixed
+   * Checks if an element is assigned by a pattern[x] on any of its parents
+   * @returns {any} the value the element is assigned to by its parent, undefined if value is not assigned
    */
-  fixedByAnyParent(): any {
+  assignedByAnyParent(): any {
     const parent = this.parent();
     if (parent == null) {
       return;
     } else {
-      let fixedValue = this.fixedByDirectParent();
-      if (fixedValue == null) {
+      let assignedValue = this.assignedByDirectParent();
+      if (assignedValue == null) {
         // Get the value from the parent, and index into that value
-        const parentValue = parent.fixedByAnyParent();
+        const parentValue = parent.assignedByAnyParent();
         const childIndex = this.path.replace(`${parent.path}.`, '');
         if (Array.isArray(parentValue)) {
           // If the value is an array, there are two cases
-          // 1 - All the fixed values in the array match => return the value
-          // 2 - The fixed values in the array don't match => return [val1, val2]
+          // 1 - All the assigned values in the array match => return the value
+          // 2 - The assigned values in the array don't match => return [val1, val2]
           // since values do exist, but they conflict so no value should be allowed to be set
           // and for any value [val1, val2] != value
-          fixedValue =
+          assignedValue =
             parentValue.every(pv => pv[childIndex] === parentValue[0][childIndex]) &&
             parentValue.length > 0
               ? parentValue[0][childIndex]
               : parentValue.map(pv => pv[childIndex]);
         } else {
-          fixedValue = parentValue?.[childIndex];
+          assignedValue = parentValue?.[childIndex];
         }
       }
-      return fixedValue;
+      return assignedValue;
     }
   }
 
   /**
-   * Fixes a number to this element.
-   * @see {@link fixValue}
+   * Assigns a number to this element.
+   * @see {@link assignValue}
    * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
-   * @param {number} value - the number value to fix
+   * @param {number} value - the number value to assign
    * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private fixNumber(value: number, exactly = false): void {
+  private assignNumber(value: number, exactly = false): void {
     const type = this.type[0].code;
     if (
       type === 'decimal' ||
@@ -1418,23 +1422,23 @@ export class ElementDefinition {
       (type === 'unsignedInt' && Number.isInteger(value) && value >= 0) ||
       (type === 'positiveInt' && Number.isInteger(value) && value > 0)
     ) {
-      this.fixFHIRValue(value.toString(), value, exactly, type);
+      this.assignFHIRValue(value.toString(), value, exactly, type);
     } else {
       throw new MismatchedTypeError('number', value, type);
     }
   }
 
   /**
-   * Fixes a string to this element.
-   * @see {@link fixValue}
+   * Assigns a string to this element.
+   * @see {@link assignValue}
    * @see {@link https://www.hl7.org/fhir/datatypes.html#primitive}
-   * @param {string} value - the string value to fix
+   * @param {string} value - the string value to assign
    * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {NoSingleTypeError} when the ElementDefinition does not have a single type
-   * @throws {ValueAlreadyFixedError} when the value is already fixed to a different value
+   * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  private fixString(value: string, exactly = false): void {
+  private assignString(value: string, exactly = false): void {
     const type = this.type[0].code;
     if (
       type === 'string' ||
@@ -1461,10 +1465,10 @@ export class ElementDefinition {
       (type === 'markdown' && /^\s*(\S|\s)*$/.test(value)) ||
       type === 'uuid'
     ) {
-      this.fixFHIRValue(`"${value}"`, value, exactly, type);
+      this.assignFHIRValue(`"${value}"`, value, exactly, type);
     } else if (type == 'xhtml' && this.checkXhtml(value)) {
-      this.fixFHIRValue(`"${value}"`, value, exactly, type);
-      // If we got here, the fixed value is valid. Replace the XML with a minimized version.
+      this.assignFHIRValue(`"${value}"`, value, exactly, type);
+      // If we got here, the assigned value is valid. Replace the XML with a minimized version.
       this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, { collapseWhitespace: true });
     } else {
       throw new MismatchedTypeError('string', value, type);
@@ -1480,13 +1484,13 @@ export class ElementDefinition {
   }
 
   /**
-   * Checks if a resource can be fixed to this element
-   * @param {InstanceDefinition} value - The resource to fix
+   * Checks if a resource can be assigned to this element
+   * @param {InstanceDefinition} value - The resource to assign
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @throws {MismatchedTypeError} when the ElementDefinition is not of type Resource
-   * @returns {InstanceDefinition} the input value when it can be fixed
+   * @returns {InstanceDefinition} the input value when it can be assigned
    */
-  checkFixInlineInstance(value: InstanceDefinition, fisher: Fishable): InstanceDefinition {
+  checkAssignInlineInstance(value: InstanceDefinition, fisher: Fishable): InstanceDefinition {
     const inlineInstanceType = value.resourceType ?? value._instanceMeta.sdType;
     const lineage = this.getTypeLineage(inlineInstanceType, fisher).map(
       metadata => metadata.sdType
@@ -1495,7 +1499,7 @@ export class ElementDefinition {
       return value;
     } else {
       // In this case neither the type of the inline instance nor the type of any of its parents matches the
-      // ED.type, so we cannot fix the inline instance to this ED.
+      // ED.type, so we cannot assign the inline instance to this ED.
       throw new MismatchedTypeError(
         inlineInstanceType,
         value.id,
@@ -1505,33 +1509,38 @@ export class ElementDefinition {
   }
 
   /**
-   * Fixes a code to this element, formatting it in the way the element expects for the type.
-   * If the element is not a code-ish type or a different code is already fixed, it will throw.
-   * TODO: Determine if it is valid to fix the code on a choice element (e.g., value[x]).
+   * Assigns a code to this element, formatting it in the way the element expects for the type.
+   * If the element is not a code-ish type or a different code is already assigned, it will throw.
+   * TODO: Determine if it is valid to assign the code on a choice element (e.g., value[x]).
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.fixed_x_}
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.pattern_x_}
-   * @param {FshCode} code - the code to fix
+   * @param {FshCode} code - the code to assign
    * @param {exactly} boolean - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @throws {CodedTypeNotFoundError} when there is no coded type on this element
-   * @throws {ValueAlreadyFixedError} when the code is already fixed to a different code
-   * @throws {InvalidUriError} when the system being fixed is not a valid uri
+   * @throws {ValueAlreadyAssignedError} when the code is already assigned to a different code
+   * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
-  private fixFshCode(code: FshCode, exactly = false): void {
+  private assignFshCode(code: FshCode, exactly = false): void {
     if (code.system && !isUri(code.system.split('|')[0])) {
       throw new InvalidUriError(code.system);
     }
 
     const type = this.type[0].code;
     if (type === 'code' || type === 'string' || type === 'uri') {
-      this.fixFHIRValue(code.toString(), code.code, exactly, type);
+      this.assignFHIRValue(code.toString(), code.code, exactly, type);
     } else if (type === 'CodeableConcept') {
-      this.fixFHIRValue(code.toString(), code.toFHIRCodeableConcept(), exactly, 'CodeableConcept');
+      this.assignFHIRValue(
+        code.toString(),
+        code.toFHIRCodeableConcept(),
+        exactly,
+        'CodeableConcept'
+      );
     } else if (type === 'Coding') {
-      this.fixFHIRValue(code.toString(), code.toFHIRCoding(), exactly, 'Coding');
+      this.assignFHIRValue(code.toString(), code.toFHIRCoding(), exactly, 'Coding');
     } else if (type === 'Quantity') {
       // Since code only maps to part of Quantity, we want to ensure that if there are other (non-code) parts
-      // already fixed, we take them on too -- as we don't want to overwrite them with blanks.
-      const existing = this.fixedQuantity ?? this.patternQuantity ?? this.fixedByAnyParent();
+      // already assigned, we take them on too -- as we don't want to overwrite them with blanks.
+      const existing = this.fixedQuantity ?? this.patternQuantity ?? this.assignedByAnyParent();
       const quantity = code.toFHIRQuantity();
       if (existing?.value != null) {
         quantity.value = existing.value;
@@ -1539,7 +1548,7 @@ export class ElementDefinition {
       if (existing?.comparator != null) {
         quantity.comparator = existing.comparator;
       }
-      this.fixFHIRValue(code.toString(), quantity, exactly, 'Quantity');
+      this.assignFHIRValue(code.toString(), quantity, exactly, 'Quantity');
     } else {
       throw new CodedTypeNotFoundError([type]);
     }
@@ -1626,17 +1635,17 @@ export class ElementDefinition {
     });
   }
   /**
-   * Finds and returns all fixable descendents of the element. A fixable descendent is a direct child of the
-   * element that has minimum cardinality greater than 0, and all fixable descendents of such children
-   * @returns {ElementDefinition[]} the fixable descendents of this element
+   * Finds and returns all assignable descendents of the element. A assignable descendent is a direct child of the
+   * element that has minimum cardinality greater than 0, and all assignable descendents of such children
+   * @returns {ElementDefinition[]} the assignable descendents of this element
    */
-  getFixableDescendents(): ElementDefinition[] {
-    const fixableChildren = this.children(true).filter(e => e.min > 0);
-    let fixableDescendents: ElementDefinition[] = [];
-    fixableChildren.forEach(fc => {
-      fixableDescendents = fixableDescendents.concat(fc.getFixableDescendents());
+  getAssignableDescendents(): ElementDefinition[] {
+    const assignableChildren = this.children(true).filter(e => e.min > 0);
+    let assignableDescendents: ElementDefinition[] = [];
+    assignableChildren.forEach(fc => {
+      assignableDescendents = assignableDescendents.concat(fc.getAssignableDescendents());
     });
-    return [...fixableChildren, ...fixableDescendents];
+    return [...assignableChildren, ...assignableDescendents];
   }
 
   /**

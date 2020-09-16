@@ -201,7 +201,7 @@ describe('FSHImporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
     });
 
-    it('should log an error when a fixed value rule aliased reference prefixed with $ does not resolve', () => {
+    it('should log an error when an assignment rule aliased reference prefixed with $ does not resolve', () => {
       const input = `
       Alias: $MYPATIENT = http://hl7.org/fhir/StructureDefinition/mypatient.html
 

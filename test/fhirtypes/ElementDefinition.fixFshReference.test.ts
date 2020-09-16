@@ -27,10 +27,10 @@ describe('ElementDefinition', () => {
     fshReference2 = new FshReference('otherFoo', 'otherBar');
   });
 
-  describe('#fixFshReference', () => {
-    it('should fix a FshReference to a Reference', () => {
+  describe('#assignFshReference', () => {
+    it('should assign a FshReference to a Reference', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(fshReference1);
+      subject.assignValue(fshReference1);
       expect(subject.patternReference).toEqual({
         reference: 'foo',
         display: 'bar'
@@ -38,9 +38,9 @@ describe('ElementDefinition', () => {
       expect(subject.fixedReference).toBeUndefined();
     });
 
-    it('should fix a FshReference to a Reference (exactly)', () => {
+    it('should assign a FshReference to a Reference (exactly)', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(fshReference1, true);
+      subject.assignValue(fshReference1, true);
       expect(subject.fixedReference).toEqual({
         reference: 'foo',
         display: 'bar'
@@ -48,13 +48,13 @@ describe('ElementDefinition', () => {
       expect(subject.patternReference).toBeUndefined();
     });
 
-    it('should fix a FshReference to a Reference allowing a more specific display', () => {
+    it('should assign a FshReference to a Reference allowing a more specific display', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(new FshReference('foo'));
+      subject.assignValue(new FshReference('foo'));
       expect(subject.patternReference).toEqual({
         reference: 'foo'
       });
-      subject.fixValue(new FshReference('foo', 'bar'));
+      subject.assignValue(new FshReference('foo', 'bar'));
       expect(subject.patternReference).toEqual({
         reference: 'foo',
         display: 'bar'
@@ -62,13 +62,13 @@ describe('ElementDefinition', () => {
       expect(subject.fixedReference).toBeUndefined();
     });
 
-    it('should fix a FshReference to a Reference allowing a more specific display (exactly)', () => {
+    it('should assign a FshReference to a Reference allowing a more specific display (exactly)', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(new FshReference('foo'), true);
+      subject.assignValue(new FshReference('foo'), true);
       expect(subject.fixedReference).toEqual({
         reference: 'foo'
       });
-      subject.fixValue(new FshReference('foo', 'bar'), true);
+      subject.assignValue(new FshReference('foo', 'bar'), true);
       expect(subject.fixedReference).toEqual({
         reference: 'foo',
         display: 'bar'
@@ -79,117 +79,117 @@ describe('ElementDefinition', () => {
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixValue(fshReference1);
+        valueX.assignValue(fshReference1);
       }).toThrow(
-        'Cannot fix Reference value on this element since this element does not have a single type'
+        'Cannot assign Reference value on this element since this element does not have a single type'
       );
       expect(() => {
-        valueX.fixValue(fshReference1, true);
+        valueX.assignValue(fshReference1, true);
       }).toThrow(
-        'Cannot fix Reference value on this element since this element does not have a single type'
+        'Cannot assign Reference value on this element since this element does not have a single type'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value by pattern[x]', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(fshReference1);
-      // should be able to fix a Reference twice in the same way without issue
-      subject.fixValue(fshReference1);
+      subject.assignValue(fshReference1);
+      // should be able to assign a Reference twice in the same way without issue
+      subject.assignValue(fshReference1);
       expect(subject.patternReference).toEqual({
         reference: 'foo',
         display: 'bar'
       });
       // different value
       expect(() => {
-        subject.fixValue(fshReference2);
+        subject.assignValue(fshReference2);
       }).toThrow(
-        'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: {"reference":"foo","display":"bar"}.'
+        'Cannot assign Reference(otherFoo) "otherBar" to this element; a different Reference is already assigned: {"reference":"foo","display":"bar"}.'
       );
       expect(() => {
-        subject.fixValue(fshReference2, true);
+        subject.assignValue(fshReference2, true);
       }).toThrow(
-        'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: {"reference":"foo","display":"bar"}.'
+        'Cannot assign Reference(otherFoo) "otherBar" to this element; a different Reference is already assigned: {"reference":"foo","display":"bar"}.'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value by fixed[x]', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(fshReference1, true);
-      // should be able to fix a Reference twice in the same way without issue
-      subject.fixValue(fshReference1, true);
+      subject.assignValue(fshReference1, true);
+      // should be able to assign a Reference twice in the same way without issue
+      subject.assignValue(fshReference1, true);
       expect(subject.fixedReference).toEqual({
         reference: 'foo',
         display: 'bar'
       });
       // different value
       expect(() => {
-        subject.fixValue(fshReference2, true);
+        subject.assignValue(fshReference2, true);
       }).toThrow(
-        'Cannot fix Reference(otherFoo) "otherBar" to this element; a different Reference is already fixed: {"reference":"foo","display":"bar"}.'
+        'Cannot assign Reference(otherFoo) "otherBar" to this element; a different Reference is already assigned: {"reference":"foo","display":"bar"}.'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value and a display is added', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value and a display is added', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(new FshReference('foo'));
+      subject.assignValue(new FshReference('foo'));
       expect(subject.patternReference).toEqual({
         reference: 'foo'
       });
-      expect(() => subject.fixValue(new FshReference('bar', 'bar'))).toThrow(
-        'Cannot fix Reference(bar) "bar" to this element; a different Reference is already fixed: {"reference":"foo"}.'
+      expect(() => subject.assignValue(new FshReference('bar', 'bar'))).toThrow(
+        'Cannot assign Reference(bar) "bar" to this element; a different Reference is already assigned: {"reference":"foo"}.'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value, no display', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value, no display', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(new FshReference('foo'));
-      // should be able to fix a Reference twice in the same way without issue
-      subject.fixValue(new FshReference('foo'));
+      subject.assignValue(new FshReference('foo'));
+      // should be able to assign a Reference twice in the same way without issue
+      subject.assignValue(new FshReference('foo'));
       expect(subject.patternReference).toEqual({
         reference: 'foo'
       });
       // different value
       expect(() => {
-        subject.fixValue(new FshReference('bar'));
+        subject.assignValue(new FshReference('bar'));
       }).toThrow(
-        'Cannot fix Reference(bar) to this element; a different Reference is already fixed: {"reference":"foo"}.'
+        'Cannot assign Reference(bar) to this element; a different Reference is already assigned: {"reference":"foo"}.'
       );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const subject = observation.elements.find(e => e.id === 'Observation.subject');
-      subject.fixValue(fshReference1, true);
+      subject.assignValue(fshReference1, true);
       // different value
       expect(() => {
-        subject.fixValue(fshReference2);
+        subject.assignValue(fshReference2);
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedReference.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedReference.'
       );
     });
 
-    it('should throw MismatchedTypeError when the value is fixed to a non-Reference', () => {
+    it('should throw MismatchedTypeError when the value is assigned to a non-Reference', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       // with display
       expect(() => {
-        status.fixValue(fshReference1);
+        status.assignValue(fshReference1);
       }).toThrow(
-        'Cannot fix Reference value: Reference(foo) "bar". Value does not match element type: code'
+        'Cannot assign Reference value: Reference(foo) "bar". Value does not match element type: code'
       );
       expect(() => {
-        status.fixValue(fshReference1, true);
+        status.assignValue(fshReference1, true);
       }).toThrow(
-        'Cannot fix Reference value: Reference(foo) "bar". Value does not match element type: code'
+        'Cannot assign Reference value: Reference(foo) "bar". Value does not match element type: code'
       );
       // without display
       expect(() => {
-        status.fixValue(new FshReference('foo'));
+        status.assignValue(new FshReference('foo'));
       }).toThrow(
-        'Cannot fix Reference value: Reference(foo). Value does not match element type: code'
+        'Cannot assign Reference value: Reference(foo). Value does not match element type: code'
       );
       expect(() => {
-        status.fixValue(new FshReference('foo'), true);
+        status.assignValue(new FshReference('foo'), true);
       }).toThrow(
-        'Cannot fix Reference value: Reference(foo). Value does not match element type: code'
+        'Cannot assign Reference value: Reference(foo). Value does not match element type: code'
       );
     });
   });

@@ -1064,20 +1064,20 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFixedValueRule(ctx: pc.FixedValueRuleContext): AssignmentRule {
-    const fixedValueRule = new AssignmentRule(this.visitPath(ctx.path()))
+    const assignmentRule = new AssignmentRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    fixedValueRule.value = this.visitValue(ctx.value());
-    fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
+    assignmentRule.value = this.visitValue(ctx.value());
+    assignmentRule.exactly = ctx.KW_EXACTLY() != null;
     if (ctx.KW_UNITS()) {
       logger.warn(
         'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        fixedValueRule.sourceInfo
+        assignmentRule.sourceInfo
       );
     }
-    fixedValueRule.isInstance =
+    assignmentRule.isInstance =
       ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
-    return fixedValueRule;
+    return assignmentRule;
   }
 
   visitValue(ctx: pc.ValueContext): AssignmentValueType {

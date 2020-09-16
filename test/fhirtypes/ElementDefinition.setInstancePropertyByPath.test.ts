@@ -66,10 +66,10 @@ describe('ElementDefinition', () => {
       });
     });
 
-    it('should not set an instance property which is being fixed incorrectly', () => {
+    it('should not set an instance property which is being assigned incorrectly', () => {
       expect(() => {
         status.setInstancePropertyByPath('short', 1.2, fisher);
-      }).toThrow('Cannot fix number value: 1.2. Value does not match element type: string');
+      }).toThrow('Cannot assign number value: 1.2. Value does not match element type: string');
       expect(status.short).toBe('registered | preliminary | final | amended +');
     });
 

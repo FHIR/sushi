@@ -1,6 +1,6 @@
 import {
   assertCardRule,
-  assertFixedValueRule,
+  assertAssignmentRule,
   assertFlagRule,
   assertOnlyRule,
   assertValueSetRule,
@@ -836,8 +836,8 @@ describe('FSHImporter', () => {
       });
     });
 
-    describe('#fixedValueRule', () => {
-      it('should parse fixed value boolean rule', () => {
+    describe('#assignmentRule', () => {
+      it('should parse assigned value boolean rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -847,10 +847,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'valueBoolean', true);
+        assertAssignmentRule(profile.rules[0], 'valueBoolean', true);
       });
 
-      it('should parse fixed value boolean rule with (exactly) modifier', () => {
+      it('should parse assigned value boolean rule with (exactly) modifier', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -860,10 +860,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'valueBoolean', true, true);
+        assertAssignmentRule(profile.rules[0], 'valueBoolean', true, true);
       });
 
-      it('should parse fixed value number rule', () => {
+      it('should parse assigned value number rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -873,10 +873,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'valueDecimal', 1.23);
+        assertAssignmentRule(profile.rules[0], 'valueDecimal', 1.23);
       });
 
-      it('should parse fixed value string rule', () => {
+      it('should parse assigned value string rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -886,10 +886,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'valueString', 'hello world');
+        assertAssignmentRule(profile.rules[0], 'valueString', 'hello world');
       });
 
-      it('should parse fixed value multi-line string rule', () => {
+      it('should parse assigned value multi-line string rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -902,10 +902,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'valueString', 'hello\nworld');
+        assertAssignmentRule(profile.rules[0], 'valueString', 'hello\nworld');
       });
 
-      it('should parse fixed value date rule', () => {
+      it('should parse assigned value date rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -916,10 +916,10 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         // For now, treating dates like strings
-        assertFixedValueRule(profile.rules[0], 'valueDateTime', '2019-11-01T12:30:01.999Z');
+        assertAssignmentRule(profile.rules[0], 'valueDateTime', '2019-11-01T12:30:01.999Z');
       });
 
-      it('should parse fixed value time rule', () => {
+      it('should parse assigned value time rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -930,10 +930,10 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         // For now, treating dates like strings
-        assertFixedValueRule(profile.rules[0], 'valueTime', '12:30:01.999-05:00');
+        assertAssignmentRule(profile.rules[0], 'valueTime', '12:30:01.999-05:00');
       });
 
-      it('should parse fixed value code rule', () => {
+      it('should parse assigned value code rule', () => {
         const input = `
         Alias: LOINC = http://loinc.org
 
@@ -946,10 +946,10 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedCode = new FshCode('final').withLocation([6, 20, 6, 25]).withFile('');
-        assertFixedValueRule(profile.rules[0], 'status', expectedCode);
+        assertAssignmentRule(profile.rules[0], 'status', expectedCode);
       });
 
-      it('should parse fixed value CodeableConcept rule', () => {
+      it('should parse assigned value CodeableConcept rule', () => {
         const input = `
         Alias: LOINC = http://loinc.org
 
@@ -968,10 +968,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([6, 34, 6, 80])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
+        assertAssignmentRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
       });
 
-      it('should parse fixed value CodeableConcept rule with (exactly) modifier', () => {
+      it('should parse assigned value CodeableConcept rule with (exactly) modifier', () => {
         const input = `
         Alias: LOINC = http://loinc.org
 
@@ -990,10 +990,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([6, 34, 6, 80])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueCodeableConcept', expectedCode, true);
+        assertAssignmentRule(profile.rules[0], 'valueCodeableConcept', expectedCode, true);
       });
 
-      it('should ignore the units keyword and log a warning when parsing a fixed value FSHCode rule with units on Quantity', () => {
+      it('should ignore the units keyword and log a warning when parsing an assigned value FSHCode rule with units on Quantity', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -1006,13 +1006,13 @@ describe('FSHImporter', () => {
         const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
           .withLocation([4, 33, 4, 61])
           .withFile('UselessUnits.fsh');
-        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedCode);
+        assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedCode);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /The "units" keyword is deprecated and has no effect.*File: UselessUnits\.fsh.*Line: 4\D*/s
         );
       });
 
-      it('should parse fixed value Quantity rule', () => {
+      it('should parse assigned value Quantity rule', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1029,10 +1029,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([5, 27, 5, 34])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueQuantity', expectedQuantity);
+        assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
-      it('should parse fixed value Ratio rule', () => {
+      it('should parse assigned value Ratio rule', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1059,10 +1059,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([5, 24, 5, 40])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
+        assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
-      it('should parse fixed value Ratio rule w/ numeric numerator', () => {
+      it('should parse assigned value Ratio rule w/ numeric numerator', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1084,10 +1084,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([5, 24, 5, 35])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
+        assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
-      it('should parse fixed value Ratio rule w/ numeric denominator', () => {
+      it('should parse assigned value Ratio rule w/ numeric denominator', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1109,10 +1109,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([5, 24, 5, 35])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
+        assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
-      it('should parse fixed value Ratio rule w/ numeric numerator and denominator', () => {
+      it('should parse assigned value Ratio rule w/ numeric numerator and denominator', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1129,10 +1129,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([5, 24, 5, 30])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'valueRatio', expectedRatio);
+        assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
-      it('should parse fixed value Reference rule', () => {
+      it('should parse assigned value Reference rule', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1147,10 +1147,10 @@ describe('FSHImporter', () => {
         const expectedReference = new FshReference('fooProfile')
           .withLocation([5, 21, 5, 41])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+        assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
-      it('should parse fixed value Reference rules while allowing and translating aliases', () => {
+      it('should parse assigned value Reference rules while allowing and translating aliases', () => {
         const input = `
         Alias: FOO = http://hl7.org/fhir/StructureDefinition/Foo
 
@@ -1169,10 +1169,10 @@ describe('FSHImporter', () => {
         )
           .withLocation([6, 21, 6, 40])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+        assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
-      it('should parse fixed value Reference rule with a display string', () => {
+      it('should parse assigned value Reference rule with a display string', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1187,10 +1187,10 @@ describe('FSHImporter', () => {
         const expectedReference = new FshReference('fooProfile', 'bar')
           .withLocation([5, 21, 5, 47])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+        assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
-      it('should parse fixed value Reference rule with whitespace', () => {
+      it('should parse assigned value Reference rule with whitespace', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1205,10 +1205,10 @@ describe('FSHImporter', () => {
         const expectedReference = new FshReference('fooProfile')
           .withLocation([5, 21, 5, 47])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+        assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
-      it('should log an error when a fixed value Reference rule has a choice of references', () => {
+      it('should log an error when an assigned value Reference rule has a choice of references', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1223,13 +1223,13 @@ describe('FSHImporter', () => {
         const expectedReference = new FshReference('cakeProfile')
           .withLocation([5, 21, 5, 56])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'basedOn', expectedReference);
+        assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Multiple choices of references are not allowed when setting a value.*Line: 5\D*/s
         );
       });
 
-      it('should parse fixed value using Canonical', () => {
+      it('should parse assigned value using Canonical', () => {
         const input = `
         CodeSystem: Example
         * #first
@@ -1247,10 +1247,10 @@ describe('FSHImporter', () => {
         const expectedCanonical = new FshCanonical('Example')
           .withLocation([8, 32, 8, 49])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse fixed value using Canonical with spaces around entity name', () => {
+      it('should parse assigned value using Canonical with spaces around entity name', () => {
         const input = `
         CodeSystem: SpaceyExample
         * #first
@@ -1268,10 +1268,10 @@ describe('FSHImporter', () => {
         const expectedCanonical = new FshCanonical('SpaceyExample') // No spaces are included in the entityName
           .withLocation([8, 32, 8, 59])
           .withFile('');
-        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse fixed value using Canonical with a version', () => {
+      it('should parse assigned value using Canonical with a version', () => {
         const input = `
         CodeSystem: Example
         * #first
@@ -1290,10 +1290,10 @@ describe('FSHImporter', () => {
           .withLocation([8, 32, 8, 55])
           .withFile('');
         expectedCanonical.version = '1.2.3';
-        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse fixed value using Canonical with spaces around the version', () => {
+      it('should parse assigned value using Canonical with spaces around the version', () => {
         const input = `
         CodeSystem: Example
         * #first
@@ -1312,10 +1312,10 @@ describe('FSHImporter', () => {
           .withLocation([8, 32, 8, 61])
           .withFile('');
         expectedCanonical.version = '1.2.3';
-        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse fixed value using Canonical with a version which contains a |', () => {
+      it('should parse assigned value using Canonical with a version which contains a |', () => {
         const input = `
         CodeSystem: Example
         * #first
@@ -1334,10 +1334,10 @@ describe('FSHImporter', () => {
           .withLocation([8, 32, 8, 75])
           .withFile('');
         expectedCanonical.version = '1.2.3|aWeirdVersion';
-        assertFixedValueRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse fixed values that are an alias', () => {
+      it('should parse assigned values that are an alias', () => {
         const input = `
         Alias: EXAMPLE = http://example.org
 
@@ -1349,10 +1349,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('PatientProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'identifier.system', 'http://example.org');
+        assertAssignmentRule(profile.rules[0], 'identifier.system', 'http://example.org');
       });
 
-      it('should parse a fixed value Resource rule', () => {
+      it('should parse an assigned value Resource rule', () => {
         const input = `
 
         Profile: ObservationProfile
@@ -1363,7 +1363,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertFixedValueRule(profile.rules[0], 'contained[0]', 'SomeInstance', false, true);
+        assertAssignmentRule(profile.rules[0], 'contained[0]', 'SomeInstance', false, true);
       });
     });
 

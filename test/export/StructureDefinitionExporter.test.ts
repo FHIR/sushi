@@ -262,7 +262,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.type).toBe('Extension');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
 
-    // Check that Extension.url is correctly fixed
+    // Check that Extension.url is correctly assigned
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
       'http://hl7.org/fhir/us/minimal/StructureDefinition/foo'
     );
@@ -314,7 +314,7 @@ describe('StructureDefinitionExporter', () => {
     ); // url for patient-mothersMaidenName
     expect(exported.derivation).toBe('constraint'); // always constraint
 
-    // Check that Extension.url is correctly fixed
+    // Check that Extension.url is correctly assigned
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
       'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
     );
@@ -1333,9 +1333,9 @@ describe('StructureDefinitionExporter', () => {
     p1ContainsRule.items.push({ name: 'quantity-ext', type: 'QuantityExtension' });
     const p1OnlyRule = new OnlyRule('extension[quantity-ext].valueQuantity');
     p1OnlyRule.types = [{ type: 'BarQuantity' }];
-    const p1FixedValueRule = new AssignmentRule('extension[quantity-ext].valueQuantity.code');
-    p1FixedValueRule.value = new FshCode('mg');
-    profile1.rules = [p1ContainsRule, p1OnlyRule, p1FixedValueRule];
+    const p1AssignedValueRule = new AssignmentRule('extension[quantity-ext].valueQuantity.code');
+    p1AssignedValueRule.value = new FshCode('mg');
+    profile1.rules = [p1ContainsRule, p1OnlyRule, p1AssignedValueRule];
     doc.profiles.set(profile1.name, profile1);
 
     const profile2 = new Profile('BarQuantity');
@@ -1344,9 +1344,9 @@ describe('StructureDefinitionExporter', () => {
     p2ContainsRule.items.push({ name: 'quantity-ext', type: 'QuantityExtension' });
     const p2OnlyRule = new OnlyRule('extension[quantity-ext].valueQuantity');
     p2OnlyRule.types = [{ type: 'FooQuantity' }];
-    const p2FixedValueRule = new AssignmentRule('extension[quantity-ext].valueQuantity.code');
-    p2FixedValueRule.value = new FshCode('mg');
-    profile2.rules = [p2ContainsRule, p2OnlyRule, p2FixedValueRule];
+    const p2AssignedValueRule = new AssignmentRule('extension[quantity-ext].valueQuantity.code');
+    p2AssignedValueRule.value = new FshCode('mg');
+    profile2.rules = [p2ContainsRule, p2OnlyRule, p2AssignedValueRule];
     doc.profiles.set(profile2.name, profile2);
 
     const extension = new Extension('QuantityExtension');
@@ -1375,9 +1375,9 @@ describe('StructureDefinitionExporter', () => {
     p2ContainsRule.items.push({ name: 'quantity-ext', type: 'QuantityExtension' });
     const p2OnlyRule = new OnlyRule('extension[quantity-ext].valueQuantity');
     p2OnlyRule.types = [{ type: 'FooQuantity' }];
-    const p2FixedValueRule = new AssignmentRule('extension[quantity-ext].valueQuantity.code');
-    p2FixedValueRule.value = new FshCode('mg');
-    profile2.rules = [p2ContainsRule, p2OnlyRule, p2FixedValueRule];
+    const p2AssignedValueRule = new AssignmentRule('extension[quantity-ext].valueQuantity.code');
+    p2AssignedValueRule.value = new FshCode('mg');
+    profile2.rules = [p2ContainsRule, p2OnlyRule, p2AssignedValueRule];
     doc.profiles.set(profile2.name, profile2);
 
     const extension = new Extension('QuantityExtension');
@@ -1544,14 +1544,14 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllLogs()).toHaveLength(0);
   });
 
-  // Fixed Value Rule
+  // Assigned Value Rule
   it('should apply a correct AssignmentRule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
     const rule = new AssignmentRule('code');
-    const fixedFshCode = new FshCode('foo', 'http://foo.com');
-    rule.value = fixedFshCode;
+    const assignedFshCode = new FshCode('foo', 'http://foo.com');
+    rule.value = assignedFshCode;
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
@@ -1559,10 +1559,10 @@ describe('StructureDefinitionExporter', () => {
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCode = baseStructDef.findElement('Observation.code');
-    const fixedCode = sd.findElement('Observation.code');
+    const assignedCode = sd.findElement('Observation.code');
 
     expect(baseCode.patternCodeableConcept).toBeUndefined();
-    expect(fixedCode.patternCodeableConcept).toEqual({
+    expect(assignedCode.patternCodeableConcept).toEqual({
       coding: [{ code: 'foo', system: 'http://foo.com' }]
     });
   });
@@ -1583,9 +1583,9 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
 
-    const fixedSubject = sd.findElement('Observation.subject');
+    const assignedSubject = sd.findElement('Observation.subject');
 
-    expect(fixedSubject.patternReference).toEqual({
+    expect(assignedSubject.patternReference).toEqual({
       reference: 'Patient/bar-id'
     });
   });
@@ -1606,9 +1606,9 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
 
-    const fixedSubject = sd.findElement('Observation.subject');
+    const assignedSubject = sd.findElement('Observation.subject');
 
-    expect(fixedSubject.patternReference).toEqual(undefined);
+    expect(assignedSubject.patternReference).toEqual(undefined);
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /The type "Reference\(Condition\)" does not match any of the allowed types\D*/s
@@ -1627,8 +1627,8 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
-    expect(fixedElement.patternCodeableConcept.coding).toEqual([
+    const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+    expect(assignedElement.patternCodeableConcept.coding).toEqual([
       {
         code: 'bright',
         system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
@@ -1636,7 +1636,7 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
-  it('should apply a FixedValue rule with a valid Canonical entity defined in FSH', () => {
+  it('should apply an AssignmentRule with a valid Canonical entity defined in FSH', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
     const rule = new AssignmentRule('code.coding.system');
@@ -1648,14 +1648,14 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedSystem = sd.findElement('Observation.code.coding.system');
-    expect(fixedSystem.patternUri).toEqual(
+    const assignedSystem = sd.findElement('Observation.code.coding.system');
+    expect(assignedSystem.patternUri).toEqual(
       'http://hl7.org/fhir/us/minimal/CodeSystem/VeryRealCodeSystem'
     );
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
-  it('should apply a FixedValue rule with Canonical of a FHIR entity', () => {
+  it('should apply an AssignmentRule with Canonical of a FHIR entity', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
     const rule = new AssignmentRule('code.coding.system');
@@ -1664,14 +1664,14 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedSystem = sd.findElement('Observation.code.coding.system');
-    expect(fixedSystem.patternUri).toEqual(
+    const assignedSystem = sd.findElement('Observation.code.coding.system');
+    expect(assignedSystem.patternUri).toEqual(
       'http://hl7.org/fhir/StructureDefinition/MedicationRequest'
     );
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
-  it('should apply a FixedValue rule with Canonical of a FHIR entity with a given version', () => {
+  it('should apply an AssignmentRule with Canonical of a FHIR entity with a given version', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
     const rule = new AssignmentRule('code.coding.system');
@@ -1681,15 +1681,15 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedSystem = sd.findElement('Observation.code.coding.system');
+    const assignedSystem = sd.findElement('Observation.code.coding.system');
     // Use the specified version instead of the version on MedicationRequest
-    expect(fixedSystem.patternUri).toEqual(
+    expect(assignedSystem.patternUri).toEqual(
       'http://hl7.org/fhir/StructureDefinition/MedicationRequest|3.2.1'
     );
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
-  it('should not apply a FixedValue rule with an invalid Canonical entity and log an error', () => {
+  it('should not apply an AssignmentRule with an invalid Canonical entity and log an error', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
     const rule = new AssignmentRule('code.coding.system');
@@ -1698,8 +1698,8 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedSystem = sd.findElement('Observation.code.coding.system');
-    expect(fixedSystem.patternUri).toEqual(undefined);
+    const assignedSystem = sd.findElement('Observation.code.coding.system');
+    expect(assignedSystem.patternUri).toEqual(undefined);
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Cannot use canonical URL of FakeCodeSystem because it does not exist.\D*/s
@@ -1718,15 +1718,15 @@ describe('StructureDefinitionExporter', () => {
     const instance = new Instance('USPostalAddress');
     instance.instanceOf = 'Address';
     instance.usage = 'Inline';
-    const fixCountry = new AssignmentRule('country');
-    fixCountry.value = 'US';
-    instance.rules.push(fixCountry); // * country = "US"
+    const assignCountry = new AssignmentRule('country');
+    assignCountry.value = 'US';
+    instance.rules.push(assignCountry); // * country = "US"
     doc.instances.set(instance.name, instance);
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedAddress = sd.findElement('Patient.address');
-    expect(fixedAddress.patternAddress).toEqual({ country: 'US' });
+    const assignedAddress = sd.findElement('Patient.address');
+    expect(assignedAddress.patternAddress).toEqual({ country: 'US' });
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
@@ -1741,8 +1741,8 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedAddress = sd.findElement('Patient.address');
-    expect(fixedAddress.patternAddress).toBeUndefined();
+    const assignedAddress = sd.findElement('Patient.address');
+    expect(assignedAddress.patternAddress).toBeUndefined();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Cannot find definition for Instance: FakeInstance. Skipping rule.\D*/s
@@ -1765,8 +1765,8 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    const fixedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
-    expect(fixedElement.patternCodeableConcept.coding).toEqual([
+    const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+    expect(assignedElement.patternCodeableConcept.coding).toEqual([
       {
         code: 'bright',
         system: 'http://special-domain.com/CodeSystem/Visible'
@@ -1774,7 +1774,7 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
-  it('should apply a fixedValueRule on the child of a choice element with constrained choices that share a type', () => {
+  it('should apply an AssignmentRule on the child of a choice element with constrained choices that share a type', () => {
     // Quantity is the first ancestor of Duration and Age
 
     // * value[x] only Duration or Age
@@ -1786,17 +1786,17 @@ describe('StructureDefinitionExporter', () => {
     onlyRule.types = [{ type: 'Duration' }, { type: 'Age' }];
     extension.rules.push(onlyRule);
 
-    const fixedValueRule = new AssignmentRule('value[x].comparator');
-    fixedValueRule.value = new FshCode('>=');
-    extension.rules.push(fixedValueRule);
+    const assignedValueRule = new AssignmentRule('value[x].comparator');
+    assignedValueRule.value = new FshCode('>=');
+    extension.rules.push(assignedValueRule);
 
     exporter.exportStructDef(extension);
     const sd = pkg.extensions[0];
-    const fixedElement = sd.findElement('Extension.value[x].comparator');
-    expect(fixedElement.patternCode).toBe('>=');
+    const assignedElement = sd.findElement('Extension.value[x].comparator');
+    expect(assignedElement.patternCode).toBe('>=');
   });
 
-  it('should apply a fixedValueRule on the child of a choice element with constrained choices that share a profile', () => {
+  it('should apply an AssignmentRule on the child of a choice element with constrained choices that share a profile', () => {
     // Profile: CustomizedTiming
     // Parent: Timing
     // * extension contains customField 0..1
@@ -1830,9 +1830,9 @@ describe('StructureDefinitionExporter', () => {
     specialTimingObservation.parent = 'Observation';
     const onlyRule = new OnlyRule('effective[x]');
     onlyRule.types = [{ type: 'VerifiedTiming' }, { type: 'ConsensusTiming' }];
-    const fixedValueRule = new AssignmentRule('effective[x].extension[customField].id');
-    fixedValueRule.value = 'my-special-id';
-    specialTimingObservation.rules.push(onlyRule, fixedValueRule);
+    const assignedValueRule = new AssignmentRule('effective[x].extension[customField].id');
+    assignedValueRule.value = 'my-special-id';
+    specialTimingObservation.rules.push(onlyRule, assignedValueRule);
     doc.profiles.set(specialTimingObservation.name, specialTimingObservation);
 
     exporter.exportStructDef(specialTimingObservation);
@@ -1840,17 +1840,17 @@ describe('StructureDefinitionExporter', () => {
       resource => resource.id === 'SpecialTimingObservation'
     );
     expect(specialTimingObservationSd).toBeDefined();
-    const fixedId = specialTimingObservationSd.findElement(
+    const assignedId = specialTimingObservationSd.findElement(
       'Observation.effective[x].extension:customField.id'
     );
-    expect(fixedId.patternString).toBe('my-special-id');
+    expect(assignedId.patternString).toBe('my-special-id');
   });
 
   it('should not apply an incorrect AssignmentRule', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
 
-    const rule = new AssignmentRule('code').withFile('Fixed.fsh').withLocation([4, 18, 4, 28]);
+    const rule = new AssignmentRule('code').withFile('Assigned.fsh').withLocation([4, 18, 4, 28]);
     rule.value = true; // Incorrect boolean
     profile.rules.push(rule);
 
@@ -1859,11 +1859,11 @@ describe('StructureDefinitionExporter', () => {
     const baseStructDef = fisher.fishForStructureDefinition('Observation');
 
     const baseCode = baseStructDef.findElement('Observation.code');
-    const fixedCode = sd.findElement('Observation.code');
+    const assignedCode = sd.findElement('Observation.code');
 
     expect(baseCode.patternCodeableConcept).toBeUndefined();
-    expect(fixedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
-    expect(loggerSpy.getLastMessage()).toMatch(/File: Fixed\.fsh.*Line: 4\D*/s);
+    expect(assignedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
+    expect(loggerSpy.getLastMessage()).toMatch(/File: Assigned\.fsh.*Line: 4\D*/s);
   });
 
   it('should not apply a AssignmentRule to a parent element when it would conflict with a child element', () => {
@@ -1874,11 +1874,11 @@ describe('StructureDefinitionExporter', () => {
     const profile = new Profile('MyObs');
     profile.parent = 'Observation';
     const valueRule = new AssignmentRule('valueQuantity.value')
-      .withFile('Fixed.fsh')
+      .withFile('Assigned.fsh')
       .withLocation([3, 8, 3, 29]);
     valueRule.value = 20;
     const quantityRule = new AssignmentRule('valueQuantity')
-      .withFile('Fixed.fsh')
+      .withFile('Assigned.fsh')
       .withLocation([4, 8, 4, 27]);
     quantityRule.value = new FshQuantity(10, new FshCode('mm', 'http://unitsofmeasure.org'));
     profile.rules.push(valueRule, quantityRule);
@@ -1891,7 +1891,7 @@ describe('StructureDefinitionExporter', () => {
     expect(childElement.patternDecimal).toBe(20);
     expect(parentElement.patternQuantity).toBeUndefined();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot fix 10 to this element.*File: Fixed\.fsh.*Line: 4\D*/s
+      /Cannot assign 10 to this element.*File: Assigned\.fsh.*Line: 4\D*/s
     );
   });
 
@@ -1905,7 +1905,7 @@ describe('StructureDefinitionExporter', () => {
     const innerRule = new AssignmentRule('valueCodeableConcept.coding.code');
     innerRule.value = new FshCode('pancake');
     const outerRule = new AssignmentRule('valueCodeableConcept')
-      .withFile('Fixed.fsh')
+      .withFile('Assigned.fsh')
       .withLocation([4, 9, 4, 33]);
     outerRule.value = new FshCode('waffle');
     profile.rules.push(innerRule, outerRule);
@@ -1917,7 +1917,7 @@ describe('StructureDefinitionExporter', () => {
     expect(innerElement.patternCode).toBe('pancake');
     expect(outerElement.patternCodeableConcept).toBeUndefined();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot fix waffle to this element.*File: Fixed\.fsh.*Line: 4\D*/s
+      /Cannot assign waffle to this element.*File: Assigned\.fsh.*Line: 4\D*/s
     );
   });
 
@@ -1962,7 +1962,7 @@ describe('StructureDefinitionExporter', () => {
     recentCard.min = 1;
     recentCard.max = '1';
     const recentInstance = new AssignmentRule('address[RecentAddress]')
-      .withFile('Fixed.fsh')
+      .withFile('Assigned.fsh')
       .withLocation([8, 9, 8, 54]);
     recentInstance.value = 'CustomPostalAddress';
     recentInstance.isInstance = true;
@@ -1985,7 +1985,7 @@ describe('StructureDefinitionExporter', () => {
     expect(periodStartElement.patternDateTime).toBe('1998-07-04');
     expect(addressSliceElement.patternAddress).toBeUndefined();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot fix 2020-04-01 to this element.*File: Fixed\.fsh.*Line: 8\D*/s
+      /Cannot assign 2020-04-01 to this element.*File: Assigned\.fsh.*Line: 8\D*/s
     );
   });
 
@@ -2049,7 +2049,7 @@ describe('StructureDefinitionExporter', () => {
     recentCard.min = 1;
     recentCard.max = '1';
     const recentInstance = new AssignmentRule('address[RecentAddress]')
-      .withFile('Fixed.fsh')
+      .withFile('Assigned.fsh')
       .withLocation([12, 9, 12, 54]);
     recentInstance.value = 'CustomPostalAddress';
     recentInstance.isInstance = true;
@@ -2076,7 +2076,7 @@ describe('StructureDefinitionExporter', () => {
     expect(addressLineElement.patternString).toBeDefined();
     expect(addressSliceElement.patternAddress).toBeUndefined();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot fix First part of address to this element.*File: Fixed\.fsh.*Line: 12\D*/s
+      /Cannot assign First part of address to this element.*File: Assigned\.fsh.*Line: 12\D*/s
     );
   });
 
@@ -2319,7 +2319,7 @@ describe('StructureDefinitionExporter', () => {
   it('should apply a ContainsRule of an inline extension with a name that resolves to a non-extension type', () => {
     // This tests the use case in https://github.com/FHIR/sushi/issues/83, which we originally thought
     // was an issue w/ reserved words, but was actually an issue because "code" resolves to the StructureDefinition
-    // for the code type.  This test initially failed and was fixed by changing the code that handles extension
+    // for the code type.  This test initially failed and was assigned by changing the code that handles extension
     // slices to only look for Extension resolutions (as opposed to all types).
     // NOTE: This test is mainly irrelevant now that we switched to a syntax that distinguishes slice name from type.
     const profile = new Profile('Foo');
@@ -3313,9 +3313,9 @@ describe('StructureDefinitionExporter', () => {
     containsRuleForExtension.items = [{ name: 'mySlice' }];
     extension.rules.push(containsRuleForExtension); // * extension contains MySlice
 
-    const fixedValueRule = new AssignmentRule('extension[mySlice].valueBoolean');
-    fixedValueRule.value = true;
-    extension.rules.push(fixedValueRule);
+    const assignedValueRule = new AssignmentRule('extension[mySlice].valueBoolean');
+    assignedValueRule.value = true;
+    extension.rules.push(assignedValueRule);
 
     exporter.exportStructDef(extension);
     const sd = pkg.extensions[0];
@@ -4026,10 +4026,10 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it.todo(
-      'should apply a AssignmentRule on a sliced element that updates the fixed value on its slices'
+      'should apply a AssignmentRule on a sliced element that updates the assigned value on its slices'
     );
     it.todo(
-      'should not apply a AssignmentRule on a sliced element that would invalidate the fixed value on a slice'
+      'should not apply a AssignmentRule on a sliced element that would invalidate the assigned value on a slice'
     );
     it.todo(
       'should apply a ContainsRule on the child of a sliced element that updates the slices on the child of a slice'
@@ -4188,14 +4188,14 @@ describe('StructureDefinitionExporter', () => {
     it('should log an error when a type constraint implicitly removes a choice on a sliced element', () => {
       // * component[Lab].valueString = "Please leave"
       // * component.value[x] only Quantity
-      const labFixedValue = new AssignmentRule('component[Lab].valueString');
-      labFixedValue.value = 'Please leave';
+      const labAssignedValue = new AssignmentRule('component[Lab].valueString');
+      labAssignedValue.value = 'Please leave';
       const rootOnly = new OnlyRule('component.value[x]')
         .withFile('RemoveString.fsh')
         .withLocation([8, 4, 8, 23]);
       rootOnly.types = [{ type: 'Quantity' }];
 
-      observationWithSlice.rules.push(labFixedValue, rootOnly);
+      observationWithSlice.rules.push(labAssignedValue, rootOnly);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
       exporter.export();
       const sd = pkg.profiles[0];

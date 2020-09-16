@@ -1,7 +1,7 @@
 import { importSingleText } from '../testhelpers/importSingleText';
 import {
   assertValueSetRule,
-  assertFixedValueRule,
+  assertAssignmentRule,
   assertCardRule,
   assertInsertRule,
   assertValueSetConceptComponent
@@ -32,7 +32,7 @@ describe('FSHImporter', () => {
         endColumn: 23
       });
       expect(ruleSet.sourceInfo.file).toBe('OneRule.fsh');
-      assertFixedValueRule(ruleSet.rules[0] as Rule, 'active', true);
+      assertAssignmentRule(ruleSet.rules[0] as Rule, 'active', true);
     });
 
     it('should parse a RuleSet with multiple rules', () => {
@@ -58,7 +58,7 @@ describe('FSHImporter', () => {
         'https://www.hl7.org/fhir/valueset-administrative-gender.html',
         'required'
       );
-      assertFixedValueRule(ruleSet.rules[1] as Rule, 'active', true, true);
+      assertAssignmentRule(ruleSet.rules[1] as Rule, 'active', true, true);
       assertCardRule(ruleSet.rules[2] as Rule, 'contact', 1, '1');
     });
 

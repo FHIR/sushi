@@ -168,7 +168,7 @@ export class StructureDefinitionExporter implements Fishable {
               rule.value = instance;
             }
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.fixValue(replacedRule.value, replacedRule.exactly, this);
+            element.assignValue(replacedRule.value, replacedRule.exactly, this);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(
               rule.mustSupport,
@@ -315,13 +315,13 @@ export class StructureDefinitionExporter implements Fishable {
         }
         slice.type[0].profile.push(extension.url);
       } else {
-        // If the extension is inline, fix its url element automatically to the sliceName
+        // If the extension is inline, assign its url element automatically to the sliceName
         const slice = element.addSlice(item.name);
         const urlElement = structDef.findElementByPath(
           `${rule.path}[${slice.sliceName}].url`,
           this
         );
-        urlElement.fixValue(slice.sliceName, true);
+        urlElement.assignValue(slice.sliceName, true);
       }
     });
   }

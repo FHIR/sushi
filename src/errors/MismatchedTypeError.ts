@@ -12,7 +12,7 @@ export class MismatchedTypeError extends Error implements Annotated {
     public elementType: string
   ) {
     super(
-      `Cannot fix ${valueType} value: ${value.toString()}. Value does not match element type: ${elementType}`
+      `Cannot assign ${valueType} value: ${value.toString()}. Value does not match element type: ${elementType}`
     );
   }
 }
