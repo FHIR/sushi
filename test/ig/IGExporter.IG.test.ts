@@ -801,6 +801,88 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-resources in legacy IG Publisher mode', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
+      loadCustomResources(path.join(fixtures, 'ig-data', 'input'), defs);
+    });
+
+    beforeEach(() => {
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      pkg = new Package(config);
+      // Add a patient to the package that will be overwritten
+      const fisher = new TestFisher(null, defs, pkg);
+      const patient = fisher.fishForStructureDefinition('Patient');
+      patient.id = 'MyPatient';
+      patient.name = 'MyPatient';
+      patient.description = 'This should go away';
+      pkg.profiles.push(patient);
+
+      const patientInstance = new InstanceDefinition();
+      patientInstance.resourceType = 'Patient';
+      patientInstance.id = 'FooPatient';
+      patientInstance._instanceMeta.description = 'This should stay';
+      patientInstance._instanceMeta.name = 'StayName';
+      patientInstance._instanceMeta.usage = 'Example';
+      pkg.instances.push(patientInstance);
+
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true, true);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should copy over resource files and fix names where possible', () => {
+      exporter.export(tempOut);
+      const directoryContents = new Map<string, string[]>();
+      const dirNames = [
+        'capabilities',
+        'extensions',
+        'models',
+        'operations',
+        'profiles',
+        'resources',
+        'vocabulary',
+        'examples'
+      ];
+      for (const dirName of dirNames) {
+        directoryContents.set(dirName, fs.readdirSync(path.join(tempOut, 'input', dirName)));
+      }
+      expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
+      expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
+      expect(directoryContents.get('extensions')).toEqual([
+        'StructureDefinition-patient-birthPlace.json',
+        'StructureDefinition-patient-birthPlaceXML.xml'
+      ]);
+      expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
+      expect(directoryContents.get('profiles')).toEqual([
+        'StructureDefinition-MyPatient.json',
+        'StructureDefinition-MyTitlePatient.json'
+      ]);
+      expect(directoryContents.get('resources')).toEqual(['Patient-BazPatient.json']);
+      expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
+      expect(directoryContents.get('examples')).toEqual([
+        'Patient-BarPatient.json',
+        'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
+      ]);
+    });
+  });
+
   describe('#customized-ig-with-resources', () => {
     let pkg: Package;
     let exporter: IGExporter;
@@ -878,7 +960,7 @@ describe('IGExporter', () => {
       expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
       expect(directoryContents.get('examples')).toEqual([
         'Patient-BarPatient.json',
-        'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
+        'PoorlyNamedPatient.json' // Not renamed from "PoorlyNamedPatient.json"
       ]);
     });
 

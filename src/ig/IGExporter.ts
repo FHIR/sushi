@@ -979,12 +979,10 @@ export class IGExporter {
                 this.ig.definition.resource.push(newResource);
               }
               const inputPath = path.join(dirPath, file);
-              const outputPath = path.join(
-                igPath,
-                'input',
-                pathEnd,
-                `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
-              );
+              const outputFileName = this.isLegacyIgPubContext
+                ? `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
+                : file;
+              const outputPath = path.join(igPath, 'input', pathEnd, outputFileName);
               this.copyAsIs(inputPath, outputPath);
             }
           }
