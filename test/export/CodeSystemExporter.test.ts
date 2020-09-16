@@ -394,7 +394,7 @@ describe('CodeSystemExporter', () => {
       const valueRule = new AssignmentRule('experimental')
         .withFile('Value.fsh')
         .withLocation([1, 2, 3, 4]);
-      valueRule.fixedValue = true;
+      valueRule.value = true;
       const nameRule = new CaretValueRule('');
       nameRule.caretPath = 'title';
       nameRule.value = 'Wow fancy';

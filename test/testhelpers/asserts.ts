@@ -70,7 +70,7 @@ export function assertFixedValueRule(
   expect(rule).toBeInstanceOf(AssignmentRule);
   const fixedValueRule = rule as AssignmentRule;
   expect(fixedValueRule.path).toBe(path);
-  expect(fixedValueRule.fixedValue).toEqual(value);
+  expect(fixedValueRule.value).toEqual(value);
   expect(fixedValueRule.exactly).toBe(exactly);
   expect(fixedValueRule.isInstance).toEqual(isInstance);
 }

@@ -117,7 +117,7 @@ describe('InstanceExporter', () => {
     instance.instanceOf = 'Patient';
     const fixedValRule = new AssignmentRule('gender');
     const fixedFshCode = new FshCode('foo', 'http://foo.com');
-    fixedValRule.fixedValue = fixedFshCode;
+    fixedValRule.value = fixedFshCode;
     instance.rules.push(fixedValRule);
     doc.instances.set(instance.name, instance);
     const exported = exporter.export().instances;
@@ -205,7 +205,7 @@ describe('InstanceExporter', () => {
       const myExamplePatient = new Instance('MyExample');
       myExamplePatient.instanceOf = 'Patient';
       const fixedValRule = new AssignmentRule('id');
-      fixedValRule.fixedValue = 'PatientA';
+      fixedValRule.value = 'PatientA';
       myExamplePatient.rules.push(fixedValRule);
       const exported = exportInstance(myExamplePatient);
       const expectedInstanceJSON = {
@@ -221,7 +221,7 @@ describe('InstanceExporter', () => {
         .withLocation([3, 6, 6, 45]);
       myExamplePatient.instanceOf = 'Patient';
       const fixedValRule = new AssignmentRule('id');
-      fixedValRule.fixedValue = 'Some Patient';
+      fixedValRule.value = 'Some Patient';
       myExamplePatient.rules.push(fixedValRule);
       const exported = exportInstance(myExamplePatient);
       const expectedInstanceJSON = {
@@ -237,7 +237,7 @@ describe('InstanceExporter', () => {
       const instance = new Instance('Foo').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
       instance.instanceOf = 'Patient';
       const fixedValRule = new AssignmentRule('id');
-      fixedValRule.fixedValue = 'Some_Patient';
+      fixedValRule.value = 'Some_Patient';
       instance.rules.push(fixedValRule);
       const exported = exportInstance(instance);
       const expectedInstanceJSON = {
@@ -257,7 +257,7 @@ describe('InstanceExporter', () => {
       const fixedValRule = new AssignmentRule('id');
       let longId = 'Toolong';
       while (longId.length < 65) longId += 'longer';
-      fixedValRule.fixedValue = longId;
+      fixedValRule.value = longId;
       instance.rules.push(fixedValRule);
       const exported = exportInstance(instance);
       const expectedId = longId.slice(0, 64);
@@ -279,7 +279,7 @@ describe('InstanceExporter', () => {
         .withLocation([3, 8, 11, 25]);
       firstExample.instanceOf = 'Patient';
       const firstId = new AssignmentRule('id');
-      firstId.fixedValue = 'repeated-id';
+      firstId.value = 'repeated-id';
       firstExample.rules.push(firstId);
       doc.instances.set(firstExample.name, firstExample);
 
@@ -288,7 +288,7 @@ describe('InstanceExporter', () => {
         .withLocation([13, 8, 20, 22]);
       secondExample.instanceOf = 'Patient';
       const secondId = new AssignmentRule('id');
-      secondId.fixedValue = 'repeated-id';
+      secondId.value = 'repeated-id';
       secondExample.rules.push(secondId);
       doc.instances.set(secondExample.name, secondExample);
 
@@ -306,7 +306,7 @@ describe('InstanceExporter', () => {
         .withLocation([3, 8, 11, 25]);
       firstExample.instanceOf = 'Patient';
       const firstId = new AssignmentRule('id');
-      firstId.fixedValue = 'repeated-id';
+      firstId.value = 'repeated-id';
       firstExample.rules.push(firstId);
       doc.instances.set(firstExample.name, firstExample);
 
@@ -315,7 +315,7 @@ describe('InstanceExporter', () => {
         .withLocation([13, 8, 20, 22]);
       secondExample.instanceOf = 'Practitioner';
       const secondId = new AssignmentRule('id');
-      secondId.fixedValue = 'repeated-id';
+      secondId.value = 'repeated-id';
       secondExample.rules.push(secondId);
       doc.instances.set(secondExample.name, secondExample);
 
@@ -347,7 +347,7 @@ describe('InstanceExporter', () => {
       inlineQuantity.instanceOf = 'Quantity';
       inlineQuantity.usage = 'Inline';
       const inlineId = new AssignmentRule('id');
-      inlineId.fixedValue = 'my-quantity';
+      inlineId.value = 'my-quantity';
       inlineQuantity.rules.push(inlineId);
       doc.instances.set(inlineQuantity.name, inlineQuantity);
 
@@ -355,7 +355,7 @@ describe('InstanceExporter', () => {
       exampleQuantity.instanceOf = 'Quantity';
       exampleQuantity.usage = 'Example';
       const exampleId = new AssignmentRule('id');
-      exampleId.fixedValue = 'my-quantity';
+      exampleId.value = 'my-quantity';
       exampleQuantity.rules.push(exampleId);
       doc.instances.set(exampleQuantity.name, exampleQuantity);
 
@@ -371,7 +371,7 @@ describe('InstanceExporter', () => {
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const fixedValRule = new AssignmentRule('active');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.active).toEqual(true);
@@ -382,7 +382,7 @@ describe('InstanceExporter', () => {
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const fixedValRule = new AssignmentRule('active');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       fixedValRule.exactly = true;
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
@@ -394,7 +394,7 @@ describe('InstanceExporter', () => {
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const fixedValRule = new AssignmentRule('gender');
-      fixedValRule.fixedValue = new FshCode('F');
+      fixedValRule.value = new FshCode('F');
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.gender).toBe('F');
@@ -402,7 +402,7 @@ describe('InstanceExporter', () => {
 
     it('should not fix optional elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('active');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.active).toBeUndefined();
@@ -421,7 +421,7 @@ describe('InstanceExporter', () => {
       doc.instances.set(conditionInstance.name, conditionInstance);
       const fixedValRule = new AssignmentRule('category');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       condition.rules.push(fixedValRule);
       const exported = exportInstance(conditionInstance);
       expect(exported.category).toEqual([
@@ -442,7 +442,7 @@ describe('InstanceExporter', () => {
       patient.rules.push(cardRule);
       const fixedValRule = new AssignmentRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
@@ -459,7 +459,7 @@ describe('InstanceExporter', () => {
       observation.rules.push(onlyRule); // * value[x] only Quantity
       const fixedValRule = new AssignmentRule('valueQuantity');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       observation.rules.push(fixedValRule); // * valueQuantity = foo.com#foo
       const cardRule = new CardRule('valueQuantity');
       cardRule.min = 1;
@@ -467,7 +467,7 @@ describe('InstanceExporter', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'TestObservation';
       const fixedQuantityValue = new AssignmentRule('valueQuantity.value');
-      fixedQuantityValue.fixedValue = 100;
+      fixedQuantityValue.value = 100;
       observationInstance.rules.push(fixedQuantityValue); // * valueQuantity.value = 100
       doc.instances.set(observationInstance.name, observationInstance);
 
@@ -489,7 +489,7 @@ describe('InstanceExporter', () => {
       respRate.rules.push(cardRule); // * category[niceSlice] 1..*
       const fixedValRule = new AssignmentRule('category[niceSlice]');
       const fixedFshCode = new FshCode('rice', 'http://spice.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       respRate.rules.push(fixedValRule); // * category[niceSlice] = http://spice.com#rice
       const exported = exportInstance(respRateInstance);
       expect(exported.category).toContainEqual({
@@ -504,7 +504,7 @@ describe('InstanceExporter', () => {
 
     it('should fix top level choice elements that are fixed on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('deceasedBoolean');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       patient.rules.push(fixedValRule);
       const cardRule = new CardRule('deceasedBoolean');
       cardRule.min = 1;
@@ -515,11 +515,11 @@ describe('InstanceExporter', () => {
 
     it('should fix an element to a value the same as the fixed value on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('active');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       fixedValRule.exactly = true;
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('active');
-      instanceFixedValRule.fixedValue = true;
+      instanceFixedValRule.value = true;
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.active).toEqual(true);
@@ -529,11 +529,11 @@ describe('InstanceExporter', () => {
     it('should fix an element to a value the same as the fixed pattern on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('maritalStatus');
       const instanceFixedFshCode = new FshCode('foo', 'http://foo.com');
-      instanceFixedValRule.fixedValue = instanceFixedFshCode;
+      instanceFixedValRule.value = instanceFixedFshCode;
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
@@ -545,11 +545,11 @@ describe('InstanceExporter', () => {
     it('should fix an element to a value that is a superset of the fixed pattern on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('maritalStatus');
       const instanceFixedFshCode = new FshCode('foo', 'http://foo.com', 'Foo Foo');
-      instanceFixedValRule.fixedValue = instanceFixedFshCode;
+      instanceFixedValRule.value = instanceFixedFshCode;
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
@@ -559,13 +559,13 @@ describe('InstanceExporter', () => {
 
     it('should not fix an element to a value different than the fixed value on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('active');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       patient.rules.push(fixedValRule);
       const cardRule = new CardRule('active');
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const instanceFixedValRule = new AssignmentRule('active');
-      instanceFixedValRule.fixedValue = false;
+      instanceFixedValRule.value = false;
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.active).toBe(true);
@@ -577,14 +577,14 @@ describe('InstanceExporter', () => {
     it('should not fix an element to a value different than the pattern value on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       patient.rules.push(fixedValRule);
       const cardRule = new CardRule('maritalStatus');
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const instanceFixedValRule = new AssignmentRule('maritalStatus');
       const instanceFixedFshCode = new FshCode('bar', 'http://bar.com');
-      instanceFixedValRule.fixedValue = instanceFixedFshCode;
+      instanceFixedValRule.value = instanceFixedFshCode;
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus.coding[0]).toEqual({
@@ -602,10 +602,10 @@ describe('InstanceExporter', () => {
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const fixedValRule = new AssignmentRule('communication.preferred');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('communication[0].language');
-      instanceFixedValRule.fixedValue = new FshCode('foo');
+      instanceFixedValRule.value = new FshCode('foo');
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.communication[0]).toEqual({
@@ -619,12 +619,12 @@ describe('InstanceExporter', () => {
       cardRule.min = 1;
       patient.rules.push(cardRule);
       const fixedValRule = new AssignmentRule('communication.language.text');
-      fixedValRule.fixedValue = 'foo';
+      fixedValRule.value = 'foo';
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule(
         'communication[0].language.coding[0].version'
       );
-      instanceFixedValRule.fixedValue = 'bar';
+      instanceFixedValRule.value = 'bar';
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.communication[0]).toEqual({
@@ -634,7 +634,7 @@ describe('InstanceExporter', () => {
 
     it('should not fix a nested element that does not have parents defined in the instance', () => {
       const fixedValRule = new AssignmentRule('communication.preferred');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       patient.rules.push(fixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.communication).toBeUndefined();
@@ -650,10 +650,10 @@ describe('InstanceExporter', () => {
       cardRuleRelationship.max = '*';
       patient.rules.push(cardRuleRelationship);
       const fixedValRule = new AssignmentRule('contact.relationship');
-      fixedValRule.fixedValue = new FshCode('mother');
+      fixedValRule.value = new FshCode('mother');
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('contact.gender');
-      instanceFixedValRule.fixedValue = new FshCode('foo');
+      instanceFixedValRule.value = new FshCode('foo');
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.contact).toEqual([
@@ -676,11 +676,11 @@ describe('InstanceExporter', () => {
       startCard.min = 1;
       startCard.max = '1';
       const fixedValRule = new AssignmentRule('telecom.period.start');
-      fixedValRule.fixedValue = '2000-07-04';
+      fixedValRule.value = '2000-07-04';
 
       patient.rules.push(periodCard, startCard, fixedValRule);
       const instanceFixedValRule = new AssignmentRule('telecom[0].system');
-      instanceFixedValRule.fixedValue = new FshCode('email');
+      instanceFixedValRule.value = new FshCode('email');
       patientInstance.rules.push(instanceFixedValRule); // * telecom[0].system = #email
       const exported = exportInstance(patientInstance);
       expect(exported.telecom[0]).toEqual({
@@ -704,11 +704,11 @@ describe('InstanceExporter', () => {
       sysCard.min = 1;
       sysCard.max = '1';
       const fixedValRule = new AssignmentRule('maritalStatus.coding.system');
-      fixedValRule.fixedValue = 'http://itscomplicated.com';
+      fixedValRule.value = 'http://itscomplicated.com';
 
       patient.rules.push(statCard, codingCard, sysCard, fixedValRule);
       const instanceFixedValRule = new AssignmentRule('generalPractitioner.identifier.system');
-      instanceFixedValRule.fixedValue = 'http://medicine.med';
+      instanceFixedValRule.value = 'http://medicine.med';
       patientInstance.rules.push(instanceFixedValRule); // * generalPractitioner.identifier.system = "http://medicine.med"
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({ coding: [{ system: 'http://itscomplicated.com' }] });
@@ -734,11 +734,11 @@ describe('InstanceExporter', () => {
       displayCard.min = 1;
       displayCard.max = '1';
       const fixedValRule = new AssignmentRule('identifier.type.coding.display');
-      fixedValRule.fixedValue = 'This is my coding';
+      fixedValRule.value = 'This is my coding';
 
       patient.rules.push(idCard, typeCard, displayCard, fixedValRule);
       const instanceFixedValRule = new AssignmentRule('identifier.type.coding[2].version');
-      instanceFixedValRule.fixedValue = '1.2.3';
+      instanceFixedValRule.value = '1.2.3';
       patientInstance.rules.push(instanceFixedValRule); // * identifier.type.coding[2].version = "1.2.3"
       const exported = exportInstance(patientInstance);
       expect(exported.identifier).toEqual([
@@ -774,7 +774,7 @@ describe('InstanceExporter', () => {
       respRate.rules.push(cardRule);
       const fixedValRule = new AssignmentRule('category[niceSlice]');
       const fixedFshCode = new FshCode('rice', 'http://spice.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       respRate.rules.push(containsRule, cardRule, fixedValRule);
       const exported = exportInstance(respRateInstance);
       expect(exported.category).toEqual([
@@ -808,11 +808,11 @@ describe('InstanceExporter', () => {
       startCard.min = 1;
       startCard.max = '1';
       const fixedValRule = new AssignmentRule('telecom.period.start');
-      fixedValRule.fixedValue = '2000-07-04';
+      fixedValRule.value = '2000-07-04';
 
       patient.rules.push(periodCard, startCard, fixedValRule);
       const instanceFixedValRule = new AssignmentRule('telecom[0].system');
-      instanceFixedValRule.fixedValue = new FshCode('email');
+      instanceFixedValRule.value = new FshCode('email');
       patientInstance.rules.push(instanceFixedValRule); // * telecom[0].system = #email
       const exported = exportInstance(patientInstance);
       expect(exported.telecom[0]).toEqual({
@@ -824,10 +824,10 @@ describe('InstanceExporter', () => {
     // Fixing with pattern[x]
     it('should fix a nested element that is fixed by pattern[x] from a parent on the SD', () => {
       const fixedValRule = new AssignmentRule('maritalStatus.coding');
-      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      fixedValRule.value = new FshCode('foo', 'http://foo.com');
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('maritalStatus.coding[0].version');
-      instanceFixedValRule.fixedValue = '1.2.3';
+      instanceFixedValRule.value = '1.2.3';
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
@@ -843,13 +843,13 @@ describe('InstanceExporter', () => {
 
     it('should fix multiple nested elements that are fixed by pattern[x] from a parent on the SD', () => {
       const fixedValRule = new AssignmentRule('maritalStatus.coding');
-      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      fixedValRule.value = new FshCode('foo', 'http://foo.com');
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('maritalStatus.coding[0].version');
-      instanceFixedValRule.fixedValue = '1.2.3';
+      instanceFixedValRule.value = '1.2.3';
       patientInstance.rules.push(instanceFixedValRule);
       const instanceFixedValRule2 = new AssignmentRule('maritalStatus.coding[1].version');
-      instanceFixedValRule2.fixedValue = '3.2.1';
+      instanceFixedValRule2.value = '3.2.1';
       patientInstance.rules.push(instanceFixedValRule2);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
@@ -870,10 +870,10 @@ describe('InstanceExporter', () => {
 
     it('should fix a nested element that is fixed by array pattern[x] from a parent on the SD', () => {
       const fixedValRule = new AssignmentRule('maritalStatus');
-      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      fixedValRule.value = new FshCode('foo', 'http://foo.com');
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('maritalStatus.coding[0].version');
-      instanceFixedValRule.fixedValue = '1.2.3';
+      instanceFixedValRule.value = '1.2.3';
       patientInstance.rules.push(instanceFixedValRule);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
@@ -889,13 +889,13 @@ describe('InstanceExporter', () => {
 
     it('should fix multiple nested elements that are fixed by array pattern[x] from a parent on the SD', () => {
       const fixedValRule = new AssignmentRule('maritalStatus');
-      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      fixedValRule.value = new FshCode('foo', 'http://foo.com');
       patient.rules.push(fixedValRule);
       const instanceFixedValRule1 = new AssignmentRule('maritalStatus.coding[0].version');
-      instanceFixedValRule1.fixedValue = '1.2.3';
+      instanceFixedValRule1.value = '1.2.3';
       patientInstance.rules.push(instanceFixedValRule1);
       const instanceFixedValRule2 = new AssignmentRule('maritalStatus.coding[1].version');
-      instanceFixedValRule2.fixedValue = '3.2.1';
+      instanceFixedValRule2.value = '3.2.1';
       patientInstance.rules.push(instanceFixedValRule2);
       const exported = exportInstance(patientInstance);
       expect(exported.maritalStatus).toEqual({
@@ -914,7 +914,7 @@ describe('InstanceExporter', () => {
 
     it('should fix cardinality 1..n elements that are fixed by array pattern[x] from a parent on the SD', () => {
       const fixedValRule = new AssignmentRule('maritalStatus');
-      fixedValRule.fixedValue = new FshCode('foo', 'http://foo.com');
+      fixedValRule.value = new FshCode('foo', 'http://foo.com');
       patient.rules.push(fixedValRule);
       const cardRule = new CardRule('maritalStatus');
       cardRule.min = 1;
@@ -935,10 +935,10 @@ describe('InstanceExporter', () => {
     it.skip('should not fix an element to a value different than a parent pattern value on the Structure Definition', () => {
       const fixedValRule = new AssignmentRule('maritalStatus');
       const fixedFshCode = new FshCode('foo', 'http://foo.com');
-      fixedValRule.fixedValue = fixedFshCode;
+      fixedValRule.value = fixedFshCode;
       patient.rules.push(fixedValRule);
       const instanceFixedValRule = new AssignmentRule('maritalStatus.coding[0].system');
-      instanceFixedValRule.fixedValue = 'http://bar.com';
+      instanceFixedValRule.value = 'http://bar.com';
       patientInstance.rules.push(instanceFixedValRule);
       expect(() => exportInstance(patientInstance)).toThrow();
     });
@@ -946,7 +946,7 @@ describe('InstanceExporter', () => {
     // Fixing children of primitives
     it('should fix children of primitive values on an instance', () => {
       const fixedValRule = new AssignmentRule('active.id');
-      fixedValRule.fixedValue = 'foo';
+      fixedValRule.value = 'foo';
       patientInstance.rules.push(fixedValRule);
       doc.instances.set(patientInstance.name, patientInstance);
       const exported = exportInstance(patientInstance);
@@ -955,10 +955,10 @@ describe('InstanceExporter', () => {
 
     it('should fix primitive values and their children on an instance', () => {
       const fixedValRule1 = new AssignmentRule('active');
-      fixedValRule1.fixedValue = true;
+      fixedValRule1.value = true;
       patientInstance.rules.push(fixedValRule1);
       const fixedValRule2 = new AssignmentRule('active.id');
-      fixedValRule2.fixedValue = 'foo';
+      fixedValRule2.value = 'foo';
       patientInstance.rules.push(fixedValRule2);
       doc.instances.set(patientInstance.name, patientInstance);
       const exported = exportInstance(patientInstance);
@@ -968,7 +968,7 @@ describe('InstanceExporter', () => {
 
     it('should fix children of primitive value arrays on an instance', () => {
       const fixedValRule = new AssignmentRule('address[0].line[1].extension[0].url');
-      fixedValRule.fixedValue = 'foo';
+      fixedValRule.value = 'foo';
       patientInstance.rules.push(fixedValRule);
       doc.instances.set(patientInstance.name, patientInstance);
       const exported = exportInstance(patientInstance);
@@ -981,10 +981,10 @@ describe('InstanceExporter', () => {
 
     it('should fix children of primitive value arrays on an instance with out of order rules', () => {
       const fixedValRule1 = new AssignmentRule('address[0].line[1].extension[0].url');
-      fixedValRule1.fixedValue = 'bar';
+      fixedValRule1.value = 'bar';
       patientInstance.rules.push(fixedValRule1);
       const fixedValRule2 = new AssignmentRule('address[0].line[0].extension[0].url');
-      fixedValRule2.fixedValue = 'foo';
+      fixedValRule2.value = 'foo';
       patientInstance.rules.push(fixedValRule2);
       doc.instances.set(patientInstance.name, patientInstance);
       const exported = exportInstance(patientInstance);
@@ -1009,11 +1009,11 @@ describe('InstanceExporter', () => {
       // * name.prefix contains Dr 0..*
       patient.rules.push(caretRule, containsRule, cardRule);
       const fixedRule1 = new AssignmentRule('name[0].prefix[Dr][0]');
-      fixedRule1.fixedValue = 'Doctor';
+      fixedRule1.value = 'Doctor';
       const fixedRule2 = new AssignmentRule('name[0].prefix[Dr][1]');
-      fixedRule2.fixedValue = 'Mister Doctor';
+      fixedRule2.value = 'Mister Doctor';
       const fixedRuleChild = new AssignmentRule('name[0].prefix[Dr][1].id');
-      fixedRuleChild.fixedValue = 'Sir Mister Doctor to you';
+      fixedRuleChild.value = 'Sir Mister Doctor to you';
       // * name[0].prefix[Dr][0] = "Doctor"
       // * name[0].prefix[Dr][1] = "Mister Doctor"
       // * name[0].prefix[Dr][1].id = "Sir Mister Doctor to you";
@@ -1032,10 +1032,10 @@ describe('InstanceExporter', () => {
       const orgInstance = new Instance('TestOrganization');
       orgInstance.instanceOf = 'Organization';
       const fixedIdRule = new AssignmentRule('id');
-      fixedIdRule.fixedValue = 'org-id';
+      fixedIdRule.value = 'org-id';
       orgInstance.rules.push(fixedIdRule);
       const fixedRefRule = new AssignmentRule('managingOrganization');
-      fixedRefRule.fixedValue = new FshReference('TestOrganization');
+      fixedRefRule.value = new FshReference('TestOrganization');
       patientInstance.rules.push(fixedRefRule);
       doc.instances.set(patientInstance.name, patientInstance);
       doc.instances.set(orgInstance.name, orgInstance);
@@ -1049,13 +1049,13 @@ describe('InstanceExporter', () => {
       const orgInstance = new Instance('TestOrganization');
       orgInstance.instanceOf = 'Organization';
       const fixedIdRule = new AssignmentRule('id');
-      fixedIdRule.fixedValue = 'org-id';
+      fixedIdRule.value = 'org-id';
       orgInstance.rules.push(fixedIdRule);
       const containedRule = new AssignmentRule('contained');
-      containedRule.fixedValue = 'TestOrganization';
+      containedRule.value = 'TestOrganization';
       containedRule.isInstance = true;
       const fixedRefRule = new AssignmentRule('managingOrganization');
-      fixedRefRule.fixedValue = new FshReference('TestOrganization');
+      fixedRefRule.value = new FshReference('TestOrganization');
       patientInstance.rules.push(containedRule, fixedRefRule);
       doc.instances.set(patientInstance.name, patientInstance);
       doc.instances.set(orgInstance.name, orgInstance);
@@ -1067,7 +1067,7 @@ describe('InstanceExporter', () => {
 
     it('should fix a reference without replacing if the referred Instance does not exist', () => {
       const fixedRefRule = new AssignmentRule('managingOrganization');
-      fixedRefRule.fixedValue = new FshReference('http://hl7.org/fhir/us/minimal');
+      fixedRefRule.value = new FshReference('http://hl7.org/fhir/us/minimal');
       patientInstance.rules.push(fixedRefRule);
       doc.instances.set(patientInstance.name, patientInstance);
       const exported = exportInstance(patientInstance);
@@ -1087,7 +1087,7 @@ describe('InstanceExporter', () => {
       profiledInstance.instanceOf =
         'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
       const fixedRefRule = new AssignmentRule('subject');
-      fixedRefRule.fixedValue = new FshReference('BasePatient');
+      fixedRefRule.value = new FshReference('BasePatient');
       profiledInstance.rules.push(fixedRefRule); // * subject = Reference(BasePatient)
       doc.instances.set(profiledInstance.name, profiledInstance);
 
@@ -1103,7 +1103,7 @@ describe('InstanceExporter', () => {
       doc.instances.set(referencedPatientInstance.name, referencedPatientInstance);
 
       const fixedRefRule = new AssignmentRule('extension.valueReference');
-      fixedRefRule.fixedValue = new FshReference('ReferencedPatient');
+      fixedRefRule.value = new FshReference('ReferencedPatient');
       patientInstance.rules.push(fixedRefRule); // * extension.valueReference = Reference(BasePatient)
 
       const exported = exportInstance(patientInstance);
@@ -1117,7 +1117,7 @@ describe('InstanceExporter', () => {
       observationInstance.instanceOf = 'Observation';
       doc.instances.set(observationInstance.name, observationInstance);
       const fixedRefRule = new AssignmentRule('contact[0].organization');
-      fixedRefRule.fixedValue = new FshReference('TestObservation');
+      fixedRefRule.value = new FshReference('TestObservation');
       // * contact[0].organization = Reference(TestObservation)
       patientInstance.rules.push(fixedRefRule);
       doc.instances.set(patientInstance.name, patientInstance);
@@ -1141,7 +1141,7 @@ describe('InstanceExporter', () => {
       profiledInstance.instanceOf =
         'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab';
       const fixedRefRule = new AssignmentRule('subject');
-      fixedRefRule.fixedValue = new FshReference('MyGroup'); // * subject = Reference(MyGroup)
+      fixedRefRule.value = new FshReference('MyGroup'); // * subject = Reference(MyGroup)
       profiledInstance.rules.push(fixedRefRule);
       doc.instances.set(profiledInstance.name, profiledInstance);
 
@@ -1159,7 +1159,7 @@ describe('InstanceExporter', () => {
 
       // DocumentReference.context.related is a reference to Any
       const fixedRefRule = new AssignmentRule('context.related');
-      fixedRefRule.fixedValue = new FshReference('Bar'); // Bar is a Patient Instance that has a TestPatient profile
+      fixedRefRule.value = new FshReference('Bar'); // Bar is a Patient Instance that has a TestPatient profile
       documentReferenceInstance.rules.push(fixedRefRule); // * context.related = Reference(Bar)
 
       const exported = exportInstance(documentReferenceInstance);
@@ -1180,7 +1180,7 @@ describe('InstanceExporter', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';
       const fixedRefRule = new AssignmentRule('subject');
-      fixedRefRule.fixedValue = new FshReference('MyGeneralResource'); // * subject = Reference(MyGeneralResource)
+      fixedRefRule.value = new FshReference('MyGeneralResource'); // * subject = Reference(MyGeneralResource)
       observationInstance.rules.push(fixedRefRule);
       doc.instances.set(observationInstance.name, observationInstance);
 
@@ -1198,7 +1198,7 @@ describe('InstanceExporter', () => {
       doc.instances.set(observationInstance.name, observationInstance);
 
       const fixedValueRule = new AssignmentRule('code.coding.system');
-      fixedValueRule.fixedValue = new FshCanonical('VeryRealCodeSystem');
+      fixedValueRule.value = new FshCanonical('VeryRealCodeSystem');
       observationInstance.rules.push(fixedValueRule);
 
       const realCodeSystem = new FshCodeSystem('VeryRealCodeSystem');
@@ -1216,7 +1216,7 @@ describe('InstanceExporter', () => {
       doc.instances.set(observationInstance.name, observationInstance);
 
       const fixedValueRule = new AssignmentRule('code.coding.system');
-      fixedValueRule.fixedValue = new FshCanonical('MedicationRequest');
+      fixedValueRule.value = new FshCanonical('MedicationRequest');
       observationInstance.rules.push(fixedValueRule);
 
       const exported = exportInstance(observationInstance);
@@ -1231,7 +1231,7 @@ describe('InstanceExporter', () => {
       doc.instances.set(observationInstance.name, observationInstance);
 
       const fixedValueRule = new AssignmentRule('code.coding.system');
-      fixedValueRule.fixedValue = new FshCanonical('FakeCodeSystem');
+      fixedValueRule.value = new FshCanonical('FakeCodeSystem');
       observationInstance.rules.push(fixedValueRule);
 
       const exported = exportInstance(observationInstance);
@@ -1246,7 +1246,7 @@ describe('InstanceExporter', () => {
       const brightInstance = new Instance('BrightObservation');
       brightInstance.instanceOf = 'Observation';
       const fixedCodeRule = new AssignmentRule('code');
-      fixedCodeRule.fixedValue = new FshCode('bright', 'Visible');
+      fixedCodeRule.value = new FshCode('bright', 'Visible');
       brightInstance.rules.push(fixedCodeRule);
       doc.instances.set(brightInstance.name, brightInstance);
 
@@ -1265,7 +1265,7 @@ describe('InstanceExporter', () => {
       const brightInstance = new Instance('BrightObservation');
       brightInstance.instanceOf = 'Observation';
       const fixedCodeRule = new AssignmentRule('component[0].code');
-      fixedCodeRule.fixedValue = new FshCode('bright', 'Visible');
+      fixedCodeRule.value = new FshCode('bright', 'Visible');
       brightInstance.rules.push(fixedCodeRule);
       doc.instances.set(brightInstance.name, brightInstance);
 
@@ -1285,7 +1285,7 @@ describe('InstanceExporter', () => {
       const conditionInstance = new Instance('SomeCondition');
       conditionInstance.instanceOf = 'Condition';
       const fixedAgeRule = new AssignmentRule('onsetAge');
-      fixedAgeRule.fixedValue = new FshQuantity(
+      fixedAgeRule.value = new FshQuantity(
         42.0,
         new FshCode('a', 'http://unitsofmeasure.org', 'years')
       );
@@ -1303,7 +1303,7 @@ describe('InstanceExporter', () => {
     // Sliced elements
     it('should fix a single sliced element to a value', () => {
       const fixedValRule = new AssignmentRule('extension[level].valueCoding.system');
-      fixedValRule.fixedValue = 'foo';
+      fixedValRule.value = 'foo';
       patientProfInstance.rules.push(fixedValRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([{ url: 'level', valueCoding: { system: 'foo' } }]);
@@ -1322,7 +1322,7 @@ describe('InstanceExporter', () => {
       // * name.prefix contains Dr 1..1
       patient.rules.push(caretRule, containsRule, cardRule);
       const fixedRule = new AssignmentRule('name[0].prefix[Dr]');
-      fixedRule.fixedValue = 'Doctor';
+      fixedRule.value = 'Doctor';
       // * name[0].prefix[Dr] = "Doctor"
       patientInstance.rules.push(fixedRule);
       const exported = exportInstance(patientInstance);
@@ -1335,10 +1335,10 @@ describe('InstanceExporter', () => {
 
     it('should fix sliced elements in an array that are fixed in order', () => {
       const fooRule = new AssignmentRule('extension[type][0].valueCoding.system');
-      fooRule.fixedValue = 'foo';
+      fooRule.value = 'foo';
       patientProfInstance.rules.push(fooRule);
       const barRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1360,9 +1360,9 @@ describe('InstanceExporter', () => {
       // * name.prefix contains Dr 0..*
       patient.rules.push(caretRule, containsRule, cardRule);
       const fixedRule1 = new AssignmentRule('name[0].prefix[Dr][0]');
-      fixedRule1.fixedValue = 'Doctor';
+      fixedRule1.value = 'Doctor';
       const fixedRule2 = new AssignmentRule('name[0].prefix[Dr][1]');
-      fixedRule2.fixedValue = 'Mister Doctor';
+      fixedRule2.value = 'Mister Doctor';
       // * name[0].prefix[Dr][0] = "Doctor"
       // * name[0].prefix[Dr][1] = "Mister Doctor"
       patientInstance.rules.push(fixedRule1, fixedRule2);
@@ -1376,10 +1376,10 @@ describe('InstanceExporter', () => {
 
     it('should fix a sliced element in an array that is fixed by multiple rules', () => {
       const fooRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      fooRule.fixedValue = 'foo';
+      fooRule.value = 'foo';
       patientProfInstance.rules.push(fooRule);
       const barRule = new AssignmentRule('extension[type][1].valueCoding.version');
-      barRule.fixedValue = '1.2.3';
+      barRule.value = '1.2.3';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1390,10 +1390,10 @@ describe('InstanceExporter', () => {
 
     it('should fix sliced elements in an array that are fixed out of order', () => {
       const fooRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      fooRule.fixedValue = 'foo';
+      fooRule.value = 'foo';
       patientProfInstance.rules.push(fooRule);
       const barRule = new AssignmentRule('extension[type][0].valueCoding.system');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1404,7 +1404,7 @@ describe('InstanceExporter', () => {
 
     it('should fix sliced elements in an array and fill empty values', () => {
       const fooRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      fooRule.fixedValue = 'foo';
+      fooRule.value = 'foo';
       patientProfInstance.rules.push(fooRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1415,13 +1415,13 @@ describe('InstanceExporter', () => {
 
     it('should fix mixed sliced elements in an array', () => {
       const fooRule = new AssignmentRule('extension[type][0].valueCoding.system');
-      fooRule.fixedValue = 'foo';
+      fooRule.value = 'foo';
       patientProfInstance.rules.push(fooRule);
       const bazRule = new AssignmentRule('extension[level].valueCoding.system');
-      bazRule.fixedValue = 'baz';
+      bazRule.value = 'baz';
       patientProfInstance.rules.push(bazRule);
       const barRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1433,13 +1433,13 @@ describe('InstanceExporter', () => {
 
     it('should fix mixed sliced elements in an array out of order', () => {
       const fooRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      fooRule.fixedValue = 'foo';
+      fooRule.value = 'foo';
       patientProfInstance.rules.push(fooRule);
       const bazRule = new AssignmentRule('extension[level].valueCoding.system');
-      bazRule.fixedValue = 'baz';
+      bazRule.value = 'baz';
       patientProfInstance.rules.push(bazRule);
       const barRule = new AssignmentRule('extension[type][0].valueCoding.system');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1456,7 +1456,7 @@ describe('InstanceExporter', () => {
       containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
       patientProf.rules.push(containsRule);
       const barRule = new AssignmentRule('extension[foo].valueString');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1476,7 +1476,7 @@ describe('InstanceExporter', () => {
       const barRule = new AssignmentRule(
         'extension[http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension].valueString'
       );
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1498,7 +1498,7 @@ describe('InstanceExporter', () => {
       containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
       patientProf.rules.push(containsRule);
       const barRule = new AssignmentRule('extension[FooAlias].valueString');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
@@ -1517,7 +1517,7 @@ describe('InstanceExporter', () => {
       );
       doc.extensions.set(fooExtension.name, fooExtension);
       const barRule = new AssignmentRule('extension[FooAlias].valueString');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientInstance.rules.push(barRule);
       const exported = exportInstance(patientInstance);
       expect(exported.extension).toEqual([
@@ -1530,7 +1530,7 @@ describe('InstanceExporter', () => {
 
     it('should not fix an extension that is not defined and not present on the SD', () => {
       const barRule = new AssignmentRule('extension[FooAlias].valueString');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       patientInstance.rules.push(barRule);
       const exported = exportInstance(patientInstance);
       expect(exported.extension).toBeUndefined();
@@ -1538,7 +1538,7 @@ describe('InstanceExporter', () => {
 
     it.skip('should throw when ordered is set in the discriminator but slices arrive out of order', () => {
       const fixedValRule = new AssignmentRule('result[Triglyceride].display');
-      fixedValRule.fixedValue = 'foo';
+      fixedValRule.value = 'foo';
       lipidInstance.rules.push(fixedValRule);
       // Feel free to change this error message when actually implementing
       expect(() => exportInstance(lipidInstance)).toThrow(
@@ -1548,7 +1548,7 @@ describe('InstanceExporter', () => {
 
     it.skip('should throw if incorrect elements are added when the slicing is closed', () => {
       const fixedValRule = new AssignmentRule('result[0].display');
-      fixedValRule.fixedValue = 'foo';
+      fixedValRule.value = 'foo';
       lipidInstance.rules.push(fixedValRule);
       expect(() => exportInstance(lipidInstance)).toThrow(
         'Slicing on result is closed, only named slices may be added'
@@ -1562,7 +1562,7 @@ describe('InstanceExporter', () => {
     // Content Reference
     it('should fix a child of a contentReference element', () => {
       const barRule = new AssignmentRule('compose.exclude.version');
-      barRule.fixedValue = 'bar';
+      barRule.value = 'bar';
       valueSetInstance.rules.push(barRule);
       const exported = exportInstance(valueSetInstance);
       expect(exported.compose).toEqual({
@@ -1611,7 +1611,7 @@ describe('InstanceExporter', () => {
       cardRule.max = '1';
       patient.rules.push(cardRule);
       const fixedValueRule = new AssignmentRule('maritalStatus');
-      fixedValueRule.fixedValue = new FshCode('foo');
+      fixedValueRule.value = new FshCode('foo');
       patientInstance.rules.push(fixedValueRule);
       exportInstance(patientInstance);
       expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -1640,7 +1640,7 @@ describe('InstanceExporter', () => {
       cardRule.max = '*';
       patient.rules.push(cardRule);
       const fixedValueRule = new AssignmentRule('contact[0].gender');
-      fixedValueRule.fixedValue = new FshCode('F');
+      fixedValueRule.value = new FshCode('F');
       patientInstance.rules.push(fixedValueRule);
       exportInstance(patientInstance);
       expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -1654,10 +1654,10 @@ describe('InstanceExporter', () => {
       cardRule.max = '1';
       patient.rules.push(cardRule);
       const fixedValueRule1 = new AssignmentRule('contact[0].relationship');
-      fixedValueRule1.fixedValue = new FshCode('Looking for love');
+      fixedValueRule1.value = new FshCode('Looking for love');
       patientInstance.rules.push(fixedValueRule1);
       const fixedValueRule2 = new AssignmentRule('contact[1].relationship');
-      fixedValueRule2.fixedValue = new FshCode('Complicated');
+      fixedValueRule2.value = new FshCode('Complicated');
       patientInstance.rules.push(fixedValueRule2);
       exportInstance(patientInstance);
       const messages = loggerSpy.getAllMessages('error');
@@ -1688,7 +1688,7 @@ describe('InstanceExporter', () => {
       cardRule.max = '1';
       patient.rules.push(cardRule);
       const fixedValueRule = new AssignmentRule('deceasedBoolean');
-      fixedValueRule.fixedValue = true;
+      fixedValueRule.value = true;
       patientInstance.rules.push(fixedValueRule);
       exportInstance(patientInstance);
       expect(loggerSpy.getAllMessages('error').length).toBe(originalLength);
@@ -1696,7 +1696,7 @@ describe('InstanceExporter', () => {
 
     it('should log an error when a required sliced element is not present', () => {
       const fixedValueRule = new AssignmentRule('result[Cholesterol]');
-      fixedValueRule.fixedValue = new FshReference('Fsh are friends');
+      fixedValueRule.value = new FshReference('Fsh are friends');
       lipidInstance.rules.push(fixedValueRule);
       exportInstance(lipidInstance);
       const messages = loggerSpy.getAllMessages('error');
@@ -1754,7 +1754,7 @@ describe('InstanceExporter', () => {
       // * active 1..1
       patient.rules.push(cardRule1, cardRule2);
       const activeRule = new AssignmentRule('active');
-      activeRule.fixedValue = true;
+      activeRule.value = true;
       // * active = true
       patientInstance.rules.push(activeRule);
       exportInstance(patientInstance);
@@ -1774,7 +1774,7 @@ describe('InstanceExporter', () => {
       // * active 1..1
       patient.rules.push(cardRule1, cardRule2);
       const idRule = new AssignmentRule('active.id');
-      idRule.fixedValue = 'foo';
+      idRule.value = 'foo';
       // * active.id = "foo"
       patientInstance.rules.push(idRule);
       exportInstance(patientInstance);
@@ -1792,9 +1792,9 @@ describe('InstanceExporter', () => {
       // * active 1..1
       patient.rules.push(cardRule1, cardRule2);
       const activeRule = new AssignmentRule('active');
-      activeRule.fixedValue = true;
+      activeRule.value = true;
       const extensionRule = new AssignmentRule('active.extension.url');
-      extensionRule.fixedValue = 'http://example.com';
+      extensionRule.value = 'http://example.com';
       // * active = true
       // * active.extension.url = "http://example.com"
       patientInstance.rules.push(activeRule, extensionRule);
@@ -1815,7 +1815,7 @@ describe('InstanceExporter', () => {
       // * active 1..1
       patient.rules.push(cardRule1, cardRule2);
       const idRule = new AssignmentRule('active.extension.url');
-      idRule.fixedValue = 'http://example.com';
+      idRule.value = 'http://example.com';
       // * active.extension.url = "http://example.com"
       patientInstance.rules.push(idRule);
       exportInstance(patientInstance);
@@ -1826,7 +1826,7 @@ describe('InstanceExporter', () => {
       const bundleInstance = new Instance('MyBundle');
       bundleInstance.instanceOf = 'Bundle';
       const inlineRule = new AssignmentRule('entry[0].resource');
-      inlineRule.fixedValue = 'MyBundledPatient';
+      inlineRule.value = 'MyBundledPatient';
       inlineRule.isInstance = true;
       bundleInstance.rules.push(inlineRule); // * entry[0].resource = MyBundledPatient
       doc.instances.set(bundleInstance.name, bundleInstance);
@@ -1834,7 +1834,7 @@ describe('InstanceExporter', () => {
       const inlineInstance = new Instance('MyBundledPatient');
       inlineInstance.instanceOf = 'Patient';
       const fixedValRule = new AssignmentRule('active');
-      fixedValRule.fixedValue = true;
+      fixedValRule.value = true;
       inlineInstance.rules.push(fixedValRule); // * active = true
       doc.instances.set(inlineInstance.name, inlineInstance);
 
@@ -1874,15 +1874,15 @@ describe('InstanceExporter', () => {
 
       // * generalPractitioner[0] = Reference(my-doctor)
       const gp = new AssignmentRule('generalPractitioner[0]');
-      gp.fixedValue = new FshReference('my-doctor');
+      gp.value = new FshReference('my-doctor');
       // * generalPractitioner[1] = Reference(gp-org1)
       const gpOrg = new AssignmentRule('generalPractitioner[1]');
-      gpOrg.fixedValue = new FshReference('gp-org1');
+      gpOrg.value = new FshReference('gp-org1');
       // * generalPractitioner[1].extension[mothers-maiden-name].valueString = "Belnades"
       const directValue = new AssignmentRule(
         'generalPractitioner[1].extension[mothers-maiden-name].valueString'
       );
-      directValue.fixedValue = 'Belnades';
+      directValue.value = 'Belnades';
       patientInstance.rules.push(gp, gpOrg, directValue);
 
       sdExporter.export();
@@ -1908,7 +1908,7 @@ describe('InstanceExporter', () => {
         const inlineInstance = new Instance('MyInlinePatient');
         inlineInstance.instanceOf = 'Patient';
         const fixedValRule = new AssignmentRule('active');
-        fixedValRule.fixedValue = true;
+        fixedValRule.value = true;
         inlineInstance.rules.push(fixedValRule);
         // * active = true
         doc.instances.set(inlineInstance.name, inlineInstance);
@@ -1916,7 +1916,7 @@ describe('InstanceExporter', () => {
         const inlineObservation = new Instance('MyInlineObservation');
         inlineObservation.instanceOf = 'Observation';
         const observationValueRule = new AssignmentRule('valueString');
-        observationValueRule.fixedValue = 'Some Observation';
+        observationValueRule.value = 'Some Observation';
         inlineObservation.rules.push(observationValueRule);
         // * valueString = "Some Observation"
         doc.instances.set(inlineObservation.name, inlineObservation);
@@ -1957,7 +1957,7 @@ describe('InstanceExporter', () => {
 
       it('should fix an inline resource to an instance', () => {
         const inlineRule = new AssignmentRule('contained[0]');
-        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.value = 'MyInlinePatient';
         inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
 
@@ -1969,12 +1969,12 @@ describe('InstanceExporter', () => {
 
       it('should fix multiple inline resources to an instance', () => {
         const inlineRule = new AssignmentRule('contained[0]');
-        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.value = 'MyInlinePatient';
         inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyInlinePatient
 
         const inlineRule2 = new AssignmentRule('contained[1]');
-        inlineRule2.fixedValue = 'MyInlineObservation';
+        inlineRule2.value = 'MyInlineObservation';
         inlineRule2.isInstance = true;
         patientInstance.rules.push(inlineRule2); // * contained[1] = MyInlineObservation
 
@@ -1991,7 +1991,7 @@ describe('InstanceExporter', () => {
 
       it('should fix an inline resource to an instance element with a specific type', () => {
         const bundleValRule = new AssignmentRule('entry[PatientsOnly].resource');
-        bundleValRule.fixedValue = 'MyInlinePatient';
+        bundleValRule.value = 'MyInlinePatient';
         bundleValRule.isInstance = true;
         // * entry[PatientsOnly].resource = MyInlinePatient
         bundleInstance.rules.push(bundleValRule);
@@ -2004,7 +2004,7 @@ describe('InstanceExporter', () => {
 
       it('should fix an inline resource to an instance element with a choice type', () => {
         const bundleValRule = new AssignmentRule('entry[PatientOrOrganization].resource');
-        bundleValRule.fixedValue = 'MyInlinePatient';
+        bundleValRule.value = 'MyInlinePatient';
         bundleValRule.isInstance = true;
         // * entry[PatientOrOrganization].resource = MyInlinePatient
         bundleInstance.rules.push(bundleValRule);
@@ -2021,7 +2021,7 @@ describe('InstanceExporter', () => {
         const bundleValRule = new AssignmentRule('entry[PatientOrOrganization].resource')
           .withFile('BadChoice.fsh')
           .withLocation([1, 2, 3, 4]);
-        bundleValRule.fixedValue = 'MyInlineObservation';
+        bundleValRule.value = 'MyInlineObservation';
         bundleValRule.isInstance = true;
         // * entry[PatientOrOrganization].resource = MyInlineObservation
         bundleInstance.rules.push(bundleValRule);
@@ -2043,7 +2043,7 @@ describe('InstanceExporter', () => {
         const inlineRule = new AssignmentRule('contained[0]')
           .withFile('FakeInstance.fsh')
           .withLocation([1, 2, 3, 4]);
-        inlineRule.fixedValue = 'MyFakePatient';
+        inlineRule.value = 'MyFakePatient';
         inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule); // * contained[0] = MyFakePatient
 
@@ -2056,10 +2056,10 @@ describe('InstanceExporter', () => {
 
       it('should override a fixed inline resource on an instance', () => {
         const inlineRule = new AssignmentRule('contained[0]');
-        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.value = 'MyInlinePatient';
         inlineRule.isInstance = true;
         const overrideRule = new AssignmentRule('contained[0].birthDate');
-        overrideRule.fixedValue = '2000-02-24';
+        overrideRule.value = '2000-02-24';
         // * contained[0] = MyInlinePatient
         // * contained[0].birthDate = 2000-02-24
         patientInstance.rules.push(inlineRule, overrideRule);
@@ -2071,9 +2071,9 @@ describe('InstanceExporter', () => {
 
       it('should override a fixed via resourceType inline resource on an instance', () => {
         const inlineRule = new AssignmentRule('contained[0].resourceType');
-        inlineRule.fixedValue = 'Patient';
+        inlineRule.value = 'Patient';
         const overrideRule = new AssignmentRule('contained[0].birthDate');
-        overrideRule.fixedValue = '2000-02-24';
+        overrideRule.value = '2000-02-24';
         // * contained[0].resourceType = "Patient"
         // * contained[0].birthDate = 2000-02-24
         patientInstance.rules.push(inlineRule, overrideRule);
@@ -2083,10 +2083,10 @@ describe('InstanceExporter', () => {
 
       it('should override a fixed inline resource on an instance with paths that mix usage of [0] indexing', () => {
         const inlineRule = new AssignmentRule('contained[00]'); // [00] index used
-        inlineRule.fixedValue = 'MyInlinePatient';
+        inlineRule.value = 'MyInlinePatient';
         inlineRule.isInstance = true;
         const overrideRule = new AssignmentRule('contained.birthDate'); // no [0] index used
-        overrideRule.fixedValue = '2000-02-24';
+        overrideRule.value = '2000-02-24';
         // * contained[0] = MyInlinePatient
         // * contained.birthDate = 2000-02-24
         patientInstance.rules.push(inlineRule, overrideRule);
@@ -2098,9 +2098,9 @@ describe('InstanceExporter', () => {
 
       it('should override a fixed via resourceType inline resource on an instance with paths that mix usage of [0] indexing', () => {
         const inlineRule = new AssignmentRule('contained[0].resourceType'); // [0] index used
-        inlineRule.fixedValue = 'Patient';
+        inlineRule.value = 'Patient';
         const overrideRule = new AssignmentRule('contained.birthDate'); // no [0] index used
-        overrideRule.fixedValue = '2000-02-24';
+        overrideRule.value = '2000-02-24';
         // * contained.birthDate = 2000-02-24
         // * contained[0].resourceType = "Patient"
         patientInstance.rules.push(overrideRule, inlineRule);
@@ -2110,12 +2110,12 @@ describe('InstanceExporter', () => {
 
       it('should override a nested fixed inline resource on an instance', () => {
         const bundleRule = new AssignmentRule('contained[0].resourceType');
-        bundleRule.fixedValue = 'Bundle';
+        bundleRule.value = 'Bundle';
         const patientRule = new AssignmentRule('contained[0].entry[0].resource');
-        patientRule.fixedValue = 'MyInlinePatient';
+        patientRule.value = 'MyInlinePatient';
         patientRule.isInstance = true;
         const birthDateRule = new AssignmentRule('contained[0].entry[0].resource.birthDate');
-        birthDateRule.fixedValue = '2000-02-24';
+        birthDateRule.value = '2000-02-24';
         // * contained[0].resourceType = "Bundle"
         // * contained[0].entry[0].resource = MyInlinePatient
         // * contained[0].entry[0].resource.birthDate = "2000-02-24"
@@ -2144,12 +2144,12 @@ describe('InstanceExporter', () => {
         doc.instances.set(inlineBundle.name, inlineBundle);
 
         const bundleRule = new AssignmentRule('contained[0]');
-        bundleRule.fixedValue = 'MyBundle';
+        bundleRule.value = 'MyBundle';
         bundleRule.isInstance = true;
         const birthDateRule = new AssignmentRule(
           'contained[0].entry[PatientsOnly].resource.birthDate'
         );
-        birthDateRule.fixedValue = '2000-02-24';
+        birthDateRule.value = '2000-02-24';
         // contained[0] = MyBundle
         // contained[0].entry[PatientsOnly].resource.birthDate = "2000-02-24"
         patientInstance.rules.push(bundleRule, birthDateRule);
@@ -2176,12 +2176,12 @@ describe('InstanceExporter', () => {
         inlineCodeable.usage = 'Inline';
         doc.instances.set(inlineCodeable.name, inlineCodeable);
         const codingRule = new AssignmentRule('coding');
-        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        codingRule.value = new FshCode('foo', 'http://bar.com');
         // * coding = http://bar.com#foo
         inlineCodeable.rules.push(codingRule);
 
         const inlineRule = new AssignmentRule('maritalStatus');
-        inlineRule.fixedValue = 'MyCodeable';
+        inlineRule.value = 'MyCodeable';
         inlineRule.isInstance = true;
         // * maritalStatus = MyCodeable
         patientInstance.rules.push(inlineRule);
@@ -2202,12 +2202,12 @@ describe('InstanceExporter', () => {
         inlineAge.usage = 'Inline';
         doc.instances.set(inlineAge.name, inlineAge);
         const ageRule = new AssignmentRule('value');
-        ageRule.fixedValue = 42;
+        ageRule.value = 42;
         // * value = 42
         inlineAge.rules.push(ageRule);
 
         const inlineRule = new AssignmentRule('valueQuantity');
-        inlineRule.fixedValue = 'MyAge';
+        inlineRule.value = 'MyAge';
         inlineRule.isInstance = true;
         // * valueQuantity = MyAge
         respRateInstance.rules.push(inlineRule);
@@ -2223,12 +2223,12 @@ describe('InstanceExporter', () => {
         inlineSimple.usage = 'Inline';
         doc.instances.set(inlineSimple.name, inlineSimple);
         const quantRule = new AssignmentRule('value');
-        quantRule.fixedValue = 7;
+        quantRule.value = 7;
         // * value = 7
         inlineSimple.rules.push(quantRule);
 
         const inlineRule = new AssignmentRule('valueQuantity');
-        inlineRule.fixedValue = 'MySimple';
+        inlineRule.value = 'MySimple';
         inlineRule.isInstance = true;
         // * valueQuantity = MySimple
         respRateInstance.rules.push(inlineRule);
@@ -2248,12 +2248,12 @@ describe('InstanceExporter', () => {
         inlineSimple.usage = 'Inline';
         doc.instances.set(inlineSimple.name, inlineSimple);
         const quantRule = new AssignmentRule('value');
-        quantRule.fixedValue = 7;
+        quantRule.value = 7;
         // * value = 7
         inlineSimple.rules.push(quantRule);
 
         const inlineRule = new AssignmentRule('valueQuantity');
-        inlineRule.fixedValue = 'MyQuantity';
+        inlineRule.value = 'MyQuantity';
         inlineRule.isInstance = true;
         // * valueQuantity = MyQuantity
         respRateInstance.rules.push(inlineRule);
@@ -2266,11 +2266,11 @@ describe('InstanceExporter', () => {
       it('should fix an inline instance of an extension to an instance', () => {
         patientProfInstance.usage = 'Inline';
         const codingRule = new AssignmentRule('extension[level].valueCoding');
-        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        codingRule.value = new FshCode('foo', 'http://bar.com');
         // * extension[level].valueCoding = http://bar.com#foo
         patientProfInstance.rules.push(codingRule);
         const inlineRule = new AssignmentRule('extension');
-        inlineRule.fixedValue = 'Baz'; // InstanceOf patientProf defined in beforeEach
+        inlineRule.value = 'Baz'; // InstanceOf patientProf defined in beforeEach
         inlineRule.isInstance = true;
         patientInstance.rules.push(inlineRule);
         const exported = exportInstance(patientInstance);
@@ -2289,12 +2289,12 @@ describe('InstanceExporter', () => {
         inlineCodeable.instanceOf = 'CodeableConcept';
         doc.instances.set(inlineCodeable.name, inlineCodeable);
         const codingRule = new AssignmentRule('coding');
-        codingRule.fixedValue = new FshCode('foo', 'http://bar.com');
+        codingRule.value = new FshCode('foo', 'http://bar.com');
         // * coding = http://bar.com#foo
         inlineCodeable.rules.push(codingRule);
 
         const inlineRule = new AssignmentRule('maritalStatus');
-        inlineRule.fixedValue = 'MyCodeable';
+        inlineRule.value = 'MyCodeable';
         inlineRule.isInstance = true;
         // * maritalStatus = MyCodeable
         patientInstance.rules.push(inlineRule);
@@ -2320,10 +2320,10 @@ describe('InstanceExporter', () => {
       const instance = new Instance('UnmeasurableAttribute');
       instance.instanceOf = 'Patient';
       const impossibleRule = new AssignmentRule('impossible');
-      impossibleRule.fixedValue = 'unmeasurable';
+      impossibleRule.value = 'unmeasurable';
       instance.rules.push(impossibleRule);
       const possibleRule = new AssignmentRule('identifier.value');
-      possibleRule.fixedValue = 'Pascal';
+      possibleRule.value = 'Pascal';
       instance.rules.push(possibleRule);
       doc.instances.set(instance.name, instance);
 
@@ -2338,7 +2338,7 @@ describe('InstanceExporter', () => {
       const impossibleRule = new AssignmentRule('impossible')
         .withFile('Unmeasurable.fsh')
         .withLocation([3, 8, 3, 28]);
-      impossibleRule.fixedValue = 'unmeasurable';
+      impossibleRule.value = 'unmeasurable';
       instance.rules.push(impossibleRule);
       doc.instances.set(instance.name, instance);
 
@@ -2364,7 +2364,7 @@ describe('InstanceExporter', () => {
 
     it('should apply rules from a single mixin', () => {
       const rule = new AssignmentRule('active');
-      rule.fixedValue = true;
+      rule.value = true;
       mixin.rules.push(rule);
 
       const exported = exporter.exportInstance(instance);
@@ -2373,13 +2373,13 @@ describe('InstanceExporter', () => {
 
     it('should apply rules from multiple mixins in the correct order', () => {
       const rule1 = new AssignmentRule('active');
-      rule1.fixedValue = true;
+      rule1.value = true;
       mixin.rules.push(rule1);
 
       const mixin2 = new RuleSet('Baz');
       doc.ruleSets.set(mixin2.name, mixin2);
       const rule2 = new AssignmentRule('active');
-      rule2.fixedValue = false;
+      rule2.value = false;
       mixin2.rules.push(rule2);
       instance.mixins.push('Baz');
 
@@ -2389,7 +2389,7 @@ describe('InstanceExporter', () => {
 
     it('should emit an error when the path is not found on a mixin rule', () => {
       const rule = new AssignmentRule('activez').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.fixedValue = true;
+      rule.value = true;
       mixin.rules.push(rule);
 
       exporter.exportInstance(instance);
@@ -2402,7 +2402,7 @@ describe('InstanceExporter', () => {
 
     it('should emit an error when applying an invalid mixin rule', () => {
       const rule = new AssignmentRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.fixedValue = 'some string';
+      rule.value = 'some string';
       mixin.rules.push(rule);
 
       exporter.exportInstance(instance);
@@ -2460,7 +2460,7 @@ describe('InstanceExporter', () => {
       // InstanceOf: Resource
       // * insert Bar
       const valueRule = new AssignmentRule('id');
-      valueRule.fixedValue = 'my-id';
+      valueRule.value = 'my-id';
       ruleSet.rules.push(valueRule);
 
       const insertRule = new InsertRule();
@@ -2483,7 +2483,7 @@ describe('InstanceExporter', () => {
       caretRule.caretPath = 'title';
       caretRule.value = 'Wow fancy';
       const valueRule = new AssignmentRule('id');
-      valueRule.fixedValue = 'my-id';
+      valueRule.value = 'my-id';
       ruleSet.rules.push(caretRule, valueRule);
 
       const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);

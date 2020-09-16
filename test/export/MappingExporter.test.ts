@@ -341,7 +341,7 @@ describe('MappingExporter', () => {
       const valueRule = new AssignmentRule('experimental')
         .withFile('Value.fsh')
         .withLocation([1, 2, 3, 4]);
-      valueRule.fixedValue = true;
+      valueRule.value = true;
       const mapRule = new MappingRule('status');
       mapRule.map = 'Observation.otherStatus';
       ruleSet.rules.push(mapRule);

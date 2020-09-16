@@ -1067,7 +1067,7 @@ export class FSHImporter extends FSHVisitor {
     const fixedValueRule = new AssignmentRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    fixedValueRule.fixedValue = this.visitValue(ctx.value());
+    fixedValueRule.value = this.visitValue(ctx.value());
     fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
     if (ctx.KW_UNITS()) {
       logger.warn(

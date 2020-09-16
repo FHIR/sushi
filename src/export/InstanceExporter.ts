@@ -39,13 +39,13 @@ export class InstanceExporter implements Fishable {
     // Convert strings in fixedValueRules to instances
     rules = rules.filter(r => {
       if (r.isInstance) {
-        const instance: InstanceDefinition = this.fishForFHIR(r.fixedValue as string);
+        const instance: InstanceDefinition = this.fishForFHIR(r.value as string);
         if (instance != null) {
-          r.fixedValue = instance;
+          r.value = instance;
           return true;
         } else {
           logger.error(
-            `Cannot find definition for Instance: ${r.fixedValue}. Skipping rule.`,
+            `Cannot find definition for Instance: ${r.value}. Skipping rule.`,
             r.sourceInfo
           );
           return false;
@@ -58,20 +58,20 @@ export class InstanceExporter implements Fishable {
     // Patient is used for the type of a.b
     const inlineResourcePaths: { path: string; instanceOf: string }[] = [];
     rules.forEach(r => {
-      if (r.isInstance && r.fixedValue instanceof InstanceDefinition) {
+      if (r.isInstance && r.value instanceof InstanceDefinition) {
         inlineResourcePaths.push({
           path: r.path,
           // We only use the first element of the meta.profile array, if a need arises for a more
           // comprehensive approach, we can come back to this later
-          instanceOf: r.fixedValue.meta?.profile[0] ?? r.fixedValue.resourceType
+          instanceOf: r.value.meta?.profile[0] ?? r.value.resourceType
         });
       }
-      if (r.path.endsWith('.resourceType') && typeof r.fixedValue === 'string') {
+      if (r.path.endsWith('.resourceType') && typeof r.value === 'string') {
         inlineResourcePaths.push({
           // Only get the part of the path before resourceType, aka if path is a.b.resourceType
           // the relevant element is a.b, since it is the actual Resource element
           path: splitOnPathPeriods(r.path).slice(0, -1).join('.'),
-          instanceOf: r.fixedValue
+          instanceOf: r.value
         });
       }
     });
@@ -99,7 +99,7 @@ export class InstanceExporter implements Fishable {
         });
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
-          rule.fixedValue,
+          rule.value,
           this.fisher,
           inlineResourceTypes
         );

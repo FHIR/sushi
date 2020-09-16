@@ -248,7 +248,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       const idRule = instance.rules.find(
         r => r.path === 'id' && r instanceof AssignmentRule
       ) as AssignmentRule;
-      const id = idRule?.fixedValue ?? instance.id;
+      const id = idRule?.value ?? instance.id;
       clone = cloneDeep(rule);
       const fv = getRuleValue(clone) as FshReference;
       fv.reference = `${instanceMeta.sdType}/${id}`;
@@ -273,7 +273,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
  */
 function getRuleValue(rule: AssignmentRule | CaretValueRule): AssignmentValueType {
   if (rule instanceof AssignmentRule) {
-    return rule.fixedValue;
+    return rule.value;
   } else if (rule instanceof CaretValueRule) {
     return rule.value;
   }

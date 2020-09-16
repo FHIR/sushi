@@ -160,17 +160,15 @@ export class StructureDefinitionExporter implements Fishable {
           } else if (rule instanceof AssignmentRule) {
             if (rule.isInstance) {
               const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-              const instance = instanceExporter.fishForFHIR(rule.fixedValue as string);
+              const instance = instanceExporter.fishForFHIR(rule.value as string);
               if (instance == null) {
-                logger.error(
-                  `Cannot find definition for Instance: ${rule.fixedValue}. Skipping rule.`
-                );
+                logger.error(`Cannot find definition for Instance: ${rule.value}. Skipping rule.`);
                 continue;
               }
-              rule.fixedValue = instance;
+              rule.value = instance;
             }
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.fixValue(replacedRule.fixedValue, replacedRule.exactly, this);
+            element.fixValue(replacedRule.value, replacedRule.exactly, this);
           } else if (rule instanceof FlagRule) {
             element.applyFlags(
               rule.mustSupport,

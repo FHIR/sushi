@@ -15,7 +15,7 @@ export type AssignmentValueType =
   | InstanceDefinition;
 
 export class AssignmentRule extends Rule {
-  fixedValue: AssignmentValueType;
+  value: AssignmentValueType;
   exactly: boolean;
   isInstance: boolean;
 
