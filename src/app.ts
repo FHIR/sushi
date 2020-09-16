@@ -88,8 +88,10 @@ async function app() {
 
   // Load custom resources specified in ig-data folder
   loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
-  if (isIgPubContext && !fs.existsSync(path.join(input, 'ig-data'))) {
+  if (isLegacyIgPubContext && !fs.existsSync(path.join(input, 'ig-data'))) {
     loadCustomResources(path.join(input, '..', 'input'), defs);
+  } else if (isIgPubContext) {
+    loadCustomResources(path.join(input, '..'), defs);
   }
 
   let tank: FSHTank;
@@ -122,13 +124,16 @@ async function app() {
   if (config.FSHOnly) {
     logger.info('Exporting FSH definitions only. No IG related content will be exported.');
   } else {
-    const igDataPath = path.resolve(input, 'ig-data');
+    const igDataPath = isIgPubContext
+      ? path.resolve(input, '..', '..')
+      : path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(
       outPackage,
       defs,
       igDataPath,
-      isIgPubContext || isLegacyIgPubContext
+      isIgPubContext,
+      isLegacyIgPubContext
     );
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');

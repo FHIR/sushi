@@ -50,7 +50,8 @@ export class IGExporter {
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string,
-    private readonly isIgPubContext: boolean = false
+    private readonly isIgPubContext: boolean = false,
+    private readonly isLegacyIgPubContext: boolean = false
   ) {
     this.outputLog = new Map();
     this.config = pkg.config;
@@ -251,7 +252,7 @@ export class IGExporter {
     const inputPath = path.join(__dirname, 'files');
     this.copyAsIs(inputPath, igPath, src => {
       // If in an IG Publisher context, do not include any of the publisher scripts
-      if (this.isIgPubContext) {
+      if (this.isIgPubContext || this.isLegacyIgPubContext) {
         if (path.parse(src).base.startsWith('_genonce.')) return false;
         if (path.parse(src).base.startsWith('_gencontinuous.')) return false;
         if (path.parse(src).base.startsWith('_updatePublisher.')) return false;
@@ -267,7 +268,7 @@ export class IGExporter {
     // To work around this, we set the necessary permissions on executable
     // scripts after copying them to the IG path.
     try {
-      if (!this.isIgPubContext) {
+      if (!this.isIgPubContext || this.isLegacyIgPubContext) {
         chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
         chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
         chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
@@ -552,18 +553,19 @@ export class IGExporter {
     const pageData = pages.map(page => {
       const nameParts = page.match(/^(\d+)_(.*)/);
       let prefix: number = null;
-      let name: string;
+      let title: string;
+      const nameWithPrefix = page.slice(0, page.lastIndexOf('.'));
       if (nameParts == null) {
-        name = page.slice(0, page.lastIndexOf('.'));
+        title = page.slice(0, page.lastIndexOf('.'));
       } else {
         prefix = parseInt(nameParts[1]);
-        name = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
+        title = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
       }
       return {
         originalName: page,
         prefix: prefix,
-        name: name,
-        title: titleCase(words(name).join(' ')),
+        name: this.isLegacyIgPubContext ? title : nameWithPrefix,
+        title: titleCase(words(title).join(' ')),
         fileType: page.slice(page.lastIndexOf('.') + 1)
       };
     });
@@ -1350,6 +1352,11 @@ export class IGExporter {
     if (!existsSync(inputPath) || junk.is(path.basename(inputPath))) {
       return;
     }
+
+    // Don't copy to the same directory it came from
+    const fullInputPath = path.resolve(inputPath);
+    const fullOutputPath = path.resolve(outputPath);
+    if (fullInputPath === fullOutputPath) return;
 
     copySync(inputPath, outputPath, { filter });
     this.updateOutputLogForCopiedPath(outputPath, inputPath, filter);
