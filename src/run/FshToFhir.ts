@@ -11,7 +11,7 @@ import {
 } from '../utils';
 
 export async function fshToFhir(
-  input: string,
+  input: string | string[],
   options: fshToFhirOptions = {}
 ): Promise<{
   fhir: Package;
@@ -23,6 +23,19 @@ export async function fshToFhir(
   if (options.logLevel == 'silent') {
     logger.transports[0].silent = true;
   } else if (options.logLevel != null) {
+    if (!isLevel(options.logLevel)) {
+      return {
+        fhir: null,
+        errors: [
+          {
+            message: `Invalid logLevel: ${options.logLevel}. Valid levels include: ${levels.join(
+              ', '
+            )}.`
+          }
+        ],
+        warnings: []
+      };
+    }
     logger.level = options.logLevel;
   }
 
@@ -40,8 +53,15 @@ export async function fshToFhir(
   await Promise.all(loadExternalDependencies(defs, config));
 
   // load FSH text into memory
-  const rawFSH = [new RawFSH(input)];
-  const tank = fillTank(rawFSH, config);
+  const rawFSHes: RawFSH[] = [];
+  if (Array.isArray(input)) {
+    input.forEach((input, i) => {
+      rawFSHes.push(new RawFSH(input, `Input_${i}`));
+    });
+  } else {
+    rawFSHes.push(new RawFSH(input));
+  }
+  const tank = fillTank(rawFSHes, config);
 
   // process FSH text into FHIR
   const outPackage = exportFHIR(tank, defs);
@@ -61,4 +81,8 @@ type fshToFhirOptions = {
 };
 
 // Winston levels: https://github.com/winstonjs/winston#logging-levels plus a silent option
-type Level = 'silly' | 'debug' | 'verbose' | 'http' | 'info' | 'warn' | 'error' | 'silent';
+const levels = ['silly', 'debug', 'verbose', 'http', 'info', 'warn', 'error', 'silent'] as const;
+type Level = typeof levels[number];
+function isLevel(level: string): level is Level {
+  return levels.includes(level as Level);
+}

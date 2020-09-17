@@ -8,7 +8,7 @@ import { Configuration } from '../../src/fshtypes';
 import { Package } from '../../src/export';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 
-describe('FshToFhir', () => {
+describe('#FshToFhir', () => {
   let loadSpy: jest.SpyInstance;
   let defaultConfig: Configuration;
 
@@ -69,6 +69,17 @@ describe('FshToFhir', () => {
     expect(logger.transports[0].silent).toBe(true);
   });
 
+  it('should quit and return an error when an invalid logLevel is specified', async () => {
+    // @ts-ignore
+    const results = await fshToFhir('Bad FSH', { logLevel: '11' });
+    expect(results.errors).toHaveLength(1);
+    expect(results.errors[0].message).toMatch(
+      /Invalid logLevel: 11. Valid levels include: silly, debug, verbose, http, info, warn, error, silent/
+    );
+    expect(results.warnings).toHaveLength(0);
+    expect(results.fhir).toBeNull();
+  });
+
   it('should replace configuration options when specified', async () => {
     await expect(
       fshToFhir('', {
@@ -95,55 +106,109 @@ describe('FshToFhir', () => {
     expect(loadSpy.mock.calls[0]).toEqual([new FHIRDefinitions(), defaultConfig]);
   });
 
-  it('should convert valid FSH into FHIR', async () => {
-    // Set up the FHIRDefinitions with required R4 defintiions so that we can convert from FSH
-    const sd = JSON.parse(
-      fs.readFileSync(
-        path.join(
-          __dirname,
-          '..',
-          'testhelpers',
-          'testdefs',
-          'package',
-          'StructureDefinition-StructureDefinition.json'
-        ),
-        'utf-8'
-      )
-    );
-    const patient = JSON.parse(
-      fs.readFileSync(
-        path.join(
-          __dirname,
-          '..',
-          'testhelpers',
-          'testdefs',
-          'package',
-          'StructureDefinition-Patient.json'
-        ),
-        'utf-8'
-      )
-    );
-    loadSpy.mockImplementation(defs => {
-      defs.add(sd);
-      defs.add(patient);
-      return [undefined];
+  describe('#Conversion', () => {
+    beforeAll(() => {
+      const sd = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            __dirname,
+            '..',
+            'testhelpers',
+            'testdefs',
+            'package',
+            'StructureDefinition-StructureDefinition.json'
+          ),
+          'utf-8'
+        )
+      );
+      const patient = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            __dirname,
+            '..',
+            'testhelpers',
+            'testdefs',
+            'package',
+            'StructureDefinition-Patient.json'
+          ),
+          'utf-8'
+        )
+      );
+      loadSpy.mockImplementation(defs => {
+        defs.add(sd);
+        defs.add(patient);
+        return [undefined];
+      });
     });
 
-    const results = await fshToFhir(
-      `
-    Profile: MyPatient
-    Parent: Patient
-    * name MS
-    `
-    );
-    expect(results.errors).toHaveLength(0);
-    expect(results.warnings).toHaveLength(0);
-    loadSpy.mockImplementation(() => {
-      return [undefined];
+    afterAll(() => {
+      loadSpy.mockImplementation(() => {
+        return [undefined];
+      });
     });
-    expect(results.fhir.profiles).toHaveLength(1);
-    expect(results.fhir.profiles[0].id).toBe('MyPatient');
-    const name = results.fhir.profiles[0].elements.find(e => e.id == 'Patient.name');
-    expect(name.mustSupport).toBe(true);
+
+    it('should convert valid FSH into FHIR with a single input', async () => {
+      const results = await fshToFhir(
+        `
+      Profile: MyPatient
+      Parent: Patient
+      * name MS
+      `
+      );
+      expect(results.errors).toHaveLength(0);
+      expect(results.warnings).toHaveLength(0);
+
+      expect(results.fhir.profiles).toHaveLength(1);
+      expect(results.fhir.profiles[0].id).toBe('MyPatient');
+      const name = results.fhir.profiles[0].elements.find(e => e.id == 'Patient.name');
+      expect(name.mustSupport).toBe(true);
+    });
+
+    it('should convert valid FSH into FHIR with several inputs', async () => {
+      const results = await fshToFhir([
+        `
+      Profile: MyPatient1
+      Parent: Patient
+      * name MS
+      `,
+        `
+      Profile: MyPatient2
+      Parent: Patient
+      * gender MS
+      `
+      ]);
+      expect(results.errors).toHaveLength(0);
+      expect(results.warnings).toHaveLength(0);
+      expect(results.fhir.profiles).toHaveLength(2);
+      expect(results.fhir.profiles[0].id).toBe('MyPatient1');
+      const name = results.fhir.profiles[0].elements.find(e => e.id == 'Patient.name');
+      expect(name.mustSupport).toBe(true);
+      expect(results.fhir.profiles[1].id).toBe('MyPatient2');
+      const gender = results.fhir.profiles[1].elements.find(e => e.id == 'Patient.gender');
+      expect(gender.mustSupport).toBe(true);
+    });
+
+    it('should trace errors back to the originating input when multiple inputs are given', async () => {
+      const results = await fshToFhir([
+        `
+      Profile: MyPatient1
+      Parent: FakeProfile
+      * name MS
+      `,
+        `
+      Profile: MyPatient2
+      Parent: AlsoFakeProfile
+      * gender MS
+      `
+      ]);
+      expect(results.errors).toHaveLength(2);
+      expect(results.errors[0].message).toMatch(/Parent FakeProfile not found/);
+      expect(results.errors[0].input).toBe('Input_0');
+      expect(results.errors[1].message).toMatch(/Parent AlsoFakeProfile not found/);
+      expect(results.errors[1].input).toBe('Input_1');
+      expect(results.warnings).toHaveLength(0);
+      expect(results.fhir.profiles).toHaveLength(0);
+      expect(results.fhir).toEqual(new Package(defaultConfig));
+    });
   });
 });

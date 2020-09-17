@@ -55,9 +55,17 @@ const trackErrorsAndWarnings = format(info => {
     return info;
   }
   if (info.level === 'error') {
-    errorsAndWarnings.errors.push({ message: info.message, location: info.location });
+    errorsAndWarnings.errors.push({
+      message: info.message,
+      location: info.location,
+      input: info.file
+    });
   } else if (info.level === 'warn') {
-    errorsAndWarnings.warnings.push({ message: info.message, location: info.location });
+    errorsAndWarnings.warnings.push({
+      message: info.message,
+      location: info.location,
+      input: info.file
+    });
   }
   return info;
 });
@@ -106,8 +114,8 @@ class LoggerStats {
 export const stats = new LoggerStats();
 
 export class ErrorsAndWarnings {
-  public errors: { message: string; location: string }[] = [];
-  public warnings: { message: string; location: string }[] = [];
+  public errors: { message: string; location?: string; input?: string }[] = [];
+  public warnings: { message: string; location?: string; input?: string }[] = [];
   public shouldTrack = false;
 
   reset(): void {
