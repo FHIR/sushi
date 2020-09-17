@@ -324,7 +324,9 @@ export class IGExporter {
       ensureDirSync(pageContentExportPath);
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
         `To change the contents of this file, edit the "indexPageContent" attribute in the tank ${this.configName} file`,
-        `or provide your own index file in the ig-data${path.sep}input${path.sep}pagecontent or ig-data${path.sep}input${path.sep}pages folder.`,
+        `or provide your own index file in the ${path.basename(this.igDataPath)}${path.sep}input${
+          path.sep
+        }pagecontent or ${path.basename(this.igDataPath)}${path.sep}input${path.sep}pages folder.`,
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
@@ -333,13 +335,17 @@ export class IGExporter {
       logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
 
       if (filePath) {
+        const filePathString = `${path.basename(this.igDataPath)}${path.sep}${path.relative(
+          this.igDataPath,
+          filePath
+        )}`;
         logger.warn(
           `Found both an "indexPageContent" property in ${this.configName} and an index file at ` +
-            `ig-data${path.sep}${path.relative(this.igDataPath, filePath)}. ` +
+            `${filePathString}. ` +
             `Since the "indexPageContent" property is present in the ${this.configName}, an index.md file will be generated and ` +
-            `the ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file will be ` +
+            `the ${filePathString} file will be ` +
             `ignored. Remove the "indexPageContent" property in ${this.configName} to use the ` +
-            `ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file instead.`,
+            `${filePathString} file instead.`,
           {
             file: filePath
           }
@@ -668,11 +674,14 @@ export class IGExporter {
 
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.config.menu) {
+      const filePathString = `${path.basename(this.igDataPath)}${path.sep}input${path.sep}includes${
+        path.sep
+      }menu.xml`;
       logger.warn(
-        `Found both a "menu" property in ${this.configName} and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
+        `Found both a "menu" property in ${this.configName} and a menu.xml file at ${filePathString}. ` +
           `Since the "menu" property is present in the ${this.configName}, a menu.xml file will be generated and ` +
-          `the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored. Remove the "menu" property in ${this.configName} ` +
-          `to use the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file instead.`,
+          `the ${filePathString} file will be ignored. Remove the "menu" property in ${this.configName} ` +
+          `to use the ${filePathString} file instead.`,
         {
           file: menuXMLDefaultPath
         }
@@ -687,12 +696,13 @@ export class IGExporter {
       });
       menu += '</ul>';
 
+      const filePathString = `${path.basename(this.igDataPath)}${path.sep}input${path.sep}includes`;
       const warning = warningBlock(
         `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
         [
           `To change the contents of this file, edit the "menu" attribute in the tank ${this.configName} file`,
-          'or provide your own menu.xml in the ig-data/input/includes folder'
+          `or provide your own menu.xml in the ${filePathString} folder`
         ]
       );
       outputFileSync(menuXMLOutputPath, `${warning}${menu}`, 'utf8');
@@ -1096,11 +1106,12 @@ export class IGExporter {
     if (this.config.template != null) {
       this.generateIgIni(igPath);
       if (existsSync(inputIniPath)) {
+        const filePathString = `${path.basename(this.igDataPath)}${path.sep}ig.ini`;
         logger.warn(
-          `Found both a "template" property in ${this.configName} and an ig.ini file at ig-data${path.sep}ig.ini. ` +
+          `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. ` +
             'Since the "template" property is present in the sushi-config.yaml, an ig.ini file will be generated and ' +
-            `the ig-data${path.sep}ig.ini file will be ignored. Remove the "template" property in ${this.configName} ` +
-            `to use the ig-data${path.sep}ig.ini file instead.`,
+            `the ${filePathString} file will be ignored. Remove the "template" property in ${this.configName} ` +
+            `to use the ${filePathString} file instead.`,
           {
             file: inputIniPath
           }
@@ -1125,7 +1136,9 @@ export class IGExporter {
     iniObj.template = this.config.template;
     const comment = [
       'This ig.ini was generated using the template property in sushi-config.yaml. To provide your own',
-      'ig.ini, create an ig.ini file in the ig-data folder with required properties: ig, template.',
+      `ig.ini, create an ig.ini file in the ${path.basename(
+        this.igDataPath
+      )} folder with required properties: ig, template.`,
       'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
     ];
     const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
@@ -1166,13 +1179,14 @@ export class IGExporter {
         file: inputIniPath
       });
     }
+    const filePathString = `${path.basename(this.igDataPath)}${path.sep}ig.ini`;
     if (inputIni.IG) {
       if (inputIni.IG.ig == null) {
         const igValue = `input/ImplementationGuide-${this.config.id}.json`;
         inputIni.IG.ig = igValue;
         logger.error(
           'The ig.ini file must have an "ig" property pointing to the IG file. Please add the following line ' +
-            `to ig-data${path.sep}ig.ini:\n'` +
+            `to ${filePathString}:\n'` +
             `ig = ${igValue}`,
           {
             file: inputIniPath
@@ -1183,7 +1197,7 @@ export class IGExporter {
         const templateValue = 'fhir.base.template';
         inputIni.IG.template = templateValue;
         logger.error(
-          `The ig.ini file must have a "template" property. Please update ig-data${path.sep}ig.ini to include ` +
+          `The ig.ini file must have a "template" property. Please update ${filePathString} to include ` +
             'your desired template value. Consider adding the following line:\n' +
             `template = ${templateValue}`,
           {
@@ -1205,7 +1219,7 @@ export class IGExporter {
       if (deprecatedProps.length > 0) {
         const propList = deprecatedProps.join(', ');
         logger.warn(
-          `Your ig-data${path.sep}ig.ini file contains the following deprecated properties: ${propList}. ` +
+          `Your ${filePathString} file contains the following deprecated properties: ${propList}. ` +
             'These are no longer supported in ig.ini and should be removed.  See the following link for details: ' +
             'https://github.com/HL7/ig-template-base/releases/tag/0.0.2',
           {
@@ -1223,7 +1237,7 @@ export class IGExporter {
     );
     const comment = [
       'To change the contents of this file, edit the original source file at:',
-      `ig-data${path.sep}ig.ini`
+      `${filePathString}`
     ];
     const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
     outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
@@ -1244,6 +1258,7 @@ export class IGExporter {
   addPackageList(igPath: string): void {
     const packageListPath = path.join(this.igDataPath, 'package-list.json');
     const isIgDataPackageList = existsSync(packageListPath);
+    const filePathString = `${path.basename(this.igDataPath)}${path.sep}package-list.json`;
 
     if (this.config.history) {
       const outputPath = path.join(igPath, 'package-list.json');
@@ -1252,10 +1267,10 @@ export class IGExporter {
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
       if (isIgDataPackageList) {
         logger.warn(
-          `Found both a "history" property in ${this.configName} and a package-list.json file at ig-data${path.sep}package-list.json. ` +
+          `Found both a "history" property in ${this.configName} and a package-list.json file at ${filePathString}. ` +
             `Since the "history" property is present in the ${this.configName}, a package-list.json file will be generated and ` +
-            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in ${this.configName} ` +
-            `to use the ig-data${path.sep}package-list.json file instead.`,
+            `the ${filePathString} file will be ignored. Remove the "history" property in ${this.configName} ` +
+            `to use the ${filePathString} file instead.`,
           {
             file: packageListPath
           }
@@ -1263,7 +1278,7 @@ export class IGExporter {
       }
     } else if (isIgDataPackageList) {
       this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
-      logger.info('Copied ig-data/package-list.json.');
+      logger.info(`Copied ${filePathString}.`);
     }
   }
 
@@ -1284,7 +1299,8 @@ export class IGExporter {
       'files.',
       '',
       'NOTE: This file does not currently list the FHIR resources and examples generated from .fsh files. It only',
-      'lists those files generated from project configs or the contents in the ig-data folder.',
+      'lists those files generated from project configs or the contents in the',
+      `${path.basename(this.igDataPath)} folder.`,
       '',
       ''
     ].join(EOL);
@@ -1370,7 +1386,9 @@ export class IGExporter {
     // Otherwise, it's .md or .xml
     const extra = [
       'To change the contents of this file, edit the original source file at:',
-      inputPath.slice(inputPath.indexOf(`${path.sep}ig-data${path.sep}`) + 1)
+      inputPath.slice(
+        inputPath.indexOf(`${path.sep}${path.basename(this.igDataPath)}${path.sep}`) + 1
+      )
     ];
     // .xml files can't have bare jekyll comments at the start of the file, as they fail XML parsing,
     // so we must surround the warning w/ XML comments.  To avoid the final HTML having just an empty

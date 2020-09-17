@@ -96,7 +96,8 @@ describe('IGExporter', () => {
         { name: 'Other' }
       ];
       const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, '');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
+      const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();

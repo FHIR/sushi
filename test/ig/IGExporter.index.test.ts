@@ -205,7 +205,8 @@ describe('IGExporter', () => {
     it('should use config.indexPageContent to generate an index.md file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
       const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, '');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
+      const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
       exporter.addIndex(tempOut);
       exporter.addImplementationGuide(tempOut);
