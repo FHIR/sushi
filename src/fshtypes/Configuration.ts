@@ -23,7 +23,6 @@ import {
  * @see {@link http://hl7.org/fhir/R4/implementationguide.html}
  * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#igroot}
  * @see {@link https://confluence.hl7.org/display/FHIR/NPM+Package+Specification}
- * @see {@link https://confluence.hl7.org/pages/viewpage.action?pageId=66928420#FHIRIGPackageListdoco-PublicationObject}
  * @see {@link https://github.com/FHIR/sample-ig/blob/master/input/includes/menu.xml}
  */
 export type Configuration = {
@@ -114,21 +113,6 @@ export type Configuration = {
   // a menu)?
   menu?: ConfigurationMenuItem[];
 
-  // The history property corresponds to package-list.json. SUSHI will use the existing top-level
-  // properties in its config to populate the top-level package-list.json properties: package-id,
-  // canonical, title, and introduction. Authors that wish to provide different values can supply
-  // them as properties under history. All other properties under history are assumed to be
-  // versions. To provide a custom package-list.json file, remove this property and include a
-  // package-list.json file in ig-data.
-  //
-  // The current version is special. If the author provides only a single string value, it is
-  // assumed to be the URL path to the current build. The following default values will then be
-  // used:
-  // * desc: Continuous Integration Build (latest in version control)
-  // * status: ci-build
-  // * current: true
-  history?: ConfigurationHistory;
-
   // The indexPageContent property is used to generate a basic index.md file. To provide a
   // custom index file, do not include this property and include an index.md or index.xml file
   // in input/pages/ or input/pagecontent folders.
@@ -153,31 +137,4 @@ export type ConfigurationMenuItem = {
   isExternal?: boolean;
   openInNewTab?: boolean;
   subMenu?: ConfigurationMenuItem[];
-};
-
-export type ConfigurationHistory = {
-  'package-id'?: string;
-  canonical?: string;
-  title?: string;
-  introduction?: string;
-  list?: ConfigurationHistoryItem[];
-};
-
-export type ConfigurationHistoryItem = {
-  version: string;
-  date?: string;
-  desc?: string;
-  path: string;
-  changes?: string;
-  status?:
-    | 'ci-build'
-    | 'preview'
-    | 'ballot'
-    | 'trial-use'
-    | 'update'
-    | 'normative'
-    | 'trial-use+normative';
-  sequence?: string;
-  fhirversion?: string;
-  current?: boolean;
 };

@@ -84,7 +84,6 @@ export class IGExporter {
     this.addIncludeContents(outPath);
     this.addMenuXML(outPath);
     this.addIgIni(outPath);
-    this.addPackageList(outPath);
     this.addIgnoreWarningsFile(outPath);
     this.addImplementationGuide(outPath);
     this.addOutputLog(outPath);
@@ -1260,38 +1259,6 @@ export class IGExporter {
       outputFileSync(outputPath, outputIniContents);
       this.updateOutputLogForCopiedPath(outputPath, inputIniPath);
       logger.info('Copied ig.ini.');
-    }
-  }
-
-  /**
-   * Adds the package-list.json file to the IG. Generated based on the Configuration history
-   * field, or the package-list.json found at ig-data/package-list.json.
-   *
-   * @param igPath {string} - the path where the IG is exported to
-   */
-  addPackageList(igPath: string): void {
-    const packageListPath = path.join(this.igDataPath, 'package-list.json');
-    const isIgDataPackageList = existsSync(packageListPath);
-
-    if (this.config.history) {
-      const outputPath = path.join(igPath, 'package-list.json');
-      outputJSONSync(outputPath, this.config.history, { spaces: 2 });
-      logger.info('Generated package-list.json');
-      this.updateOutputLog(outputPath, [this.configPath], 'generated');
-      if (isIgDataPackageList) {
-        logger.warn(
-          `Found both a "history" property in config.yaml and a package-list.json file at ig-data${path.sep}package-list.json. ` +
-            'Since the "history" property is present in the config.yaml, a package-list.json file will be generated and ' +
-            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in config.yaml ` +
-            `to use the ig-data${path.sep}package-list.json file instead.`,
-          {
-            file: packageListPath
-          }
-        );
-      }
-    } else if (isIgDataPackageList) {
-      this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
-      logger.info('Copied ig-data/package-list.json.');
     }
   }
 
