@@ -1838,7 +1838,6 @@ export class ElementDefinition {
 
   /**
    * Creates a new slice on the element.
-   * TODO: Handle re-slicing?
    * @see {@link http://hl7.org/fhir/R4/profiling.html#slicing}
    * @param {string} name - the name of the new slice
    * @param { ElementDefinitionType } [type] - the type of the new slice; if undefined it copies over this element's types
@@ -1861,7 +1860,6 @@ export class ElementDefinition {
 
     // On a new slice, delete slice.min and slice.max and then reset them
     // so that they are always captured in diff
-    const originalMax = slice.max;
     delete slice.min;
     delete slice.max;
 
@@ -1869,12 +1867,26 @@ export class ElementDefinition {
     slice.captureOriginal();
 
     slice.sliceName = this.sliceName ? `${this.sliceName}/${name}` : name;
-    // When we slice, we do not inherit min cardinality, but rather make it 0
-    // Allows multiple slices to be defined without violating cardinality of sliced element
-    // Cardinality can be later narrowed by card constraints, which check validity of narrowing
-    // According to https://chat.fhir.org/#narrow/stream/179239-tooling/topic/Slicing.201.2E.2E.3F.20element
-    slice.min = 0;
-    slice.max = originalMax;
+
+    // Usually, when we slice, we do not inherit min cardinality, but rather make it 0.
+    // This allows multiple slices to be defined without violating cardinality of sliced element.
+    // Cardinality can be later narrowed by card constraints, which check validity of narrowing.
+    // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/Slicing.201.2E.2E.3F.20element
+    // BUT... if it's a choice that has already been constrained to a single type (thus, not really a choice),
+    // and this is a type slice, then the slice is essentially the *same* as what is being sliced and therefore
+    // should retain min card. See: https://github.com/FHIR/sushi/issues/596
+    if (
+      this.path.endsWith('[x]') &&
+      this.type.length === 1 &&
+      this.slicing?.discriminator?.[0].type === 'type' &&
+      this.slicing?.discriminator?.[0].path === '$this'
+    ) {
+      slice.min = this.min;
+    } else {
+      slice.min = 0;
+    }
+
+    slice.max = this.max;
     if (type) {
       slice.type = [type];
     }
