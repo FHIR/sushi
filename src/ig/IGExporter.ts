@@ -352,6 +352,15 @@ export class IGExporter {
         );
 
         if (!this.shouldCopyFiles) {
+          if (existsSync(inputIndexXMLPagesPath) || existsSync(inputIndexXMLPageContentPath)) {
+            generation = 'html';
+          }
+          // Add user-provided index file to IG definition
+          this.ig.definition.page.page.push({
+            nameUrl: 'index.html',
+            title: 'Home',
+            generation
+          });
           return;
         }
       }
