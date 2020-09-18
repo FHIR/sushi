@@ -58,7 +58,7 @@ async function app() {
     .parse(process.argv);
 
   if (program.init) {
-    init();
+    await init();
     process.exit(0);
   }
   if (program.debug) logger.level = 'debug';

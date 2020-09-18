@@ -149,24 +149,6 @@ describe('IGExporter', () => {
 
     it('should copy over the static files', () => {
       exporter.export(tempOut);
-      expect(fs.existsSync(path.join(tempOut, '_genonce.bat'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_genonce.sh'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.bat'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.sh'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
-    });
-
-    it('should not copy over scripts in publisher context', () => {
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true);
-      exporter.export(tempOut);
-      expect(fs.existsSync(path.join(tempOut, '_genonce.bat'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_genonce.sh'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.bat'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.sh'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeFalsy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
     });
 
