@@ -840,7 +840,7 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true, true);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, true);
     });
 
     afterAll(() => {

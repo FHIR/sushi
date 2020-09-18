@@ -46,6 +46,7 @@ export class IGExporter {
   private readonly outputLog: Map<string, outputLogDetails>;
   private readonly config: Configuration;
   private readonly configName: string;
+  private shouldCopyFiles: boolean;
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
@@ -57,6 +58,9 @@ export class IGExporter {
     this.config = pkg.config;
     this.configPath = path.resolve(this.igDataPath, '..', path.basename(this.config.filePath));
     this.configName = path.basename(this.configPath);
+    // In legacy IG publisher mode and legacy flat tank, always copy files and prefer config files.
+    // Since current supported tank configuration requires input/fsh folder, both legacy cases occur when not in IG Pub context
+    this.shouldCopyFiles = !this.isIgPubContext;
   }
 
   getOutputLogDetails(file: string) {
@@ -322,6 +326,36 @@ export class IGExporter {
 
     if (this.config.indexPageContent) {
       ensureDirSync(pageContentExportPath);
+
+      if (filePath) {
+        const filePathString = `${path.basename(this.igDataPath)}${path.sep}${path.relative(
+          this.igDataPath,
+          filePath
+        )}`;
+
+        let preferredFileMessage =
+          `Since a ${filePathString} file was found, the "indexPageContent" property in the ${this.configName} ` +
+          `will be ignored and an index.md file will not be generated. Remove the ${filePathString} ` +
+          `file to use the "indexPageContent" property in ${this.configName} to generate an index.md file instead.`;
+        if (this.shouldCopyFiles) {
+          preferredFileMessage =
+            `Since the "indexPageContent" property is present in the ${this.configName}, ` +
+            `an index.md file will be generated and the ${filePathString} file will be ignored.` +
+            `Remove the "indexPageContent" property in ${this.configName} to use the ${filePathString} file instead.`;
+        }
+        logger.warn(
+          `Found both an "indexPageContent" property in ${this.configName} and an index file at ` +
+            `${filePathString}. ${preferredFileMessage}`,
+          {
+            file: filePath
+          }
+        );
+
+        if (!this.shouldCopyFiles) {
+          return;
+        }
+      }
+
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
         `To change the contents of this file, edit the "indexPageContent" attribute in the tank ${this.configName} file`,
         `or provide your own index file in the ${path.basename(this.igDataPath)}${path.sep}input${
@@ -333,32 +367,14 @@ export class IGExporter {
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
       logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
-
-      if (filePath) {
-        const filePathString = `${path.basename(this.igDataPath)}${path.sep}${path.relative(
-          this.igDataPath,
-          filePath
-        )}`;
-        logger.warn(
-          `Found both an "indexPageContent" property in ${this.configName} and an index file at ` +
-            `${filePathString}. ` +
-            `Since the "indexPageContent" property is present in the ${this.configName}, an index.md file will be generated and ` +
-            `the ${filePathString} file will be ` +
-            `ignored. Remove the "indexPageContent" property in ${this.configName} to use the ` +
-            `${filePathString} file instead.`,
-          {
-            file: filePath
-          }
-        );
-      }
-    } else if (existsSync(inputIndexMarkdownPageContentPath)) {
+    } else if (existsSync(inputIndexMarkdownPageContentPath) && this.shouldCopyFiles) {
       ensureDirSync(pageContentExportPath);
       this.copyWithWarningText(
         inputIndexMarkdownPageContentPath,
         path.join(pageContentExportPath, 'index.md')
       );
       logger.info(`Copied ${path.join(pageContentExportPath, 'index.md')}`);
-    } else if (existsSync(inputIndexXMLPageContentPath)) {
+    } else if (existsSync(inputIndexXMLPageContentPath) && this.shouldCopyFiles) {
       ensureDirSync(pageContentExportPath);
       this.copyWithWarningText(
         inputIndexXMLPageContentPath,
@@ -366,11 +382,11 @@ export class IGExporter {
       );
       generation = 'html';
       logger.info(`Copied ${path.join(pageContentExportPath, 'index.xml')}`);
-    } else if (existsSync(inputIndexMarkdownPagesPath)) {
+    } else if (existsSync(inputIndexMarkdownPagesPath) && this.shouldCopyFiles) {
       ensureDirSync(pagesExportPath);
       this.copyWithWarningText(inputIndexMarkdownPagesPath, path.join(pagesExportPath, 'index.md'));
       logger.info(`Copied ${path.join(pagesExportPath, 'index.md')}`);
-    } else if (existsSync(inputIndexXMLPagesPath)) {
+    } else if (existsSync(inputIndexXMLPagesPath) && this.shouldCopyFiles) {
       ensureDirSync(pagesExportPath);
       this.copyWithWarningText(inputIndexXMLPagesPath, path.join(pagesExportPath, 'index.xml'));
       generation = 'html';
@@ -412,10 +428,12 @@ export class IGExporter {
           // All user defined pages are included in input/${contentFolder}
           const pagePath = path.join(this.igDataPath, 'input', contentFolder, page.originalName);
 
-          this.copyWithWarningText(
-            pagePath,
-            path.join(igPath, 'input', contentFolder, `${page.name}.${page.fileType}`)
-          );
+          if (this.shouldCopyFiles) {
+            this.copyWithWarningText(
+              pagePath,
+              path.join(igPath, 'input', contentFolder, `${page.name}.${page.fileType}`)
+            );
+          }
           const isSupportedFileType = page.fileType === 'md' || page.fileType === 'xml';
           const isIntroOrNotesFile = page.name.endsWith('-intro') || page.name.endsWith('-notes');
           if (isSupportedFileType) {
@@ -667,7 +685,7 @@ export class IGExporter {
     const menuXMLOutputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
 
     // If user provided menu file in input/includes and no config, copy over the file.
-    if (existsSync(menuXMLDefaultPath) && !this.config.menu) {
+    if (existsSync(menuXMLDefaultPath) && !this.config.menu && this.shouldCopyFiles) {
       this.copyWithWarningText(menuXMLDefaultPath, menuXMLOutputPath);
       return;
     }
@@ -677,15 +695,28 @@ export class IGExporter {
       const filePathString = `${path.basename(this.igDataPath)}${path.sep}input${path.sep}includes${
         path.sep
       }menu.xml`;
-      logger.warn(
-        `Found both a "menu" property in ${this.configName} and a menu.xml file at ${filePathString}. ` +
+
+      let preferredFileMessage =
+        `Since a ${filePathString} file was found, the "menu" property in the ${this.configName} ` +
+        `will be ignored and a menu.xml file will not be generated. Remove the ${filePathString} ` +
+        `file to use the "menu" property in ${this.configName} to generate a menu.xml file instead.`;
+      if (this.shouldCopyFiles) {
+        preferredFileMessage =
           `Since the "menu" property is present in the ${this.configName}, a menu.xml file will be generated and ` +
           `the ${filePathString} file will be ignored. Remove the "menu" property in ${this.configName} ` +
-          `to use the ${filePathString} file instead.`,
+          `to use the ${filePathString} file instead.`;
+      }
+      logger.warn(
+        `Found both a "menu" property in ${this.configName} and a menu.xml file at ${filePathString}. ` +
+          `${preferredFileMessage}`,
         {
           file: menuXMLDefaultPath
         }
       );
+
+      if (!this.shouldCopyFiles) {
+        return;
+      }
     }
 
     // Always use config menu if defined
@@ -988,12 +1019,15 @@ export class IGExporter {
               } else {
                 this.ig.definition.resource.push(newResource);
               }
-              const inputPath = path.join(dirPath, file);
-              const outputFileName = this.isLegacyIgPubContext
-                ? `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
-                : file;
-              const outputPath = path.join(igPath, 'input', pathEnd, outputFileName);
-              this.copyAsIs(inputPath, outputPath);
+
+              if (this.shouldCopyFiles) {
+                const inputPath = path.join(dirPath, file);
+                const outputFileName = this.isLegacyIgPubContext
+                  ? `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
+                  : file;
+                const outputPath = path.join(igPath, 'input', pathEnd, outputFileName);
+                this.copyAsIs(inputPath, outputPath);
+              }
             }
           }
         }
@@ -1104,19 +1138,32 @@ export class IGExporter {
   addIgIni(igPath: string): void {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     if (this.config.template != null) {
-      this.generateIgIni(igPath);
       if (existsSync(inputIniPath)) {
         const filePathString = `${path.basename(this.igDataPath)}${path.sep}ig.ini`;
+
+        let preferredFileMessage =
+          `Since a ${filePathString} file was found, the "template" property in the ${this.configName} ` +
+          `will be ignored and an ig.ini file will not be generated. Remove the ${filePathString} ` +
+          `file to use the "template" property in ${this.configName} and generate an ig.ini file instead.`;
+        if (this.shouldCopyFiles) {
+          preferredFileMessage =
+            `Since the "template" property is present in the ${this.configName}, an ig.ini file will be generated and ` +
+            `the ${filePathString} file will be ignored. Remove the "template" property in ${this.configName} ` +
+            `to use the ${filePathString} file instead.`;
+        }
         logger.warn(
           `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. ` +
-            'Since the "template" property is present in the sushi-config.yaml, an ig.ini file will be generated and ' +
-            `the ${filePathString} file will be ignored. Remove the "template" property in ${this.configName} ` +
-            `to use the ${filePathString} file instead.`,
+            `${preferredFileMessage}`,
           {
             file: inputIniPath
           }
         );
+
+        if (!this.shouldCopyFiles) {
+          return;
+        }
       }
+      this.generateIgIni(igPath);
     } else if (existsSync(inputIniPath)) {
       this.processIgIni(igPath, inputIniPath);
     } else {
@@ -1244,9 +1291,11 @@ export class IGExporter {
 
     // Finally, write it to disk
     const outputPath = path.join(igPath, 'ig.ini');
-    outputFileSync(outputPath, outputIniContents);
-    this.updateOutputLogForCopiedPath(outputPath, inputIniPath);
-    logger.info('Copied ig.ini.');
+    if (this.shouldCopyFiles) {
+      outputFileSync(outputPath, outputIniContents);
+      this.updateOutputLogForCopiedPath(outputPath, inputIniPath);
+      logger.info('Copied ig.ini.');
+    }
   }
 
   /**

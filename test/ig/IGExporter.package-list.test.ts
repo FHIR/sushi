@@ -134,7 +134,7 @@ describe('IGExporter', () => {
       expect(outputLogDetails.action).toBe('copied');
       expect(outputLogDetails.inputs).toHaveLength(1);
       expect(outputLogDetails.inputs[0].endsWith('package-list.json')).toBeTruthy();
-      expect(loggerSpy.getLastMessage('info')).toBe('Copied ig-data/package-list.json.');
+      expect(loggerSpy.getLastMessage('info')).toBe(`Copied ig-data${path.sep}package-list.json.`);
     });
   });
 });
