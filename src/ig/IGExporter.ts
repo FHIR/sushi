@@ -272,7 +272,7 @@ export class IGExporter {
     // To work around this, we set the necessary permissions on executable
     // scripts after copying them to the IG path.
     try {
-      if (!this.isIgPubContext || !this.isLegacyIgPubContext) {
+      if (!this.isIgPubContext && !this.isLegacyIgPubContext) {
         chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
         chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
         chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
@@ -1034,9 +1034,9 @@ export class IGExporter {
 
               if (this.shouldCopyFiles) {
                 const inputPath = path.join(dirPath, file);
-                const outputFileName = this.isLegacyIgPubContext
-                  ? `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
-                  : file;
+                const outputFileName = `${resourceJSON.resourceType}-${
+                  resourceJSON.id
+                }${path.extname(file)}`;
                 const outputPath = path.join(igPath, 'input', pathEnd, outputFileName);
                 this.copyAsIs(inputPath, outputPath);
               }

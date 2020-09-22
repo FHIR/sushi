@@ -922,16 +922,15 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true);
     });
 
     afterAll(() => {
       temp.cleanupSync();
     });
 
-    it('should copy over resource files', () => {
+    it('should not copy over resource files', () => {
       exporter.export(tempOut);
-      const directoryContents = new Map<string, string[]>();
       const dirNames = [
         'capabilities',
         'extensions',
@@ -943,25 +942,9 @@ describe('IGExporter', () => {
         'examples'
       ];
       for (const dirName of dirNames) {
-        directoryContents.set(dirName, fs.readdirSync(path.join(tempOut, 'input', dirName)));
+        // No provided resources are copied to output
+        expect(fs.existsSync(path.join(tempOut, 'input', dirName))).toBeFalsy();
       }
-      expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
-      expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
-      expect(directoryContents.get('extensions')).toEqual([
-        'StructureDefinition-patient-birthPlace.json',
-        'StructureDefinition-patient-birthPlaceXML.xml'
-      ]);
-      expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
-      expect(directoryContents.get('profiles')).toEqual([
-        'StructureDefinition-MyPatient.json',
-        'StructureDefinition-MyTitlePatient.json'
-      ]);
-      expect(directoryContents.get('resources')).toEqual(['Patient-BazPatient.json']);
-      expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
-      expect(directoryContents.get('examples')).toEqual([
-        'Patient-BarPatient.json',
-        'PoorlyNamedPatient.json' // Not renamed from "PoorlyNamedPatient.json"
-      ]);
     });
 
     it('should add basic resource references to the ImplementationGuide resource', () => {

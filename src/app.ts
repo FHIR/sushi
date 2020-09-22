@@ -86,11 +86,12 @@ async function app() {
   const defs = new FHIRDefinitions();
   const dependencyDefs = loadExternalDependencies(defs, config);
 
-  // Load custom resources specified in ig-data folder
-  loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
-  if (isLegacyIgPubContext && !fs.existsSync(path.join(input, 'ig-data'))) {
-    loadCustomResources(path.join(input, '..', 'input'), defs);
+  // Load custom resources
+  if (!isIgPubContext) {
+    // In legacy configuration (both IG publisher context and any other tank), resources are in ig-data/input/
+    loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
   } else if (isIgPubContext) {
+    // In current tank configuration (input/fsh), resources will be in input/
     loadCustomResources(path.join(input, '..'), defs);
   }
 
