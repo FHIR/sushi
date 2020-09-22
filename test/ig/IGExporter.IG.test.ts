@@ -132,8 +132,7 @@ describe('IGExporter', () => {
             code: 'releaselabel',
             value: 'CI Build'
           }
-        ],
-        history: {} // to suppress warning for HL7 IGs
+        ]
       };
       pkg = new Package(config);
       pkg.profiles.push(...pkgProfiles);
