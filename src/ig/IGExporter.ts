@@ -51,8 +51,8 @@ export class IGExporter {
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string,
-    private readonly isIgPubContext: boolean = false,
-    private readonly isLegacyIgPubContext: boolean = false
+    private readonly isIgPubContext = false,
+    private readonly isLegacyIgPubContext = false
   ) {
     this.outputLog = new Map();
     this.config = pkg.config;
@@ -272,7 +272,7 @@ export class IGExporter {
     // To work around this, we set the necessary permissions on executable
     // scripts after copying them to the IG path.
     try {
-      if (!this.isIgPubContext || this.isLegacyIgPubContext) {
+      if (!this.isIgPubContext || !this.isLegacyIgPubContext) {
         chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
         chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
         chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
@@ -328,15 +328,15 @@ export class IGExporter {
       ensureDirSync(pageContentExportPath);
 
       if (filePath) {
-        const filePathString = `${path.basename(this.igDataPath)}${path.sep}${path.relative(
-          this.igDataPath,
-          filePath
-        )}`;
+        const filePathString = path.join(
+          path.basename(this.igDataPath),
+          path.relative(this.igDataPath, filePath)
+        );
 
         let preferredFileMessage =
           `Since a ${filePathString} file was found, the "indexPageContent" property in the ${this.configName} ` +
-          `will be ignored and an index.md file will not be generated. Remove the ${filePathString} ` +
-          `file to use the "indexPageContent" property in ${this.configName} to generate an index.md file instead.`;
+          'will be ignored and an index.md file will not be generated. Remove the "indexPageContent" ' +
+          `property in ${this.configName} to resolve this warning.`;
         if (this.shouldCopyFiles) {
           preferredFileMessage =
             `Since the "indexPageContent" property is present in the ${this.configName}, ` +
@@ -586,19 +586,19 @@ export class IGExporter {
     const pageData = pages.map(page => {
       const nameParts = page.match(/^(\d+)_(.*)/);
       let prefix: number = null;
-      let title: string;
+      let nameWithoutPrefix: string;
       const nameWithPrefix = page.slice(0, page.lastIndexOf('.'));
       if (nameParts == null) {
-        title = page.slice(0, page.lastIndexOf('.'));
+        nameWithoutPrefix = page.slice(0, page.lastIndexOf('.'));
       } else {
         prefix = parseInt(nameParts[1]);
-        title = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
+        nameWithoutPrefix = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
       }
       return {
         originalName: page,
         prefix: prefix,
-        name: this.isLegacyIgPubContext ? title : nameWithPrefix,
-        title: titleCase(words(title).join(' ')),
+        name: this.isLegacyIgPubContext ? nameWithoutPrefix : nameWithPrefix,
+        title: titleCase(words(nameWithoutPrefix).join(' ')),
         fileType: page.slice(page.lastIndexOf('.') + 1)
       };
     });
@@ -701,9 +701,12 @@ export class IGExporter {
 
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.config.menu) {
-      const filePathString = `${path.basename(this.igDataPath)}${path.sep}input${path.sep}includes${
-        path.sep
-      }menu.xml`;
+      const filePathString = path.join(
+        path.basename(this.igDataPath),
+        'input',
+        'includes',
+        'menu.xml'
+      );
 
       let preferredFileMessage =
         `Since a ${filePathString} file was found, the "menu" property in the ${this.configName} ` +
@@ -736,7 +739,7 @@ export class IGExporter {
       });
       menu += '</ul>';
 
-      const filePathString = `${path.basename(this.igDataPath)}${path.sep}input${path.sep}includes`;
+      const filePathString = path.join(path.basename(this.igDataPath), 'input', 'includes');
       const warning = warningBlock(
         `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
@@ -1148,7 +1151,7 @@ export class IGExporter {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     if (this.config.template != null) {
       if (existsSync(inputIniPath)) {
-        const filePathString = `${path.basename(this.igDataPath)}${path.sep}ig.ini`;
+        const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
 
         let preferredFileMessage =
           `Since a ${filePathString} file was found, the "template" property in the ${this.configName} ` +
@@ -1235,7 +1238,7 @@ export class IGExporter {
         file: inputIniPath
       });
     }
-    const filePathString = `${path.basename(this.igDataPath)}${path.sep}ig.ini`;
+    const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
     if (inputIni.IG) {
       if (inputIni.IG.ig == null) {
         const igValue = `input/ImplementationGuide-${this.config.id}.json`;
@@ -1316,7 +1319,7 @@ export class IGExporter {
   addPackageList(igPath: string): void {
     const packageListPath = path.join(this.igDataPath, 'package-list.json');
     const isIgDataPackageList = existsSync(packageListPath);
-    const filePathString = `${path.basename(this.igDataPath)}${path.sep}package-list.json`;
+    const filePathString = path.join(path.basename(this.igDataPath), 'package-list.json');
 
     if (this.config.history) {
       const outputPath = path.join(igPath, 'package-list.json');
