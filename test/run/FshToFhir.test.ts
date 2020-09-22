@@ -5,7 +5,6 @@ import { errorsAndWarnings, logger } from '../../src/utils/';
 import { fshToFhir } from '../../src/run';
 import * as utils from '../../src/utils';
 import { Configuration } from '../../src/fshtypes';
-import { Package } from '../../src/export';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 
 describe('#FshToFhir', () => {
@@ -33,7 +32,7 @@ describe('#FshToFhir', () => {
     await expect(fshToFhir('')).resolves.toEqual({
       errors: [],
       warnings: [],
-      fhir: new Package(defaultConfig)
+      fhir: []
     });
     expect(logger.level).toBe('info');
   });
@@ -49,7 +48,7 @@ describe('#FshToFhir', () => {
     });
     expect(results.errors[0].message).toMatch(/mismatched input 'Bad'/);
     expect(results.warnings).toHaveLength(0);
-    expect(results.fhir).toEqual(new Package(defaultConfig));
+    expect(results.fhir).toEqual([]);
     expect(logger.level).toBe('error');
   });
 
@@ -65,7 +64,7 @@ describe('#FshToFhir', () => {
     // errors are still tracked, even when the logger is silent
     expect(results.errors[0].message).toMatch(/mismatched input 'Bad'/);
     expect(results.warnings).toHaveLength(0);
-    expect(results.fhir).toEqual(new Package(defaultConfig));
+    expect(results.fhir).toEqual([]);
     expect(logger.transports[0].silent).toBe(true);
   });
 
@@ -90,13 +89,7 @@ describe('#FshToFhir', () => {
     ).resolves.toEqual({
       errors: [],
       warnings: [],
-      fhir: new Package({
-        canonical: 'http://mycanonical.org',
-        dependencies: [{ packageId: 'hl7.fhir.test.core', version: '1.2.3' }],
-        version: '3.2.1',
-        FSHOnly: true,
-        fhirVersion: ['4.0.1']
-      })
+      fhir: []
     });
   });
 
@@ -158,9 +151,9 @@ describe('#FshToFhir', () => {
       expect(results.errors).toHaveLength(0);
       expect(results.warnings).toHaveLength(0);
 
-      expect(results.fhir.profiles).toHaveLength(1);
-      expect(results.fhir.profiles[0].id).toBe('MyPatient');
-      const name = results.fhir.profiles[0].elements.find(e => e.id == 'Patient.name');
+      expect(results.fhir).toHaveLength(1);
+      expect(results.fhir[0].id).toBe('MyPatient');
+      const name = results.fhir[0].differential.element.find((e: any) => e.id == 'Patient.name');
       expect(name.mustSupport).toBe(true);
     });
 
@@ -179,12 +172,14 @@ describe('#FshToFhir', () => {
       ]);
       expect(results.errors).toHaveLength(0);
       expect(results.warnings).toHaveLength(0);
-      expect(results.fhir.profiles).toHaveLength(2);
-      expect(results.fhir.profiles[0].id).toBe('MyPatient1');
-      const name = results.fhir.profiles[0].elements.find(e => e.id == 'Patient.name');
+      expect(results.fhir).toHaveLength(2);
+      expect(results.fhir[0].id).toBe('MyPatient1');
+      const name = results.fhir[0].differential.element.find((e: any) => e.id == 'Patient.name');
       expect(name.mustSupport).toBe(true);
-      expect(results.fhir.profiles[1].id).toBe('MyPatient2');
-      const gender = results.fhir.profiles[1].elements.find(e => e.id == 'Patient.gender');
+      expect(results.fhir[1].id).toBe('MyPatient2');
+      const gender = results.fhir[1].differential.element.find(
+        (e: any) => e.id == 'Patient.gender'
+      );
       expect(gender.mustSupport).toBe(true);
     });
 
@@ -207,8 +202,8 @@ describe('#FshToFhir', () => {
       expect(results.errors[1].message).toMatch(/Parent AlsoFakeProfile not found/);
       expect(results.errors[1].input).toBe('Input_1');
       expect(results.warnings).toHaveLength(0);
-      expect(results.fhir.profiles).toHaveLength(0);
-      expect(results.fhir).toEqual(new Package(defaultConfig));
+      expect(results.fhir).toHaveLength(0);
+      expect(results.fhir).toEqual([]);
     });
   });
 });

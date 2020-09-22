@@ -1,5 +1,5 @@
 import { RawFSH } from '../import';
-import { exportFHIR, Package } from '../export';
+import { exportFHIR } from '../export';
 import { FHIRDefinitions } from '../fhirdefs';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import {
@@ -14,7 +14,7 @@ export async function fshToFhir(
   input: string | string[],
   options: fshToFhirOptions = {}
 ): Promise<{
-  fhir: Package;
+  fhir: any[];
   errors: ErrorsAndWarnings['errors'];
   warnings: ErrorsAndWarnings['warnings'];
 }> {
@@ -65,9 +65,17 @@ export async function fshToFhir(
 
   // process FSH text into FHIR
   const outPackage = exportFHIR(tank, defs);
+  const fhir: any[] = [];
+  (['profiles', 'extensions', 'instances', 'valueSets', 'codeSystems'] as const).forEach(
+    artifactType => {
+      outPackage[artifactType].forEach((artifact: { toJSON: (snapshot: boolean) => any }) => {
+        fhir.push(artifact.toJSON(false));
+      });
+    }
+  );
 
   return {
-    fhir: outPackage,
+    fhir,
     errors: errorsAndWarnings.errors,
     warnings: errorsAndWarnings.warnings
   };
