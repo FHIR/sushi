@@ -1337,7 +1337,7 @@ export class IGExporter {
           }
         );
       }
-    } else if (isIgDataPackageList) {
+    } else if (isIgDataPackageList && this.shouldCopyFiles) {
       this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
       logger.info(`Copied ${filePathString}.`);
     }
