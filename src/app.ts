@@ -78,6 +78,22 @@ async function app() {
     process.exit(1);
   }
 
+  let tank: FSHTank;
+  try {
+    const rawFSH = getRawFSHes(input);
+    if (rawFSH.length === 0) {
+      logger.info('No FSH files present.');
+      process.exit(0);
+    }
+    if (!config) {
+      process.exit(1);
+    }
+    tank = fillTank(rawFSH, config);
+  } catch {
+    program.outputHelp();
+    process.exit(1);
+  }
+
   // Load dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs = loadExternalDependencies(defs, config);
@@ -85,14 +101,6 @@ async function app() {
   // Load custom resources specified in ig-data folder
   loadCustomResources(input, defs);
 
-  let tank: FSHTank;
-  try {
-    const rawFSH = getRawFSHes(input);
-    tank = fillTank(rawFSH, config);
-  } catch {
-    program.outputHelp();
-    process.exit(1);
-  }
   await Promise.all(dependencyDefs);
 
   // Check for StructureDefinition

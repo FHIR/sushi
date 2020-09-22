@@ -148,11 +148,10 @@ describe('Processing', () => {
       });
     });
 
-    it('should log and throw an error when config.yaml is not found in the input directory', () => {
+    it('should log an error when config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
-      expect(() => {
-        readConfig(input);
-      }).toThrow();
+      const config = readConfig(input);
+      expect(config).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(/No config\.yaml/s);
     });
 
