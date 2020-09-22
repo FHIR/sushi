@@ -84,6 +84,7 @@ export class IGExporter {
     this.addIncludeContents(outPath);
     this.addMenuXML(outPath);
     this.addIgIni(outPath);
+    this.addPackageList(outPath);
     this.addIgnoreWarningsFile(outPath);
     this.addImplementationGuide(outPath);
     this.addOutputLog(outPath);
@@ -1259,6 +1260,20 @@ export class IGExporter {
       outputFileSync(outputPath, outputIniContents);
       this.updateOutputLogForCopiedPath(outputPath, inputIniPath);
       logger.info('Copied ig.ini.');
+    }
+  }
+
+  /**
+   * Adds the package-list.json file to the IG. Copied from the
+   *  package-list.json found at ig-data/package-list.json.
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
+  addPackageList(igPath: string): void {
+    const packageListPath = path.join(this.igDataPath, 'package-list.json');
+    if (existsSync(packageListPath)) {
+      this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
+      logger.info('Copied ig-data/package-list.json.');
     }
   }
 

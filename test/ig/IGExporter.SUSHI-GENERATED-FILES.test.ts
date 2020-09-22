@@ -75,6 +75,9 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /\| input[\/\\]pagecontent[\/\\]unsupported\.html \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]input[\/\\]pagecontent[\/\\]unsupported\.html \s*\|/
       );
+      expect(content).toMatch(
+        /\| package-list\.json \s*\| copied \s*\| .*[\/\\]ig-data[\/\\]package-list\.json \s*\|/
+      );
     });
 
     it('should generate a SUSHI-GENERATED-FILES.md with the correct listings when configs are generated', () => {
@@ -138,6 +141,7 @@ describe('IGExporter', () => {
       expect(content).not.toMatch('ig.ini');
       expect(content).not.toMatch('menu.xml');
       expect(content).not.toMatch('index.md');
+      expect(content).not.toMatch('package-list.json');
     });
 
     it('should generate a SUSHI-GENERATED-FILES.md with the correct listings when in publisher context', () => {
