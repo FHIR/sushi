@@ -373,8 +373,8 @@ describe('Processing', () => {
         temp.cleanupSync();
       });
 
-      it('should write all resources to the "generated" directory', () => {
-        const generatedPath = path.join(tempIGPubRoot, 'input', 'generated');
+      it('should write all resources to the "fsh-generated" directory', () => {
+        const generatedPath = path.join(tempIGPubRoot, 'fsh-generated');
         expect(fs.existsSync(generatedPath)).toBeTruthy();
         const allGeneratedFiles = fs.readdirSync(generatedPath);
         expect(allGeneratedFiles.length).toBe(12);

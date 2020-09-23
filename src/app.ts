@@ -48,8 +48,13 @@ async function app() {
       console.log('    Default: "."');
       console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
-      console.log('    Default: "build"');
-      console.log('    If input/fsh/ subdirectory present, default output is to input/generated/');
+      console.log('    Default: "fsh-generated"');
+      console.log(
+        '    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"'
+      );
+      console.log(
+        '    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"'
+      );
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
