@@ -252,17 +252,17 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       ) as AssignmentRule;
       const id = idRule?.value ?? instance.id;
       clone = cloneDeep(rule);
-      const fv = getRuleValue(clone) as FshReference;
-      fv.reference = `${instanceMeta.sdType}/${id}`;
-      fv.sdType = instanceMeta.sdType;
+      const assignedReference = getRuleValue(clone) as FshReference;
+      assignedReference.reference = `${instanceMeta.sdType}/${id}`;
+      assignedReference.sdType = instanceMeta.sdType;
     }
   } else if (value instanceof FshCode) {
     const codeSystem = tank.fish(value.system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
     if (codeSystem && codeSystemMeta) {
       clone = cloneDeep(rule);
-      const fv = getRuleValue(clone) as FshCode;
-      fv.system = codeSystemMeta.url;
+      const assignedCode = getRuleValue(clone) as FshCode;
+      assignedCode.system = codeSystemMeta.url;
     }
   }
   return clone ?? rule;

@@ -70,7 +70,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned string by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned string by fixed[x]', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
       batchLotNumber.assignValue('foo bar', true);
       expect(batchLotNumber.fixedString).toBe('foo bar');
@@ -103,7 +103,7 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(identifierValue);
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning a decimal to a different value set in a parent by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning a decimal to a different value set in a parent by fixed[x]', () => {
       const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
       // @ts-ignore
       identifier.fixedIdentifier = { value: 'Foo' };
@@ -125,7 +125,7 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(identifierValue);
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const batchLotNumber = medication.elements.find(e => e.id === 'Medication.batch.lotNumber');
       batchLotNumber.assignValue('foo bar', true);
       expect(batchLotNumber.fixedString).toBe('foo bar');
@@ -167,7 +167,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned uri by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned uri by fixed[x]', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
       url.assignValue('http://example.org', true);
       expect(url.fixedUri).toBe('http://example.org');
@@ -178,7 +178,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const url = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.url');
       url.assignValue('http://example.org', true);
       expect(url.fixedUri).toBe('http://example.org');
@@ -236,7 +236,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned URL by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned URL by fixed[x]', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
@@ -249,7 +249,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const url = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.implementation.url'
       );
@@ -311,7 +311,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned canonical by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned canonical by fixed[x]', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
@@ -324,7 +324,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'
       );
@@ -386,7 +386,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned base64Binary by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned base64Binary by fixed[x]', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
@@ -399,7 +399,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
       );
@@ -459,7 +459,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned instant by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned instant by fixed[x]', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
       issued.assignValue('2015-02-07T13:28:17.239+02:00', true);
       expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
@@ -470,7 +470,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const issued = observation.elements.find(e => e.id === 'Observation.issued');
       issued.assignValue('2015-02-07T13:28:17.239+02:00', true);
       expect(issued.fixedInstant).toBe('2015-02-07T13:28:17.239+02:00');
@@ -526,7 +526,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned date by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned date by fixed[x]', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
       birthDate.assignValue('1905-08-23', true);
       expect(birthDate.fixedDate).toBe('1905-08-23');
@@ -537,7 +537,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const birthDate = patient.elements.find(e => e.id === 'Patient.birthDate');
       birthDate.assignValue('1905-08-23', true);
       expect(birthDate.fixedDate).toBe('1905-08-23');
@@ -593,7 +593,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned dateTime by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned dateTime by fixed[x]', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
       date.assignValue('1905-08-23', true);
       expect(date.fixedDateTime).toBe('1905-08-23');
@@ -604,7 +604,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const date = riskEvidenceSynthesis.elements.find(e => e.id === 'RiskEvidenceSynthesis.date');
       date.assignValue('1905-08-23', true);
       expect(date.fixedDateTime).toBe('1905-08-23');
@@ -666,7 +666,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned time by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned time by fixed[x]', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
@@ -679,7 +679,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const hoursOfOperationClosingTime = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.closingTime'
       );
@@ -739,7 +739,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned oid by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned oid by fixed[x]', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       inputValueOid.assignValue('urn:oid:1.2.3.4.5', true);
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
@@ -750,7 +750,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const inputValueOid = task.findElementByPath('input.valueOid', fisher);
       inputValueOid.assignValue('urn:oid:1.2.3.4.5', true);
       expect(inputValueOid.fixedOid).toBe('urn:oid:1.2.3.4.5');
@@ -802,7 +802,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned id by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned id by fixed[x]', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       uid.assignValue('uniqueId123', true);
       expect(uid.fixedId).toBe('uniqueId123');
@@ -813,7 +813,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const uid = imagingStudy.elements.find(e => e.id === 'ImagingStudy.series.uid');
       uid.assignValue('uniqueId123', true);
       expect(uid.fixedId).toBe('uniqueId123');
@@ -871,7 +871,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned markdown by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned markdown by fixed[x]', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
@@ -884,7 +884,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const description = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.description'
       );
@@ -928,7 +928,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned uuid by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned uuid by fixed[x]', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
       inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
@@ -939,7 +939,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const inputValueUuid = task.findElementByPath('input.valueUuid', fisher);
       inputValueUuid.assignValue('urn:uuid:c757873d-ec9a-4326-a141-556f43239520', true);
       expect(inputValueUuid.fixedUuid).toBe('urn:uuid:c757873d-ec9a-4326-a141-556f43239520');
@@ -1027,7 +1027,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning an already assigned xhtml by assigned[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning an already assigned xhtml by fixed[x]', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       narrativeDiv.assignValue(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>',
@@ -1046,7 +1046,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw FixedToPatternError when trying to change assigned[x] to pattern[x]', () => {
+    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       narrativeDiv.assignValue(
         '<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>',

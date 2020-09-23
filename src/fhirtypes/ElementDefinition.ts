@@ -1642,8 +1642,8 @@ export class ElementDefinition {
   getAssignableDescendents(): ElementDefinition[] {
     const assignableChildren = this.children(true).filter(e => e.min > 0);
     let assignableDescendents: ElementDefinition[] = [];
-    assignableChildren.forEach(fc => {
-      assignableDescendents = assignableDescendents.concat(fc.getAssignableDescendents());
+    assignableChildren.forEach(ac => {
+      assignableDescendents = assignableDescendents.concat(ac.getAssignableDescendents());
     });
     return [...assignableChildren, ...assignableDescendents];
   }
