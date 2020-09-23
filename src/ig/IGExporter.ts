@@ -649,7 +649,9 @@ export class IGExporter {
    */
   addMenuXML(igPath: string): void {
     const menuXMLDefaultPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
-    const menuXMLOutputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
+    const menuXMLOutputPath = this.isIgPubContext
+      ? path.join(igPath, 'fsh-generated', 'includes', 'menu.xml')
+      : path.join(igPath, 'input', 'includes', 'menu.xml');
 
     // If user provided menu file in input/includes and no config, copy over the file.
     if (existsSync(menuXMLDefaultPath) && !this.config.menu && this.shouldCopyFiles) {
