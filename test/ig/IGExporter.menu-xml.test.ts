@@ -21,16 +21,13 @@ describe('IGExporter', () => {
   describe('#menu-xml', () => {
     let tempOut: string;
 
-    beforeAll(() => {
-      tempOut = temp.mkdirSync('sushi-test');
-    });
-
-    afterAll(() => {
-      temp.cleanupSync();
-    });
-
     beforeEach(() => {
+      tempOut = temp.mkdirSync('sushi-test');
       loggerSpy.reset();
+    });
+
+    afterEach(() => {
+      temp.cleanupSync();
     });
 
     it('should do nothing when config.menu is undefined and none provided', () => {
@@ -62,7 +59,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    it('should use config.menu when defined even with user-provided menu.xml present and log a warning', () => {
+    it('should use config.menu when defined even with user-provided menu.xml present and log a warning in legacy configuration', () => {
       const config = { ...minimalConfig };
       config.menu = [{ name: 'Animals', url: 'animals.html' }];
       const pkg = new Package(config);
@@ -86,6 +83,28 @@ describe('IGExporter', () => {
       expect(loggerSpy.getLastMessage()).toMatch(
         /Found both a "menu" property in sushi-config.yaml and a menu.xml file.*File: .*menu.xml/s
       );
+      expect(loggerSpy.getLastMessage()).toMatch(
+        `ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored`
+      );
+    });
+
+    it('should use user-provided menu.xml even when config.menu when defined and log a warning', () => {
+      const config = { ...minimalConfig };
+      config.menu = [{ name: 'Animals', url: 'animals.html' }];
+      const pkg = new Package(config);
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
+      const exporter = new IGExporter(pkg, null, igDataPath, true); // New tank configuration input/fsh/;
+      exporter.addMenuXML(tempOut);
+      const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
+      expect(fs.existsSync(menuPath)).toBeFalsy(); // Should not copy file or generate new one
+
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Found both a "menu" property in sushi-config.yaml and a menu.xml file.*File: .*menu.xml/s
+      );
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /the "menu" property in the sushi-config\.yaml will be ignored/s
+      );
     });
 
     it('should build simple menu.xml when provided in config.menu', () => {
@@ -96,7 +115,8 @@ describe('IGExporter', () => {
         { name: 'Other' }
       ];
       const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, '');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
+      const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();

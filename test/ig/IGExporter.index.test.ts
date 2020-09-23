@@ -18,21 +18,18 @@ describe('IGExporter', () => {
     let indexXMLPagesPath: string;
     let igPath: string;
 
-    beforeAll(() => {
+    beforeEach(() => {
       tempOut = temp.mkdirSync('sushi-test');
       indexMarkdownPageContentPath = path.join(tempOut, 'input', 'pagecontent', 'index.md');
       indexXMLPageContentPath = path.join(tempOut, 'input', 'pagecontent', 'index.xml');
       indexMarkdownPagesPath = path.join(tempOut, 'input', 'pages', 'index.md');
       indexXMLPagesPath = path.join(tempOut, 'input', 'pages', 'index.xml');
       igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
-    });
-
-    afterAll(() => {
-      temp.cleanupSync();
-    });
-
-    beforeEach(() => {
       loggerSpy.reset();
+    });
+
+    afterEach(() => {
+      temp.cleanupSync();
     });
 
     it('should not export index file when config.indexPageContent is not defined and none provided', () => {
@@ -205,7 +202,8 @@ describe('IGExporter', () => {
     it('should use config.indexPageContent to generate an index.md file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
       const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, '');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
+      const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
       exporter.addIndex(tempOut);
       exporter.addImplementationGuide(tempOut);
@@ -237,7 +235,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(loggerSpy.getAllMessages('info').length);
     });
 
-    it('should log a warning if config.indexPageContent defined and user provided index file', () => {
+    it('should log a warning if config.indexPageContent defined and user provided index file and generate index.md in legacy configuration', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
       const pkg = new Package(config);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
@@ -266,6 +264,42 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         /Found both an "indexPageContent" property in sushi-config\.yaml and an index file.*File: .*index.md/s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        `ig-data${path.sep}input${path.sep}pagecontent${path.sep}index.md file will be ignored`
+      );
+    });
+
+    it('should log a warning if config.indexPageContent defined and use user provided file but not copy file', () => {
+      const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
+      const pkg = new Package(config);
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
+      const exporter = new IGExporter(pkg, null, igDataPath, true); // New tank configuration input/fsh/;
+      exporter.initIG();
+      exporter.addIndex(tempOut);
+      exporter.addImplementationGuide(tempOut);
+      const indexPath = path.join(tempOut, 'input', 'pagecontent', 'index.md');
+      expect(fs.existsSync(indexPath)).toBeFalsy(); // Do not copy user provided file or generate a new file
+
+      // Checks that the index.md file is added to IG definition
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          nameUrl: 'index.html',
+          title: 'Home',
+          generation: 'markdown'
+        }
+      ]);
+
+      // No errors logged, warning logged that both indexPageContent and index file provided
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Found both an "indexPageContent" property in sushi-config\.yaml and an index file.*File: .*index.md/s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /the "indexPageContent" property in the sushi-config\.yaml will be ignored/s
       );
     });
   });
