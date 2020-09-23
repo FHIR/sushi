@@ -147,11 +147,6 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should copy over the static files', () => {
-      exporter.export(tempOut);
-      expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
-    });
-
     it('should generate an implementation guide for simple-ig', () => {
       exporter.export(tempOut);
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');

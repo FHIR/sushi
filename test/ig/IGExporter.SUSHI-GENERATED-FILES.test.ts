@@ -118,7 +118,6 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
       expect(content).toMatch(
         /\| input[\/\\]includes[\/\\]menu\.xml \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml \s*\|/
       );
@@ -146,7 +145,6 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
       expect(content).not.toMatch('ig.ini');
       expect(content).not.toMatch('menu.xml');
       expect(content).not.toMatch('index.md');
@@ -169,7 +167,6 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
       expect(content).not.toMatch('ig.ini');
       expect(content).not.toMatch('menu.xml');
       expect(content).not.toMatch('index.md');

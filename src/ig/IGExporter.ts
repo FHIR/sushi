@@ -79,7 +79,6 @@ export class IGExporter {
     this.addPredefinedResources(outPath);
     this.addConfiguredResources();
     this.addConfiguredGroups();
-    this.addStaticFiles(outPath);
     this.addIndex(outPath);
     if (!this.config.pages?.length) {
       this.addOtherPageContent(outPath);
@@ -244,16 +243,6 @@ export class IGExporter {
     }
 
     return dependsOn;
-  }
-
-  /**
-   * Add the static files that (currently) do not change from IG to IG.
-   *
-   * @param igPath {string} - the path where the IG is exported to
-   */
-  private addStaticFiles(igPath: string): void {
-    const inputPath = path.join(__dirname, 'files');
-    this.copyAsIs(inputPath, igPath);
   }
 
   /**
