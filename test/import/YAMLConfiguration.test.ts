@@ -104,6 +104,26 @@ describe('YAMLConfiguration', () => {
         excludettl: true,
         validation: ['allow-any-extensions', 'no-broken-links']
       });
+      expect(config.history).toEqual({
+        current: 'http://build.fhir.org/ig/HL7/example-ig/',
+        '1.0.0': {
+          fhirversion: '4.0.1',
+          date: '2020-03-06',
+          desc: 'STU 1 Release',
+          path: 'https://hl7.org/fhir/us/example/STU1/',
+          status: 'trial-use',
+          sequence: 'STU 1',
+          current: true
+        },
+        '0.9.1': {
+          fhirversion: '4.0.0',
+          date: '2019-06-10',
+          desc: 'Initial STU ballot (Sep 2019 Ballot)',
+          path: 'https://hl7.org/fhir/us/example/2019Sep/',
+          status: 'ballot',
+          sequence: 'STU 1'
+        }
+      });
     });
   });
 });

@@ -1,5 +1,5 @@
 # This IG YML file is inspired by the ImplementationGuide resource
-# and also draws from package.json and ig.ini.
+# and also draws from package.json, package-list.json, and ig.ini.
 # That said, it is structured for ease-of-use, so it is not strictly
 # conformant to any of those existing configuration formats.
 
@@ -181,6 +181,39 @@ menu:
 parameters:
   excludettl: true
   validation: [allow-any-extensions, no-broken-links]
+
+# The history property corresponds to package-list.json. SUSHI will
+# use the existing top-level properties in its config to populate the
+# top-level package-list.json properties: packageId, canonical, title,
+# and introduction. Authors that wish to provide different values can
+# supply them as properties under history. All other properties under
+# history are assumed to be versions. To provide a custom package-list.json
+# file, remove this property and include a package-list.json file in ig-data.
+history:
+  # The current version is special. If the author provides only a
+  # single value, it is assumed to be the URL path to the current
+  # build. The following default values will then be used:
+  #   desc: Continuous Integration Build (latest in version control)
+  #   status: ci-build
+  #   current: true
+  current: http://build.fhir.org/ig/HL7/example-ig/
+  # All other versions need each of their values fully specified.
+  # See: https://confluence.hl7.org/pages/viewpage.action?pageId=66928420#FHIRIGPackageListdoco-PublicationObject
+  1.0.0:
+    fhirversion: 4.0.1
+    date: 2020-03-06
+    desc: STU 1 Release
+    path: https://hl7.org/fhir/us/example/STU1/
+    status: trial-use
+    sequence: STU 1
+    current: true
+  0.9.1:
+    fhirversion: 4.0.0
+    date: 2019-06-10
+    desc: Initial STU ballot (Sep 2019 Ballot)
+    path: https://hl7.org/fhir/us/example/2019Sep/
+    status: ballot
+    sequence: STU 1
 
 # The indexPageContent property is used to generate a basic index.md file. To provide a
 # custom index file, do not include this property and include an index.md or index.xml file
