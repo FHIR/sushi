@@ -201,7 +201,7 @@ export function writeFHIRResources(
     resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
   ) => {
     const exportDir = useGeneratedFolder
-      ? path.join(outDir, 'fsh-generated')
+      ? path.join(outDir, 'fsh-generated', 'resources')
       : path.join(outDir, 'input', folder);
     resources.forEach(resource => {
       fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
