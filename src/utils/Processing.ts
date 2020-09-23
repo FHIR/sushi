@@ -111,7 +111,7 @@ export function readConfig(input: string): Configuration {
   }
   if (!config) {
     logger.error(
-      'No sushi-config.yaml in FSH definition folder, and no configuration could' +
+      `No sushi-config.yaml in ${input} folder, and no configuration could` +
         ' be extracted from an ImplementationGuide resource.'
     );
     throw Error;

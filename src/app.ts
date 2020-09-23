@@ -70,6 +70,7 @@ async function app() {
 
   logger.info(`Running ${getVersion()}`);
 
+  const originalInput = input;
   input = findInputDir(input);
 
   // If an input/fsh subdirectory is used, we are in an IG Publisher context
@@ -82,7 +83,7 @@ async function app() {
 
   let config: Configuration;
   try {
-    config = readConfig(input);
+    config = readConfig(isIgPubContext ? originalInput : input);
   } catch {
     process.exit(1);
   }
