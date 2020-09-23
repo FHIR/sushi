@@ -28,6 +28,9 @@ describe('IGExporter', () => {
 
     it('should export default files when no configuration values affect those files', () => {
       // defaults are:
+      // no package-list.json
+      const packageListPath = path.join(tempOut, 'package-list.json');
+      expect(fs.existsSync(packageListPath)).toBeFalsy();
       // no menu.xml
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeFalsy();
@@ -90,6 +93,14 @@ describe('IGExporter', () => {
         code: 'excludettl',
         value: 'true'
       });
+    });
+
+    it('should create package-list.json based upon configuration', () => {
+      const packageListPath = path.join(tempOut, 'package-list.json');
+      expect(fs.existsSync(packageListPath)).toBeTruthy();
+      const packageListContent = fs.readJSONSync(packageListPath);
+      expect(packageListContent['package-id']).toBe('fhir.us.example');
+      expect(packageListContent.list).toHaveLength(3);
     });
 
     it('should create menu.xml based upon configuration', () => {

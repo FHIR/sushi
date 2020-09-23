@@ -20,13 +20,14 @@ import {
 
 /**
  * YAMLConfiguration follows the proposed configuration format for FSH and incorporates aspects
- * of the ImplementationGuide, ig.ini, package.json, and menu.xml formats.
+ * of the ImplementationGuide, ig.ini, package.json, package-list.json, and menu.xml formats.
  *
  * This format is intended to be represented using YAML but is transformed into JSON for our use.
  *
  * @see {@link http://hl7.org/fhir/R4/implementationguide.html}
  * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#igroot}
  * @see {@link https://confluence.hl7.org/display/FHIR/NPM+Package+Specification}
+ * @see {@link https://confluence.hl7.org/pages/viewpage.action?pageId=66928420#FHIRIGPackageListdoco-PublicationObject}
  * @see {@link https://github.com/FHIR/sample-ig/blob/master/input/includes/menu.xml}
  */
 export type YAMLConfiguration = {
@@ -152,6 +153,21 @@ export type YAMLConfiguration = {
   // or should we just generate a very standard menu (since there may be too many pages to fit in
   // a menu)?
   menu?: YAMLConfigurationMenuTree;
+
+  // The history property corresponds to package-list.json. SUSHI will use the existing top-level
+  // properties in its config to populate the top-level package-list.json properties: package-id,
+  // canonical, title, and introduction. Authors that wish to provide different values can supply
+  // them as properties under history. All other properties under history are assumed to be
+  // versions. To provide a custom package-list.json file, remove this property and include a
+  // package-list.json file in ig-data.
+  //
+  // The current version is special. If the author provides only a single string value, it is
+  // assumed to be the URL path to the current build. The following default values will then be
+  // used:
+  // * desc: Continuous Integration Build (latest in version control)
+  // * status: ci-build
+  // * current: true
+  history?: YAMLConfigurationHistory;
 
   // The indexPageContent property is used to generate a basic index.md file. To provide a
   // custom index file, do not include this property and include an index.md or index.xml file
@@ -345,4 +361,39 @@ export type YAMLConfigurationParameterMap = {
 
 export type YAMLConfigurationMenuTree = {
   [key: string]: string | YAMLConfigurationMenuTree;
+};
+
+export type YAMLConfigurationHistory = {
+  'package-id'?: string;
+  canonical?: string;
+  title?: string;
+  introduction?: string;
+  current: string | YAMLConfigurationHistoryItem;
+  [key: string]: string | YAMLConfigurationHistoryItem;
+};
+
+export type YAMLConfigurationHistoryItem = {
+  date?: string | number; // YAML will parse year-only dates as numbers
+  desc?: string;
+  path: string;
+  changes?: string;
+  status?:
+    | 'ci-build'
+    | '#ci-build'
+    | 'preview'
+    | '#preview'
+    | 'ballot'
+    | '#ballot'
+    | 'trial-use'
+    | '#trial-use'
+    | 'update'
+    | '#update'
+    | 'normative'
+    | '#normative'
+    | 'trial=use+normative'
+    | '#trial=use+normative';
+
+  sequence?: string;
+  fhirversion?: string;
+  current?: boolean;
 };

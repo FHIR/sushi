@@ -49,7 +49,7 @@ SUSHI supports publishing implementation guides via the new template-based IG Pu
 If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", then SUSHI will generate a basic Implementation Guide project that can be built using the template-based IG Publisher.  SUSHI currently supports limited customization of the IG via the following files:
 
 * `ig-data/ig.ini`: If present, the user-provided igi.ini values will be merged with SUSHI-generated ig.ini.
-* `ig-data/package-list.json`: If present, will be copied into the corresponding location in the IG input folder.
+* `ig-data/package-list.json`: If present, it will be used instead of a generated package-list.json.
 * `ig-data/input/ignoreWarnings.txt`: If present, will be copied into the corresponding location in the IG input folder
 * `ig-data/input/images/*`: If present, image files will be copied into the IG input and can be referenced by user-provided pages.
 * `ig-data/input/pagecontent/index.[md|xml]`: If present, it will provide the content for the IG's main page.
