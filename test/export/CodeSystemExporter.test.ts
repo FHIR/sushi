@@ -1,7 +1,7 @@
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem, FshCode, RuleSet } from '../../src/fshtypes';
-import { CaretValueRule, InsertRule, FixedValueRule, ConceptRule } from '../../src/fshtypes/rules';
+import { CaretValueRule, InsertRule, AssignmentRule, ConceptRule } from '../../src/fshtypes/rules';
 import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
@@ -391,10 +391,10 @@ describe('CodeSystemExporter', () => {
       //
       // CodeSystem: Foo
       // * insert Bar
-      const valueRule = new FixedValueRule('experimental')
+      const valueRule = new AssignmentRule('experimental')
         .withFile('Value.fsh')
         .withLocation([1, 2, 3, 4]);
-      valueRule.fixedValue = true;
+      valueRule.value = true;
       const nameRule = new CaretValueRule('');
       nameRule.caretPath = 'title';
       nameRule.value = 'Wow fancy';
@@ -410,7 +410,7 @@ describe('CodeSystemExporter', () => {
       // experimental is not set to true
       expect(exported.experimental).toBeFalsy();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /FixedValueRule.*FshCodeSystem.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+        /AssignmentRule.*FshCodeSystem.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
   });

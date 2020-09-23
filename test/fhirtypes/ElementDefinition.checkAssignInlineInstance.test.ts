@@ -34,19 +34,19 @@ describe('ElementDefinition', () => {
     inlineCodeable._instanceMeta.sdType = 'CodeableConcept';
   });
 
-  describe('#checkFixInlineInstance', () => {
-    it('should return a resource when it can be fixed', () => {
+  describe('#checkAssignInlineInstance', () => {
+    it('should return a resource when it can be assigned', () => {
       const contained = observation.elements.find(e => e.id === 'Observation.contained');
-      const value = contained.checkFixInlineInstance(inlineInstance, fisher);
+      const value = contained.checkAssignInlineInstance(inlineInstance, fisher);
       expect(value.resourceType).toBe('Patient');
     });
 
-    it('should throw MismatchedTypeError when a Resource is fixed on a non-Resource element', () => {
+    it('should throw MismatchedTypeError when a Resource is assigned on a non-Resource element', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(() => {
-        status.checkFixInlineInstance(inlineInstance, fisher);
+        status.checkAssignInlineInstance(inlineInstance, fisher);
       }).toThrow(
-        'Cannot fix Patient value: MyInlineInstance. Value does not match element type: code'
+        'Cannot assign Patient value: MyInlineInstance. Value does not match element type: code'
       );
     });
   });

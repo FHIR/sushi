@@ -7,7 +7,7 @@ export class NoSingleTypeError extends Error implements Annotated {
   ];
   constructor(public type: string) {
     super(
-      `Cannot fix ${type} value on this element since this element does not have a single type`
+      `Cannot assign ${type} value on this element since this element does not have a single type`
     );
   }
 }

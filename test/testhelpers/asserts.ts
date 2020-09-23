@@ -2,9 +2,9 @@ import {
   Rule,
   CardRule,
   FlagRule,
-  ValueSetRule,
-  FixedValueRule,
-  FixedValueType,
+  BindingRule,
+  AssignmentRule,
+  AssignmentValueType,
   OnlyRule,
   OnlyRuleType,
   ContainsRule,
@@ -47,32 +47,32 @@ export function assertFlagRule(
   expect(flagRule.draft).toBe(draft);
 }
 
-export function assertValueSetRule(
+export function assertBindingRule(
   rule: Rule,
   path: string,
   valueSet: string,
   strength: string
 ): void {
-  expect(rule).toBeInstanceOf(ValueSetRule);
-  const valueSetRule = rule as ValueSetRule;
-  expect(valueSetRule.path).toBe(path);
-  expect(valueSetRule.valueSet).toBe(valueSet);
-  expect(valueSetRule.strength).toBe(strength);
+  expect(rule).toBeInstanceOf(BindingRule);
+  const bindingRule = rule as BindingRule;
+  expect(bindingRule.path).toBe(path);
+  expect(bindingRule.valueSet).toBe(valueSet);
+  expect(bindingRule.strength).toBe(strength);
 }
 
-export function assertFixedValueRule(
+export function assertAssignmentRule(
   rule: Rule,
   path: string,
-  value: FixedValueType,
+  value: AssignmentValueType,
   exactly = false,
   isInstance = false
 ): void {
-  expect(rule).toBeInstanceOf(FixedValueRule);
-  const fixedValueRule = rule as FixedValueRule;
-  expect(fixedValueRule.path).toBe(path);
-  expect(fixedValueRule.fixedValue).toEqual(value);
-  expect(fixedValueRule.exactly).toBe(exactly);
-  expect(fixedValueRule.isInstance).toEqual(isInstance);
+  expect(rule).toBeInstanceOf(AssignmentRule);
+  const assignmentRule = rule as AssignmentRule;
+  expect(assignmentRule.path).toBe(path);
+  expect(assignmentRule.value).toEqual(value);
+  expect(assignmentRule.exactly).toBe(exactly);
+  expect(assignmentRule.isInstance).toEqual(isInstance);
 }
 
 export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[]): void {
@@ -99,7 +99,7 @@ export function assertCaretValueRule(
   rule: Rule,
   path: string,
   caretPath: string,
-  value: FixedValueType,
+  value: AssignmentValueType,
   isInstance: boolean
 ): void {
   expect(rule).toBeInstanceOf(CaretValueRule);
