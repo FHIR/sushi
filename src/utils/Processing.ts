@@ -292,8 +292,14 @@ export async function init(): Promise<void> {
     '_updatePublisher.bat',
     '_updatePublisher.sh'
   ]) {
-    const res = await axios.get(`http://raw.githubusercontent.com/FHIR/sample-ig/master/${script}`);
-    fs.writeFileSync(path.join(outputDir, script), res.data);
+    try {
+      const res = await axios.get(
+        `http://raw.githubusercontent.com/FHIR/sample-ig/master/${script}`
+      );
+      fs.writeFileSync(path.join(outputDir, script), res.data);
+    } catch (e) {
+      logger.error(`Unable to download ${script}: ${e.message}`);
+    }
   }
   const maxLength = 31;
   const printName =
