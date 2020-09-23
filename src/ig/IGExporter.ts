@@ -1091,7 +1091,8 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   addImplementationGuide(igPath: string): void {
-    const igJsonPath = path.join(igPath, 'input', `ImplementationGuide-${this.ig.id}.json`);
+    const igJSONFolder = this.isIgPubContext ? path.join('fsh-generated', 'resources') : 'input';
+    const igJsonPath = path.join(igPath, igJSONFolder, `ImplementationGuide-${this.ig.id}.json`);
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
     this.updateOutputLog(
       igJsonPath,

@@ -38,12 +38,22 @@ describe('IGExporter', () => {
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy();
       // generated implementation guide
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
     });
 
     it('should put default content into ImplementationGuide file', () => {
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       const igContent = fs.readJSONSync(igPath);
 
       expect(igContent.id).toBe('fhir.us.minimal');
