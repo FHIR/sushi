@@ -82,6 +82,19 @@ async function app() {
     process.exit(1);
   }
 
+  if (config.history) {
+    if (isIgPubContext) {
+      delete config.history;
+      logger.error(
+        'Detected "history" property in configuration. The use of "history" is deprecated. Please remove the property and provide a package-list.json directly.'
+      );
+    } else {
+      logger.warn(
+        'Use of "history" property in configuration is deprecated and will be removed in a future version. Please remove the property and provide a package-list.json directly.'
+      );
+    }
+  }
+
   // Load dependencies
   const defs = new FHIRDefinitions();
   const dependencyDefs = loadExternalDependencies(defs, config);
