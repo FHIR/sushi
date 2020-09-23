@@ -90,7 +90,7 @@ async function app() {
   if (!isIgPubContext) {
     // In legacy configuration (both IG publisher context and any other tank), resources are in ig-data/input/
     loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
-  } else if (isIgPubContext) {
+  } else {
     // In current tank configuration (input/fsh), resources will be in input/
     loadCustomResources(path.join(input, '..'), defs);
   }

@@ -1194,7 +1194,7 @@ export class IGExporter {
     iniObj.ig = `input/ImplementationGuide-${this.config.id}.json`;
     iniObj.template = this.config.template;
     const comment = [
-      'This ig.ini was generated using the template property in sushi-config.yaml. To provide your own',
+      `This ig.ini was generated using the template property in ${this.configName}. To provide your own`,
       `ig.ini, create an ig.ini file in the ${path.basename(
         this.igDataPath
       )} folder with required properties: ig, template.`,
@@ -1360,8 +1360,9 @@ export class IGExporter {
       'files.',
       '',
       'NOTE: This file does not currently list the FHIR resources and examples generated from .fsh files. It only',
-      'lists those files generated from project configs or the contents in the',
-      `${path.basename(this.igDataPath)} folder.`,
+      `lists those files generated from project configs or the contents in the ${path.basename(
+        this.igDataPath
+      )} folder.`,
       '',
       ''
     ].join(EOL);
