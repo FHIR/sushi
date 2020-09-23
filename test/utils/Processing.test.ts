@@ -364,7 +364,7 @@ describe('Processing', () => {
       temp.cleanupSync();
     });
 
-    describe('IG Publisher mode and flat tank', () => {
+    describe('IG Publisher mode', () => {
       beforeAll(() => {
         writeFHIRResources(tempIGPubRoot, outPackage, false, true);
       });
@@ -393,7 +393,7 @@ describe('Processing', () => {
       });
     });
 
-    describe('legacy IG Publisher mode', () => {
+    describe('legacy IG Publisher mode and legacy flat tank', () => {
       beforeAll(() => {
         writeFHIRResources(tempRoot, outPackage, false, false);
       });

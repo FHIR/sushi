@@ -123,8 +123,7 @@ async function app() {
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  const useGeneratedFolder = !isLegacyIgPubContext;
-  writeFHIRResources(outDir, outPackage, program.snapshot, useGeneratedFolder);
+  writeFHIRResources(outDir, outPackage, program.snapshot, isIgPubContext);
 
   // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
   if (config.FSHOnly) {
