@@ -20,9 +20,7 @@ import {
   Configuration,
   ConfigurationGroup,
   ConfigurationResource,
-  ConfigurationMenuItem,
-  ConfigurationHistory,
-  ConfigurationHistoryItem
+  ConfigurationMenuItem
 } from '../fshtypes/Configuration';
 import { logger } from '../utils/FSHLogger';
 import { parseCodeLexeme } from './parseCodeLexeme';
@@ -160,7 +158,6 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     templates: parseTemplates(yaml.templates, file),
     template: yaml.template,
     menu: parseMenu(yaml.menu),
-    history: parseHistory(yaml, file),
     indexPageContent: yaml.indexPageContent,
     FSHOnly: yaml.FSHOnly ?? false
   };
@@ -181,6 +178,14 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
         { file }
       );
     }
+  }
+
+  // @ts-ignore
+  if (yaml.history) {
+    logger.warn(
+      'The "history" property is set in the configuration. Use of this property to generate a package-list.json file is deprecated, and the property will be ignored',
+      { file }
+    );
   }
 
   return config;
@@ -735,83 +740,6 @@ function parseMenu(yamlMenu: YAMLConfigurationMenuTree): ConfigurationMenuItem[]
     return item;
   });
 }
-
-function parseHistory(yamlConfig: YAMLConfiguration, file: string): ConfigurationHistory {
-  const yamlHistory = yamlConfig.history;
-  if (yamlHistory == null) {
-    return;
-  }
-  const history: ConfigurationHistory = {
-    'package-id': yamlHistory['package-id'] ?? yamlConfig.packageId ?? yamlConfig.id,
-    canonical: yamlHistory.canonical ?? yamlConfig.canonical,
-    title: yamlHistory.title ?? yamlConfig.title,
-    introduction: yamlHistory.introduction ?? yamlConfig.description,
-    list: []
-  };
-  if (yamlHistory.current) {
-    if (typeof yamlHistory.current === 'string') {
-      history.list.push({
-        version: 'current',
-        desc: 'Continuous Integration Build (latest in version control)',
-        path: yamlHistory.current,
-        status: 'ci-build',
-        current: true
-      });
-    } else {
-      history.list.push({
-        version: 'current',
-        date: normalizeToString(yamlHistory.current.date),
-        desc:
-          yamlHistory.current.desc ?? 'Continuous Integration Build (latest in version control)',
-        path: required(yamlHistory.current.path, 'history[current].path', file),
-        changes: yamlHistory.current.changes,
-        status: parseCodeWithRequiredValues(
-          yamlHistory.current.status ?? 'ci-build',
-          allowedHistoryStatus,
-          'history[current].status',
-          file
-        ),
-        sequence: yamlHistory.current.sequence,
-        fhirversion: yamlHistory.current.fhirversion,
-        current: yamlHistory.current.current ?? true
-      });
-    }
-  }
-  for (const [key, value] of Object.entries(yamlHistory)) {
-    if (['package-id', 'canonical', 'title', 'introduction', 'current'].indexOf(key) !== -1) {
-      continue;
-    }
-    const item = value as ConfigurationHistoryItem;
-    history.list.push({
-      version: key,
-      date: required(item.date, `history[${key}].date`, file),
-      desc: required(item.desc, `history[${key}].desc`, file),
-      path: required(item.path, `history[${key}].path`, file),
-      changes: item.changes,
-      status: parseCodeWithRequiredValues(
-        required(item.status, `history[${key}].status`, file),
-        allowedHistoryStatus,
-        `history[${key}].status`,
-        file
-      ),
-      sequence: required(item.sequence, `history[${key}].sequence`, file),
-      fhirversion: required(item.fhirversion, `history[${key}].fhirVersion`, file),
-      current: item.current
-    });
-  }
-  history.list.forEach(item => removeUndefinedValues(item));
-  return history;
-}
-
-const allowedHistoryStatus: ConfigurationHistoryItem['status'][] = [
-  'ci-build',
-  'preview',
-  'ballot',
-  'trial-use',
-  'update',
-  'normative',
-  'trial-use+normative'
-];
 
 function removeUndefinedValues<T extends object>(incoming: T): T {
   Object.keys(incoming).forEach((k: string) => {
