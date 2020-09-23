@@ -88,6 +88,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = {
         filePath: path.join(fixtures, 'sushi-config.yml'),
@@ -563,6 +564,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -806,6 +808,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -888,6 +891,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -1102,6 +1106,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -1199,6 +1204,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = minimalConfig;
       pkg = new Package(config);
@@ -1224,7 +1230,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'index.md'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'invalid.txt'))).toBeTruthy();
       // Check for log messages indicating invalid input
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
         /Files not in the supported file types \(\.md and \.xml\) were detected\. These files will be copied over without any processing\..*File: .*[\/\\]invalid-pages-folder-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
@@ -1246,6 +1252,10 @@ describe('IGExporter', () => {
         defs
       );
       pkg = new Package(minimalConfig);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
     });
 
     afterAll(() => {
@@ -1429,6 +1439,7 @@ describe('IGExporter', () => {
     let tempOut: string;
 
     beforeAll(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
       const defs = new FHIRDefinitions();
@@ -1510,8 +1521,10 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      delete config.template;
       pkg = new Package(config);
       exporter = new IGExporter(
         pkg,
@@ -1519,7 +1532,6 @@ describe('IGExporter', () => {
         path.resolve(fixtures, 'ig-data'),
         false
       );
-      loggerSpy.reset();
     });
 
     it('should avoid copying over extra system files', () => {

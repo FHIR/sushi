@@ -63,8 +63,11 @@ describe('IGExporter', () => {
           ''
         ].join(EOL) // Windows: /r/n; Mac: /n
       );
-      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getAllMessages()).toHaveLength(2);
       expect(loggerSpy.getLastMessage('info')).toMatch('Generated ig.ini.');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'The "template" property in sushi-config.yaml has been deprecated.'
+      );
     });
 
     it('should generate an ig.ini when local template is defined in the config', () => {
@@ -94,8 +97,11 @@ describe('IGExporter', () => {
           ''
         ].join(EOL) // Windows: /r/n; Mac: /n
       );
-      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getAllMessages()).toHaveLength(2);
       expect(loggerSpy.getLastMessage('info')).toMatch('Generated ig.ini.');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'The "template" property in sushi-config.yaml has been deprecated.'
+      );
     });
 
     it('should generate an ig.ini when template is defined in the config and warn if there is also an ig-data/ig.ini file in legacy configuration', () => {

@@ -34,21 +34,18 @@ describe('IGExporter', () => {
       // no menu.xml
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeFalsy();
-      // generated ig.ini
+      // no ig.ini
       const igIniPath = path.join(tempOut, 'ig.ini');
-      expect(fs.existsSync(igIniPath)).toBeTruthy();
+      expect(fs.existsSync(igIniPath)).toBeFalsy();
       // generated implementation guide
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
     });
 
-    it('should put default content into ig.ini and ImplementationGuide files', () => {
-      const igIniPath = path.join(tempOut, 'ig.ini');
+    it('should put default content into ImplementationGuide file', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
-      const igIniContent = fs.readFileSync(igIniPath, 'utf8');
       const igContent = fs.readJSONSync(igPath);
 
-      expect(igIniContent).toMatch('template = hl7.fhir.template#0.0.5');
       expect(igContent.id).toBe('fhir.us.minimal');
       expect(igContent.definition.resource).toHaveLength(0);
     });

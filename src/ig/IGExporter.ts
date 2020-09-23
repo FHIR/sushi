@@ -1111,18 +1111,19 @@ export class IGExporter {
   addIgIni(igPath: string): void {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     if (this.config.template != null) {
+      const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
       if (existsSync(inputIniPath)) {
-        const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
-
         let preferredFileMessage =
           `Since a ${filePathString} file was found, the "template" property in the ${this.configName} ` +
-          `will be ignored and an ig.ini file will not be generated. Remove the ${filePathString} ` +
-          `file to use the "template" property in ${this.configName} and generate an ig.ini file instead.`;
+          'will be ignored and an ig.ini file will not be generated. Support for the "template" property ' +
+          `in ${this.configName} will be removed in a future version of SUSHI. Please remove the "template" ` +
+          `property in ${this.configName} and manage the ig.ini file directly.`;
         if (this.shouldCopyFiles) {
           preferredFileMessage =
             `Since the "template" property is present in the ${this.configName}, an ig.ini file will be generated and ` +
-            `the ${filePathString} file will be ignored. Remove the "template" property in ${this.configName} ` +
-            `to use the ${filePathString} file instead.`;
+            `the ${filePathString} file will be ignored. NOTE: Support for the "template" property in ${this.configName} will ` +
+            `be removed in a future version of SUSHI. Please remove the "template" property in ${this.configName} and ` +
+            'manage the ig.ini file directly.';
         }
         logger.warn(
           `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. ` +
@@ -1131,11 +1132,27 @@ export class IGExporter {
             file: inputIniPath
           }
         );
-
-        if (!this.shouldCopyFiles) {
-          return;
+      } else {
+        let message =
+          `The "template" property in ${this.configName} has been deprecated. Please remove the "template" ` +
+          `property in ${this.configName} and manage the ig.ini file directly.`;
+        if (this.shouldCopyFiles) {
+          message +=
+            ` Support for the "template" property in ${this.configName} will be removed in a future ` +
+            'version of SUSHI.';
+        } else {
+          message += ` To start, create the ig.ini file with the following contents:\n\n${this.generateIgIniString(
+            false
+          )}`;
         }
+        logger.warn(message);
       }
+
+      // Don't ever generate ig.ini in new IG Publisher project structure
+      if (!this.shouldCopyFiles) {
+        return;
+      }
+
       this.generateIgIni(igPath);
     } else if (existsSync(inputIniPath)) {
       this.processIgIni(igPath, inputIniPath);
@@ -1145,35 +1162,45 @@ export class IGExporter {
   }
 
   /**
-   * Generates an ig.ini file using the information in the configuration.
+   * Generates the contents of an ig.ini file using the information in the configuration.
    *
-   * @param igPath {string} - the path where the IG is exported to
+   * @returns {string} contents of ig.ini file
    */
-  generateIgIni(igPath: string): void {
+  generateIgIniString(includeWarning = true): string {
     // Create an ig.ini object from the configuration
     const iniObj: any = {};
-    iniObj.ig = `input/ImplementationGuide-${this.config.id}.json`;
+    const igFolder = this.isIgPubContext ? 'fsh-generated/resources' : 'input';
+    iniObj.ig = `${igFolder}/ImplementationGuide-${this.config.id}.json`;
     iniObj.template = this.config.template;
-    const comment = [
-      `This ig.ini was generated using the template property in ${this.configName}. To provide your own`,
-      `ig.ini, create an ig.ini file in the ${path.basename(
-        this.igDataPath
-      )} folder with required properties: ig, template.`,
-      'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
-    ];
-    const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
-    let outputIniContents = ini
-      .encode(iniObj, { section: 'IG', whitespace: true })
-      .replace('\n', `\n${iniWarning}`);
+    let outputIniContents = ini.encode(iniObj, { section: 'IG', whitespace: true });
+    if (includeWarning) {
+      const comment = [
+        `This ig.ini was generated using the template property in ${this.configName}. To provide your own`,
+        `ig.ini, create an ig.ini file in the ${path.basename(
+          this.igDataPath
+        )} folder with required properties: ig, template.`,
+        'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
+      ];
+      const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
+      outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
+    }
 
     // The encoder escapes '#' but FHIR doesn't like that, so if `#` is escaped in the template, then unescape it.
     outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
       $1 ? $0.replace($1, $1.slice(1)) : $0
     );
 
-    // Write the ig.ini to disk
+    return outputIniContents;
+  }
+
+  /**
+   * Generates an ig.ini file using the information in the configuration.
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
+  generateIgIni(igPath: string): void {
     const outputPath = path.join(igPath, 'ig.ini');
-    outputFileSync(outputPath, outputIniContents);
+    outputFileSync(outputPath, this.generateIgIniString());
     this.updateOutputLog(outputPath, [this.configPath], 'generated');
     logger.info('Generated ig.ini.');
   }
