@@ -296,6 +296,9 @@ export async function init(): Promise<void> {
     try {
       const res = await axios.get(url);
       fs.writeFileSync(path.join(outputDir, script), res.data);
+      if (script.endsWith('.sh')) {
+        fs.chmodSync(path.join(outputDir, script), 0o755);
+      }
     } catch (e) {
       logger.error(`Unable to download ${script} from ${url}: ${e.message}`);
     }
