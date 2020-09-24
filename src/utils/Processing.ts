@@ -29,31 +29,62 @@ export function findInputDir(input: string): string {
     logger.info('path-to-fsh-defs defaulted to current working directory');
   }
 
+  const originalInput = input;
+
   // TODO: Legacy support. Remove when no longer supported.
   // Use input/fsh/ subdirectory if not already specified and present
-  const inputFshSubdirectoryPath = path.join(input, 'input', 'fsh');
+  const inputFshSubdirectoryPath = path.join(originalInput, 'input', 'fsh');
   if (fs.existsSync(inputFshSubdirectoryPath)) {
-    input = path.join(input, 'input', 'fsh');
+    input = path.join(originalInput, 'input', 'fsh');
   }
 
   // Use fsh/ subdirectory if not already specified and present
-  const fshSubdirectoryPath = path.join(input, 'fsh');
+  const fshSubdirectoryPath = path.join(originalInput, 'fsh');
   if (!fs.existsSync(inputFshSubdirectoryPath) && fs.existsSync(fshSubdirectoryPath)) {
     input = path.join(input, 'fsh');
-    logger.warn(
-      'SUSHI detected a "fsh" directory that will be used in the input path. ' +
-        'Use of this folder is deprecated and will be removed in a future release. ' +
-        'To migrate to the new folder structure the following changes are needed:\n' +
-        `  - sushi-config.yaml moves to ${path.resolve(
-          input,
-          '..',
-          'input',
-          'fsh',
-          'sushi-config.yaml'
-        )}\n` +
-        `  - ig-data/* files move to ${path.resolve(input, '..')}${path.sep}*\n` +
-        `  - .fsh files move to ${path.resolve(input, 'input', 'fsh')}${path.sep}*`
-    );
+    let msg =
+      '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
+      '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
+      'Use of this folder is DEPRECATED and will be REMOVED in a future release.\n' +
+      'To migrate to the new folder structure, make the following changes:\n' +
+      `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
+      `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
+    if (fs.existsSync(path.join(input, 'ig-data'))) {
+      msg += `  - move fsh${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
+    }
+    if (!fs.existsSync(path.join(input, 'ig-data', 'ig.ini'))) {
+      msg += `  - if you used the "template" property in your config, remove it and manage .${path.sep}ig.ini directly\n`;
+    }
+    if (!fs.existsSync(path.join(input, 'ig-data', 'package-list.json'))) {
+      msg += `  - if you used the "history" property in your config, remove it and manage .${path.sep}package-list.json directly\n`;
+    }
+    msg +=
+      '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
+      '  - add /fsh-generated your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
+      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n`;
+    logger.warn(msg);
+  } else if (!fs.existsSync(inputFshSubdirectoryPath)) {
+    let msg =
+      '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
+      '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
+      'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
+      'To migrate to the new folder structure, make the following changes:\n' +
+      `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
+      `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
+    if (fs.existsSync(path.join(input, 'ig-data'))) {
+      msg += `  - move .${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
+    }
+    if (!fs.existsSync(path.join(input, 'ig-data', 'ig.ini'))) {
+      msg += `  - if you used the "template" property in your config, remove it and manage .${path.sep}ig.ini directly\n`;
+    }
+    if (!fs.existsSync(path.join(input, 'ig-data', 'package-list.json'))) {
+      msg += `  - if you used the "history" property in your config, remove it and manage .${path.sep}package-list.json directly\n`;
+    }
+    msg +=
+      '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
+      '  - add /fsh-generated your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
+      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n`;
+    logger.warn(msg);
   }
   return input;
 }
@@ -64,23 +95,6 @@ export function ensureOutputDir(
   isIgPubContext: boolean,
   isLegacyIgPubContext: boolean
 ): string {
-  if (isIgPubContext || isLegacyIgPubContext) {
-    // TODO: Message includes information about legacy support for top level fsh folder. Remove when not supported.
-    let directory = 'fsh';
-    let article = 'a';
-    let parentDirectory = 'fsh';
-    if (isIgPubContext) {
-      directory = 'input/fsh';
-      article = 'an';
-      parentDirectory = 'input';
-    }
-    logger.info(
-      `SUSHI detected ${article} "${directory}" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n` +
-        `  - the "${directory}" directory will be used as the input path\n` +
-        `  - the parent of the "${parentDirectory}" directory will be used as the output path unless otherwise specified with --out option\n` +
-        '  - generation of publisher-related scripts will be suppressed (i.e., assumed to be managed by you)'
-    );
-  }
   let outDir = output;
   if (isLegacyIgPubContext && !output) {
     // TODO: Legacy support for top level "fsh" directory. Remove when no longer supported.

@@ -50,7 +50,7 @@ describe('Processing', () => {
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh', 'fsh'));
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /Use of this folder is deprecated and will be removed in a future release/s
+        /Use of this folder is DEPRECATED and will be REMOVED in a future release/s
       );
     });
 
