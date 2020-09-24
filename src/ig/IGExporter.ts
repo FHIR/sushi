@@ -1141,12 +1141,13 @@ export class IGExporter {
           message +=
             ` Support for the "template" property in ${this.configName} will be removed in a future ` +
             'version of SUSHI.';
+          logger.warn(message);
         } else {
-          message += ` To start, create the ig.ini file with the following contents:\n\n${this.generateIgIniString(
+          message += ` To resolve this error, create an ig.ini file in your project folder with the following contents:\n\n${this.generateIgIniString(
             false
           )}`;
+          logger.error(message);
         }
-        logger.warn(message);
       }
 
       // Don't ever generate ig.ini in new IG Publisher project structure

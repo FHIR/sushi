@@ -38,7 +38,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    it('should generate an ig.ini when template is defined in the config', () => {
+    it('should generate an ig.ini when template is defined in the config (legacy)', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
@@ -70,7 +70,7 @@ describe('IGExporter', () => {
       );
     });
 
-    it('should generate an ig.ini when local template is defined in the config', () => {
+    it('should generate an ig.ini when local template is defined in the config (legacy)', () => {
       const localTemplateConfig = cloneDeep(minimalConfig);
       localTemplateConfig.template = '#local-template';
       const pkg = new Package(localTemplateConfig);
@@ -104,7 +104,7 @@ describe('IGExporter', () => {
       );
     });
 
-    it('should generate an ig.ini when template is defined in the config and warn if there is also an ig-data/ig.ini file in legacy configuration', () => {
+    it('should generate an ig.ini when template is defined in the config and warn if there is also an ig-data/ig.ini (legacy)', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
@@ -152,6 +152,24 @@ describe('IGExporter', () => {
       );
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         'the "template" property in the sushi-config.yaml will be ignored'
+      );
+    });
+
+    it('should error if there is no ig.ini file and template is defined in the config (and not generate an ig.ini)', () => {
+      const pkg = new Package(minimalConfig);
+      const igDataPath = path.resolve(
+        __dirname,
+        'fixtures',
+        'customized-ig-with-resources', // NOTE: This fixture does not have an ig.ini
+        'ig-data'
+      );
+      const exporter = new IGExporter(pkg, null, igDataPath, true); // New tank configuration input/fsh/
+      exporter.addIgIni(tempOut);
+      const igIniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(igIniPath)).toBeFalsy(); // Does not copy ig.ini to output
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'create an ig.ini file in your project folder'
       );
     });
 

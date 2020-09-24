@@ -1111,7 +1111,7 @@ describe('IGExporter', () => {
 
     it('should log an error for input files missing resourceType or id', () => {
       exporter.export(tempOut);
-      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
+      expect(loggerSpy.getFirstMessage('error')).toMatch(
         /.*InvalidPatient.json must define resourceType and id/
       );
     });
