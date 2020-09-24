@@ -70,12 +70,24 @@ async function app() {
 
   logger.info(`Running ${getVersion()}`);
 
+  logger.info('Arguments:');
+  if (program.debug) {
+    logger.info('  --debug');
+  }
+  if (program.snapshot) {
+    logger.info('  --snapshot');
+  }
+  if (program.out) {
+    logger.info(`  --out ${path.resolve(program.out)}`);
+  }
+  logger.info(`  ${path.resolve(input)}`);
   const originalInput = input;
   input = findInputDir(input);
+  console.log('input', input);
 
   // If an input/fsh subdirectory is used, we are in an IG Publisher context
-  const fshFolder = path.parse(input).base === 'fsh';
-  const inputFshFolder = fshFolder && path.parse(input).dir.endsWith(`${path.sep}input`);
+  const fshFolder = path.basename(input) === 'fsh';
+  const inputFshFolder = fshFolder && path.basename(path.dirname(input)) === 'input';
   const isIgPubContext = inputFshFolder;
   // TODO: Legacy support for top level fsh/ subdirectory. Remove when no longer supported.
   const isLegacyIgPubContext = fshFolder && !inputFshFolder;
