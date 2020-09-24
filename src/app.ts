@@ -139,8 +139,6 @@ async function app() {
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
     if (
-      !isIgPubContext &&
-      !isLegacyIgPubContext &&
       !fs
         .readdirSync(outDir)
         .some(file => file.startsWith('_genonce') || file.startsWith('_updatePublisher'))

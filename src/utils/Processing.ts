@@ -292,13 +292,12 @@ export async function init(): Promise<void> {
     '_updatePublisher.bat',
     '_updatePublisher.sh'
   ]) {
+    const url = `http://raw.githubusercontent.com/FHIR/sample-ig/master/${script}`;
     try {
-      const res = await axios.get(
-        `http://raw.githubusercontent.com/FHIR/sample-ig/master/${script}`
-      );
+      const res = await axios.get(url);
       fs.writeFileSync(path.join(outputDir, script), res.data);
     } catch (e) {
-      logger.error(`Unable to download ${script}: ${e.message}`);
+      logger.error(`Unable to download ${script} from ${url}: ${e.message}`);
     }
   }
   const maxLength = 31;
