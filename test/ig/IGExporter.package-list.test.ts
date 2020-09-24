@@ -149,7 +149,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages('info')).toHaveLength(0);
     });
 
-    it('should not log an error when a "history" is specified in the non-legacy IgPubContext', () => {
+    it('should log an error when a "history" is specified in the non-legacy IgPubContext', () => {
       config.history = {
         'package-id': 'fhir.us.example',
         canonical: 'http://hl7.org/fhir/us/example',
@@ -184,6 +184,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Detected "history" property in configuration/
       );
+      expect(loggerSpy.getLastMessage('error')).toMatch(JSON.stringify(config.history, null, 2));
     });
   });
 });

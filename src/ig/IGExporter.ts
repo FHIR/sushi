@@ -1325,7 +1325,10 @@ export class IGExporter {
     if (this.config.history) {
       if (this.isIgPubContext) {
         logger.error(
-          'Detected "history" property in configuration. The use of "history" is deprecated. Please remove the property and provide a package-list.json directly.'
+          'Detected "history" property in configuration. The use of "history" is deprecated. Please remove the property and provide a package-list.json directly. ' +
+            'The package-list.json corresponding to the "history" property in the configuration is:\n\n' +
+            JSON.stringify(this.config.history, null, 2) +
+            '\n'
         );
         return;
       }
