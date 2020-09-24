@@ -272,6 +272,8 @@ export async function init(): Promise<void> {
   fs.writeFileSync(path.join(outputDir, 'input', 'pagecontent', 'index.md'), indexPageContent);
   // Add the config
   fs.writeFileSync(path.join(outputDir, 'sushi-config.yaml'), configDoc.toString());
+  // Copy over ig.ini
+  fs.copyFileSync(path.join(initProjectDir, 'ig.ini'), path.join(outputDir, 'ig.ini'));
   // Copy over remaining static files
   fs.ensureDirSync(path.join(outputDir, 'input', 'fsh'));
   fs.copyFileSync(
