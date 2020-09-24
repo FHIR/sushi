@@ -24,8 +24,8 @@ describe('ElementDefinition', () => {
     observation = fisher.fishForStructureDefinition('Observation');
   });
 
-  describe('#fixInstance', () => {
-    it('should fix an allowed type of an instance', () => {
+  describe('#assignInstance', () => {
+    it('should assign an allowed type of an instance', () => {
       const addressInstance = new InstanceDefinition();
       addressInstance._instanceMeta.name = 'USPostalAddress';
       addressInstance._instanceMeta.sdType = 'Address';
@@ -34,12 +34,12 @@ describe('ElementDefinition', () => {
       addressInstance.type = 'postal';
 
       const address = patient.elements.find(e => e.id === 'Patient.address');
-      address.fixValue(addressInstance);
+      address.assignValue(addressInstance);
       expect(address.patternAddress).toEqual({ country: 'US', type: 'postal' });
       expect(address.fixedAddress).toBeUndefined();
     });
 
-    it('should fix an allowed type of an instance (exactly)', () => {
+    it('should assign an allowed type of an instance (exactly)', () => {
       const addressInstance = new InstanceDefinition();
       addressInstance._instanceMeta.name = 'USPostalAddress';
       addressInstance._instanceMeta.sdType = 'Address';
@@ -48,7 +48,7 @@ describe('ElementDefinition', () => {
       addressInstance.type = 'postal';
 
       const address = patient.elements.find(e => e.id === 'Patient.address');
-      address.fixValue(addressInstance, true);
+      address.assignValue(addressInstance, true);
       expect(address.fixedAddress).toEqual({ country: 'US', type: 'postal' });
       expect(address.patternAddress).toBeUndefined();
     });
@@ -63,20 +63,20 @@ describe('ElementDefinition', () => {
 
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixValue(periodInstance);
+        valueX.assignValue(periodInstance);
       }).toThrow(
-        'Cannot fix InstanceDefinition value on this element since this element does not have a single type'
+        'Cannot assign InstanceDefinition value on this element since this element does not have a single type'
       );
       expect(() => {
-        valueX.fixValue(periodInstance, true);
+        valueX.assignValue(periodInstance, true);
       }).toThrow(
-        'Cannot fix InstanceDefinition value on this element since this element does not have a single type'
+        'Cannot assign InstanceDefinition value on this element since this element does not have a single type'
       );
       expect(valueX.patternPeriod).toBeUndefined();
       expect(valueX.fixedPeriod).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value by pattern[x]', () => {
       const workAddress = new InstanceDefinition();
       workAddress._instanceMeta.name = 'USPostalAddress';
       workAddress._instanceMeta.sdType = 'Address';
@@ -93,18 +93,18 @@ describe('ElementDefinition', () => {
       homeAddress.use = 'home';
 
       const address = patient.elements.find(e => e.id === 'Patient.address');
-      address.fixValue(workAddress);
+      address.assignValue(workAddress);
       expect(address.patternAddress).toEqual({ country: 'US', type: 'postal', use: 'work' });
-      address.fixValue(workAddress);
+      address.assignValue(workAddress);
       expect(address.patternAddress).toEqual({ country: 'US', type: 'postal', use: 'work' });
       expect(() => {
-        address.fixValue(homeAddress);
+        address.assignValue(homeAddress);
       }).toThrow(
-        'Cannot fix {"country":"US","type":"postal","use":"home"} to this element; a different Address is already fixed: {"country":"US","type":"postal","use":"work"}'
+        'Cannot assign {"country":"US","type":"postal","use":"home"} to this element; a different Address is already assigned: {"country":"US","type":"postal","use":"work"}'
       );
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value by fixed[x]', () => {
       const workAddress = new InstanceDefinition();
       workAddress._instanceMeta.name = 'USPostalAddress';
       workAddress._instanceMeta.sdType = 'Address';
@@ -121,18 +121,18 @@ describe('ElementDefinition', () => {
       homeAddress.use = 'home';
 
       const address = patient.elements.find(e => e.id === 'Patient.address');
-      address.fixValue(workAddress, true);
+      address.assignValue(workAddress, true);
       expect(address.fixedAddress).toEqual({ country: 'US', type: 'postal', use: 'work' });
-      address.fixValue(workAddress, true);
+      address.assignValue(workAddress, true);
       expect(address.fixedAddress).toEqual({ country: 'US', type: 'postal', use: 'work' });
       expect(() => {
-        address.fixValue(homeAddress, true);
+        address.assignValue(homeAddress, true);
       }).toThrow(
-        'Cannot fix {"country":"US","type":"postal","use":"home"} to this element; a different Address is already fixed: {"country":"US","type":"postal","use":"work"}'
+        'Cannot assign {"country":"US","type":"postal","use":"home"} to this element; a different Address is already assigned: {"country":"US","type":"postal","use":"work"}'
       );
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw AssignedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const addressInstance = new InstanceDefinition();
       addressInstance._instanceMeta.name = 'USPostalAddress';
       addressInstance._instanceMeta.sdType = 'Address';
@@ -141,16 +141,16 @@ describe('ElementDefinition', () => {
       addressInstance.type = 'postal';
 
       const address = patient.elements.find(e => e.id === 'Patient.address');
-      address.fixValue(addressInstance, true);
+      address.assignValue(addressInstance, true);
       expect(address.fixedAddress).toEqual({ country: 'US', type: 'postal' });
       expect(() => {
-        address.fixValue(addressInstance);
+        address.assignValue(addressInstance);
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedAddress'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedAddress'
       );
     });
 
-    it('should throw MismatchedTypeError when the value is fixed to an unsupported type', () => {
+    it('should throw MismatchedTypeError when the value is assigned to an unsupported type', () => {
       const periodInstance = new InstanceDefinition();
       periodInstance._instanceMeta.name = 'LastYear';
       periodInstance._instanceMeta.sdType = 'Period';
@@ -160,9 +160,9 @@ describe('ElementDefinition', () => {
 
       const address = patient.elements.find(e => e.id === 'Patient.address');
       expect(() => {
-        address.fixValue(periodInstance);
+        address.assignValue(periodInstance);
       }).toThrow(
-        'Cannot fix Period value: {"start":"2019-08-01","end":"2020-08-01"}. Value does not match element type: Address'
+        'Cannot assign Period value: {"start":"2019-08-01","end":"2020-08-01"}. Value does not match element type: Address'
       );
     });
   });

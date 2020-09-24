@@ -1,10 +1,10 @@
 import 'jest-extended';
-import { ValueSetRule } from '../../../src/fshtypes/rules/ValueSetRule';
+import { BindingRule } from '../../../src/fshtypes/rules/BindingRule';
 
-describe('ValueSetRule', () => {
+describe('BindingRule', () => {
   describe('#constructor', () => {
     it('should set the properties correctly', () => {
-      const c = new ValueSetRule('component.code');
+      const c = new BindingRule('component.code');
       expect(c.path).toBe('component.code');
       expect(c.valueSet).toBeUndefined();
       expect(c.strength).toBeUndefined();

@@ -1,6 +1,6 @@
 export * from './Annotated';
 export * from './BindingStrengthError';
-export * from './ValueAlreadyFixedError';
+export * from './ValueAlreadyAssignedError';
 export * from './FixedToPatternError';
 export * from './NoSingleTypeError';
 export * from './MismatchedTypeError';

@@ -2,11 +2,11 @@ import {
   CardRule,
   CaretValueRule,
   ContainsRule,
-  FixedValueRule,
+  AssignmentRule,
   FlagRule,
   ObeysRule,
   OnlyRule,
-  ValueSetRule,
+  BindingRule,
   InsertRule
 } from '.';
 
@@ -14,9 +14,9 @@ export type SdRule =
   | CardRule
   | CaretValueRule
   | ContainsRule
-  | FixedValueRule
+  | AssignmentRule
   | FlagRule
   | ObeysRule
   | OnlyRule
-  | ValueSetRule
+  | BindingRule
   | InsertRule;

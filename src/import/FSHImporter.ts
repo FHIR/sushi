@@ -30,9 +30,9 @@ import {
 import {
   CardRule,
   FlagRule,
-  ValueSetRule,
-  FixedValueRule,
-  FixedValueType,
+  BindingRule,
+  AssignmentRule,
+  AssignmentValueType,
   OnlyRule,
   ContainsRule,
   ContainsRuleItem,
@@ -871,7 +871,7 @@ export class FSHImporter extends FSHVisitor {
     return [];
   }
 
-  visitInstanceRule(ctx: pc.InstanceRuleContext): FixedValueRule | InsertRule {
+  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule {
     if (ctx.fixedValueRule()) {
       return this.visitFixedValueRule(ctx.fixedValueRule());
     } else if (ctx.insertRule()) {
@@ -1037,8 +1037,8 @@ export class FSHImporter extends FSHVisitor {
     return Flag.Unknown;
   }
 
-  visitValueSetRule(ctx: pc.ValueSetRuleContext): ValueSetRule {
-    const vsRule = new ValueSetRule(this.visitPath(ctx.path()))
+  visitValueSetRule(ctx: pc.ValueSetRuleContext): BindingRule {
+    const vsRule = new BindingRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
@@ -1063,24 +1063,24 @@ export class FSHImporter extends FSHVisitor {
     return 'required';
   }
 
-  visitFixedValueRule(ctx: pc.FixedValueRuleContext): FixedValueRule {
-    const fixedValueRule = new FixedValueRule(this.visitPath(ctx.path()))
+  visitFixedValueRule(ctx: pc.FixedValueRuleContext): AssignmentRule {
+    const assignmentRule = new AssignmentRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    fixedValueRule.fixedValue = this.visitValue(ctx.value());
-    fixedValueRule.exactly = ctx.KW_EXACTLY() != null;
+    assignmentRule.value = this.visitValue(ctx.value());
+    assignmentRule.exactly = ctx.KW_EXACTLY() != null;
     if (ctx.KW_UNITS()) {
       logger.warn(
         'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        fixedValueRule.sourceInfo
+        assignmentRule.sourceInfo
       );
     }
-    fixedValueRule.isInstance =
+    assignmentRule.isInstance =
       ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
-    return fixedValueRule;
+    return assignmentRule;
   }
 
-  visitValue(ctx: pc.ValueContext): FixedValueType {
+  visitValue(ctx: pc.ValueContext): AssignmentValueType {
     // In cases where the parser encounters an error, ctx might be null
     if (ctx == null) {
       return;

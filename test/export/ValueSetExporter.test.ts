@@ -8,7 +8,7 @@ import path from 'path';
 import {
   CaretValueRule,
   InsertRule,
-  FixedValueRule,
+  AssignmentRule,
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule
@@ -709,10 +709,10 @@ describe('ValueSetExporter', () => {
       //
       // ValueSet: Foo
       // * insert Bar
-      const valueRule = new FixedValueRule('experimental')
+      const valueRule = new AssignmentRule('experimental')
         .withFile('Value.fsh')
         .withLocation([1, 2, 3, 4]);
-      valueRule.fixedValue = true;
+      valueRule.value = true;
       const nameRule = new CaretValueRule('');
       nameRule.caretPath = 'title';
       nameRule.value = 'Wow fancy';
@@ -728,7 +728,7 @@ describe('ValueSetExporter', () => {
       // experimental is not set to true
       expect(exported.experimental).toBeFalsy();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /FixedValueRule.*FshValueSet.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+        /AssignmentRule.*FshValueSet.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
   });

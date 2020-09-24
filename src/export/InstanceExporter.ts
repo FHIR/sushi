@@ -14,7 +14,7 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
 import { cloneDeep } from 'lodash';
-import { FixedValueRule } from '../fshtypes/rules';
+import { AssignmentRule } from '../fshtypes/rules';
 
 export class InstanceExporter implements Fishable {
   constructor(
@@ -23,29 +23,29 @@ export class InstanceExporter implements Fishable {
     private readonly fisher: Fishable
   ) {}
 
-  private setFixedValues(
+  private setAssignedValues(
     fshInstanceDef: Instance,
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
-    // The fshInstanceDef.rules list may contain insert rules, which will be expanded to FixedValueRules
+    // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
-    let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as FixedValueRule[];
+    let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
       r.path = r.path.replace(/\[0+\]/g, '');
     });
     rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
-    // Convert strings in fixedValueRules to instances
+    // Convert strings in AssignmentRules to instances
     rules = rules.filter(r => {
       if (r.isInstance) {
-        const instance: InstanceDefinition = this.fishForFHIR(r.fixedValue as string);
+        const instance: InstanceDefinition = this.fishForFHIR(r.value as string);
         if (instance != null) {
-          r.fixedValue = instance;
+          r.value = instance;
           return true;
         } else {
           logger.error(
-            `Cannot find definition for Instance: ${r.fixedValue}. Skipping rule.`,
+            `Cannot find definition for Instance: ${r.value}. Skipping rule.`,
             r.sourceInfo
           );
           return false;
@@ -58,25 +58,25 @@ export class InstanceExporter implements Fishable {
     // Patient is used for the type of a.b
     const inlineResourcePaths: { path: string; instanceOf: string }[] = [];
     rules.forEach(r => {
-      if (r.isInstance && r.fixedValue instanceof InstanceDefinition) {
+      if (r.isInstance && r.value instanceof InstanceDefinition) {
         inlineResourcePaths.push({
           path: r.path,
           // We only use the first element of the meta.profile array, if a need arises for a more
           // comprehensive approach, we can come back to this later
-          instanceOf: r.fixedValue.meta?.profile[0] ?? r.fixedValue.resourceType
+          instanceOf: r.value.meta?.profile[0] ?? r.value.resourceType
         });
       }
-      if (r.path.endsWith('.resourceType') && typeof r.fixedValue === 'string') {
+      if (r.path.endsWith('.resourceType') && typeof r.value === 'string') {
         inlineResourcePaths.push({
           // Only get the part of the path before resourceType, aka if path is a.b.resourceType
           // the relevant element is a.b, since it is the actual Resource element
           path: splitOnPathPeriods(r.path).slice(0, -1).join('.'),
-          instanceOf: r.fixedValue
+          instanceOf: r.value
         });
       }
     });
 
-    // When fixing values, things happen in the order:
+    // When assigning values, things happen in the order:
     // 1 - Validate values for rules that are on the instance
     // 2 - Determine all rules implied by the Structure Definition
     // 3 - Set values from rules implied by the Structure Definition
@@ -84,7 +84,7 @@ export class InstanceExporter implements Fishable {
     // This order is required due to the fact that validateValueAtPath changes instanceOfStructureDefinition
     // in certain cases that must happen before setting rules from the Structure Definition. In the future
     // we may want to refactor validateValueAtPath, but for now things should happen in this order
-    const ruleMap: Map<string, { pathParts: PathPart[]; fixedValue: any }> = new Map();
+    const ruleMap: Map<string, { pathParts: PathPart[]; assignedValue: any }> = new Map();
     rules.forEach(rule => {
       try {
         const matchingInlineResourcePaths = inlineResourcePaths.filter(
@@ -99,14 +99,14 @@ export class InstanceExporter implements Fishable {
         });
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
-          rule.fixedValue,
+          rule.value,
           this.fisher,
           inlineResourceTypes
         );
         // Record each valid rule in a map
         ruleMap.set(rule.path, {
           pathParts: validatedRule.pathParts,
-          fixedValue: validatedRule.fixedValue
+          assignedValue: validatedRule.assignedValue
         });
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
@@ -115,7 +115,7 @@ export class InstanceExporter implements Fishable {
 
     const paths = ['', ...rules.map(rule => rule.path)];
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
-    ruleMap.forEach(rule => setPropertyOnInstance(instanceDef, rule.pathParts, rule.fixedValue));
+    ruleMap.forEach(rule => setPropertyOnInstance(instanceDef, rule.pathParts, rule.assignedValue));
     return instanceDef;
   }
 
@@ -275,8 +275,8 @@ export class InstanceExporter implements Fishable {
     this.pkg.instances.push(instanceDef);
 
     applyMixinRules(fshDefinition, this.tank);
-    // Set Fixed values based on the FSH rules and the Structure Definition
-    instanceDef = this.setFixedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
+    // Set Assigned values based on the FSH rules and the Structure Definition
+    instanceDef = this.setAssignedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     instanceDef.validateId(fshDefinition.sourceInfo);
     this.validateRequiredElements(
       instanceDef,

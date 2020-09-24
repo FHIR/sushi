@@ -6,7 +6,7 @@ import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import path from 'path';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { Mapping, RuleSet } from '../../src/fshtypes';
-import { MappingRule, InsertRule, FixedValueRule } from '../../src/fshtypes/rules';
+import { MappingRule, InsertRule, AssignmentRule } from '../../src/fshtypes/rules';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('MappingExporter', () => {
@@ -338,10 +338,10 @@ describe('MappingExporter', () => {
       //
       // Mapping: Foo
       // * insert Bar
-      const valueRule = new FixedValueRule('experimental')
+      const valueRule = new AssignmentRule('experimental')
         .withFile('Value.fsh')
         .withLocation([1, 2, 3, 4]);
-      valueRule.fixedValue = true;
+      valueRule.value = true;
       const mapRule = new MappingRule('status');
       mapRule.map = 'Observation.otherStatus';
       ruleSet.rules.push(mapRule);
@@ -358,7 +358,7 @@ describe('MappingExporter', () => {
       expect(exported.map).toBe('Observation.otherStatus');
       expect(exported.identity).toBe('Foo');
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /FixedValueRule.*Mapping.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+        /AssignmentRule.*Mapping.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
   });

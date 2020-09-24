@@ -2,11 +2,11 @@ import {
   assertCardRule,
   assertFlagRule,
   assertOnlyRule,
-  assertValueSetRule,
+  assertBindingRule,
   assertCaretValueRule,
   assertObeysRule,
   assertContainsRule,
-  assertFixedValueRule,
+  assertAssignmentRule,
   assertInsertRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -189,7 +189,7 @@ describe('FSHImporter', () => {
       });
     });
 
-    describe('#valueSetRule', () => {
+    describe('#BindingRule', () => {
       it('should parse value set rules w/ names and strength', () => {
         const input = `
         Extension: SomeExtension
@@ -200,7 +200,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertValueSetRule(
+        assertBindingRule(
           extension.rules[0],
           'valueCodeableConcept',
           'ExtensionValueSet',
@@ -209,8 +209,8 @@ describe('FSHImporter', () => {
       });
     });
 
-    describe('#fixedValueRule', () => {
-      it('should parse fixed value boolean rule', () => {
+    describe('#assignmentRule', () => {
+      it('should parse assigned value boolean rule', () => {
         const input = `
         Extension: SomeExtension
         * valueBoolean = true
@@ -219,10 +219,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertFixedValueRule(extension.rules[0], 'valueBoolean', true);
+        assertAssignmentRule(extension.rules[0], 'valueBoolean', true);
       });
 
-      it('should parse fixed value boolean rule with (exactly) modifier', () => {
+      it('should parse assigned value boolean rule with (exactly) modifier', () => {
         const input = `
         Extension: SomeExtension
         * valueBoolean = true (exactly)
@@ -231,7 +231,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const extension = result.extensions.get('SomeExtension');
         expect(extension.rules).toHaveLength(1);
-        assertFixedValueRule(extension.rules[0], 'valueBoolean', true, true);
+        assertAssignmentRule(extension.rules[0], 'valueBoolean', true, true);
       });
     });
 

@@ -107,12 +107,12 @@ export class ValueSetExporter {
     for (const rule of rules) {
       try {
         if (rule instanceof CaretValueRule) {
-          const { fixedValue, pathParts } = vsStructureDefinition.validateValueAtPath(
+          const { assignedValue, pathParts } = vsStructureDefinition.validateValueAtPath(
             rule.caretPath,
             rule.value,
             this.fisher
           );
-          setPropertyOnInstance(valueSet, pathParts, fixedValue);
+          setPropertyOnInstance(valueSet, pathParts, assignedValue);
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
