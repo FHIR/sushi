@@ -86,6 +86,10 @@ async function app() {
       process.exit(0);
     }
     if (!config) {
+      logger.error(
+        'No config.yaml in FSH definition folder, and no configuration could' +
+          ' be extracted from an ImplementationGuide resource.'
+      );
       process.exit(1);
     }
     tank = fillTank(rawFSH, config);
