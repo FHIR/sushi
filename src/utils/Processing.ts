@@ -56,7 +56,6 @@ export function findInputDir(input: string): string {
       }
     } else {
       msg +=
-        '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
         '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
         'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
