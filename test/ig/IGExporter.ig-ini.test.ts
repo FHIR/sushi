@@ -139,7 +139,7 @@ describe('IGExporter', () => {
       expect(loggerSpy.getLastMessage('info')).toMatch('Generated ig.ini.');
     });
 
-    it('should warn if there is an ig-data/ig.ini file and template is defined in the config and not generate or copy an ig.ini', () => {
+    it('should error if there is an ig-data/ig.ini file and template is defined in the config and not generate or copy an ig.ini', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath, true); // New tank configuration input/fsh/
@@ -147,11 +147,11 @@ describe('IGExporter', () => {
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy(); // Does not copy ig.ini to output
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
+      expect(loggerSpy.getLastMessage('error')).toMatch(
         `Found both a "template" property in sushi-config.yaml and an ig.ini file at ig-data${path.sep}ig.ini.`
       );
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'the "template" property in the sushi-config.yaml will be ignored'
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'The "template" property in sushi-config.yaml has been deprecated and will be ignored'
       );
     });
 

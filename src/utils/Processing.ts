@@ -40,17 +40,31 @@ export function findInputDir(input: string): string {
 
   // Use fsh/ subdirectory if not already specified and present
   const fshSubdirectoryPath = path.join(originalInput, 'fsh');
-  if (!fs.existsSync(inputFshSubdirectoryPath) && fs.existsSync(fshSubdirectoryPath)) {
-    input = path.join(input, 'fsh');
+  if (!fs.existsSync(inputFshSubdirectoryPath)) {
     let msg =
-      '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
-      '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
-      'Use of this folder is DEPRECATED and will be REMOVED in a future release.\n' +
-      'To migrate to the new folder structure, make the following changes:\n' +
-      `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
-      `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
-    if (fs.existsSync(path.join(input, 'ig-data'))) {
-      msg += `  - move fsh${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
+      '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n';
+    if (fs.existsSync(fshSubdirectoryPath)) {
+      input = path.join(input, 'fsh');
+      msg +=
+        '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
+        'Use of this folder is DEPRECATED and will be REMOVED in a future release.\n' +
+        'To migrate to the new folder structure, make the following changes:\n' +
+        `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
+        `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
+      if (fs.existsSync(path.join(input, 'ig-data'))) {
+        msg += `  - move fsh${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
+      }
+    } else {
+      msg +=
+        '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
+        '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
+        'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
+        'To migrate to the new folder structure, make the following changes:\n' +
+        `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
+        `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
+      if (fs.existsSync(path.join(input, 'ig-data'))) {
+        msg += `  - move .${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
+      }
     }
     if (!fs.existsSync(path.join(input, 'ig-data', 'ig.ini'))) {
       msg += `  - if you used the "template" property in your config, remove it and manage .${path.sep}ig.ini directly\n`;
@@ -60,29 +74,7 @@ export function findInputDir(input: string): string {
     }
     msg +=
       '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
-      '  - add /fsh-generated your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
-      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n`;
-    logger.warn(msg);
-  } else if (!fs.existsSync(inputFshSubdirectoryPath)) {
-    let msg =
-      '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
-      '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
-      'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
-      'To migrate to the new folder structure, make the following changes:\n' +
-      `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
-      `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
-    if (fs.existsSync(path.join(input, 'ig-data'))) {
-      msg += `  - move .${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
-    }
-    if (!fs.existsSync(path.join(input, 'ig-data', 'ig.ini'))) {
-      msg += `  - if you used the "template" property in your config, remove it and manage .${path.sep}ig.ini directly\n`;
-    }
-    if (!fs.existsSync(path.join(input, 'ig-data', 'package-list.json'))) {
-      msg += `  - if you used the "history" property in your config, remove it and manage .${path.sep}package-list.json directly\n`;
-    }
-    msg +=
-      '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
-      '  - add /fsh-generated your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
+      '  - add /fsh-generated to your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
       `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n`;
     logger.warn(msg);
   }
@@ -206,7 +198,7 @@ export function writeFHIRResources(
   outDir: string,
   outPackage: Package,
   snapshot: boolean,
-  useGeneratedFolder: boolean
+  isIgPubContext: boolean
 ) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
@@ -214,7 +206,7 @@ export function writeFHIRResources(
     folder: string,
     resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
   ) => {
-    const exportDir = useGeneratedFolder
+    const exportDir = isIgPubContext
       ? path.join(outDir, 'fsh-generated', 'resources')
       : path.join(outDir, 'input', folder);
     resources.forEach(resource => {

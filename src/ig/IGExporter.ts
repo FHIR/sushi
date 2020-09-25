@@ -1112,27 +1112,23 @@ export class IGExporter {
   addIgIni(igPath: string): void {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     if (this.config.template != null) {
-      const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
       if (existsSync(inputIniPath)) {
-        let preferredFileMessage =
-          `Since a ${filePathString} file was found, the "template" property in the ${this.configName} ` +
-          'will be ignored and an ig.ini file will not be generated. Support for the "template" property ' +
-          `in ${this.configName} will be removed in a future version of SUSHI. Please remove the "template" ` +
-          `property in ${this.configName} and manage the ig.ini file directly.`;
+        const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
+        let message = `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. `;
         if (this.shouldCopyFiles) {
-          preferredFileMessage =
+          message +=
             `Since the "template" property is present in the ${this.configName}, an ig.ini file will be generated and ` +
             `the ${filePathString} file will be ignored. NOTE: Support for the "template" property in ${this.configName} will ` +
             `be removed in a future version of SUSHI. Please remove the "template" property in ${this.configName} and ` +
             'manage the ig.ini file directly.';
+          logger.warn(message, { file: inputIniPath });
+        } else {
+          message +=
+            `The "template" property in ${this.configName} has been deprecated and will be ignored. The existing ` +
+            `${filePathString} file will be used instead.  To resolve this error, remove the "template" property in ` +
+            `${this.configName} and manage the ig.ini file directly.`;
+          logger.error(message, { file: inputIniPath });
         }
-        logger.warn(
-          `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. ` +
-            `${preferredFileMessage}`,
-          {
-            file: inputIniPath
-          }
-        );
       } else {
         let message =
           `The "template" property in ${this.configName} has been deprecated. Please remove the "template" ` +
