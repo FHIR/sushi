@@ -7,14 +7,14 @@ import {
   CodeSystem
 } from '.';
 import {
-  FixedValueRule,
+  AssignmentRule,
   Rule,
   InsertRule,
   ConceptRule,
   ValueSetConceptComponentRule,
   SdRule,
   CaretValueRule,
-  FixedValueType
+  AssignmentValueType
 } from '../fshtypes/rules';
 import {
   FshReference,
@@ -42,9 +42,9 @@ export function splitOnPathPeriods(path: string): string[] {
 
 /**
  * This function sets an instance property of an SD or ED if possible
- * @param {StructureDefinition | ElementDefinition} - The instance to fix a value on
- * @param {string} path - The path to fix a value at
- * @param {any} value - The value to fix
+ * @param {StructureDefinition | ElementDefinition} - The instance to assign a value on
+ * @param {string} path - The path to assign a value at
+ * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  */
 export function setPropertyOnDefinitionInstance(
@@ -54,9 +54,9 @@ export function setPropertyOnDefinitionInstance(
   fisher: Fishable
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
-  const { fixedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
+  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
   setImpliedPropertiesOnInstance(instance, instanceSD, [path], fisher);
-  setPropertyOnInstance(instance, pathParts, fixedValue);
+  setPropertyOnInstance(instance, pathParts, assignedValue);
 }
 
 export function setImpliedPropertiesOnInstance(
@@ -71,19 +71,21 @@ export function setImpliedPropertiesOnInstance(
     const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
     if (element) {
-      // If an element is pointed to by a path, that means we must fix values on its parents, its own
-      // fixable descendents, and fixable descenendents of its parents. A fixable descendent is a 1..n direct child
-      // or a fixable descendent of such a child
+      // If an element is pointed to by a path, that means we must assign values on its parents, its own
+      // assignable descendents, and assignable descenendents of its parents. An assignable descendent is a 1..n direct child
+      // or an assignable descendent of such a child
       const parents = element.getAllParents();
-      const associatedElements = [...element.getFixableDescendents(), ...parents];
-      parents.map(p => p.getFixableDescendents()).forEach(pd => associatedElements.push(...pd));
+      const associatedElements = [...element.getAssignableDescendents(), ...parents];
+      parents.map(p => p.getAssignableDescendents()).forEach(pd => associatedElements.push(...pd));
 
       for (const associatedEl of associatedElements) {
-        const fixedValueKey = Object.keys(associatedEl).find(
+        const assignedValueKey = Object.keys(associatedEl).find(
           k => k.startsWith('fixed') || k.startsWith('pattern')
         );
-        const foundFixedValue = cloneDeep(associatedEl[fixedValueKey as keyof ElementDefinition]);
-        if (foundFixedValue) {
+        const foundAssignedValue = cloneDeep(
+          associatedEl[assignedValueKey as keyof ElementDefinition]
+        );
+        if (foundAssignedValue) {
           // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
           let overlapIdx = 0;
           const elParts = element.id.split('.');
@@ -108,7 +110,7 @@ export function setImpliedPropertiesOnInstance(
             // Implied paths are found via the index free path
             finalPath.replace(/\[[-+]?\d+\]$/g, '')
           );
-          [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundFixedValue));
+          [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundAssignedValue));
         }
       }
     }
@@ -122,10 +124,10 @@ export function setImpliedPropertiesOnInstance(
 export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
-  fixedValue: any
+  assignedValue: any
 ): void {
-  if (fixedValue != null) {
-    // If we can fix the value on the StructureDefinition StructureDefinition, then we can set the
+  if (assignedValue != null) {
+    // If we can assign the value on the StructureDefinition StructureDefinition, then we can set the
     // instance property here
     let current: any = instance;
     for (const [i, pathPart] of pathParts.entries()) {
@@ -141,11 +143,11 @@ export function setPropertyOnInstance(
         if (current[key] == null) current[key] = [];
         sliceName = getSliceName(pathPart);
         if (sliceName) {
-          if (typeof fixedValue !== 'object') {
-            // When a fixedValue is a primitive but also a slice, we convert to an object so that
+          if (typeof assignedValue !== 'object') {
+            // When an assignedValue is a primitive but also a slice, we convert to an object so that
             // the sliceName field can be tracked on the object. The _primitive field marks the object
             // to later be converted back to a primitive by replaceField in cleanResource
-            fixedValue = { fixedValue, _primitive: true };
+            assignedValue = { assignedValue, _primitive: true };
           }
           const sliceIndices: number[] = [];
           // Find the indices where slices are placed
@@ -184,10 +186,10 @@ export function setPropertyOnInstance(
             current._sliceName = sliceName;
           }
         } else {
-          if (typeof fixedValue === 'object') {
-            Object.assign(current[key][index], fixedValue);
+          if (typeof assignedValue === 'object') {
+            Object.assign(current[key][index], assignedValue);
           } else {
-            current[key][index] = fixedValue;
+            current[key][index] = assignedValue;
           }
         }
       } else {
@@ -196,7 +198,7 @@ export function setPropertyOnInstance(
           if (current[key] == null) current[key] = {};
           current = current[key];
         } else {
-          current[key] = fixedValue;
+          current[key] = assignedValue;
         }
       }
     }
@@ -221,12 +223,12 @@ export function getArrayIndex(pathPart: PathPart): number {
 /**
  * Replaces references to instances by the correct path to that instance.
  * Replaces references to local code systems by the url for that code system.
- * @param {FixedValueRule} rule - The rule to replace references on
+ * @param {AssignmentRule} rule - The rule to replace references on
  * @param {FSHTank} tank - The tank holding the instances and code systems
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
- * @returns {FixedValueRule} a clone of the rule if replacing is done, otherwise the original rule
+ * @returns {AssignmentRule} a clone of the rule if replacing is done, otherwise the original rule
  */
-export function replaceReferences<T extends FixedValueRule | CaretValueRule>(
+export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
   rule: T,
   tank: FSHTank,
   fisher: Fishable
@@ -246,34 +248,34 @@ export function replaceReferences<T extends FixedValueRule | CaretValueRule>(
     if (instance && instanceMeta) {
       // If the instance has a rule setting id, that overrides instance.id
       const idRule = instance.rules.find(
-        r => r.path === 'id' && r instanceof FixedValueRule
-      ) as FixedValueRule;
-      const id = idRule?.fixedValue ?? instance.id;
+        r => r.path === 'id' && r instanceof AssignmentRule
+      ) as AssignmentRule;
+      const id = idRule?.value ?? instance.id;
       clone = cloneDeep(rule);
-      const fv = getRuleValue(clone) as FshReference;
-      fv.reference = `${instanceMeta.sdType}/${id}`;
-      fv.sdType = instanceMeta.sdType;
+      const assignedReference = getRuleValue(clone) as FshReference;
+      assignedReference.reference = `${instanceMeta.sdType}/${id}`;
+      assignedReference.sdType = instanceMeta.sdType;
     }
   } else if (value instanceof FshCode) {
     const codeSystem = tank.fish(value.system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
     if (codeSystem && codeSystemMeta) {
       clone = cloneDeep(rule);
-      const fv = getRuleValue(clone) as FshCode;
-      fv.system = codeSystemMeta.url;
+      const assignedCode = getRuleValue(clone) as FshCode;
+      assignedCode.system = codeSystemMeta.url;
     }
   }
   return clone ?? rule;
 }
 
 /**
- * Function to get a value from a rule that has a value (FixedValue or CaretValue)
+ * Function to get a value from a rule that has a value (AssignedValue or CaretValue)
  * @param rule - The rule to get a value from
  * @returns - The value on the rule
  */
-function getRuleValue(rule: FixedValueRule | CaretValueRule): FixedValueType {
-  if (rule instanceof FixedValueRule) {
-    return rule.fixedValue;
+function getRuleValue(rule: AssignmentRule | CaretValueRule): AssignmentValueType {
+  if (rule instanceof AssignmentRule) {
+    return rule.value;
   } else if (rule instanceof CaretValueRule) {
     return rule.value;
   }
@@ -341,7 +343,7 @@ export function cleanResource(
   replaceField(
     resourceDef,
     (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._primitive,
-    (o, p) => (o[p] = o[p].fixedValue),
+    (o, p) => (o[p] = o[p].assignedValue),
     skipFn
   );
 
@@ -387,9 +389,9 @@ export function applyMixinRules(
         r.sourceInfo.appliedLocation = fshDefinition.sourceInfo.location;
       });
       const rules = ruleSet.rules.filter(r => {
-        if (fshDefinition instanceof Instance && !(r instanceof FixedValueRule)) {
+        if (fshDefinition instanceof Instance && !(r instanceof AssignmentRule)) {
           logger.error(
-            'Rules applied by mixins to an instance must fix a value. Other rules are ignored.',
+            'Rules applied by mixins to an instance must assign a value. Other rules are ignored.',
             r.sourceInfo
           );
           return false;
@@ -471,7 +473,7 @@ export function applyInsertRules(
 
 /**
  * Finds all FSH paths implied by the FSH path pointing at element. Paths are implied by array elements.
- * For example, if foo is 2..* and bar is 2..*, and bar has a fixed value of "hello", then the rule
+ * For example, if foo is 2..* and bar is 2..*, and bar has a assigned value of "hello", then the rule
  * "foo[0].baz = "hey" " implies the following:
  * foo[0].baz = "hey"
  * foo[0].bar[0] = "hello"

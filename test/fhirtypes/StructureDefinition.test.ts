@@ -837,10 +837,10 @@ describe('StructureDefinition', () => {
       expect(observation.title).toBe('foo');
     });
 
-    it('should not set an instance property which is being fixed incorrectly', () => {
+    it('should not set an instance property which is being assigned incorrectly', () => {
       expect(() => {
         observation.setInstancePropertyByPath('version', 1.2, fisher);
-      }).toThrow('Cannot fix number value: 1.2. Value does not match element type: string');
+      }).toThrow('Cannot assign number value: 1.2. Value does not match element type: string');
       expect(observation.version).toBe('4.0.1');
     });
 
@@ -988,57 +988,57 @@ describe('StructureDefinition', () => {
     });
 
     // Simple value
-    it('should allow fixing an instance value', () => {
-      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
+    it('should allow assigning an instance value', () => {
+      const { assignedValue, pathParts } = structureDefinition.validateValueAtPath(
         'version',
         '4.0.2',
         fisher
       );
-      expect(fixedValue).toBe('4.0.2');
+      expect(assignedValue).toBe('4.0.2');
       expect(pathParts.length).toBe(1);
       expect(pathParts[0]).toEqual({ primitive: true, base: 'version' });
     });
 
-    it('should allow fixing the same instance value over an existing pattern[x]', () => {
+    it('should allow assigning the same instance value over an existing pattern[x]', () => {
       const method = respRate.findElement('Observation.method');
       method.patternCodeableConcept = { coding: [{ system: 'http://system.com', code: 'foo' }] };
-      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
         'method',
         new FshCode('foo', 'http://system.com'),
         fisher
       );
-      expect(fixedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
+      expect(assignedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
       expect(pathParts.length).toBe(1);
       expect(pathParts[0]).toEqual({ base: 'method' });
     });
 
-    it('should allow fixing the same instance value over an existing fixed[x]', () => {
+    it('should allow assigning the same instance value over an existing fixed[x]', () => {
       const method = respRate.findElement('Observation.method');
       method.fixedCodeableConcept = { coding: [{ system: 'http://system.com', code: 'foo' }] };
-      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
         'method',
         new FshCode('foo', 'http://system.com'),
         fisher
       );
-      expect(fixedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
+      expect(assignedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
       expect(pathParts.length).toBe(1);
       expect(pathParts[0]).toEqual({ base: 'method' });
     });
 
     // Invalid paths
-    it('should not allow fixing an instance value with an incorrect path', () => {
+    it('should not allow assigning an instance value with an incorrect path', () => {
       expect(() => {
         structureDefinition.validateValueAtPath('Version', '4.0.2', fisher);
       }).toThrow('The element or path you referenced does not exist: Version');
     });
 
-    it('should not allow fixing an instance value with an incorrect value', () => {
+    it('should not allow assigning an instance value with an incorrect value', () => {
       expect(() => {
         structureDefinition.validateValueAtPath('version', true, fisher);
-      }).toThrow('Cannot fix boolean value: true. Value does not match element type: string');
+      }).toThrow('Cannot assign boolean value: true. Value does not match element type: string');
     });
 
-    it('should not allow fixing an instance value with a 0 cardinality', () => {
+    it('should not allow assigning an instance value with a 0 cardinality', () => {
       const version = structureDefinition.elements.find(
         e => e.id === 'StructureDefinition.version'
       );
@@ -1049,38 +1049,38 @@ describe('StructureDefinition', () => {
     });
 
     // Arrays
-    it('should allow fixing an instance value to an element in an array', () => {
-      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
+    it('should allow assigning an instance value to an element in an array', () => {
+      const { assignedValue, pathParts } = structureDefinition.validateValueAtPath(
         'identifier[0].value',
         'foo',
         fisher
       );
-      expect(fixedValue).toBe('foo');
+      expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
       expect(pathParts[1]).toEqual({ primitive: true, base: 'value' });
     });
 
-    it('should allow fixing an instance value to an element in an array, with implied 0 index', () => {
-      const { fixedValue, pathParts } = structureDefinition.validateValueAtPath(
+    it('should allow assigning an instance value to an element in an array, with implied 0 index', () => {
+      const { assignedValue, pathParts } = structureDefinition.validateValueAtPath(
         'identifier.value',
         'foo',
         fisher
       );
-      expect(fixedValue).toBe('foo');
+      expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
       expect(pathParts[1]).toEqual({ primitive: true, base: 'value' });
     });
 
-    it('should allow fixing an instance value to an element in an array if the element was constrained from an array', () => {
+    it('should allow assigning an instance value to an element in an array if the element was constrained from an array', () => {
       // code.coding[RespRateCode] has been constrained from 1..* to 1..1
-      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
         'code.coding[RespRateCode].id',
         'foo',
         fisher
       );
-      expect(fixedValue).toBe('foo');
+      expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
       expect(pathParts[0]).toEqual({ base: 'code' });
       expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['RespRateCode', '0'] }); // 0 in path parts means value will be set in an array
@@ -1110,26 +1110,26 @@ describe('StructureDefinition', () => {
     });
 
     // Slices
-    it('should allow fixing an instance value on a slice', () => {
-      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+    it('should allow assigning an instance value on a slice', () => {
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
         'category[VSCat].coding[0].version',
         'foo',
         fisher
       );
-      expect(fixedValue).toBe('foo');
+      expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
       expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat', '0'] });
       expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['0'] });
       expect(pathParts[2]).toEqual({ primitive: true, base: 'version' });
     });
 
-    it('should allow fixing an instance value on a slice array', () => {
-      const { fixedValue, pathParts } = CSSPC.validateValueAtPath(
+    it('should allow assigning an instance value on a slice array', () => {
+      const { assignedValue, pathParts } = CSSPC.validateValueAtPath(
         'extension[required][3].value[x]',
         'foo',
         fisher
       );
-      expect(fixedValue).toBe('foo');
+      expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['required', '3'] });
       expect(pathParts[1]).toEqual({ primitive: true, base: 'value[x]' });
@@ -1137,14 +1137,14 @@ describe('StructureDefinition', () => {
 
     it('should allow setting values directly on extensions by accessing indexes', () => {
       // This test also tests that we can access later indexes of an array that has been unfolded at other indexes
-      // For example, extension[0].url has already been unfolded an has values fixed.
+      // For example, extension[0].url has already been unfolded an has values assigned.
       // validateValueAtPath correctly validates values for extension[2]
-      const { fixedValue, pathParts } = CSSPC.validateValueAtPath(
+      const { assignedValue, pathParts } = CSSPC.validateValueAtPath(
         'extension[2].url',
         'foo',
         fisher
       );
-      expect(fixedValue).toBe('foo');
+      expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['2'] });
       expect(pathParts[1]).toEqual({ primitive: true, base: 'url' });
@@ -1152,12 +1152,12 @@ describe('StructureDefinition', () => {
 
     it('should allow setting arbitrary defined extensions', () => {
       const originalLength = respRate.elements.length;
-      const { fixedValue, pathParts } = respRate.validateValueAtPath(
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
         'extension[patient-mothersMaidenName].value[x]',
         'foo',
         fisher
       );
-      expect(fixedValue).toBe('foo');
+      expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({
         base: 'extension',
@@ -1200,55 +1200,55 @@ describe('StructureDefinition', () => {
         containedChoice.constrainType(choiceRule, fisher);
       });
 
-      it('should allow fixing a Patient type InstanceDefinition to a Resource element', () => {
+      it('should allow assigning a Patient type InstanceDefinition to a Resource element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.resourceType = 'Patient';
-        const { fixedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
-        expect(fixedValue.resourceType).toBe('Patient');
+        const { assignedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
+        expect(assignedValue.resourceType).toBe('Patient');
       });
 
-      it('should allow fixing a Patient type InstanceDefinition to a DomainResource element', () => {
+      it('should allow assigning a Patient type InstanceDefinition to a DomainResource element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.resourceType = 'Patient';
-        const { fixedValue } = respRate.validateValueAtPath(
+        const { assignedValue } = respRate.validateValueAtPath(
           'contained[DomainsOnly][0]',
           instanceDef,
           fisher
         );
-        expect(fixedValue.resourceType).toBe('Patient');
+        expect(assignedValue.resourceType).toBe('Patient');
       });
 
-      it('should allow fixing a Patient type InstanceDefinition to a Patient element', () => {
+      it('should allow assigning a Patient type InstanceDefinition to a Patient element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.resourceType = 'Patient';
-        const { fixedValue } = respRate.validateValueAtPath(
+        const { assignedValue } = respRate.validateValueAtPath(
           'contained[PatientsOnly][0]',
           instanceDef,
           fisher
         );
-        expect(fixedValue.resourceType).toBe('Patient');
+        expect(assignedValue.resourceType).toBe('Patient');
       });
 
-      it('should allow fixing a Patient type InstanceDefinition to a choice element that includes Patient', () => {
+      it('should allow assigning a Patient type InstanceDefinition to a choice element that includes Patient', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.resourceType = 'Patient';
-        const { fixedValue } = respRate.validateValueAtPath(
+        const { assignedValue } = respRate.validateValueAtPath(
           'contained[PatientOrObservation][0]',
           instanceDef,
           fisher
         );
-        expect(fixedValue.resourceType).toBe('Patient');
+        expect(assignedValue.resourceType).toBe('Patient');
       });
 
-      it('should allow fixing a Bundle type InstanceDefinition to a Resource element', () => {
+      it('should allow assigning a Bundle type InstanceDefinition to a Resource element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.id = 'OfJoy';
         instanceDef.resourceType = 'Bundle';
-        const { fixedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
-        expect(fixedValue.resourceType).toBe('Bundle');
+        const { assignedValue } = respRate.validateValueAtPath('contained[0]', instanceDef, fisher);
+        expect(assignedValue.resourceType).toBe('Bundle');
       });
 
-      it('should not allow fixing a Bundle type InstanceDefinition to a DomainResource element', () => {
+      it('should not allow assigning a Bundle type InstanceDefinition to a DomainResource element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.id = 'OfJoy';
         instanceDef.resourceType = 'Bundle';
@@ -1257,7 +1257,7 @@ describe('StructureDefinition', () => {
         ).toThrow(/Bundle.*OfJoy.*DomainResource/);
       });
 
-      it('should not allow fixing a Bundle type InstanceDefinition to a Patient element', () => {
+      it('should not allow assigning a Bundle type InstanceDefinition to a Patient element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.id = 'OfJoy';
         instanceDef.resourceType = 'Bundle';
@@ -1266,7 +1266,7 @@ describe('StructureDefinition', () => {
         ).toThrow(/Bundle.*OfJoy.*Patient/);
       });
 
-      it('should not allow fixing a Bundle type InstanceDefinition to a choice element that does not include Bundle', () => {
+      it('should not allow assigning a Bundle type InstanceDefinition to a choice element that does not include Bundle', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.id = 'OfJoy';
         instanceDef.resourceType = 'Bundle';
@@ -1275,105 +1275,113 @@ describe('StructureDefinition', () => {
         ).toThrow(/Bundle.*OfJoy.*Patient, Observation/);
       });
 
-      it('should allow fixing a CodeableConcept type InstanceDefinition to a CodeableConcept element', () => {
+      it('should allow assigning a CodeableConcept type InstanceDefinition to a CodeableConcept element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.coding = [{ value: '#5' }];
         instanceDef._instanceMeta.sdType = 'CodeableConcept';
-        const { fixedValue } = respRate.validateValueAtPath('code', instanceDef, fisher);
-        expect(fixedValue).toEqual({ coding: [{ value: '#5' }] });
+        const { assignedValue } = respRate.validateValueAtPath('code', instanceDef, fisher);
+        expect(assignedValue).toEqual({ coding: [{ value: '#5' }] });
       });
 
-      it('should allow fixing a specialization of a type to a type', () => {
+      it('should allow assigning a specialization of a type to a type', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.value = 5;
         instanceDef._instanceMeta.sdType = 'Age';
-        const { fixedValue } = respRate.validateValueAtPath('valueQuantity', instanceDef, fisher);
-        expect(fixedValue).toEqual({ value: 5 });
+        const { assignedValue } = respRate.validateValueAtPath(
+          'valueQuantity',
+          instanceDef,
+          fisher
+        );
+        expect(assignedValue).toEqual({ value: 5 });
       });
 
-      it('should allow fixing a profile of a type to a type', () => {
+      it('should allow assigning a profile of a type to a type', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.value = 5;
         instanceDef._instanceMeta.sdType = 'SimpleQuantity';
-        const { fixedValue } = respRate.validateValueAtPath('valueQuantity', instanceDef, fisher);
-        expect(fixedValue).toEqual({ value: 5 });
+        const { assignedValue } = respRate.validateValueAtPath(
+          'valueQuantity',
+          instanceDef,
+          fisher
+        );
+        expect(assignedValue).toEqual({ value: 5 });
       });
 
-      it('should allow fixing a type to a choice type element', () => {
+      it('should allow assigning a type to a choice type element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.value = 5;
         instanceDef._instanceMeta.sdType = 'Quantity';
-        const { fixedValue } = observation.validateValueAtPath('value[x]', instanceDef, fisher);
-        expect(fixedValue).toEqual({ value: 5 });
+        const { assignedValue } = observation.validateValueAtPath('value[x]', instanceDef, fisher);
+        expect(assignedValue).toEqual({ value: 5 });
       });
 
-      it('should not allow fixing a type that is not in the choice to a choice type element', () => {
+      it('should not allow assigning a type that is not in the choice to a choice type element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.value = 5.0;
         instanceDef._instanceMeta.sdType = 'Money';
         instanceDef.id = 'Cash';
         expect(() => observation.validateValueAtPath('value[x]', instanceDef, fisher)).toThrow(
-          'Cannot fix Money value: Cash. Value does not match element type: '
+          'Cannot assign Money value: Cash. Value does not match element type: '
         );
       });
 
-      it('should not allow fixing a type to a non-matching type', () => {
+      it('should not allow assigning a type to a non-matching type', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.value = 5;
         instanceDef._instanceMeta.sdType = 'Quantity';
         instanceDef.id = 'Foo';
         expect(() => respRate.validateValueAtPath('code', instanceDef, fisher)).toThrow(
-          'Cannot fix Quantity value: Foo. Value does not match element type: CodeableConcept'
+          'Cannot assign Quantity value: Foo. Value does not match element type: CodeableConcept'
         );
       });
 
-      it('should not allow fixing a parent of a type to a type', () => {
+      it('should not allow assigning a parent of a type to a type', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef._instanceMeta.sdType = 'Element';
         instanceDef.id = 'Foo';
         expect(() => respRate.validateValueAtPath('code', instanceDef, fisher)).toThrow(
-          'Cannot fix Element value: Foo. Value does not match element type: CodeableConcept'
+          'Cannot assign Element value: Foo. Value does not match element type: CodeableConcept'
         );
       });
 
-      it('should allow fixing an extension of to an extension element', () => {
+      it('should allow assigning an extension of to an extension element', () => {
         const instanceDef = new InstanceDefinition();
         instanceDef.valueString = 'hello';
         instanceDef._instanceMeta.sdType = 'Extension';
-        const { fixedValue } = respRate.validateValueAtPath('extension', instanceDef, fisher);
-        expect(fixedValue).toEqual({ valueString: 'hello' });
+        const { assignedValue } = respRate.validateValueAtPath('extension', instanceDef, fisher);
+        expect(assignedValue).toEqual({ valueString: 'hello' });
       });
 
       // Overriding elements
       it('should allow replacing parts of a Resource element', () => {
         const language = new FshCode('French');
-        const { fixedValue } = respRate.validateValueAtPath(
+        const { assignedValue } = respRate.validateValueAtPath(
           'contained[0].language',
           language,
           fisher
         );
-        expect(fixedValue).toBe('French');
+        expect(assignedValue).toBe('French');
       });
 
       it('should allow replacing parts of a Patient element', () => {
         const gender = new FshCode('F');
-        const { fixedValue } = respRate.validateValueAtPath(
+        const { assignedValue } = respRate.validateValueAtPath(
           'contained[PatientsOnly][0].gender',
           gender,
           fisher
         );
-        expect(fixedValue).toBe('F');
+        expect(assignedValue).toBe('F');
       });
 
       it('should allow overriding a Resource with a Patient', () => {
         const gender = new FshCode('F');
-        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
           'contained[0].gender',
           gender,
           fisher,
           ['Patient']
         );
-        expect(fixedValue).toBe('F');
+        expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
           { base: 'gender', primitive: true }
@@ -1383,7 +1391,7 @@ describe('StructureDefinition', () => {
       it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle', () => {
         const gender = new FshCode('F');
         const {
-          fixedValue,
+          assignedValue,
           pathParts
         } = respRate.validateValueAtPath('contained[0].entry[0].resource.gender', gender, fisher, [
           'Bundle',
@@ -1391,7 +1399,7 @@ describe('StructureDefinition', () => {
           'Patient',
           null
         ]);
-        expect(fixedValue).toBe('F');
+        expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
           { base: 'entry', brackets: ['0'] },
@@ -1403,7 +1411,7 @@ describe('StructureDefinition', () => {
       it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle within a Bundle', () => {
         const gender = new FshCode('F');
         const {
-          fixedValue,
+          assignedValue,
           pathParts
         } = respRate.validateValueAtPath(
           'contained[0].entry[0].resource.entry[0].resource.gender',
@@ -1411,7 +1419,7 @@ describe('StructureDefinition', () => {
           fisher,
           ['Bundle', null, 'Bundle', null, 'Patient', null]
         );
-        expect(fixedValue).toBe('F');
+        expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
           { base: 'entry', brackets: ['0'] },
@@ -1425,14 +1433,14 @@ describe('StructureDefinition', () => {
       it('should allow overriding a Resource with a Profile', () => {
         const unit = 'slugs';
         const {
-          fixedValue,
+          assignedValue,
           pathParts
         } = respRate.validateValueAtPath('contained[0].valueQuantity.unit', unit, fisher, [
           'http://hl7.org/fhir/StructureDefinition/resprate',
           null,
           null
         ]);
-        expect(fixedValue).toBe('slugs');
+        expect(assignedValue).toBe('slugs');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
           { base: 'valueQuantity' },
@@ -1481,12 +1489,12 @@ describe('StructureDefinition', () => {
 
       // resourceType
       it('should allow a valid FHIR resourceType to be set on a Resource element', () => {
-        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
           'contained[0].resourceType',
           'Patient',
           fisher
         );
-        expect(fixedValue).toBe('Patient');
+        expect(assignedValue).toBe('Patient');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
           { base: 'resourceType' }
@@ -1494,12 +1502,12 @@ describe('StructureDefinition', () => {
       });
 
       it('should allow a valid FHIR resourceType to be set on a DomainResource element', () => {
-        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
           'contained[DomainsOnly][0].resourceType',
           'Patient',
           fisher
         );
-        expect(fixedValue).toBe('Patient');
+        expect(assignedValue).toBe('Patient');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['DomainsOnly', '0'] },
           { base: 'resourceType' }
@@ -1507,12 +1515,12 @@ describe('StructureDefinition', () => {
       });
 
       it('should allow a valid FHIR resourceType to be set on a Patient element', () => {
-        const { fixedValue, pathParts } = respRate.validateValueAtPath(
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
           'contained[PatientsOnly][0].resourceType',
           'Patient',
           fisher
         );
-        expect(fixedValue).toBe('Patient');
+        expect(assignedValue).toBe('Patient');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['PatientsOnly', '0'] },
           { base: 'resourceType' }

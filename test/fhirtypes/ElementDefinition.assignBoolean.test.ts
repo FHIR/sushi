@@ -25,21 +25,21 @@ describe('ElementDefinition', () => {
     location = fisher.fishForStructureDefinition('Location');
   });
 
-  describe('#fixBoolean', () => {
-    it('should fix a boolean to a boolean', () => {
+  describe('#assignBoolean', () => {
+    it('should assign a boolean to a boolean', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
-      hoursOfOperationAllDay.fixValue(true);
+      hoursOfOperationAllDay.assignValue(true);
       expect(hoursOfOperationAllDay.patternBoolean).toBe(true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBeUndefined();
     });
 
-    it('should fix a boolean to a boolean (exactly)', () => {
+    it('should assign a boolean to a boolean (exactly)', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
-      hoursOfOperationAllDay.fixValue(true, true);
+      hoursOfOperationAllDay.assignValue(true, true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
       expect(hoursOfOperationAllDay.patternBoolean).toBeUndefined();
     });
@@ -47,49 +47,55 @@ describe('ElementDefinition', () => {
     it('should throw NoSingleTypeError when element has multiple types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       expect(() => {
-        valueX.fixValue(true);
+        valueX.assignValue(true);
       }).toThrow(
-        'Cannot fix boolean value on this element since this element does not have a single type'
+        'Cannot assign boolean value on this element since this element does not have a single type'
       );
       expect(() => {
-        valueX.fixValue(true, true);
+        valueX.assignValue(true, true);
       }).toThrow(
-        'Cannot fix boolean value on this element since this element does not have a single type'
+        'Cannot assign boolean value on this element since this element does not have a single type'
       );
       expect(valueX.patternBoolean).toBeUndefined();
       expect(valueX.fixedBoolean).toBeUndefined();
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value by pattern[x]', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
-      hoursOfOperationAllDay.fixValue(true);
+      hoursOfOperationAllDay.assignValue(true);
       expect(hoursOfOperationAllDay.patternBoolean).toBe(true);
-      hoursOfOperationAllDay.fixValue(true);
+      hoursOfOperationAllDay.assignValue(true);
       expect(hoursOfOperationAllDay.patternBoolean).toBe(true);
       expect(() => {
-        hoursOfOperationAllDay.fixValue(false);
-      }).toThrow('Cannot fix false to this element; a different boolean is already fixed: true.');
+        hoursOfOperationAllDay.assignValue(false);
+      }).toThrow(
+        'Cannot assign false to this element; a different boolean is already assigned: true.'
+      );
       expect(() => {
-        hoursOfOperationAllDay.fixValue(false, true);
-      }).toThrow('Cannot fix false to this element; a different boolean is already fixed: true.');
+        hoursOfOperationAllDay.assignValue(false, true);
+      }).toThrow(
+        'Cannot assign false to this element; a different boolean is already assigned: true.'
+      );
     });
 
-    it('should throw ValueAlreadyFixedError when the value is fixed to a different value by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when the value is assigned to a different value by fixed[x]', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
-      hoursOfOperationAllDay.fixValue(true, true);
+      hoursOfOperationAllDay.assignValue(true, true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
-      hoursOfOperationAllDay.fixValue(true, true);
+      hoursOfOperationAllDay.assignValue(true, true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
       expect(() => {
-        hoursOfOperationAllDay.fixValue(false, true);
-      }).toThrow('Cannot fix false to this element; a different boolean is already fixed: true.');
+        hoursOfOperationAllDay.assignValue(false, true);
+      }).toThrow(
+        'Cannot assign false to this element; a different boolean is already assigned: true.'
+      );
     });
 
-    it('should throw ValueAlreadyFixedError when fixing a boolean to a different value set in a parent by pattern[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning a boolean to a different value set in a parent by pattern[x]', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
       code.patternCodeableConcept = { coding: [{ userSelected: false }] };
       code.unfold(fisher);
@@ -100,15 +106,19 @@ describe('ElementDefinition', () => {
       );
       const clone = cloneDeep(userSelected);
       expect(() => {
-        userSelected.fixValue(true);
-      }).toThrow('Cannot fix true to this element; a different boolean is already fixed: false.');
+        userSelected.assignValue(true);
+      }).toThrow(
+        'Cannot assign true to this element; a different boolean is already assigned: false.'
+      );
       expect(() => {
-        userSelected.fixValue(true, true);
-      }).toThrow('Cannot fix true to this element; a different boolean is already fixed: false.');
+        userSelected.assignValue(true, true);
+      }).toThrow(
+        'Cannot assign true to this element; a different boolean is already assigned: false.'
+      );
       expect(clone).toEqual(userSelected);
     });
 
-    it('should throw ValueAlreadyFixedError when fixing a boolean to a different value set in a parent by fixed[x]', () => {
+    it('should throw ValueAlreadyAssignedError when assigning a boolean to a different value set in a parent by fixed[x]', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
       code.fixedCodeableConcept = { coding: [{ userSelected: false }] };
       code.unfold(fisher);
@@ -119,32 +129,34 @@ describe('ElementDefinition', () => {
       );
       const clone = cloneDeep(userSelected);
       expect(() => {
-        userSelected.fixValue(true, true);
-      }).toThrow('Cannot fix true to this element; a different boolean is already fixed: false.');
+        userSelected.assignValue(true, true);
+      }).toThrow(
+        'Cannot assign true to this element; a different boolean is already assigned: false.'
+      );
       expect(clone).toEqual(userSelected);
     });
 
-    it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
+    it('should throw AssignedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const hoursOfOperationAllDay = location.elements.find(
         e => e.id === 'Location.hoursOfOperation.allDay'
       );
-      hoursOfOperationAllDay.fixValue(true, true);
+      hoursOfOperationAllDay.assignValue(true, true);
       expect(hoursOfOperationAllDay.fixedBoolean).toBe(true);
       expect(() => {
-        hoursOfOperationAllDay.fixValue(true);
+        hoursOfOperationAllDay.assignValue(true);
       }).toThrow(
-        'Cannot fix this element using a pattern; as it is already fixed in the StructureDefinition using fixedBoolean.'
+        'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedBoolean.'
       );
     });
 
-    it('should throw MismatchedTypeError when the value is fixed to a non-boolean', () => {
+    it('should throw MismatchedTypeError when the value is assigned to a non-boolean', () => {
       const status = location.elements.find(e => e.id === 'Location.status');
       expect(() => {
-        status.fixValue(true);
-      }).toThrow('Cannot fix boolean value: true. Value does not match element type: code');
+        status.assignValue(true);
+      }).toThrow('Cannot assign boolean value: true. Value does not match element type: code');
       expect(() => {
-        status.fixValue(true, true);
-      }).toThrow('Cannot fix boolean value: true. Value does not match element type: code');
+        status.assignValue(true, true);
+      }).toThrow('Cannot assign boolean value: true. Value does not match element type: code');
     });
   });
 });

@@ -1,6 +1,6 @@
 import { Rule } from './Rule';
 
-export class ValueSetRule extends Rule {
+export class BindingRule extends Rule {
   valueSet: string;
   strength: string;
 

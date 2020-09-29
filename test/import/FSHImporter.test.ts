@@ -1,7 +1,7 @@
 import { importText, RawFSH } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
-import { assertFixedValueRule, assertFlagRule } from '../testhelpers/asserts';
+import { assertAssignmentRule, assertFlagRule } from '../testhelpers/asserts';
 import { importSingleText } from '../testhelpers/importSingleText';
 
 describe('FSHImporter', () => {
@@ -55,7 +55,7 @@ describe('FSHImporter', () => {
       .withLocation([5, 14, 5, 65])
       .withFile('Escape.fsh');
     expect(profile.rules).toHaveLength(1);
-    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
   });
 
   it('should parse escaped hash and backslash characters in system identifiers in codings', () => {
@@ -78,9 +78,9 @@ describe('FSHImporter', () => {
       .withLocation([6, 19, 6, 54])
       .withFile('HashBrowns.fsh');
     expect(profile.rules).toHaveLength(3);
-    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
-    assertFixedValueRule(profile.rules[1], 'extraCode', expectedExtraCode);
-    assertFixedValueRule(profile.rules[2], 'bonusCode', expectedBonusCode);
+    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
+    assertAssignmentRule(profile.rules[1], 'extraCode', expectedExtraCode);
+    assertAssignmentRule(profile.rules[2], 'bonusCode', expectedBonusCode);
   });
 
   it('should parse a rule with an identifying integer', () => {
@@ -95,7 +95,7 @@ describe('FSHImporter', () => {
       .withLocation([4, 17, 4, 42])
       .withFile('IdentifyingInteger.fsh');
     expect(profile.rules).toHaveLength(1);
-    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
   });
 
   it('should parse a rule that uses non-breaking spaces in a concept string', () => {
@@ -110,7 +110,7 @@ describe('FSHImporter', () => {
       .withLocation([4, 14, 4, 39])
       .withFile('NonBreaking.fsh');
     expect(profile.rules).toHaveLength(1);
-    assertFixedValueRule(profile.rules[0], 'code', expectedCode);
+    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
   });
 
   it('should log an error when a concept string starts with whitespace', () => {
@@ -136,7 +136,7 @@ describe('FSHImporter', () => {
     const result = importSingleText(input, 'MyOperation.fsh');
     const profile = result.profiles.get('MyOperation');
     expect(profile.rules).toHaveLength(1);
-    assertFixedValueRule(profile.rules[0], 'system', true);
+    assertAssignmentRule(profile.rules[0], 'system', true);
   });
 
   it('should parse rules on a list of paths that includes system', () => {

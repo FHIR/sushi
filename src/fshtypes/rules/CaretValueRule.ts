@@ -1,9 +1,9 @@
 import { Rule } from './Rule';
-import { FixedValueType } from './FixedValueRule';
+import { AssignmentValueType } from './AssignmentRule';
 
 export class CaretValueRule extends Rule {
   caretPath: string;
-  value: FixedValueType;
+  value: AssignmentValueType;
   isInstance: boolean;
 
   constructor(path: string) {

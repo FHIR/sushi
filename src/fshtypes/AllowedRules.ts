@@ -3,11 +3,11 @@ import {
   CardRule,
   CaretValueRule,
   ContainsRule,
-  FixedValueRule,
+  AssignmentRule,
   FlagRule,
   ObeysRule,
   OnlyRule,
-  ValueSetRule,
+  BindingRule,
   ConceptRule,
   ValueSetComponentRule,
   MappingRule,
@@ -21,11 +21,11 @@ const allowedRulesMap = new Map<any, any[]>([
       CardRule,
       CaretValueRule,
       ContainsRule,
-      FixedValueRule,
+      AssignmentRule,
       FlagRule,
       ObeysRule,
       OnlyRule,
-      ValueSetRule
+      BindingRule
     ]
   ],
   [
@@ -34,14 +34,14 @@ const allowedRulesMap = new Map<any, any[]>([
       CardRule,
       CaretValueRule,
       ContainsRule,
-      FixedValueRule,
+      AssignmentRule,
       FlagRule,
       ObeysRule,
       OnlyRule,
-      ValueSetRule
+      BindingRule
     ]
   ],
-  [Instance, [FixedValueRule]],
+  [Instance, [AssignmentRule]],
   [FshValueSet, [ValueSetComponentRule, CaretValueRule]],
   [FshCodeSystem, [ConceptRule, CaretValueRule]],
   [Mapping, [MappingRule]],
@@ -52,13 +52,13 @@ const allowedRulesMap = new Map<any, any[]>([
       CaretValueRule,
       ConceptRule,
       ContainsRule,
-      FixedValueRule,
+      AssignmentRule,
       FlagRule,
       MappingRule,
       ObeysRule,
       OnlyRule,
       ValueSetComponentRule,
-      ValueSetRule
+      BindingRule
     ]
   ]
 ]);

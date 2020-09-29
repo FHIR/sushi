@@ -41,12 +41,12 @@ export class CodeSystemExporter {
     );
     for (const rule of rules) {
       try {
-        const { fixedValue, pathParts } = csStructureDefinition.validateValueAtPath(
+        const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
           rule.caretPath,
           rule.value,
           this.fisher
         );
-        setPropertyOnInstance(codeSystem, pathParts, fixedValue);
+        setPropertyOnInstance(codeSystem, pathParts, assignedValue);
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }

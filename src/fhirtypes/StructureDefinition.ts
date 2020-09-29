@@ -285,8 +285,8 @@ export class StructureDefinition {
 
   /**
    * This function sets an instance property of an SD if possible
-   * @param {string} path - The path to the ElementDefinition to fix
-   * @param {any} value - The value to fix
+   * @param {string} path - The path to the ElementDefinition to assign
+   * @param {any} value - The value to assign
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
   setInstancePropertyByPath(path: string, value: any, fisher: Fishable): void {
@@ -435,21 +435,21 @@ export class StructureDefinition {
   }
 
   /**
-   * This function tests if it is possible to fix value to a path, but does not actually fix it
-   * @param {string} path - The path to the ElementDefinition to fix
-   * @param {any} value - The value to fix; use null to validate just the path when you know the value is valid
+   * This function tests if it is possible to assign value to a path, but does not actually assign it
+   * @param {string} path - The path to the ElementDefinition to assign
+   * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {inlineResourceTypes} - Types that will be used to replace Resource elements
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
-   * @returns {any} - The object or value to fix
+   * @returns {any} - The object or value to assign
    */
   validateValueAtPath(
     path: string,
     value: any,
     fisher: Fishable,
     inlineResourceTypes: string[] = []
-  ): { fixedValue: any; pathParts: PathPart[] } {
+  ): { assignedValue: any; pathParts: PathPart[] } {
     const pathParts = this.parseFSHPath(path);
     let currentPath = '';
     let previousPath = '';
@@ -477,7 +477,7 @@ export class StructureDefinition {
         // Get the extension being referred to
         const extension = fisher.fishForMetadata(pathPart.brackets[0]);
         if (extension && extensionElement) {
-          // If the extension exists, add it as a slice to the SD so that we can fix it
+          // If the extension exists, add it as a slice to the SD so that we can assign it
           // This function is only called by InstanceExporter on copies of SDs, not those being exported
           if (!extensionElement.slicing) {
             extensionElement.sliceIt('value', 'url');
@@ -498,7 +498,7 @@ export class StructureDefinition {
         previousElement?.type?.length === 1
       ) {
         if (isInheritedResource(value, previousElement.type[0].code, fisher)) {
-          return { fixedValue: value, pathParts: pathParts };
+          return { assignedValue: value, pathParts: pathParts };
         } else {
           throw new InvalidResourceTypeError(value, previousElement.type[0].code);
         }
@@ -563,7 +563,7 @@ export class StructureDefinition {
               inlineResourceTypes.slice(i + 1)
             );
             return {
-              fixedValue: validatedInlineResource.fixedValue,
+              assignedValue: validatedInlineResource.assignedValue,
               pathParts: pathParts.slice(0, i + 1).concat(validatedInlineResource.pathParts)
             };
           } catch (e) {
@@ -580,22 +580,22 @@ export class StructureDefinition {
       previousElement = currentElement;
     }
     const clone = currentElement.clone();
-    let fixedValue;
-    // Fixed resources cannot be fixed by pattern[x]/fixed[x], so we must set fixedValue directly
+    let assignedValue;
+    // Assigned resources cannot be assigned by pattern[x]/fixed[x], so we must set assignedValue directly
     if (value instanceof InstanceDefinition) {
-      fixedValue = clone.checkFixInlineInstance(value, fisher).toJSON();
+      assignedValue = clone.checkAssignInlineInstance(value, fisher).toJSON();
     } else {
-      // fixValue will throw if it fails, but skip the check if value is null
+      // assignValue will throw if it fails, but skip the check if value is null
       if (value != null) {
-        // exactly must be true so that we always test fixing with the more strict fixed[x] approach
-        clone.fixValue(value, true, fisher);
+        // exactly must be true so that we always test assigning with the more strict fixed[x] approach
+        clone.assignValue(value, true, fisher);
       }
       // If there is a fixedValue or patternValue, find it and return it
       const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
-      if (key != null) fixedValue = clone[key as keyof ElementDefinition];
+      if (key != null) assignedValue = clone[key as keyof ElementDefinition];
     }
 
-    return { fixedValue, pathParts };
+    return { assignedValue, pathParts };
   }
 
   /**
