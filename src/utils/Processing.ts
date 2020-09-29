@@ -270,10 +270,13 @@ export async function init(): Promise<void> {
     .replace('ExampleIG', projectName);
   fs.ensureDirSync(path.join(outputDir, 'input', 'pagecontent'));
   fs.writeFileSync(path.join(outputDir, 'input', 'pagecontent', 'index.md'), indexPageContent);
+  // Add ig.ini, updating to reflect the user given id
+  const iniContent = fs
+    .readFileSync(path.join(initProjectDir, 'ig.ini'), 'utf-8')
+    .replace('fhir.example', configDoc.get('id'));
+  fs.writeFileSync(path.join(outputDir, 'ig.ini'), iniContent);
   // Add the config
   fs.writeFileSync(path.join(outputDir, 'sushi-config.yaml'), configDoc.toString());
-  // Copy over ig.ini
-  fs.copyFileSync(path.join(initProjectDir, 'ig.ini'), path.join(outputDir, 'ig.ini'));
   // Copy over remaining static files
   fs.ensureDirSync(path.join(outputDir, 'input', 'fsh'));
   fs.copyFileSync(
