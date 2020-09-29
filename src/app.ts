@@ -71,27 +71,16 @@ async function app() {
   const isIgPubContext = path.parse(input).base === 'fsh';
   const outDir = ensureOutputDir(input, program.out, isIgPubContext);
 
-  let config: Configuration;
-  try {
-    config = readConfig(input);
-  } catch {
-    process.exit(1);
-  }
-
   let tank: FSHTank;
+  let config: Configuration;
+
   try {
     const rawFSH = getRawFSHes(input);
     if (rawFSH.length === 0) {
       logger.info('No FSH files present.');
       process.exit(0);
     }
-    if (!config) {
-      logger.error(
-        'No config.yaml in FSH definition folder, and no configuration could' +
-          ' be extracted from an ImplementationGuide resource.'
-      );
-      process.exit(1);
-    }
+    config = readConfig(input);
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();

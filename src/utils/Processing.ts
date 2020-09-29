@@ -75,7 +75,11 @@ export function readConfig(input: string): Configuration {
     config = importConfiguration(configYaml, configPath);
   }
   if (!config) {
-    return;
+    logger.error(
+      'No config.yaml in FSH definition folder, and no configuration could' +
+        ' be extracted from an ImplementationGuide resource.'
+    );
+    throw Error;
   }
   if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
