@@ -1321,6 +1321,10 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   private addOutputLog(igPath: string): void {
+    // If we are in the new context, all output goes into fsh-generated, so no point having SUSHI-GENERATED-FILES
+    if (this.isIgPubContext) {
+      return;
+    }
     const intro = [
       '# SUSHI-GENERATED FILES #',
       '',

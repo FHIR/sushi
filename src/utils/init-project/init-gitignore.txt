@@ -1,7 +1,6 @@
 .DS_Store
 Thumbs.db
 /fsh-generated
-/SUSHI-GENERATED-FILES.md
 /input-cache
 /output
 /temp
