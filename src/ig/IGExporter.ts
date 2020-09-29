@@ -1281,6 +1281,18 @@ export class IGExporter {
     const filePathString = path.join(path.basename(this.igDataPath), 'package-list.json');
 
     if (this.config.history) {
+      if (this.isIgPubContext) {
+        logger.error(
+          'Detected "history" property in configuration. The use of "history" is deprecated. Please remove the property and provide a package-list.json directly. ' +
+            'The package-list.json corresponding to the "history" property in the configuration is:\n\n' +
+            JSON.stringify(this.config.history, null, 2) +
+            '\n'
+        );
+        return;
+      }
+      logger.warn(
+        'Use of "history" property in configuration is deprecated and will be removed in a future version. Please remove the property and provide a package-list.json directly.'
+      );
       const outputPath = path.join(igPath, 'package-list.json');
       outputJSONSync(outputPath, this.config.history, { spaces: 2 });
       logger.info('Generated package-list.json');
