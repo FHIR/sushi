@@ -1,9 +1,8 @@
 .DS_Store
 Thumbs.db
+/fsh-generated
 /SUSHI-GENERATED-FILES.md
-/ig.ini
 /input-cache
-/input/includes/menu.xml
 /output
 /temp
 /template
