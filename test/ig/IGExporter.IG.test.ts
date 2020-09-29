@@ -539,7 +539,7 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      expect(loggerSpy.getMessageAtIndex(-2, 'warn')).toMatch(
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
         /StructureDefinition\/sample-patient is listed as a member of group JustOneGroup.*does not need a groupingId/s
       );
     });
