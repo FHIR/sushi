@@ -1,3 +1,4 @@
+import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
@@ -230,7 +231,7 @@ export function writeFHIRResources(
 /**
  * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
  */
-export function init(): void {
+export async function init(): Promise<void> {
   console.log(
     '\n╭──────────────────────────────────────────────────────────╮\n' +
       '│ This interactive tool will use your answers to create a  │\n' +
@@ -284,14 +285,24 @@ export function init(): void {
     path.join(outputDir, '.gitignore')
   );
   // Add the _updatePublisher, _genonce, and _gencontinuous scripts
-  const scriptsDir = path.join(__dirname, '..', 'ig', 'files');
-  const scriptsDirContents = fs.readdirSync(scriptsDir);
-  scriptsDirContents
-    .filter(file => file.startsWith('_'))
-    .forEach(file => {
-      fs.copyFileSync(path.join(scriptsDir, file), path.join(outputDir, file));
-    });
-
+  console.log('Downloading publisher scripts from https://github.com/FHIR/sample-ig');
+  for (const script of [
+    '_genonce.bat',
+    '_genonce.sh',
+    '_updatePublisher.bat',
+    '_updatePublisher.sh'
+  ]) {
+    const url = `http://raw.githubusercontent.com/FHIR/sample-ig/master/${script}`;
+    try {
+      const res = await axios.get(url);
+      fs.writeFileSync(path.join(outputDir, script), res.data);
+      if (script.endsWith('.sh')) {
+        fs.chmodSync(path.join(outputDir, script), 0o755);
+      }
+    } catch (e) {
+      logger.error(`Unable to download ${script} from ${url}: ${e.message}`);
+    }
+  }
   const maxLength = 31;
   const printName =
     projectName.length > maxLength ? projectName.slice(0, maxLength - 3) + '...' : projectName;

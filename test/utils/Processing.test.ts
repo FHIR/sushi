@@ -1,3 +1,4 @@
+import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
@@ -482,6 +483,7 @@ describe('Processing', () => {
     let copyFileSpy: jest.SpyInstance;
     let ensureDirSpy: jest.SpyInstance;
     let consoleSpy: jest.SpyInstance;
+    let getSpy: jest.SpyInstance;
 
     beforeEach(() => {
       readlineSpy = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
@@ -490,16 +492,20 @@ describe('Processing', () => {
       copyFileSpy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
       ensureDirSpy = jest.spyOn(fs, 'ensureDirSync').mockImplementation(() => undefined);
       consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      getSpy = jest.spyOn(axios, 'get').mockImplementation(url => {
+        return Promise.resolve({ data: url.slice(url.lastIndexOf('/') + 1) });
+      });
       readlineSpy.mockClear();
       yesNoSpy.mockClear();
       writeSpy.mockClear();
       copyFileSpy.mockClear();
       ensureDirSpy.mockClear();
       consoleSpy.mockClear();
+      getSpy.mockClear();
     });
 
-    it('should initialize a default project when no user input is given', () => {
-      init();
+    it('should initialize a default project when no user input is given', async () => {
+      await init();
       expect(readlineSpy.mock.calls).toEqual([
         ['Name (Default: ExampleIG): '],
         ['Id (Default: fhir.example): '],
@@ -515,7 +521,7 @@ describe('Processing', () => {
         /.*ExampleIG.*fsh.*ig-data.*input.*pagecontent/
       );
 
-      expect(writeSpy.mock.calls).toHaveLength(2);
+      expect(writeSpy.mock.calls).toHaveLength(6);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# ExampleIG/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*sushi-config\.yaml/);
@@ -528,18 +534,28 @@ describe('Processing', () => {
           .replace(/[\n\r]/g, '')
       );
 
-      expect(copyFileSpy.mock.calls).toHaveLength(8);
+      expect(copyFileSpy.mock.calls).toHaveLength(2);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*\.gitignore/);
-      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*_gencontinuous\.bat/);
-      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*ExampleIG.*_gencontinuous\.sh/);
-      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*ExampleIG.*_genonce\.bat/);
-      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*ExampleIG.*_genonce\.sh/);
-      expect(copyFileSpy.mock.calls[6][1]).toMatch(/.*ExampleIG.*_updatePublisher\.bat/);
-      expect(copyFileSpy.mock.calls[7][1]).toMatch(/.*ExampleIG.*_updatePublisher\.sh/);
+
+      expect(getSpy.mock.calls).toHaveLength(4);
+      const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
+      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
+      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+
+      expect(writeSpy.mock.calls[2][0]).toMatch(/.*_genonce\.bat/);
+      expect(writeSpy.mock.calls[2][1]).toMatch(/_genonce\.bat/);
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.sh/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.sh/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.sh/);
     });
 
-    it('should initialize a project with user input', () => {
+    it('should initialize a project with user input', async () => {
       readlineSpy.mockImplementation((question: string) => {
         if (question.startsWith('Name')) {
           return 'MyNonDefaultName';
@@ -553,7 +569,7 @@ describe('Processing', () => {
           return '2.0.0';
         }
       });
-      init();
+      await init();
       expect(readlineSpy.mock.calls).toEqual([
         ['Name (Default: ExampleIG): '],
         ['Id (Default: fhir.example): '],
@@ -569,7 +585,7 @@ describe('Processing', () => {
         /.*MyNonDefaultName.*fsh.*ig-data.*input.*pagecontent/
       );
 
-      expect(writeSpy.mock.calls).toHaveLength(2);
+      expect(writeSpy.mock.calls).toHaveLength(6);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyNonDefaultName/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*sushi-config\.yaml/);
@@ -581,21 +597,31 @@ describe('Processing', () => {
           )
           .replace(/[\n\r]/g, '')
       );
-      expect(copyFileSpy.mock.calls).toHaveLength(8);
+      expect(copyFileSpy.mock.calls).toHaveLength(2);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
-      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.bat/);
-      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.sh/);
-      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*MyNonDefaultName.*_genonce\.bat/);
-      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*MyNonDefaultName.*_genonce\.sh/);
-      expect(copyFileSpy.mock.calls[6][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.bat/);
-      expect(copyFileSpy.mock.calls[7][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.sh/);
+
+      expect(getSpy.mock.calls).toHaveLength(4);
+      const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
+      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
+      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+
+      expect(writeSpy.mock.calls[2][0]).toMatch(/.*_genonce\.bat/);
+      expect(writeSpy.mock.calls[2][1]).toMatch(/_genonce\.bat/);
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.sh/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.sh/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.sh/);
     });
 
-    it('should abort initalizing a project when the user does not confirm', () => {
+    it('should abort initalizing a project when the user does not confirm', async () => {
       yesNoSpy.mockImplementation(() => false);
 
-      init();
+      await init();
       expect(readlineSpy.mock.calls).toEqual([
         ['Name (Default: ExampleIG): '],
         ['Id (Default: fhir.example): '],

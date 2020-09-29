@@ -41,12 +41,6 @@ describe('IGExporter', () => {
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
       expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(/\| _gencontinuous.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _gencontinuous.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
       expect(content).toMatch(
         /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]customized-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
@@ -118,19 +112,12 @@ describe('IGExporter', () => {
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
       expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(/\| _gencontinuous.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _gencontinuous.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
       expect(content).toMatch(
         /\| ig\.ini \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml \s*\|/
       );
       expect(content).toMatch(
         /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
       expect(content).toMatch(
         /\| input[\/\\]includes[\/\\]menu\.xml \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml \s*\|/
       );
@@ -155,16 +142,9 @@ describe('IGExporter', () => {
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
       expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(/\| _gencontinuous.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _gencontinuous.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
       expect(content).toMatch(
         /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
       expect(content).not.toMatch('ig.ini');
       expect(content).not.toMatch('menu.xml');
       expect(content).not.toMatch('index.md');
@@ -187,10 +167,6 @@ describe('IGExporter', () => {
       expect(content).toMatch(
         /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
-      expect(content).not.toMatch('_gencontinuous');
-      expect(content).not.toMatch('_genonce');
-      expect(content).not.toMatch('_updatePublisher');
       expect(content).not.toMatch('ig.ini');
       expect(content).not.toMatch('menu.xml');
       expect(content).not.toMatch('index.md');

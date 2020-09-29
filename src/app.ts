@@ -58,7 +58,7 @@ async function app() {
     .parse(process.argv);
 
   if (program.init) {
-    init();
+    await init();
     process.exit(0);
   }
   if (program.debug) logger.level = 'debug';
@@ -138,6 +138,15 @@ async function app() {
     );
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
+    if (
+      !fs
+        .readdirSync(outDir)
+        .some(file => file.startsWith('_genonce') || file.startsWith('_updatePublisher'))
+    ) {
+      logger.info(
+        'The sample-ig located at https://github.com/FHIR/sample-ig contains scripts useful for downloading and running the IG Publisher.'
+      );
+    }
   }
 
   console.log();
