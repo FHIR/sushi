@@ -282,6 +282,12 @@ describe('IGExporter', () => {
       expect(fs.existsSync(indexPath)).toBeFalsy(); // Do not copy user provided file or generate a new file
 
       // Checks that the index.md file is added to IG definition
+      igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
