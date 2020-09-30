@@ -274,21 +274,28 @@ export async function init(): Promise<void> {
   const indexPageContent = fs
     .readFileSync(path.join(initProjectDir, 'index.md'), 'utf-8')
     .replace('ExampleIG', projectName);
-  fs.ensureDirSync(path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent'));
-  fs.writeFileSync(
-    path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent', 'index.md'),
-    indexPageContent
-  );
+  fs.ensureDirSync(path.join(outputDir, 'input', 'pagecontent'));
+  fs.writeFileSync(path.join(outputDir, 'input', 'pagecontent', 'index.md'), indexPageContent);
+  // Add ig.ini, updating to reflect the user given id
+  const iniContent = fs
+    .readFileSync(path.join(initProjectDir, 'ig.ini'), 'utf-8')
+    .replace('fhir.example', configDoc.get('id'));
+  fs.writeFileSync(path.join(outputDir, 'ig.ini'), iniContent);
   // Add the config
-  fs.writeFileSync(path.join(outputDir, 'fsh', 'sushi-config.yaml'), configDoc.toString());
+  fs.writeFileSync(path.join(outputDir, 'sushi-config.yaml'), configDoc.toString());
   // Copy over remaining static files
+  fs.ensureDirSync(path.join(outputDir, 'input', 'fsh'));
   fs.copyFileSync(
     path.join(initProjectDir, 'patient.fsh'),
-    path.join(outputDir, 'fsh', 'patient.fsh')
+    path.join(outputDir, 'input', 'fsh', 'patient.fsh')
   );
   fs.copyFileSync(
     path.join(initProjectDir, 'init-gitignore.txt'),
     path.join(outputDir, '.gitignore')
+  );
+  fs.copyFileSync(
+    path.join(initProjectDir, 'ignoreWarnings.txt'),
+    path.join(outputDir, 'input', 'ignoreWarnings.txt')
   );
   // Add the _updatePublisher, _genonce, and _gencontinuous scripts
   console.log('Downloading publisher scripts from https://github.com/FHIR/sample-ig');

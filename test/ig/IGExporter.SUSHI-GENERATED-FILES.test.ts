@@ -151,7 +151,7 @@ describe('IGExporter', () => {
       expect(content).not.toMatch('package-list.json');
     });
 
-    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings when in publisher context', () => {
+    it('should not generate a SUSHI-GENERATED-FILES.md when in publisher context', () => {
       const config = cloneDeep(minimalConfig);
       delete config.template;
       const pkg = new Package(config);
@@ -161,16 +161,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
 
       const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
-      expect(fs.existsSync(reportPath)).toBeTruthy();
-      const content = fs.readFileSync(reportPath, 'utf8');
-      expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(
-        /\| fsh-generated[\/\\]resources[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
-      );
-      expect(content).not.toMatch('ig.ini');
-      expect(content).not.toMatch('menu.xml');
-      expect(content).not.toMatch('index.md');
-      expect(content).not.toMatch('package-list.json');
+      expect(fs.existsSync(reportPath)).toBeFalsy();
     });
   });
 });
