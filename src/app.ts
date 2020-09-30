@@ -153,13 +153,7 @@ async function app() {
       ? path.resolve(input, '..', '..')
       : path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
-    const igExporter = new IGExporter(
-      outPackage,
-      defs,
-      igDataPath,
-      isIgPubContext,
-      isLegacyIgPubContext
-    );
+    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
     if (

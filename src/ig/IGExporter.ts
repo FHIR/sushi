@@ -50,8 +50,7 @@ export class IGExporter {
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string,
-    private readonly isIgPubContext = false,
-    private readonly isLegacyIgPubContext = false
+    private readonly isIgPubContext = false
   ) {
     this.outputLog = new Map();
     this.config = pkg.config;
@@ -334,30 +333,41 @@ export class IGExporter {
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
       logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
-    } else if (existsSync(inputIndexMarkdownPageContentPath) && this.shouldCopyFiles) {
-      ensureDirSync(pageContentExportPath);
-      this.copyWithWarningText(
-        inputIndexMarkdownPageContentPath,
-        path.join(pageContentExportPath, 'index.md')
-      );
-      logger.info(`Copied ${path.join(pageContentExportPath, 'index.md')}`);
-    } else if (existsSync(inputIndexXMLPageContentPath) && this.shouldCopyFiles) {
-      ensureDirSync(pageContentExportPath);
-      this.copyWithWarningText(
-        inputIndexXMLPageContentPath,
-        path.join(pageContentExportPath, 'index.xml')
-      );
+    } else if (existsSync(inputIndexMarkdownPageContentPath)) {
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pageContentExportPath);
+        this.copyWithWarningText(
+          inputIndexMarkdownPageContentPath,
+          path.join(pageContentExportPath, 'index.md')
+        );
+        logger.info(`Copied ${path.join(pageContentExportPath, 'index.md')}`);
+      }
+    } else if (existsSync(inputIndexXMLPageContentPath)) {
       generation = 'html';
-      logger.info(`Copied ${path.join(pageContentExportPath, 'index.xml')}`);
-    } else if (existsSync(inputIndexMarkdownPagesPath) && this.shouldCopyFiles) {
-      ensureDirSync(pagesExportPath);
-      this.copyWithWarningText(inputIndexMarkdownPagesPath, path.join(pagesExportPath, 'index.md'));
-      logger.info(`Copied ${path.join(pagesExportPath, 'index.md')}`);
-    } else if (existsSync(inputIndexXMLPagesPath) && this.shouldCopyFiles) {
-      ensureDirSync(pagesExportPath);
-      this.copyWithWarningText(inputIndexXMLPagesPath, path.join(pagesExportPath, 'index.xml'));
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pageContentExportPath);
+        this.copyWithWarningText(
+          inputIndexXMLPageContentPath,
+          path.join(pageContentExportPath, 'index.xml')
+        );
+        logger.info(`Copied ${path.join(pageContentExportPath, 'index.xml')}`);
+      }
+    } else if (existsSync(inputIndexMarkdownPagesPath)) {
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pagesExportPath);
+        this.copyWithWarningText(
+          inputIndexMarkdownPagesPath,
+          path.join(pagesExportPath, 'index.md')
+        );
+        logger.info(`Copied ${path.join(pagesExportPath, 'index.md')}`);
+      }
+    } else if (existsSync(inputIndexXMLPagesPath)) {
       generation = 'html';
-      logger.info(`Copied ${path.join(pagesExportPath, 'index.xml')}`);
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pagesExportPath);
+        this.copyWithWarningText(inputIndexXMLPagesPath, path.join(pagesExportPath, 'index.xml'));
+        logger.info(`Copied ${path.join(pagesExportPath, 'index.xml')}`);
+      }
     } else {
       // do nothing -- no indexPageContent in config, no index file in ig-data
     }
@@ -555,7 +565,7 @@ export class IGExporter {
       return {
         originalName: page,
         prefix: prefix,
-        name: this.isLegacyIgPubContext ? nameWithoutPrefix : nameWithPrefix,
+        name: this.isIgPubContext ? nameWithPrefix : nameWithoutPrefix,
         title: titleCase(words(nameWithoutPrefix).join(' ')),
         fileType: page.slice(page.lastIndexOf('.') + 1)
       };

@@ -828,7 +828,7 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, true);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
     });
 
     afterAll(() => {
@@ -1294,7 +1294,7 @@ describe('IGExporter', () => {
 
     describe('legacy IG Publisher mode', () => {
       beforeAll(() => {
-        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, true);
+        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
         // No need to regenerate the IG on every test -- generate it once and inspect what you
         // need to in the tests
         exporter.export(tempOut);
@@ -1380,7 +1380,7 @@ describe('IGExporter', () => {
 
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, false);
+        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true); // New publisher mode w/ input/fsh
         // No need to regenerate the IG on every test -- generate it once and inspect what you
         // need to in the tests
         exporter.export(tempOut);
@@ -1390,11 +1390,13 @@ describe('IGExporter', () => {
         temp.cleanupSync();
       });
 
-      it('should add user-provided pages in alphabetic order', () => {
-        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-        expect(fs.existsSync(pageContentPath)).toBeTruthy();
-
-        const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      it('should configure user-provided pages in numeric then alphabetic order', () => {
+        const igPath = path.join(
+          tempOut,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
         expect(fs.existsSync(igPath)).toBeTruthy();
         const igContent = fs.readJSONSync(igPath);
         expect(igContent.definition.page.page).toHaveLength(9);
@@ -1447,20 +1449,12 @@ describe('IGExporter', () => {
         ]);
       });
 
-      it('should not remove numeric prefixes from copied files', () => {
-        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-        expect(fs.existsSync(pageContentPath)).toBeTruthy();
-        const pageContentFiles = fs.readdirSync(pageContentPath);
-        expect(pageContentFiles).toHaveLength(9);
-        expect(pageContentFiles).toContain('index.xml');
-        expect(pageContentFiles).toContain('1_oranges.md');
-        expect(pageContentFiles).toContain('2_apples.md');
-        expect(pageContentFiles).toContain('3_bananas.md');
-        expect(pageContentFiles).toContain('4_pears.md');
-        expect(pageContentFiles).toContain('7_left.md');
-        expect(pageContentFiles).toContain('7_right.md');
-        expect(pageContentFiles).toContain('100_big.md');
-        expect(pageContentFiles).toContain('pasta.md');
+      it('should not copy files', () => {
+        let pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeFalsy();
+
+        pageContentPath = path.join(tempOut, 'fsh-generated', 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeFalsy();
       });
     });
   });
