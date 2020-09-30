@@ -97,10 +97,11 @@ export type Configuration = {
   parameters?: ImplementationGuideDefinitionParameter[];
 
   // The templates property corresponds 1:1 with IG.definition.template. Note that plural templates
-  // refers to the IG.definiton.template definitions; singular template refers to the specific
-  // template to use for this IG.
+  // refers to the IG.definiton.template definitions; not the publisher template in ig.ini.
   templates?: ImplementationGuideDefinitionTemplate[];
 
+  // DEPRECATED: Use of the template property is no longer recommended.  Authors should manage the
+  // ig.ini file themselves. Support for the template property will be removed in a future release.
   // The template property will be used to generate an ig.ini file.
   // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file in ig-data.
   template?: string;
@@ -109,9 +110,6 @@ export type Configuration = {
   // a simple structure where the YAML key is the menu item name and the value is the URL. The IG
   // publisher currently only supports one level deep on sub-menus. To provide a custom menu.xml
   // file, do not include this property and include a `menu.xml` file in input/includes.
-  // TO CONSIDER: If no menu data is provided, can we generate the menu based on the pages order
-  // or should we just generate a very standard menu (since there may be too many pages to fit in
-  // a menu)?
   menu?: ConfigurationMenuItem[];
 
   // The history property corresponds to package-list.json. SUSHI will use the existing top-level
