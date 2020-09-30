@@ -212,7 +212,6 @@ function printResults(pkg: Package, isIG: boolean) {
     clr('║') + ` │ ${prNum} │ ${extnNum} │ ${vstNum} │ ${cdsysNum} │ ${insNum} │ ` + clr('║'),
     clr('║') + ' ╰──────────┴────────────┴───────────┴─────────────┴───────────╯ ' + clr('║'),
     clr('║' + '                                                                 ' + '' + '║'),
-    clr('║') + ' See SUSHI-GENERATED-FILES.md for details on generated IG files. ' + clr('║'),
     clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
     clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
