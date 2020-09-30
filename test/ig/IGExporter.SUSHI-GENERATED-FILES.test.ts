@@ -165,7 +165,7 @@ describe('IGExporter', () => {
       const content = fs.readFileSync(reportPath, 'utf8');
       expect(content).toMatch('# SUSHI-GENERATED FILES #');
       expect(content).toMatch(
-        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
+        /\| fsh-generated[\/\\]resources[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
       expect(content).not.toMatch('ig.ini');
       expect(content).not.toMatch('menu.xml');

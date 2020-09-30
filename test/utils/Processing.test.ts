@@ -50,7 +50,7 @@ describe('Processing', () => {
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh', 'fsh'));
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /Use of this folder is deprecated and will be removed in a future release/s
+        /Use of this folder is DEPRECATED and will be REMOVED in a future release/s
       );
     });
 
@@ -364,7 +364,7 @@ describe('Processing', () => {
       temp.cleanupSync();
     });
 
-    describe('IG Publisher mode and flat tank', () => {
+    describe('IG Publisher mode', () => {
       beforeAll(() => {
         writeFHIRResources(tempIGPubRoot, outPackage, false, true);
       });
@@ -373,8 +373,8 @@ describe('Processing', () => {
         temp.cleanupSync();
       });
 
-      it('should write all resources to the "generated" directory', () => {
-        const generatedPath = path.join(tempIGPubRoot, 'input', 'generated');
+      it('should write all resources to the "fsh-generated/resources" directory', () => {
+        const generatedPath = path.join(tempIGPubRoot, 'fsh-generated', 'resources');
         expect(fs.existsSync(generatedPath)).toBeTruthy();
         const allGeneratedFiles = fs.readdirSync(generatedPath);
         expect(allGeneratedFiles.length).toBe(12);
@@ -393,7 +393,7 @@ describe('Processing', () => {
       });
     });
 
-    describe('legacy IG Publisher mode', () => {
+    describe('legacy IG Publisher mode and legacy flat tank', () => {
       beforeAll(() => {
         writeFHIRResources(tempRoot, outPackage, false, false);
       });

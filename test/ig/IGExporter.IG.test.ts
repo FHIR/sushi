@@ -88,6 +88,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = {
         filePath: path.join(fixtures, 'sushi-config.yml'),
@@ -538,7 +539,7 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      expect(loggerSpy.getMessageAtIndex(-2, 'warn')).toMatch(
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
         /StructureDefinition\/sample-patient is listed as a member of group JustOneGroup.*does not need a groupingId/s
       );
     });
@@ -563,6 +564,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -806,6 +808,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -825,7 +828,7 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, true);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
     });
 
     afterAll(() => {
@@ -888,6 +891,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -934,7 +938,12 @@ describe('IGExporter', () => {
 
     it('should add basic resource references to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -984,7 +993,12 @@ describe('IGExporter', () => {
 
     it('should overwrite existing resource references in the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       // Should only have one copy of MyPatient
@@ -1005,7 +1019,12 @@ describe('IGExporter', () => {
 
     it('should add resource references with a description to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -1020,7 +1039,12 @@ describe('IGExporter', () => {
 
     it('should add example references to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -1043,7 +1067,12 @@ describe('IGExporter', () => {
 
     it('should add resource references with a title to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -1065,7 +1094,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       const myPatient: ImplementationGuideDefinitionResource = igContent.definition.resource.find(
@@ -1077,7 +1111,7 @@ describe('IGExporter', () => {
 
     it('should log an error for input files missing resourceType or id', () => {
       exporter.export(tempOut);
-      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
+      expect(loggerSpy.getFirstMessage('error')).toMatch(
         /.*InvalidPatient.json must define resourceType and id/
       );
     });
@@ -1102,6 +1136,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -1199,6 +1234,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = minimalConfig;
       pkg = new Package(config);
@@ -1224,7 +1260,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'index.md'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'invalid.txt'))).toBeTruthy();
       // Check for log messages indicating invalid input
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
         /Files not in the supported file types \(\.md and \.xml\) were detected\. These files will be copied over without any processing\..*File: .*[\/\\]invalid-pages-folder-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
@@ -1248,13 +1284,17 @@ describe('IGExporter', () => {
       pkg = new Package(minimalConfig);
     });
 
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
     afterAll(() => {
       temp.cleanupSync();
     });
 
     describe('legacy IG Publisher mode', () => {
       beforeAll(() => {
-        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, true);
+        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
         // No need to regenerate the IG on every test -- generate it once and inspect what you
         // need to in the tests
         exporter.export(tempOut);
@@ -1340,7 +1380,7 @@ describe('IGExporter', () => {
 
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false, false);
+        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true); // New publisher mode w/ input/fsh
         // No need to regenerate the IG on every test -- generate it once and inspect what you
         // need to in the tests
         exporter.export(tempOut);
@@ -1350,11 +1390,13 @@ describe('IGExporter', () => {
         temp.cleanupSync();
       });
 
-      it('should add user-provided pages in alphabetic order', () => {
-        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-        expect(fs.existsSync(pageContentPath)).toBeTruthy();
-
-        const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      it('should configure user-provided pages in numeric then alphabetic order', () => {
+        const igPath = path.join(
+          tempOut,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
         expect(fs.existsSync(igPath)).toBeTruthy();
         const igContent = fs.readJSONSync(igPath);
         expect(igContent.definition.page.page).toHaveLength(9);
@@ -1407,20 +1449,12 @@ describe('IGExporter', () => {
         ]);
       });
 
-      it('should not remove numeric prefixes from copied files', () => {
-        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-        expect(fs.existsSync(pageContentPath)).toBeTruthy();
-        const pageContentFiles = fs.readdirSync(pageContentPath);
-        expect(pageContentFiles).toHaveLength(9);
-        expect(pageContentFiles).toContain('index.xml');
-        expect(pageContentFiles).toContain('1_oranges.md');
-        expect(pageContentFiles).toContain('2_apples.md');
-        expect(pageContentFiles).toContain('3_bananas.md');
-        expect(pageContentFiles).toContain('4_pears.md');
-        expect(pageContentFiles).toContain('7_left.md');
-        expect(pageContentFiles).toContain('7_right.md');
-        expect(pageContentFiles).toContain('100_big.md');
-        expect(pageContentFiles).toContain('pasta.md');
+      it('should not copy files', () => {
+        let pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeFalsy();
+
+        pageContentPath = path.join(tempOut, 'fsh-generated', 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeFalsy();
       });
     });
   });
@@ -1429,6 +1463,7 @@ describe('IGExporter', () => {
     let tempOut: string;
 
     beforeAll(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
       const defs = new FHIRDefinitions();
@@ -1510,8 +1545,10 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      delete config.template;
       pkg = new Package(config);
       exporter = new IGExporter(
         pkg,
@@ -1519,7 +1556,6 @@ describe('IGExporter', () => {
         path.resolve(fixtures, 'ig-data'),
         false
       );
-      loggerSpy.reset();
     });
 
     it('should avoid copying over extra system files', () => {

@@ -48,8 +48,13 @@ async function app() {
       console.log('    Default: "."');
       console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
-      console.log('    Default: "build"');
-      console.log('    If input/fsh/ subdirectory present, default output is to input/generated/');
+      console.log('    Default: "fsh-generated"');
+      console.log(
+        '    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"'
+      );
+      console.log(
+        '    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"'
+      );
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
@@ -65,11 +70,31 @@ async function app() {
 
   logger.info(`Running ${getVersion()}`);
 
+  logger.info('Arguments:');
+  if (program.debug) {
+    logger.info('  --debug');
+  }
+  if (program.snapshot) {
+    logger.info('  --snapshot');
+  }
+  if (program.out) {
+    logger.info(`  --out ${path.resolve(program.out)}`);
+  }
+  logger.info(`  ${path.resolve(input)}`);
+
+  // IG Publisher HACK: the IG Publisher invokes SUSHI with `/fsh` appended (even if it doesn't
+  // exist).  If we detect a direct fsh path, we need to fix it by backing up a folder, else it
+  // won't correctly detect the IG Publisher mode.
+  if (path.basename(input) === 'fsh') {
+    input = path.dirname(input);
+  }
+
+  const originalInput = input;
   input = findInputDir(input);
 
   // If an input/fsh subdirectory is used, we are in an IG Publisher context
-  const fshFolder = path.parse(input).base === 'fsh';
-  const inputFshFolder = fshFolder && path.parse(input).dir.endsWith(`${path.sep}input`);
+  const fshFolder = path.basename(input) === 'fsh';
+  const inputFshFolder = fshFolder && path.basename(path.dirname(input)) === 'input';
   const isIgPubContext = inputFshFolder;
   // TODO: Legacy support for top level fsh/ subdirectory. Remove when no longer supported.
   const isLegacyIgPubContext = fshFolder && !inputFshFolder;
@@ -77,7 +102,7 @@ async function app() {
 
   let config: Configuration;
   try {
-    config = readConfig(input);
+    config = readConfig(isIgPubContext ? originalInput : input);
   } catch {
     process.exit(1);
   }
@@ -118,8 +143,7 @@ async function app() {
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  const useGeneratedFolder = !isLegacyIgPubContext;
-  writeFHIRResources(outDir, outPackage, program.snapshot, useGeneratedFolder);
+  writeFHIRResources(outDir, outPackage, program.snapshot, isIgPubContext);
 
   // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
   if (config.FSHOnly) {
@@ -129,13 +153,7 @@ async function app() {
       ? path.resolve(input, '..', '..')
       : path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
-    const igExporter = new IGExporter(
-      outPackage,
-      defs,
-      igDataPath,
-      isIgPubContext,
-      isLegacyIgPubContext
-    );
+    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
     if (
