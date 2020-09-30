@@ -287,6 +287,10 @@ export async function init(): Promise<void> {
     path.join(initProjectDir, 'init-gitignore.txt'),
     path.join(outputDir, '.gitignore')
   );
+  fs.copyFileSync(
+    path.join(initProjectDir, 'ignoreWarnings.txt'),
+    path.join(outputDir, 'input', 'ignoreWarnings.txt')
+  );
   // Add the _updatePublisher, _genonce, and _gencontinuous scripts
   console.log('Downloading publisher scripts from https://github.com/FHIR/sample-ig');
   for (const script of [

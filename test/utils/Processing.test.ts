@@ -535,9 +535,10 @@ describe('Processing', () => {
           .replace(/[\n\r]/g, '')
       );
 
-      expect(copyFileSpy.mock.calls).toHaveLength(2);
+      expect(copyFileSpy.mock.calls).toHaveLength(3);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*\.gitignore/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*input.*ignoreWarnings\.txt/);
 
       expect(getSpy.mock.calls).toHaveLength(4);
       const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
@@ -599,9 +600,12 @@ describe('Processing', () => {
           )
           .replace(/[\n\r]/g, '')
       );
-      expect(copyFileSpy.mock.calls).toHaveLength(2);
+      expect(copyFileSpy.mock.calls).toHaveLength(3);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(
+        /.*MyNonDefaultName.*input.*ignoreWarnings\.txt/
+      );
 
       expect(getSpy.mock.calls).toHaveLength(4);
       const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
