@@ -102,6 +102,11 @@ export function ensureOutputDir(
     logger.info(`No output path specified. Output to ${outDir}`);
   }
   fs.ensureDirSync(outDir);
+  // If the outDir contains a fsh-generated folder, we ensure that folder is empty
+  const fshGeneratedFolder = path.join(outDir, 'fsh-generated');
+  if (fs.existsSync(fshGeneratedFolder)) {
+    fs.emptyDirSync(fshGeneratedFolder);
+  }
   return outDir;
 }
 
