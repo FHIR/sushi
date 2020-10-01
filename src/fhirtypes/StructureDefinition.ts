@@ -472,7 +472,7 @@ export class StructureDefinition {
       // Allow for adding extension elements to the instance that are not on the SD
       if (!currentElement && pathPart.base === 'extension') {
         // Get extension element (if currentPath is A.B.extension[C], get A.B.extension)
-        const extensionPath = `${previousPath ? `${previousPath}'.'` : ''}${pathPart.base}`;
+        const extensionPath = `${previousPath ? `${previousPath}.` : ''}${pathPart.base}`;
         const extensionElement = this.findElementByPath(extensionPath, fisher);
         // Get the extension being referred to
         const extension = fisher.fishForMetadata(pathPart.brackets[0]);
