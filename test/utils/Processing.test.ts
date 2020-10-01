@@ -137,7 +137,7 @@ describe('Processing', () => {
       expect(emptyDirSpy.mock.calls[0][0]).toBe(path.join(tempRoot, 'fsh-generated'));
     });
 
-    it('should log a warning when emptying the directory fails', () => {
+    it('should log an error when emptying the directory fails', () => {
       emptyDirSpy = emptyDirSpy.mockImplementation(() => {
         throw Error('foo');
       });
