@@ -100,10 +100,19 @@ async function app() {
   const isLegacyIgPubContext = fshFolder && !inputFshFolder;
   const outDir = ensureOutputDir(input, program.out, isIgPubContext, isLegacyIgPubContext);
 
+  let tank: FSHTank;
   let config: Configuration;
+
   try {
+    const rawFSH = getRawFSHes(input);
+    if (rawFSH.length === 0) {
+      logger.info('No FSH files present.');
+      process.exit(0);
+    }
     config = readConfig(isIgPubContext ? originalInput : input);
+    tank = fillTank(rawFSH, config);
   } catch {
+    program.outputHelp();
     process.exit(1);
   }
 
@@ -120,14 +129,6 @@ async function app() {
     loadCustomResources(path.join(input, '..'), defs);
   }
 
-  let tank: FSHTank;
-  try {
-    const rawFSH = getRawFSHes(input);
-    tank = fillTank(rawFSH, config);
-  } catch {
-    program.outputHelp();
-    process.exit(1);
-  }
   await Promise.all(dependencyDefs);
 
   // Check for StructureDefinition
