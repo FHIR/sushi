@@ -105,7 +105,13 @@ export function ensureOutputDir(
   // If the outDir contains a fsh-generated folder, we ensure that folder is empty
   const fshGeneratedFolder = path.join(outDir, 'fsh-generated');
   if (fs.existsSync(fshGeneratedFolder)) {
-    fs.emptyDirSync(fshGeneratedFolder);
+    try {
+      fs.emptyDirSync(fshGeneratedFolder);
+    } catch (e) {
+      logger.error(
+        `Unable to empty existing fsh-generated folder because of the following error: ${e.message}`
+      );
+    }
   }
   return outDir;
 }

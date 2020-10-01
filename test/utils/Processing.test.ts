@@ -81,10 +81,10 @@ describe('Processing', () => {
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
       fs.mkdirSync(path.join(tempRoot, 'my-input'));
-      emptyDirSpy = jest.spyOn(fs, 'emptyDirSync').mockImplementation(() => '');
     });
 
     beforeEach(() => {
+      emptyDirSpy = jest.spyOn(fs, 'emptyDirSync').mockImplementation(() => '');
       emptyDirSpy.mockReset();
     });
 
@@ -135,6 +135,24 @@ describe('Processing', () => {
       expect(fs.existsSync(outputDir)).toBeTruthy();
       expect(emptyDirSpy.mock.calls).toHaveLength(1);
       expect(emptyDirSpy.mock.calls[0][0]).toBe(path.join(tempRoot, 'fsh-generated'));
+    });
+
+    it('should log a warning when emptying the directory fails', () => {
+      emptyDirSpy = emptyDirSpy.mockImplementation(() => {
+        throw Error('foo');
+      });
+      jest
+        .spyOn(fs, 'existsSync')
+        .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
+      const input = path.join(tempRoot, 'my-input', 'my-fsh');
+      const outputDir = ensureOutputDir(input, undefined, true, false);
+      expect(outputDir).toBe(tempRoot);
+      expect(fs.existsSync(outputDir)).toBeTruthy();
+      expect(emptyDirSpy.mock.calls).toHaveLength(1);
+      expect(emptyDirSpy.mock.calls[0][0]).toBe(path.join(tempRoot, 'fsh-generated'));
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Unable to empty existing fsh-generated folder.*: foo/
+      );
     });
   });
 
