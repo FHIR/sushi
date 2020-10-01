@@ -23,7 +23,7 @@ import {
   init
 } from './utils/Processing';
 
-const FSH_VERSION = '0.13.x';
+const FSH_VERSION = '1.0.0';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
