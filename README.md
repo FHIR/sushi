@@ -1,7 +1,7 @@
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/fhir/sushi/Lint%20and%20Test)
 ![npm](https://img.shields.io/npm/v/fsh-sushi)
 
-# SUSHI (WORK IN PROGRESS)
+# SUSHI
 
 SUSHI (aka "SUSHI Unshortens Short Hand Inputs") is a reference implementation command-line interpreter/compiler for FHIR Shorthand (FSH).
 
@@ -36,32 +36,21 @@ Options:
 Additional information:
   [path-to-fsh-defs]
     Default: "."
-    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]
+    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]
   -o, --out <out>
-    Default: "build"
-    If fsh/ subdirectory present, default output is one directory above fsh/
+    Default: "fsh-generated"
+    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"
+    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"
+
 ```
+
+See the [SUSHI documentation](https://fshschool.org/docs/sushi/) for detailed information on using SUSHI.
 
 # IG Generation
 
 SUSHI supports publishing implementation guides via the new template-based IG Publisher.  The template-based publisher is still being developed by the FHIR community.  See the [Guidance for HL7 IG Creation](https://build.fhir.org/ig/FHIR/ig-guidance/) for more details.
 
-If the input folder (i.e., "FSH Tank") contains a sub-folder named "ig-data", then SUSHI will generate a basic Implementation Guide project that can be built using the template-based IG Publisher.  SUSHI currently supports limited customization of the IG via the following files:
-
-* `ig-data/ig.ini`: If present, the user-provided igi.ini values will be merged with SUSHI-generated ig.ini.
-* `ig-data/package-list.json`: If present, it will be used instead of a generated package-list.json.
-* `ig-data/input/ignoreWarnings.txt`: If present, will be copied into the corresponding location in the IG input folder
-* `ig-data/input/images/*`: If present, image files will be copied into the IG input and can be referenced by user-provided pages.
-* `ig-data/input/pagecontent/index.[md|xml]`: If present, it will provide the content for the IG's main page.
-* `ig-data/input/pagecontent/*.[md|xml]`: If present, these files will be generated as individual pages in the IG and will be present in the table of contents.
-* `ig-data/input/pagecontent/{name-of-resource-file}-[intro|notes].[md|xml]`: If present, these files will place content directly on the relevant resource page. Intro files will place content before the resource definition; notes files will place content after.
-* `ig-data/input/pagecontent/*`: If present, all other files of any type that do not match the above patterns will be copied into the IG input, but will not appear in the table of contents.
-* `ig-data/input/{supported-resource-input-folder}`: JSON files found in supported subfolders will be processed as additional resources in the IG, added to the IG JSON file, and copied to the corresponding locations in the IG input. This allows for a "Bring Your Own JSON" capability when you already have resources that were generated via another method. If a provided JSON file has the same URL as a FSH-defined resource, the provided JSON file will overwrite the FSH-defined one. Supported folders match those documented in the [Guidance for FHIR IG Creation](https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input): capabilities, examples, extensions, models, operations, profiles, resources, vocabulary.
-
-After running SUSHI, change to the output folder and run the `_updatePublisher` script and enter `y|Y` to download latest publisher when prompted. Then run the `_genonce` or `_gencontinuous` script.
-`_genonce` will generate the IG one time. `_gencontinuous` will continuously run the `genonce` script, which will regenerate the IG with any changes that were made to the input of the IG build.
-
-If the input folder does not contain a sub-folder named "ig-data", then only the resources (e.g., profiles, extensions, etc.) will be generated.
+Based on the inputs in FSH files, **sushi-config.yaml**, and the IG project directory, SUSHI populates the output directory. See the [documentation on IG Project with SUSHI](https://fshschool.org/docs/sushi/project/#ig-projects) for more information on using SUSHI to generate IGs.
 
 # Installation for Developers
 

@@ -23,7 +23,7 @@ import {
   init
 } from './utils/Processing';
 
-const FSH_VERSION = '0.13.x';
+const FSH_VERSION = '1.0.0';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -46,10 +46,15 @@ async function app() {
       console.log('Additional information:');
       console.log('  [path-to-fsh-defs]');
       console.log('    Default: "."');
-      console.log('    If fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
+      console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
-      console.log('    Default: "build"');
-      console.log('    If fsh/ subdirectory present, default output is one directory above fsh/');
+      console.log('    Default: "fsh-generated"');
+      console.log(
+        '    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"'
+      );
+      console.log(
+        '    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"'
+      );
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
@@ -58,18 +63,42 @@ async function app() {
     .parse(process.argv);
 
   if (program.init) {
-    init();
+    await init();
     process.exit(0);
   }
   if (program.debug) logger.level = 'debug';
 
   logger.info(`Running ${getVersion()}`);
 
+  logger.info('Arguments:');
+  if (program.debug) {
+    logger.info('  --debug');
+  }
+  if (program.snapshot) {
+    logger.info('  --snapshot');
+  }
+  if (program.out) {
+    logger.info(`  --out ${path.resolve(program.out)}`);
+  }
+  logger.info(`  ${path.resolve(input)}`);
+
+  // IG Publisher HACK: the IG Publisher invokes SUSHI with `/fsh` appended (even if it doesn't
+  // exist).  If we detect a direct fsh path, we need to fix it by backing up a folder, else it
+  // won't correctly detect the IG Publisher mode.
+  if (path.basename(input) === 'fsh') {
+    input = path.dirname(input);
+  }
+
+  const originalInput = input;
   input = findInputDir(input);
 
-  // If a fsh subdirectory is used, we are in an IG Publisher context
-  const isIgPubContext = path.parse(input).base === 'fsh';
-  const outDir = ensureOutputDir(input, program.out, isIgPubContext);
+  // If an input/fsh subdirectory is used, we are in an IG Publisher context
+  const fshFolder = path.basename(input) === 'fsh';
+  const inputFshFolder = fshFolder && path.basename(path.dirname(input)) === 'input';
+  const isIgPubContext = inputFshFolder;
+  // TODO: Legacy support for top level fsh/ subdirectory. Remove when no longer supported.
+  const isLegacyIgPubContext = fshFolder && !inputFshFolder;
+  const outDir = ensureOutputDir(input, program.out, isIgPubContext, isLegacyIgPubContext);
 
   let tank: FSHTank;
   let config: Configuration;
@@ -80,7 +109,7 @@ async function app() {
       logger.info('No FSH files present.');
       process.exit(0);
     }
-    config = readConfig(input);
+    config = readConfig(isIgPubContext ? originalInput : input);
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
@@ -91,8 +120,14 @@ async function app() {
   const defs = new FHIRDefinitions();
   const dependencyDefs = loadExternalDependencies(defs, config);
 
-  // Load custom resources specified in ig-data folder
-  loadCustomResources(input, defs);
+  // Load custom resources
+  if (!isIgPubContext) {
+    // In legacy configuration (both IG publisher context and any other tank), resources are in ig-data/input/
+    loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
+  } else {
+    // In current tank configuration (input/fsh), resources will be in input/
+    loadCustomResources(path.join(input, '..'), defs);
+  }
 
   await Promise.all(dependencyDefs);
 
@@ -109,17 +144,28 @@ async function app() {
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  writeFHIRResources(outDir, outPackage, program.snapshot);
+  writeFHIRResources(outDir, outPackage, program.snapshot, isIgPubContext);
 
   // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
   if (config.FSHOnly) {
     logger.info('Exporting FSH definitions only. No IG related content will be exported.');
   } else {
-    const igDataPath = path.resolve(input, 'ig-data');
+    const igDataPath = isIgPubContext
+      ? path.resolve(input, '..', '..')
+      : path.resolve(input, 'ig-data');
     logger.info('Assembling Implementation Guide sources...');
     const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
+    if (
+      !fs
+        .readdirSync(outDir)
+        .some(file => file.startsWith('_genonce') || file.startsWith('_updatePublisher'))
+    ) {
+      logger.info(
+        'The sample-ig located at https://github.com/FHIR/sample-ig contains scripts useful for downloading and running the IG Publisher.'
+      );
+    }
   }
 
   console.log();
@@ -167,7 +213,6 @@ function printResults(pkg: Package, isIG: boolean) {
     clr('║') + ` │ ${prNum} │ ${extnNum} │ ${vstNum} │ ${cdsysNum} │ ${insNum} │ ` + clr('║'),
     clr('║') + ' ╰──────────┴────────────┴───────────┴─────────────┴───────────╯ ' + clr('║'),
     clr('║' + '                                                                 ' + '' + '║'),
-    clr('║') + ' See SUSHI-GENERATED-FILES.md for details on generated IG files. ' + clr('║'),
     clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
     clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')

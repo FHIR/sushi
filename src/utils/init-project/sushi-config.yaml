@@ -11,11 +11,6 @@ fhirVersion: 4.0.1
 copyrightYear: 2020+
 releaseLabel: ci-build
 
-# ╭─────────────────────────────────────────────ig.ini─────────────────────────────────────────────╮
-# │  To use a provided ig-data/ig.ini file, delete the "template" property below.                  │
-# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
-template: fhir.base.template#current
-
 # ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
 # │  To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.     │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯

@@ -9,7 +9,6 @@ import {
   copySync,
   outputJSONSync,
   outputFileSync,
-  chmodSync,
   existsSync,
   readdirSync,
   readFileSync
@@ -45,15 +44,21 @@ export class IGExporter {
   private readonly configPath: string;
   private readonly outputLog: Map<string, outputLogDetails>;
   private readonly config: Configuration;
+  private readonly configName: string;
+  private shouldCopyFiles: boolean;
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string,
-    private readonly isIgPubContext: boolean = false
+    private readonly isIgPubContext = false
   ) {
-    this.configPath = path.resolve(this.igDataPath, '..', 'config.yaml');
     this.outputLog = new Map();
     this.config = pkg.config;
+    this.configPath = path.resolve(this.igDataPath, '..', path.basename(this.config.filePath));
+    this.configName = path.basename(this.configPath);
+    // In legacy IG publisher mode and legacy flat tank, always copy files and prefer config files.
+    // Since current supported tank configuration requires input/fsh folder, both legacy cases occur when not in IG Pub context
+    this.shouldCopyFiles = !this.isIgPubContext;
   }
 
   getOutputLogDetails(file: string) {
@@ -73,7 +78,6 @@ export class IGExporter {
     this.addPredefinedResources(outPath);
     this.addConfiguredResources();
     this.addConfiguredGroups();
-    this.addStaticFiles(outPath);
     this.addIndex(outPath);
     if (!this.config.pages?.length) {
       this.addOtherPageContent(outPath);
@@ -197,7 +201,7 @@ export class IGExporter {
       // No need for the detailed log message since we already logged one in the package loader.
       logger.error(
         `Failed to add ${dependency.packageId} to ImplementationGuide instance because no ` +
-          'version was specified in your config.yaml.'
+          `version was specified in your ${this.configName}.`
       );
       return;
     }
@@ -217,7 +221,7 @@ export class IGExporter {
         logger.error(
           `Failed to add ${dependsOn.packageId}:${dependsOn.version} to ` +
             'ImplementationGuide instance because SUSHI could not find the IG URL in the ' +
-            'dependency IG. To specify the IG URL in your config.yaml, use the dependency ' +
+            `dependency IG. To specify the IG URL in your ${this.configName}, use the dependency ` +
             'details format:\n\n' +
             'dependencies:\n' +
             `  ${dependsOn.packageId}:\n` +
@@ -241,48 +245,8 @@ export class IGExporter {
   }
 
   /**
-   * Add the static files that (currently) do not change from IG to IG.
-   *
-   * @param igPath {string} - the path where the IG is exported to
-   */
-  private addStaticFiles(igPath: string): void {
-    const inputPath = path.join(__dirname, 'files');
-    this.copyAsIs(inputPath, igPath, src => {
-      // If in an IG Publisher context, do not include any of the publisher scripts
-      if (this.isIgPubContext) {
-        if (path.parse(src).base.startsWith('_genonce.')) return false;
-        if (path.parse(src).base.startsWith('_gencontinuous.')) return false;
-        if (path.parse(src).base.startsWith('_updatePublisher.')) return false;
-      }
-      // Filter out menu because handled separately
-      if (path.parse(src).base.startsWith('menu.xml')) return false;
-      return true;
-    });
-
-    // On Windows, the file permissions are not always preserved. This doesn't
-    // cause a problem for the Windows user, but it may cause problems for
-    // Mac and Linux users who use an NPM package published by a Windows user.
-    // To work around this, we set the necessary permissions on executable
-    // scripts after copying them to the IG path.
-    try {
-      if (!this.isIgPubContext) {
-        chmodSync(path.join(igPath, '_genonce.sh'), 0o755);
-        chmodSync(path.join(igPath, '_gencontinuous.sh'), 0o755);
-        chmodSync(path.join(igPath, '_updatePublisher.sh'), 0o755);
-      }
-    } catch (e) {
-      // We don't want to fail the whole export for this, but we should log it
-      logger.warn(
-        'Failed to set executable permissions on IG publisher scripts (_genonce.sh, ' +
-          '_gencontinuous.sh, _updatePublisher.sh). You may need to set these permissions ' +
-          'manually before they can be executed (e.g., chmod 755 _genonce.sh).'
-      );
-    }
-  }
-
-  /**
-   * Add the index.md file. Creates an index.md based on the "indexPageContent" in config.yaml.
-   * If the user specified an index file in the ig-data folder, and no "indexPageContent" in config.yaml is specified,
+   * Add the index.md file. Creates an index.md based on the "indexPageContent" in sushi-config.yaml.
+   * If the user specified an index file in the ig-data folder, and no "indexPageContent" in sushi-config.yaml is specified,
    * the file from ig-data is used instead. The provided file may be in one of two locations:
    * ig-data/input/pagecontent or ig-data/input/pages
    *
@@ -319,53 +283,91 @@ export class IGExporter {
 
     if (this.config.indexPageContent) {
       ensureDirSync(pageContentExportPath);
+
+      if (filePath) {
+        const filePathString = path.join(
+          path.basename(this.igDataPath),
+          path.relative(this.igDataPath, filePath)
+        );
+
+        let preferredFileMessage =
+          `Since a ${filePathString} file was found, the "indexPageContent" property in the ${this.configName} ` +
+          'will be ignored and an index.md file will not be generated. Remove the "indexPageContent" ' +
+          `property in ${this.configName} to resolve this warning.`;
+        if (this.shouldCopyFiles) {
+          preferredFileMessage =
+            `Since the "indexPageContent" property is present in the ${this.configName}, ` +
+            `an index.md file will be generated and the ${filePathString} file will be ignored.` +
+            `Remove the "indexPageContent" property in ${this.configName} to use the ${filePathString} file instead.`;
+        }
+        logger.warn(
+          `Found both an "indexPageContent" property in ${this.configName} and an index file at ` +
+            `${filePathString}. ${preferredFileMessage}`,
+          {
+            file: filePath
+          }
+        );
+
+        if (!this.shouldCopyFiles) {
+          if (existsSync(inputIndexXMLPagesPath) || existsSync(inputIndexXMLPageContentPath)) {
+            generation = 'html';
+          }
+          // Add user-provided index file to IG definition
+          this.ig.definition.page.page.push({
+            nameUrl: 'index.html',
+            title: 'Home',
+            generation
+          });
+          return;
+        }
+      }
+
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
-        'To change the contents of this file, edit the "indexPageContent" attribute in the tank config.yaml file',
-        `or provide your own index file in the ig-data${path.sep}input${path.sep}pagecontent or ig-data${path.sep}input${path.sep}pages folder.`,
+        `To change the contents of this file, edit the "indexPageContent" attribute in the tank ${this.configName} file`,
+        `or provide your own index file in the ${path.basename(this.igDataPath)}${path.sep}input${
+          path.sep
+        }pagecontent or ${path.basename(this.igDataPath)}${path.sep}input${path.sep}pages folder.`,
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
-      logger.info('Generated index.md based on "indexPageContent" in config.yaml.');
-
-      if (filePath) {
-        logger.warn(
-          'Found both an "indexPageContent" property in config.yaml and an index file at ' +
-            `ig-data${path.sep}${path.relative(this.igDataPath, filePath)}. ` +
-            'Since the "indexPageContent" property is present in the config.yaml, an index.md file will be generated and ' +
-            `the ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file will be ` +
-            'ignored. Remove the "indexPageContent" property in config.yaml to use the ' +
-            `ig-data${path.sep}${path.relative(this.igDataPath, filePath)} file instead.`,
-          {
-            file: filePath
-          }
-        );
-      }
+      logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
     } else if (existsSync(inputIndexMarkdownPageContentPath)) {
-      ensureDirSync(pageContentExportPath);
-      this.copyWithWarningText(
-        inputIndexMarkdownPageContentPath,
-        path.join(pageContentExportPath, 'index.md')
-      );
-      logger.info(`Copied ${path.join(pageContentExportPath, 'index.md')}`);
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pageContentExportPath);
+        this.copyWithWarningText(
+          inputIndexMarkdownPageContentPath,
+          path.join(pageContentExportPath, 'index.md')
+        );
+        logger.info(`Copied ${path.join(pageContentExportPath, 'index.md')}`);
+      }
     } else if (existsSync(inputIndexXMLPageContentPath)) {
-      ensureDirSync(pageContentExportPath);
-      this.copyWithWarningText(
-        inputIndexXMLPageContentPath,
-        path.join(pageContentExportPath, 'index.xml')
-      );
       generation = 'html';
-      logger.info(`Copied ${path.join(pageContentExportPath, 'index.xml')}`);
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pageContentExportPath);
+        this.copyWithWarningText(
+          inputIndexXMLPageContentPath,
+          path.join(pageContentExportPath, 'index.xml')
+        );
+        logger.info(`Copied ${path.join(pageContentExportPath, 'index.xml')}`);
+      }
     } else if (existsSync(inputIndexMarkdownPagesPath)) {
-      ensureDirSync(pagesExportPath);
-      this.copyWithWarningText(inputIndexMarkdownPagesPath, path.join(pagesExportPath, 'index.md'));
-      logger.info(`Copied ${path.join(pagesExportPath, 'index.md')}`);
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pagesExportPath);
+        this.copyWithWarningText(
+          inputIndexMarkdownPagesPath,
+          path.join(pagesExportPath, 'index.md')
+        );
+        logger.info(`Copied ${path.join(pagesExportPath, 'index.md')}`);
+      }
     } else if (existsSync(inputIndexXMLPagesPath)) {
-      ensureDirSync(pagesExportPath);
-      this.copyWithWarningText(inputIndexXMLPagesPath, path.join(pagesExportPath, 'index.xml'));
       generation = 'html';
-      logger.info(`Copied ${path.join(pagesExportPath, 'index.xml')}`);
+      if (this.shouldCopyFiles) {
+        ensureDirSync(pagesExportPath);
+        this.copyWithWarningText(inputIndexXMLPagesPath, path.join(pagesExportPath, 'index.xml'));
+        logger.info(`Copied ${path.join(pagesExportPath, 'index.xml')}`);
+      }
     } else {
       // do nothing -- no indexPageContent in config, no index file in ig-data
     }
@@ -403,10 +405,12 @@ export class IGExporter {
           // All user defined pages are included in input/${contentFolder}
           const pagePath = path.join(this.igDataPath, 'input', contentFolder, page.originalName);
 
-          this.copyWithWarningText(
-            pagePath,
-            path.join(igPath, 'input', contentFolder, `${page.name}.${page.fileType}`)
-          );
+          if (this.shouldCopyFiles) {
+            this.copyWithWarningText(
+              pagePath,
+              path.join(igPath, 'input', contentFolder, `${page.name}.${page.fileType}`)
+            );
+          }
           const isSupportedFileType = page.fileType === 'md' || page.fileType === 'xml';
           const isIntroOrNotesFile = page.name.endsWith('-intro') || page.name.endsWith('-notes');
           if (isSupportedFileType) {
@@ -550,18 +554,19 @@ export class IGExporter {
     const pageData = pages.map(page => {
       const nameParts = page.match(/^(\d+)_(.*)/);
       let prefix: number = null;
-      let name: string;
+      let nameWithoutPrefix: string;
+      const nameWithPrefix = page.slice(0, page.lastIndexOf('.'));
       if (nameParts == null) {
-        name = page.slice(0, page.lastIndexOf('.'));
+        nameWithoutPrefix = page.slice(0, page.lastIndexOf('.'));
       } else {
         prefix = parseInt(nameParts[1]);
-        name = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
+        nameWithoutPrefix = nameParts[2].slice(0, nameParts[2].lastIndexOf('.'));
       }
       return {
         originalName: page,
         prefix: prefix,
-        name: name,
-        title: titleCase(words(name).join(' ')),
+        name: this.isIgPubContext ? nameWithPrefix : nameWithoutPrefix,
+        title: titleCase(words(nameWithoutPrefix).join(' ')),
         fileType: page.slice(page.lastIndexOf('.') + 1)
       };
     });
@@ -647,32 +652,53 @@ export class IGExporter {
 
   /**
    * Adds menu.xml
-   * A user can define a menu in config.yaml or provide one in ig-data/input/includes.
+   * A user can define a menu in sushi-config.yaml or provide one in ig-data/input/includes.
    * If neither is provided, the static one SUSHI provides will be used.
    *
    * @param {string} igPath - the path where the IG is exported to
    */
   addMenuXML(igPath: string): void {
     const menuXMLDefaultPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
-    const menuXMLOutputPath = path.join(igPath, 'input', 'includes', 'menu.xml');
+    const menuXMLOutputPath = this.isIgPubContext
+      ? path.join(igPath, 'fsh-generated', 'includes', 'menu.xml')
+      : path.join(igPath, 'input', 'includes', 'menu.xml');
 
     // If user provided menu file in input/includes and no config, copy over the file.
-    if (existsSync(menuXMLDefaultPath) && !this.config.menu) {
+    if (existsSync(menuXMLDefaultPath) && !this.config.menu && this.shouldCopyFiles) {
       this.copyWithWarningText(menuXMLDefaultPath, menuXMLOutputPath);
       return;
     }
 
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.config.menu) {
+      const filePathString = path.join(
+        path.basename(this.igDataPath),
+        'input',
+        'includes',
+        'menu.xml'
+      );
+
+      let preferredFileMessage =
+        `Since a ${filePathString} file was found, the "menu" property in the ${this.configName} ` +
+        `will be ignored and a menu.xml file will not be generated. Remove the ${filePathString} ` +
+        `file to use the "menu" property in ${this.configName} to generate a menu.xml file instead.`;
+      if (this.shouldCopyFiles) {
+        preferredFileMessage =
+          `Since the "menu" property is present in the ${this.configName}, a menu.xml file will be generated and ` +
+          `the ${filePathString} file will be ignored. Remove the "menu" property in ${this.configName} ` +
+          `to use the ${filePathString} file instead.`;
+      }
       logger.warn(
-        `Found both a "menu" property in config.yaml and a menu.xml file at ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml. ` +
-          'Since the "menu" property is present in the config.yaml, a menu.xml file will be generated and ' +
-          `the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file will be ignored. Remove the "menu" property in config.yaml ` +
-          `to use the ig-data${path.sep}input${path.sep}includes${path.sep}menu.xml file instead.`,
+        `Found both a "menu" property in ${this.configName} and a menu.xml file at ${filePathString}. ` +
+          `${preferredFileMessage}`,
         {
           file: menuXMLDefaultPath
         }
       );
+
+      if (!this.shouldCopyFiles) {
+        return;
+      }
     }
 
     // Always use config menu if defined
@@ -683,12 +709,13 @@ export class IGExporter {
       });
       menu += '</ul>';
 
+      const filePathString = path.join(path.basename(this.igDataPath), 'input', 'includes');
       const warning = warningBlock(
         `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
         [
-          'To change the contents of this file, edit the "menu" attribute in the tank config.yaml file',
-          'or provide your own menu.xml in the ig-data/input/includes folder'
+          `To change the contents of this file, edit the "menu" attribute in the tank ${this.configName} file`,
+          `or provide your own menu.xml in the ${filePathString} folder`
         ]
       );
       outputFileSync(menuXMLOutputPath, `${warning}${menu}`, 'utf8');
@@ -760,11 +787,28 @@ export class IGExporter {
    *
    * @param {string} igPath - the path where the IG is exported to
    */
-  private addIgnoreWarningsFile(igPath: string): void {
-    const ignorePath = path.join(this.igDataPath, 'input', 'ignoreWarnings.txt');
-    if (existsSync(ignorePath)) {
+  public addIgnoreWarningsFile(igPath: string): void {
+    // Only copy ignoreWarnings.txt for legacy configurations
+    if (!this.isIgPubContext) {
       const outputPath = path.join(igPath, 'input', 'ignoreWarnings.txt');
-      this.copyAsIs(ignorePath, outputPath);
+      const ignorePath = path.join(this.igDataPath, 'input', 'ignoreWarnings.txt');
+      if (existsSync(ignorePath)) {
+        this.copyAsIs(ignorePath, outputPath);
+      } else {
+        const ignoreWarningsContents = `== Suppressed Messages ==
+
+        # ********************************************************************************************************************************
+        # *                               WARNING: DO NOT EDIT THIS FILE                                                                 *
+        # *                                                                                                                              *
+        # * This file is generated by SUSHI. Any edits you make to this file will be overwritten.                                        *
+        # *                                                                                                                              *
+        # * Authors should create their own ignoreWarnings.txt file at ig-data/input/ignoreWarnings.txt.                                 *
+        # * If that file exists, SUSHI will use it instead of generating this one.                                                       *
+        # * See: https://confluence.hl7.org/pages/viewpage.action?pageId=66938614#ImplementationGuideParameters-ManagingWarningsandHints *
+        # ********************************************************************************************************************************`;
+        outputFileSync(outputPath, ignoreWarningsContents);
+        this.updateOutputLog(outputPath, [], 'generated');
+      }
     }
   }
 
@@ -974,14 +1018,15 @@ export class IGExporter {
               } else {
                 this.ig.definition.resource.push(newResource);
               }
-              const inputPath = path.join(dirPath, file);
-              const outputPath = path.join(
-                igPath,
-                'input',
-                pathEnd,
-                `${resourceJSON.resourceType}-${resourceJSON.id}${path.extname(file)}`
-              );
-              this.copyAsIs(inputPath, outputPath);
+
+              if (this.shouldCopyFiles) {
+                const inputPath = path.join(dirPath, file);
+                const outputFileName = `${resourceJSON.resourceType}-${
+                  resourceJSON.id
+                }${path.extname(file)}`;
+                const outputPath = path.join(igPath, 'input', pathEnd, outputFileName);
+                this.copyAsIs(inputPath, outputPath);
+              }
             }
           }
         }
@@ -1073,7 +1118,8 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   addImplementationGuide(igPath: string): void {
-    const igJsonPath = path.join(igPath, 'input', `ImplementationGuide-${this.ig.id}.json`);
+    const igJSONFolder = this.isIgPubContext ? path.join('fsh-generated', 'resources') : 'input';
+    const igJsonPath = path.join(igPath, igJSONFolder, `ImplementationGuide-${this.ig.id}.json`);
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
     this.updateOutputLog(
       igJsonPath,
@@ -1084,8 +1130,8 @@ export class IGExporter {
   }
 
   /**
-   * Creates an ig.ini file based on the "template" in config.yaml and exports it to the IG folder.
-   * If the user specified an igi.ini file in the ig-data folder, and no "template" in config.yaml is specified,
+   * Creates an ig.ini file based on the "template" in sushi-config.yaml and exports it to the IG folder.
+   * If the user specified an igi.ini file in the ig-data folder, and no "template" in sushi-config.yaml is specified,
    * the file from ig-data is used instead.
    *
    * @param igPath {string} - the path where the IG is exported to
@@ -1093,18 +1139,46 @@ export class IGExporter {
   addIgIni(igPath: string): void {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     if (this.config.template != null) {
-      this.generateIgIni(igPath);
       if (existsSync(inputIniPath)) {
-        logger.warn(
-          `Found both a "template" property in config.yaml and an ig.ini file at ig-data${path.sep}ig.ini. ` +
-            'Since the "template" property is present in the config.yaml, an ig.ini file will be generated and ' +
-            `the ig-data${path.sep}ig.ini file will be ignored. Remove the "template" property in config.yaml ` +
-            `to use the ig-data${path.sep}ig.ini file instead.`,
-          {
-            file: inputIniPath
-          }
-        );
+        const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
+        let message = `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. `;
+        if (this.shouldCopyFiles) {
+          message +=
+            `Since the "template" property is present in the ${this.configName}, an ig.ini file will be generated and ` +
+            `the ${filePathString} file will be ignored. NOTE: Support for the "template" property in ${this.configName} will ` +
+            `be removed in a future version of SUSHI. Please remove the "template" property in ${this.configName} and ` +
+            'manage the ig.ini file directly.';
+          logger.warn(message, { file: inputIniPath });
+        } else {
+          message +=
+            `The "template" property in ${this.configName} has been deprecated and will be ignored. The existing ` +
+            `${filePathString} file will be used instead.  To resolve this error, remove the "template" property in ` +
+            `${this.configName} and manage the ig.ini file directly.`;
+          logger.error(message, { file: inputIniPath });
+        }
+      } else {
+        let message =
+          `The "template" property in ${this.configName} has been deprecated. Please remove the "template" ` +
+          `property in ${this.configName} and manage the ig.ini file directly.`;
+        if (this.shouldCopyFiles) {
+          message +=
+            ` Support for the "template" property in ${this.configName} will be removed in a future ` +
+            'version of SUSHI.';
+          logger.warn(message);
+        } else {
+          message += ` To resolve this error, create an ig.ini file in your project folder with the following contents:\n\n${this.generateIgIniString(
+            false
+          )}`;
+          logger.error(message);
+        }
       }
+
+      // Don't ever generate ig.ini in new IG Publisher project structure
+      if (!this.shouldCopyFiles) {
+        return;
+      }
+
+      this.generateIgIni(igPath);
     } else if (existsSync(inputIniPath)) {
       this.processIgIni(igPath, inputIniPath);
     } else {
@@ -1113,50 +1187,57 @@ export class IGExporter {
   }
 
   /**
-   * Generates an ig.ini file using the information in the configuration.
+   * Generates the contents of an ig.ini file using the information in the configuration.
    *
-   * @param igPath {string} - the path where the IG is exported to
+   * @returns {string} contents of ig.ini file
    */
-  generateIgIni(igPath: string): void {
+  generateIgIniString(includeWarning = true): string {
     // Create an ig.ini object from the configuration
     const iniObj: any = {};
-    iniObj.ig = `input/ImplementationGuide-${this.config.id}.json`;
+    const igFolder = this.isIgPubContext ? 'fsh-generated/resources' : 'input';
+    iniObj.ig = `${igFolder}/ImplementationGuide-${this.config.id}.json`;
     iniObj.template = this.config.template;
-    const comment = [
-      'This ig.ini was generated using the template property in config.yaml. To provide your own',
-      'ig.ini, create an ig.ini file in the ig-data folder with required properties: ig, template.',
-      'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
-    ];
-    const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
-    let outputIniContents = ini
-      .encode(iniObj, { section: 'IG', whitespace: true })
-      .replace('\n', `\n${iniWarning}`);
+    let outputIniContents = ini.encode(iniObj, { section: 'IG', whitespace: true });
+    if (includeWarning) {
+      const comment = [
+        `This ig.ini was generated using the template property in ${this.configName}. To provide your own`,
+        `ig.ini, create an ig.ini file in the ${path.basename(
+          this.igDataPath
+        )} folder with required properties: ig, template.`,
+        'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root'
+      ];
+      const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
+      outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
+    }
 
     // The encoder escapes '#' but FHIR doesn't like that, so if `#` is escaped in the template, then unescape it.
     outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
       $1 ? $0.replace($1, $1.slice(1)) : $0
     );
 
-    // Write the ig.ini to disk
+    return outputIniContents;
+  }
+
+  /**
+   * Generates an ig.ini file using the information in the configuration.
+   *
+   * @param igPath {string} - the path where the IG is exported to
+   */
+  generateIgIni(igPath: string): void {
     const outputPath = path.join(igPath, 'ig.ini');
-    outputFileSync(outputPath, outputIniContents);
+    outputFileSync(outputPath, this.generateIgIniString());
     this.updateOutputLog(outputPath, [this.configPath], 'generated');
     logger.info('Generated ig.ini.');
   }
 
   /**
-   * Process an existing ig.ini. This may involve merging in default values when one of the required properties
-   * is missing.  If required properties are present, the file will be copied as-is.
+   * Process an existing ig.ini. The file will always be copied as-is.
+   * When one of the required properties is missing, an error is logged but the file is copied as-is.
    *
    * @param igPath {string} - the path where the IG is exported to
    * @param inputIniPath {string} - the path to the input ig.ini file
    */
   processIgIni(igPath: string, inputIniPath: string): void {
-    // Since we used to merge ig.ini, we did not allow the ig property -- so it may be missing for existing users.
-    // Similarly, we merged in the template property if it was missing, so that may be missing as well. In these
-    // cases, we should add them to the copied file (to be friendly) but also issue a warning that the user should
-    // update their ig.ini to include them.
-    let modified = false;
     let inputIniContents = readFileSync(inputIniPath, 'utf8');
     // FHIR allows templates to have versions identified using #.  E.g.,
     //   template = hl7.fhir.template#0.1.0
@@ -1170,34 +1251,31 @@ export class IGExporter {
         file: inputIniPath
       });
     }
+    const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
     if (inputIni.IG) {
       if (inputIni.IG.ig == null) {
         const igValue = `input/ImplementationGuide-${this.config.id}.json`;
         inputIni.IG.ig = igValue;
-        logger.warn(
-          'The ig.ini file must have an "ig" property pointing to the IG file. SUSHI has added the following line ' +
-            'to the copied version of the ig.ini:\n' +
-            `ig = ${igValue}\n` +
-            `Please update ig-data${path.sep}ig.ini to include this value.`,
+        logger.error(
+          'The ig.ini file must have an "ig" property pointing to the IG file. Please add the following line ' +
+            `to ${filePathString}:\n'` +
+            `ig = ${igValue}`,
           {
             file: inputIniPath
           }
         );
-        modified = true;
       }
       if (inputIni.IG.template == null) {
         const templateValue = 'fhir.base.template';
         inputIni.IG.template = templateValue;
-        logger.warn(
-          'The ig.ini file must have a "template" property. SUSHI has added the following line to the copied ' +
-            'version of the ig.ini:\n' +
-            `template = ${templateValue}\n` +
-            `Please update ig-data${path.sep}ig.ini to include your desired template value.`,
+        logger.error(
+          `The ig.ini file must have a "template" property. Please update ${filePathString} to include ` +
+            'your desired template value. Consider adding the following line:\n' +
+            `template = ${templateValue}`,
           {
             file: inputIniPath
           }
         );
-        modified = true;
       }
       const deprecatedProps = [
         'copyrightyear',
@@ -1213,7 +1291,7 @@ export class IGExporter {
       if (deprecatedProps.length > 0) {
         const propList = deprecatedProps.join(', ');
         logger.warn(
-          `Your ig-data${path.sep}ig.ini file contains the following deprecated properties: ${propList}. ` +
+          `Your ${filePathString} file contains the following deprecated properties: ${propList}. ` +
             'These are no longer supported in ig.ini and should be removed.  See the following link for details: ' +
             'https://github.com/HL7/ig-template-base/releases/tag/0.0.2',
           {
@@ -1223,40 +1301,22 @@ export class IGExporter {
       }
     }
 
-    let outputIniContents;
-    if (modified) {
-      // Generate a merged version of the ig.ini
-      outputIniContents = ini.encode(inputIni.IG, { section: 'IG', whitespace: true });
-      // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
-      outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
-        $1 ? $0.replace($1, $1.slice(1)) : $0
-      );
-      const comment = [
-        'This ig.ini was generated by merging in required properties: "ig" and/or "template". Review your ',
-        `original ig-data${path.sep}ig.ini file and add the missing required properties.`
-      ];
-      const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
-      outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
+    // Copy the ig.ini as-is with an embedded comment
+    let outputIniContents = inputIniContents;
+    // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
+    outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
+      $1 ? $0.replace($1, $1.slice(1)) : $0
+    );
+    const comment = [
+      'To change the contents of this file, edit the original source file at:',
+      `${filePathString}`
+    ];
+    const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
+    outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
 
-      // Finally, write it to disk
-      const outputPath = path.join(igPath, 'ig.ini');
-      outputFileSync(outputPath, outputIniContents);
-      this.updateOutputLog(outputPath, [this.configPath, inputIniPath], 'generated');
-      logger.info(`Merged ig-data${path.sep}ig.ini w/ default values for missing properties.`);
-    } else {
-      // Copy the ig.ini as-is with an embedded comment
-      outputIniContents = inputIniContents;
-      // Now we need to do the reverse of what we did before.  If `#` is escaped, then unescape it.
-      outputIniContents = outputIniContents.replace(/^template\s*=\s*.*?(\\#.+)?$/m, ($0, $1) =>
-        $1 ? $0.replace($1, $1.slice(1)) : $0
-      );
-      const comment = [
-        'To change the contents of this file, edit the original source file at:',
-        `ig-data${path.sep}ig.ini`
-      ];
-      const iniWarning = [...warningTextArray('; ', comment), ''].join(EOL);
-      outputIniContents = outputIniContents.replace('\n', `\n${iniWarning}`);
-      const outputPath = path.join(igPath, 'ig.ini');
+    // Finally, write it to disk
+    const outputPath = path.join(igPath, 'ig.ini');
+    if (this.shouldCopyFiles) {
       outputFileSync(outputPath, outputIniContents);
       this.updateOutputLogForCopiedPath(outputPath, inputIniPath);
       logger.info('Copied ig.ini.');
@@ -1272,26 +1332,39 @@ export class IGExporter {
   addPackageList(igPath: string): void {
     const packageListPath = path.join(this.igDataPath, 'package-list.json');
     const isIgDataPackageList = existsSync(packageListPath);
+    const filePathString = path.join(path.basename(this.igDataPath), 'package-list.json');
 
     if (this.config.history) {
+      if (this.isIgPubContext) {
+        logger.error(
+          'Detected "history" property in configuration. The use of "history" is deprecated. Please remove the property and provide a package-list.json directly. ' +
+            'The package-list.json corresponding to the "history" property in the configuration is:\n\n' +
+            JSON.stringify(this.config.history, null, 2) +
+            '\n'
+        );
+        return;
+      }
+      logger.warn(
+        'Use of "history" property in configuration is deprecated and will be removed in a future version. Please remove the property and provide a package-list.json directly.'
+      );
       const outputPath = path.join(igPath, 'package-list.json');
       outputJSONSync(outputPath, this.config.history, { spaces: 2 });
       logger.info('Generated package-list.json');
       this.updateOutputLog(outputPath, [this.configPath], 'generated');
       if (isIgDataPackageList) {
         logger.warn(
-          `Found both a "history" property in config.yaml and a package-list.json file at ig-data${path.sep}package-list.json. ` +
-            'Since the "history" property is present in the config.yaml, a package-list.json file will be generated and ' +
-            `the ig-data${path.sep}package-list.json file will be ignored. Remove the "history" property in config.yaml ` +
-            `to use the ig-data${path.sep}package-list.json file instead.`,
+          `Found both a "history" property in ${this.configName} and a package-list.json file at ${filePathString}. ` +
+            `Since the "history" property is present in the ${this.configName}, a package-list.json file will be generated and ` +
+            `the ${filePathString} file will be ignored. Remove the "history" property in ${this.configName} ` +
+            `to use the ${filePathString} file instead.`,
           {
             file: packageListPath
           }
         );
       }
-    } else if (isIgDataPackageList) {
+    } else if (isIgDataPackageList && this.shouldCopyFiles) {
       this.copyAsIs(packageListPath, path.join(igPath, 'package-list.json'));
-      logger.info('Copied ig-data/package-list.json.');
+      logger.info(`Copied ${filePathString}.`);
     }
   }
 
@@ -1302,6 +1375,10 @@ export class IGExporter {
    * @param igPath {string} - the path where the IG is exported to
    */
   private addOutputLog(igPath: string): void {
+    // If we are in the new context, all output goes into fsh-generated, so no point having SUSHI-GENERATED-FILES
+    if (this.isIgPubContext) {
+      return;
+    }
     const intro = [
       '# SUSHI-GENERATED FILES #',
       '',
@@ -1312,7 +1389,9 @@ export class IGExporter {
       'files.',
       '',
       'NOTE: This file does not currently list the FHIR resources and examples generated from .fsh files. It only',
-      'lists those files generated from project configs or the contents in the ig-data folder.',
+      `lists those files generated from project configs or the contents in the ${path.basename(
+        this.igDataPath
+      )} folder.`,
       '',
       ''
     ].join(EOL);
@@ -1349,6 +1428,11 @@ export class IGExporter {
     if (!existsSync(inputPath) || junk.is(path.basename(inputPath))) {
       return;
     }
+
+    // Don't copy to the same directory it came from
+    const fullInputPath = path.resolve(inputPath);
+    const fullOutputPath = path.resolve(outputPath);
+    if (fullInputPath === fullOutputPath) return;
 
     copySync(inputPath, outputPath, { filter });
     this.updateOutputLogForCopiedPath(outputPath, inputPath, filter);
@@ -1393,7 +1477,9 @@ export class IGExporter {
     // Otherwise, it's .md or .xml
     const extra = [
       'To change the contents of this file, edit the original source file at:',
-      inputPath.slice(inputPath.indexOf(`${path.sep}ig-data${path.sep}`) + 1)
+      inputPath.slice(
+        inputPath.indexOf(`${path.sep}${path.basename(this.igDataPath)}${path.sep}`) + 1
+      )
     ];
     // .xml files can't have bare jekyll comments at the start of the file, as they fail XML parsing,
     // so we must surround the warning w/ XML comments.  To avoid the final HTML having just an empty

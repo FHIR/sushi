@@ -1,7 +1,7 @@
 import { Configuration } from '../../src/fshtypes';
 
 export const minimalConfig: Configuration = {
-  filePath: 'config.yaml',
+  filePath: 'sushi-config.yaml',
   id: 'fhir.us.minimal',
   canonical: 'http://hl7.org/fhir/us/minimal',
   name: 'MinimalIG',

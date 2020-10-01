@@ -41,14 +41,8 @@ describe('IGExporter', () => {
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
       expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(/\| _gencontinuous.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _gencontinuous.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
       expect(content).toMatch(
-        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]customized-ig[\/\\]config\.yaml, \{all input resources and pages\} \s*\|/
+        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]customized-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
       expect(content).toMatch(/\| ig\.ini \s*\| copied \s*\| ..*[\/\\]ig-data[\/\\]ig\.ini \s*\|/);
       expect(content).toMatch(
@@ -118,27 +112,20 @@ describe('IGExporter', () => {
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
       expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(/\| _gencontinuous.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _gencontinuous.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
       expect(content).toMatch(
-        /\| ig\.ini \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]config\.yaml \s*\|/
+        /\| ig\.ini \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml \s*\|/
       );
       expect(content).toMatch(
-        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]config\.yaml, \{all input resources and pages\} \s*\|/
-      );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
-      expect(content).toMatch(
-        /\| input[\/\\]includes[\/\\]menu\.xml \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]config\.yaml \s*\|/
+        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
       expect(content).toMatch(
-        /\| input[\/\\]pagecontent[\/\\]index\.md \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]config\.yaml \s*\|/
+        /\| input[\/\\]includes[\/\\]menu\.xml \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml \s*\|/
       );
       expect(content).toMatch(
-        /\| package-list\.json \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]config\.yaml \s*\|/
+        /\| input[\/\\]pagecontent[\/\\]index\.md \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml \s*\|/
+      );
+      expect(content).toMatch(
+        /\| package-list\.json \s*\| generated \s*\| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml \s*\|/
       );
     });
 
@@ -155,23 +142,16 @@ describe('IGExporter', () => {
       expect(fs.existsSync(reportPath)).toBeTruthy();
       const content = fs.readFileSync(reportPath, 'utf8');
       expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(/\| _gencontinuous.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _gencontinuous.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _genonce.sh .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.bat .*\| generated \| \s* \|/);
-      expect(content).toMatch(/\| _updatePublisher.sh .*\| generated \| \s* \|/);
       expect(content).toMatch(
-        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]config\.yaml, \{all input resources and pages\} \s*\|/
+        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]sushi-config\.yaml, \{all input resources and pages\} \s*\|/
       );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
       expect(content).not.toMatch('ig.ini');
       expect(content).not.toMatch('menu.xml');
       expect(content).not.toMatch('index.md');
       expect(content).not.toMatch('package-list.json');
     });
 
-    it('should generate a SUSHI-GENERATED-FILES.md with the correct listings when in publisher context', () => {
+    it('should not generate a SUSHI-GENERATED-FILES.md when in publisher context', () => {
       const config = cloneDeep(minimalConfig);
       delete config.template;
       const pkg = new Package(config);
@@ -181,20 +161,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
 
       const reportPath = path.join(tempOut, 'SUSHI-GENERATED-FILES.md');
-      expect(fs.existsSync(reportPath)).toBeTruthy();
-      const content = fs.readFileSync(reportPath, 'utf8');
-      expect(content).toMatch('# SUSHI-GENERATED FILES #');
-      expect(content).toMatch(
-        /\| input[\/\\]ImplementationGuide-fhir\.us\.minimal\.json \s*\| generated \| .*[\/\\]simple-ig[\/\\]config\.yaml, \{all input resources and pages\} \s*\|/
-      );
-      expect(content).toMatch(/\| input[\/\\]ignoreWarnings\.txt \s*\| generated \s*\|\s*\|/);
-      expect(content).not.toMatch('_gencontinuous');
-      expect(content).not.toMatch('_genonce');
-      expect(content).not.toMatch('_updatePublisher');
-      expect(content).not.toMatch('ig.ini');
-      expect(content).not.toMatch('menu.xml');
-      expect(content).not.toMatch('index.md');
-      expect(content).not.toMatch('package-list.json');
+      expect(fs.existsSync(reportPath)).toBeFalsy();
     });
   });
 });

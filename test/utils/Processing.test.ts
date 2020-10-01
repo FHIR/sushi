@@ -1,3 +1,4 @@
+import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
@@ -27,7 +28,10 @@ describe('Processing', () => {
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
-      fs.mkdirpSync(path.join(tempRoot, 'has-fsh', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'has-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
+      fs.mkdirpSync(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
+      fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
     });
 
@@ -40,10 +44,27 @@ describe('Processing', () => {
       expect(foundInput).toBe('.');
     });
 
+    // TODO: Tests legacy support. Remove when no longer supported.
     it('should find a path to the fsh subdirectory if present', () => {
       const input = path.join(tempRoot, 'has-fsh');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh', 'fsh'));
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Use of this folder is DEPRECATED and will be REMOVED in a future release/s
+      );
+    });
+
+    it('should find a path to the input/fsh subdirectory if present', () => {
+      const input = path.join(tempRoot, 'has-input-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
+    });
+
+    // TODO: Tests legacy support. Remove when no longer supported.
+    it('should prefer path to input/fsh over fsh/ if both present', () => {
+      const input = path.join(tempRoot, 'has-fsh-and-input-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
     });
 
     it('should find a path to the provided directory if the fsh subdirectory is not present', () => {
@@ -55,10 +76,16 @@ describe('Processing', () => {
 
   describe('#ensureOutputDir()', () => {
     let tempRoot: string;
+    let emptyDirSpy: jest.SpyInstance;
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
       fs.mkdirSync(path.join(tempRoot, 'my-input'));
+    });
+
+    beforeEach(() => {
+      emptyDirSpy = jest.spyOn(fs, 'emptyDirSync').mockImplementation(() => '');
+      emptyDirSpy.mockReset();
     });
 
     afterAll(() => {
@@ -68,25 +95,64 @@ describe('Processing', () => {
     it('should use and create the output directory when it is provided', () => {
       const input = path.join(tempRoot, 'my-input');
       const output = path.join(tempRoot, 'my-output');
-      const igContextOutputDir = ensureOutputDir(input, output, true);
-      const nonIgContextOutputDir = ensureOutputDir(input, output, false);
+      const legacyIgContextOutputDir = ensureOutputDir(input, output, false, true);
+      const igContextOutputDir = ensureOutputDir(input, output, true, false);
+      const nonIgContextOutputDir = ensureOutputDir(input, output, false, false);
       expect(igContextOutputDir).toBe(output);
       expect(nonIgContextOutputDir).toBe(output);
+      expect(legacyIgContextOutputDir).toBe(output);
       expect(fs.existsSync(output)).toBeTruthy();
     });
 
     it('should default the output directory to "build" when not running in IG Publisher context', () => {
       const input = path.join(tempRoot, 'my-input');
-      const outputDir = ensureOutputDir(input, undefined, false);
+      const outputDir = ensureOutputDir(input, undefined, false, false);
       expect(outputDir).toBe('build');
       expect(fs.existsSync(outputDir)).toBeTruthy();
     });
 
-    it('should default the output directory to the parent of the input when running in IG Publisher context', () => {
+    it('should default the output directory to the parent of the input when running in legacy IG Publisher context', () => {
       const input = path.join(tempRoot, 'my-input');
-      const outputDir = ensureOutputDir(input, undefined, true);
+      const outputDir = ensureOutputDir(input, undefined, false, true);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
+    });
+
+    it('should default the output directory to the grandparent of the input when running in IG Publisher context', () => {
+      const input = path.join(tempRoot, 'my-input', 'my-fsh');
+      const outputDir = ensureOutputDir(input, undefined, true, false);
+      expect(outputDir).toBe(tempRoot);
+      expect(fs.existsSync(outputDir)).toBeTruthy();
+    });
+
+    it('should empty the fsh-generated folder if the output directory contains one', () => {
+      jest
+        .spyOn(fs, 'existsSync')
+        .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
+      const input = path.join(tempRoot, 'my-input', 'my-fsh');
+      const outputDir = ensureOutputDir(input, undefined, true, false);
+      expect(outputDir).toBe(tempRoot);
+      expect(fs.existsSync(outputDir)).toBeTruthy();
+      expect(emptyDirSpy.mock.calls).toHaveLength(1);
+      expect(emptyDirSpy.mock.calls[0][0]).toBe(path.join(tempRoot, 'fsh-generated'));
+    });
+
+    it('should log an error when emptying the directory fails', () => {
+      emptyDirSpy = emptyDirSpy.mockImplementation(() => {
+        throw Error('foo');
+      });
+      jest
+        .spyOn(fs, 'existsSync')
+        .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
+      const input = path.join(tempRoot, 'my-input', 'my-fsh');
+      const outputDir = ensureOutputDir(input, undefined, true, false);
+      expect(outputDir).toBe(tempRoot);
+      expect(fs.existsSync(outputDir)).toBeTruthy();
+      expect(emptyDirSpy.mock.calls).toHaveLength(1);
+      expect(emptyDirSpy.mock.calls[0][0]).toBe(path.join(tempRoot, 'fsh-generated'));
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Unable to empty existing fsh-generated folder.*: foo/
+      );
     });
   });
 
@@ -95,11 +161,11 @@ describe('Processing', () => {
       loggerSpy.reset();
     });
 
-    it('should return the contents of config.yaml from the input directory', () => {
+    it('should return the contents of sushi-config.yaml from the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       expect(config).toEqual({
-        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'config.yaml'),
+        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
         id: 'sushi-test',
         packageId: 'sushi-test',
         canonical: 'http://hl7.org/fhir/sushi-test',
@@ -148,15 +214,15 @@ describe('Processing', () => {
       });
     });
 
-    it('should log and throw an error when config.yaml is not found in the input directory', () => {
+    it('should log and throw an error when sushi-config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
         readConfig(input);
       }).toThrow();
-      expect(loggerSpy.getLastMessage('error')).toMatch(/No config\.yaml/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/No sushi-config\.yaml/s);
     });
 
-    it('should log and throw an error when the contents of config.yaml are not valid yaml', () => {
+    it('should log and throw an error when the contents of sushi-config.yaml are not valid yaml', () => {
       const input = path.join(__dirname, 'fixtures', 'invalid-yaml');
       expect(() => {
         readConfig(input);
@@ -260,10 +326,12 @@ describe('Processing', () => {
 
   describe('#writeFHIRResources()', () => {
     let tempRoot: string;
+    let tempIGPubRoot: string;
     let outPackage: Package;
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('output-dir');
+      tempIGPubRoot = temp.mkdirSync('output-ig-dir');
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       outPackage = new Package(config);
@@ -326,83 +394,121 @@ describe('Processing', () => {
         myProfileInstance,
         myOtherInstance
       );
-      writeFHIRResources(tempRoot, outPackage, false);
     });
 
     afterAll(() => {
       temp.cleanupSync();
     });
 
-    it('should write profiles and profile instances to the "profiles" directory', () => {
-      const profilesPath = path.join(tempRoot, 'input', 'profiles');
-      expect(fs.existsSync(profilesPath)).toBeTruthy();
-      const profilesFiles = fs.readdirSync(profilesPath);
-      expect(profilesFiles.length).toBe(2);
-      expect(profilesFiles).toContain('StructureDefinition-my-profile.json');
-      expect(profilesFiles).toContain('StructureDefinition-my-profile-instance.json');
+    describe('IG Publisher mode', () => {
+      beforeAll(() => {
+        writeFHIRResources(tempIGPubRoot, outPackage, false, true);
+      });
+
+      afterAll(() => {
+        temp.cleanupSync();
+      });
+
+      it('should write all resources to the "fsh-generated/resources" directory', () => {
+        const generatedPath = path.join(tempIGPubRoot, 'fsh-generated', 'resources');
+        expect(fs.existsSync(generatedPath)).toBeTruthy();
+        const allGeneratedFiles = fs.readdirSync(generatedPath);
+        expect(allGeneratedFiles.length).toBe(12);
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-profile.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-profile-instance.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-extension.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-extension-instance.json');
+        expect(allGeneratedFiles).toContain('ValueSet-my-value-set.json');
+        expect(allGeneratedFiles).toContain('CodeSystem-my-code-system.json');
+        expect(allGeneratedFiles).toContain('ConceptMap-my-concept-map.json');
+        expect(allGeneratedFiles).toContain('Observation-my-example.json');
+        expect(allGeneratedFiles).toContain('CapabilityStatement-my-capabilities.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-model.json');
+        expect(allGeneratedFiles).toContain('OperationDefinition-my-operation.json');
+        expect(allGeneratedFiles).toContain('Observation-my-other-instance.json');
+      });
     });
 
-    it('should write extensions and extension instances to the "extensions" directory', () => {
-      const extensionsPath = path.join(tempRoot, 'input', 'extensions');
-      expect(fs.existsSync(extensionsPath)).toBeTruthy();
-      const extensionsFiles = fs.readdirSync(extensionsPath);
-      expect(extensionsFiles.length).toBe(2);
-      expect(extensionsFiles).toContain('StructureDefinition-my-extension.json');
-      expect(extensionsFiles).toContain('StructureDefinition-my-extension-instance.json');
-    });
+    describe('legacy IG Publisher mode and legacy flat tank', () => {
+      beforeAll(() => {
+        writeFHIRResources(tempRoot, outPackage, false, false);
+      });
 
-    it('should write value sets, code systems, and vocabulary instances to the "vocabulary" directory', () => {
-      const vocabularyPath = path.join(tempRoot, 'input', 'vocabulary');
-      expect(fs.existsSync(vocabularyPath)).toBeTruthy();
-      const vocabularyFiles = fs.readdirSync(vocabularyPath);
-      expect(vocabularyFiles.length).toBe(3);
-      expect(vocabularyFiles).toContain('ValueSet-my-value-set.json');
-      expect(vocabularyFiles).toContain('CodeSystem-my-code-system.json');
-      expect(vocabularyFiles).toContain('ConceptMap-my-concept-map.json');
-    });
+      afterAll(() => {
+        temp.cleanupSync();
+      });
 
-    it('should write example instances to the "examples" directory', () => {
-      const examplesPath = path.join(tempRoot, 'input', 'examples');
-      expect(fs.existsSync(examplesPath)).toBeTruthy();
-      const examplesFiles = fs.readdirSync(examplesPath);
-      expect(examplesFiles.length).toBe(1);
-      expect(examplesFiles).toContain('Observation-my-example.json');
-    });
+      it('should write profiles and profile instances to the "profiles" directory', () => {
+        const profilesPath = path.join(tempRoot, 'input', 'profiles');
+        expect(fs.existsSync(profilesPath)).toBeTruthy();
+        const profilesFiles = fs.readdirSync(profilesPath);
+        expect(profilesFiles.length).toBe(2);
+        expect(profilesFiles).toContain('StructureDefinition-my-profile.json');
+        expect(profilesFiles).toContain('StructureDefinition-my-profile-instance.json');
+      });
 
-    it('should write capability instances to the "capabilities" directory', () => {
-      const capabilitiesPath = path.join(tempRoot, 'input', 'capabilities');
-      expect(fs.existsSync(capabilitiesPath)).toBeTruthy();
-      const capabilitiesFiles = fs.readdirSync(capabilitiesPath);
-      expect(capabilitiesFiles.length).toBe(1);
-      expect(capabilitiesFiles).toContain('CapabilityStatement-my-capabilities.json');
-    });
+      it('should write extensions and extension instances to the "extensions" directory', () => {
+        const extensionsPath = path.join(tempRoot, 'input', 'extensions');
+        expect(fs.existsSync(extensionsPath)).toBeTruthy();
+        const extensionsFiles = fs.readdirSync(extensionsPath);
+        expect(extensionsFiles.length).toBe(2);
+        expect(extensionsFiles).toContain('StructureDefinition-my-extension.json');
+        expect(extensionsFiles).toContain('StructureDefinition-my-extension-instance.json');
+      });
 
-    it('should write model instances to the "models" directory', () => {
-      const modelsPath = path.join(tempRoot, 'input', 'models');
-      expect(fs.existsSync(modelsPath)).toBeTruthy();
-      const modelsFiles = fs.readdirSync(modelsPath);
-      expect(modelsFiles.length).toBe(1);
-      expect(modelsFiles).toContain('StructureDefinition-my-model.json');
-    });
+      it('should write value sets, code systems, and vocabulary instances to the "vocabulary" directory', () => {
+        const vocabularyPath = path.join(tempRoot, 'input', 'vocabulary');
+        expect(fs.existsSync(vocabularyPath)).toBeTruthy();
+        const vocabularyFiles = fs.readdirSync(vocabularyPath);
+        expect(vocabularyFiles.length).toBe(3);
+        expect(vocabularyFiles).toContain('ValueSet-my-value-set.json');
+        expect(vocabularyFiles).toContain('CodeSystem-my-code-system.json');
+        expect(vocabularyFiles).toContain('ConceptMap-my-concept-map.json');
+      });
 
-    it('should write operation instances to the "operations" directory', () => {
-      const operationsPath = path.join(tempRoot, 'input', 'operations');
-      expect(fs.existsSync(operationsPath)).toBeTruthy();
-      const operationsFiles = fs.readdirSync(operationsPath);
-      expect(operationsFiles.length).toBe(1);
-      expect(operationsFiles).toContain('OperationDefinition-my-operation.json');
-    });
+      it('should write example instances to the "examples" directory', () => {
+        const examplesPath = path.join(tempRoot, 'input', 'examples');
+        expect(fs.existsSync(examplesPath)).toBeTruthy();
+        const examplesFiles = fs.readdirSync(examplesPath);
+        expect(examplesFiles.length).toBe(1);
+        expect(examplesFiles).toContain('Observation-my-example.json');
+      });
 
-    it('should write all other non-inline instances to the "resources" directory', () => {
-      const resourcesPath = path.join(tempRoot, 'input', 'resources');
-      expect(fs.existsSync(resourcesPath)).toBeTruthy();
-      const resourcesFiles = fs.readdirSync(resourcesPath);
-      expect(resourcesFiles.length).toBe(1);
-      expect(resourcesFiles).toContain('Observation-my-other-instance.json');
-    });
+      it('should write capability instances to the "capabilities" directory', () => {
+        const capabilitiesPath = path.join(tempRoot, 'input', 'capabilities');
+        expect(fs.existsSync(capabilitiesPath)).toBeTruthy();
+        const capabilitiesFiles = fs.readdirSync(capabilitiesPath);
+        expect(capabilitiesFiles.length).toBe(1);
+        expect(capabilitiesFiles).toContain('CapabilityStatement-my-capabilities.json');
+      });
 
-    it('should write an info message with the number of instances exported', () => {
-      expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
+      it('should write model instances to the "models" directory', () => {
+        const modelsPath = path.join(tempRoot, 'input', 'models');
+        expect(fs.existsSync(modelsPath)).toBeTruthy();
+        const modelsFiles = fs.readdirSync(modelsPath);
+        expect(modelsFiles.length).toBe(1);
+        expect(modelsFiles).toContain('StructureDefinition-my-model.json');
+      });
+
+      it('should write operation instances to the "operations" directory', () => {
+        const operationsPath = path.join(tempRoot, 'input', 'operations');
+        expect(fs.existsSync(operationsPath)).toBeTruthy();
+        const operationsFiles = fs.readdirSync(operationsPath);
+        expect(operationsFiles.length).toBe(1);
+        expect(operationsFiles).toContain('OperationDefinition-my-operation.json');
+      });
+
+      it('should write all other non-inline instances to the "resources" directory', () => {
+        const resourcesPath = path.join(tempRoot, 'input', 'resources');
+        expect(fs.existsSync(resourcesPath)).toBeTruthy();
+        const resourcesFiles = fs.readdirSync(resourcesPath);
+        expect(resourcesFiles.length).toBe(1);
+        expect(resourcesFiles).toContain('Observation-my-other-instance.json');
+      });
+
+      it('should write an info message with the number of instances exported', () => {
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
+      });
     });
   });
 
@@ -413,6 +519,7 @@ describe('Processing', () => {
     let copyFileSpy: jest.SpyInstance;
     let ensureDirSpy: jest.SpyInstance;
     let consoleSpy: jest.SpyInstance;
+    let getSpy: jest.SpyInstance;
 
     beforeEach(() => {
       readlineSpy = jest.spyOn(readlineSync, 'question').mockImplementation(() => '');
@@ -421,16 +528,20 @@ describe('Processing', () => {
       copyFileSpy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
       ensureDirSpy = jest.spyOn(fs, 'ensureDirSync').mockImplementation(() => undefined);
       consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      getSpy = jest.spyOn(axios, 'get').mockImplementation(url => {
+        return Promise.resolve({ data: url.slice(url.lastIndexOf('/') + 1) });
+      });
       readlineSpy.mockClear();
       yesNoSpy.mockClear();
       writeSpy.mockClear();
       copyFileSpy.mockClear();
       ensureDirSpy.mockClear();
       consoleSpy.mockClear();
+      getSpy.mockClear();
     });
 
-    it('should initialize a default project when no user input is given', () => {
-      init();
+    it('should initialize a default project when no user input is given', async () => {
+      await init();
       expect(readlineSpy.mock.calls).toEqual([
         ['Name (Default: ExampleIG): '],
         ['Id (Default: fhir.example): '],
@@ -441,16 +552,17 @@ describe('Processing', () => {
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
 
-      expect(ensureDirSpy.mock.calls).toHaveLength(1);
-      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
-        /.*ExampleIG.*fsh.*ig-data.*input.*pagecontent/
-      );
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*ExampleIG.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*ExampleIG.*input.*fsh/);
 
-      expect(writeSpy.mock.calls).toHaveLength(2);
+      expect(writeSpy.mock.calls).toHaveLength(7);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# ExampleIG/);
-      expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
-      expect(writeSpy.mock.calls[1][1].replace(/[\n\r]/g, '')).toBe(
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
+      expect(writeSpy.mock.calls[1][1]).toMatch(/fhir.example/);
+      expect(writeSpy.mock.calls[2][0]).toMatch(/.*sushi-config\.yaml/);
+      expect(writeSpy.mock.calls[2][1].replace(/[\n\r]/g, '')).toBe(
         fs
           .readFileSync(
             path.join(__dirname, 'fixtures', 'init-config', 'default-config.yaml'),
@@ -459,18 +571,29 @@ describe('Processing', () => {
           .replace(/[\n\r]/g, '')
       );
 
-      expect(copyFileSpy.mock.calls).toHaveLength(8);
+      expect(copyFileSpy.mock.calls).toHaveLength(3);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*ExampleIG.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*\.gitignore/);
-      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*_gencontinuous\.bat/);
-      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*ExampleIG.*_gencontinuous\.sh/);
-      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*ExampleIG.*_genonce\.bat/);
-      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*ExampleIG.*_genonce\.sh/);
-      expect(copyFileSpy.mock.calls[6][1]).toMatch(/.*ExampleIG.*_updatePublisher\.bat/);
-      expect(copyFileSpy.mock.calls[7][1]).toMatch(/.*ExampleIG.*_updatePublisher\.sh/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*input.*ignoreWarnings\.txt/);
+
+      expect(getSpy.mock.calls).toHaveLength(4);
+      const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
+      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
+      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
+      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
     });
 
-    it('should initialize a project with user input', () => {
+    it('should initialize a project with user input', async () => {
       readlineSpy.mockImplementation((question: string) => {
         if (question.startsWith('Name')) {
           return 'MyNonDefaultName';
@@ -484,7 +607,7 @@ describe('Processing', () => {
           return '2.0.0';
         }
       });
-      init();
+      await init();
       expect(readlineSpy.mock.calls).toEqual([
         ['Name (Default: ExampleIG): '],
         ['Id (Default: fhir.example): '],
@@ -495,16 +618,17 @@ describe('Processing', () => {
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
 
-      expect(ensureDirSpy.mock.calls).toHaveLength(1);
-      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
-        /.*MyNonDefaultName.*fsh.*ig-data.*input.*pagecontent/
-      );
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MyNonDefaultName.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyNonDefaultName.*input.*fsh/);
 
-      expect(writeSpy.mock.calls).toHaveLength(2);
+      expect(writeSpy.mock.calls).toHaveLength(7);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyNonDefaultName/);
-      expect(writeSpy.mock.calls[1][0]).toMatch(/.*config\.yaml/);
-      expect(writeSpy.mock.calls[1][1].replace(/[\n\r]/g, '')).toBe(
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
+      expect(writeSpy.mock.calls[1][1]).toMatch(/foo.bar/);
+      expect(writeSpy.mock.calls[2][0]).toMatch(/.*sushi-config\.yaml/);
+      expect(writeSpy.mock.calls[2][1].replace(/[\n\r]/g, '')).toBe(
         fs
           .readFileSync(
             path.join(__dirname, 'fixtures', 'init-config', 'user-input-config.yaml'),
@@ -512,21 +636,34 @@ describe('Processing', () => {
           )
           .replace(/[\n\r]/g, '')
       );
-      expect(copyFileSpy.mock.calls).toHaveLength(8);
+      expect(copyFileSpy.mock.calls).toHaveLength(3);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyNonDefaultName.*\.gitignore/);
-      expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.bat/);
-      expect(copyFileSpy.mock.calls[3][1]).toMatch(/.*MyNonDefaultName.*_gencontinuous\.sh/);
-      expect(copyFileSpy.mock.calls[4][1]).toMatch(/.*MyNonDefaultName.*_genonce\.bat/);
-      expect(copyFileSpy.mock.calls[5][1]).toMatch(/.*MyNonDefaultName.*_genonce\.sh/);
-      expect(copyFileSpy.mock.calls[6][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.bat/);
-      expect(copyFileSpy.mock.calls[7][1]).toMatch(/.*MyNonDefaultName.*_updatePublisher\.sh/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(
+        /.*MyNonDefaultName.*input.*ignoreWarnings\.txt/
+      );
+
+      expect(getSpy.mock.calls).toHaveLength(4);
+      const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
+      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
+      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
+      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
     });
 
-    it('should abort initalizing a project when the user does not confirm', () => {
+    it('should abort initalizing a project when the user does not confirm', async () => {
       yesNoSpy.mockImplementation(() => false);
 
-      init();
+      await init();
       expect(readlineSpy.mock.calls).toEqual([
         ['Name (Default: ExampleIG): '],
         ['Id (Default: fhir.example): '],

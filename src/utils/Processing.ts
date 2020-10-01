@@ -1,16 +1,11 @@
+import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import { logger } from './FSHLogger';
 import { loadDependency } from '../fhirdefs/load';
 import { FHIRDefinitions } from '../fhirdefs';
-import {
-  FSHTank,
-  RawFSH,
-  importText,
-  ensureConfigurationFile,
-  importConfiguration
-} from '../import';
+import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
 import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
 import { Package } from '../export';
@@ -34,27 +29,72 @@ export function findInputDir(input: string): string {
     logger.info('path-to-fsh-defs defaulted to current working directory');
   }
 
+  const originalInput = input;
+
+  // TODO: Legacy support. Remove when no longer supported.
+  // Use input/fsh/ subdirectory if not already specified and present
+  const inputFshSubdirectoryPath = path.join(originalInput, 'input', 'fsh');
+  if (fs.existsSync(inputFshSubdirectoryPath)) {
+    input = path.join(originalInput, 'input', 'fsh');
+  }
+
   // Use fsh/ subdirectory if not already specified and present
-  const fshSubdirectoryPath = path.join(input, 'fsh');
-  if (fs.existsSync(fshSubdirectoryPath)) {
-    input = path.join(input, 'fsh');
+  const fshSubdirectoryPath = path.join(originalInput, 'fsh');
+  if (!fs.existsSync(inputFshSubdirectoryPath)) {
+    let msg =
+      '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n';
+    if (fs.existsSync(fshSubdirectoryPath)) {
+      input = path.join(input, 'fsh');
+      msg +=
+        '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
+        'Use of this folder is DEPRECATED and will be REMOVED in a future release.\n' +
+        'To migrate to the new folder structure, make the following changes:\n' +
+        `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
+        `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
+      if (fs.existsSync(path.join(input, 'ig-data'))) {
+        msg += `  - move fsh${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
+      }
+    } else {
+      msg +=
+        '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
+        'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
+        'To migrate to the new folder structure, make the following changes:\n' +
+        `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
+        `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
+      if (fs.existsSync(path.join(input, 'ig-data'))) {
+        msg += `  - move .${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
+      }
+    }
+    if (!fs.existsSync(path.join(input, 'ig-data', 'ig.ini'))) {
+      msg += `  - if you used the "template" property in your config, remove it and manage .${path.sep}ig.ini directly\n`;
+    }
+    if (!fs.existsSync(path.join(input, 'ig-data', 'package-list.json'))) {
+      msg += `  - if you used the "history" property in your config, remove it and manage .${path.sep}package-list.json directly\n`;
+    }
+    msg +=
+      '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
+      '  - add /fsh-generated to your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
+      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n`;
+    logger.warn(msg);
   }
   return input;
 }
 
-export function ensureOutputDir(input: string, output: string, isIgPubContext: boolean): string {
-  if (isIgPubContext) {
-    logger.info(
-      'SUSHI detected a "fsh" directory in the input path. As a result, SUSHI will operate in "IG Publisher integration" mode. This means:\n' +
-        '  - the "fsh" directory will be used as the input path\n' +
-        '  - the parent of the "fsh" directory (e.g., "../fsh") will be used as the output path unless otherwise specified with --out option\n' +
-        '  - generation of publisher-related scripts will be suppressed (i.e., assumed to be managed by you)'
-    );
-  }
+export function ensureOutputDir(
+  input: string,
+  output: string,
+  isIgPubContext: boolean,
+  isLegacyIgPubContext: boolean
+): string {
   let outDir = output;
-  if (isIgPubContext && !output) {
-    // When running in an IG Publisher context, default output is the parent folder of the tank
+  if (isLegacyIgPubContext && !output) {
+    // TODO: Legacy support for top level "fsh" directory. Remove when no longer supported.
+    // When running in a legacy IG Publisher context, default output is the parent folder of the tank
     outDir = path.join(input, '..');
+    logger.info(`No output path specified. Output to ${outDir}`);
+  } else if (isIgPubContext && !output) {
+    // When running in an IG Publisher context, default output is the parent folder of the input/fsh folder
+    outDir = path.join(input, '..', '..');
     logger.info(`No output path specified. Output to ${outDir}`);
   } else if (!output) {
     // Any other time, default output is just to 'build'
@@ -62,11 +102,22 @@ export function ensureOutputDir(input: string, output: string, isIgPubContext: b
     logger.info(`No output path specified. Output to ${outDir}`);
   }
   fs.ensureDirSync(outDir);
+  // If the outDir contains a fsh-generated folder, we ensure that folder is empty
+  const fshGeneratedFolder = path.join(outDir, 'fsh-generated');
+  if (fs.existsSync(fshGeneratedFolder)) {
+    try {
+      fs.emptyDirSync(fshGeneratedFolder);
+    } catch (e) {
+      logger.error(
+        `Unable to empty existing fsh-generated folder because of the following error: ${e.message}`
+      );
+    }
+  }
   return outDir;
 }
 
 export function readConfig(input: string): Configuration {
-  const configPath = ensureConfigurationFile(input);
+  const configPath = ensureConfiguration(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
     config = loadConfigurationFromIgResource(input);
@@ -76,15 +127,15 @@ export function readConfig(input: string): Configuration {
   }
   if (!config) {
     logger.error(
-      'No config.yaml in FSH definition folder, and no configuration could' +
+      `No sushi-config.yaml in ${input} folder, and no configuration could` +
         ' be extracted from an ImplementationGuide resource.'
     );
     throw Error;
   }
   if (!config.fhirVersion.includes('4.0.1')) {
     logger.error(
-      'The config.yaml must specify FHIR R4 as a fhirVersion. Be sure to' +
-        ' add "fhirVersion: 4.0.1" to the config.yaml file.'
+      `The ${path.basename(config.filePath)} must specify FHIR R4 as a fhirVersion. Be sure to` +
+        ` add "fhirVersion: 4.0.1" to the ${path.basename(config.filePath)} file.`
     );
     throw Error;
   }
@@ -105,7 +156,7 @@ export function loadExternalDependencies(
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
-          'config.yaml, either use the simple dependency format:\n\n' +
+          `${path.basename(config.filePath)}, either use the simple dependency format:\n\n` +
           'dependencies:\n' +
           `  ${dep.packageId}: current\n\n` +
           'or use the detailed dependency format to specify other properties as well:\n\n' +
@@ -153,14 +204,21 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
-export function writeFHIRResources(outDir: string, outPackage: Package, snapshot: boolean) {
+export function writeFHIRResources(
+  outDir: string,
+  outPackage: Package,
+  snapshot: boolean,
+  isIgPubContext: boolean
+) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const writeResources = (
     folder: string,
     resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
   ) => {
-    const exportDir = path.join(outDir, 'input', folder);
+    const exportDir = isIgPubContext
+      ? path.join(outDir, 'fsh-generated', 'resources')
+      : path.join(outDir, 'input', folder);
     resources.forEach(resource => {
       fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
         spaces: 2
@@ -190,7 +248,7 @@ export function writeFHIRResources(outDir: string, outPackage: Package, snapshot
 /**
  * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
  */
-export function init(): void {
+export async function init(): Promise<void> {
   console.log(
     '\n╭──────────────────────────────────────────────────────────╮\n' +
       '│ This interactive tool will use your answers to create a  │\n' +
@@ -200,7 +258,7 @@ export function init(): void {
   );
 
   const configDoc = YAML.parseDocument(
-    fs.readFileSync(path.join(__dirname, 'init-project', 'config.yaml'), 'utf-8')
+    fs.readFileSync(path.join(__dirname, 'init-project', 'sushi-config.yaml'), 'utf-8')
   );
   // Accept user input for certain fields
   ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
@@ -215,7 +273,7 @@ export function init(): void {
   configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
   const projectName = configDoc.get('name');
 
-  // Write init directory out, including user made config.yaml, files in utils/init-project, and build scripts from ig/files
+  // Write init directory out, including user made sushi-config.yaml, files in utils/init-project, and build scripts from ig/files
   const outputDir = path.resolve('.', projectName);
   const initProjectDir = path.join(__dirname, 'init-project');
   if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
@@ -227,31 +285,48 @@ export function init(): void {
   const indexPageContent = fs
     .readFileSync(path.join(initProjectDir, 'index.md'), 'utf-8')
     .replace('ExampleIG', projectName);
-  fs.ensureDirSync(path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent'));
-  fs.writeFileSync(
-    path.join(outputDir, 'fsh', 'ig-data', 'input', 'pagecontent', 'index.md'),
-    indexPageContent
-  );
+  fs.ensureDirSync(path.join(outputDir, 'input', 'pagecontent'));
+  fs.writeFileSync(path.join(outputDir, 'input', 'pagecontent', 'index.md'), indexPageContent);
+  // Add ig.ini, updating to reflect the user given id
+  const iniContent = fs
+    .readFileSync(path.join(initProjectDir, 'ig.ini'), 'utf-8')
+    .replace('fhir.example', configDoc.get('id'));
+  fs.writeFileSync(path.join(outputDir, 'ig.ini'), iniContent);
   // Add the config
-  fs.writeFileSync(path.join(outputDir, 'fsh', 'config.yaml'), configDoc.toString());
+  fs.writeFileSync(path.join(outputDir, 'sushi-config.yaml'), configDoc.toString());
   // Copy over remaining static files
+  fs.ensureDirSync(path.join(outputDir, 'input', 'fsh'));
   fs.copyFileSync(
     path.join(initProjectDir, 'patient.fsh'),
-    path.join(outputDir, 'fsh', 'patient.fsh')
+    path.join(outputDir, 'input', 'fsh', 'patient.fsh')
   );
   fs.copyFileSync(
     path.join(initProjectDir, 'init-gitignore.txt'),
     path.join(outputDir, '.gitignore')
   );
+  fs.copyFileSync(
+    path.join(initProjectDir, 'ignoreWarnings.txt'),
+    path.join(outputDir, 'input', 'ignoreWarnings.txt')
+  );
   // Add the _updatePublisher, _genonce, and _gencontinuous scripts
-  const scriptsDir = path.join(__dirname, '..', 'ig', 'files');
-  const scriptsDirContents = fs.readdirSync(scriptsDir);
-  scriptsDirContents
-    .filter(file => file.startsWith('_'))
-    .forEach(file => {
-      fs.copyFileSync(path.join(scriptsDir, file), path.join(outputDir, file));
-    });
-
+  console.log('Downloading publisher scripts from https://github.com/FHIR/sample-ig');
+  for (const script of [
+    '_genonce.bat',
+    '_genonce.sh',
+    '_updatePublisher.bat',
+    '_updatePublisher.sh'
+  ]) {
+    const url = `http://raw.githubusercontent.com/FHIR/sample-ig/master/${script}`;
+    try {
+      const res = await axios.get(url);
+      fs.writeFileSync(path.join(outputDir, script), res.data);
+      if (script.endsWith('.sh')) {
+        fs.chmodSync(path.join(outputDir, script), 0o755);
+      }
+    } catch (e) {
+      logger.error(`Unable to download ${script} from ${url}: ${e.message}`);
+    }
+  }
   const maxLength = 31;
   const printName =
     projectName.length > maxLength ? projectName.slice(0, maxLength - 3) + '...' : projectName;

@@ -171,10 +171,10 @@ export function cleanCachedPackage(packageDirectory: string): void {
 
 /**
  * Loads custom resources defined in ig-data into FHIRDefs
- * @param {string} input - The input path to the cli
+ * @param {string} resourceDir - The path to the directory containing the resource subdirs
  * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
  */
-export function loadCustomResources(input: string, defs: FHIRDefinitions): void {
+export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions): void {
   // Similar code for loading custom resources exists in IGExporter.ts addPredefinedResources()
   const pathEnds = [
     'capabilities',
@@ -189,7 +189,7 @@ export function loadCustomResources(input: string, defs: FHIRDefinitions): void 
   const converter = new FHIRConverter();
   for (const pathEnd of pathEnds) {
     let invalidFile = false;
-    const dirPath = path.join(input, 'ig-data', 'input', pathEnd);
+    const dirPath = path.join(resourceDir, pathEnd);
     if (fs.existsSync(dirPath)) {
       const files = fs.readdirSync(dirPath);
       for (const file of files) {

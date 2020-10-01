@@ -88,9 +88,10 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = {
-        filePath: path.join(fixtures, 'config.yml'),
+        filePath: path.join(fixtures, 'sushi-config.yml'),
         id: 'sushi-test',
         canonical: 'http://hl7.org/fhir/sushi-test',
         url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
@@ -145,29 +146,6 @@ describe('IGExporter', () => {
 
     afterAll(() => {
       temp.cleanupSync();
-    });
-
-    it('should copy over the static files', () => {
-      exporter.export(tempOut);
-      expect(fs.existsSync(path.join(tempOut, '_genonce.bat'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_genonce.sh'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.bat'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.sh'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
-    });
-
-    it('should not copy over scripts in publisher context', () => {
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true);
-      exporter.export(tempOut);
-      expect(fs.existsSync(path.join(tempOut, '_genonce.bat'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_genonce.sh'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.bat'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_gencontinuous.sh'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.bat'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, '_updatePublisher.sh'))).toBeFalsy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'ignoreWarnings.txt'))).toBeTruthy();
     });
 
     it('should generate an implementation guide for simple-ig', () => {
@@ -561,7 +539,7 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
         /StructureDefinition\/sample-patient is listed as a member of group JustOneGroup.*does not need a groupingId/s
       );
     });
@@ -586,6 +564,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -809,7 +788,7 @@ describe('IGExporter', () => {
     });
   });
 
-  describe('#customized-ig-with-resources', () => {
+  describe('#customized-ig-with-resources in legacy IG Publisher mode', () => {
     let pkg: Package;
     let exporter: IGExporter;
     let tempOut: string;
@@ -825,10 +804,11 @@ describe('IGExporter', () => {
         defs
       );
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(fixtures, defs);
+      loadCustomResources(path.join(fixtures, 'ig-data', 'input'), defs);
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -848,14 +828,14 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
     });
 
     afterAll(() => {
       temp.cleanupSync();
     });
 
-    it('should copy over resource files', () => {
+    it('should copy over resource files and fix names where possible', () => {
       exporter.export(tempOut);
       const directoryContents = new Map<string, string[]>();
       const dirNames = [
@@ -889,10 +869,81 @@ describe('IGExporter', () => {
         'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
       ]);
     });
+  });
+
+  describe('#customized-ig-with-resources', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
+      loadCustomResources(path.join(fixtures, 'ig-data', 'input'), defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      pkg = new Package(config);
+      // Add a patient to the package that will be overwritten
+      const fisher = new TestFisher(null, defs, pkg);
+      const patient = fisher.fishForStructureDefinition('Patient');
+      patient.id = 'MyPatient';
+      patient.name = 'MyPatient';
+      patient.description = 'This should go away';
+      pkg.profiles.push(patient);
+
+      const patientInstance = new InstanceDefinition();
+      patientInstance.resourceType = 'Patient';
+      patientInstance.id = 'FooPatient';
+      patientInstance._instanceMeta.description = 'This should stay';
+      patientInstance._instanceMeta.name = 'StayName';
+      patientInstance._instanceMeta.usage = 'Example';
+      pkg.instances.push(patientInstance);
+
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should not copy over resource files', () => {
+      exporter.export(tempOut);
+      const dirNames = [
+        'capabilities',
+        'extensions',
+        'models',
+        'operations',
+        'profiles',
+        'resources',
+        'vocabulary',
+        'examples'
+      ];
+      for (const dirName of dirNames) {
+        // No provided resources are copied to output
+        expect(fs.existsSync(path.join(tempOut, 'input', dirName))).toBeFalsy();
+      }
+    });
 
     it('should add basic resource references to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -942,7 +993,12 @@ describe('IGExporter', () => {
 
     it('should overwrite existing resource references in the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       // Should only have one copy of MyPatient
@@ -963,7 +1019,12 @@ describe('IGExporter', () => {
 
     it('should add resource references with a description to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -978,7 +1039,12 @@ describe('IGExporter', () => {
 
     it('should add example references to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -1001,7 +1067,12 @@ describe('IGExporter', () => {
 
     it('should add resource references with a title to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.resource).toContainEqual({
@@ -1023,7 +1094,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       const myPatient: ImplementationGuideDefinitionResource = igContent.definition.resource.find(
@@ -1035,7 +1111,7 @@ describe('IGExporter', () => {
 
     it('should log an error for input files missing resourceType or id', () => {
       exporter.export(tempOut);
-      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(
+      expect(loggerSpy.getFirstMessage('error')).toMatch(
         /.*InvalidPatient.json must define resourceType and id/
       );
     });
@@ -1060,6 +1136,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
@@ -1157,6 +1234,7 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = minimalConfig;
       pkg = new Package(config);
@@ -1182,7 +1260,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'index.md'))).toBeTruthy();
       expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'invalid.txt'))).toBeTruthy();
       // Check for log messages indicating invalid input
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
         /Files not in the supported file types \(\.md and \.xml\) were detected\. These files will be copied over without any processing\..*File: .*[\/\\]invalid-pages-folder-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
       );
     });
@@ -1190,98 +1268,194 @@ describe('IGExporter', () => {
 
   describe('#sorted-pages-ig', () => {
     let tempOut: string;
+    let fixtures: string;
+    let defs: FHIRDefinitions;
+    let pkg: Package;
 
     beforeAll(() => {
       tempOut = temp.mkdirSync('sushi-test');
-      const fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
-      const defs = new FHIRDefinitions();
+      fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
+      defs = new FHIRDefinitions();
       loadFromPath(
         path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
         'testPackage',
         defs
       );
-      const pkg = new Package(minimalConfig);
-      const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
-      // No need to regenerate the IG on every test -- generate it once and inspect what you
-      // need to in the tests
-      exporter.export(tempOut);
+      pkg = new Package(minimalConfig);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
     });
 
     afterAll(() => {
       temp.cleanupSync();
     });
 
-    it('should add user-provided pages in the user-specified order', () => {
-      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-      expect(fs.existsSync(pageContentPath)).toBeTruthy();
+    describe('legacy IG Publisher mode', () => {
+      beforeAll(() => {
+        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+        // No need to regenerate the IG on every test -- generate it once and inspect what you
+        // need to in the tests
+        exporter.export(tempOut);
+      });
 
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
-      expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
-      expect(igContent.definition.page.page).toHaveLength(9);
-      expect(igContent.definition.page.page).toEqual([
-        {
-          nameUrl: 'index.html',
-          title: 'Home',
-          generation: 'html'
-        },
-        {
-          nameUrl: 'oranges.html',
-          title: 'Oranges',
-          generation: 'markdown'
-        },
-        {
-          nameUrl: 'apples.html',
-          title: 'Apples',
-          generation: 'markdown'
-        },
-        {
-          nameUrl: 'bananas.html',
-          title: 'Bananas',
-          generation: 'markdown'
-        },
-        {
-          nameUrl: 'pears.html',
-          title: 'Pears',
-          generation: 'markdown'
-        },
-        {
-          nameUrl: 'left.html',
-          title: 'Left',
-          generation: 'markdown'
-        },
-        {
-          nameUrl: 'right.html',
-          title: 'Right',
-          generation: 'markdown'
-        },
-        {
-          nameUrl: 'big.html',
-          title: 'Big',
-          generation: 'markdown'
-        },
-        {
-          nameUrl: 'pasta.html',
-          title: 'Pasta',
-          generation: 'markdown'
-        }
-      ]);
+      afterAll(() => {
+        temp.cleanupSync();
+      });
+
+      it('should add user-provided pages in the user-specified order', () => {
+        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeTruthy();
+
+        const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toHaveLength(9);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'index.html',
+            title: 'Home',
+            generation: 'html'
+          },
+          {
+            nameUrl: 'oranges.html',
+            title: 'Oranges',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'apples.html',
+            title: 'Apples',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'bananas.html',
+            title: 'Bananas',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'pears.html',
+            title: 'Pears',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'left.html',
+            title: 'Left',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'right.html',
+            title: 'Right',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'big.html',
+            title: 'Big',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'pasta.html',
+            title: 'Pasta',
+            generation: 'markdown'
+          }
+        ]);
+      });
+
+      it('should remove numeric prefixes from copied files', () => {
+        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeTruthy();
+        const pageContentFiles = fs.readdirSync(pageContentPath);
+        expect(pageContentFiles).toHaveLength(9);
+        expect(pageContentFiles).toContain('index.xml');
+        expect(pageContentFiles).toContain('oranges.md');
+        expect(pageContentFiles).toContain('apples.md');
+        expect(pageContentFiles).toContain('bananas.md');
+        expect(pageContentFiles).toContain('pears.md');
+        expect(pageContentFiles).toContain('left.md');
+        expect(pageContentFiles).toContain('right.md');
+        expect(pageContentFiles).toContain('big.md');
+        expect(pageContentFiles).toContain('pasta.md');
+      });
     });
 
-    it('should remove numeric prefixes from copied files', () => {
-      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-      expect(fs.existsSync(pageContentPath)).toBeTruthy();
-      const pageContentFiles = fs.readdirSync(pageContentPath);
-      expect(pageContentFiles).toHaveLength(9);
-      expect(pageContentFiles).toContain('index.xml');
-      expect(pageContentFiles).toContain('oranges.md');
-      expect(pageContentFiles).toContain('apples.md');
-      expect(pageContentFiles).toContain('bananas.md');
-      expect(pageContentFiles).toContain('pears.md');
-      expect(pageContentFiles).toContain('left.md');
-      expect(pageContentFiles).toContain('right.md');
-      expect(pageContentFiles).toContain('big.md');
-      expect(pageContentFiles).toContain('pasta.md');
+    describe('IG Publisher mode', () => {
+      beforeAll(() => {
+        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true); // New publisher mode w/ input/fsh
+        // No need to regenerate the IG on every test -- generate it once and inspect what you
+        // need to in the tests
+        exporter.export(tempOut);
+      });
+
+      afterAll(() => {
+        temp.cleanupSync();
+      });
+
+      it('should configure user-provided pages in numeric then alphabetic order', () => {
+        const igPath = path.join(
+          tempOut,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toHaveLength(9);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'index.html',
+            title: 'Home',
+            generation: 'html'
+          },
+          {
+            nameUrl: '1_oranges.html',
+            title: 'Oranges',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: '2_apples.html',
+            title: 'Apples',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: '3_bananas.html',
+            title: 'Bananas',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: '4_pears.html',
+            title: 'Pears',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: '7_left.html',
+            title: 'Left',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: '7_right.html',
+            title: 'Right',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: '100_big.html',
+            title: 'Big',
+            generation: 'markdown'
+          },
+          {
+            nameUrl: 'pasta.html',
+            title: 'Pasta',
+            generation: 'markdown'
+          }
+        ]);
+      });
+
+      it('should not copy files', () => {
+        let pageContentPath = path.join(tempOut, 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeFalsy();
+
+        pageContentPath = path.join(tempOut, 'fsh-generated', 'input', 'pagecontent');
+        expect(fs.existsSync(pageContentPath)).toBeFalsy();
+      });
     });
   });
 
@@ -1289,6 +1463,7 @@ describe('IGExporter', () => {
     let tempOut: string;
 
     beforeAll(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
       const defs = new FHIRDefinitions();
@@ -1370,8 +1545,10 @@ describe('IGExporter', () => {
     });
 
     beforeEach(() => {
+      loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      delete config.template;
       pkg = new Package(config);
       exporter = new IGExporter(
         pkg,
@@ -1379,7 +1556,6 @@ describe('IGExporter', () => {
         path.resolve(fixtures, 'ig-data'),
         false
       );
-      loggerSpy.reset();
     });
 
     it('should avoid copying over extra system files', () => {
