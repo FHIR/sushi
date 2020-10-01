@@ -1166,6 +1166,22 @@ describe('StructureDefinition', () => {
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
 
+    it('should allow setting nested arbitrary defined extensions', () => {
+      const originalLength = respRate.elements.length;
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'extension[0].extension[patient-mothersMaidenName].value[x]',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(3);
+      expect(pathParts[1]).toEqual({
+        base: 'extension',
+        brackets: ['patient-mothersMaidenName', '0']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 9);
+    });
+
     it('should not allow setting arbitrary undefined extensions', () => {
       expect(() => {
         respRate.validateValueAtPath('extension[fake-extension].value[x]', 'foo', fisher);
