@@ -76,10 +76,16 @@ describe('Processing', () => {
 
   describe('#ensureOutputDir()', () => {
     let tempRoot: string;
+    let emptyDirSpy: jest.SpyInstance;
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
       fs.mkdirSync(path.join(tempRoot, 'my-input'));
+    });
+
+    beforeEach(() => {
+      emptyDirSpy = jest.spyOn(fs, 'emptyDirSync').mockImplementation(() => '');
+      emptyDirSpy.mockReset();
     });
 
     afterAll(() => {
@@ -117,6 +123,36 @@ describe('Processing', () => {
       const outputDir = ensureOutputDir(input, undefined, true, false);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
+    });
+
+    it('should empty the fsh-generated folder if the output directory contains one', () => {
+      jest
+        .spyOn(fs, 'existsSync')
+        .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
+      const input = path.join(tempRoot, 'my-input', 'my-fsh');
+      const outputDir = ensureOutputDir(input, undefined, true, false);
+      expect(outputDir).toBe(tempRoot);
+      expect(fs.existsSync(outputDir)).toBeTruthy();
+      expect(emptyDirSpy.mock.calls).toHaveLength(1);
+      expect(emptyDirSpy.mock.calls[0][0]).toBe(path.join(tempRoot, 'fsh-generated'));
+    });
+
+    it('should log an error when emptying the directory fails', () => {
+      emptyDirSpy = emptyDirSpy.mockImplementation(() => {
+        throw Error('foo');
+      });
+      jest
+        .spyOn(fs, 'existsSync')
+        .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
+      const input = path.join(tempRoot, 'my-input', 'my-fsh');
+      const outputDir = ensureOutputDir(input, undefined, true, false);
+      expect(outputDir).toBe(tempRoot);
+      expect(fs.existsSync(outputDir)).toBeTruthy();
+      expect(emptyDirSpy.mock.calls).toHaveLength(1);
+      expect(emptyDirSpy.mock.calls[0][0]).toBe(path.join(tempRoot, 'fsh-generated'));
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Unable to empty existing fsh-generated folder.*: foo/
+      );
     });
   });
 
