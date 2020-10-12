@@ -19,6 +19,7 @@ export async function fshToFhir(
   warnings: ErrorsAndWarnings['warnings'];
 }> {
   // track errors and warnings, and determine log level from options
+  errorsAndWarnings.reset();
   errorsAndWarnings.shouldTrack = true;
   if (options.logLevel == 'silent') {
     logger.transports[0].silent = true;
