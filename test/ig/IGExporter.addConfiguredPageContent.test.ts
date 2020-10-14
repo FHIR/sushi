@@ -1,12 +1,13 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
+import { cloneDeep } from 'lodash';
 import { IGExporter } from '../../src/ig';
 import { Package } from '../../src/export';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { importConfiguration } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Configuration } from '../../src/fshtypes';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('IGExporter', () => {
   // Track temp files/folders for cleanup
@@ -15,14 +16,20 @@ describe('IGExporter', () => {
   describe('#configured-pagecontent', () => {
     let tempOut: string;
     let config: Configuration;
-    const configPath = path.join(__dirname, '..', 'import', 'fixtures', 'example-config.yaml');
-    const configYaml = fs.readFileSync(configPath, 'utf8');
     const outputFileSyncSpy = jest.spyOn(fs, 'outputFileSync');
     const defs = new FHIRDefinitions();
 
     beforeEach(() => {
       tempOut = temp.mkdirSync('sushi-test');
-      config = importConfiguration(configYaml, configPath);
+      config = cloneDeep(minimalConfig);
+      config.pages = [
+        { nameUrl: 'index.md', title: 'Example Home' },
+        {
+          nameUrl: 'examples.xml',
+          title: 'Examples Overview',
+          page: [{ nameUrl: 'simpleExamples.xml' }]
+        }
+      ];
       loggerSpy.reset();
     });
 
@@ -59,15 +66,9 @@ describe('IGExporter', () => {
       exporter.addConfiguredPageContent(tempOut);
       const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
       expect(fs.existsSync(pageContentPath)).toBeTruthy();
-      expect(outputFileSyncSpy).toHaveBeenCalledTimes(5);
+      expect(outputFileSyncSpy).toHaveBeenCalledTimes(3);
       const files = fs.readdirSync(pageContentPath, 'utf8');
-      const expectedPages = [
-        'complexExamples.xml',
-        'examples.xml',
-        'implementation.xml',
-        'index.md',
-        'simpleExamples.xml'
-      ];
+      const expectedPages = ['examples.xml', 'index.md', 'simpleExamples.xml'];
       expect(files).toEqual(expectedPages); // Copies over all pagecontent files
       for (const file of expectedPages) {
         const content = fs.readFileSync(path.join(pageContentPath, file), 'utf8');
