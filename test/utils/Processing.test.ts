@@ -20,6 +20,7 @@ import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
+import { Profile } from '../../src/fshtypes';
 describe('Processing', () => {
   temp.track();
 
@@ -328,6 +329,7 @@ describe('Processing', () => {
     let tempRoot: string;
     let tempIGPubRoot: string;
     let outPackage: Package;
+    let defs: FHIRDefinitions;
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('output-dir');
@@ -335,6 +337,7 @@ describe('Processing', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       outPackage = new Package(config);
+      defs = new FHIRDefinitions();
 
       const myProfile = new StructureDefinition();
       myProfile.id = 'my-profile';
@@ -379,7 +382,18 @@ describe('Processing', () => {
       myOtherInstance.id = 'my-other-instance';
       myOtherInstance.resourceType = 'Observation';
 
-      outPackage.profiles.push(myProfile);
+      const myPredefinedProfile = new StructureDefinition();
+      myPredefinedProfile.id = 'my-duplicate-profile';
+      myPredefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
+      defs.addPredefinedResource(
+        'StructureDefinition-my-duplicate-profile.json',
+        myPredefinedProfile
+      );
+      const myFSHDefinedProfile = new StructureDefinition();
+      myFSHDefinedProfile.id = 'my-duplicate-profile';
+      myFSHDefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
+
+      outPackage.profiles.push(myProfile, myFSHDefinedProfile);
       outPackage.extensions.push(myExtension);
       outPackage.valueSets.push(myValueSet);
       outPackage.codeSystems.push(myCodeSystem);
@@ -402,7 +416,7 @@ describe('Processing', () => {
 
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        writeFHIRResources(tempIGPubRoot, outPackage, false, true);
+        writeFHIRResources(tempIGPubRoot, outPackage, defs, false, true);
       });
 
       afterAll(() => {
@@ -427,11 +441,27 @@ describe('Processing', () => {
         expect(allGeneratedFiles).toContain('OperationDefinition-my-operation.json');
         expect(allGeneratedFiles).toContain('Observation-my-other-instance.json');
       });
+
+      it('should not write a resource if that resource already exists in the "input" folder', () => {
+        expect(
+          fs.existsSync(
+            path.join(
+              tempIGPubRoot,
+              'fsh-generated',
+              'resources',
+              'StructureDefinition-my-duplicate-profile.json'
+            )
+          )
+        ).toBeFalsy();
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Ignoring FSH definition for .*my-duplicate-profile/
+        );
+      });
     });
 
     describe('legacy IG Publisher mode and legacy flat tank', () => {
       beforeAll(() => {
-        writeFHIRResources(tempRoot, outPackage, false, false);
+        writeFHIRResources(tempRoot, outPackage, defs, false, false);
       });
 
       afterAll(() => {

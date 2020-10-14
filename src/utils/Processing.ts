@@ -207,23 +207,32 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
 export function writeFHIRResources(
   outDir: string,
   outPackage: Package,
+  defs: FHIRDefinitions,
   snapshot: boolean,
   isIgPubContext: boolean
 ) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
+  const predefinedResources = defs.allPredefinedResources();
   const writeResources = (
     folder: string,
-    resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any }[]
+    resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any; url?: string }[]
   ) => {
     const exportDir = isIgPubContext
       ? path.join(outDir, 'fsh-generated', 'resources')
       : path.join(outDir, 'input', folder);
     resources.forEach(resource => {
-      fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
-        spaces: 2
-      });
-      count++;
+      if (!predefinedResources.find(predef => predef.url === resource.url)) {
+        fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
+          spaces: 2
+        });
+        count++;
+      } else {
+        logger.warn(
+          `Ignoring FSH definition for ${resource.url} since it duplicates existing pre-defined resource. ` +
+            'Remove the existing file from the "input" folder, or remove the FSH definition to resolve this.'
+        );
+      }
     });
   };
   writeResources('profiles', outPackage.profiles);
