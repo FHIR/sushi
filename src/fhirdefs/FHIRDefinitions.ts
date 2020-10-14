@@ -66,7 +66,7 @@ export class FHIRDefinitions implements Fishable {
     return cloneJsonMapValues(this.implementationGuides);
   }
 
-  allPredefinedResources(): any[] { 
+  allPredefinedResources(): any[] {
     return cloneJsonMapValues(this.predefinedResources);
   }
 
