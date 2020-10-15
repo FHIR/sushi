@@ -6,6 +6,7 @@ import { minimalConfig } from './minimalConfig';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import readlineSync from 'readline-sync';
 import {
+  ensureInputDir,
   findInputDir,
   ensureOutputDir,
   readConfig,
@@ -40,7 +41,7 @@ describe('Processing', () => {
     });
 
     it('should find a path to the current working directory when no input folder is specified', () => {
-      const foundInput = findInputDir(undefined);
+      const foundInput = ensureInputDir(undefined);
       expect(foundInput).toBe('.');
     });
 

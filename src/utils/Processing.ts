@@ -22,13 +22,16 @@ import {
 import { Configuration } from '../fshtypes';
 import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
 
-export function findInputDir(input: string): string {
+export function ensureInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
   if (!input) {
     input = '.';
     logger.info('path-to-fsh-defs defaulted to current working directory');
   }
+  return input;
+}
 
+export function findInputDir(input: string): string {
   const originalInput = input;
 
   // TODO: Legacy support. Remove when no longer supported.

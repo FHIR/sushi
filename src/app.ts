@@ -13,6 +13,7 @@ import { loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
 import {
+  ensureInputDir,
   findInputDir,
   ensureOutputDir,
   readConfig,
@@ -67,6 +68,7 @@ async function app() {
     process.exit(0);
   }
   if (program.debug) logger.level = 'debug';
+  input = ensureInputDir(input);
 
   logger.info(`Running ${getVersion()}`);
 

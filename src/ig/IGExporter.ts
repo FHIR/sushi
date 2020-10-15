@@ -32,6 +32,25 @@ import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 
+// List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
+const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
+  'CapabilityStatement',
+  'StructureDefinition',
+  'ImplementationGuide',
+  'SearchParameter',
+  'MessageDefinition',
+  'OperationDefinition',
+  'CompartmentDefinition',
+  'StructureMap',
+  'GraphDefinition',
+  'ExampleScenario',
+  'CodeSystem',
+  'ValueSet',
+  'ConceptMap',
+  'NamingSystem',
+  'TerminologyCapabilities'
+]);
+
 /**
  * The IG Exporter exports the FSH artifacts into a file structure supported by the IG Publisher.
  * This allows a FSH Tank to be built as a FHIR IG.  Currently, template-based IG publishing is
@@ -448,7 +467,7 @@ export class IGExporter {
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
    * @param {string} igPath - the path where the IG is exported to
    */
-  private addConfiguredPageContent(igPath: string): void {
+  addConfiguredPageContent(igPath: string): void {
     // only configured pages are added to the implementation guide,
     for (const page of this.config.pages) {
       this.addConfiguredPage(page, this.ig.definition.page.page);
@@ -461,10 +480,12 @@ export class IGExporter {
       if (existsSync(inputPageContentPath)) {
         const outputPageContentPath = path.join(igPath, 'input', contentFolder);
         for (const contentFile of readdirSync(inputPageContentPath)) {
-          this.copyWithWarningText(
-            path.join(inputPageContentPath, contentFile),
-            path.join(outputPageContentPath, contentFile)
-          );
+          if (this.shouldCopyFiles) {
+            this.copyWithWarningText(
+              path.join(inputPageContentPath, contentFile),
+              path.join(outputPageContentPath, contentFile)
+            );
+          }
           const fileType = contentFile.slice(contentFile.lastIndexOf('.') + 1);
           if (!(fileType === 'md' || fileType === 'xml') && !junk.is(path.basename(contentFile))) {
             invalidFileTypeIncluded = true;
@@ -625,7 +646,7 @@ export class IGExporter {
   private addImages(igPath: string): void {
     // If the user provided additional image files, include them
     const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
-    if (existsSync(inputImagesPath)) {
+    if (existsSync(inputImagesPath) && this.shouldCopyFiles) {
       const outputPath = path.join(igPath, 'input', 'images');
       const files = readdirSync(inputImagesPath);
       files.forEach(file => {
@@ -640,9 +661,9 @@ export class IGExporter {
    *
    * @param {string} igPath - the path where the IG is exported to
    */
-  private addIncludeContents(igPath: string): void {
+  addIncludeContents(igPath: string): void {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
-    if (existsSync(includesPath)) {
+    if (existsSync(includesPath) && this.shouldCopyFiles) {
       this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'), src => {
         // Filter out menu.xml because handled separately
         return !path.parse(src).base.startsWith('menu.xml');
@@ -967,7 +988,11 @@ export class IGExporter {
               const existingName = existingIsExample ? existingResource.name : null;
               const existingDescription = existingIsExample ? existingResource.description : null;
               newResource.description =
-                configResource?.description ?? existingDescription ?? resourceJSON.description;
+                configResource?.description ??
+                existingDescription ??
+                (CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resourceJSON.resourceType)
+                  ? resourceJSON.description
+                  : undefined);
               if (configResource?.fhirVersion) {
                 newResource.fhirVersion = configResource.fhirVersion;
               }

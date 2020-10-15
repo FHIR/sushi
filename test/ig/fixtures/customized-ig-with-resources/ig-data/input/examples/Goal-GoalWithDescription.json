@@ -1,0 +1,11 @@
+{
+  "resourceType": "Goal",
+  "id": "GoalWithDescription",
+  "lifecycleStatus": "on-hold",
+  "description": {
+    "text": "Target weight is 160 to 180 lbs."
+  },
+  "subject": {
+    "reference": "Patient/BarPatient"
+  }
+}
