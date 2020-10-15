@@ -29,8 +29,11 @@ export class MasterFisher implements Fishable {
     // Resolve the alias if necessary
     item = this.tank?.resolveAlias(item) ?? item;
 
+    let result = this.fhir.fishForPredefinedResource(item, ...types);
+    if (result != null) return result;
+
     // First check for it in the package
-    let result = this.pkg?.fishForFHIR(item, ...types);
+    result = this.pkg?.fishForFHIR(item, ...types);
     if (result == null) {
       // If it is in the tank, return undefined. We don't want to return the external FHIR
       // definition, even if it exists -- because it won't match what is in the tank.  This
@@ -56,9 +59,12 @@ export class MasterFisher implements Fishable {
     // Resolve the alias if necessary
     item = this.tank?.resolveAlias(item) ?? item;
 
+    let result = this.fhir.fishForPredefinedResourceMetadata(item, ...types);
+    if (result != null) return result;
+
     const fishables = [this.pkg, this.tank, this.fhir].filter(f => f != null);
     for (const fishable of fishables) {
-      const result = fishable.fishForMetadata(item, ...types);
+      result = fishable.fishForMetadata(item, ...types);
       if (result) {
         // If it came from the tank, we need to get the sdType because the tank doesn't know.
         if (fishable instanceof FSHTank) {

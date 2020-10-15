@@ -230,7 +230,9 @@ export function writeFHIRResources(
       } else {
         logger.warn(
           `Ignoring FSH definition for ${resource.url} since it duplicates existing pre-defined resource. ` +
-            'Remove the existing file from the "input" folder, or remove the FSH definition to resolve this.'
+            'To use the FSH definition, remove the conflicting file from "input". ' +
+            'If you do want the FSH definition to be ignored, please comment the definition out ' +
+            'to remove this warning.'
         );
       }
     });

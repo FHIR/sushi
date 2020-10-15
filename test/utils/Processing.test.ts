@@ -20,7 +20,6 @@ import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
-import { Profile } from '../../src/fshtypes';
 describe('Processing', () => {
   temp.track();
 

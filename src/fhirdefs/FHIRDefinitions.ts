@@ -107,6 +107,43 @@ export class FHIRDefinitions implements Fishable {
     return this.predefinedResources.get(file);
   }
 
+  resetPredefinedResources() {
+    this.predefinedResources = new Map();
+  }
+
+  fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
+    const resource = this.fishForFHIR(item, ...types);
+    if (
+      resource &&
+      this.allPredefinedResources().find(
+        predefResource =>
+          predefResource.id === resource.id && predefResource.resourceType === resource.resourceType
+      )
+    ) {
+      return resource;
+    }
+  }
+
+  fishForPredefinedResourceMetadata(item: string, ...types: Type[]): any | undefined {
+    const resource = this.fishForFHIR(item, ...types);
+    if (
+      resource &&
+      this.allPredefinedResources().find(
+        predefResource =>
+          predefResource.id === resource.id && predefResource.resourceType === resource.resourceType
+      )
+    ) {
+      return {
+        id: resource.id as string,
+        name: resource.name as string,
+        sdType: resource.type as string,
+        url: resource.url as string,
+        parent: resource.baseDefinition as string,
+        abstract: resource.abstract as boolean
+      };
+    }
+  }
+
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
     // No types passed in means to search ALL supported types
     if (types.length === 0) {
