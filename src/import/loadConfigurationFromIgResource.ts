@@ -8,33 +8,24 @@ import { logger } from '../utils';
 
 /**
  * Attempts to find an ig resource file and extract the required configuration properties from it
- * @param input - path to the input directory
+ * @param igRoot - path to the root of the IG project
  * @returns {Configuration} the extracted configuration
  */
-export function loadConfigurationFromIgResource(
-  input: string,
-  isLegacyIgPubContext: boolean
-): Configuration | null {
+export function loadConfigurationFromIgResource(igRoot: string): Configuration | null {
   // First, look in the ig.ini file for a path to the IG resource
   let igPath: string;
-  const igIniPath = isLegacyIgPubContext
-    ? path.join(input, '..', 'ig.ini')
-    : path.join(input, 'ig.ini');
+  const igIniPath = path.join(igRoot, 'ig.ini');
   if (fs.existsSync(igIniPath)) {
     try {
       const igIni = ini.parse(fs.readFileSync(igIniPath, 'utf-8'));
       if (igIni.IG?.ig) {
-        igPath = isLegacyIgPubContext
-          ? path.join(input, '..', igIni.IG.ig)
-          : path.join(input, igIni.IG.ig);
+        igPath = path.join(igRoot, igIni.IG.ig);
       }
     } catch {}
   }
   // Make a list of possible path, if ig.ini exists and points to a ig file, add just that
   // otherwise consider all files in the input folder of the ig
-  const igInputPath = isLegacyIgPubContext
-    ? path.join(input, '..', 'input')
-    : path.join(input, 'input');
+  const igInputPath = path.join(igRoot, 'input');
   const possibleIgPaths: string[] = [];
   if (fs.existsSync(igPath)) {
     possibleIgPaths.push(igPath);

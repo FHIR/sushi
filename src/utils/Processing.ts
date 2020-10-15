@@ -120,7 +120,7 @@ export function readConfig(input: string, isLegacyIgPubContext: boolean): Config
   const configPath = ensureConfiguration(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
-    config = loadConfigurationFromIgResource(input, isLegacyIgPubContext);
+    config = loadConfigurationFromIgResource(isLegacyIgPubContext ? path.dirname(input) : input);
   } else {
     const configYaml = fs.readFileSync(configPath, 'utf8');
     config = importConfiguration(configYaml, configPath);
