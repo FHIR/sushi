@@ -189,6 +189,7 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
   const converter = new FHIRConverter();
   for (const pathEnd of pathEnds) {
     let invalidFile = false;
+    let foundSpreadsheets = false;
     const dirPath = path.join(resourceDir, pathEnd);
     if (fs.existsSync(dirPath)) {
       const files = fs.readdirSync(dirPath);
@@ -200,8 +201,16 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
             continue;
           } else if (file.endsWith('.json')) {
             resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+          } else if (file.endsWith('-spreadsheet.xml')) {
+            foundSpreadsheets = true;
+            continue;
           } else if (file.endsWith('xml')) {
-            resourceJSON = converter.xmlToObj(fs.readFileSync(path.join(dirPath, file)).toString());
+            const xml = fs.readFileSync(path.join(dirPath, file)).toString();
+            if (/<\?mso-application progid="Excel\.Sheet"\?>/m.test(xml)) {
+              foundSpreadsheets = true;
+              continue;
+            }
+            resourceJSON = converter.xmlToObj(xml);
           } else {
             invalidFile = true;
             continue;
@@ -223,6 +232,11 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
     if (invalidFile) {
       logger.error(
         `Invalid file detected in directory ${dirPath}. Input FHIR definitions must be JSON or XML.`
+      );
+    }
+    if (foundSpreadsheets) {
+      logger.info(
+        `Found spreadsheets in directory ${dirPath}. SUSHI does not support spreadsheets, so any resources in the spreadsheets will be ignored.`
       );
     }
   }

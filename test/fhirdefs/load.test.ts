@@ -372,7 +372,7 @@ describe('#loadCustomResources', () => {
   });
 
   it('should log an error for invalid XML files', () => {
-    expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(
+    expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
       /Loading InvalidFile.xml failed with the following error:/
     );
   });
@@ -391,8 +391,12 @@ describe('#loadCustomResources', () => {
     });
   });
 
+  it('should log an info message when it finds spreadsheets', () => {
+    expect(loggerSpy.getLastMessage('info')).toMatch(/Found spreadsheets in directory/);
+  });
+
   it('should log an error for invalid JSON files', () => {
-    expect(loggerSpy.getMessageAtIndex(-5, 'error')).toMatch(
+    expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(
       /Loading InvalidFile.json failed with the following error:/
     );
   });
