@@ -452,7 +452,7 @@ describe('Processing', () => {
             )
           )
         ).toBeFalsy();
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
+        expect(loggerSpy.getLastMessage('error')).toMatch(
           /Ignoring FSH definition for .*my-duplicate-profile/
         );
       });
