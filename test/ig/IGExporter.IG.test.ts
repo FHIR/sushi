@@ -865,6 +865,7 @@ describe('IGExporter', () => {
       expect(directoryContents.get('resources')).toEqual(['Patient-BazPatient.json']);
       expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
       expect(directoryContents.get('examples')).toEqual([
+        'Goal-GoalWithDescription.json',
         'Patient-BarPatient.json',
         'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
       ]);
@@ -1037,6 +1038,26 @@ describe('IGExporter', () => {
       });
     });
 
+    it('should not include a description for non-conformance resources when adding them to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Goal/GoalWithDescription'
+        },
+        name: 'GoalWithDescription',
+        // NOTE: no description since Goal is not a conformance resource (and Goal.description is a CodeableConcept)
+        exampleBoolean: true
+      });
+    });
+
     it('should add example references to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
       const igPath = path.join(
@@ -1062,6 +1083,13 @@ describe('IGExporter', () => {
         },
         name: 'BarPatient',
         exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Goal/GoalWithDescription'
+        },
+        name: 'GoalWithDescription',
+        exampleBoolean: true
       });
     });
 
