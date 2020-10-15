@@ -117,7 +117,9 @@ export class FHIRDefinitions implements Fishable {
       resource &&
       this.allPredefinedResources().find(
         predefResource =>
-          predefResource.id === resource.id && predefResource.resourceType === resource.resourceType
+          predefResource.id === resource.id &&
+          predefResource.resourceType === resource.resourceType &&
+          predefResource.url === resource.url
       )
     ) {
       return resource;
@@ -125,14 +127,8 @@ export class FHIRDefinitions implements Fishable {
   }
 
   fishForPredefinedResourceMetadata(item: string, ...types: Type[]): any | undefined {
-    const resource = this.fishForFHIR(item, ...types);
-    if (
-      resource &&
-      this.allPredefinedResources().find(
-        predefResource =>
-          predefResource.id === resource.id && predefResource.resourceType === resource.resourceType
-      )
-    ) {
+    const resource = this.fishForPredefinedResource(item, ...types);
+    if (resource) {
       return {
         id: resource.id as string,
         name: resource.name as string,

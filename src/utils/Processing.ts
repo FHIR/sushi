@@ -216,13 +216,26 @@ export function writeFHIRResources(
   const predefinedResources = defs.allPredefinedResources();
   const writeResources = (
     folder: string,
-    resources: { getFileName: () => string; toJSON: (snapshot: boolean) => any; url?: string }[]
+    resources: {
+      getFileName: () => string;
+      toJSON: (snapshot: boolean) => any;
+      url?: string;
+      id?: string;
+      resourceType?: string;
+    }[]
   ) => {
     const exportDir = isIgPubContext
       ? path.join(outDir, 'fsh-generated', 'resources')
       : path.join(outDir, 'input', folder);
     resources.forEach(resource => {
-      if (!predefinedResources.find(predef => predef.url === resource.url)) {
+      if (
+        !predefinedResources.find(
+          predef =>
+            predef.url === resource.url &&
+            predef.resourceType === resource.resourceType &&
+            predef.id === resource.id
+        )
+      ) {
         fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
           spaces: 2
         });
