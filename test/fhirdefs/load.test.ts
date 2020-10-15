@@ -372,13 +372,27 @@ describe('#loadCustomResources', () => {
   });
 
   it('should log an error for invalid XML files', () => {
-    expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
+    expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(
       /Loading InvalidFile.xml failed with the following error:/
     );
   });
 
+  it('should not log an error for spreadsheet XML files following standard naming convention', () => {
+    loggerSpy.getAllMessages('error').forEach(m => {
+      expect(m).not.toMatch(/Loading resources-spreadsheet.xml failed with the following error:/);
+    });
+  });
+
+  it('should not log an error for spreadsheet XML files NOT following standard naming convention', () => {
+    loggerSpy.getAllMessages('error').forEach(m => {
+      expect(m).not.toMatch(
+        /Loading sneaky-spread-like-bread-sheet.xml failed with the following error:/
+      );
+    });
+  });
+
   it('should log an error for invalid JSON files', () => {
-    expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(
+    expect(loggerSpy.getMessageAtIndex(-5, 'error')).toMatch(
       /Loading InvalidFile.json failed with the following error:/
     );
   });
