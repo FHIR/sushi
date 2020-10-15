@@ -467,7 +467,7 @@ export class IGExporter {
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
    * @param {string} igPath - the path where the IG is exported to
    */
-  private addConfiguredPageContent(igPath: string): void {
+  addConfiguredPageContent(igPath: string): void {
     // only configured pages are added to the implementation guide,
     for (const page of this.config.pages) {
       this.addConfiguredPage(page, this.ig.definition.page.page);
@@ -480,10 +480,12 @@ export class IGExporter {
       if (existsSync(inputPageContentPath)) {
         const outputPageContentPath = path.join(igPath, 'input', contentFolder);
         for (const contentFile of readdirSync(inputPageContentPath)) {
-          this.copyWithWarningText(
-            path.join(inputPageContentPath, contentFile),
-            path.join(outputPageContentPath, contentFile)
-          );
+          if (this.shouldCopyFiles) {
+            this.copyWithWarningText(
+              path.join(inputPageContentPath, contentFile),
+              path.join(outputPageContentPath, contentFile)
+            );
+          }
           const fileType = contentFile.slice(contentFile.lastIndexOf('.') + 1);
           if (!(fileType === 'md' || fileType === 'xml') && !junk.is(path.basename(contentFile))) {
             invalidFileTypeIncluded = true;
@@ -644,7 +646,7 @@ export class IGExporter {
   private addImages(igPath: string): void {
     // If the user provided additional image files, include them
     const inputImagesPath = path.join(this.igDataPath, 'input', 'images');
-    if (existsSync(inputImagesPath)) {
+    if (existsSync(inputImagesPath) && this.shouldCopyFiles) {
       const outputPath = path.join(igPath, 'input', 'images');
       const files = readdirSync(inputImagesPath);
       files.forEach(file => {
@@ -659,9 +661,9 @@ export class IGExporter {
    *
    * @param {string} igPath - the path where the IG is exported to
    */
-  private addIncludeContents(igPath: string): void {
+  addIncludeContents(igPath: string): void {
     const includesPath = path.join(this.igDataPath, 'input', 'includes');
-    if (existsSync(includesPath)) {
+    if (existsSync(includesPath) && this.shouldCopyFiles) {
       this.copyWithWarningText(includesPath, path.join(igPath, 'input', 'includes'), src => {
         // Filter out menu.xml because handled separately
         return !path.parse(src).base.startsWith('menu.xml');
