@@ -32,6 +32,25 @@ import { logger, Type } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 
+// List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
+const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
+  'CapabilityStatement',
+  'StructureDefinition',
+  'ImplementationGuide',
+  'SearchParameter',
+  'MessageDefinition',
+  'OperationDefinition',
+  'CompartmentDefinition',
+  'StructureMap',
+  'GraphDefinition',
+  'ExampleScenario',
+  'CodeSystem',
+  'ValueSet',
+  'ConceptMap',
+  'NamingSystem',
+  'TerminologyCapabilities'
+]);
+
 /**
  * The IG Exporter exports the FSH artifacts into a file structure supported by the IG Publisher.
  * This allows a FSH Tank to be built as a FHIR IG.  Currently, template-based IG publishing is
@@ -969,7 +988,11 @@ export class IGExporter {
               const existingName = existingIsExample ? existingResource.name : null;
               const existingDescription = existingIsExample ? existingResource.description : null;
               newResource.description =
-                configResource?.description ?? existingDescription ?? resourceJSON.description;
+                configResource?.description ??
+                existingDescription ??
+                (CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resourceJSON.resourceType)
+                  ? resourceJSON.description
+                  : undefined);
               if (configResource?.fhirVersion) {
                 newResource.fhirVersion = configResource.fhirVersion;
               }
