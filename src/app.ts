@@ -109,7 +109,7 @@ async function app() {
       logger.info('No FSH files present.');
       process.exit(0);
     }
-    config = readConfig(isIgPubContext ? originalInput : input);
+    config = readConfig(isIgPubContext ? originalInput : input, isLegacyIgPubContext);
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
