@@ -10,6 +10,14 @@ import {
   ErrorsAndWarnings
 } from '../utils';
 
+/**
+ * This function can be used to process input string(s) containing FSH definitions into JSON.
+ * NOTE: This function is not safe for true asynchronous usage. If two calls of this function are running at once, the error and warnings reported
+ * will be inconsistent. Always ensure a given call to this function completes before making a new call.
+ * @param {string|string[]} input - A string or array of strings containing FSH
+ * @param {fshToFhirOptions} options - An object containing options for processing. Options include canonical, version, dependencies, and logLevel
+ * @returns {Promise<{fhir: any[]; errors: ErrorsAndWarnings['errors']; warnings: ErrorsAndWarnings['warnings'];}>} - Object containing generated fhir, and errors/warnings from processing
+ */
 export async function fshToFhir(
   input: string | string[],
   options: fshToFhirOptions = {}
