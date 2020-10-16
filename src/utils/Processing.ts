@@ -119,11 +119,11 @@ export function ensureOutputDir(
   return outDir;
 }
 
-export function readConfig(input: string): Configuration {
+export function readConfig(input: string, isLegacyIgPubContext: boolean): Configuration {
   const configPath = ensureConfiguration(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
-    config = loadConfigurationFromIgResource(input);
+    config = loadConfigurationFromIgResource(isLegacyIgPubContext ? path.dirname(input) : input);
   } else {
     const configYaml = fs.readFileSync(configPath, 'utf8');
     config = importConfiguration(configYaml, configPath);
