@@ -1,6 +1,6 @@
 {
   "name": "fsh-sushi",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
     "build": "rm -rf dist && tsc && cp -r src/utils/init-project dist/utils/init-project",
