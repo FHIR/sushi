@@ -1,0 +1,2 @@
+﻿<?xml version="1.0"?>
+<!-- Not actually a spreadsheet, but testing that we ignore it if it *looks* like a spreadsheet based on file name -->
