@@ -164,7 +164,7 @@ describe('Processing', () => {
 
     it('should return the contents of sushi-config.yaml from the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input);
+      const config = readConfig(input, false);
       expect(config).toEqual({
         filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
         id: 'sushi-test',
@@ -206,8 +206,18 @@ describe('Processing', () => {
     });
 
     it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent', () => {
-      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only', 'fsh');
-      const config = readConfig(input);
+      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only');
+      const config = readConfig(input, false);
+      expect(config).toEqual({
+        FSHOnly: true,
+        canonical: 'http://example.org',
+        fhirVersion: ['4.0.1']
+      });
+    });
+
+    it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent (legacy)', () => {
+      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only-legacy', 'fsh');
+      const config = readConfig(input, true);
       expect(config).toEqual({
         FSHOnly: true,
         canonical: 'http://example.org',
@@ -218,7 +228,7 @@ describe('Processing', () => {
     it('should log and throw an error when sushi-config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
-        readConfig(input);
+        readConfig(input, false);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/No sushi-config\.yaml/s);
     });
@@ -226,7 +236,7 @@ describe('Processing', () => {
     it('should log and throw an error when the contents of sushi-config.yaml are not valid yaml', () => {
       const input = path.join(__dirname, 'fixtures', 'invalid-yaml');
       expect(() => {
-        readConfig(input);
+        readConfig(input, false);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/not a valid YAML object/s);
     });
@@ -234,7 +244,7 @@ describe('Processing', () => {
     it('should log and throw an error when the configuration does not include a FHIR R4 dependency', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-dstu2');
       expect(() => {
-        readConfig(input);
+        readConfig(input, false);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/must specify FHIR R4 as a fhirVersion/s);
     });
@@ -335,7 +345,7 @@ describe('Processing', () => {
       tempRoot = temp.mkdirSync('output-dir');
       tempIGPubRoot = temp.mkdirSync('output-ig-dir');
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input);
+      const config = readConfig(input, false);
       outPackage = new Package(config);
       defs = new FHIRDefinitions();
 
