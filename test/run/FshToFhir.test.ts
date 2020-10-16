@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { loggerSpy } from '../testhelpers';
-import { errorsAndWarnings, logger } from '../../src/utils/';
+import { logger } from '../../src/utils/';
 import { fshToFhir } from '../../src/run';
 import * as utils from '../../src/utils';
 import { Configuration } from '../../src/fshtypes';
@@ -25,7 +25,6 @@ describe('#FshToFhir', () => {
   beforeEach(() => {
     loadSpy.mockClear();
     loggerSpy.reset();
-    errorsAndWarnings.reset();
   });
 
   it('should use the "info" logging level by default', async () => {
