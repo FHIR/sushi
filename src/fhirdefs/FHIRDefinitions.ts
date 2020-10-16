@@ -66,6 +66,10 @@ export class FHIRDefinitions implements Fishable {
     return cloneJsonMapValues(this.implementationGuides);
   }
 
+  allPredefinedResources(): any[] {
+    return cloneJsonMapValues(this.predefinedResources);
+  }
+
   add(definition: any): void {
     if (definition.resourceType === 'StructureDefinition') {
       if (
@@ -101,6 +105,39 @@ export class FHIRDefinitions implements Fishable {
 
   getPredefinedResource(file: string): any {
     return this.predefinedResources.get(file);
+  }
+
+  resetPredefinedResources() {
+    this.predefinedResources = new Map();
+  }
+
+  fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
+    const resource = this.fishForFHIR(item, ...types);
+    if (
+      resource &&
+      this.allPredefinedResources().find(
+        predefResource =>
+          predefResource.id === resource.id &&
+          predefResource.resourceType === resource.resourceType &&
+          predefResource.url === resource.url
+      )
+    ) {
+      return resource;
+    }
+  }
+
+  fishForPredefinedResourceMetadata(item: string, ...types: Type[]): any | undefined {
+    const resource = this.fishForPredefinedResource(item, ...types);
+    if (resource) {
+      return {
+        id: resource.id as string,
+        name: resource.name as string,
+        sdType: resource.type as string,
+        url: resource.url as string,
+        parent: resource.baseDefinition as string,
+        abstract: resource.abstract as boolean
+      };
+    }
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {

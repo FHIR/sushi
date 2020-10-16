@@ -25,6 +25,10 @@ describe('FHIRDefinitions', () => {
     fisher.fishForFHIR('w3c-provenance-activity-type');
   });
 
+  beforeEach(() => {
+    defs.resetPredefinedResources();
+  });
+
   describe('#fishForFHIR()', () => {
     it('should find base FHIR resources', () => {
       const conditionByID = defs.fishForFHIR('Condition', Type.Resource);
@@ -608,6 +612,120 @@ describe('FHIRDefinitions', () => {
       expect(defs.fishForMetadata('http://hl7.org/fhir/w3c-provenance-activity-type')).toEqual(
         w3cProvenanceCodeSystemByID
       );
+    });
+  });
+
+  describe('#fishForPredefinedResource', () => {
+    it('should not find resources that are not predefined', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      const predefinedCondition = defs.fishForPredefinedResource('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should not find resources that are predefined with different resourceTypes', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: 'foo',
+        id: condition.id,
+        url: condition.url
+      });
+      const predefinedCondition = defs.fishForPredefinedResource('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should not find resources that are predefined with different ids', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: condition.resourceType,
+        id: 'foo',
+        url: condition.url
+      });
+      const predefinedCondition = defs.fishForPredefinedResource('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should not find resources that are predefined with different urls', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: condition.resourceType,
+        id: condition.id,
+        url: 'foo'
+      });
+      const predefinedCondition = defs.fishForPredefinedResource('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should find resources that are predefined', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: condition.resourceType,
+        id: condition.id,
+        url: condition.url
+      });
+      const predefinedCondition = defs.fishForPredefinedResource('Condition');
+      expect(predefinedCondition.id).toBe('Condition');
+    });
+  });
+
+  describe('#fishForPredefinedResourceMetadata', () => {
+    it('should not find resources that are not predefined', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should not find resources that are predefined with different resourceTypes', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: 'foo',
+        id: condition.id,
+        url: condition.url
+      });
+      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should not find resources that are predefined with different ids', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: condition.resourceType,
+        id: 'foo',
+        url: condition.url
+      });
+      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should not find resources that are predefined with different urls', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: condition.resourceType,
+        id: condition.id,
+        url: 'foo'
+      });
+      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
+      expect(predefinedCondition).toBeUndefined();
+    });
+
+    it('should find resources that are predefined', () => {
+      const condition = defs.fishForFHIR('Condition');
+      expect(condition.id).toBe('Condition');
+      defs.addPredefinedResource('', {
+        resourceType: condition.resourceType,
+        id: condition.id,
+        url: condition.url
+      });
+      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
+      expect(predefinedCondition.id).toBe('Condition');
     });
   });
 });
