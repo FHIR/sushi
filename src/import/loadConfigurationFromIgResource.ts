@@ -8,22 +8,24 @@ import { logger } from '../utils';
 
 /**
  * Attempts to find an ig resource file and extract the required configuration properties from it
- * @param input - path to the input directory
+ * @param igRoot - path to the root of the IG project
  * @returns {Configuration} the extracted configuration
  */
-export function loadConfigurationFromIgResource(input: string): Configuration | null {
+export function loadConfigurationFromIgResource(igRoot: string): Configuration | null {
   // First, look in the ig.ini file for a path to the IG resource
   let igPath: string;
-  const igIniPath = path.join(input, '..', 'ig.ini');
+  const igIniPath = path.join(igRoot, 'ig.ini');
   if (fs.existsSync(igIniPath)) {
     try {
       const igIni = ini.parse(fs.readFileSync(igIniPath, 'utf-8'));
-      igPath = path.join(input, '..', igIni.ig);
+      if (igIni.IG?.ig) {
+        igPath = path.join(igRoot, igIni.IG.ig);
+      }
     } catch {}
   }
   // Make a list of possible path, if ig.ini exists and points to a ig file, add just that
   // otherwise consider all files in the input folder of the ig
-  const igInputPath = path.join(input, '..', 'input');
+  const igInputPath = path.join(igRoot, 'input');
   const possibleIgPaths: string[] = [];
   if (fs.existsSync(igPath)) {
     possibleIgPaths.push(igPath);
@@ -56,14 +58,16 @@ export function loadConfigurationFromIgResource(input: string): Configuration | 
   });
   // Extract the configuration from the resource
   if (igResource && igResource.url && !multipleIgs) {
-    logger.info(`Extracting FSHOnly configuration from ${igPath}.`);
-    return {
+    const config = {
       canonical: igResource.url.replace(/\/ImplementationGuide.*/, ''),
-      FSHOnly: true,
-      dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),
+      version: igResource.version,
       fhirVersion: igResource.fhirVersion ?? [],
-      version: igResource.version
+      dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),
+      FSHOnly: true
     };
+    logger.info(`Extracting FSHOnly configuration from ${igPath}:`);
+    Object.entries(config).forEach(e => logger.info(`  ${e[0]}: ${JSON.stringify(e[1])}`));
+    return config;
   }
   return null;
 }
