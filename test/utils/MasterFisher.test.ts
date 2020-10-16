@@ -10,6 +10,7 @@ import { minimalConfig } from './minimalConfig';
 
 describe('MasterFisher', () => {
   let fisher: MasterFisher;
+  let defs: FHIRDefinitions;
   beforeAll(() => {
     const doc1 = new FSHDocument('doc.fsh');
     doc1.aliases.set('TankProfile1', 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1');
@@ -49,7 +50,7 @@ describe('MasterFisher', () => {
     profile4.fhirVersion = '4.0.1';
     pkg.profiles.push(profile3, profile4);
 
-    const defs = new FHIRDefinitions();
+    defs = new FHIRDefinitions();
     loadFromPath(
       path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
       'test#1.1.1',
@@ -151,6 +152,27 @@ describe('MasterFisher', () => {
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/vitalsigns',
       parent: 'http://hl7.org/fhir/StructureDefinition/Observation'
     });
+  });
+
+  it('should return a profile that is predefined when it also exists in the package', () => {
+    // Mark vital signs as predefined
+    const fhirDefinedVitalSigns = defs.fishForFHIR('vitalsigns');
+    defs.addPredefinedResource('', defs.fishForFHIR('vitalsigns'));
+
+    // Result should match the fhir defined version, not our defined version
+    const result = fisher.fishForFHIR('vitalsigns');
+    expect(result.name).toBe(fhirDefinedVitalSigns.name);
+
+    const resultMD = fisher.fishForMetadata('vitalsigns');
+    expect(resultMD).toEqual({
+      abstract: false,
+      id: fhirDefinedVitalSigns.id,
+      name: fhirDefinedVitalSigns.name,
+      sdType: fhirDefinedVitalSigns.type,
+      url: fhirDefinedVitalSigns.url,
+      parent: fhirDefinedVitalSigns.baseDefinition
+    });
+    defs.resetPredefinedResources();
   });
 
   it('should not return the FHIR def for a resource if there is a profile w/ the same name in the tank', () => {

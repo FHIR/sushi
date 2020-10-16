@@ -164,7 +164,7 @@ describe('Processing', () => {
 
     it('should return the contents of sushi-config.yaml from the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input);
+      const config = readConfig(input, false);
       expect(config).toEqual({
         filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
         id: 'sushi-test',
@@ -206,8 +206,18 @@ describe('Processing', () => {
     });
 
     it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent', () => {
-      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only', 'fsh');
-      const config = readConfig(input);
+      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only');
+      const config = readConfig(input, false);
+      expect(config).toEqual({
+        FSHOnly: true,
+        canonical: 'http://example.org',
+        fhirVersion: ['4.0.1']
+      });
+    });
+
+    it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent (legacy)', () => {
+      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only-legacy', 'fsh');
+      const config = readConfig(input, true);
       expect(config).toEqual({
         FSHOnly: true,
         canonical: 'http://example.org',
@@ -218,7 +228,7 @@ describe('Processing', () => {
     it('should log and throw an error when sushi-config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
-        readConfig(input);
+        readConfig(input, false);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/No sushi-config\.yaml/s);
     });
@@ -226,7 +236,7 @@ describe('Processing', () => {
     it('should log and throw an error when the contents of sushi-config.yaml are not valid yaml', () => {
       const input = path.join(__dirname, 'fixtures', 'invalid-yaml');
       expect(() => {
-        readConfig(input);
+        readConfig(input, false);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/not a valid YAML object/s);
     });
@@ -234,7 +244,7 @@ describe('Processing', () => {
     it('should log and throw an error when the configuration does not include a FHIR R4 dependency', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-dstu2');
       expect(() => {
-        readConfig(input);
+        readConfig(input, false);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/must specify FHIR R4 as a fhirVersion/s);
     });
@@ -329,13 +339,15 @@ describe('Processing', () => {
     let tempRoot: string;
     let tempIGPubRoot: string;
     let outPackage: Package;
+    let defs: FHIRDefinitions;
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('output-dir');
       tempIGPubRoot = temp.mkdirSync('output-ig-dir');
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input);
+      const config = readConfig(input, false);
       outPackage = new Package(config);
+      defs = new FHIRDefinitions();
 
       const myProfile = new StructureDefinition();
       myProfile.id = 'my-profile';
@@ -380,7 +392,18 @@ describe('Processing', () => {
       myOtherInstance.id = 'my-other-instance';
       myOtherInstance.resourceType = 'Observation';
 
-      outPackage.profiles.push(myProfile);
+      const myPredefinedProfile = new StructureDefinition();
+      myPredefinedProfile.id = 'my-duplicate-profile';
+      myPredefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
+      defs.addPredefinedResource(
+        'StructureDefinition-my-duplicate-profile.json',
+        myPredefinedProfile
+      );
+      const myFSHDefinedProfile = new StructureDefinition();
+      myFSHDefinedProfile.id = 'my-duplicate-profile';
+      myFSHDefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
+
+      outPackage.profiles.push(myProfile, myFSHDefinedProfile);
       outPackage.extensions.push(myExtension);
       outPackage.valueSets.push(myValueSet);
       outPackage.codeSystems.push(myCodeSystem);
@@ -403,7 +426,7 @@ describe('Processing', () => {
 
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        writeFHIRResources(tempIGPubRoot, outPackage, false, true);
+        writeFHIRResources(tempIGPubRoot, outPackage, defs, false, true);
       });
 
       afterAll(() => {
@@ -428,11 +451,27 @@ describe('Processing', () => {
         expect(allGeneratedFiles).toContain('OperationDefinition-my-operation.json');
         expect(allGeneratedFiles).toContain('Observation-my-other-instance.json');
       });
+
+      it('should not write a resource if that resource already exists in the "input" folder', () => {
+        expect(
+          fs.existsSync(
+            path.join(
+              tempIGPubRoot,
+              'fsh-generated',
+              'resources',
+              'StructureDefinition-my-duplicate-profile.json'
+            )
+          )
+        ).toBeFalsy();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Ignoring FSH definition for .*my-duplicate-profile/
+        );
+      });
     });
 
     describe('legacy IG Publisher mode and legacy flat tank', () => {
       beforeAll(() => {
-        writeFHIRResources(tempRoot, outPackage, false, false);
+        writeFHIRResources(tempRoot, outPackage, defs, false, false);
       });
 
       afterAll(() => {
