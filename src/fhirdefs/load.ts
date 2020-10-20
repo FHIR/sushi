@@ -187,8 +187,8 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
     'examples'
   ];
   const converter = new FHIRConverter();
+  let invalidFileCount = 0;
   for (const pathEnd of pathEnds) {
-    let invalidFile = false;
     let foundSpreadsheets = false;
     const dirPath = path.join(resourceDir, pathEnd);
     if (fs.existsSync(dirPath)) {
@@ -212,7 +212,7 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
             }
             resourceJSON = converter.xmlToObj(xml);
           } else {
-            invalidFile = true;
+            invalidFileCount++;
             continue;
           }
         } catch (e) {
@@ -229,16 +229,18 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
         }
       }
     }
-    if (invalidFile) {
-      logger.error(
-        `Invalid file detected in directory ${dirPath}. Input FHIR definitions must be JSON or XML.`
-      );
-    }
     if (foundSpreadsheets) {
       logger.info(
         `Found spreadsheets in directory ${dirPath}. SUSHI does not support spreadsheets, so any resources in the spreadsheets will be ignored.`
       );
     }
+  }
+  if (invalidFileCount > 0) {
+    logger.info(
+      invalidFileCount > 1
+        ? `Found ${invalidFileCount} files in input/* resource folders that were neither XML nor JSON. These files were not processed as resources by SUSHI.`
+        : `Found ${invalidFileCount} file in an input/* resource folder that was neither XML nor JSON. This file was not processed as a resource by SUSHI.`
+    );
   }
 }
 

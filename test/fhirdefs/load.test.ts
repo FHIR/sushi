@@ -316,6 +316,7 @@ describe('#loadDependency()', () => {
 describe('#loadCustomResources', () => {
   let defs: FHIRDefinitions;
   beforeAll(() => {
+    loggerSpy.reset();
     defs = new FHIRDefinitions();
     const fixtures = path.join(
       __dirname,
@@ -367,12 +368,14 @@ describe('#loadCustomResources', () => {
     expect(defs.getPredefinedResource('ValueSet-MyVS.json').id).toBe('MyVS');
   });
 
-  it('should log an error for non JSON or XML input files', () => {
-    expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(/Invalid file.*resources/);
+  it('should log an info message for non JSON or XML input files', () => {
+    expect(loggerSpy.getLastMessage('info')).toMatch(
+      /Found 1 file in an input\/\* resource folder that was neither XML nor JSON/
+    );
   });
 
   it('should log an error for invalid XML files', () => {
-    expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
+    expect(loggerSpy.getLastMessage('error')).toMatch(
       /Loading InvalidFile.xml failed with the following error:/
     );
   });
@@ -392,11 +395,11 @@ describe('#loadCustomResources', () => {
   });
 
   it('should log an info message when it finds spreadsheets', () => {
-    expect(loggerSpy.getLastMessage('info')).toMatch(/Found spreadsheets in directory/);
+    expect(loggerSpy.getFirstMessage('info')).toMatch(/Found spreadsheets in directory/);
   });
 
   it('should log an error for invalid JSON files', () => {
-    expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(
+    expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
       /Loading InvalidFile.json failed with the following error:/
     );
   });
