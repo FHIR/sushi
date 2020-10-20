@@ -116,12 +116,14 @@ describe('importConfiguration', () => {
       ],
       groups: [
         {
-          name: 'GroupA',
+          id: 'GroupA',
+          name: 'Group A',
           description: 'The Alpha Group',
           resources: ['StructureDefinition/animal-patient', 'StructureDefinition/arm-procedure']
         },
         {
-          name: 'GroupB',
+          id: 'GroupB',
+          name: 'Group B',
           description: 'The Beta Group',
           resources: ['StructureDefinition/bark-control', 'StructureDefinition/bee-sting']
         }
@@ -1450,6 +1452,7 @@ describe('importConfiguration', () => {
     it('should convert the groups map to a list', () => {
       minYAML.groups = {
         GroupA: {
+          name: 'Group A',
           description: 'The Alpha Group',
           resources: ['StructureDefinition/animal-patient', 'StructureDefinition/arm-procedure']
         },
@@ -1461,11 +1464,13 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.groups).toEqual([
         {
-          name: 'GroupA',
+          id: 'GroupA',
+          name: 'Group A',
           description: 'The Alpha Group',
           resources: ['StructureDefinition/animal-patient', 'StructureDefinition/arm-procedure']
         },
         {
+          id: 'GroupB',
           name: 'GroupB',
           description: 'The Beta Group',
           resources: ['StructureDefinition/bark-control', 'StructureDefinition/bee-sting']

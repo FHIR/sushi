@@ -589,8 +589,16 @@ function parseGroups(yamlGroups: YAMLConfigurationGroupMap): ConfigurationGroup[
   if (yamlGroups == null) {
     return;
   }
-  return Object.entries(yamlGroups).map(([name, details]) => {
-    return { name, ...details };
+  return Object.entries(yamlGroups).map(([id, groupObj]) => {
+    if (groupObj.name === undefined) {
+      groupObj.name = id;
+    }
+    return {
+      id: id,
+      name: groupObj.name,
+      description: groupObj.description,
+      resources: groupObj.resources
+    };
   });
 }
 

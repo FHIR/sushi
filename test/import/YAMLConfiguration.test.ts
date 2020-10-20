@@ -70,10 +70,12 @@ describe('YAMLConfiguration', () => {
       });
       expect(config.groups).toEqual({
         GroupA: {
+          name: 'Group A',
           description: 'The Alpha Group',
           resources: ['StructureDefinition/animal-patient', 'StructureDefinition/arm-procedure']
         },
         GroupB: {
+          name: 'Group B',
           description: 'The Beta Group',
           resources: ['StructureDefinition/bark-control', 'StructureDefinition/bee-sting']
         }

@@ -1080,21 +1080,28 @@ export class IGExporter {
   /**
    * Adds or updates a group in the implementation guide.
    *
-   * @param {string} name - name of the group, used as unique identifier
+   * @param {string} id - unique identifier for group
+   * @param {string} name - name of the group
    * @param {string} description - optional description of the group
    */
-  private addGroup(name: string, description?: string): void {
+  private addGroup(id: string, name?: string, description?: string): void {
     if (!this.ig.definition.grouping) {
       this.ig.definition.grouping = [];
     }
-    const existingGroup = this.ig.definition.grouping.find(group => group.name === name);
+    // Initially `name` and `id` were derived from the same parameter. This allows
+    // the function to still work with just a single parameter.
+    if (name === undefined) {
+      name = id;
+    }
+    const existingGroup = this.ig.definition.grouping.find(group => group.id === id);
     if (existingGroup) {
+      existingGroup.name = name;
       if (description) {
         existingGroup.description = description;
       }
     } else {
       this.ig.definition.grouping.push({
-        id: name,
+        id: id,
         name: name,
         ...(description && { description })
       });
@@ -1112,26 +1119,26 @@ export class IGExporter {
 
   private addConfiguredGroups(): void {
     for (const group of this.config.groups ?? []) {
-      this.addGroup(group.name, group.description);
+      this.addGroup(group.id, group.name, group.description);
       for (const resourceKey of group.resources) {
         const existingResource = this.ig.definition.resource.find(
           resource => resource.reference?.reference === resourceKey
         );
         if (!existingResource) {
-          logger.error(`Group ${group.name} configured with nonexistent resource ${resourceKey}`);
+          logger.error(`Group ${group.id} configured with nonexistent resource ${resourceKey}`);
         } else {
           if (existingResource.groupingId) {
-            if (existingResource.groupingId === group.name) {
+            if (existingResource.groupingId === group.id) {
               logger.warn(
-                `Resource ${resourceKey} is listed as a member of group ${group.name}, and does not need a groupingId.`
+                `Resource ${resourceKey} is listed as a member of group ${group.id}, and does not need a groupingId.`
               );
             } else {
               logger.error(
-                `Resource ${resourceKey} configured with groupingId ${existingResource.groupingId}, but listed as member of group ${group.name}.`
+                `Resource ${resourceKey} configured with groupingId ${existingResource.groupingId}, but listed as member of group ${group.id}.`
               );
             }
           }
-          existingResource.groupingId = group.name;
+          existingResource.groupingId = group.id;
         }
       }
     }

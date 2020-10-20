@@ -109,11 +109,13 @@ resources:
 # resource entries with the corresponding groupIds.
 groups:
   GroupA:
+    name: Group A
     description: The Alpha Group
     resources:
     - StructureDefinition/animal-patient
     - StructureDefinition/arm-procedure
   GroupB:
+    name: Group B
     description: The Beta Group
     resources:
     - StructureDefinition/bark-control
