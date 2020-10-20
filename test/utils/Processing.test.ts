@@ -403,6 +403,14 @@ describe('Processing', () => {
       myFSHDefinedProfile.id = 'my-duplicate-profile';
       myFSHDefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
 
+      const myPredefinedInstance = new InstanceDefinition();
+      myPredefinedInstance.id = 'my-duplicate-instance';
+      myPredefinedInstance.resourceType = 'Patient';
+      defs.addPredefinedResource('Patient-my-duplicate-instance.json', myPredefinedInstance);
+      const myFSHDefinedInstance = new InstanceDefinition();
+      myFSHDefinedInstance.id = 'my-duplicate-instance';
+      myFSHDefinedInstance.resourceType = 'Patient';
+
       outPackage.profiles.push(myProfile, myFSHDefinedProfile);
       outPackage.extensions.push(myExtension);
       outPackage.valueSets.push(myValueSet);
@@ -416,7 +424,8 @@ describe('Processing', () => {
         myOperationDefinition,
         myExtensionInstance,
         myProfileInstance,
-        myOtherInstance
+        myOtherInstance,
+        myFSHDefinedInstance
       );
     });
 
@@ -463,9 +472,26 @@ describe('Processing', () => {
             )
           )
         ).toBeFalsy();
-        expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Ignoring FSH definition for .*my-duplicate-profile/
-        );
+        expect(
+          loggerSpy
+            .getAllMessages('error')
+            .some(error => error.match(/Ignoring FSH definition for .*my-duplicate-profile/))
+        ).toBeTruthy();
+        expect(
+          fs.existsSync(
+            path.join(
+              tempIGPubRoot,
+              'fsh-generated',
+              'resources',
+              'Patient-my-duplicate-instance.json'
+            )
+          )
+        ).toBeFalsy();
+        expect(
+          loggerSpy
+            .getAllMessages('error')
+            .some(error => error.match(/Ignoring FSH definition for .*my-duplicate-instance/))
+        ).toBeTruthy();
       });
     });
 
