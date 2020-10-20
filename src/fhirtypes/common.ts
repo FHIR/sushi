@@ -123,7 +123,7 @@ export function setImpliedPropertiesOnInstance(
 
 export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
-  pathParts: PathPart[],
+  pathParts: PathPart[], 
   assignedValue: any
 ): void {
   if (assignedValue != null) {
@@ -198,6 +198,19 @@ export function setPropertyOnInstance(
           if (current[key] == null) current[key] = {};
           current = current[key];
         } else {
+          // Check if the instance  already has the element being defined
+          if (current.hasOwnProperty([pathPart.base])) {
+            // Check if the instance already has a quantity element
+            // Quantity elements are the only FHIR types with both a code and value
+            if (current[pathPart.base].hasOwnProperty('value')) {
+              if (assignedValue.hasOwnProperty('code')) {
+                // Ensure that the existing value is not being overwritten
+                assignedValue = { 
+                  value: current[pathPart.base].value, ...assignedValue, 
+                };
+              }
+            }
+          }
           current[key] = assignedValue;
         }
       }

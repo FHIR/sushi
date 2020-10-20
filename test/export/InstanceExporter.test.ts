@@ -2217,6 +2217,27 @@ describe('InstanceExporter', () => {
         });
       });
 
+      it('should not overwrite the value property when assigning a Quantity object', () => {
+        // * valueQuantity.value = 17
+        const valueSettingRule = new AssignmentRule('valueQuantity.value');
+        valueSettingRule.value = 17;
+        valueSettingRule.isInstance = false;
+        respRateInstance.rules.push(valueSettingRule);
+
+        // * valueQuantity = UCUM#/min
+        const codeSettingRule = new AssignmentRule('valueQuantity');
+        codeSettingRule.value = new FshCode('/min', 'UCUM');
+        codeSettingRule.isInstance = false;
+        respRateInstance.rules.push(codeSettingRule);
+
+        const exported = exportInstance(respRateInstance);
+        expect(exported.valueQuantity).toEqual({
+          value: 17,
+          code: '/min',
+          system: 'http://unitsofmeasure.org',
+        });
+      });
+
       it('should assign an inline instance of a profile of a type to an instance', () => {
         const inlineSimple = new Instance('MySimple');
         inlineSimple.instanceOf = 'SimpleQuantity';
