@@ -468,7 +468,7 @@ describe('Processing', () => {
               tempIGPubRoot,
               'fsh-generated',
               'resources',
-              'Patient-my-duplicate-profile.json'
+              'StructureDefinition-my-duplicate-profile.json'
             )
           )
         ).toBeFalsy();
