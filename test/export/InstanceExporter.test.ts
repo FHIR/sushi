@@ -2234,7 +2234,7 @@ describe('InstanceExporter', () => {
         expect(exported.valueQuantity).toEqual({
           value: 17,
           code: '/min',
-          system: 'http://unitsofmeasure.org',
+          system: 'http://unitsofmeasure.org'
         });
       });
 

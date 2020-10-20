@@ -123,7 +123,7 @@ export function setImpliedPropertiesOnInstance(
 
 export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
-  pathParts: PathPart[], 
+  pathParts: PathPart[],
   assignedValue: any
 ): void {
   if (assignedValue != null) {
@@ -205,8 +205,9 @@ export function setPropertyOnInstance(
             if (current[pathPart.base].hasOwnProperty('value')) {
               if (assignedValue.hasOwnProperty('code')) {
                 // Ensure that the existing value is not being overwritten
-                assignedValue = { 
-                  value: current[pathPart.base].value, ...assignedValue, 
+                assignedValue = {
+                  value: current[pathPart.base].value,
+                  ...assignedValue
                 };
               }
             }
