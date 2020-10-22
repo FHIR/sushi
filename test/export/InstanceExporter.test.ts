@@ -2218,23 +2218,37 @@ describe('InstanceExporter', () => {
       });
 
       it('should not overwrite the value property when assigning a Quantity object', () => {
+        const exObservation = new Profile('ExObservation');
+        exObservation.parent = 'Observation';
+        doc.profiles.set(exObservation.name, exObservation);
+
+        const onlyRule = new OnlyRule('value[x]');
+        onlyRule.types = [{ type: 'Quantity' }];
+        exObservation.rules.push(onlyRule);
+
         // * valueQuantity.value = 17
         const valueSettingRule = new AssignmentRule('valueQuantity.value');
         valueSettingRule.value = 17;
         valueSettingRule.isInstance = false;
-        respRateInstance.rules.push(valueSettingRule);
+        valueSettingRule.exactly = false;
 
         // * valueQuantity = UCUM#/min
         const codeSettingRule = new AssignmentRule('valueQuantity');
-        codeSettingRule.value = new FshCode('/min', 'UCUM');
+        codeSettingRule.value = new FshCode('mg', 'http://unitsofmeasure.org', 'mg');
         codeSettingRule.isInstance = false;
-        respRateInstance.rules.push(codeSettingRule);
+        codeSettingRule.exactly = false;
 
-        const exported = exportInstance(respRateInstance);
+        const exInstance = new Instance('ExInstance');
+        exInstance.instanceOf = 'ExObservation';
+        exInstance.rules.push(valueSettingRule);
+        exInstance.rules.push(codeSettingRule);
+
+        const exported = exportInstance(exInstance);
         expect(exported.valueQuantity).toEqual({
           value: 17,
-          code: '/min',
-          system: 'http://unitsofmeasure.org'
+          code: 'mg',
+          system: 'http://unitsofmeasure.org',
+          unit: 'mg'
         });
       });
 
