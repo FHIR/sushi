@@ -3772,9 +3772,12 @@ describe('StructureDefinitionExporter', () => {
     });
 
     it('should apply a FlagRule on a sliced element that updates the flags on its slices', () => {
-      // * component MS
+      // * component MS ?!
+      // modifier should be applied to the slices, but must support is not applied to slices.
+      // see https://confluence.hl7.org/display/FHIR/Guide+to+Designing+Resources
       const rootFlag = new FlagRule('component');
       rootFlag.mustSupport = true;
+      rootFlag.modifier = true;
 
       observationWithSlice.rules.push(rootFlag);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
@@ -3783,12 +3786,16 @@ describe('StructureDefinitionExporter', () => {
       const rootComponent = sd.findElement('Observation.component');
       const labComponent = sd.findElement('Observation.component:Lab');
       expect(rootComponent.mustSupport).toBe(true);
-      expect(labComponent.mustSupport).toBe(true);
+      expect(labComponent.mustSupport).toBeFalsy();
+      expect(rootComponent.isModifier).toBe(true);
+      expect(labComponent.isModifier).toBe(true);
     });
 
     it('should apply a FlagRule on the child of a sliced element that updates the flags on the child of a slice', () => {
       // * component[Lab].interpretation 0..1 // this forces the creation of the unfolded slice
       // * component.interpretation MS
+      // must support is applied to children of slices, in contrast to previous test case
+      // again, see https://confluence.hl7.org/display/FHIR/Guide+to+Designing+Resources
       const labCard = new CardRule('component[Lab].interpretation');
       labCard.min = 0;
       labCard.max = '1';

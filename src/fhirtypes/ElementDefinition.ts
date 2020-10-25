@@ -1025,7 +1025,12 @@ export class ElementDefinition {
     const connectedElements = this.findConnectedElements();
     if (mustSupport === true) {
       this.mustSupport = mustSupport;
-      connectedElements.forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
+      // MS only gets applied to connected elements that are not themselves slices
+      // For example, Observation.component.interpretation MS implies Observation.component:Lab.interpretation MS
+      // But Observation.component MS does not imply Observation.component:Lab MS
+      connectedElements
+        .filter(ce => ce.sliceName == null)
+        .forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
     }
     if (summary === true) {
       this.isSummary = summary;
