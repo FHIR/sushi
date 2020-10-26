@@ -1537,7 +1537,7 @@ export class ElementDefinition {
       );
     } else if (type === 'Coding') {
       this.assignFHIRValue(code.toString(), code.toFHIRCoding(), exactly, 'Coding');
-    } else if (type === 'Quantity') {
+    } else if (type === 'Quantity' || type === 'Age') {
       // Since code only maps to part of Quantity, we want to ensure that if there are other (non-code) parts
       // already assigned, we take them on too -- as we don't want to overwrite them with blanks.
       const existing = this.fixedQuantity ?? this.patternQuantity ?? this.assignedByAnyParent();
@@ -1548,7 +1548,7 @@ export class ElementDefinition {
       if (existing?.comparator != null) {
         quantity.comparator = existing.comparator;
       }
-      this.assignFHIRValue(code.toString(), quantity, exactly, 'Quantity');
+      this.assignFHIRValue(code.toString(), quantity, exactly, type);
     } else {
       throw new CodedTypeNotFoundError([type]);
     }
