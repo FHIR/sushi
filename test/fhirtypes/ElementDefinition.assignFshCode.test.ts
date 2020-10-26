@@ -5,10 +5,12 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
+import { ElementDefinitionType } from '../../src/fhirtypes';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
+  let condition: StructureDefinition;
   let fooBarCode: FshCode;
   let barFooCode: FshCode;
   let versionedCode: FshCode;
@@ -25,6 +27,7 @@ describe('ElementDefinition', () => {
   });
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');
+    condition = fisher.fishForStructureDefinition('Condition');
     fooBarCode = new FshCode('bar', 'http://foo.com');
     barFooCode = new FshCode('foo', 'http://bar.com');
     versionedCode = new FshCode('versioned', 'http://versioned.com|7.6.5');
@@ -431,6 +434,46 @@ describe('ElementDefinition', () => {
       quantity.assignValue(fooBarCode, true);
       expect(quantity.fixedQuantity).toEqual({ code: 'bar', system: 'http://foo.com' });
       expect(quantity.patternQuantity).toBeUndefined();
+    });
+
+    it('should assign a code to an Age', () => {
+      const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
+      onsetX.type = [new ElementDefinitionType('Age')];
+      onsetX.assignValue(fooBarCode);
+      expect(onsetX.patternAge).toEqual({ code: 'bar', system: 'http://foo.com' });
+      expect(onsetX.fixedAge).toBeUndefined();
+    });
+
+    it('should assign a code to an Age (exactly)', () => {
+      const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
+      onsetX.type = [new ElementDefinitionType('Age')];
+      onsetX.assignValue(fooBarCode, true);
+      expect(onsetX.patternAge).toBeUndefined();
+      expect(onsetX.fixedAge).toEqual({ code: 'bar', system: 'http://foo.com' });
+    });
+
+    it('should assign a code with a display to an Age', () => {
+      const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
+      onsetX.type = [new ElementDefinitionType('Age')];
+      onsetX.assignValue(codeWithDisplay);
+      expect(onsetX.patternAge).toEqual({
+        code: 'bar',
+        system: 'http://foo.com',
+        unit: 'Foo Bar'
+      });
+      expect(onsetX.fixedAge).toBeUndefined();
+    });
+
+    it('should assign a code with a display to an Age (exactly)', () => {
+      const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
+      onsetX.type = [new ElementDefinitionType('Age')];
+      onsetX.assignValue(codeWithDisplay, true);
+      expect(onsetX.patternAge).toBeUndefined();
+      expect(onsetX.fixedAge).toEqual({
+        code: 'bar',
+        system: 'http://foo.com',
+        unit: 'Foo Bar'
+      });
     });
 
     it('should assign a code with a display to a Quantity', () => {
