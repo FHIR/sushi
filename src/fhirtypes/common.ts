@@ -198,6 +198,18 @@ export function setPropertyOnInstance(
           if (current[key] == null) current[key] = {};
           current = current[key];
         } else {
+          // Check if the instance already has the element being defined
+          if (current[key] != null && typeof current[key] === 'object') {
+            // Check if the instance already has a quantity element
+            // Quantity elements are the only FHIR types with both a code and value
+            if (current[key].hasOwnProperty('value') && assignedValue.hasOwnProperty('code')) {
+              // Ensure that the existing value is not being overwritten
+              assignedValue = {
+                value: current[key].value,
+                ...assignedValue
+              };
+            }
+          }
           current[key] = assignedValue;
         }
       }
