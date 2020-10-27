@@ -451,12 +451,14 @@ describe('IGExporter', () => {
     it('should create groups for each configured group', () => {
       config.groups = [
         {
-          name: 'MyPatientGroup',
+          id: 'MyPatientGroup',
+          name: 'My Patient Group',
           description: 'Group for some patient-related things.',
           resources: ['StructureDefinition/sample-patient', 'Patient/patient-example']
         },
         {
-          name: 'MyObservationGroup',
+          id: 'MyObservationGroup',
+          name: 'My Observation Group',
           description: 'Group for some observation-related things.',
           resources: ['StructureDefinition/sample-observation']
         }
@@ -467,12 +469,12 @@ describe('IGExporter', () => {
       const content = fs.readJSONSync(igPath);
       expect(content.definition.grouping).toContainEqual({
         id: 'MyPatientGroup',
-        name: 'MyPatientGroup',
+        name: 'My Patient Group',
         description: 'Group for some patient-related things.'
       });
       expect(content.definition.grouping).toContainEqual({
         id: 'MyObservationGroup',
-        name: 'MyObservationGroup',
+        name: 'My Observation Group',
         description: 'Group for some observation-related things.'
       });
       const samplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
@@ -495,7 +497,8 @@ describe('IGExporter', () => {
     it('should log an error when a group is configured with a nonexistent resource', () => {
       config.groups = [
         {
-          name: 'BananaGroup',
+          id: 'BananaGroup',
+          name: 'Banana Group',
           description: 'Holds all the bananas.',
           resources: ['StructureDefinition/sample-banana']
         }
@@ -515,6 +518,7 @@ describe('IGExporter', () => {
       ];
       config.groups = [
         {
+          id: 'Capulets',
           name: 'Capulets',
           resources: ['StructureDefinition/sample-patient']
         }
@@ -534,7 +538,8 @@ describe('IGExporter', () => {
       ];
       config.groups = [
         {
-          name: 'JustOneGroup',
+          id: 'JustOneGroup',
+          name: 'Just One Group',
           resources: ['StructureDefinition/sample-patient']
         }
       ];

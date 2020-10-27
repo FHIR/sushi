@@ -318,6 +318,7 @@ export type YAMLConfigurationGlobalMap = {
 
 export type YAMLConfigurationGroupMap = {
   [key: string]: {
+    name?: ImplementationGuide['name'];
     description?: ImplementationGuideDefinitionGrouping['description']; // string
     resources: string[];
   };
