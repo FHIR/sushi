@@ -4547,6 +4547,29 @@ describe('StructureDefinitionExporter', () => {
     ]);
   });
 
+  it('should include mustSupport in the differential of a new slice, even if the base element is also mustSupport', () => {
+    const profile = new Profile('MustSlice');
+    profile.parent = 'resprate';
+    const mustCode = new FlagRule('code.coding');
+    mustCode.mustSupport = true;
+    const codeSlice = new ContainsRule('code.coding');
+    codeSlice.items = [{ name: 'OxygenCode' }];
+    const mustSlice = new FlagRule('code.coding[OxygenCode]');
+    mustSlice.mustSupport = true;
+    profile.rules.push(mustCode, codeSlice, mustSlice);
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const json = sd.toJSON();
+    expect(json.differential.element).toContainEqual({
+      id: 'Observation.code.coding:OxygenCode',
+      path: 'Observation.code.coding',
+      sliceName: 'OxygenCode',
+      min: 0,
+      max: '*',
+      mustSupport: true
+    });
+  });
+
   it('should include the children of primitive elements when serializing to JSON', () => {
     const profile = new Profile('SpecialUrlId');
     profile.parent = 'Observation';
