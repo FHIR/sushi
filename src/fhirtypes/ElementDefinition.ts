@@ -1171,7 +1171,7 @@ export class ElementDefinition {
         this.assignString(value as string, exactly);
         break;
       case 'Code':
-        this.assignFshCode(value as FshCode, exactly);
+        this.assignFshCode(value as FshCode, exactly, fisher);
         break;
       case 'Quantity':
         value = value as FshQuantity;
@@ -1520,12 +1520,22 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the code is already assigned to a different code
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
-  private assignFshCode(code: FshCode, exactly = false): void {
+  private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
     if (code.system && !isUri(code.system.split('|')[0])) {
       throw new InvalidUriError(code.system);
     }
 
     const type = this.type[0].code;
+
+    // Check if the code is a specialization of the Quantity type
+    let quantityType = type === 'Quantity';
+    if (!quantityType) {
+      const actualTypeSD = fisher?.fishForFHIR(type, Type.Type);
+      if (actualTypeSD?.baseDefinition === 'http://hl7.org/fhir/StructureDefinition/Quantity') {
+        quantityType = true;
+      }
+    }
+
     if (type === 'code' || type === 'string' || type === 'uri') {
       this.assignFHIRValue(code.toString(), code.code, exactly, type);
     } else if (type === 'CodeableConcept') {
@@ -1537,7 +1547,7 @@ export class ElementDefinition {
       );
     } else if (type === 'Coding') {
       this.assignFHIRValue(code.toString(), code.toFHIRCoding(), exactly, 'Coding');
-    } else if (type === 'Quantity' || type === 'Age') {
+    } else if (quantityType) {
       // Since code only maps to part of Quantity, we want to ensure that if there are other (non-code) parts
       // already assigned, we take them on too -- as we don't want to overwrite them with blanks.
       const existing = this.fixedQuantity ?? this.patternQuantity ?? this.assignedByAnyParent();

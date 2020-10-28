@@ -439,7 +439,7 @@ describe('ElementDefinition', () => {
     it('should assign a code to an Age', () => {
       const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
       onsetX.type = [new ElementDefinitionType('Age')];
-      onsetX.assignValue(fooBarCode);
+      onsetX.assignValue(fooBarCode, false, fisher);
       expect(onsetX.patternAge).toEqual({ code: 'bar', system: 'http://foo.com' });
       expect(onsetX.fixedAge).toBeUndefined();
     });
@@ -447,7 +447,7 @@ describe('ElementDefinition', () => {
     it('should assign a code to an Age (exactly)', () => {
       const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
       onsetX.type = [new ElementDefinitionType('Age')];
-      onsetX.assignValue(fooBarCode, true);
+      onsetX.assignValue(fooBarCode, true, fisher);
       expect(onsetX.patternAge).toBeUndefined();
       expect(onsetX.fixedAge).toEqual({ code: 'bar', system: 'http://foo.com' });
     });
@@ -455,7 +455,7 @@ describe('ElementDefinition', () => {
     it('should assign a code with a display to an Age', () => {
       const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
       onsetX.type = [new ElementDefinitionType('Age')];
-      onsetX.assignValue(codeWithDisplay);
+      onsetX.assignValue(codeWithDisplay, false, fisher);
       expect(onsetX.patternAge).toEqual({
         code: 'bar',
         system: 'http://foo.com',
@@ -467,7 +467,7 @@ describe('ElementDefinition', () => {
     it('should assign a code with a display to an Age (exactly)', () => {
       const onsetX = condition.elements.find(e => e.id === 'Condition.onset[x]');
       onsetX.type = [new ElementDefinitionType('Age')];
-      onsetX.assignValue(codeWithDisplay, true);
+      onsetX.assignValue(codeWithDisplay, true, fisher);
       expect(onsetX.patternAge).toBeUndefined();
       expect(onsetX.fixedAge).toEqual({
         code: 'bar',
