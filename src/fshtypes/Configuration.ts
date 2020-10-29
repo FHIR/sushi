@@ -138,6 +138,7 @@ export type Configuration = {
 };
 
 export type ConfigurationGroup = {
+  id: string;
   name: string;
   description?: string;
   resources: string[];

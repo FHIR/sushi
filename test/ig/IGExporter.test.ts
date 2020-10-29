@@ -89,7 +89,8 @@ describe('IGExporter', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.example.json');
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.grouping).toHaveLength(2);
-      expect(igContent.definition.grouping[0].name).toBe('GroupA');
+      expect(igContent.definition.grouping[0].id).toBe('GroupA');
+      expect(igContent.definition.grouping[0].name).toBe('Group A');
       expect(igContent.definition.resource).toHaveLength(1);
       expect(igContent.definition.resource[0].name).toBe('My Example Patient');
       expect(igContent.definition.page.page).toHaveLength(3);
