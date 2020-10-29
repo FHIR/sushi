@@ -1,4 +1,4 @@
-import cloneDeep = require('lodash/cloneDeep');
+import { cloneDeep, remove, pull } from 'lodash';
 import { Meta } from './specialTypes';
 import { HasId } from './common';
 import { applyMixins } from '../utils';
@@ -26,8 +26,51 @@ export class InstanceDefinition {
   }
 
   toJSON(): any {
-    const clone = cloneDeep(this);
-    delete clone._instanceMeta; // Only needed for lookup and IG config - not a FHIR property
+    const orderedKeys: string[] = [];
+    const keys = Object.keys(this);
+    const underscoreKeys = remove(keys, key => key.startsWith('_'));
+    // Reconstruct the object with properties in the expected serialization order.
+    // resourceType, id, and meta are handled separately because they come before any other properties.
+    // When properties on a primitive field (e.g. "status"), exist, they will have
+    // an underscore-prefixed key (e.g. "_status"). If both of these properties exist
+    // on the instance, they should appear next to one another.
+    const clone: any = {
+      resourceType: cloneDeep(this.resourceType)
+    };
+    if (this._resourceType) {
+      clone._resourceType = cloneDeep(this._resourceType);
+    }
+    if (this.id) {
+      clone.id = cloneDeep(this.id);
+    }
+    if (this._id) {
+      clone._id = cloneDeep(this._id);
+    }
+    if (this.meta) {
+      clone.meta = cloneDeep(this.meta);
+    }
+    if (this._meta) {
+      clone._meta = cloneDeep(this._meta);
+    }
+    // remove values from keys and underscoreKeys if we do not need to handle them now
+    // _instanceMeta is only needed for lookup and IG config - not a FHIR property
+    pull(keys, 'resourceType', 'id', 'meta');
+    pull(underscoreKeys, '_resourceType', '_id', '_meta', '_instanceMeta');
+
+    keys.forEach(key => {
+      orderedKeys.push(key);
+      if (underscoreKeys.includes(`_${key}`)) {
+        orderedKeys.push(`_${key}`);
+        pull(underscoreKeys, `_${key}`);
+      }
+    });
+    underscoreKeys.forEach(key => {
+      orderedKeys.push(key);
+    });
+    orderedKeys.forEach(key => {
+      clone[key] = cloneDeep(this[key]);
+    });
+
     return clone;
   }
 
