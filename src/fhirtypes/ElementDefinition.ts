@@ -1171,7 +1171,7 @@ export class ElementDefinition {
         this.assignString(value as string, exactly);
         break;
       case 'Code':
-        this.assignFshCode(value as FshCode, exactly, fisher);
+        this.assignFshCode(value as FshCode, fisher, exactly);
         break;
       case 'Quantity':
         value = value as FshQuantity;
@@ -1520,7 +1520,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the code is already assigned to a different code
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
-  private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
+  private assignFshCode(code: FshCode, fisher?: Fishable, exactly = false): void {
     if (code.system && !isUri(code.system.split('|')[0])) {
       throw new InvalidUriError(code.system);
     }
