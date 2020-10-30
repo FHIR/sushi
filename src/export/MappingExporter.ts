@@ -2,7 +2,7 @@ import { FSHTank } from '../import';
 import { Package } from '.';
 import { logger, Type, MasterFisher } from '../utils';
 import { Mapping } from '../fshtypes';
-import { StructureDefinition, idRegex } from '../fhirtypes';
+import { StructureDefinition, StructureDefinitionMapping, idRegex } from '../fhirtypes';
 import { InvalidFHIRIdError } from '../errors';
 import { MappingRule } from '../fshtypes/rules';
 import { applyInsertRules } from '../fhirtypes/common';
@@ -72,7 +72,38 @@ export class MappingExporter {
       Type.Extension
     ) as StructureDefinition;
     if (sourceStructDef) {
-      this.setMetadata(sourceStructDef, fshDefinition);
+      const parent = this.fisher.fishForFHIR(
+        sourceStructDef.baseDefinition,
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension
+      );
+      const matchingParentMapping = parent?.mapping.find(
+        (m: StructureDefinitionMapping) => m.identity === fshDefinition.id
+      );
+      if (matchingParentMapping != null) {
+        const isMatchingTitle = fshDefinition.title
+          ? fshDefinition.title === matchingParentMapping.name
+          : true;
+        const isMatchingTarget = fshDefinition.target
+          ? fshDefinition.target === matchingParentMapping.uri
+          : true;
+        const isMatchingDescription = fshDefinition.description
+          ? fshDefinition.description === matchingParentMapping.comment
+          : true;
+        if (!isMatchingTitle || !isMatchingTarget || !isMatchingDescription) {
+          // If the mapping identity matches one on the parent, all other metadata must also match in order to merge MappingRules
+          logger.error(
+            `Unable to add Mapping ${fshDefinition.name} because it conflicts with one already on the parent of ${fshDefinition.source}.`,
+            fshDefinition.sourceInfo
+          );
+          return;
+        }
+      } else {
+        // Only add metadata if it does not already exist on the parent
+        this.setMetadata(sourceStructDef, fshDefinition);
+      }
       this.setMappingRules(sourceStructDef, fshDefinition);
     } else {
       logger.error(`Unable to find source "${fshDefinition.source}".`, fshDefinition.sourceInfo);
