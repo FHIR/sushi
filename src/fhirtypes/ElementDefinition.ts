@@ -1025,7 +1025,12 @@ export class ElementDefinition {
     const connectedElements = this.findConnectedElements();
     if (mustSupport === true) {
       this.mustSupport = mustSupport;
-      connectedElements.forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
+      // MS only gets applied to connected elements that are not themselves slices
+      // For example, Observation.component.interpretation MS implies Observation.component:Lab.interpretation MS
+      // But Observation.component MS does not imply Observation.component:Lab MS
+      connectedElements
+        .filter(ce => ce.sliceName == null)
+        .forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
     }
     if (summary === true) {
       this.isSummary = summary;
@@ -1882,10 +1887,11 @@ export class ElementDefinition {
       throw new DuplicateSliceError(this.structDef.name, this.id, name);
     }
 
-    // On a new slice, delete slice.min and slice.max and then reset them
+    // On a new slice, delete slice.min, slice.max, and slice.mustSupport. Then, reset slice.min and slice.max
     // so that they are always captured in diff
     delete slice.min;
     delete slice.max;
+    delete slice.mustSupport;
 
     // Capture the original so that the differential only contains changes from this point on.
     slice.captureOriginal();
