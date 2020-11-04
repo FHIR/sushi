@@ -1,3 +1,4 @@
+import { isEmpty, cloneDeep } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -31,10 +32,8 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import cloneDeep = require('lodash/cloneDeep');
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
-import { isEmpty } from 'lodash';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets

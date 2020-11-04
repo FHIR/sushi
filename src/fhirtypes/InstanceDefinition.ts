@@ -1,4 +1,4 @@
-import cloneDeep = require('lodash/cloneDeep');
+import { difference, remove, pull, cloneDeep } from 'lodash';
 import { Meta } from './specialTypes';
 import { HasId } from './common';
 import { applyMixins } from '../utils';
@@ -26,9 +26,12 @@ export class InstanceDefinition {
   }
 
   toJSON(): any {
-    const clone = cloneDeep(this);
-    delete clone._instanceMeta; // Only needed for lookup and IG config - not a FHIR property
-    return clone;
+    const orderedKeys = ['resourceType', '_resourceType', 'id', '_id', 'meta', '_meta'].filter(
+      key => this[key] != null
+    );
+    // _instanceMeta is only needed for lookup and IG config - not a FHIR property
+    const additionalKeys = difference(Object.keys(this), [...orderedKeys, '_instanceMeta']);
+    return orderedCloneDeep(this, [...orderedKeys, ...additionalKeys]);
   }
 
   static fromJSON(json: { [key: string]: any }): InstanceDefinition {
@@ -41,6 +44,46 @@ export class InstanceDefinition {
       instanceDefinition._instanceMeta.name = json.id;
     }
     return instanceDefinition;
+  }
+}
+
+/**
+ * Make a deep clone recursively, adding properties in the order expected for exported JSON.
+ * If a list of keys is provided, use those properties from the input.
+ * Otherwise, use all properties from the input.
+ *
+ * @param input - the value to clone
+ * @param keys - optionally, the properties of the value to include in the clone
+ * @returns {any} - a clone of the input, with reordered properties
+ */
+function orderedCloneDeep(input: any, keys: string[] = Object.keys(input)): any {
+  // non-objects should be cloned normally
+  // arrays should get a recursive call on their elements, but don't need reordering
+  if (typeof input !== 'object') {
+    return cloneDeep(input);
+  } else if (Array.isArray(input)) {
+    return input.map(element => orderedCloneDeep(element));
+  } else {
+    const underscoreKeys = remove(keys, key => key.startsWith('_'));
+    const orderedKeys: string[] = [];
+    const result: any = {};
+
+    keys.forEach(key => {
+      orderedKeys.push(key);
+      if (underscoreKeys.includes(`_${key}`)) {
+        orderedKeys.push(`_${key}`);
+        pull(underscoreKeys, `_${key}`);
+      }
+    });
+    underscoreKeys.forEach(key => {
+      orderedKeys.push(key);
+    });
+
+    orderedKeys.forEach(key => {
+      result[key] = orderedCloneDeep(input[key]);
+    });
+
+    return result;
   }
 }
 
