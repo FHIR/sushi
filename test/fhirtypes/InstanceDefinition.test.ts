@@ -60,5 +60,20 @@ describe('InstanceDefinition', () => {
       expect(keys.indexOf('id') + 1).toBe(keys.indexOf('_id'));
       expect(keys.indexOf('status') + 1).toBe(keys.indexOf('_status'));
     });
+
+    it('should serialize subproperties such that underscore properties come immediately after their non-underscore counterparts', () => {
+      patientInstance.name[0]._family = {
+        extension: {
+          url: 'http://question.org/wait/really?',
+          valueBoolean: false
+        }
+      };
+      const originalKeys = Object.keys(patientInstance.name[0]);
+      expect(originalKeys.indexOf('family') + 1).not.toBe(originalKeys.indexOf('_family'));
+
+      const newJSON = patientInstance.toJSON();
+      const nameKeys = Object.keys(newJSON.name[0]);
+      expect(nameKeys.indexOf('family') + 1).toBe(nameKeys.indexOf('_family'));
+    });
   });
 });
