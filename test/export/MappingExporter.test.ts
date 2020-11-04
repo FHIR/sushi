@@ -255,36 +255,6 @@ describe('MappingExporter', () => {
       expect(status.mapping.length).toBe(originalStatusMappingLength + 1); // New rule added to status element
     });
 
-    it('should log an error and not add mapping or rules when a Mapping has the same identity as one on the parent but name or uri differs', () => {
-      /**
-       * Mapping: rim
-       * Id: rim
-       * Source: MyObservation
-       * Title: "RIM Mapping"
-       * Target: "http://real.org/not"
-       * * status -> "Something.new"
-       */
-
-      const mapping = new Mapping('rim');
-      mapping.source = 'MyObservation';
-      mapping.id = 'rim';
-      mapping.title = 'RIM Mapping';
-      mapping.target = 'http://real.org/not';
-      const newRule = new MappingRule('status');
-      newRule.map = 'Something.new';
-      mapping.rules.push(newRule);
-      doc.mappings.set(mapping.name, mapping);
-
-      const originalMappingLength = observation.mapping.length;
-      const status = observation.elements.find(e => e.id === 'Observation.status');
-      const originalStatusMappingLength = status.mapping.length;
-
-      exporter.export();
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(observation.mapping.length).toBe(originalMappingLength); // No metadata added
-      expect(status.mapping.length).toBe(originalStatusMappingLength); // No rule added to status element
-    });
-
     it('should not log an error, should update metadata, and should add rules for a Mapping that is inherited from the parent and has additional metadata not on the parent', () => {
       /**
        * Mapping: rim
@@ -315,6 +285,36 @@ describe('MappingExporter', () => {
       const rimMapping = observation.mapping.find(m => m.identity === 'rim');
       originalRimMapping.comment = 'A totally new description'; // Description is added
       expect(rimMapping).toEqual(originalRimMapping);
+    });
+
+    it('should log an error and not add mapping or rules when a Mapping has the same identity as one on the parent but name or uri differs', () => {
+      /**
+       * Mapping: rim
+       * Id: rim
+       * Source: MyObservation
+       * Title: "RIM Mapping"
+       * Target: "http://real.org/not"
+       * * status -> "Something.new"
+       */
+
+      const mapping = new Mapping('rim');
+      mapping.source = 'MyObservation';
+      mapping.id = 'rim';
+      mapping.title = 'RIM Mapping';
+      mapping.target = 'http://real.org/not';
+      const newRule = new MappingRule('status');
+      newRule.map = 'Something.new';
+      mapping.rules.push(newRule);
+      doc.mappings.set(mapping.name, mapping);
+
+      const originalMappingLength = observation.mapping.length;
+      const status = observation.elements.find(e => e.id === 'Observation.status');
+      const originalStatusMappingLength = status.mapping.length;
+
+      exporter.export();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(observation.mapping.length).toBe(originalMappingLength); // No metadata added
+      expect(status.mapping.length).toBe(originalStatusMappingLength); // No rule added to status element
     });
   });
 
