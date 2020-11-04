@@ -1,9 +1,10 @@
+import path from 'path';
+import { cloneDeep } from 'lodash';
 import { MappingExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import path from 'path';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { Mapping, RuleSet } from '../../src/fshtypes';
 import { MappingRule, InsertRule, AssignmentRule } from '../../src/fshtypes/rules';
@@ -212,14 +213,19 @@ describe('MappingExporter', () => {
       const originalMappingLength = observation.mapping.length;
       const status = observation.elements.find(e => e.id === 'Observation.status');
       const originalStatusMappingLength = status.mapping.length;
+      const originalRimMapping = cloneDeep(observation.mapping.find(m => m.identity === 'rim'));
 
       exporter.export();
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(observation.mapping.length).toBe(originalMappingLength); // No metadata added
       expect(status.mapping.length).toBe(originalStatusMappingLength + 1); // New rule added to status element
+
+      // Metadata is same as the parent
+      const rimMapping = observation.mapping.find(m => m.identity === 'rim');
+      expect(rimMapping).toEqual(originalRimMapping);
     });
 
-    it('should not log an error and not add metadata but add rules for a Mapping that is inherited from the parent with the same metdata', () => {
+    it('should not log an error and not add metadata but add rules for a Mapping that is inherited from the parent with the same metadata', () => {
       /**
        * Mapping: rim
        * Id: rim
@@ -249,7 +255,7 @@ describe('MappingExporter', () => {
       expect(status.mapping.length).toBe(originalStatusMappingLength + 1); // New rule added to status element
     });
 
-    it('should log an error and not add mapping or rules when a Mapping has the same identity as one on the parent but has other metadata that differs', () => {
+    it('should log an error and not add mapping or rules when a Mapping has the same identity as one on the parent but name or uri differs', () => {
       /**
        * Mapping: rim
        * Id: rim
@@ -279,7 +285,7 @@ describe('MappingExporter', () => {
       expect(status.mapping.length).toBe(originalStatusMappingLength); // No rule added to status element
     });
 
-    it('should not log an error and not add metadata but add rules for a Mapping that is inherited from the parent and has additional metadata not on the parent', () => {
+    it('should not log an error, should update metadata, and should add rules for a Mapping that is inherited from the parent and has additional metadata not on the parent', () => {
       /**
        * Mapping: rim
        * Source: MyObservation
@@ -289,7 +295,7 @@ describe('MappingExporter', () => {
 
       const mapping = new Mapping('rim');
       mapping.source = 'MyObservation';
-      mapping.description = 'A totally new description';
+      mapping.description = 'A totally new description'; // There is no comment on the parent rim mapping
       const newRule = new MappingRule('status');
       newRule.map = 'Something.new';
       mapping.rules.push(newRule);
@@ -298,11 +304,17 @@ describe('MappingExporter', () => {
       const originalMappingLength = observation.mapping.length;
       const status = observation.elements.find(e => e.id === 'Observation.status');
       const originalStatusMappingLength = status.mapping.length;
+      const originalRimMapping = cloneDeep(observation.mapping.find(m => m.identity === 'rim'));
 
       exporter.export();
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(observation.mapping.length).toBe(originalMappingLength); // No metadata added
       expect(status.mapping.length).toBe(originalStatusMappingLength + 1); // New rule added to status element
+
+      // New comment (Description) is added to mapping, all other metadata should be the same
+      const rimMapping = observation.mapping.find(m => m.identity === 'rim');
+      originalRimMapping.comment = 'A totally new description'; // Description is added
+      expect(rimMapping).toEqual(originalRimMapping);
     });
   });
 

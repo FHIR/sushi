@@ -96,6 +96,14 @@ export class MappingExporter {
             fshDefinition.sourceInfo
           );
           return;
+        } else {
+          // Update parent mapping with additional or changed metadata (comment is the only property this can be the case for)
+          const inheritedMapping = sourceStructDef.mapping.find(
+            m => m.identity === fshDefinition.id
+          );
+          if (fshDefinition.description) {
+            inheritedMapping.comment = fshDefinition.description;
+          }
         }
       } else {
         // Only add metadata if it does not already exist on the parent
