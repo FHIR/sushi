@@ -89,10 +89,7 @@ export class MappingExporter {
         const isMatchingTarget = fshDefinition.target
           ? fshDefinition.target === matchingParentMapping.uri
           : true;
-        const isMatchingDescription = fshDefinition.description
-          ? fshDefinition.description === matchingParentMapping.comment
-          : true;
-        if (!isMatchingTitle || !isMatchingTarget || !isMatchingDescription) {
+        if (!isMatchingTitle || !isMatchingTarget) {
           // If the mapping identity matches one on the parent, all other metadata must also match in order to merge MappingRules
           logger.error(
             `Unable to add Mapping ${fshDefinition.name} because it conflicts with one already on the parent of ${fshDefinition.source}.`,

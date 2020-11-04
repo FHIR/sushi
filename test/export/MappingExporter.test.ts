@@ -279,17 +279,17 @@ describe('MappingExporter', () => {
       expect(status.mapping.length).toBe(originalStatusMappingLength); // No rule added to status element
     });
 
-    it('should log an error and not add mapping or rules when a Mapping has the same identity as one on the parent and has additional metadata not on the parent', () => {
+    it('should not log an error and not add metadata but add rules for a Mapping that is inherited from the parent and has additional metadata not on the parent', () => {
       /**
        * Mapping: rim
        * Source: MyObservation
-       * Description: "A totally different description"
+       * Description: "A totally new description"
        * * status -> "Something.new"
        */
 
       const mapping = new Mapping('rim');
       mapping.source = 'MyObservation';
-      mapping.description = 'A totally different description';
+      mapping.description = 'A totally new description';
       const newRule = new MappingRule('status');
       newRule.map = 'Something.new';
       mapping.rules.push(newRule);
@@ -300,9 +300,9 @@ describe('MappingExporter', () => {
       const originalStatusMappingLength = status.mapping.length;
 
       exporter.export();
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(observation.mapping.length).toBe(originalMappingLength); // No metadata added
-      expect(status.mapping.length).toBe(originalStatusMappingLength); // No rule added to status element
+      expect(status.mapping.length).toBe(originalStatusMappingLength + 1); // New rule added to status element
     });
   });
 
