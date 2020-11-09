@@ -126,6 +126,7 @@ describe('InstanceExporter', () => {
   });
 
   describe('#exportInstance', () => {
+    let questionnaire: Profile;
     let patient: Profile;
     let respRate: Profile;
     let patientProf: Profile;
@@ -138,6 +139,9 @@ describe('InstanceExporter', () => {
     let bundleInstance: Instance;
     beforeEach(() => {
       loggerSpy.reset();
+      questionnaire = new Profile('TestQuestionnaire');
+      questionnaire.parent = 'Questionnaire';
+      doc.profiles.set(questionnaire.name, questionnaire);
       patient = new Profile('TestPatient');
       patient.parent = 'Patient';
       doc.profiles.set(patient.name, patient);
@@ -1819,6 +1823,37 @@ describe('InstanceExporter', () => {
       // * active.extension.url = "http://example.com"
       patientInstance.rules.push(idRule);
       exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not log an error when a connected element fulfills the cardinality constraint', () => {
+      const caretRule = new CaretValueRule('item');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'type';
+      const containsRule = new ContainsRule('item');
+      containsRule.items.push({ name: 'boo' });
+      const cardRule = new CardRule('item[boo]');
+      cardRule.min = 0;
+      cardRule.max = '1';
+      // * item ^slicing.discriminator[0].path = "type"
+      // * item contains boo 0..1
+      questionnaire.rules.push(caretRule, containsRule, cardRule);
+      const answerRule = new AssignmentRule('item[boo].answerOption[0].valueString');
+      answerRule.value = 'foo';
+      const linkIdRule = new AssignmentRule('item[boo].linkId');
+      linkIdRule.value = 'bar';
+      const typeRule = new AssignmentRule('item[boo].type');
+      typeRule.value = new FshCode('group');
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * item[boo].answerOption[0].valueString = "foo"
+      // * item[boo].linkId = "bar"
+      // * item[boo].type = #group
+      // * status = #active
+      const questionnaireInstance = new Instance('Test');
+      questionnaireInstance.instanceOf = 'TestQuestionnaire';
+      questionnaireInstance.rules.push(answerRule, linkIdRule, typeRule, statusRule);
+      exportInstance(questionnaireInstance);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
