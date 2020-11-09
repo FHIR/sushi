@@ -142,7 +142,11 @@ export class InstanceExporter implements Fishable {
       let instanceChild = instance[`_${childPathEnd}`] ?? instance[childPathEnd];
       // If the element is a choice, we will fail to find it, we need to use the choice name
       if (instanceChild == null && childPathEnd.endsWith('[x]')) {
-        const choiceSlices = children.filter(c => c.path === child.path && c.sliceName);
+        const possibleChoiceSlices = children;
+        element
+          .findConnectedElements()
+          .forEach(ce => possibleChoiceSlices.push(...ce.children(true)));
+        const choiceSlices = possibleChoiceSlices.filter(c => c.path === child.path && c.sliceName);
         for (const choiceSlice of choiceSlices) {
           instanceChild = instance[choiceSlice.sliceName];
           if (instanceChild != null) {
