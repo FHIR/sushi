@@ -731,6 +731,11 @@ function parseMenu(yamlMenu: YAMLConfigurationMenuTree): ConfigurationMenuItem[]
       }
 
       if (value.includes('external ')) {
+        logger.warn(
+          'The "external" keyword in menu configuration has been deprecated. The IG Publisher' +
+            ' will add the external link icon. To resolve this warning, remove the "external"' +
+            ` keyword from the "${name}" menu item.`
+        );
         item.isExternal = true;
         value = value.replace('external', '');
       }

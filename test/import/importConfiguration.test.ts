@@ -1883,6 +1883,10 @@ describe('importConfiguration', () => {
           openInNewTab: true
         }
       ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /The "external" keyword in menu configuration has been deprecated/
+      );
     });
   });
 
