@@ -78,7 +78,7 @@ The following NPM tasks are useful in development:
 | **prettier** | checks all src files to ensure they follow project formatting conventions |
 | **prettier:fix** | fixes prettier errors by rewriting files using project formatting conventions |
 | **check** | runs all the checks performed as part of ci (test, lint, prettier) |
-| **regression** | runs regression against the repos in regression/all-repos.txt |
+| **regression** | runs regression against the repos in regression/all-repos.txt (mac only) |
 
 To run any of these tasks, use `npm run`.  For example:
 
@@ -87,6 +87,8 @@ $ npm run check
 ```
 
 # Regression
+
+_WARNING: The regression script currently works on Mac systems only.  It is not expected to work on Windows at this time._
 
 The `regression/run-regression.sh` script can be used to run regression on a set of repos.  It takes the following arguments:
 * `repoFile`: A text file for which each line is a GitHub clone URL for a repository to run regression on. `#` comments out a line.
