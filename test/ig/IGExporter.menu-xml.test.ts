@@ -9,7 +9,6 @@ import { minimalConfig } from '../utils/minimalConfig';
 import {
   simpleMenuXMLContent,
   simpleMenuXMLWithOpenInNewTabContent,
-  simpleMenuXMLWithExternalContent,
   subMenuXMLContent,
   subMenuWithWarningXMLContent
 } from './fixtures/menuXMLContent';
@@ -176,23 +175,6 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    it('should build menu with external icon when provided in config.menu', () => {
-      const config = { ...minimalConfig };
-      config.menu = [
-        { name: 'Animals', url: 'animals.html', isExternal: true },
-        { name: 'Plants', url: 'plants.html' },
-        { name: 'Other' }
-      ];
-      const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, '', true);
-      exporter.addMenuXML(tempOut);
-      const menuPath = path.join(tempOut, 'fsh-generated', 'includes', 'menu.xml');
-      expect(fs.existsSync(menuPath)).toBeTruthy();
-      const content = fs.readFileSync(menuPath, 'utf8');
-      expect(content).toContain(simpleMenuXMLWithExternalContent.replace(/\n/g, EOL));
-      expect(loggerSpy.getAllMessages()).toHaveLength(0);
-    });
-
     it('should build menu with a sub-menu when provided in config.menu', () => {
       const config = { ...minimalConfig };
       config.menu = [
@@ -202,7 +184,7 @@ describe('IGExporter', () => {
           subMenu: [
             { name: 'Trees', url: 'plants.html#trees' },
             { name: 'Flowers', url: 'buds.html' },
-            { name: 'Cacti', url: 'prickly.com', isExternal: true, openInNewTab: true }
+            { name: 'Cacti', url: 'prickly.com', openInNewTab: true }
           ]
         }
       ];

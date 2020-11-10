@@ -736,7 +736,6 @@ function parseMenu(yamlMenu: YAMLConfigurationMenuTree): ConfigurationMenuItem[]
             ' will add the external link icon. To resolve this warning, remove the "external"' +
             ` keyword from the "${name}" menu item.`
         );
-        item.isExternal = true;
         value = value.replace('external', '');
       }
 

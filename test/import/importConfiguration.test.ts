@@ -152,7 +152,6 @@ describe('importConfiguration', () => {
         {
           name: 'FHIR Spec',
           url: 'http://hl7.org/fhir/R4/index.html',
-          isExternal: true,
           openInNewTab: true
         }
       ],
@@ -1879,7 +1878,6 @@ describe('importConfiguration', () => {
         {
           name: 'FHIR Spec',
           url: 'http://hl7.org/fhir/R4/index.html',
-          isExternal: true,
           openInNewTab: true
         }
       ]);
