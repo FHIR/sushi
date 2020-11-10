@@ -10,5 +10,7 @@ build*/*
 /src/public/
 # custom definition files
 /src/types/
+# regression output
+/regression/output
 # generated source code
 **/generated
