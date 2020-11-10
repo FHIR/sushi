@@ -78,12 +78,38 @@ The following NPM tasks are useful in development:
 | **prettier** | checks all src files to ensure they follow project formatting conventions |
 | **prettier:fix** | fixes prettier errors by rewriting files using project formatting conventions |
 | **check** | runs all the checks performed as part of ci (test, lint, prettier) |
+| **regression** | runs regression against the repos in regression/all-repos.txt |
 
 To run any of these tasks, use `npm run`.  For example:
 
 ```sh
 $ npm run check
 ```
+
+# Regression
+
+The `regression/run-regression.sh` script can be used to run regression on a set of repos.  It takes the following arguments:
+* `repoFile`: A text file for which each line is a GitHub clone URL for a repository to run regression on. `#` comments out a line.
+  _(default: regression/all-repos.txt)_
+* `version1`: The base version of SUSHI to use. Can be a specific version number, `github:fhir/sushi#branch` to use a GitHub branch, or `local` to use the local code with `ts-node`.
+  _(default: github:fhir/sushi)_
+* `version2`: The version of SUSHI under test. Can be a specific version number, `github:fhir/sushi#branch` to use a GitHub branch, or `local` to use the local code with `ts-node`.
+  _(default: local)_
+
+For example:
+```sh
+$ regression/run-regression.sh regression/all-repos.txt 0.16.0 local
+```
+
+_NOTE: Using GitHub branches of SUSHI is slow. This may be optimized in the future._
+
+The regression script will do the following for each repository:
+1. Clone the repo from GitHub, creating two copies (for the base version of SUSHI and the version under test)
+2. Run the base version of SUSHI against one copy of the repo
+3. Run the version of SUSHI under test against the other copy of the repo
+4. Compare results and generate a report of the differences
+
+When the script is complete, it will generate and launch a top-level index file with links to the reports and logs for each repo.
 
 # Recommended Development Environment
 

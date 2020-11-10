@@ -14,6 +14,7 @@
     "prettier": "prettier --check \"**/*.{js,ts}\"",
     "prettier:fix": "prettier --write \"**/*.{js,ts}\"",
     "check": "npm run test && npm run lint && npm run prettier",
+    "regression": "bash regression/run-regression.sh",
     "prepare": "npm run build",
     "prepublishOnly": "npm run check && npm run fixGrammarTypes",
     "fixGrammarTypes": "ts-node dev/fixGrammarTypes.ts"
