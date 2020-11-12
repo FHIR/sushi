@@ -769,7 +769,6 @@ export class IGExporter {
       }
       menuItem += item.name;
       if (item.url) {
-        if (item.isExternal) menuItem += ' <img src="external.png" style="text-align: baseline"/>';
         menuItem += '</a>';
       }
       menuItem += `${EOL}${prefixSpaces}</li>${EOL}`;
