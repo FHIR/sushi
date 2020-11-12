@@ -2136,13 +2136,11 @@ describe('StructureDefinitionExporter', () => {
   });
 
   it('should apply a ContainsRule on an extension with defined slicing', () => {
-    // Profile: Foo
-    // Parent: resprate
+    // Extension: Foo
     // * extension contains bar
     // * extension[bar] ^slicing.discriminator.type = #pattern
     // * extension[bar] contains barReslice
-    const profile = new Profile('Foo');
-    profile.parent = 'resprate';
+    const extension = new Extension('Foo');
 
     const sliceRule = new ContainsRule('extension');
     sliceRule.items = [{ name: 'bar' }];
@@ -2151,13 +2149,13 @@ describe('StructureDefinitionExporter', () => {
     caretRule.value = new FshCode('pattern');
     const resliceRule = new ContainsRule('extension[bar]');
     resliceRule.items = [{ name: 'barReslice' }];
-    profile.rules.push(sliceRule, caretRule, resliceRule);
+    extension.rules.push(sliceRule, caretRule, resliceRule);
 
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-    const baseStructDef = fisher.fishForStructureDefinition('resprate');
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
+    const baseStructDef = fisher.fishForStructureDefinition('Extension');
 
-    const barReslice = sd.elements.find(e => e.id === 'Observation.extension:bar/barReslice');
+    const barReslice = sd.elements.find(e => e.id === 'Extension.extension:bar/barReslice');
 
     expect(sd.elements.length).toBe(baseStructDef.elements.length + 6);
     expect(barReslice).toBeDefined();
@@ -2322,32 +2320,31 @@ describe('StructureDefinitionExporter', () => {
     // for the code type.  This test initially failed and was assigned by changing the code that handles extension
     // slices to only look for Extension resolutions (as opposed to all types).
     // NOTE: This test is mainly irrelevant now that we switched to a syntax that distinguishes slice name from type.
-    const profile = new Profile('Foo');
-    profile.parent = 'Observation';
+    const extension = new Extension('Foo');
 
     const containsRule = new ContainsRule('extension');
     containsRule.items = [{ name: 'code' }];
-    profile.rules.push(containsRule);
+    extension.rules.push(containsRule);
 
     const onlyRule = new OnlyRule('extension[code].value[x]');
     onlyRule.types = [{ type: 'Quantity' }];
-    profile.rules.push(onlyRule);
+    extension.rules.push(onlyRule);
 
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
+    exporter.exportStructDef(extension);
+    const sd = pkg.extensions[0];
 
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
 
-    const extension = sd.elements.find(e => e.id === 'Observation.extension');
-    const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:code');
-    const extensionSliceUrl = sd.elements.find(e => e.id === 'Observation.extension:code.url');
+    const innerExtension = sd.elements.find(e => e.id === 'Extension.extension');
+    const extensionSlice = sd.elements.find(e => e.id === 'Extension.extension:code');
+    const extensionSliceUrl = sd.elements.find(e => e.id === 'Extension.extension:code.url');
     const extensionSliceValueX = sd.elements.find(
-      e => e.id === 'Observation.extension:code.value[x]'
+      e => e.id === 'Extension.extension:code.value[x]'
     );
 
-    expect(extension.slicing).toBeDefined();
-    expect(extension.slicing.discriminator.length).toBe(1);
-    expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+    expect(innerExtension.slicing).toBeDefined();
+    expect(innerExtension.slicing.discriminator.length).toBe(1);
+    expect(innerExtension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
     expect(extensionSlice).toBeDefined();
     expect(extensionSliceUrl).toBeDefined();
     expect(extensionSliceUrl.fixedUri).toBe('code');
@@ -3469,11 +3466,14 @@ describe('StructureDefinitionExporter', () => {
     patientProfile.parent = 'Patient';
 
     const containsRule = new ContainsRule('maritalStatus.extension');
-    containsRule.items = [{ name: 'maritalSlice' }];
+    containsRule.items = [{ name: 'maritalSlice', type: 'MaritalExtension' }];
     const sliceCardRule = new CardRule('maritalStatus.extension[maritalSlice].extension');
     sliceCardRule.min = 1;
     sliceCardRule.max = '2';
     patientProfile.rules.push(containsRule, sliceCardRule);
+
+    const extension = new Extension('MaritalExtension');
+    doc.extensions.set(extension.name, extension);
 
     exporter.exportStructDef(patientProfile);
     const sd = pkg.profiles[0];
@@ -3489,10 +3489,13 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Observation';
 
     const containsRule = new ContainsRule('extension');
-    containsRule.items = [{ name: 'EvidenceType' }];
+    containsRule.items = [{ name: 'EvidenceType', type: 'EvidenceExtension' }];
     const onlyRule = new OnlyRule('value[x]');
     onlyRule.types = [{ type: 'string' }];
     profile.rules.push(containsRule, onlyRule);
+
+    const extension = new Extension('EvidenceExtension');
+    doc.extensions.set(extension.name, extension);
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
@@ -3512,11 +3515,14 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Patient';
 
     const containsRule = new ContainsRule('extension');
-    containsRule.items = [{ name: 'PatientNote' }];
+    containsRule.items = [{ name: 'PatientNote', type: 'NoteExtension' }];
     const cardRule = new CardRule('extension[PatientNote].extension');
     cardRule.min = 1;
     cardRule.max = '1';
     profile.rules.push(containsRule, cardRule);
+
+    const noteExtension = new Extension('NoteExtension');
+    doc.extensions.set(noteExtension.name, noteExtension);
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
