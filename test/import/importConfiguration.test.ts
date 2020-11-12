@@ -152,7 +152,6 @@ describe('importConfiguration', () => {
         {
           name: 'FHIR Spec',
           url: 'http://hl7.org/fhir/R4/index.html',
-          isExternal: true,
           openInNewTab: true
         }
       ],
@@ -1879,10 +1878,13 @@ describe('importConfiguration', () => {
         {
           name: 'FHIR Spec',
           url: 'http://hl7.org/fhir/R4/index.html',
-          isExternal: true,
           openInNewTab: true
         }
       ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /The "external" keyword in menu configuration has been deprecated/
+      );
     });
   });
 

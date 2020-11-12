@@ -100,7 +100,7 @@ describe('YAMLConfiguration', () => {
         },
         Downloads: 'downloads.html',
         History: 'http://hl7.org/fhir/us/example/history.html',
-        'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html'
+        'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html'
       });
       expect(config.parameters).toEqual({
         excludettl: true,

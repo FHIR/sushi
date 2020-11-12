@@ -94,7 +94,7 @@ describe('ensureConfigurationFile', () => {
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: {
-          'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html'
+          'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html'
         }
       },
       history: {
@@ -164,7 +164,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       history: {
         current: 'http://build.fhir.org/ig/example/example-ig',
@@ -240,7 +240,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       history: {
         current: 'http://build.fhir.org/ig/example/example-ig',
@@ -339,7 +339,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       history: {
         current: 'http://build.fhir.org/ig/example/example-ig',
@@ -398,7 +398,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       history: {
         current: 'http://build.fhir.org/ig/example/example-ig',
@@ -471,7 +471,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       history: {
         current: 'http://build.fhir.org/ig/example/example-ig',
@@ -529,7 +529,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       // history should no longer exist since it will just use the provided package-list.json
       indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
@@ -631,7 +631,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       // history should still not exist since it will just use the provided package-list.json
       indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
@@ -744,7 +744,7 @@ describe('ensureConfigurationFile', () => {
       },
       'Artifact Index': 'artifacts.html',
       Support: {
-        'FHIR Spec': 'new-tab external {{site.data.fhir.path}}index.html',
+        'FHIR Spec': 'new-tab {{site.data.fhir.path}}index.html',
         Downloads: 'downloads.html'
       }
     });
@@ -794,7 +794,7 @@ describe('ensureConfigurationFile', () => {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab external http://hl7.org/fhir/R4/index.html' }
+        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
       history: {
         current: 'http://build.fhir.org/ig/example/example-ig',

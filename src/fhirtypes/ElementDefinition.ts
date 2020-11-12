@@ -546,7 +546,7 @@ export class ElementDefinition {
    * @param {string} postPath The path to append to the parent in order to try to find a connected element
    * @returns {ElementDefinition[]} The elements at or inside of slices whose path matches the original element
    */
-  private findConnectedElements(postPath = ''): ElementDefinition[] {
+  findConnectedElements(postPath = ''): ElementDefinition[] {
     const connectedElements = this.getSlices()
       .filter(e => e.max !== '0') // we don't need zeroed-out slices
       .map(slice => {

@@ -24,19 +24,6 @@ export const simpleMenuXMLWithOpenInNewTabContent = `
   </li>
 </ul>`;
 
-export const simpleMenuXMLWithExternalContent = `
-<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">
-  <li>
-    <a href="animals.html">Animals <img src="external.png" style="text-align: baseline"/></a>
-  </li>
-  <li>
-    <a href="plants.html">Plants</a>
-  </li>
-  <li>
-    Other
-  </li>
-</ul>`;
-
 export const subMenuXMLContent = `
 <ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">
   <li>
@@ -54,7 +41,7 @@ export const subMenuXMLContent = `
         <a href="buds.html">Flowers</a>
       </li>
       <li>
-        <a target="_blank" href="prickly.com">Cacti <img src="external.png" style="text-align: baseline"/></a>
+        <a target="_blank" href="prickly.com">Cacti</a>
       </li>
     </ul>
   </li>
