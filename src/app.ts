@@ -107,8 +107,14 @@ async function app() {
 
   try {
     const rawFSH = getRawFSHes(input);
-    if (rawFSH.length === 0) {
-      logger.info('No FSH files present.');
+    if (
+      rawFSH.length === 0 &&
+      !fs.existsSync(path.join(originalInput, 'config.yaml')) &&
+      !fs.existsSync(path.join(originalInput, 'sushi-config.yaml')) &&
+      !fs.existsSync(path.join(originalInput, 'fsh', 'config.yaml')) &&
+      !fs.existsSync(path.join(originalInput, 'fsh', 'sushi-config.yaml'))
+    ) {
+      logger.info('No FSH files or sushi-config.yaml present.');
       process.exit(0);
     }
     config = readConfig(isIgPubContext ? originalInput : input, isLegacyIgPubContext);
