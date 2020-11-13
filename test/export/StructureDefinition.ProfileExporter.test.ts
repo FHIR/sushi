@@ -6,7 +6,7 @@ import { Profile, Instance } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { CaretValueRule } from '../../src/fshtypes/rules';
+import { CaretValueRule, ContainsRule } from '../../src/fshtypes/rules';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -156,5 +156,24 @@ describe('ProfileExporter', () => {
     expect(exporter.deferredRules.size).toBe(1);
     expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
     expect(exporter.deferredRules.get(exported[0])).toContain(caretValueRule);
+  });
+
+  it('should log an error when an inline extension is used', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const containsRule = new ContainsRule('extension')
+      .withFile('MyObservation.fsh')
+      .withLocation([3, 8, 3, 25]);
+    containsRule.items.push({
+      name: 'SomeExtension'
+    });
+    profile.rules.push(containsRule);
+    doc.profiles.set(profile.name, profile);
+    exporter.export();
+
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyObservation\.fsh.*Line: 3\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Inline extensions should not be used on profiles/s
+    );
   });
 });

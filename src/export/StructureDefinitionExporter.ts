@@ -322,6 +322,10 @@ export class StructureDefinitionExporter implements Fishable {
           this
         );
         urlElement.assignValue(slice.sliceName, true);
+        // Inline extensions should not be used on profiles
+        if (fshDefinition instanceof Profile) {
+          logger.error('Inline extensions should not be used on profiles.', rule.sourceInfo);
+        }
       }
     });
   }

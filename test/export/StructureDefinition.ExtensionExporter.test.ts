@@ -6,6 +6,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
 import { minimalConfig } from '../utils/minimalConfig';
+import { ContainsRule } from '../../src/fshtypes/rules';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
@@ -144,5 +145,21 @@ describe('ExtensionExporter', () => {
     expect(exported[2].name).toBe('Foo');
     expect(exported[1].baseDefinition === exported[0].url);
     expect(exported[2].baseDefinition === exported[1].url);
+  });
+
+  it('should not log an error when an inline extension is used', () => {
+    loggerSpy.reset();
+    const extension = new Extension('MyExtension');
+    const containsRule = new ContainsRule('extension')
+      .withFile('MyExtension.fsh')
+      .withLocation([3, 8, 3, 25]);
+    containsRule.items.push({
+      name: 'SomeExtension'
+    });
+    extension.rules.push(containsRule);
+    doc.extensions.set(extension.name, extension);
+    exporter.export();
+
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
   });
 });
