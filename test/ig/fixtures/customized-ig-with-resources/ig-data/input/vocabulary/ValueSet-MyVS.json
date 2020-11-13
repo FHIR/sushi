@@ -1,6 +1,18 @@
 {
   "resourceType": "ValueSet",
   "id": "MyVS",
+  "meta": {
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/instance-description",
+        "valueMarkdown": "Ignored Description"
+      },
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/instance-name",
+        "valueString": "Ignored Name"
+      }
+    ]
+  },
   "url": "http://hl7.org/fhir/ValueSet/MyVS",
   "version": "4.0.1",
   "name": "Yes/No/Don't Know",

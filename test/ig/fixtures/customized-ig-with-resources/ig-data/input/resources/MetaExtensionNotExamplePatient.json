@@ -1,0 +1,17 @@
+{
+  "resourceType": "Patient",
+  "id": "MetaExtensionNotExamplePatient",
+  "meta": {
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/instance-description",
+        "valueMarkdown": "MetaExtensionNotExample Patient Description"
+      },
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/instance-name",
+        "valueString": "MetaExtensionNotExample Patient Name"
+      }
+    ]
+  },
+  "name": [{ "family": "MetaExtensionNotExample" }]
+}

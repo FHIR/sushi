@@ -1,4 +1,4 @@
-import { Coding } from './dataTypes';
+import { Coding, Extension } from './dataTypes';
 
 /**
  * Type to represent FHIR R4 resource metadata.
@@ -14,4 +14,5 @@ export type Meta = {
   profile?: string[];
   security?: Coding[];
   tag?: Coding[];
+  extension?: Extension[];
 };

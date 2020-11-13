@@ -986,8 +986,13 @@ export class IGExporter {
                 existingResource?.exampleBoolean || existingResource?.exampleCanonical;
               const existingName = existingIsExample ? existingResource.name : null;
               const existingDescription = existingIsExample ? existingResource.description : null;
+
+              const metaExtensionDescription = this.getMetaExtensionDescription(resourceJSON);
+              const metaExtensionName = this.getMetaExtensionName(resourceJSON);
+
               newResource.description =
                 configResource?.description ??
+                metaExtensionDescription ??
                 existingDescription ??
                 (CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resourceJSON.resourceType)
                   ? resourceJSON.description
@@ -1000,7 +1005,8 @@ export class IGExporter {
                 this.addGroup(newResource.groupingId);
               }
               if (pathEnd === 'examples') {
-                newResource.name = configResource?.name ?? existingName ?? resourceJSON.id;
+                newResource.name =
+                  configResource?.name ?? metaExtensionName ?? existingName ?? resourceJSON.id;
                 // set exampleCanonical or exampleBoolean, preferring configured values
                 if (configResource?.exampleCanonical) {
                   newResource.exampleCanonical = configResource.exampleCanonical;
@@ -1031,6 +1037,7 @@ export class IGExporter {
                 const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
                 newResource.name =
                   configResource?.name ??
+                  metaExtensionName ??
                   existingResource?.name ??
                   title ??
                   name ??
@@ -1140,6 +1147,24 @@ export class IGExporter {
           existingResource.groupingId = group.id;
         }
       }
+    }
+  }
+
+  private getMetaExtensionDescription(resource: InstanceDefinition): string {
+    const description = resource.meta?.extension?.find(
+      e => e.url === 'http://hl7.org/fhir/StructureDefinition/instance-description'
+    )?.valueMarkdown;
+    if (!CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resource.resourceType)) {
+      return description;
+    }
+  }
+
+  private getMetaExtensionName(resource: InstanceDefinition): string {
+    const name = resource.meta?.extension?.find(
+      e => e.url === 'http://hl7.org/fhir/StructureDefinition/instance-name'
+    )?.valueString;
+    if (!CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resource.resourceType)) {
+      return name;
     }
   }
 

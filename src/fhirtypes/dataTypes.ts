@@ -73,6 +73,7 @@ export type Element = {
  */
 export type Extension = {
   url: string;
+  [key: string]: any;
 };
 
 /**
