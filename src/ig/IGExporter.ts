@@ -1154,11 +1154,7 @@ export class IGExporter {
     const description = resource.meta?.extension?.find(
       e => e.url === 'http://hl7.org/fhir/StructureDefinition/instance-description'
     )?.valueString;
-    const definition = this.fhirDefs.fishForFHIR(resource.resourceType, Type.Resource);
-    if (
-      definition &&
-      !definition.snapshot.element.find((e: any) => e.id === `${resource.resourceType}.description`)
-    ) {
+    if (!CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resource.resourceType)) {
       return description;
     }
   }
@@ -1167,11 +1163,7 @@ export class IGExporter {
     const name = resource.meta?.extension?.find(
       e => e.url === 'http://hl7.org/fhir/StructureDefinition/instance-name'
     )?.valueString;
-    const definition = this.fhirDefs.fishForFHIR(resource.resourceType, Type.Resource);
-    if (
-      definition &&
-      !definition.snapshot.element.find((e: any) => e.id === `${resource.resourceType}.title`)
-    ) {
+    if (!CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resource.resourceType)) {
       return name;
     }
   }
