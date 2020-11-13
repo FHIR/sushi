@@ -867,12 +867,16 @@ describe('IGExporter', () => {
         'StructureDefinition-MyPatient.json',
         'StructureDefinition-MyTitlePatient.json'
       ]);
-      expect(directoryContents.get('resources')).toEqual(['Patient-BazPatient.json']);
+      expect(directoryContents.get('resources')).toEqual([
+        'Patient-BazPatient.json',
+        'Patient-MetaExtensionNotExamplePatient.json'
+      ]);
       expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
       expect(directoryContents.get('examples')).toEqual([
         'Goal-GoalWithDescription.json',
         'Patient-BarPatient.json',
-        'Patient-FooPatient.json' // Renamed from "PoorlyNamedPatient.json"
+        'Patient-FooPatient.json', // Renamed from "PoorlyNamedPatient.json"
+        'Patient-MetaExtensionPatient.json'
       ]);
     });
   });
@@ -1113,6 +1117,104 @@ describe('IGExporter', () => {
           reference: 'StructureDefinition/MyTitlePatient'
         },
         name: 'This patient has a title',
+        exampleBoolean: false
+      });
+    });
+
+    it('should add resource references with a description and name extension to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/MetaExtensionPatient'
+        },
+        name: 'MetaExtension Patient Name',
+        description: 'MetaExtension Patient Description',
+        exampleBoolean: true
+      });
+    });
+
+    it('should prefer configured names and descriptions to extensions on resource references', () => {
+      config.resources = [
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionPatient'
+          },
+          name: 'Configured Name',
+          description: 'Configured Description'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/MetaExtensionPatient'
+        },
+        name: 'Configured Name',
+        description: 'Configured Description',
+        exampleBoolean: true
+      });
+    });
+
+    it('should add non example resource references with a description and name extension to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/MetaExtensionNotExamplePatient'
+        },
+        name: 'MetaExtensionNotExample Patient Name',
+        description: 'MetaExtensionNotExample Patient Description',
+        exampleBoolean: false
+      });
+    });
+
+    it('should prefer non example configured names and descriptions to extensions on resource references', () => {
+      config.resources = [
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionNotExamplePatient'
+          },
+          name: 'Configured Name',
+          description: 'Configured Description'
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/MetaExtensionNotExamplePatient'
+        },
+        name: 'Configured Name',
+        description: 'Configured Description',
         exampleBoolean: false
       });
     });
