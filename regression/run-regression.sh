@@ -100,7 +100,7 @@ if [[ $repo =~ ^(git@github\.com:|git://github\.com/|https://github\.com/)(.*)/(
   if [ -s "$name.diff" ]
   then
     printf ": CHANGED"
-    npx -q diff2html -i file -s side --hwt template.html -F "$name-diff-report.html" -- "$name.diff"
+    npx -q diff2html-cli -i file -s side --hwt template.html -F "$name-diff-report.html" -- "$name.diff"
     result="<a href=\"$name/$name-diff-report.html\">$name-diff-report.html</a>"
   else
     printf ": SAME"
