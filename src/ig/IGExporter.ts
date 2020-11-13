@@ -1153,7 +1153,7 @@ export class IGExporter {
   private getMetaExtensionDescription(resource: InstanceDefinition): string {
     const description = resource.meta?.extension?.find(
       e => e.url === 'http://hl7.org/fhir/StructureDefinition/instance-description'
-    )?.valueString;
+    )?.valueMarkdown;
     if (!CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resource.resourceType)) {
       return description;
     }
