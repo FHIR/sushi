@@ -66,7 +66,15 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
       FSHOnly: true
     };
     logger.info(`Extracting FSHOnly configuration from ${igPath}:`);
-    Object.entries(config).forEach(e => logger.info(`  ${e[0]}: ${JSON.stringify(e[1])}`));
+    Object.entries(config).forEach(e => {
+      if (Array.isArray(e[1])) {
+        e[1].forEach((sub: any, i: number) => {
+          logger.info(`  ${e[0]}[${i}]: ${JSON.stringify(sub)}`);
+        });
+      } else {
+        logger.info(`  ${e[0]}: ${JSON.stringify(e[1])}`);
+      }
+    });
     return config;
   }
   return null;
