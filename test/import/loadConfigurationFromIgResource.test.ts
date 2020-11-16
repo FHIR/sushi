@@ -48,7 +48,7 @@ describe('loadConfigurationFromIgResource', () => {
     );
     expect(loggerSpy.getMessageAtIndex(1, 'info')).toEqual('  canonical: "http://example.org"');
     expect(loggerSpy.getMessageAtIndex(2, 'info')).toEqual('  version: "1.0.0"');
-    expect(loggerSpy.getMessageAtIndex(3, 'info')).toEqual('  fhirVersion: ["4.0.1"]');
+    expect(loggerSpy.getMessageAtIndex(3, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
     expect(loggerSpy.getMessageAtIndex(4, 'info')).toEqual(
       '  dependencies[0]: {"packageId":"foo.bar","version":"1.2.3"}'
     );
