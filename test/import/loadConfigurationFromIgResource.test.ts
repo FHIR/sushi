@@ -50,9 +50,12 @@ describe('loadConfigurationFromIgResource', () => {
     expect(loggerSpy.getMessageAtIndex(2, 'info')).toEqual('  version: "1.0.0"');
     expect(loggerSpy.getMessageAtIndex(3, 'info')).toEqual('  fhirVersion: ["4.0.1"]');
     expect(loggerSpy.getMessageAtIndex(4, 'info')).toEqual(
-      '  dependencies: [{"packageId":"foo.bar","version":"1.2.3"},{"packageId":"bar.foo","version":"current"}]'
+      '  dependencies[0]: {"packageId":"foo.bar","version":"1.2.3"}'
     );
-    expect(loggerSpy.getMessageAtIndex(5, 'info')).toEqual('  FSHOnly: true');
+    expect(loggerSpy.getMessageAtIndex(5, 'info')).toEqual(
+      '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual('  FSHOnly: true');
   });
 
   it('should extract an XML configuration with a url and dependencies', () => {

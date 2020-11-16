@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import ini from 'ini';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
 import { Configuration } from '../fshtypes';
-import { ImplementationGuide } from '../fhirtypes';
+import { ImplementationGuide, ImplementationGuideDependsOn } from '../fhirtypes';
 import { logger } from '../utils';
 
 /**
@@ -66,7 +66,15 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
       FSHOnly: true
     };
     logger.info(`Extracting FSHOnly configuration from ${igPath}:`);
-    Object.entries(config).forEach(e => logger.info(`  ${e[0]}: ${JSON.stringify(e[1])}`));
+    Object.entries(config).forEach(e => {
+      if (e[0] === 'dependencies') {
+        (e[1] as ImplementationGuideDependsOn[])?.forEach((dep, i) =>
+          logger.info(`  dependencies[${i}]: ${JSON.stringify(dep)}`)
+        );
+      } else {
+        logger.info(`  ${e[0]}: ${JSON.stringify(e[1])}`);
+      }
+    });
     return config;
   }
   return null;
