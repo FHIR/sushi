@@ -1700,7 +1700,9 @@ export class ElementDefinition {
         if (json) {
           const def = StructureDefinition.fromJSON(json);
           // Content references start with #, slice that off to id of referenced element
-          const referencedElement = def.findElement(this.contentReference.slice(1));
+          const referencedElement = def.findElement(
+            this.contentReference.slice(this.contentReference.indexOf('#') + 1)
+          );
           newElements = referencedElement?.children().map(e => {
             const eClone = e.clone();
             eClone.id = eClone.id.replace(referencedElement.id, this.id);

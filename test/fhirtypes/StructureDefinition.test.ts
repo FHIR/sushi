@@ -793,6 +793,27 @@ describe('StructureDefinition', () => {
       expect(valueSet.elements.length).toBe(originalLength + 26);
     });
 
+    it('should find a child of a content reference element by path when the reference uses a full URI', () => {
+      const originalLength = valueSet.elements.length;
+      // Modify system on the current ValueSet to test that we are copying from original SD
+      // not the profiled SD
+      const include = valueSet.elements.find(e => e.id === 'ValueSet.compose.include');
+      const includeSystem = valueSet.elements.find(e => e.id === 'ValueSet.compose.include.system');
+      includeSystem.short = 'This should not get copied over!';
+      const exclude = valueSet.elements.find(e => e.id === 'ValueSet.compose.exclude');
+
+      // Set the content reference to be a complete path
+      exclude.contentReference =
+        'http://hl7.org/fhir/StructureDefinition/ValueSet#ValueSet.compose.include';
+      const excludeSystem = valueSet.findElementByPath('compose.exclude.system', fisher);
+      expect(excludeSystem).toBeDefined();
+      expect(excludeSystem.id).toBe('ValueSet.compose.exclude.system');
+      expect(excludeSystem.short).toBe('The system the codes come from');
+      expect(exclude.contentReference).toBeUndefined();
+      expect(exclude.type).toEqual(include.type);
+      expect(valueSet.elements.length).toBe(originalLength + 26);
+    });
+
     it('should find a child of a slice content reference by path', () => {
       const originalLength = valueSet.elements.length;
       const include = valueSet.elements.find(e => e.id === 'ValueSet.compose.include');
