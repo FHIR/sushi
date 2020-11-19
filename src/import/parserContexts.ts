@@ -108,6 +108,7 @@ export interface InvariantMetadataContext extends ParserRuleContext {
 
 export interface RuleSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
+  PARAMETER_LIST(): ParserRuleContext;
   ruleSetRule(): RuleSetRuleContext[];
 }
 

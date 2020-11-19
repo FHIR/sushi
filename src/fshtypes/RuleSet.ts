@@ -6,10 +6,12 @@ import { Rule } from './rules/Rule';
  */
 export class RuleSet extends FshEntity {
   rules: Rule[];
+  parameters: string[];
 
   constructor(public name: string) {
     super();
     this.rules = [];
+    this.parameters = [];
   }
 
   /**

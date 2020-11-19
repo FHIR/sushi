@@ -24,7 +24,7 @@ codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* csRule*;
 csMetadata:         id | title | description;
 csRule:             concept | caretValueRule | insertRule;
 
-ruleSet:            KW_RULESET SEQUENCE ruleSetRule+;
+ruleSet:            KW_RULESET SEQUENCE PARAMETER_LIST? ruleSetRule+;
 ruleSetRule:        sdRule | concept | vsComponent;
 
 mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingEntityRule*;
@@ -192,6 +192,8 @@ REGEX:              '/' ('\\/' | ~[*/\r\n])('\\/' | ~[/\r\n])* '/';
 
 
 COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
+
+PARAMETER_LIST: '(' (SEQUENCE WS* COMMA WS*)* SEQUENCE ')';
 
                         // (NON-WS  WS  ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;

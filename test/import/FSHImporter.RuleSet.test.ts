@@ -121,6 +121,25 @@ describe('FSHImporter', () => {
       );
     });
 
+    it('should parse a RuleSet with declared parameters', () => {
+      const input = `
+        RuleSet: ParameterizedRuleSet (system, strength)
+        * component 1..*
+      `;
+      const result = importSingleText(input, 'Rules.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('ParameterizedRuleSet');
+      expect(ruleSet.name).toBe('ParameterizedRuleSet');
+      expect(ruleSet.sourceInfo.location).toEqual({
+        startLine: 2,
+        startColumn: 9,
+        endLine: 3,
+        endColumn: 24
+      });
+      expect(ruleSet.parameters).toEqual(['system', 'strength']);
+      assertCardRule(ruleSet.rules[0], 'component', 1, '*');
+    });
+
     it('should log an error when parsing a mixin with no rules', () => {
       const input = `
         RuleSet: EmptyRuleSet

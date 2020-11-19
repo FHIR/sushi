@@ -561,6 +561,14 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
+      if (ctx.PARAMETER_LIST()) {
+        ruleSet.parameters = ctx
+          .PARAMETER_LIST()
+          .getText()
+          .replace(/(^\()|(\)$)/g, '')
+          .split(',')
+          .map(param => param.trim());
+      }
       this.parseRuleSet(ruleSet, ctx.ruleSetRule());
       this.currentDoc.ruleSets.set(ruleSet.name, ruleSet);
     }
