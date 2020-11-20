@@ -121,10 +121,12 @@ describe('FSHImporter', () => {
       );
     });
 
-    it('should parse a RuleSet with declared parameters', () => {
+    it('should parse a parameterized RuleSet', () => {
       const input = `
         RuleSet: ParameterizedRuleSet (system, strength)
         * component 1..*
+        * code from {system} {strength}
+        * component.code = {system}#12345
       `;
       const result = importSingleText(input, 'Rules.fsh');
       expect(result.ruleSets.size).toBe(1);
@@ -133,11 +135,18 @@ describe('FSHImporter', () => {
       expect(ruleSet.sourceInfo.location).toEqual({
         startLine: 2,
         startColumn: 9,
-        endLine: 3,
-        endColumn: 24
+        endLine: 5,
+        endColumn: 41
       });
       expect(ruleSet.parameters).toEqual(['system', 'strength']);
+
       assertCardRule(ruleSet.rules[0], 'component', 1, '*');
+      assertBindingRule(ruleSet.rules[1], 'code', '{system}', '{strength}');
+      assertAssignmentRule(
+        ruleSet.rules[2],
+        'component.code',
+        new FshCode('12345', '{system}').withFile('Rules.fsh').withLocation([5, 28, 5, 41])
+      );
     });
 
     it('should log an error when parsing a mixin with no rules', () => {

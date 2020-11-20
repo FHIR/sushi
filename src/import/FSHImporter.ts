@@ -1049,7 +1049,11 @@ export class FSHImporter extends FSHVisitor {
     const vsRule = new BindingRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
+    if (ctx.SEQUENCE()) {
+      vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
+    } else {
+      vsRule.valueSet = ctx.SUBSTITUTION().getText();
+    }
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     if (ctx.KW_UNITS()) {
       logger.warn(
@@ -1067,6 +1071,8 @@ export class FSHImporter extends FSHVisitor {
       return 'preferred';
     } else if (ctx.KW_EXTENSIBLE()) {
       return 'extensible';
+    } else if (ctx.SUBSTITUTION()) {
+      return ctx.SUBSTITUTION().getText();
     }
     return 'required';
   }
