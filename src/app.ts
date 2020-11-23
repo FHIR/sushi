@@ -246,14 +246,19 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'Ex-clam-ation point!',
     'Ac-clam-ations!',
     'Fin-tastic job!',
-    "You're dolphinitely doing great!"
+    'You are dolphinitely doing great!',
+    'It doesn’t get any betta than this',
+    'You’re piranha roll now!'
   ],
   warnings: [
     'Not bad, but you cod do batter!',
     'Something smells fishy...',
     'Warnings... Water those about?',
     'Looks like you are casting about.',
-    'A bit pitchy, but tuna-ble.'
+    'A bit pitchy, but tuna-ble.',
+    'Do you sea the problem?',
+    'You are skating on fin ice',
+    'You should mullet over'
   ],
   errors: [
     'Ick! Errors!',
@@ -266,7 +271,11 @@ const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
     'The docs might be bene-fish-al.',
     'This was a turtle disaster.',
     'Something went eely wrong there.',
-    'Documentation may be kelp-ful.'
+    'Documentation may be kelp-ful.',
+    'You should do some sole searching.',
+    'Call a FSH sturgeon!',
+    'This is giving me a haddock.',
+    'You whaley need to turn this around'
   ]
 };
 
