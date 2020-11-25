@@ -1216,9 +1216,10 @@
       }
     },
     "@types/antlr4": {
-      "version": "4.7.1",
-      "resolved": "https://registry.npmjs.org/@types/antlr4/-/antlr4-4.7.1.tgz",
-      "integrity": "sha512-mjQv+WtdJnwI5qhNh5yJkZ9rVFdRClUyaO5KebaLSJFHT6uSyDLAK9jUke4zLKZXk6vQQ/QJN2j7QV2q7l5Slw=="
+      "version": "4.7.2",
+      "resolved": "https://registry.npmjs.org/@types/antlr4/-/antlr4-4.7.2.tgz",
+      "integrity": "sha512-v6NASzZa4pUgO2QJJqGHTRRBfZDTOk2savuugSfCLatRTd2q+UtW0I7ub9mjzERhm7aWqGxBi886HnJkLYiIEA==",
+      "dev": true
     },
     "@types/babel__core": {
       "version": "7.1.6",
