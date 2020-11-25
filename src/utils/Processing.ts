@@ -77,7 +77,8 @@ export function findInputDir(input: string): string {
     msg +=
       '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
       '  - add /fsh-generated to your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
-      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n`;
+      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n` +
+      'For detailed migration instructions, see: https://fshschool.org/docs/sushi/migration/\n\n';
     logger.warn(msg);
   }
   return input;
