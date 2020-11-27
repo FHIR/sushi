@@ -13,6 +13,7 @@ export interface EntityContext extends ParserRuleContext {
   codeSystem(): CodeSystemContext;
   invariant(): InvariantContext;
   ruleSet(): RuleSetContext;
+  paramRuleSet(): ParamRuleSetContext;
   mapping(): MappingContext;
 }
 
@@ -108,7 +109,7 @@ export interface InvariantMetadataContext extends ParserRuleContext {
 
 export interface RuleSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
-  PARAMETER_LIST(): ParserRuleContext;
+
   ruleSetRule(): RuleSetRuleContext[];
 }
 
@@ -116,6 +117,16 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   sdRule(): SdRuleContext;
   vsComponent(): VsComponentContext;
   concept(): ConceptContext;
+}
+
+export interface ParamRuleSetContext extends ParserRuleContext {
+  SEQUENCE(): ParserRuleContext;
+  PARAMETER_LIST(): ParserRuleContext;
+  paramRuleSetRule(): ParamRuleSetRuleContext[];
+}
+
+export interface ParamRuleSetRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
 }
 
 export interface MappingContext extends ParserRuleContext {

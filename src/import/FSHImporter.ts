@@ -24,6 +24,7 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
+  ParamRuleSet,
   Mapping,
   isInstanceUsage
 } from '../fshtypes';
@@ -59,6 +60,7 @@ import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
 import { parseCodeLexeme } from './parseCodeLexeme';
+import { EOL } from 'os';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -130,6 +132,7 @@ export class FSHImporter extends FSHVisitor {
   private currentFile: string;
   private currentDoc: FSHDocument;
   private allAliases: Map<string, string>;
+  paramRuleSets: Map<string, ParamRuleSet>;
 
   constructor() {
     super();
@@ -137,6 +140,7 @@ export class FSHImporter extends FSHVisitor {
 
   import(rawFSHes: RawFSH[]): FSHDocument[] {
     this.allAliases = new Map();
+    this.paramRuleSets = new Map();
     const docs: FSHDocument[] = [];
     const contexts: pc.DocContext[] = [];
 
@@ -175,6 +179,9 @@ export class FSHImporter extends FSHVisitor {
             this.allAliases.set(name, value);
             doc.aliases.set(name, value);
           }
+        }
+        if (e.paramRuleSet()) {
+          this.visitParamRuleSet(e.paramRuleSet());
         }
       });
     });
@@ -561,14 +568,6 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      if (ctx.PARAMETER_LIST()) {
-        ruleSet.parameters = ctx
-          .PARAMETER_LIST()
-          .getText()
-          .replace(/(^\()|(\)$)/g, '')
-          .split(',')
-          .map(param => param.trim());
-      }
       this.parseRuleSet(ruleSet, ctx.ruleSetRule());
       this.currentDoc.ruleSets.set(ruleSet.name, ruleSet);
     }
@@ -584,6 +583,35 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
       }
     });
+  }
+
+  visitParamRuleSet(ctx: pc.ParamRuleSetContext): void {
+    const paramRuleSet = new ParamRuleSet(ctx.SEQUENCE().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.paramRuleSets.has(paramRuleSet.name)) {
+      logger.error(`Skipping RuleSet: a RuleSet named ${paramRuleSet.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      paramRuleSet.parameters = ctx
+        .PARAMETER_LIST()
+        .getText()
+        .replace(/(^\()|(\)$)/g, '')
+        .split(',')
+        .map(param => param.trim());
+      paramRuleSet.contents = ctx
+        .paramRuleSetRule()
+        .map(rule => this.visitParamRuleSetRule(rule))
+        .join(EOL);
+      this.paramRuleSets.set(paramRuleSet.name, paramRuleSet);
+    }
+  }
+
+  visitParamRuleSetRule(ctx: pc.ParamRuleSetRuleContext): string {
+    const result = ctx.start.getInputStream().getText(ctx.start.start, ctx.stop.stop);
+    return result;
   }
 
   visitMapping(ctx: pc.MappingContext): void {

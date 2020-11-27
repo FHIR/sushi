@@ -121,48 +121,12 @@ describe('FSHImporter', () => {
       );
     });
 
-    it('should parse a parameterized RuleSet', () => {
-      const input = `
-        RuleSet: ParameterizedRuleSet (system, strength)
-        * component 1..*
-        * code from {system} {strength}
-        * component.code = {system}#12345
-      `;
-      const result = importSingleText(input, 'Rules.fsh');
-      expect(result.ruleSets.size).toBe(1);
-      const ruleSet = result.ruleSets.get('ParameterizedRuleSet');
-      expect(ruleSet.name).toBe('ParameterizedRuleSet');
-      expect(ruleSet.sourceInfo.location).toEqual({
-        startLine: 2,
-        startColumn: 9,
-        endLine: 5,
-        endColumn: 41
-      });
-      expect(ruleSet.parameters).toEqual(['system', 'strength']);
-
-      assertCardRule(ruleSet.rules[0], 'component', 1, '*');
-      assertBindingRule(ruleSet.rules[1], 'code', '{system}', '{strength}');
-      assertAssignmentRule(
-        ruleSet.rules[2],
-        'component.code',
-        new FshCode('12345', '{system}').withFile('Rules.fsh').withLocation([5, 28, 5, 41])
-      );
-    });
-
     it('should log an error when parsing a mixin with no rules', () => {
       const input = `
         RuleSet: EmptyRuleSet
         `;
       const result = importSingleText(input, 'Empty.fsh');
-      expect(result.ruleSets.size).toBe(1);
-      const ruleSet = result.ruleSets.get('EmptyRuleSet');
-      expect(ruleSet.name).toBe('EmptyRuleSet');
-      expect(ruleSet.sourceInfo.location).toEqual({
-        startLine: 2,
-        startColumn: 9,
-        endLine: 2,
-        endColumn: 29
-      });
+      expect(result.ruleSets.size).toBe(0);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Empty\.fsh.*Line: 4\D*/s);
     });
 
