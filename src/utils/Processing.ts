@@ -37,13 +37,16 @@ export function findInputDir(input: string): string {
   // TODO: Legacy support. Remove when no longer supported.
   // Use input/fsh/ subdirectory if not already specified and present
   const inputFshSubdirectoryPath = path.join(originalInput, 'input', 'fsh');
+  const inputSubdirectoryPath = path.join(originalInput, 'input');
   if (fs.existsSync(inputFshSubdirectoryPath)) {
+    input = path.join(originalInput, 'input', 'fsh');
+  } else if (fs.existsSync(inputSubdirectoryPath)) {
     input = path.join(originalInput, 'input', 'fsh');
   }
 
   // Use fsh/ subdirectory if not already specified and present
   const fshSubdirectoryPath = path.join(originalInput, 'fsh');
-  if (!fs.existsSync(inputFshSubdirectoryPath)) {
+  if (!fs.existsSync(inputFshSubdirectoryPath) && !fs.existsSync(inputSubdirectoryPath)) {
     let msg =
       '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n';
     if (fs.existsSync(fshSubdirectoryPath)) {
@@ -187,6 +190,13 @@ export function loadExternalDependencies(
 export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
   try {
+    if (
+      path.basename(path.dirname(input)) === 'input' &&
+      path.basename(input) === 'fsh' &&
+      !fs.existsSync(input)
+    ) {
+      return [];
+    }
     files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');

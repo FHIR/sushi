@@ -31,9 +31,14 @@ describe('Processing', () => {
       tempRoot = temp.mkdirSync('sushi-test');
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirpSync(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'has-input', 'input'));
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
     });
 
     afterAll(() => {
@@ -59,6 +64,13 @@ describe('Processing', () => {
       const input = path.join(tempRoot, 'has-input-fsh');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
+    });
+
+    it('should use path to input/fsh as input if input/ subdirectory present but no input/fsh present', () => {
+      const input = path.join(tempRoot, 'has-input');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'has-input', 'input', 'fsh'));
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
     // TODO: Tests legacy support. Remove when no longer supported.
@@ -312,6 +324,10 @@ describe('Processing', () => {
   });
 
   describe('#getRawFSHes()', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
     it('should return a RawFSH for each file in the input directory that ends with .fsh', () => {
       const input = path.join(__dirname, 'fixtures', 'fsh-files');
       const rawFSHes = getRawFSHes(input);
@@ -324,6 +340,13 @@ describe('Processing', () => {
         content: '// Content of second file',
         path: path.join(input, 'second.fsh')
       });
+    });
+
+    it('should not throw and error and find no FSH files if input ends with input/fsh but there is not fsh subdirectory', () => {
+      const input = path.join(__dirname, 'fixtures', 'config-only', 'input', 'fsh');
+      const rawFSHes = getRawFSHes(input);
+      expect(rawFSHes.length).toBe(0);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
     it('should log and throw an error when the input path is invalid', () => {
