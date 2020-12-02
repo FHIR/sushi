@@ -332,10 +332,6 @@ describe('Processing', () => {
   });
 
   describe('#getRawFSHes()', () => {
-    beforeEach(() => {
-      loggerSpy.reset();
-    });
-
     it('should return a RawFSH for each file in the input directory that ends with .fsh', () => {
       const input = path.join(__dirname, 'fixtures', 'fsh-files');
       const rawFSHes = getRawFSHes(input);
@@ -348,13 +344,6 @@ describe('Processing', () => {
         content: '// Content of second file',
         path: path.join(input, 'second.fsh')
       });
-    });
-
-    it('should not throw and error and find no FSH files if input ends with input/fsh but there is not fsh subdirectory', () => {
-      const input = path.join(__dirname, 'fixtures', 'config-only', 'input', 'fsh');
-      const rawFSHes = getRawFSHes(input);
-      expect(rawFSHes.length).toBe(0);
-      expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
     it('should log and throw an error when the input path is invalid', () => {

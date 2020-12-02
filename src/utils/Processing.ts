@@ -204,13 +204,6 @@ export function loadExternalDependencies(
 export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
   try {
-    if (
-      path.basename(path.dirname(input)) === 'input' &&
-      path.basename(input) === 'fsh' &&
-      !fs.existsSync(input)
-    ) {
-      return [];
-    }
     files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');
