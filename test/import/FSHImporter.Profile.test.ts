@@ -1816,6 +1816,18 @@ describe('FSHImporter', () => {
         expect(profile.rules).toHaveLength(1);
         assertInsertRule(profile.rules[0], 'MyRuleSet');
       });
+
+      it('should parse an insert rule with a single RuleSet with parameters', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MyRuleSet (ahoy, matey)
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MyRuleSet', ['ahoy', 'matey']);
+      });
     });
   });
 });

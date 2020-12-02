@@ -89,7 +89,7 @@ paramRuleSetRule:   STAR
                     | REGEX
                     | COMMA_DELIMITED_CODES
                     | PARAMETER_LIST
-                    | SUBSTITUTION
+                    | APPLIED_PARAMETER_LIST
                     | COMMA_DELIMITED_SEQUENCES
                     | SEQUENCE
                     )+; // how exhausting!
@@ -116,14 +116,21 @@ target:             KW_TARGET STRING;
 // RULES
 cardRule:           STAR path CARD flag*;
 flagRule:           STAR ((path KW_AND)* path | paths) flag+;
-valueSetRule:       STAR path KW_UNITS? KW_FROM (SEQUENCE|SUBSTITUTION) strength?;
+valueSetRule:       STAR path KW_UNITS? KW_FROM SEQUENCE strength?;
 fixedValueRule:     STAR path KW_UNITS? EQUAL value KW_EXACTLY?;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
-insertRule:         STAR KW_INSERT SEQUENCE;
+insertRule:         STAR KW_INSERT SEQUENCE insertRuleParams?;
+insertRuleParams:   PARAMETER_LIST
+                    | APPLIED_PARAMETER_LIST
+                    | SEQUENCE
+                    | KW_EXAMPLE
+                    | KW_PREFERRED
+                    | KW_EXTENSIBLE
+                    | KW_REQUIRED;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );
@@ -144,7 +151,7 @@ path:               SEQUENCE | KW_SYSTEM;
 paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
-strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED | SUBSTITUTION;
+strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              SEQUENCE | STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | canonical | code | quantity | ratio | bool ;
 item:               SEQUENCE (KW_NAMED SEQUENCE)? CARD flag*;
 code:               CODE STRING?;
@@ -262,7 +269,7 @@ COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
 
 PARAMETER_LIST: '(' (SEQUENCE WS* COMMA WS*)* SEQUENCE ')';
 
-SUBSTITUTION: '{' WS* SEQUENCE WS* '}';
+APPLIED_PARAMETER_LIST: '(' ('\\)' | '\\\\' | ~[\r\n])+')';
 
                         // (NON-WS  WS  ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;

@@ -247,7 +247,6 @@ export interface FlagContext extends ParserRuleContext {
 export interface ValueSetRuleContext extends ParserRuleContext {
   path(): PathContext;
   SEQUENCE(): ParserRuleContext;
-  SUBSTITUTION(): ParserRuleContext;
   strength(): StrengthContext;
   KW_UNITS(): ParserRuleContext;
 }
@@ -257,7 +256,6 @@ export interface StrengthContext extends ParserRuleContext {
   KW_PREFERRED(): ParserRuleContext;
   KW_EXTENSIBLE(): ParserRuleContext;
   KW_REQUIRED(): ParserRuleContext;
-  SUBSTITUTION(): ParserRuleContext;
 }
 
 export interface FixedValueRuleContext extends ParserRuleContext {
@@ -356,6 +354,17 @@ export interface CaretValueRuleContext extends ParserRuleContext {
 
 export interface InsertRuleContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
+  insertRuleParams(): InsertRuleParamsContext;
+}
+
+export interface InsertRuleParamsContext extends ParserRuleContext {
+  PARAMETER_LIST(): ParserRuleContext;
+  APPLIED_PARAMETER_LIST(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
+  KW_EXAMPLE(): ParserRuleContext;
+  KW_PREFERRED(): ParserRuleContext;
+  KW_EXTENSIBLE(): ParserRuleContext;
+  KW_REQUIRED(): ParserRuleContext;
 }
 
 export interface MappingRuleContext extends ParserRuleContext {

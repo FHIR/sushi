@@ -149,6 +149,8 @@ export class FSHImporter extends FSHVisitor {
       // Create and store doc for main import process
       const doc = new FSHDocument(rawFSH.path);
       docs.push(doc);
+      this.currentDoc = doc;
+      this.currentFile = this.currentDoc.file ?? '';
 
       // Create and store context for main import process
       // We are appending a newline to the file content if there is not one there already.
@@ -184,6 +186,8 @@ export class FSHImporter extends FSHVisitor {
           this.visitParamRuleSet(e.paramRuleSet());
         }
       });
+      this.currentDoc = null;
+      this.currentFile = null;
     });
     logger.info(`Preprocessed ${docs.length} documents with ${this.allAliases.size} aliases.`);
 
@@ -1077,11 +1081,7 @@ export class FSHImporter extends FSHVisitor {
     const vsRule = new BindingRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (ctx.SEQUENCE()) {
-      vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
-    } else {
-      vsRule.valueSet = ctx.SUBSTITUTION().getText();
-    }
+    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     if (ctx.KW_UNITS()) {
       logger.warn(
@@ -1099,8 +1099,6 @@ export class FSHImporter extends FSHVisitor {
       return 'preferred';
     } else if (ctx.KW_EXTENSIBLE()) {
       return 'extensible';
-    } else if (ctx.SUBSTITUTION()) {
-      return ctx.SUBSTITUTION().getText();
     }
     return 'required';
   }
@@ -1423,7 +1421,49 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     insertRule.ruleSet = ctx.SEQUENCE().getText();
+    if (ctx.insertRuleParams()) {
+      // TODO this is a parameterized rule set. make sure that it exists, and we are using it correctly
+      insertRule.params = this.parseInsertRuleParams(ctx.insertRuleParams().getText());
+    }
     return insertRule;
+  }
+
+  private parseInsertRuleParams(ruleText: string): string[] {
+    // first, trim parentheses
+    const ruleNoParens = ruleText.slice(1, ruleText.length - 1);
+    // since backslash is the escape character, deal with literal backslash first
+    const splitBackslash = ruleNoParens.split(/\\\\/g);
+    // then, split the parameters apart with unescaped commas
+    const splitComma = splitBackslash.map(substrBackslash => {
+      return substrBackslash.split(/(?<!\\),/g).map(substrComma => {
+        // then, make all the replacements: closing parenthesis, comma, and special whitespace
+        return substrComma
+          .replace(/\\\)/g, ')')
+          .replace(/\\,/g, ',')
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t');
+      });
+    });
+    const paramList: string[] = [];
+    // if splitComma has more than one list, that means we split on literal backslash
+    // so to rejoin all the strings, the last string joins the first string in the next sublist
+    splitComma.forEach((list, index) => {
+      list.forEach((paramPart, subIndex) => {
+        if (index > 0 && subIndex === 0) {
+          // join with \\ on the last param
+          paramList.push(`${paramList.pop()}\\${paramPart}`);
+        } else {
+          // push a new param
+          paramList.push(paramPart);
+        }
+      });
+    });
+    // trim normal space characters from each parameter
+    // do not trim \n \r \t, though!
+    return paramList.map(param => {
+      return param.replace(/^ +| +$/g, '');
+    });
   }
 
   visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {
