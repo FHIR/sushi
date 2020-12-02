@@ -9,9 +9,19 @@ import {
   assertObeysRule,
   assertInsertRule
 } from '../testhelpers/asserts';
-import { FshCanonical, FshCode, FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
+import {
+  FshCanonical,
+  FshCode,
+  FshQuantity,
+  FshRatio,
+  FshReference,
+  ParamRuleSet
+} from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
+import { FSHImporter, RawFSH } from '../../src/import';
+import { EOL } from 'os';
+import Immutable from 'immutable';
 
 describe('FSHImporter', () => {
   describe('Profile', () => {
@@ -1805,6 +1815,25 @@ describe('FSHImporter', () => {
     });
 
     describe('#insertRule', () => {
+      let importer: FSHImporter;
+
+      beforeEach(() => {
+        loggerSpy.reset();
+        importer = new FSHImporter();
+        const oneParamRuleSet = new ParamRuleSet('OneParamRuleSet');
+        oneParamRuleSet.parameters = ['val'];
+        oneParamRuleSet.contents = '* status = {val}';
+        const multiParamRuleSet = new ParamRuleSet('MultiParamRuleSet');
+        multiParamRuleSet.parameters = ['status', 'value', 'maxNote'];
+        multiParamRuleSet.contents = [
+          '* status = {status}',
+          '* valueString = {value}',
+          '* note 0..{maxNote}'
+        ].join(EOL);
+        importer.paramRuleSets.set(oneParamRuleSet.name, oneParamRuleSet);
+        importer.paramRuleSets.set(multiParamRuleSet.name, multiParamRuleSet);
+      });
+
       it('should parse an insert rule with a single RuleSet', () => {
         const input = `
         Profile: ObservationProfile
@@ -1817,16 +1846,53 @@ describe('FSHImporter', () => {
         assertInsertRule(profile.rules[0], 'MyRuleSet');
       });
 
-      it('should parse an insert rule with a single RuleSet with parameters', () => {
+      it('should parse an insert rule with a RuleSet with one parameter', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * insert MyRuleSet (ahoy, matey)
+        * insert OneParamRuleSet (#final)
         `;
-        const result = importSingleText(input, 'Insert.fsh');
-        const profile = result.profiles.get('ObservationProfile');
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MyRuleSet', ['ahoy', 'matey']);
+        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final']);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>(['OneParamRuleSet', '#final'])
+          )
+        ).toBe(true);
+      });
+
+      it('should parse an insert rule with a RuleSet with multiple parameters', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (#preliminary, "this is a string value\\, right?", 4)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+          '#preliminary',
+          '"this is a string value, right?"',
+          '4'
+        ]);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>([
+              'MultiParamRuleSet',
+              '#preliminary',
+              '"this is a string value, right?"',
+              '4'
+            ])
+          )
+        ).toBe(true);
       });
     });
   });

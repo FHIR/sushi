@@ -121,7 +121,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
 
 export interface ParamRuleSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
-  PARAMETER_LIST(): ParserRuleContext;
+  PARAMETER_DEF_LIST(): ParserRuleContext;
   paramRuleSetRule(): ParamRuleSetRuleContext[];
 }
 
@@ -353,18 +353,14 @@ export interface CaretValueRuleContext extends ParserRuleContext {
 }
 
 export interface InsertRuleContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  RULESET_NAME(): ParserRuleContext;
   insertRuleParams(): InsertRuleParamsContext;
 }
 
 export interface InsertRuleParamsContext extends ParserRuleContext {
   PARAMETER_LIST(): ParserRuleContext;
-  APPLIED_PARAMETER_LIST(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext;
-  KW_EXAMPLE(): ParserRuleContext;
-  KW_PREFERRED(): ParserRuleContext;
-  KW_EXTENSIBLE(): ParserRuleContext;
-  KW_REQUIRED(): ParserRuleContext;
+  PARAM_CONTENT(): ParserRuleContext;
+  END_PARAM_LIST(): ParserRuleContext;
 }
 
 export interface MappingRuleContext extends ParserRuleContext {

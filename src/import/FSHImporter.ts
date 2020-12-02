@@ -61,6 +61,7 @@ import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
 import { parseCodeLexeme } from './parseCodeLexeme';
 import { EOL } from 'os';
+import Immutable from 'immutable';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -136,11 +137,11 @@ export class FSHImporter extends FSHVisitor {
 
   constructor() {
     super();
+    this.paramRuleSets = new Map();
   }
 
   import(rawFSHes: RawFSH[]): FSHDocument[] {
     this.allAliases = new Map();
-    this.paramRuleSets = new Map();
     const docs: FSHDocument[] = [];
     const contexts: pc.DocContext[] = [];
 
@@ -600,7 +601,7 @@ export class FSHImporter extends FSHVisitor {
       });
     } else {
       paramRuleSet.parameters = ctx
-        .PARAMETER_LIST()
+        .PARAMETER_DEF_LIST()
         .getText()
         .replace(/(^\()|(\)$)/g, '')
         .split(',')
@@ -1420,12 +1421,45 @@ export class FSHImporter extends FSHVisitor {
     const insertRule = new InsertRule()
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    insertRule.ruleSet = ctx.SEQUENCE().getText();
+    insertRule.ruleSet = ctx.RULESET_NAME().getText();
     if (ctx.insertRuleParams()) {
-      // TODO this is a parameterized rule set. make sure that it exists, and we are using it correctly
       insertRule.params = this.parseInsertRuleParams(ctx.insertRuleParams().getText());
+      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
+      if (ruleSet?.parameters.length === insertRule.params.length) {
+        // create a new document with the substituted parameters
+        const appliedFsh = `
+        RuleSet: ${ruleSet.name}
+        ${ruleSet.applyParameters(insertRule.params)}
+        `;
+        const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
+        if (appliedRuleSet) {
+          this.currentDoc.appliedRuleSets = Immutable.Map<Immutable.List<string>, RuleSet>([
+            ...this.currentDoc.appliedRuleSets,
+            [Immutable.List<string>([ruleSet.name, ...insertRule.params]), appliedRuleSet]
+          ]);
+          return insertRule;
+        } else {
+          logger.error(
+            `Failed to parse RuleSet ${
+              insertRule.ruleSet
+            } with provided parameters (${insertRule.params.join(', ')})`,
+            insertRule.sourceInfo
+          );
+        }
+      } else if (ruleSet) {
+        logger.error(
+          `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
+          insertRule.sourceInfo
+        );
+      } else {
+        logger.error(
+          `Could not find RuleSet with parameters named ${insertRule.ruleSet}`,
+          insertRule.sourceInfo
+        );
+      }
+    } else {
+      return insertRule;
     }
-    return insertRule;
   }
 
   private parseInsertRuleParams(ruleText: string): string[] {
@@ -1464,6 +1498,25 @@ export class FSHImporter extends FSHVisitor {
     return paramList.map(param => {
       return param.replace(/^ +| +$/g, '');
     });
+  }
+
+  private parseGeneratedRuleSet(input: string, name: string) {
+    // define a temporary document that will contain this RuleSet
+    const tempDocument = new FSHDocument(this.currentFile);
+    // save the currentDoc so it can be restored after parsing this RuleSet
+    const parentDocument = this.currentDoc;
+    this.currentDoc = tempDocument;
+    const subContext = this.parseDoc(input, this.currentFile);
+    this.visitDoc(subContext);
+    // restore parentDocument
+    this.currentDoc = parentDocument;
+    // if the RuleSet parsed successfully, it will be on the document, and we should return it.
+    if (tempDocument.ruleSets.has(name)) {
+      return tempDocument.ruleSets.get(name);
+    } else {
+      logger.error('MOLDY OMAHA');
+      return null;
+    }
   }
 
   visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {

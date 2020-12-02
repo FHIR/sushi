@@ -9,4 +9,12 @@ export class ParamRuleSet extends FshEntity {
     this.parameters = [];
     this.contents = '';
   }
+
+  applyParameters(values: string[]): string {
+    let appliedContents = this.contents;
+    this.parameters.forEach((parameter, index) => {
+      appliedContents = appliedContents.replace(`{${parameter}}`, values[index] ?? '');
+    });
+    return appliedContents;
+  }
 }
