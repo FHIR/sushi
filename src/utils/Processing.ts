@@ -31,22 +31,36 @@ export function ensureInputDir(input: string): string {
   return input;
 }
 
+function checkForFshFiles(path: string): boolean {
+  try {
+    const files = getFilesRecursive(path).filter(file => file.endsWith('.fsh'));
+    return files.length > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
 export function findInputDir(input: string): string {
   const originalInput = input;
 
-  // TODO: Legacy support. Remove when no longer supported.
-  // Use input/fsh/ subdirectory if not already specified and present
   const inputFshSubdirectoryPath = path.join(originalInput, 'input', 'fsh');
-  const inputSubdirectoryPath = path.join(originalInput, 'input');
+  const fshFilesPresent = checkForFshFiles(originalInput);
+  const fshSubdirectoryPath = path.join(originalInput, 'fsh');
+  const rootIgDataPath = path.join(originalInput, 'ig-data');
+  const currentTankWithNoFsh =
+    !fshFilesPresent && !fs.existsSync(fshSubdirectoryPath) && !fs.existsSync(rootIgDataPath);
+
   if (fs.existsSync(inputFshSubdirectoryPath)) {
+    // Use input/fsh/ subdirectory if not already specified and present
     input = path.join(originalInput, 'input', 'fsh');
-  } else if (fs.existsSync(inputSubdirectoryPath)) {
+  } else if (currentTankWithNoFsh) {
+    // Use input/fsh/ subdirectory when in the current tank configuration without FSH files
     input = path.join(originalInput, 'input', 'fsh');
   }
 
+  // TODO: Legacy support. Remove when no longer supported.
   // Use fsh/ subdirectory if not already specified and present
-  const fshSubdirectoryPath = path.join(originalInput, 'fsh');
-  if (!fs.existsSync(inputFshSubdirectoryPath) && !fs.existsSync(inputSubdirectoryPath)) {
+  if (!fs.existsSync(inputFshSubdirectoryPath) && !currentTankWithNoFsh) {
     let msg =
       '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n';
     if (fs.existsSync(fshSubdirectoryPath)) {

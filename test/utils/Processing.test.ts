@@ -34,7 +34,9 @@ describe('Processing', () => {
       fs.mkdirpSync(path.join(tempRoot, 'has-input', 'input'));
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'flat-tank', 'ig-data'));
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
+      fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'notfsh.txt'));
     });
 
     beforeEach(() => {
@@ -80,10 +82,16 @@ describe('Processing', () => {
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
     });
 
-    it('should find a path to the provided directory if the fsh subdirectory is not present', () => {
-      const input = path.join(tempRoot, 'no-fsh');
+    it('should find a path to the provided directory if the fsh subdirectory is not present and a root ig-data is present (legacy flat tank)', () => {
+      const input = path.join(tempRoot, 'flat-tank');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(input);
+    });
+
+    it('should find a path to input/fsh if no fsh files are present, no root level ig-data folder, and no fsh subdirectory (current tank with no fsh files)', () => {
+      const input = path.join(tempRoot, 'no-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'no-fsh', 'input', 'fsh'));
     });
   });
 
