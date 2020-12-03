@@ -1470,13 +1470,8 @@ export class FSHImporter extends FSHVisitor {
     // then, split the parameters apart with unescaped commas
     const splitComma = splitBackslash.map(substrBackslash => {
       return substrBackslash.split(/(?<!\\),/g).map(substrComma => {
-        // then, make all the replacements: closing parenthesis, comma, and special whitespace
-        return substrComma
-          .replace(/\\\)/g, ')')
-          .replace(/\\,/g, ',')
-          .replace(/\\n/g, '\n')
-          .replace(/\\r/g, '\r')
-          .replace(/\\t/g, '\t');
+        // then, make all the replacements: closing parenthesis and comma
+        return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
       });
     });
     const paramList: string[] = [];
@@ -1486,7 +1481,7 @@ export class FSHImporter extends FSHVisitor {
       list.forEach((paramPart, subIndex) => {
         if (index > 0 && subIndex === 0) {
           // join with \\ on the last param
-          paramList.push(`${paramList.pop()}\\${paramPart}`);
+          paramList.push(`${paramList.pop()}\\\\${paramPart}`);
         } else {
           // push a new param
           paramList.push(paramPart);

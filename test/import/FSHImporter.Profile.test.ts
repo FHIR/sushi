@@ -1894,6 +1894,81 @@ describe('FSHImporter', () => {
           )
         ).toBe(true);
       });
+
+      it('should parse an insert rule with a parameter that contains right parenthesis', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert OneParamRuleSet (#final "(Final\\)")
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final "(Final)"']);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>(['OneParamRuleSet', '#final "(Final)"'])
+          )
+        ).toBe(true);
+      });
+
+      it('should parse an insert rule with parameters that contain newline, tab, or backslash characters', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (#final, "very\\nstrange\\rvalue\\\\\\tindeed", 1)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+          '#final',
+          '"very\\nstrange\\rvalue\\\\\\tindeed"',
+          '1'
+        ]);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>([
+              'MultiParamRuleSet',
+              '#final',
+              '"very\\nstrange\\rvalue\\\\\\tindeed"',
+              '1'
+            ])
+          )
+        ).toBe(true);
+      });
+
+      it('should log an error when an insert rule has the wrong number of parameters', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert OneParamRuleSet (#final, "Final")
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Incorrect number of parameters applied to RuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log an error when an insert rule with parameters refers to an undefined parameterized RuleSet', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MysteriousRuleSet ("mystery")
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Could not find RuleSet with parameters named MysteriousRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
     });
   });
 });
