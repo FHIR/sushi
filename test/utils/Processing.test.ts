@@ -12,6 +12,7 @@ import {
   readConfig,
   loadExternalDependencies,
   getRawFSHes,
+  hasFshFiles,
   writeFHIRResources,
   init
 } from '../../src/utils/Processing';
@@ -352,6 +353,36 @@ describe('Processing', () => {
         getRawFSHes(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Invalid path to FSH definition folder\./s);
+    });
+  });
+
+  describe('#hasFshFiles()', () => {
+    let tempRoot: string;
+
+    beforeAll(() => {
+      tempRoot = temp.mkdirSync('sushi-test');
+      fs.mkdirSync(path.join(tempRoot, 'some-fsh'));
+      fs.mkdirSync(path.join(tempRoot, 'some-fsh', 'nested'));
+      fs.ensureFileSync(path.join(tempRoot, 'some-fsh', 'notfsh.txt'));
+      fs.ensureFileSync(path.join(tempRoot, 'some-fsh', 'nested', 'myfsh.fsh'));
+      fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
+      fs.mkdirSync(path.join(tempRoot, 'no-fsh', 'nested'));
+      fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'notfsh.txt'));
+      fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'nested', 'notfsh.txt'));
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should return true if FSH files exist in any subdirectory', () => {
+      const result = hasFshFiles(path.join(tempRoot, 'some-fsh'));
+      expect(result).toBe(true);
+    });
+
+    it('should return false if there are no FSH files in any subdirectory', () => {
+      const result = hasFshFiles(path.join(tempRoot, 'no-fsh'));
+      expect(result).toBe(false);
     });
   });
 

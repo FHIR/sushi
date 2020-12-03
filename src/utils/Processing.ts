@@ -31,7 +31,7 @@ export function ensureInputDir(input: string): string {
   return input;
 }
 
-function hasFshFiles(path: string): boolean {
+export function hasFshFiles(path: string): boolean {
   try {
     const files = getFilesRecursive(path).filter(file => file.endsWith('.fsh'));
     return files.length > 0;
