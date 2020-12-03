@@ -1,3 +1,4 @@
+import escapeRegExp from 'lodash/escapeRegExp';
 import { FshEntity } from '.';
 
 export class ParamRuleSet extends FshEntity {
@@ -13,7 +14,10 @@ export class ParamRuleSet extends FshEntity {
   applyParameters(values: string[]): string {
     let appliedContents = this.contents;
     this.parameters.forEach((parameter, index) => {
-      appliedContents = appliedContents.replace(`{${parameter}}`, values[index] ?? '');
+      appliedContents = appliedContents.replace(
+        new RegExp(`{${escapeRegExp(parameter)}}`, 'g'),
+        values[index] ?? ''
+      );
     });
     return appliedContents;
   }
