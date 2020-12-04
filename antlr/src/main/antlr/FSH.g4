@@ -91,7 +91,6 @@ paramRuleSetRule:   STAR
                     | REGEX
                     | COMMA_DELIMITED_CODES
                     | PARAMETER_LIST
-                    // | APPLIED_PARAMETER_LIST
                     | COMMA_DELIMITED_SEQUENCES
                     | SEQUENCE
                     )+; // how exhausting!

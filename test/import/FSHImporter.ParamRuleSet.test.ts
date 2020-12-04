@@ -6,6 +6,7 @@ describe('FSHImporter', () => {
   beforeAll(() => {
     loggerSpy.reset();
   });
+
   describe('ParamRuleSet', () => {
     it('should parse a ParamRuleSet with a rule', () => {
       const importer = new FSHImporter();

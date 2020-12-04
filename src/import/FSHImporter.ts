@@ -1506,12 +1506,7 @@ export class FSHImporter extends FSHVisitor {
     // restore parentDocument
     this.currentDoc = parentDocument;
     // if the RuleSet parsed successfully, it will be on the document, and we should return it.
-    if (tempDocument.ruleSets.has(name)) {
-      return tempDocument.ruleSets.get(name);
-    } else {
-      logger.error('MOLDY OMAHA');
-      return null;
-    }
+    return tempDocument.ruleSets.get(name);
   }
 
   visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {
