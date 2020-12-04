@@ -196,6 +196,8 @@ COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
                         // (NON-WS  WS  ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;
 
+// BLOCK_COMMENT must precede SEQUENCE so that a block comment without whitespace does not become a SEQUENCE
+BLOCK_COMMENT:      '/*' .*? '*/' -> skip;
                  // NON-WHITESPACE
 SEQUENCE:           NONWS+;
 
@@ -206,7 +208,6 @@ fragment WS: [ \t\r\n\f\u00A0];
 fragment NONWS: ~[ \t\r\n\f\u00A0];
 fragment NONWS_STR: ~[ \t\r\n\f\u00A0\\"];
 
-// IGNORED TOKENS
+// OTHER IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);
-BLOCK_COMMENT:      '/*' .*? '*/' -> skip;
 LINE_COMMENT:       '//' .*? [\r\n] -> skip;
