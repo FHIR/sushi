@@ -1,4 +1,3 @@
-import { EOL } from 'os';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FSHImporter, RawFSH } from '../../src/import';
 
@@ -23,7 +22,8 @@ describe('FSHImporter', () => {
       const result = importer.paramRuleSets.get('MyRuleSet');
       expect(result.name).toBe('MyRuleSet');
       expect(result.parameters).toEqual(['system', 'strength']);
-      const expectedContents = ['* code from {system} {strength}', '* pig from egg'].join(EOL);
+      const expectedContents = `* code from {system} {strength}
+        * pig from egg`;
       expect(result.contents).toBe(expectedContents);
     });
 
@@ -47,10 +47,8 @@ describe('FSHImporter', () => {
       const result = importer.paramRuleSets.get('MyRuleSet');
       expect(result.name).toBe('MyRuleSet');
       expect(result.parameters).toEqual(['system', 'strength']);
-      const expectedContents = [
-        '* code from http://example.org/{system}/info.html {strength}',
-        '* pig from egg'
-      ].join(EOL);
+      const expectedContents = `* code from http://example.org/{system}/info.html {strength}
+        * pig from egg`;
       expect(result.contents).toBe(expectedContents);
     });
 
@@ -72,10 +70,8 @@ describe('FSHImporter', () => {
       const result = importer.paramRuleSets.get('MyRuleSet');
       expect(result.name).toBe('MyRuleSet');
       expect(result.parameters).toEqual(['system', 'strength']);
-      const expectedContents = [
-        '* code from http://example.org/{system}/info.html {strength}',
-        '* pig from egg'
-      ].join(EOL);
+      const expectedContents = `* code from http://example.org/{system}/info.html {strength}
+        * pig from egg`;
       expect(result.contents).toBe(expectedContents);
       expect(loggerSpy.getLastMessage('error')).toMatch(/RuleSet named MyRuleSet already exists/s);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Params\.fsh.*Line: 6 - 7/s);

@@ -31,69 +31,15 @@ ruleSetRule:        sdRule | concept | vsComponent;
 
 paramRuleSet:       KW_RULESET SEQUENCE PARAMETER_DEF_LIST paramRuleSetRule+;
 paramRuleSetRule:   STAR
-                    ( KW_INSTANCEOF
-                    | KW_MIXINS
-                    | KW_PARENT
-                    | KW_ID
-                    | KW_TITLE
-                    | KW_DESCRIPTION
-                    | KW_EXPRESSION
-                    | KW_XPATH
-                    | KW_SEVERITY
-                    | KW_USAGE
-                    | KW_SOURCE
-                    | KW_TARGET
-                    | KW_MOD
-                    | KW_MS
-                    | KW_SU
-                    | KW_TU
-                    | KW_NORMATIVE
-                    | KW_DRAFT
-                    | KW_FROM
-                    | KW_EXAMPLE
-                    | KW_PREFERRED
-                    | KW_EXTENSIBLE
-                    | KW_REQUIRED
-                    | KW_CONTAINS
-                    | KW_NAMED
-                    | KW_AND
-                    | KW_ONLY
-                    | KW_OR
-                    | KW_OBEYS
-                    | KW_TRUE
-                    | KW_FALSE
-                    | KW_INCLUDE
-                    | KW_EXCLUDE
-                    | KW_CODES
-                    | KW_WHERE
-                    | KW_VSREFERENCE
-                    | KW_SYSTEM
-                    | KW_UNITS
-                    | KW_EXACTLY
-                    | KW_INSERT
-                    | EQUAL
-                    | COLON
-                    | COMMA
-                    | ARROW
-                    | STRING
-                    | MULTILINE_STRING
-                    | NUMBER
-                    | UNIT
-                    | CODE
-                    | CONCEPT_STRING
-                    | DATETIME
-                    | TIME
-                    | CARD
-                    | OR_REFERENCE
-                    | PIPE_REFERENCE
-                    | CANONICAL
-                    | CARET_SEQUENCE
-                    | REGEX
-                    | COMMA_DELIMITED_CODES
-                    | PARAMETER_LIST
-                    | COMMA_DELIMITED_SEQUENCES
-                    | SEQUENCE
-                    )+; // how exhausting!
+                    ~(KW_PROFILE
+                    | KW_ALIAS
+                    | KW_EXTENSION
+                    | KW_INSTANCE
+                    | KW_INVARIANT
+                    | KW_VALUESET
+                    | KW_CODESYSTEM
+                    | KW_RULESET
+                    | KW_MAPPING)*;
 
 mapping:            KW_MAPPING SEQUENCE mappingMetadata* mappingEntityRule*;
 mappingMetadata:    id | source | target | description | title;
