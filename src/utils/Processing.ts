@@ -47,6 +47,7 @@ export function findInputDir(input: string): string {
   const fshSubdirectoryPath = path.join(originalInput, 'fsh');
   const rootIgDataPath = path.join(originalInput, 'ig-data');
   const currentTankWithNoFsh =
+    !fs.existsSync(inputFshSubdirectoryPath) &&
     !fs.existsSync(fshSubdirectoryPath) &&
     !fs.existsSync(rootIgDataPath) &&
     !hasFshFiles(originalInput);
