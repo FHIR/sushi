@@ -6,6 +6,7 @@ import { remove, uniqBy } from 'lodash';
 
 const GH_URL_RE = /(git@github\.com:|git:\/\/github\.com|https:\/\/github\.com).*\/([^/]+)\.git/;
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
+const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
 
 async function main() {
   const ghRepos = await getReposFromGitHub();
@@ -40,21 +41,39 @@ async function main() {
 async function getReposFromGitHub(): Promise<GHRepo[]> {
   console.log('Getting HL7 repos using GitHub API...');
   const repos: GHRepo[] = [];
-  for (let page = 1; true; page++) {
-    const res = await axios.get(
-      `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`
-    );
-    if (Array.isArray(res?.data)) {
-      repos.push(...res.data.filter(r => r.size > 0 && !r.archived && !r.disabled));
-      if (res.data.length < 100) {
-        // no more results after this, so break
+  try {
+    for (let page = 1; true; page++) {
+      const options: any = {};
+      if (process.env.GITHUB_API_KEY) {
+        options.headers = { Authorization: `token ${process.env.GITHUB_API_KEY}` };
+      }
+      const res = await axios.get(
+        `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`,
+        options
+      );
+      if (Array.isArray(res?.data)) {
+        repos.push(...res.data.filter(r => r.size > 0 && !r.archived && !r.disabled));
+        if (res.data.length < 100) {
+          // no more results after this, so break
+          break;
+        }
+      } else {
         break;
       }
-    } else {
-      break;
     }
+    console.log(`Found ${repos.length} active repos at github.com/HL7.`);
+  } catch (e) {
+    const message = e.response?.status
+      ? `HTTP ${e.response.status}: ${e.response.statusText}`
+      : `${e}`;
+    console.error(`Could not get repos from GitHub: ${message}`);
+    if (process.env.GITHUB_API_KEY == null && /rate/i.test(e.response?.statusText)) {
+      console.error(
+        'To increase rate limits, set the GITHUB_API_KEY environment variable to a GitHub personal access token.'
+      );
+    }
+    process.exit(1);
   }
-  console.log(`Found ${repos.length} active repos at github.com/HL7.`);
   return repos;
 }
 
@@ -98,12 +117,15 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
 async function getReposWithFSHFolder(repos: GHRepo[]): Promise<GHRepo[]> {
   const fshRepos: GHRepo[] = [];
   for (const repo of uniqBy(repos, r => r.html_url.toLowerCase())) {
-    try {
-      console.log(`Checking ${repo.html_url} for /fsh folder...`);
-      await axios.head(`${repo.html_url}/tree/${repo.default_branch}/fsh`);
-      fshRepos.push(repo);
-    } catch (e) {
-      // 404: no fsh folder
+    console.log(`Checking ${repo.html_url} for FSHy paths...`);
+    for (const fshyPath of FSHY_PATHS) {
+      try {
+        await axios.head(`${repo.html_url}/tree/${repo.default_branch}/${fshyPath}`);
+        fshRepos.push(repo);
+        break;
+      } catch (e) {
+        // 404: fshy path not found
+      }
     }
   }
   console.log(`${fshRepos.length} repos had a /fsh folder.`);

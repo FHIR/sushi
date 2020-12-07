@@ -31,3 +31,25 @@ git@github.com:HL7NZ/nzbase.git
 git@github.com:HL7NZ/cca.git
 git@github.com:HL7NZ/nhi.git
 git@github.com:AudaciousInquiry/fhir-saner.git
+
+# Added Mon Dec 07 2020 16:23:55 GMT-0500 (Eastern Standard Time)
+git@github.com:HL7/davinci-ecdx.git
+git@github.com:HL7/fhir-icsr-ae-reporting.git
+git@github.com:HL7/fhir-mCODE-ig.git
+git@github.com:HL7/fhir-patient-correction.git
+git@github.com:HL7/fhir-spl.git
+git@github.com:HL7/genomics-reporting.git
+git@github.com:HL7/livd.git
+git@github.com:HL7/US-Core.git
+git@github.com:HL7/v2-to-fhir.git
+git@github.com:danka74/ko-ig.git
+git@github.com:hl7-be/be-core.git
+git@github.com:hl7-be/riziv-inami.git
+git@github.com:hl7-be/hl7-be-fhir-medication.git
+git@github.com:hl7-be/hl7-be-fhir.git
+git@github.com:hl7dk/kl-gateway.git
+git@github.com:costateixeira/devdays-covid19-vaccine.git
+git@github.com:IHE/ITI.MHD.git
+git@github.com:IHE/ITI_MHD_FHIR.git
+git@github.com:openhie/hiv-ig.git
+git@github.com:HL7Sweden/basprofiler-r4.git
