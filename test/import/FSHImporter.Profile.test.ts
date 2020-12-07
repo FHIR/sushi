@@ -1820,9 +1820,16 @@ describe('FSHImporter', () => {
       beforeEach(() => {
         loggerSpy.reset();
         importer = new FSHImporter();
+        // RuleSet: OneParamRuleSet (val)
+        // * status = {val}
         const oneParamRuleSet = new ParamRuleSet('OneParamRuleSet');
         oneParamRuleSet.parameters = ['val'];
         oneParamRuleSet.contents = '* status = {val}';
+        importer.paramRuleSets.set(oneParamRuleSet.name, oneParamRuleSet);
+        // RuleSet: MultiParamRuleSet (status, value, maxNote)
+        // * status = {status}
+        // * valueString = {value}
+        // * note 0..{maxNote}
         const multiParamRuleSet = new ParamRuleSet('MultiParamRuleSet');
         multiParamRuleSet.parameters = ['status', 'value', 'maxNote'];
         multiParamRuleSet.contents = [
@@ -1830,8 +1837,29 @@ describe('FSHImporter', () => {
           '* valueString = {value}',
           '* note 0..{maxNote}'
         ].join(EOL);
-        importer.paramRuleSets.set(oneParamRuleSet.name, oneParamRuleSet);
         importer.paramRuleSets.set(multiParamRuleSet.name, multiParamRuleSet);
+        // RuleSet: EntryRules (continuation)
+        // * insert {continuation}Rules (5)
+        const entryRules = new ParamRuleSet('EntryRules');
+        entryRules.parameters = ['continuation'];
+        entryRules.contents = '* insert {continuation}Rules (5)';
+        importer.paramRuleSets.set(entryRules.name, entryRules);
+        // RuleSet: RecursiveRules (value)
+        // * interpretation 0..{value}
+        // * insert EntryRules (BaseCase)
+        const recursiveRules = new ParamRuleSet('RecursiveRules');
+        recursiveRules.parameters = ['value'];
+        recursiveRules.contents = [
+          '* interpretation 0..{value}',
+          '* insert EntryRules (BaseCase)'
+        ].join(EOL);
+        importer.paramRuleSets.set(recursiveRules.name, recursiveRules);
+        // RuleSet: BaseCaseRules (value)
+        // * note 0..{value}
+        const baseCaseRules = new ParamRuleSet('BaseCaseRules');
+        baseCaseRules.parameters = ['value'];
+        baseCaseRules.contents = '* note 0..{value}';
+        importer.paramRuleSets.set(baseCaseRules.name, baseCaseRules);
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
@@ -1940,6 +1968,39 @@ describe('FSHImporter', () => {
               '"very\\nstrange\\rvalue\\\\\\tindeed"',
               '1'
             ])
+          )
+        ).toBe(true);
+      });
+
+      it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert EntryRules (Recursive)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        expect(doc.appliedRuleSets.size).toBe(4);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>(['EntryRules', 'Recursive'])
+          )
+        ).toBe(true);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>(['RecursiveRules', '5'])
+          )
+        ).toBe(true);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>(['EntryRules', 'BaseCase'])
+          )
+        ).toBe(true);
+        expect(
+          doc.appliedRuleSets.has(
+            Immutable.List<string>(['BaseCaseRules', '5'])
           )
         ).toBe(true);
       });

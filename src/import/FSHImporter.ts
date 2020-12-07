@@ -1425,32 +1425,38 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.insertRuleParams()) {
       insertRule.params = this.parseInsertRuleParams(ctx.insertRuleParams().getText());
       const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
-      if (ruleSet?.parameters.length === insertRule.params.length) {
-        // create a new document with the substituted parameters
-        const appliedFsh = `
-        RuleSet: ${ruleSet.name}
-        ${ruleSet.applyParameters(insertRule.params)}
-        `;
-        const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
-        if (appliedRuleSet) {
-          this.currentDoc.appliedRuleSets = Immutable.Map<Immutable.List<string>, RuleSet>([
-            ...this.currentDoc.appliedRuleSets,
-            [Immutable.List<string>([ruleSet.name, ...insertRule.params]), appliedRuleSet]
-          ]);
-          return insertRule;
+      if (ruleSet) {
+        const ruleSetIdentifier = Immutable.List<string>([ruleSet.name, ...insertRule.params]);
+        if (
+          ruleSet.parameters.length === insertRule.params.length &&
+          !this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)
+        ) {
+          // create a new document with the substituted parameters
+          const appliedFsh = `
+          RuleSet: ${ruleSet.name}
+          ${ruleSet.applyParameters(insertRule.params)}
+          `;
+          const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
+          if (appliedRuleSet) {
+            this.currentDoc.appliedRuleSets = this.currentDoc.appliedRuleSets.set(
+              ruleSetIdentifier,
+              appliedRuleSet
+            );
+            return insertRule;
+          } else {
+            logger.error(
+              `Failed to parse RuleSet ${
+                insertRule.ruleSet
+              } with provided parameters (${insertRule.params.join(', ')})`,
+              insertRule.sourceInfo
+            );
+          }
         } else {
           logger.error(
-            `Failed to parse RuleSet ${
-              insertRule.ruleSet
-            } with provided parameters (${insertRule.params.join(', ')})`,
+            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
             insertRule.sourceInfo
           );
         }
-      } else if (ruleSet) {
-        logger.error(
-          `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
-          insertRule.sourceInfo
-        );
       } else {
         logger.error(
           `Could not find RuleSet with parameters named ${insertRule.ruleSet}`,
@@ -1505,6 +1511,12 @@ export class FSHImporter extends FSHVisitor {
     this.visitDoc(subContext);
     // restore parentDocument
     this.currentDoc = parentDocument;
+    // if tempDocument has appliedRuleSets, merge them in
+    if (tempDocument.appliedRuleSets.size > 0) {
+      this.currentDoc.appliedRuleSets = this.currentDoc.appliedRuleSets.merge(
+        tempDocument.appliedRuleSets
+      );
+    }
     // if the RuleSet parsed successfully, it will be on the document, and we should return it.
     return tempDocument.ruleSets.get(name);
   }
