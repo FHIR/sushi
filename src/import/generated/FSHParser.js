@@ -8,7 +8,7 @@ var grammarFileName = "FSH.g4";
 
 
 var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
-    "\u0003T\u02a1\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004\t",
+    "\u0003S\u02a1\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004\t",
     "\u0004\u0004\u0005\t\u0005\u0004\u0006\t\u0006\u0004\u0007\t\u0007\u0004",
     "\b\t\b\u0004\t\t\t\u0004\n\t\n\u0004\u000b\t\u000b\u0004\f\t\f\u0004",
     "\r\t\r\u0004\u000e\t\u000e\u0004\u000f\t\u000f\u0004\u0010\t\u0010\u0004",
@@ -345,7 +345,7 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u01fb\u01fd\u0007O\u0002\u0002\u01fc\u01fe\u0005`1\u0002\u01fd\u01fc",
     "\u0003\u0002\u0002\u0002\u01fd\u01fe\u0003\u0002\u0002\u0002\u01fe_",
     "\u0003\u0002\u0002\u0002\u01ff\u0203\u0007Q\u0002\u0002\u0200\u0202",
-    "\u0007T\u0002\u0002\u0201\u0200\u0003\u0002\u0002\u0002\u0202\u0205",
+    "\u0007S\u0002\u0002\u0201\u0200\u0003\u0002\u0002\u0002\u0202\u0205",
     "\u0003\u0002\u0002\u0002\u0203\u0201\u0003\u0002\u0002\u0002\u0203\u0204",
     "\u0003\u0002\u0002\u0002\u0204\u0206\u0003\u0002\u0002\u0002\u0205\u0203",
     "\u0003\u0002\u0002\u0002\u0206\u0207\u0007R\u0002\u0002\u0207a\u0003",
@@ -484,7 +484,7 @@ var symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTAN
                       "PARAMETER_DEF_LIST", "COMMA_DELIMITED_SEQUENCES", 
                       "SEQUENCE", "WHITESPACE", "BLOCK_COMMENT", "LINE_COMMENT", 
                       "IR_WS", "RULESET_NAME", "MP_WS", "PARAMETER_LIST", 
-                      "END_PARAM_LIST", "IP_WS", "PARAM_CONTENT" ];
+                      "END_PARAM_LIST", "PARAM_CONTENT" ];
 
 var ruleNames =  [ "doc", "entity", "alias", "profile", "extension", "sdMetadata", 
                    "sdRule", "instance", "instanceMetadata", "instanceRule", 
@@ -603,8 +603,7 @@ FSHParser.RULESET_NAME = 77;
 FSHParser.MP_WS = 78;
 FSHParser.PARAMETER_LIST = 79;
 FSHParser.END_PARAM_LIST = 80;
-FSHParser.IP_WS = 81;
-FSHParser.PARAM_CONTENT = 82;
+FSHParser.PARAM_CONTENT = 81;
 
 FSHParser.RULE_doc = 0;
 FSHParser.RULE_entity = 1;

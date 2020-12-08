@@ -1911,16 +1911,31 @@ describe('FSHImporter', () => {
           '"this is a string value, right?"',
           '4'
         ]);
-        expect(
-          doc.appliedRuleSets.has(
-            Immutable.List<string>([
-              'MultiParamRuleSet',
-              '#preliminary',
-              '"this is a string value, right?"',
-              '4'
-            ])
-          )
-        ).toBe(true);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          Immutable.List<string>([
+            'MultiParamRuleSet',
+            '#preliminary',
+            '"this is a string value, right?"',
+            '4'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('preliminary').withFile('Insert.fsh').withLocation([2, 12, 2, 23]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'this is a string value, right?',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '4');
       });
 
       it('should parse an insert rule with a parameter that contains right parenthesis', () => {
@@ -1936,11 +1951,20 @@ describe('FSHImporter', () => {
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final "(Final)"']);
-        expect(
-          doc.appliedRuleSets.has(
-            Immutable.List<string>(['OneParamRuleSet', '#final "(Final)"'])
-          )
-        ).toBe(true);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          Immutable.List<string>(['OneParamRuleSet', '#final "(Final)"'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final', undefined, '(Final)')
+            .withFile('Insert.fsh')
+            .withLocation([2, 12, 2, 27]),
+          false,
+          false
+        );
       });
 
       it('should parse an insert rule with parameters that contain newline, tab, or backslash characters', () => {
@@ -1960,16 +1984,64 @@ describe('FSHImporter', () => {
           '"very\\nstrange\\rvalue\\\\\\tindeed"',
           '1'
         ]);
-        expect(
-          doc.appliedRuleSets.has(
-            Immutable.List<string>([
-              'MultiParamRuleSet',
-              '#final',
-              '"very\\nstrange\\rvalue\\\\\\tindeed"',
-              '1'
-            ])
-          )
-        ).toBe(true);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          Immutable.List<string>([
+            'MultiParamRuleSet',
+            '#final',
+            '"very\\nstrange\\rvalue\\\\\\tindeed"',
+            '1'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'very\nstrange\rvalue\\\tindeed',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '1');
+      });
+
+      it('should parse an insert rule that separates its parameters onto multiple lines', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (
+          #final,
+          "string value",
+          7
+        )
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', ['#final', '"string value"', '7']);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          Immutable.List<string>(['MultiParamRuleSet', '#final', '"string value"', '7'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(appliedRuleSet.rules[1], 'valueString', 'string value', false, false);
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
       });
 
       it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {
@@ -1983,26 +2055,34 @@ describe('FSHImporter', () => {
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
         expect(doc.appliedRuleSets.size).toBe(4);
-        expect(
-          doc.appliedRuleSets.has(
-            Immutable.List<string>(['EntryRules', 'Recursive'])
-          )
-        ).toBe(true);
-        expect(
-          doc.appliedRuleSets.has(
-            Immutable.List<string>(['RecursiveRules', '5'])
-          )
-        ).toBe(true);
-        expect(
-          doc.appliedRuleSets.has(
-            Immutable.List<string>(['EntryRules', 'BaseCase'])
-          )
-        ).toBe(true);
-        expect(
-          doc.appliedRuleSets.has(
-            Immutable.List<string>(['BaseCaseRules', '5'])
-          )
-        ).toBe(true);
+
+        const firstEntryRules = doc.appliedRuleSets.get(
+          Immutable.List<string>(['EntryRules', 'Recursive'])
+        );
+        expect(firstEntryRules).toBeDefined();
+        expect(firstEntryRules.rules).toHaveLength(1);
+        assertInsertRule(firstEntryRules.rules[0], 'RecursiveRules', ['5']);
+
+        const recursiveRules = doc.appliedRuleSets.get(
+          Immutable.List<string>(['RecursiveRules', '5'])
+        );
+        expect(recursiveRules).toBeDefined();
+        expect(recursiveRules.rules).toHaveLength(2);
+        assertCardRule(recursiveRules.rules[0], 'interpretation', 0, '5');
+        assertInsertRule(recursiveRules.rules[1], 'EntryRules', ['BaseCase']);
+
+        const secondEntryRules = doc.appliedRuleSets.get(
+          Immutable.List<string>(['EntryRules', 'BaseCase'])
+        );
+        expect(secondEntryRules.rules).toHaveLength(1);
+        assertInsertRule(secondEntryRules.rules[0], 'BaseCaseRules', ['5']);
+
+        const baseCaseRules = doc.appliedRuleSets.get(
+          Immutable.List<string>(['BaseCaseRules', '5'])
+        );
+        expect(baseCaseRules).toBeDefined();
+        expect(baseCaseRules.rules).toHaveLength(1);
+        assertCardRule(baseCaseRules.rules[0], 'note', 0, '5');
       });
 
       it('should log an error when an insert rule has the wrong number of parameters', () => {

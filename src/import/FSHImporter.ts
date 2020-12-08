@@ -1432,10 +1432,9 @@ export class FSHImporter extends FSHVisitor {
           !this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)
         ) {
           // create a new document with the substituted parameters
-          const appliedFsh = `
-          RuleSet: ${ruleSet.name}
-          ${ruleSet.applyParameters(insertRule.params)}
-          `;
+          const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
+            insertRule.params
+          )}${EOL}`;
           const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
           if (appliedRuleSet) {
             this.currentDoc.appliedRuleSets = this.currentDoc.appliedRuleSets.set(
@@ -1494,11 +1493,8 @@ export class FSHImporter extends FSHVisitor {
         }
       });
     });
-    // trim normal space characters from each parameter
-    // do not trim \n \r \t, though!
-    return paramList.map(param => {
-      return param.replace(/^ +| +$/g, '');
-    });
+    // trim whitespace from each parameter, since it may be formatted for readability
+    return paramList.map(param => param.trim());
   }
 
   private parseGeneratedRuleSet(input: string, name: string) {

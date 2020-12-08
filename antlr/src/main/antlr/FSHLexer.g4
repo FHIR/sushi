@@ -126,7 +126,7 @@ LINE_COMMENT:       '//' .*? [\r\n] -> skip;
 
 mode INSERT_RULE;
 IR_WS: [ \t\r\n\f\u00A0] -> channel(HIDDEN);
-RULESET_NAME: (~[ \t\r\n\f\u00A0])+ -> pushMode(MAYBE_PARAM);
+RULESET_NAME: (~[ \t\r\n\f\u00A0(])+ -> pushMode(MAYBE_PARAM);
 
 mode MAYBE_PARAM;
 MP_WS: [ \t\r\n\f\u00A0] -> channel(HIDDEN);
@@ -134,6 +134,5 @@ PARAMETER_LIST:     '(' -> pushMode(INSIDE_PARAM);
 NO_PARAMETERS: (.|EOF)*? -> popMode, popMode, more;
 
 mode INSIDE_PARAM;
-PARAM_CONTENT: ('\\)' | '\\\\' | ~[)\r\n]) -> more;
+PARAM_CONTENT: ('\\)' | '\\\\' | ~[)]) -> more;
 END_PARAM_LIST: ')' -> popMode, popMode, popMode;
-IP_WS: [\r\n] -> channel(HIDDEN);
