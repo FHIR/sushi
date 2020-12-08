@@ -12,6 +12,7 @@ import {
   readConfig,
   loadExternalDependencies,
   getRawFSHes,
+  hasFshFiles,
   writeFHIRResources,
   init
 } from '../../src/utils/Processing';
@@ -31,9 +32,16 @@ describe('Processing', () => {
       tempRoot = temp.mkdirSync('sushi-test');
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirpSync(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'has-input', 'input'));
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
+      fs.mkdirpSync(path.join(tempRoot, 'flat-tank', 'ig-data'));
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
+      fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'notfsh.txt'));
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
     });
 
     afterAll(() => {
@@ -61,6 +69,13 @@ describe('Processing', () => {
       expect(foundInput).toBe(path.join(tempRoot, 'has-input-fsh', 'input', 'fsh'));
     });
 
+    it('should use path to input/fsh as input if input/ subdirectory present but no input/fsh present', () => {
+      const input = path.join(tempRoot, 'has-input');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'has-input', 'input', 'fsh'));
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
     // TODO: Tests legacy support. Remove when no longer supported.
     it('should prefer path to input/fsh over fsh/ if both present', () => {
       const input = path.join(tempRoot, 'has-fsh-and-input-fsh');
@@ -68,10 +83,16 @@ describe('Processing', () => {
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
     });
 
-    it('should find a path to the provided directory if the fsh subdirectory is not present', () => {
-      const input = path.join(tempRoot, 'no-fsh');
+    it('should find a path to the provided directory if the fsh subdirectory is not present and a root ig-data is present (legacy flat tank)', () => {
+      const input = path.join(tempRoot, 'flat-tank');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(input);
+    });
+
+    it('should find a path to input/fsh if no fsh files are present, no root level ig-data folder, and no fsh subdirectory (current tank with no fsh files)', () => {
+      const input = path.join(tempRoot, 'no-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'no-fsh', 'input', 'fsh'));
     });
   });
 
@@ -332,6 +353,36 @@ describe('Processing', () => {
         getRawFSHes(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Invalid path to FSH definition folder\./s);
+    });
+  });
+
+  describe('#hasFshFiles()', () => {
+    let tempRoot: string;
+
+    beforeAll(() => {
+      tempRoot = temp.mkdirSync('sushi-test');
+      fs.mkdirSync(path.join(tempRoot, 'some-fsh'));
+      fs.mkdirSync(path.join(tempRoot, 'some-fsh', 'nested'));
+      fs.ensureFileSync(path.join(tempRoot, 'some-fsh', 'notfsh.txt'));
+      fs.ensureFileSync(path.join(tempRoot, 'some-fsh', 'nested', 'myfsh.fsh'));
+      fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
+      fs.mkdirSync(path.join(tempRoot, 'no-fsh', 'nested'));
+      fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'notfsh.txt'));
+      fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'nested', 'notfsh.txt'));
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should return true if FSH files exist in any subdirectory', () => {
+      const result = hasFshFiles(path.join(tempRoot, 'some-fsh'));
+      expect(result).toBe(true);
+    });
+
+    it('should return false if there are no FSH files in any subdirectory', () => {
+      const result = hasFshFiles(path.join(tempRoot, 'no-fsh'));
+      expect(result).toBe(false);
     });
   });
 

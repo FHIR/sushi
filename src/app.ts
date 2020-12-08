@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import program from 'commander';
 import chalk from 'chalk';
 import { pad, padStart, sample, padEnd } from 'lodash';
-import { FSHTank } from './import';
+import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
 import { logger, stats, Type } from './utils';
@@ -106,7 +106,19 @@ async function app() {
   let config: Configuration;
 
   try {
-    const rawFSH = getRawFSHes(input);
+    let rawFSH: RawFSH[];
+    if (
+      path.basename(path.dirname(input)) === 'input' &&
+      path.basename(input) === 'fsh' &&
+      !fs.existsSync(input)
+    ) {
+      // If we have a path that ends with input/fsh but that folder does not exist,
+      // we are in a sushi-config.yaml-only case (new tank configuration with no FSH files)
+      // so we can safely say there are no FSH files and therefore rawFSH is empty.
+      rawFSH = [];
+    } else {
+      rawFSH = getRawFSHes(input);
+    }
     if (
       rawFSH.length === 0 &&
       !fs.existsSync(path.join(originalInput, 'config.yaml')) &&
