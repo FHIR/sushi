@@ -193,6 +193,15 @@ export class FSHTank implements Fishable {
     return;
   }
 
+  fishForAppliedRuleSet(item: string): RuleSet | undefined {
+    for (const doc of this.docs) {
+      const ruleSet = doc.appliedRuleSets.get(item);
+      if (ruleSet) {
+        return ruleSet;
+      }
+    }
+  }
+
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const result = this.fish(item, ...types);
     if (result) {
