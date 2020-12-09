@@ -1032,6 +1032,28 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
+      it('should parse assigned value Quantity rule with unit display', () => {
+        const input = `
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity = 155.0 '[lb_av]' "lb"
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedQuantity = new FshQuantity(
+          155.0,
+          new FshCode('[lb_av]', 'http://unitsofmeasure.org', 'lb')
+            .withLocation([5, 33, 5, 41])
+            .withFile('')
+        )
+          .withLocation([5, 27, 5, 46])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
+      });
+
       it('should parse assigned value Ratio rule', () => {
         const input = `
 
