@@ -70,8 +70,7 @@ onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
-insertRule:         STAR KW_INSERT RULESET_NAME insertRuleParams?;
-insertRuleParams:   PARAMETER_LIST PARAM_CONTENT* END_PARAM_LIST;
+insertRule:         STAR KW_INSERT RULESET_REFERENCE;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );

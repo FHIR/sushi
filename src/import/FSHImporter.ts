@@ -1421,9 +1421,10 @@ export class FSHImporter extends FSHVisitor {
     const insertRule = new InsertRule()
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    insertRule.ruleSet = ctx.RULESET_NAME().getText();
-    if (ctx.insertRuleParams()) {
-      insertRule.params = this.parseInsertRuleParams(ctx.insertRuleParams().getText());
+    const [rulesetName, ruleParams] = this.parseRulesetReference(ctx.RULESET_REFERENCE().getText());
+    insertRule.ruleSet = rulesetName;
+    if (ruleParams) {
+      insertRule.params = this.parseInsertRuleParams(ruleParams);
       const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
       if (ruleSet) {
         const ruleSetIdentifier = Immutable.List<string>([ruleSet.name, ...insertRule.params]);
@@ -1464,6 +1465,15 @@ export class FSHImporter extends FSHVisitor {
       }
     } else {
       return insertRule;
+    }
+  }
+
+  private parseRulesetReference(reference: string): [string, string] {
+    const paramListStart = reference.indexOf('(');
+    if (paramListStart === -1) {
+      return [reference.trim(), null];
+    } else {
+      return [reference.slice(0, paramListStart).trim(), reference.slice(paramListStart)];
     }
   }
 

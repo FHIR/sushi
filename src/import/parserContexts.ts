@@ -352,8 +352,7 @@ export interface CaretValueRuleContext extends ParserRuleContext {
 }
 
 export interface InsertRuleContext extends ParserRuleContext {
-  RULESET_NAME(): ParserRuleContext;
-  insertRuleParams(): InsertRuleParamsContext;
+  RULESET_REFERENCE(): ParserRuleContext;
 }
 
 export interface InsertRuleParamsContext extends ParserRuleContext {

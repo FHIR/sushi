@@ -294,12 +294,6 @@ FSHVisitor.prototype.visitInsertRule = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#insertRuleParams.
-FSHVisitor.prototype.visitInsertRuleParams = function(ctx) {
-  return this.visitChildren(ctx);
-};
-
-
 // Visit a parse tree produced by FSHParser#vsComponent.
 FSHVisitor.prototype.visitVsComponent = function(ctx) {
   return this.visitChildren(ctx);

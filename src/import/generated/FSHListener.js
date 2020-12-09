@@ -434,15 +434,6 @@ FSHListener.prototype.exitInsertRule = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#insertRuleParams.
-FSHListener.prototype.enterInsertRuleParams = function(ctx) {
-};
-
-// Exit a parse tree produced by FSHParser#insertRuleParams.
-FSHListener.prototype.exitInsertRuleParams = function(ctx) {
-};
-
-
 // Enter a parse tree produced by FSHParser#vsComponent.
 FSHListener.prototype.enterVsComponent = function(ctx) {
 };
