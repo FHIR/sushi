@@ -82,7 +82,7 @@ value:              SEQUENCE | STRING | MULTILINE_STRING | NUMBER | DATETIME | T
 item:               SEQUENCE (KW_NAMED SEQUENCE)? CARD flag*;
 code:               CODE STRING?;
 concept:            STAR code (STRING | MULTILINE_STRING)?;
-quantity:           NUMBER UNIT;
+quantity:           NUMBER UNIT STRING?;
 ratio:              ratioPart COLON ratioPart;
 reference:          (OR_REFERENCE | PIPE_REFERENCE) STRING?;
 canonical:          CANONICAL;
