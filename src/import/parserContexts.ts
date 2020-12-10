@@ -293,6 +293,7 @@ export interface ConceptContext extends ParserRuleContext {
 export interface QuantityContext extends ParserRuleContext {
   NUMBER(): ParserRuleContext;
   UNIT(): ParserRuleContext;
+  STRING(): ParserRuleContext;
 }
 
 export interface RatioContext extends ParserRuleContext {

@@ -1211,8 +1211,12 @@ export class FSHImporter extends FSHVisitor {
   visitQuantity(ctx: pc.QuantityContext): FshQuantity {
     const value = parseFloat(ctx.NUMBER().getText());
     const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
+    let displayUnit: string;
+    if (ctx.STRING()) {
+      displayUnit = this.extractString(ctx.STRING());
+    }
     // the literal version of quantity always assumes UCUM code system
-    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org')
+    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org', displayUnit)
       .withLocation(this.extractStartStop(ctx.UNIT()))
       .withFile(this.currentFile);
     const quantity = new FshQuantity(value, unit)

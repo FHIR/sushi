@@ -109,6 +109,8 @@ PARAMETER_DEF_LIST: '(' (SEQUENCE WS* COMMA WS*)* SEQUENCE ')';
                         // (NON-WS  WS  ,   WS )+ NON-WS
 COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;
 
+// BLOCK_COMMENT must precede SEQUENCE so that a block comment without whitespace does not become a SEQUENCE
+BLOCK_COMMENT:      '/*' .*? '*/' -> skip;
                  // NON-WHITESPACE
 SEQUENCE:           NONWS+;
 
@@ -121,7 +123,6 @@ fragment NONWS_STR: ~[ \t\r\n\f\u00A0\\"];
 
 // IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);
-BLOCK_COMMENT:      '/*' .*? '*/' -> skip;
 LINE_COMMENT:       '//' .*? [\r\n] -> skip;
 
 mode INSERT_RULE;
