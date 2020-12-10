@@ -121,10 +121,10 @@ export interface RuleSetRuleContext extends ParserRuleContext {
 export interface ParamRuleSetContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   PARAMETER_DEF_LIST(): ParserRuleContext;
-  paramRuleSetRule(): ParamRuleSetRuleContext[];
+  paramRuleSetContent(): ParamRuleSetContentContext;
 }
 
-export interface ParamRuleSetRuleContext extends ParserRuleContext {
+export interface ParamRuleSetContentContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
 }
 

@@ -29,8 +29,8 @@ csRule:             concept | caretValueRule | insertRule;
 ruleSet:            KW_RULESET SEQUENCE ruleSetRule+;
 ruleSetRule:        sdRule | concept | vsComponent;
 
-paramRuleSet:       KW_RULESET SEQUENCE PARAMETER_DEF_LIST paramRuleSetRule+;
-paramRuleSetRule:   STAR
+paramRuleSet:       KW_RULESET SEQUENCE PARAMETER_DEF_LIST paramRuleSetContent;
+paramRuleSetContent:   STAR
                     ~(KW_PROFILE
                     | KW_ALIAS
                     | KW_EXTENSION

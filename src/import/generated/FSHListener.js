@@ -200,12 +200,12 @@ FSHListener.prototype.exitParamRuleSet = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#paramRuleSetRule.
-FSHListener.prototype.enterParamRuleSetRule = function(ctx) {
+// Enter a parse tree produced by FSHParser#paramRuleSetContent.
+FSHListener.prototype.enterParamRuleSetContent = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#paramRuleSetRule.
-FSHListener.prototype.exitParamRuleSetRule = function(ctx) {
+// Exit a parse tree produced by FSHParser#paramRuleSetContent.
+FSHListener.prototype.exitParamRuleSetContent = function(ctx) {
 };
 
 

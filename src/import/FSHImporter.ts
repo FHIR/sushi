@@ -606,15 +606,12 @@ export class FSHImporter extends FSHVisitor {
         .replace(/(^\()|(\)$)/g, '')
         .split(',')
         .map(param => param.trim());
-      paramRuleSet.contents = ctx
-        .paramRuleSetRule()
-        .map(rule => this.visitParamRuleSetRule(rule))
-        .join(EOL);
+      paramRuleSet.contents = this.visitParamRuleSetContent(ctx.paramRuleSetContent());
       this.paramRuleSets.set(paramRuleSet.name, paramRuleSet);
     }
   }
 
-  visitParamRuleSetRule(ctx: pc.ParamRuleSetRuleContext): string {
+  visitParamRuleSetContent(ctx: pc.ParamRuleSetContentContext): string {
     const result = ctx.start.getInputStream().getText(ctx.start.start, ctx.stop.stop);
     return result;
   }
@@ -1428,28 +1425,28 @@ export class FSHImporter extends FSHVisitor {
       const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
       if (ruleSet) {
         const ruleSetIdentifier = Immutable.List<string>([ruleSet.name, ...insertRule.params]);
-        if (
-          ruleSet.parameters.length === insertRule.params.length &&
-          !this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)
-        ) {
-          // create a new document with the substituted parameters
-          const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
-            insertRule.params
-          )}${EOL}`;
-          const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
-          if (appliedRuleSet) {
-            this.currentDoc.appliedRuleSets = this.currentDoc.appliedRuleSets.set(
-              ruleSetIdentifier,
-              appliedRuleSet
-            );
-            return insertRule;
-          } else {
-            logger.error(
-              `Failed to parse RuleSet ${
-                insertRule.ruleSet
-              } with provided parameters (${insertRule.params.join(', ')})`,
-              insertRule.sourceInfo
-            );
+        if (ruleSet.parameters.length === insertRule.params.length) {
+          // no need to create the appliedRuleSet again if we already have it
+          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
+            // create a new document with the substituted parameters
+            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
+              insertRule.params
+            )}${EOL}`;
+            const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
+            if (appliedRuleSet) {
+              this.currentDoc.appliedRuleSets = this.currentDoc.appliedRuleSets.set(
+                ruleSetIdentifier,
+                appliedRuleSet
+              );
+              return insertRule;
+            } else {
+              logger.error(
+                `Failed to parse RuleSet ${
+                  insertRule.ruleSet
+                } with provided parameters (${insertRule.params.join(', ')})`,
+                insertRule.sourceInfo
+              );
+            }
           }
         } else {
           logger.error(

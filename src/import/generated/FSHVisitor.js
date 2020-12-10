@@ -138,8 +138,8 @@ FSHVisitor.prototype.visitParamRuleSet = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#paramRuleSetRule.
-FSHVisitor.prototype.visitParamRuleSetRule = function(ctx) {
+// Visit a parse tree produced by FSHParser#paramRuleSetContent.
+FSHVisitor.prototype.visitParamRuleSetContent = function(ctx) {
   return this.visitChildren(ctx);
 };
 

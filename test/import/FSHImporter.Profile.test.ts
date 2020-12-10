@@ -2044,6 +2044,23 @@ describe('FSHImporter', () => {
         assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
       });
 
+      it('should generate a RuleSet only once when inserted with the same parameters multiple times in the same document', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (#preliminary, "something", 3)
+        * insert MultiParamRuleSet (#preliminary, "something", 3)
+        `;
+        const visitDocSpy = jest.spyOn(importer, 'visitDoc');
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        expect(doc.appliedRuleSets.size).toBe(1);
+        // expect one call to visitDoc for the Profile, and one for the generated RuleSet
+        expect(visitDocSpy).toHaveBeenCalledTimes(2);
+      });
+
       it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {
         const input = `
         Profile: ObservationProfile
