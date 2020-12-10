@@ -1,0 +1,7 @@
+HL7/fhir-mCODE-ig#master
+HL7/fhir-icsr-ae-reporting#main
+HL7/livd#master
+openhie/covid-ig#master
+IHE/ITI.MHD#master
+HL7NZ/hpi#master
+IHTSDO/snomed-ig#master

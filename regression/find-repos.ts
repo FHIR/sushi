@@ -4,7 +4,6 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import { remove, uniqBy } from 'lodash';
 
-const GH_URL_RE = /(git@github\.com:|git:\/\/github\.com|https:\/\/github\.com).*\/([^/]+)\.git/;
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
 const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
 
@@ -12,22 +11,22 @@ async function main() {
   const ghRepos = await getReposFromGitHub();
   const buildRepos = await getNonHL7ReposFromBuild();
   const fshRepos = await getReposWithFSHFolder([...ghRepos, ...buildRepos]);
-  const repoFilePath = path.join(__dirname, 'all-repos.txt');
+  const repoFilePath = path.join(__dirname, 'repos-all.txt');
   const repoFile = fs.readFileSync(repoFilePath, 'utf8');
-  const lines = repoFile.split(/\r?\n/);
+  const lines = repoFile
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && line[0] != '#');
 
   // First remove any found repos that are already listed in the file (commented or not)
   lines.forEach(line => {
-    const repoURL = line.match(GH_URL_RE)?.[0];
-    if (repoURL) {
-      remove(fshRepos, r => [r.ssh_url, r.git_url, r.clone_url].indexOf(repoURL) !== -1);
-    }
+    remove(fshRepos, r => line === `${r.full_name}#${r.default_branch}`);
   });
 
   if (fshRepos.length) {
     // Then add the remaining repos
     lines.push(`# Added ${new Date()}`);
-    lines.push(...fshRepos.map(r => r.ssh_url));
+    lines.push(...fshRepos.map(r => `${r.full_name}#${r.default_branch}`));
     lines.push('');
 
     // Write it out
@@ -103,6 +102,7 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
       // We don't want to use GH API to get default branch (due to API rate limits, so just do our best...)
       repos.push({
         default_branch: branches.indexOf('main') != -1 ? 'main' : 'master',
+        full_name: repo,
         html_url: `https://github.com/${repo}`,
         clone_url: `https://github.com/${repo}.git`,
         git_url: `git://github.com/${repo}.git`,
@@ -133,6 +133,7 @@ async function getReposWithFSHFolder(repos: GHRepo[]): Promise<GHRepo[]> {
 }
 
 interface GHRepo {
+  full_name: string;
   html_url: string;
   default_branch: string;
   git_url: string;
