@@ -283,6 +283,18 @@ describe('FSHImporter', () => {
     expect(loggerSpy.getAllLogs('error').length).toBe(0);
   });
 
+  it('should allow a FSH document with a block comment containing no whitespace', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    /******comment*****/
+    Title: "Single line comment test"
+    `;
+    const result = importSingleText(input);
+    expect(loggerSpy.getAllLogs('error').length).toBe(0);
+    expect(result.profiles.size).toBe(1);
+  });
+
   it('should adjust indentation of multi-line strings that include blank lines', () => {
     const input = `
     Profile: ObservationProfile
