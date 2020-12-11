@@ -192,7 +192,7 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
   const sushiDir = config.getSUSHIDir(num);
   if (version === 'local') {
     console.log(`Installing local sushi at ${sushiDir}`);
-    await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir });
+    await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir, shell: true });
   } else if (/^(gh|github):/.test(version)) {
     const branch = version.replace(/^(gh|github):/, '');
     console.log(`Installing sushi#${branch} from GitHub`);
@@ -208,11 +208,14 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
     const zipRootFolderName = await (await fs.readdir(tempSushiDir)).find(name => /\w/.test(name));
     const zipRoot = path.join(tempSushiDir, zipRootFolderName);
     await fs.move(zipRoot, sushiDir);
-    await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir });
+    await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir, shell: true });
   } else {
     console.log(`Installing fsh-sushi@${version} from NPM`);
     await fs.mkdirp(sushiDir);
-    await util.promisify(execFile)('npm', ['install', `fsh-sushi@${version}`], { cwd: sushiDir });
+    await util.promisify(execFile)('npm', ['install', `fsh-sushi@${version}`], {
+      cwd: sushiDir,
+      shell: true
+    });
   }
 }
 
@@ -276,7 +279,8 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<void> {
       config.getSUSHIExecFile(num),
       config.getSUSHIExecArgs(num),
       {
-        cwd: repoSUSHIDir
+        cwd: repoSUSHIDir,
+        shell: true
       }
     );
   } catch (err) {
@@ -343,7 +347,7 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
         '--',
         config.getRepoDiff(repo)
       ],
-      { cwd: path.dirname(__dirname) }
+      { cwd: path.dirname(__dirname), shell: true }
     );
     process.stdout.write(': CHANGED\n');
   } else {
