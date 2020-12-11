@@ -166,16 +166,16 @@ async function prepareOutputFolder(config: Config): Promise<void> {
     const doDelete = readlineSync.keyInYN(
       'The specified output folder already exists. Do you wish to delete it?'
     );
+    console.log();
     if (doDelete) {
-      // So this is weird... rmdirSync allows recursion but rmdir does not...
-      fs.rmdirSync(config.output, { recursive: true });
+      await fs.emptyDir(config.output);
     } else {
       console.log('Cannot run regression using an existing output folder.  Exiting.');
       process.exit(1);
     }
+  } else {
+    await fs.mkdirp(config.output);
   }
-  await fs.mkdirp(config.output);
-  console.log();
 }
 
 async function setupSUSHI(num: 1 | 2, config: Config) {
