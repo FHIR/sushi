@@ -45,7 +45,7 @@ class Config {
 
   getSUSHICommand(num: 1 | 2): string {
     const version = this.getVersion(num);
-    if (version === 'local') {
+    if (version === 'local' || /^(gh|github):/.test(version)) {
       return `node ${path.join(this.getSUSHIDir(num), 'dist', 'app.js')}`;
     } else {
       return `${path.join(this.getSUSHIDir(num), 'node_modules', '.bin', 'sushi')}`;
@@ -185,10 +185,21 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
     console.log(`Installing local sushi at ${sushiDir}`);
     await util.promisify(exec)('npm install', { cwd: sushiDir });
   } else if (/^(gh|github):/.test(version)) {
-    const commitish = version.replace(/^(gh|github):/, '');
-    console.log(`Installing sushi#${commitish} from GitHub`);
-    await fs.mkdirp(sushiDir);
-    await util.promisify(exec)(`npm install https://github.com/FHIR/sushi.git#${commitish}`, {
+    const branch = version.replace(/^(gh|github):/, '');
+    console.log(`Installing sushi#${branch} from GitHub`);
+    // NOTE: Windows does not support "npm install https://github.com/..." well, so we download
+    // and install the zip distribution instead. In order to get the folder format we want, we
+    // extract in a different temp folder first and then move the extracted root folder to where
+    // we really want it.
+    const tempSushiDir = `${sushiDir}-temp`;
+    await fs.mkdirp(tempSushiDir);
+    const zipPath = path.join(tempSushiDir, 'sushi.zip');
+    const ghRepo = new Repo('FHIR/sushi', branch);
+    await downloadAndExtractZip(ghRepo.getDownloadURL(), zipPath, tempSushiDir);
+    const zipRootFolderName = await (await fs.readdir(tempSushiDir)).find(name => /\w/.test(name));
+    const zipRoot = path.join(tempSushiDir, zipRootFolderName);
+    await fs.move(zipRoot, sushiDir);
+    await util.promisify(exec)('npm install', {
       cwd: sushiDir
     });
   } else {
@@ -222,11 +233,19 @@ async function downloadAndExtractRepo(repo: Repo, config: Config) {
   console.log(`  - Downloading ${repo.getDownloadURL()}`);
   const repoOutput = config.getRepoDir(repo);
   await fs.mkdirp(repoOutput);
+  await downloadAndExtractZip(repo.getDownloadURL(), config.getRepoZipFile(repo), repoOutput);
+  const zipRootFolderName = await (await fs.readdir(repoOutput)).find(name => /\w/.test(name));
+  const zipRoot = path.join(repoOutput, zipRootFolderName);
+  await fs.move(zipRoot, config.getRepoSUSHIDir(repo, 1));
+  return fs.copy(config.getRepoSUSHIDir(repo, 1), config.getRepoSUSHIDir(repo, 2), {
+    recursive: true
+  });
+}
 
-  const zipPath = config.getRepoZipFile(repo);
+async function downloadAndExtractZip(zipURL: string, zipPath: string, extractTo: string) {
   await axios({
     method: 'get',
-    url: repo.getDownloadURL(),
+    url: zipURL,
     responseType: 'stream'
   }).then(response => {
     const writer = fs.createWriteStream(zipPath);
@@ -236,14 +255,8 @@ async function downloadAndExtractRepo(repo: Repo, config: Config) {
       writer.on('error', reject);
     });
   });
-  await extract(zipPath, { dir: repoOutput });
+  await extract(zipPath, { dir: extractTo });
   await fs.unlink(zipPath);
-  const zipRootFolderName = await (await fs.readdir(repoOutput)).find(name => /\w/.test(name));
-  const zipRoot = path.join(repoOutput, zipRootFolderName);
-  await fs.move(zipRoot, config.getRepoSUSHIDir(repo, 1));
-  return fs.copy(config.getRepoSUSHIDir(repo, 1), config.getRepoSUSHIDir(repo, 2), {
-    recursive: true
-  });
 }
 
 async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<void> {
