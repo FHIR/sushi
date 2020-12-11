@@ -1,7 +1,7 @@
 import path from 'path';
 import util from 'util';
 import temp from 'temp';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs-extra';
 import axios from 'axios';
 import program from 'commander';
@@ -43,12 +43,21 @@ class Config {
     }
   }
 
-  getSUSHICommand(num: 1 | 2): string {
+  getSUSHIExecFile(num: 1 | 2): string {
     const version = this.getVersion(num);
     if (version === 'local' || /^(gh|github):/.test(version)) {
-      return `node ${path.join(this.getSUSHIDir(num), 'dist', 'app.js')}`;
+      return 'node';
     } else {
       return `${path.join(this.getSUSHIDir(num), 'node_modules', '.bin', 'sushi')}`;
+    }
+  }
+
+  getSUSHIExecArgs(num: 1 | 2): string[] {
+    const version = this.getVersion(num);
+    if (version === 'local' || /^(gh|github):/.test(version)) {
+      return [`${path.join(this.getSUSHIDir(num), 'dist', 'app.js')}`, '.'];
+    } else {
+      return ['.'];
     }
   }
 
@@ -183,7 +192,7 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
   const sushiDir = config.getSUSHIDir(num);
   if (version === 'local') {
     console.log(`Installing local sushi at ${sushiDir}`);
-    await util.promisify(exec)('npm install', { cwd: sushiDir });
+    await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir });
   } else if (/^(gh|github):/.test(version)) {
     const branch = version.replace(/^(gh|github):/, '');
     console.log(`Installing sushi#${branch} from GitHub`);
@@ -199,13 +208,11 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
     const zipRootFolderName = await (await fs.readdir(tempSushiDir)).find(name => /\w/.test(name));
     const zipRoot = path.join(tempSushiDir, zipRootFolderName);
     await fs.move(zipRoot, sushiDir);
-    await util.promisify(exec)('npm install', {
-      cwd: sushiDir
-    });
+    await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir });
   } else {
     console.log(`Installing fsh-sushi@${version} from NPM`);
     await fs.mkdirp(sushiDir);
-    await util.promisify(exec)(`npm install fsh-sushi@${version}`, { cwd: sushiDir });
+    await util.promisify(execFile)('npm', ['install', `fsh-sushi@${version}`], { cwd: sushiDir });
   }
 }
 
@@ -265,9 +272,13 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<void> {
   console.log(`  - Running SUSHI ${version}`);
   let result: { stdout: string; stderr: string };
   try {
-    result = await util.promisify(exec)(`${config.getSUSHICommand(num)} .`, {
-      cwd: repoSUSHIDir
-    });
+    result = await util.promisify(execFile)(
+      config.getSUSHIExecFile(num),
+      config.getSUSHIExecArgs(num),
+      {
+        cwd: repoSUSHIDir
+      }
+    );
   } catch (err) {
     result = err;
   }
@@ -316,13 +327,23 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
       .replace(/\$SUSHI1/g, config.version1)
       .replace(/\$SUSHI2/g, config.version2);
     await fs.writeFile(config.getRepoDiffReport(repo), diffReportTemplate, 'utf8');
-    await util.promisify(exec)(
-      `npx -q diff2html -i file -s side --hwt "${config.getRepoDiffReport(
-        repo
-      )}" -F "${config.getRepoDiff(repo)}.html" -- "${config.getRepoDiff(repo)}"`,
-      {
-        cwd: path.dirname(__dirname)
-      }
+    await util.promisify(execFile)(
+      'npx',
+      [
+        '-q',
+        'diff2html',
+        '-i',
+        'file',
+        '-s',
+        'side',
+        '--hwt',
+        config.getRepoDiffReport(repo),
+        '-F',
+        config.getRepoDiffReport(repo),
+        '--',
+        config.getRepoDiff(repo)
+      ],
+      { cwd: path.dirname(__dirname) }
     );
     process.stdout.write(': CHANGED\n');
   } else {
