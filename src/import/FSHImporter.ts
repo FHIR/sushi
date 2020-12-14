@@ -61,7 +61,6 @@ import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
 import { parseCodeLexeme } from './parseCodeLexeme';
 import { EOL } from 'os';
-import Immutable from 'immutable';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -612,8 +611,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitParamRuleSetContent(ctx: pc.ParamRuleSetContentContext): string {
-    const result = ctx.start.getInputStream().getText(ctx.start.start, ctx.stop.stop);
-    return result;
+    return ctx.start.getInputStream().getText(ctx.start.start, ctx.stop.stop);
   }
 
   visitMapping(ctx: pc.MappingContext): void {
@@ -1428,7 +1426,7 @@ export class FSHImporter extends FSHVisitor {
       insertRule.params = this.parseInsertRuleParams(ruleParams);
       const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
       if (ruleSet) {
-        const ruleSetIdentifier = Immutable.List<string>([ruleSet.name, ...insertRule.params]);
+        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
         if (ruleSet.parameters.length === insertRule.params.length) {
           // no need to create the appliedRuleSet again if we already have it
           if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
@@ -1438,10 +1436,7 @@ export class FSHImporter extends FSHVisitor {
             )}${EOL}`;
             const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
             if (appliedRuleSet) {
-              this.currentDoc.appliedRuleSets = this.currentDoc.appliedRuleSets.set(
-                ruleSetIdentifier,
-                appliedRuleSet
-              );
+              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
               return insertRule;
             } else {
               logger.error(
@@ -1460,7 +1455,7 @@ export class FSHImporter extends FSHVisitor {
         }
       } else {
         logger.error(
-          `Could not find RuleSet with parameters named ${insertRule.ruleSet}`,
+          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
           insertRule.sourceInfo
         );
       }
@@ -1514,16 +1509,17 @@ export class FSHImporter extends FSHVisitor {
     // save the currentDoc so it can be restored after parsing this RuleSet
     const parentDocument = this.currentDoc;
     this.currentDoc = tempDocument;
-    const subContext = this.parseDoc(input, this.currentFile);
-    this.visitDoc(subContext);
-    // restore parentDocument
-    this.currentDoc = parentDocument;
-    // if tempDocument has appliedRuleSets, merge them in
-    if (tempDocument.appliedRuleSets.size > 0) {
-      this.currentDoc.appliedRuleSets = this.currentDoc.appliedRuleSets.merge(
-        tempDocument.appliedRuleSets
-      );
+    try {
+      const subContext = this.parseDoc(input, this.currentFile);
+      this.visitDoc(subContext);
+    } finally {
+      // be sure to restore parentDocument
+      this.currentDoc = parentDocument;
     }
+    // if tempDocument has appliedRuleSets, merge them in
+    tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>
+      this.currentDoc.appliedRuleSets.set(identifier, ruleSet)
+    );
     // if the RuleSet parsed successfully, it will be on the document, and we should return it.
     return tempDocument.ruleSets.get(name);
   }

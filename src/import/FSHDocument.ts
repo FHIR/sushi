@@ -1,4 +1,3 @@
-import Immutable from 'immutable';
 import {
   Profile,
   Extension,
@@ -19,7 +18,7 @@ export class FSHDocument {
   readonly codeSystems: Map<string, FshCodeSystem>;
   readonly invariants: Map<string, Invariant>;
   readonly ruleSets: Map<string, RuleSet>; // rulesets without parameters
-  appliedRuleSets: Immutable.Map<Immutable.List<string>, RuleSet>; // rulesets with substitutions applied
+  readonly appliedRuleSets: Map<string, RuleSet>; // rulesets with substitutions applied
   readonly mappings: Map<string, Mapping>;
 
   constructor(public readonly file: string) {
@@ -31,7 +30,7 @@ export class FSHDocument {
     this.codeSystems = new Map();
     this.invariants = new Map();
     this.ruleSets = new Map();
-    this.appliedRuleSets = Immutable.Map();
+    this.appliedRuleSets = new Map();
     this.mappings = new Map();
   }
 }
