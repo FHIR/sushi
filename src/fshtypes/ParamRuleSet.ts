@@ -12,13 +12,14 @@ export class ParamRuleSet extends FshEntity {
   }
 
   applyParameters(values: string[]): string {
-    let appliedContents = this.contents;
-    this.parameters.forEach((parameter, index) => {
-      appliedContents = appliedContents.replace(
-        new RegExp(`{${escapeRegExp(parameter)}}`, 'g'),
-        values[index] ?? ''
-      );
+    const paramUsage = new RegExp(`{(${this.parameters.map(escapeRegExp).join('|')})}`, 'g');
+    return this.contents.replace(paramUsage, (_fullMatch, paramName) => {
+      const matchIndex = this.parameters.indexOf(paramName);
+      if (matchIndex > -1) {
+        return values[matchIndex];
+      } else {
+        return '';
+      }
     });
-    return appliedContents;
   }
 }

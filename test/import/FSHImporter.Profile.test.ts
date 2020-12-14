@@ -1881,6 +1881,12 @@ describe('FSHImporter', () => {
         baseCaseRules.parameters = ['value'];
         baseCaseRules.contents = '* note 0..{value}';
         importer.paramRuleSets.set(baseCaseRules.name, baseCaseRules);
+        // RuleSet: CardRuleSet (path, min, max)
+        // * {path} {min}..{max}
+        const cardRuleSet = new ParamRuleSet('CardRuleSet').withFile('RuleSet.fsh');
+        cardRuleSet.parameters = ['path', 'min', 'max'];
+        cardRuleSet.contents = '* {path} {min}..{max}';
+        importer.paramRuleSets.set(cardRuleSet.name, cardRuleSet);
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
@@ -2139,6 +2145,37 @@ describe('FSHImporter', () => {
           /Could not find parameterized RuleSet named MysteriousRuleSet/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log an error when an insert rule with parameters results in invalid syntax', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert CardRuleSet(path with spaces, 1, *)
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/no viable alternative/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 2/s);
+      });
+
+      it('should not log an error when an insert rule with parameters results in rules that are syntactically correct but semantically invalid', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert CardRuleSet(nonExistentPath, 7, 4)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+
+        expect(doc.appliedRuleSets.size).toBe(1);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['CardRuleSet', 'nonExistentPath', '7', '4'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        // This rule is nonsense, of course, but figuring that out is the job of the exporter, not the importer.
+        assertCardRule(appliedRuleSet.rules[0], 'nonExistentPath', 7, '4');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
     });
   });

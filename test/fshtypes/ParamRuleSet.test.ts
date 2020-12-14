@@ -29,13 +29,25 @@ describe('ParamRuleSet', () => {
       expect(appliedContents).toBe(expectedContents);
     });
 
-    it('should replace parameters sequentially', () => {
+    it('should replace all parameters simultaneously', () => {
       const ruleSet = new ParamRuleSet('MyParamRuleSet');
       ruleSet.parameters = ['first', 'second'];
       ruleSet.contents = ['* code from {first}', '* category from {second}'].join(EOL);
 
       const appliedContents = ruleSet.applyParameters(['{second}Deluxe', 'MySystem']);
-      const expectedContents = ['* code from MySystemDeluxe', '* category from MySystem'].join(EOL);
+      const expectedContents = ['* code from {second}Deluxe', '* category from MySystem'].join(EOL);
+      expect(appliedContents).toBe(expectedContents);
+    });
+
+    it('should replace parameters when parameter names contain characters that have special meanings in regular expressions', () => {
+      const ruleSet = new ParamRuleSet('MyParamRuleSet');
+      ruleSet.parameters = ['system.a', 'system_a'];
+      ruleSet.contents = ['* code from {system.a}', '* category from {system_a}'].join(EOL);
+
+      const appliedContents = ruleSet.applyParameters(['FirstSystem', 'SecondSystem']);
+      const expectedContents = ['* code from FirstSystem', '* category from SecondSystem'].join(
+        EOL
+      );
       expect(appliedContents).toBe(expectedContents);
     });
   });
