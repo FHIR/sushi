@@ -1,20 +1,19 @@
 import { TextLocation } from '../fshtypes';
-import { logger } from '../utils/FSHLogger';
 import { Recognizer, Token } from 'antlr4';
 import { ErrorListener } from 'antlr4/error';
 
-export class FSHErrorListener extends ErrorListener {
-  constructor(readonly file: string) {
+export abstract class FSHErrorListener extends ErrorListener {
+  constructor() {
     super();
   }
 
-  syntaxError(
+  buildErrorMessage(
     recognizer: Recognizer,
     offendingSymbol: Token,
     line: number,
     column: number,
     msg: string
-  ): void {
+  ): { message: string; location: TextLocation } {
     let message = msg;
     let location: TextLocation = {
       startLine: line,
@@ -155,7 +154,7 @@ export class FSHErrorListener extends ErrorListener {
       message = "Rules must start with a '*' symbol followed by at least one space";
     }
 
-    logger.error(message, { file: this.file, location });
+    return { message, location };
   }
 }
 

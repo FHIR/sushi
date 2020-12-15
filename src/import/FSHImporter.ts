@@ -1,7 +1,7 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { RawFSH } from './RawFSH';
-import { FSHErrorListener } from './FSHErrorListener';
+import { FSHErrorPrinter } from './FSHErrorPrinter';
 import { FSHVisitor } from './generated/FSHVisitor';
 import { FSHLexer } from './generated/FSHLexer';
 import { FSHParser } from './generated/FSHParser';
@@ -1891,7 +1891,7 @@ export class FSHImporter extends FSHVisitor {
   private parseDoc(input: string, file?: string): pc.DocContext {
     const chars = new InputStream(input);
     const lexer = new FSHLexer(chars);
-    const listener = new FSHErrorListener(file);
+    const listener = new FSHErrorPrinter(file);
     // @ts-ignore
     lexer.removeErrorListeners();
     // @ts-ignore
