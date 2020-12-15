@@ -22,4 +22,10 @@ export class ParamRuleSet extends FshEntity {
       }
     });
   }
+
+  getUnusedParameters() {
+    return this.parameters.filter(param => {
+      return this.contents.indexOf(`{${param}}`) === -1;
+    });
+  }
 }

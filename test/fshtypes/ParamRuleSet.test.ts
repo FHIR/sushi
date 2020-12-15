@@ -51,4 +51,28 @@ describe('ParamRuleSet', () => {
       expect(appliedContents).toBe(expectedContents);
     });
   });
+
+  describe('#getUnusedParameters', () => {
+    it('should return a list of all unused parameters', () => {
+      const ruleSet = new ParamRuleSet('MyParamRuleSet');
+      ruleSet.parameters = ['first', 'second', 'third', 'fourth'];
+      ruleSet.contents = ['* code from {first}', '* category from {third}'].join(EOL);
+
+      const unusedParameters = ruleSet.getUnusedParameters();
+      expect(unusedParameters).toEqual(['second', 'fourth']);
+    });
+
+    it('should return an empty list when all parameters are used', () => {
+      const ruleSet = new ParamRuleSet('MyParamRuleSet');
+      ruleSet.parameters = ['first', 'second', 'third', 'fourth'];
+      ruleSet.contents = [
+        '* code from {first}',
+        '* category from {third}',
+        '* note {second}..{fourth}'
+      ].join(EOL);
+
+      const unusedParameters = ruleSet.getUnusedParameters();
+      expect(unusedParameters).toEqual([]);
+    });
+  });
 });

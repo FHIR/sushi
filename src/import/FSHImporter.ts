@@ -606,6 +606,15 @@ export class FSHImporter extends FSHVisitor {
         .split(',')
         .map(param => param.trim());
       paramRuleSet.contents = this.visitParamRuleSetContent(ctx.paramRuleSetContent());
+      const unusedParameters = paramRuleSet.getUnusedParameters();
+      if (unusedParameters.length > 0) {
+        logger.warn(
+          `RuleSet ${paramRuleSet.name} contains unused parameter${
+            unusedParameters.length > 1 ? 's' : ''
+          }: ${unusedParameters.join(', ')}`,
+          paramRuleSet.sourceInfo
+        );
+      }
       this.paramRuleSets.set(paramRuleSet.name, paramRuleSet);
     }
   }
