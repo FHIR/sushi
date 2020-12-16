@@ -39,6 +39,22 @@ describe('ParamRuleSet', () => {
       expect(appliedContents).toBe(expectedContents);
     });
 
+    it('should replace parameters when there is whitespace in the substitution token', () => {
+      const ruleSet = new ParamRuleSet('MyParamRuleSet');
+      ruleSet.parameters = ['first', 'second'];
+      ruleSet.contents = [
+        '* category {  first}..*',
+        '* category from {second }',
+        '* note 0..{ first \t}'
+      ].join(EOL);
+
+      const appliedContents = ruleSet.applyParameters(['5', 'MySystem']);
+      const expectedContents = ['* category 5..*', '* category from MySystem', '* note 0..5'].join(
+        EOL
+      );
+      expect(appliedContents).toBe(expectedContents);
+    });
+
     it('should replace parameters when parameter names contain characters that have special meanings in regular expressions', () => {
       const ruleSet = new ParamRuleSet('MyParamRuleSet');
       ruleSet.parameters = ['system.a', 'system_a'];
@@ -57,6 +73,15 @@ describe('ParamRuleSet', () => {
       const ruleSet = new ParamRuleSet('MyParamRuleSet');
       ruleSet.parameters = ['first', 'second', 'third', 'fourth'];
       ruleSet.contents = ['* code from {first}', '* category from {third}'].join(EOL);
+
+      const unusedParameters = ruleSet.getUnusedParameters();
+      expect(unusedParameters).toEqual(['second', 'fourth']);
+    });
+
+    it('should detect parameter uses that contain whitespace', () => {
+      const ruleSet = new ParamRuleSet('MyParamRuleSet');
+      ruleSet.parameters = ['first', 'second', 'third', 'fourth'];
+      ruleSet.contents = ['* code from { first  }', '* category from {\tthird \t}'].join(EOL);
 
       const unusedParameters = ruleSet.getUnusedParameters();
       expect(unusedParameters).toEqual(['second', 'fourth']);

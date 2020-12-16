@@ -12,7 +12,10 @@ export class ParamRuleSet extends FshEntity {
   }
 
   applyParameters(values: string[]): string {
-    const paramUsage = new RegExp(`{(${this.parameters.map(escapeRegExp).join('|')})}`, 'g');
+    const paramUsage = new RegExp(
+      `{\\s*(${this.parameters.map(escapeRegExp).join('|')})\\s*}`,
+      'g'
+    );
     return this.contents.replace(paramUsage, (_fullMatch, paramName) => {
       const matchIndex = this.parameters.indexOf(paramName);
       if (matchIndex > -1) {
@@ -25,7 +28,7 @@ export class ParamRuleSet extends FshEntity {
 
   getUnusedParameters() {
     return this.parameters.filter(param => {
-      return this.contents.indexOf(`{${param}}`) === -1;
+      return !new RegExp(`{\\s*${escapeRegExp(param)}\\s*}`).test(this.contents);
     });
   }
 }
