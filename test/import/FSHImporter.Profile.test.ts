@@ -1887,6 +1887,22 @@ describe('FSHImporter', () => {
         cardRuleSet.parameters = ['path', 'min', 'max'];
         cardRuleSet.contents = '* {path} {min}..{max}';
         importer.paramRuleSets.set(cardRuleSet.name, cardRuleSet);
+        // RuleSet: FirstRiskyRuleSet (value)
+        // * note ={value}
+        // * insert SecondRiskyRuleSet({value})
+        const firstRiskyRuleSet = new ParamRuleSet('FirstRiskyRuleSet').withFile('RuleSet.fsh');
+        firstRiskyRuleSet.parameters = ['value'];
+        firstRiskyRuleSet.contents = [
+          '* note ={value}',
+          '* insert SecondRiskyRuleSet({value})'
+        ].join(EOL);
+        importer.paramRuleSets.set(firstRiskyRuleSet.name, firstRiskyRuleSet);
+        // RuleSet: SecondRiskyRuleSet(value)
+        // * status ={value}
+        const secondRiskyRuleSet = new ParamRuleSet('SecondRiskyRuleSet').withFile('RuleSet.fsh');
+        secondRiskyRuleSet.parameters = ['value'];
+        secondRiskyRuleSet.contents = '* status ={value}';
+        importer.paramRuleSets.set(secondRiskyRuleSet.name, secondRiskyRuleSet);
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
@@ -2147,15 +2163,32 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
       });
 
-      it('should log an error when an insert rule with parameters results in invalid syntax', () => {
+      it('should log an error when an insert rule with parameters results in a parser error in the generated RuleSet', () => {
         const input = `
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(path with spaces, 1, *)
         `;
         importer.import([new RawFSH(input, 'Insert.fsh')]);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/no viable alternative/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 2/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Error parsing insert rule with parameterized RuleSet CardRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log one error when nested insert rules with parameters result in multiple parser errors in the generated RuleSets', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * note 0..1
+        * insert FirstRiskyRuleSet("Observation.id")
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Errors parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 5/s);
       });
 
       it('should not log an error when an insert rule with parameters results in rules that are syntactically correct but semantically invalid', () => {

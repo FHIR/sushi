@@ -1,7 +1,9 @@
 import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { RawFSH } from './RawFSH';
+import { FSHErrorListener } from './FSHErrorListener';
 import { FSHErrorPrinter } from './FSHErrorPrinter';
+import { FSHErrorCollector } from './FSHErrorCollector';
 import { FSHVisitor } from './generated/FSHVisitor';
 import { FSHLexer } from './generated/FSHLexer';
 import { FSHParser } from './generated/FSHParser';
@@ -159,7 +161,7 @@ export class FSHImporter extends FSHVisitor {
       // grammar if a newline follows it. In order to prevent this error from occurring,
       // we add a newline to the content before we parse it so comments at EOF can be tokenized.
       const content = rawFSH.content.endsWith('\n') ? rawFSH.content : rawFSH.content + '\n';
-      const ctx = this.parseDoc(content, rawFSH.path);
+      const ctx = this.parseDoc(content, new FSHErrorPrinter(rawFSH.path));
       contexts.push(ctx);
 
       // Collect the aliases and store in global map
@@ -1443,7 +1445,12 @@ export class FSHImporter extends FSHVisitor {
             const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
               insertRule.params
             )}${EOL}`;
-            const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name);
+            const appliedRuleSet = this.parseGeneratedRuleSet(
+              appliedFsh,
+              ruleSet.name,
+              ctx,
+              insertRule
+            );
             if (appliedRuleSet) {
               this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
               return insertRule;
@@ -1512,14 +1519,32 @@ export class FSHImporter extends FSHVisitor {
     return paramList.map(param => param.trim());
   }
 
-  private parseGeneratedRuleSet(input: string, name: string) {
+  private parseGeneratedRuleSet(
+    input: string,
+    name: string,
+    ctx: pc.InsertRuleContext,
+    insertRule: InsertRule
+  ) {
     // define a temporary document that will contain this RuleSet
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet
     const parentDocument = this.currentDoc;
     this.currentDoc = tempDocument;
+    // errors should be collected, not printed, when parsing generated documents
+    // create a new FSHErrorCollector if one does not already exist on our context
+    // the context contains a reference to the parser, but not as part of its interface
+    // so we need to ts-ignore to get it.
+    let retrieveErrors = false;
+    // @ts-ignore
+    let errorCollector = ctx.parser._listeners.find(
+      (listener: any) => listener instanceof FSHErrorCollector
+    ) as FSHErrorCollector;
+    if (!errorCollector) {
+      errorCollector = new FSHErrorCollector();
+      retrieveErrors = true;
+    }
     try {
-      const subContext = this.parseDoc(input, this.currentFile);
+      const subContext = this.parseDoc(input, errorCollector);
       this.visitDoc(subContext);
     } finally {
       // be sure to restore parentDocument
@@ -1529,6 +1554,18 @@ export class FSHImporter extends FSHVisitor {
     tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>
       this.currentDoc.appliedRuleSets.set(identifier, ruleSet)
     );
+    // retrieve errors from the error collectors
+    if (retrieveErrors && errorCollector.errorMessages.length > 0) {
+      logger.error(
+        [
+          `Error${
+            errorCollector.errorMessages.length > 1 ? 's' : ''
+          } parsing insert rule with parameterized RuleSet ${name}`,
+          ...errorCollector.errorMessages.map(message => `- ${message}`)
+        ].join(EOL),
+        insertRule.sourceInfo
+      );
+    }
     // if the RuleSet parsed successfully, it will be on the document, and we should return it.
     return tempDocument.ruleSets.get(name);
   }
@@ -1888,10 +1925,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   // NOTE: Since the ANTLR parser/lexer is JS (not typescript), we need to use some ts-ignore here.
-  private parseDoc(input: string, file?: string): pc.DocContext {
+  private parseDoc(input: string, listener: FSHErrorListener): pc.DocContext {
     const chars = new InputStream(input);
     const lexer = new FSHLexer(chars);
-    const listener = new FSHErrorPrinter(file);
     // @ts-ignore
     lexer.removeErrorListeners();
     // @ts-ignore
