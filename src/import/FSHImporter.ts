@@ -2,8 +2,6 @@ import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { RawFSH } from './RawFSH';
 import { FSHErrorListener } from './FSHErrorListener';
-import { FSHErrorPrinter } from './FSHErrorPrinter';
-import { FSHErrorCollector } from './FSHErrorCollector';
 import { FSHVisitor } from './generated/FSHVisitor';
 import { FSHLexer } from './generated/FSHLexer';
 import { FSHParser } from './generated/FSHParser';
@@ -50,7 +48,7 @@ import {
   SdRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
-import { logger } from '../utils/FSHLogger';
+import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
 import {
   RequiredMetadataError,
@@ -135,10 +133,12 @@ export class FSHImporter extends FSHVisitor {
   private currentDoc: FSHDocument;
   private allAliases: Map<string, string>;
   paramRuleSets: Map<string, ParamRuleSet>;
+  private topLevelParse: boolean;
 
   constructor() {
     super();
     this.paramRuleSets = new Map();
+    this.topLevelParse = true;
   }
 
   import(rawFSHes: RawFSH[]): FSHDocument[] {
@@ -161,7 +161,7 @@ export class FSHImporter extends FSHVisitor {
       // grammar if a newline follows it. In order to prevent this error from occurring,
       // we add a newline to the content before we parse it so comments at EOF can be tokenized.
       const content = rawFSH.content.endsWith('\n') ? rawFSH.content : rawFSH.content + '\n';
-      const ctx = this.parseDoc(content, new FSHErrorPrinter(rawFSH.path));
+      const ctx = this.parseDoc(content, rawFSH.path);
       contexts.push(ctx);
 
       // Collect the aliases and store in global map
@@ -1531,20 +1531,14 @@ export class FSHImporter extends FSHVisitor {
     const parentDocument = this.currentDoc;
     this.currentDoc = tempDocument;
     // errors should be collected, not printed, when parsing generated documents
-    // create a new FSHErrorCollector if one does not already exist on our context
-    // the context contains a reference to the parser, but not as part of its interface
-    // so we need to ts-ignore to get it.
-    let retrieveErrors = false;
-    // @ts-ignore
-    let errorCollector = ctx.parser._listeners.find(
-      (listener: any) => listener instanceof FSHErrorCollector
-    ) as FSHErrorCollector;
-    if (!errorCollector) {
-      errorCollector = new FSHErrorCollector();
-      retrieveErrors = true;
+    // we should only retrieve errors if we are currently in the top-level parse
+    let topLevelInfo: LoggerData;
+    if (this.topLevelParse) {
+      this.topLevelParse = false;
+      topLevelInfo = switchToSecretLogger();
     }
     try {
-      const subContext = this.parseDoc(input, errorCollector);
+      const subContext = this.parseDoc(input);
       this.visitDoc(subContext);
     } finally {
       // be sure to restore parentDocument
@@ -1554,17 +1548,32 @@ export class FSHImporter extends FSHVisitor {
     tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>
       this.currentDoc.appliedRuleSets.set(identifier, ruleSet)
     );
-    // retrieve errors from the error collectors
-    if (retrieveErrors && errorCollector.errorMessages.length > 0) {
-      logger.error(
-        [
-          `Error${
-            errorCollector.errorMessages.length > 1 ? 's' : ''
-          } parsing insert rule with parameterized RuleSet ${name}`,
-          ...errorCollector.errorMessages.map(message => `- ${message}`)
-        ].join(EOL),
-        insertRule.sourceInfo
-      );
+    if (topLevelInfo) {
+      // exit logger collection mode, write collected errors and warnings
+      const collectedMessages = restoreMainLogger(topLevelInfo);
+      this.topLevelParse = true;
+      if (collectedMessages.errors.length > 0) {
+        logger.error(
+          [
+            `Error${
+              collectedMessages.errors.length > 1 ? 's' : ''
+            } parsing insert rule with parameterized RuleSet ${name}`,
+            ...collectedMessages.errors.map(log => `- ${log.message}`)
+          ].join(EOL),
+          insertRule.sourceInfo
+        );
+      }
+      if (collectedMessages.warnings.length > 0) {
+        logger.warn(
+          [
+            `Warning${
+              collectedMessages.warnings.length > 1 ? 's' : ''
+            } parsing insert rule with parameterized RuleSet ${name}`,
+            ...collectedMessages.warnings.map(log => `- ${log.message}`)
+          ].join(EOL),
+          insertRule.sourceInfo
+        );
+      }
     }
     // if the RuleSet parsed successfully, it will be on the document, and we should return it.
     return tempDocument.ruleSets.get(name);
@@ -1925,9 +1934,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   // NOTE: Since the ANTLR parser/lexer is JS (not typescript), we need to use some ts-ignore here.
-  private parseDoc(input: string, listener: FSHErrorListener): pc.DocContext {
+  private parseDoc(input: string, file?: string): pc.DocContext {
     const chars = new InputStream(input);
     const lexer = new FSHLexer(chars);
+    const listener = new FSHErrorListener(file);
     // @ts-ignore
     lexer.removeErrorListeners();
     // @ts-ignore

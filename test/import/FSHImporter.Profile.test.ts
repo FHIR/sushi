@@ -18,6 +18,7 @@ import {
   ParamRuleSet
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { stats } from '../../src/utils/FSHLogger';
 import { importSingleText } from '../testhelpers/importSingleText';
 import { FSHImporter, RawFSH } from '../../src/import';
 import { EOL } from 'os';
@@ -1839,7 +1840,14 @@ describe('FSHImporter', () => {
       let importer: FSHImporter;
 
       beforeEach(() => {
+        // To explain a bit about why stats are used here and not in other tests:
+        // When parsing generated documents, the logging level is temporarily raised
+        // in order to suppress console output. However, messages still go to the logger
+        // and therefore are detected by loggerSpy. However, the stats should provide an
+        // accurate reflection of the number of times that errors and warnings were logged
+        // while the logger is at the normal level.
         loggerSpy.reset();
+        stats.reset();
         importer = new FSHImporter();
         // RuleSet: OneParamRuleSet (val)
         // * status = {val}
@@ -1883,9 +1891,10 @@ describe('FSHImporter', () => {
         importer.paramRuleSets.set(baseCaseRules.name, baseCaseRules);
         // RuleSet: CardRuleSet (path, min, max)
         // * {path} {min}..{max}
+        // * note {min}..{max}
         const cardRuleSet = new ParamRuleSet('CardRuleSet').withFile('RuleSet.fsh');
         cardRuleSet.parameters = ['path', 'min', 'max'];
-        cardRuleSet.contents = '* {path} {min}..{max}';
+        cardRuleSet.contents = ['* {path} {min}..{max}', '* note {min}..{max}'].join(EOL);
         importer.paramRuleSets.set(cardRuleSet.name, cardRuleSet);
         // RuleSet: FirstRiskyRuleSet (value)
         // * note ={value}
@@ -1903,6 +1912,16 @@ describe('FSHImporter', () => {
         secondRiskyRuleSet.parameters = ['value'];
         secondRiskyRuleSet.contents = '* status ={value}';
         importer.paramRuleSets.set(secondRiskyRuleSet.name, secondRiskyRuleSet);
+        // RuleSet: WarningRuleSet(value)
+        // * focus[0] only Reference(Patient | {value})
+        // * focus[1] only Reference(Group | {value})
+        const warningRuleSet = new ParamRuleSet('WarningRuleSet');
+        warningRuleSet.parameters = ['value'];
+        warningRuleSet.contents = [
+          '* focus[0] only Reference(Patient | {value})',
+          '* focus[1] only Reference(Group | {value})'
+        ].join(EOL);
+        importer.paramRuleSets.set(warningRuleSet.name, warningRuleSet);
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
@@ -2170,6 +2189,8 @@ describe('FSHImporter', () => {
         * insert CardRuleSet(path with spaces, 1, *)
         `;
         importer.import([new RawFSH(input, 'Insert.fsh')]);
+
+        expect(stats.numError).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Error parsing insert rule with parameterized RuleSet CardRuleSet/s
         );
@@ -2184,7 +2205,7 @@ describe('FSHImporter', () => {
         * insert FirstRiskyRuleSet("Observation.id")
         `;
         importer.import([new RawFSH(input, 'Insert.fsh')]);
-        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(stats.numError).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Errors parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
         );
@@ -2208,7 +2229,38 @@ describe('FSHImporter', () => {
         expect(appliedRuleSet).toBeDefined();
         // This rule is nonsense, of course, but figuring that out is the job of the exporter, not the importer.
         assertCardRule(appliedRuleSet.rules[0], 'nonExistentPath', 7, '4');
+        assertCardRule(appliedRuleSet.rules[1], 'note', 7, '4');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should log one warning when an insert rule with parameters results in warnings', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert WarningRuleSet(Device)
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+
+        expect(stats.numWarn).toBe(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Warnings parsing insert rule with parameterized RuleSet WarningRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log one error when an insert rule with parameters results in non-parser errors', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert CardRuleSet(nonExistentPath, , )
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+
+        expect(stats.numError).toBe(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Errors parsing insert rule with parameterized RuleSet CardRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
       });
     });
   });

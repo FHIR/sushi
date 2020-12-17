@@ -1,10 +1,28 @@
 import { TextLocation } from '../fshtypes';
 import { Recognizer, Token } from 'antlr4';
+import { logger } from '../utils/FSHLogger';
 import { ErrorListener } from 'antlr4/error';
 
-export abstract class FSHErrorListener extends ErrorListener {
-  constructor() {
+export class FSHErrorListener extends ErrorListener {
+  constructor(readonly file: string) {
     super();
+  }
+
+  syntaxError(
+    recognizer: Recognizer,
+    offendingSymbol: Token,
+    line: number,
+    column: number,
+    msg: string
+  ): void {
+    const { message, location } = this.buildErrorMessage(
+      recognizer,
+      offendingSymbol,
+      line,
+      column,
+      msg
+    );
+    logger.error(message, { file: this.file, location });
   }
 
   buildErrorMessage(

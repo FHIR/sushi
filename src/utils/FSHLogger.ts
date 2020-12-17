@@ -1,5 +1,6 @@
 import { createLogger, format, transports } from 'winston';
 import chalk from 'chalk';
+import cloneDeep from 'lodash/cloneDeep';
 
 const { combine, printf } = format;
 
@@ -126,3 +127,34 @@ export class ErrorsAndWarnings {
 }
 
 export const errorsAndWarnings = new ErrorsAndWarnings();
+
+export type LoggerData = {
+  level: string;
+  errorsAndWarnings: ErrorsAndWarnings;
+  stats: LoggerStats;
+};
+
+export function switchToSecretLogger(): LoggerData {
+  const oldLevel = logger.level;
+  logger.level = 'emerg';
+  const oldErrorsAndWarnings = cloneDeep(errorsAndWarnings);
+  errorsAndWarnings.reset();
+  errorsAndWarnings.shouldTrack = true;
+  const oldStats = cloneDeep(stats);
+  stats.reset();
+  return { level: oldLevel, errorsAndWarnings: oldErrorsAndWarnings, stats: oldStats };
+}
+
+export function restoreMainLogger(loggerDataToRestore: LoggerData): ErrorsAndWarnings {
+  logger.level = loggerDataToRestore.level;
+  const secretErrorsAndWarnings = cloneDeep(errorsAndWarnings);
+  errorsAndWarnings.reset();
+  errorsAndWarnings.errors = loggerDataToRestore.errorsAndWarnings.errors;
+  errorsAndWarnings.warnings = loggerDataToRestore.errorsAndWarnings.warnings;
+  errorsAndWarnings.shouldTrack = loggerDataToRestore.errorsAndWarnings.shouldTrack;
+  stats.numInfo = loggerDataToRestore.stats.numInfo;
+  stats.numWarn = loggerDataToRestore.stats.numWarn;
+  stats.numError = loggerDataToRestore.stats.numError;
+  stats.numDebug = loggerDataToRestore.stats.numDebug;
+  return secretErrorsAndWarnings;
+}
