@@ -209,15 +209,22 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
     contents.add(new YAMLPair('license', packageJSON.license ?? igIni.license));
   }
   // fhirVersion
-  contents.add(new YAMLPair('fhirVersion', '4.0.1'));
+  const fhirDependency =
+    packageJSON.dependencies?.['hl7.fhir.r4.core'] ??
+    packageJSON.dependencies?.['hl7.fhir.r5.core'] ??
+    DEFAULT_PACKAGE_JSON.dependencies['hl7.fhir.r4.core'];
+  contents.add(new YAMLPair('fhirVersion', fhirDependency));
   // dependencies
   const packageWithDeps =
     packageJSON.dependencies &&
-    Object.keys(packageJSON.dependencies)?.some(k => k !== 'hl7.fhir.r4.core')
+    Object.keys(packageJSON.dependencies)?.some(
+      k => k !== 'hl7.fhir.r4.core' && k !== 'hl7.fhir.r5.core'
+    )
       ? packageJSON
       : DEFAULT_PACKAGE_JSON;
   const dependencies = cloneDeep(packageWithDeps.dependencies);
   delete dependencies['hl7.fhir.r4.core'];
+  delete dependencies['hl7.fhir.r5.core'];
   if (packageWithDeps !== DEFAULT_PACKAGE_JSON) {
     contents.add(new YAMLPair('dependencies', dependencies));
   }
@@ -638,7 +645,7 @@ const DEFAULT_PACKAGE_LIST: any = {
     },
     {
       version: DEFAULT_PACKAGE_JSON.version,
-      fhirversion: '4.0.1',
+      fhirversion: DEFAULT_PACKAGE_JSON.dependencies['hl7.fhir.r4.core'],
       date: '2099-01-01',
       desc: 'Initial STU ballot (Mmm yyyy Ballot)',
       path: 'http://example.org/fhir/STU1',

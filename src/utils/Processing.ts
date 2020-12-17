@@ -22,6 +22,12 @@ import {
 import { Configuration } from '../fshtypes';
 import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
 
+export function isSupportedFHIRVersion(version: string): boolean {
+  // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
+  // in an invalid version that passes this test (e.g., 4.99.0), it is still expected to fail when we load dependencies.
+  return /current|4\.0\.1|4\.[1-9]\d*.\d+/.test(version);
+}
+
 export function ensureInputDir(input: string): string {
   // If no input folder is specified, set default to current directory
   if (!input) {
@@ -153,10 +159,12 @@ export function readConfig(input: string, isLegacyIgPubContext: boolean): Config
     );
     throw Error;
   }
-  if (!config.fhirVersion.includes('4.0.1')) {
+  if (!config.fhirVersion.some(v => isSupportedFHIRVersion(v))) {
     logger.error(
-      `The ${path.basename(config.filePath)} must specify FHIR R4 as a fhirVersion. Be sure to` +
-        ` add "fhirVersion: 4.0.1" to the ${path.basename(config.filePath)} file.`
+      `The ${path.basename(config.filePath)} must specify a supported version of FHIR. Be sure to` +
+        ` add "fhirVersion: 4.0.1" (or 4.x.y, as appropriate) to the ${path.basename(
+          config.filePath
+        )} file.`
     );
     throw Error;
   }
@@ -167,9 +175,16 @@ export function loadExternalDependencies(
   defs: FHIRDefinitions,
   config: Configuration
 ): Promise<FHIRDefinitions | void>[] {
-  // Add FHIR R4 to the dependencies so it is loaded
+  // Add FHIR to the dependencies so it is loaded
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
-  dependencies.push({ packageId: 'hl7.fhir.r4.core', version: '4.0.1' });
+  const fhirVersion = config.fhirVersion.find(v => isSupportedFHIRVersion(v));
+  const fhirPackageId = fhirVersion.startsWith('4.0') ? 'hl7.fhir.r4.core' : 'hl7.fhir.r5.core';
+  if (fhirPackageId === 'hl7.fhir.r5.core') {
+    logger.warn(
+      'SUSHI support for pre-release versions of FHIR is experimental.  Use at your own risk!'
+    );
+  }
+  dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
 
   // Load dependencies
   const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
