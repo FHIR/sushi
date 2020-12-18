@@ -916,6 +916,51 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should assign elements with soft indexing used within a path', () => {
+      const assignedValRule = new AssignmentRule('name[+].given');
+      assignedValRule.value = 'John';
+      patientInstance.rules.push(assignedValRule);
+      const assignedValRule2 = new AssignmentRule('name[=].family');
+      assignedValRule2.value = 'Johnson';
+      patientInstance.rules.push(assignedValRule2);
+      const assignedValRule3 = new AssignmentRule('name[+].given');
+      assignedValRule3.value = 'Johnny';
+      patientInstance.rules.push(assignedValRule3);
+      const assignedValRule4 = new AssignmentRule('name[=].family');
+      assignedValRule4.value = 'Jackson';
+      patientInstance.rules.push(assignedValRule4);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          given: ['John'],
+          family: 'Johnson'
+        },
+        {
+          given: ['Johnny'],
+          family: 'Jackson'
+        }
+      ]);
+    });
+
+    it('should assign elements with soft indexing used on multiple elements within a path', () => {
+      const assignedValRule = new AssignmentRule('name[+].given');
+      assignedValRule.value = 'John';
+      patientInstance.rules.push(assignedValRule);
+      const instanceAssignedValRule = new AssignmentRule('name[=].family');
+      instanceAssignedValRule.value = 'Johnson';
+      patientInstance.rules.push(instanceAssignedValRule);
+      const instanceAssignedValRule2 = new AssignmentRule('name[=].given[+]');
+      instanceAssignedValRule2.value = 'Johnny';
+      patientInstance.rules.push(instanceAssignedValRule2);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          given: ['John', 'Johnny'],
+          family: 'Johnson'
+        }
+      ]);
+    });
+
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus');
       assignedValRule.value = new FshCode('foo', 'http://foo.com');

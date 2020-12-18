@@ -7,7 +7,7 @@ import { Rule } from '../fshtypes/rules';
  * @param {string} fshPath - A syntactically valid path in FSH
  * @returns {PathPart[]} an array of PathParts that is easier to work with
  */
-export function parseFSHPath(fshPath: string): PathPart[] {
+function parseFSHPath(fshPath: string): PathPart[] {
   const pathParts: PathPart[] = [];
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
   for (const pathPart of splitPath) {
