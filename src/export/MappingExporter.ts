@@ -7,6 +7,7 @@ import { InvalidFHIRIdError } from '../errors';
 import { MappingRule } from '../fshtypes/rules';
 import { applyInsertRules } from '../fhirtypes/common';
 import { groupBy, pickBy } from 'lodash';
+import { resolveSoftIndexing } from './common';
 
 export class MappingExporter {
   constructor(
@@ -44,6 +45,7 @@ export class MappingExporter {
   private setMappingRules(structDef: StructureDefinition, fshDefinition: Mapping): void {
     // Before applying mapping rules, applyInsertRules will expand any insert rules into mapping rules
     applyInsertRules(fshDefinition, this.tank);
+    resolveSoftIndexing(fshDefinition.rules);
     for (const rule of fshDefinition.rules as MappingRule[]) {
       const element = structDef.findElementByPath(rule.path, this.fisher);
       if (element) {

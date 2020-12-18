@@ -35,6 +35,7 @@ import {
   getUrlFromFshDefinition
 } from '../fhirtypes/common';
 import { Package } from './Package';
+import { resolveSoftIndexing } from './common';
 
 // Extensions that should not be inherited by derived profiles
 // See: https://jira.hl7.org/browse/FHIR-27535
@@ -151,6 +152,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
   private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
+    resolveSoftIndexing(fshDefinition.rules);
     for (const rule of fshDefinition.rules) {
       const element = structDef.findElementByPath(rule.path, this);
       if (element) {

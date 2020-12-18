@@ -6,6 +6,7 @@ import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, Type } from '../utils';
 import { Package } from '.';
+import { resolveSoftIndexing } from './common';
 
 export class CodeSystemExporter {
   constructor(
@@ -39,6 +40,7 @@ export class CodeSystemExporter {
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
+    resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {
         const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(

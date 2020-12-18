@@ -15,6 +15,7 @@ import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
 import { cloneDeep } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
+import { resolveSoftIndexing } from './common';
 
 export class InstanceExporter implements Fishable {
   constructor(
@@ -30,6 +31,7 @@ export class InstanceExporter implements Fishable {
   ): InstanceDefinition {
     // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
+    resolveSoftIndexing(fshInstanceDef.rules);
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {

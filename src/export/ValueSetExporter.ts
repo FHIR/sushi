@@ -18,7 +18,7 @@ import {
 } from '../fshtypes/rules';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
-
+import { resolveSoftIndexing } from './common';
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
 
@@ -104,6 +104,7 @@ export class ValueSetExporter {
     const vsStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('ValueSet', Type.Resource)
     );
+    resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {
         if (rule instanceof CaretValueRule) {
