@@ -381,7 +381,10 @@ export class FSHImporter extends FSHVisitor {
       throw new RequiredMetadataError('InstanceOf', 'Instance', instance.name);
     }
     ruleCtx.forEach(instanceRule => {
-      instance.rules.push(this.visitInstanceRule(instanceRule));
+      const rule = this.visitInstanceRule(instanceRule);
+      if (rule) {
+        instance.rules.push(rule);
+      }
     });
   }
 
@@ -672,7 +675,10 @@ export class FSHImporter extends FSHVisitor {
         }
       });
     ruleCtx.forEach(mappingRule => {
-      mapping.rules.push(this.visitMappingEntityRule(mappingRule));
+      const rule = this.visitMappingEntityRule(mappingRule);
+      if (rule) {
+        mapping.rules.push(rule);
+      }
     });
   }
 
@@ -909,7 +915,8 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.obeysRule()) {
       return this.visitObeysRule(ctx.obeysRule());
     } else if (ctx.insertRule()) {
-      return [this.visitInsertRule(ctx.insertRule())];
+      const rule = this.visitInsertRule(ctx.insertRule());
+      return rule ? [rule] : [];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,

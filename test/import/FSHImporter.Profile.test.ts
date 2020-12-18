@@ -2156,26 +2156,32 @@ describe('FSHImporter', () => {
         assertCardRule(baseCaseRules.rules[0], 'note', 0, '5');
       });
 
-      it('should log an error when an insert rule has the wrong number of parameters', () => {
+      it('should log an error and not add a rule when an insert rule has the wrong number of parameters', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final, "Final")
         `;
-        importer.import([new RawFSH(input, 'Insert.fsh')]);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Incorrect number of parameters applied to RuleSet/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
       });
 
-      it('should log an error when an insert rule with parameters refers to an undefined parameterized RuleSet', () => {
+      it('should log an error and not add a rule when an insert rule with parameters refers to an undefined parameterized RuleSet', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
         * insert MysteriousRuleSet ("mystery")
         `;
-        importer.import([new RawFSH(input, 'Insert.fsh')]);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Could not find parameterized RuleSet named MysteriousRuleSet/s
         );
