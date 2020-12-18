@@ -946,12 +946,12 @@ describe('InstanceExporter', () => {
       const assignedValRule = new AssignmentRule('name[+].given');
       assignedValRule.value = 'John';
       patientInstance.rules.push(assignedValRule);
-      const instanceAssignedValRule = new AssignmentRule('name[=].family');
-      instanceAssignedValRule.value = 'Johnson';
-      patientInstance.rules.push(instanceAssignedValRule);
-      const instanceAssignedValRule2 = new AssignmentRule('name[=].given[+]');
-      instanceAssignedValRule2.value = 'Johnny';
-      patientInstance.rules.push(instanceAssignedValRule2);
+      const assignedValRule2 = new AssignmentRule('name[=].family');
+      assignedValRule2.value = 'Johnson';
+      patientInstance.rules.push(assignedValRule2);
+      const assignedValRule3 = new AssignmentRule('name[=].given[+]');
+      assignedValRule3.value = 'Johnny';
+      patientInstance.rules.push(assignedValRule3);
       const exported = exportInstance(patientInstance);
       expect(exported.name).toEqual([
         {
