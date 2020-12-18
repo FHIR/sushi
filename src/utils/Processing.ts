@@ -181,7 +181,7 @@ export function loadExternalDependencies(
   const fhirPackageId = fhirVersion.startsWith('4.0') ? 'hl7.fhir.r4.core' : 'hl7.fhir.r5.core';
   if (fhirPackageId === 'hl7.fhir.r5.core') {
     logger.warn(
-      'SUSHI support for pre-release versions of FHIR is experimental.  Use at your own risk!'
+      'SUSHI support for pre-release versions of FHIR is experimental. Use at your own risk!'
     );
   }
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
