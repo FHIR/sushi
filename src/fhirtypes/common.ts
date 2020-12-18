@@ -34,6 +34,7 @@ import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
+import { resolveSoftIndexing } from '../export/common';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -428,6 +429,7 @@ export function applyInsertRules(
   seenRuleSets: string[] = []
 ): void {
   const expandedRules: Rule[] = [];
+  resolveSoftIndexing(fshDefinition.rules);
   fshDefinition.rules.forEach(rule => {
     if (!(rule instanceof InsertRule)) {
       expandedRules.push(rule);
@@ -455,7 +457,7 @@ export function applyInsertRules(
       ruleSet.rules.forEach(ruleSetRule => {
         // On the import side, a rule that is intended to be a ValueSetConceptComponent can
         // be imported as a ConceptRule because the syntax is identical. If this is the case,
-        // create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that
+        // create a ValueSetConceptComponent that corr esponds to the ConceptRule, and use that
         if (fshDefinition instanceof FshValueSet && ruleSetRule instanceof ConceptRule) {
           if (ruleSetRule.definition != null) {
             logger.warn(
