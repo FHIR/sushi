@@ -6,6 +6,7 @@ import { minimalConfig } from './minimalConfig';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import readlineSync from 'readline-sync';
 import {
+  isSupportedFHIRVersion,
   ensureInputDir,
   findInputDir,
   ensureOutputDir,
@@ -24,6 +25,26 @@ import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
 describe('Processing', () => {
   temp.track();
+
+  describe('#isSupportedFHIRVersion', () => {
+    it('should support published version >= 4.0.1', () => {
+      expect(isSupportedFHIRVersion('4.0.1')).toBe(true);
+      expect(isSupportedFHIRVersion('4.2.0')).toBe(true);
+      expect(isSupportedFHIRVersion('4.4.0')).toBe(true);
+      expect(isSupportedFHIRVersion('4.5.0')).toBe(true);
+    });
+
+    it('should support current version', () => {
+      expect(isSupportedFHIRVersion('current')).toBe(true);
+    });
+
+    it('should not support published versions < 4.0.1', () => {
+      expect(isSupportedFHIRVersion('4.0.0')).toBe(false);
+      expect(isSupportedFHIRVersion('3.0.2')).toBe(false);
+      expect(isSupportedFHIRVersion('1.0.2')).toBe(false);
+      expect(isSupportedFHIRVersion('0.0.82')).toBe(false);
+    });
+  });
 
   describe('#findInputDir()', () => {
     let tempRoot: string;
@@ -226,6 +247,18 @@ describe('Processing', () => {
       });
     });
 
+    it('should allow FHIR R5', () => {
+      const input = path.join(__dirname, 'fixtures', 'fhir-r5');
+      const config = readConfig(input, false);
+      expect(config.fhirVersion).toEqual(['4.5.0']);
+    });
+
+    it('should allow FHIR current', () => {
+      const input = path.join(__dirname, 'fixtures', 'fhir-current');
+      const config = readConfig(input, false);
+      expect(config.fhirVersion).toEqual(['current']);
+    });
+
     it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent', () => {
       const input = path.join(__dirname, 'fixtures', 'ig-JSON-only');
       const config = readConfig(input, false);
@@ -262,12 +295,24 @@ describe('Processing', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/not a valid YAML object/s);
     });
 
-    it('should log and throw an error when the configuration does not include a FHIR R4 dependency', () => {
+    it('should log and throw an error when the configuration uses an unsupported FHIR version (DSTU2)', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-dstu2');
       expect(() => {
         readConfig(input, false);
       }).toThrow();
-      expect(loggerSpy.getLastMessage('error')).toMatch(/must specify FHIR R4 as a fhirVersion/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /must specify a supported version of FHIR/s
+      );
+    });
+
+    it('should log and throw an error when the configuration uses an unsupported FHIR version (4.0.0)', () => {
+      const input = path.join(__dirname, 'fixtures', 'fhir-four-oh-oh');
+      expect(() => {
+        readConfig(input, false);
+      }).toThrow();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /must specify a supported version of FHIR/s
+      );
     });
   });
 
@@ -277,8 +322,12 @@ describe('Processing', () => {
         .spyOn(loadModule, 'loadDependency')
         .mockImplementation(
           async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
-            // the mock loader can find hl7.fhir.r4.core and hl7.fhir.us.core
-            if (packageName === 'hl7.fhir.r4.core' || packageName === 'hl7.fhir.us.core') {
+            // the mock loader can find hl7.fhir.r4.core, hl7.fhir.r5.core, and hl7.fhir.us.core
+            if (
+              packageName === 'hl7.fhir.r4.core' ||
+              packageName === 'hl7.fhir.r5.core' ||
+              packageName === 'hl7.fhir.us.core'
+            ) {
               FHIRDefs.packages.push(`${packageName}#${version}`);
               return Promise.resolve(FHIRDefs);
             } else {
@@ -300,6 +349,33 @@ describe('Processing', () => {
         expect(defs.packages.length).toBe(2);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(defs.packages).toContain('hl7.fhir.us.core#3.1.0');
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should support FHIR R5 dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['4.5.0'];
+      const defs = new FHIRDefinitions();
+      const dependencyDefs = loadExternalDependencies(defs, config);
+      return Promise.all(dependencyDefs).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r5.core#4.5.0']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
+      });
+    });
+
+    it('should support FHIR current dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['current'];
+      const defs = new FHIRDefinitions();
+      const dependencyDefs = loadExternalDependencies(defs, config);
+      return Promise.all(dependencyDefs).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r5.core#current']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
       });
     });
 

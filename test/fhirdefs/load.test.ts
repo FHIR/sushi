@@ -135,7 +135,10 @@ describe('#loadDependency()', () => {
       } else if (
         uri === 'http://packages.fhir.org/sushi-test/0.2.0' ||
         uri === 'http://build.fhir.org/ig/sushi/sushi-test-old/package.tgz' ||
-        uri === 'http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz'
+        uri === 'http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz' ||
+        uri === 'http://build.fhir.org/hl7.fhir.r5.core.tgz' ||
+        uri === 'http://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0' ||
+        uri === 'http://packages.fhir.org/hl7.fhir.r4.core/4.0.1'
       ) {
         return {
           data: {
@@ -184,6 +187,28 @@ describe('#loadDependency()', () => {
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'sushi-test#0.2.0')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'sushi-test#0.2.0'));
+  });
+
+  it('should try to load FHIR R4 (4.0.1) from packages.fhir.org when it is not cached', async () => {
+    await expect(loadDependency('hl7.fhir.r4.core', '4.0.1', defs, 'foo')).rejects.toThrow(
+      'The package hl7.fhir.r4.core#4.0.1 could not be loaded locally or from the FHIR package registry'
+    ); // the package is never actually added to the cache, since tar is mocked
+    expect(axiosSpy.mock.calls).toEqual([
+      ['http://packages.fhir.org/hl7.fhir.r4.core/4.0.1', { responseType: 'arraybuffer' }]
+    ]);
+    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r4.core#4.0.1')]);
+    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r4.core#4.0.1'));
+  });
+
+  it('should try to load FHIR R5 (4.5.0) from packages2.fhir.org when it is not cached', async () => {
+    await expect(loadDependency('hl7.fhir.r5.core', '4.5.0', defs, 'foo')).rejects.toThrow(
+      'The package hl7.fhir.r5.core#4.5.0 could not be loaded locally or from the FHIR package registry'
+    ); // the package is never actually added to the cache, since tar is mocked
+    expect(axiosSpy.mock.calls).toEqual([
+      ['http://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0', { responseType: 'arraybuffer' }]
+    ]);
+    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r5.core#4.5.0')]);
+    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r5.core#4.5.0'));
   });
 
   it('should throw PackageLoadError when a package with a non-current version is not cached or available on packages.fhir.org', async () => {
@@ -241,6 +266,17 @@ describe('#loadDependency()', () => {
     ]);
     expect(ensureDirSpy.mock.calls[0][0]).toEqual(path.join(cachePath, 'sushi-test-old#current'));
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join(cachePath, 'sushi-test-old#current'));
+  });
+
+  it('should try to load the latest FHIR R5 package from build.fhir.org when it is not locally cached', async () => {
+    await expect(loadDependency('hl7.fhir.r5.core', 'current', defs, 'foo')).rejects.toThrow(
+      'The package hl7.fhir.r5.core#current could not be loaded locally or from the FHIR package registry'
+    ); // the package is never actually added to the cache, since tar is mocked
+    expect(axiosSpy.mock.calls).toEqual([
+      ['http://build.fhir.org/hl7.fhir.r5.core.tgz', { responseType: 'arraybuffer' }]
+    ]);
+    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r5.core#current')]);
+    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r5.core#current'));
   });
 
   it('should revert to an old locally cached current version when a newer current version is not available for download', async () => {

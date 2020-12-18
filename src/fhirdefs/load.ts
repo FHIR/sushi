@@ -50,10 +50,19 @@ export async function loadDependency(
     loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
   }
 
-  // Even if a local current package is loaded, we must still check that the local package date matches
-  // the date on the most recent version on build.fhir.org. If the date does not match, we re-download to the cache
   let packageUrl;
-  if (version === 'current') {
+  if (packageName.startsWith('hl7.fhir.r5.') && version === 'current') {
+    packageUrl = `http://build.fhir.org/${packageName}.tgz`;
+    // TODO: Figure out how to determine if the cached package is current
+    // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
+    if (loadedPackage) {
+      logger.info(
+        `Downloading ${fullPackageName} since SUSHI cannot determine if the version in the local cache is the most recent build.`
+      );
+    }
+  } else if (version === 'current') {
+    // Even if a local current package is loaded, we must still check that the local package date matches
+    // the date on the most recent version on build.fhir.org. If the date does not match, we re-download to the cache
     const baseUrl = 'http://build.fhir.org/ig';
     const res = await axios.get(`${baseUrl}/qas.json`);
     const qaData: { 'package-id': string; date: string; repo: string }[] = res?.data;
@@ -104,8 +113,13 @@ export async function loadDependency(
     }
   } else if (!loadedPackage) {
     // If the package is not locally cached, and it is not a current or dev version, we attempt to get it
-    // from packages.fhir.org
-    packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
+    // from packages.fhir.org or packages2.fhir.org
+    if (packageName.startsWith('hl7.fhir.r5.')) {
+      // Temporary.  See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
+      packageUrl = `http://packages2.fhir.org/packages/${packageName}/${version}`;
+    } else {
+      packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
+    }
   }
 
   // If the packageUrl is set, we must download the package from that url, and extract it to our local cache

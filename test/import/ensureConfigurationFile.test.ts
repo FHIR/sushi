@@ -358,6 +358,32 @@ describe('ensureConfigurationFile', () => {
     });
   });
 
+  it('should generate an appropriate config for a tank w/ R5 package.json', () => {
+    // Copy the fixture to a temp folder since we actually create files in the tank
+    const tank = temp.mkdirSync('sushi-test');
+    fs.copySync(path.join(__dirname, 'fixtures', 'package-json-only'), tank);
+
+    // Tweak the JSON to remove optional fields
+    const packageJSON = fs.readJsonSync(path.join(tank, 'package.json'));
+    delete packageJSON.url;
+    delete packageJSON.title;
+    delete packageJSON.description;
+    delete packageJSON.dependencies;
+    delete packageJSON.author;
+    delete packageJSON.maintainers;
+    delete packageJSON.license;
+    packageJSON.dependencies = { 'hl7.fhir.r5.core': '4.5.0' };
+    fs.writeJsonSync(path.join(tank, 'package.json'), packageJSON);
+
+    // ensureConfiguration
+    const configPath = ensureConfiguration(tank);
+    const configText = fs.readFileSync(configPath, 'utf8');
+    const configJSON = YAML.parse(configText);
+
+    // We've tested most of this already.  We only care about the fhirVersion.
+    expect(configJSON.fhirVersion).toEqual('4.5.0');
+  });
+
   it('should generate an appropriate config for a tank w/ a package.json and legacy ig.ini', () => {
     // Copy the fixture to a temp folder since we actually create files in the tank
     const tank = temp.mkdirSync('sushi-test');

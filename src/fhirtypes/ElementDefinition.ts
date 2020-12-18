@@ -65,7 +65,8 @@ export class ElementDefinitionType {
     const fhirTypeExtension = this.extension?.find(
       ext => ext.url === 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type'
     );
-    return fhirTypeExtension?.valueUrl ?? this._code;
+    // R4 uses valueUrl; R5 uses valueUri
+    return fhirTypeExtension?.valueUrl ?? fhirTypeExtension?.valueUri ?? this._code;
   }
 
   set code(c: string) {
@@ -2033,6 +2034,7 @@ export type ElementDefinitionExtension = {
   url: string;
   // TODO: support all the value[x]
   valueUrl?: string;
+  valueUri?: string;
 };
 
 export type ElementDefinitionExample = {
