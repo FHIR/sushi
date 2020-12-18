@@ -4,29 +4,29 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import { remove, uniqBy } from 'lodash';
 
-const GH_URL_RE = /(git@github\.com:|git:\/\/github\.com|https:\/\/github\.com).*\/([^/]+)\.git/;
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
+const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
 
 async function main() {
   const ghRepos = await getReposFromGitHub();
   const buildRepos = await getNonHL7ReposFromBuild();
   const fshRepos = await getReposWithFSHFolder([...ghRepos, ...buildRepos]);
-  const repoFilePath = path.join(__dirname, 'all-repos.txt');
+  const repoFilePath = path.join(__dirname, 'repos-all.txt');
   const repoFile = fs.readFileSync(repoFilePath, 'utf8');
-  const lines = repoFile.split(/\r?\n/);
+  const lines = repoFile
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && line[0] != '#');
 
   // First remove any found repos that are already listed in the file (commented or not)
   lines.forEach(line => {
-    const repoURL = line.match(GH_URL_RE)?.[0];
-    if (repoURL) {
-      remove(fshRepos, r => [r.ssh_url, r.git_url, r.clone_url].indexOf(repoURL) !== -1);
-    }
+    remove(fshRepos, r => line === `${r.full_name}#${r.default_branch}`);
   });
 
   if (fshRepos.length) {
     // Then add the remaining repos
     lines.push(`# Added ${new Date()}`);
-    lines.push(...fshRepos.map(r => r.ssh_url));
+    lines.push(...fshRepos.map(r => `${r.full_name}#${r.default_branch}`));
     lines.push('');
 
     // Write it out
@@ -40,21 +40,39 @@ async function main() {
 async function getReposFromGitHub(): Promise<GHRepo[]> {
   console.log('Getting HL7 repos using GitHub API...');
   const repos: GHRepo[] = [];
-  for (let page = 1; true; page++) {
-    const res = await axios.get(
-      `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`
-    );
-    if (Array.isArray(res?.data)) {
-      repos.push(...res.data.filter(r => r.size > 0 && !r.archived && !r.disabled));
-      if (res.data.length < 100) {
-        // no more results after this, so break
+  try {
+    for (let page = 1; true; page++) {
+      const options: any = {};
+      if (process.env.GITHUB_API_KEY) {
+        options.headers = { Authorization: `token ${process.env.GITHUB_API_KEY}` };
+      }
+      const res = await axios.get(
+        `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`,
+        options
+      );
+      if (Array.isArray(res?.data)) {
+        repos.push(...res.data.filter(r => r.size > 0 && !r.archived && !r.disabled));
+        if (res.data.length < 100) {
+          // no more results after this, so break
+          break;
+        }
+      } else {
         break;
       }
-    } else {
-      break;
     }
+    console.log(`Found ${repos.length} active repos at github.com/HL7.`);
+  } catch (e) {
+    const message = e.response?.status
+      ? `HTTP ${e.response.status}: ${e.response.statusText}`
+      : `${e}`;
+    console.error(`Could not get repos from GitHub: ${message}`);
+    if (process.env.GITHUB_API_KEY == null && /rate/i.test(e.response?.statusText)) {
+      console.error(
+        'To increase rate limits, set the GITHUB_API_KEY environment variable to a GitHub personal access token.'
+      );
+    }
+    process.exit(1);
   }
-  console.log(`Found ${repos.length} active repos at github.com/HL7.`);
   return repos;
 }
 
@@ -84,6 +102,7 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
       // We don't want to use GH API to get default branch (due to API rate limits, so just do our best...)
       repos.push({
         default_branch: branches.indexOf('main') != -1 ? 'main' : 'master',
+        full_name: repo,
         html_url: `https://github.com/${repo}`,
         clone_url: `https://github.com/${repo}.git`,
         git_url: `git://github.com/${repo}.git`,
@@ -98,12 +117,15 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
 async function getReposWithFSHFolder(repos: GHRepo[]): Promise<GHRepo[]> {
   const fshRepos: GHRepo[] = [];
   for (const repo of uniqBy(repos, r => r.html_url.toLowerCase())) {
-    try {
-      console.log(`Checking ${repo.html_url} for /fsh folder...`);
-      await axios.head(`${repo.html_url}/tree/${repo.default_branch}/fsh`);
-      fshRepos.push(repo);
-    } catch (e) {
-      // 404: no fsh folder
+    console.log(`Checking ${repo.html_url} for FSHy paths...`);
+    for (const fshyPath of FSHY_PATHS) {
+      try {
+        await axios.head(`${repo.html_url}/tree/${repo.default_branch}/${fshyPath}`);
+        fshRepos.push(repo);
+        break;
+      } catch (e) {
+        // 404: fshy path not found
+      }
     }
   }
   console.log(`${fshRepos.length} repos had a /fsh folder.`);
@@ -111,6 +133,7 @@ async function getReposWithFSHFolder(repos: GHRepo[]): Promise<GHRepo[]> {
 }
 
 interface GHRepo {
+  full_name: string;
   html_url: string;
   default_branch: string;
   git_url: string;
