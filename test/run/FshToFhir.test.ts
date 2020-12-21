@@ -83,12 +83,20 @@ describe('#FshToFhir', () => {
       fshToFhir('', {
         canonical: 'http://mycanonical.org',
         dependencies: [{ packageId: 'hl7.fhir.test.core', version: '1.2.3' }],
+        fhirVersion: '4.5.0',
         version: '3.2.1'
       })
     ).resolves.toEqual({
       errors: [],
       warnings: [],
       fhir: []
+    });
+    expect(loadSpy.mock.calls[0][1]).toEqual({
+      FSHOnly: true,
+      canonical: 'http://mycanonical.org',
+      dependencies: [{ packageId: 'hl7.fhir.test.core', version: '1.2.3' }],
+      fhirVersion: ['4.5.0'],
+      version: '3.2.1'
     });
   });
 

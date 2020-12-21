@@ -8,7 +8,7 @@ import { pad, padStart, sample, padEnd } from 'lodash';
 import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
-import { logger, stats, Type } from './utils';
+import { logger, stats, isSupportedFHIRVersion, Type } from './utils';
 import { loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
@@ -153,9 +153,9 @@ async function app() {
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
-  if (structDef?.version !== '4.0.1') {
+  if (structDef == null || !isSupportedFHIRVersion(structDef.version)) {
     logger.error(
-      'StructureDefinition resource not found for v4.0.1. The FHIR R4 package in local cache' +
+      'Valid StructureDefinition resource not found. The FHIR package in your local cache' +
         ' may be corrupt. Local FHIR cache can be found at <home-directory>/.fhir/packages.' +
         ' For more information, see https://wiki.hl7.org/FHIR_Package_Cache#Location.'
     );
