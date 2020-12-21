@@ -28,6 +28,27 @@ describe('FSHImporter', () => {
       expect(result.contents).toBe(expectedContents);
     });
 
+    it('should parse a ParamRuleSet when there is no space between the ruleset name and parameter list', () => {
+      const importer = new FSHImporter();
+      const input = `
+        RuleSet: MyRuleSet(system, strength)
+        * code from {system} {strength}
+        * pig from egg
+      `;
+
+      importer.import([new RawFSH(input, 'Params.fsh')]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(importer.paramRuleSets.size).toBe(1);
+      expect(importer.paramRuleSets.has('MyRuleSet')).toBe(true);
+      const result = importer.paramRuleSets.get('MyRuleSet');
+      expect(result.name).toBe('MyRuleSet');
+      expect(result.parameters).toEqual(['system', 'strength']);
+      const expectedContents = `* code from {system} {strength}
+        * pig from egg`;
+      expect(result.contents).toBe(expectedContents);
+    });
+
     it('should stop parsing ParamRuleSet contents when the next entity is defined', () => {
       const importer = new FSHImporter();
       const input = `

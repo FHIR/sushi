@@ -568,7 +568,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitRuleSet(ctx: pc.RuleSetContext): void {
-    const ruleSet = new RuleSet(ctx.SEQUENCE().getText())
+    const ruleSet = new RuleSet(ctx.RULESET_REFERENCE().getText().trim())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.ruleSets.has(ruleSet.name)) {
@@ -595,7 +595,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitParamRuleSet(ctx: pc.ParamRuleSetContext): void {
-    const paramRuleSet = new ParamRuleSet(ctx.SEQUENCE().getText())
+    const [rulesetName, ruleParams] = this.parseRulesetReference(
+      ctx.PARAM_RULESET_REFERENCE().getText()
+    );
+    const paramRuleSet = new ParamRuleSet(rulesetName)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.paramRuleSets.has(paramRuleSet.name)) {
@@ -604,9 +607,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      paramRuleSet.parameters = ctx
-        .PARAMETER_DEF_LIST()
-        .getText()
+      paramRuleSet.parameters = ruleParams
         .replace(/(^\()|(\)$)/g, '')
         .split(',')
         .map(param => param.trim());
@@ -1438,7 +1439,9 @@ export class FSHImporter extends FSHVisitor {
     const insertRule = new InsertRule()
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    const [rulesetName, ruleParams] = this.parseRulesetReference(ctx.RULESET_REFERENCE().getText());
+    const [rulesetName, ruleParams] = this.parseRulesetReference(
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE().getText()
+    );
     insertRule.ruleSet = rulesetName;
     if (ruleParams) {
       insertRule.params = this.parseInsertRuleParams(ruleParams);

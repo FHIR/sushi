@@ -9,7 +9,7 @@ KW_INSTANCEOF:      'InstanceOf' WS* ':';
 KW_INVARIANT:       'Invariant' WS* ':';
 KW_VALUESET:        'ValueSet' WS* ':';
 KW_CODESYSTEM:      'CodeSystem' WS* ':';
-KW_RULESET:         'RuleSet' WS* ':';
+KW_RULESET:         'RuleSet' WS* ':' -> pushMode(RULESET_OR_INSERT);
 KW_MAPPING:         'Mapping' WS* ':';
 KW_MIXINS:          'Mixins' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
@@ -49,7 +49,7 @@ KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
 KW_UNITS:           'units';
 KW_EXACTLY:         '(' WS* 'exactly' WS* ')';
-KW_INSERT:          'insert' -> pushMode(INSERT_RULE);
+KW_INSERT:          'insert' -> pushMode(RULESET_OR_INSERT);
 
 // SYMBOLS
 EQUAL:              '=';
@@ -125,6 +125,6 @@ fragment NONWS_STR: ~[ \t\r\n\f\u00A0\\"];
 WHITESPACE:         WS -> channel(HIDDEN);
 LINE_COMMENT:       '//' .*? [\r\n] -> skip;
 
-mode INSERT_RULE;
-RULESET_REFERENCE:      WS* NONWS+ (WS* ('(' ('\\)' | '\\\\' | ~[)])+ ')'))? -> popMode;
-
+mode RULESET_OR_INSERT;
+PARAM_RULESET_REFERENCE:      WS* NONWS+ (WS* ('(' ('\\)' | '\\\\' | ~[)])+ ')')) -> popMode;
+RULESET_REFERENCE:            WS* NONWS+ -> popMode;

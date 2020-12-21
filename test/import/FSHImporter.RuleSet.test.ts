@@ -126,7 +126,15 @@ describe('FSHImporter', () => {
         RuleSet: EmptyRuleSet
         `;
       const result = importSingleText(input, 'Empty.fsh');
-      expect(result.ruleSets.size).toBe(0);
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('EmptyRuleSet');
+      expect(ruleSet.name).toBe('EmptyRuleSet');
+      expect(ruleSet.sourceInfo.location).toEqual({
+        startLine: 2,
+        startColumn: 9,
+        endLine: 2,
+        endColumn: 29
+      });
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Empty\.fsh.*Line: 4\D*/s);
     });
 

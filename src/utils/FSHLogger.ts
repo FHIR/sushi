@@ -135,6 +135,9 @@ export type LoggerData = {
 };
 
 export function switchToSecretLogger(): LoggerData {
+  // by setting the logger level to the highest level possible,
+  // console output is suppressed, while still calling all the functions
+  // defined in the logger's format.
   const oldLevel = logger.level;
   logger.level = 'emerg';
   const oldErrorsAndWarnings = cloneDeep(errorsAndWarnings);

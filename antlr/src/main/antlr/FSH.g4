@@ -26,10 +26,10 @@ codeSystem:         KW_CODESYSTEM SEQUENCE csMetadata* csRule*;
 csMetadata:         id | title | description;
 csRule:             concept | caretValueRule | insertRule;
 
-ruleSet:            KW_RULESET SEQUENCE ruleSetRule+;
+ruleSet:            KW_RULESET RULESET_REFERENCE ruleSetRule+;
 ruleSetRule:        sdRule | concept | vsComponent;
 
-paramRuleSet:       KW_RULESET SEQUENCE PARAMETER_DEF_LIST paramRuleSetContent;
+paramRuleSet:       KW_RULESET PARAM_RULESET_REFERENCE paramRuleSetContent;
 paramRuleSetContent:   STAR
                     ~(KW_PROFILE
                     | KW_ALIAS
@@ -70,7 +70,7 @@ onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS SEQUENCE (KW_AND SEQUENCE)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
-insertRule:         STAR KW_INSERT RULESET_REFERENCE;
+insertRule:         STAR KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );

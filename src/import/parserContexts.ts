@@ -108,7 +108,7 @@ export interface InvariantMetadataContext extends ParserRuleContext {
 }
 
 export interface RuleSetContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  RULESET_REFERENCE(): ParserRuleContext;
   ruleSetRule(): RuleSetRuleContext[];
 }
 
@@ -119,8 +119,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
 }
 
 export interface ParamRuleSetContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
-  PARAMETER_DEF_LIST(): ParserRuleContext;
+  PARAM_RULESET_REFERENCE(): ParserRuleContext;
   paramRuleSetContent(): ParamRuleSetContentContext;
 }
 
@@ -354,6 +353,7 @@ export interface CaretValueRuleContext extends ParserRuleContext {
 
 export interface InsertRuleContext extends ParserRuleContext {
   RULESET_REFERENCE(): ParserRuleContext;
+  PARAM_RULESET_REFERENCE(): ParserRuleContext;
 }
 
 export interface InsertRuleParamsContext extends ParserRuleContext {
