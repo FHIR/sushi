@@ -14,6 +14,7 @@ export * from './FshValueSet';
 export * from './ValueSetComponentTypes';
 export * from './Invariant';
 export * from './RuleSet';
+export * from './ParamRuleSet';
 export * from './Mapping';
 export * from './Configuration';
 export * from './AllowedRules';

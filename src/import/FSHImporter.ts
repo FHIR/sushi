@@ -24,6 +24,7 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
+  ParamRuleSet,
   Mapping,
   isInstanceUsage
 } from '../fshtypes';
@@ -47,7 +48,7 @@ import {
   SdRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
-import { logger } from '../utils/FSHLogger';
+import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
 import {
   RequiredMetadataError,
@@ -59,6 +60,7 @@ import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
 import { parseCodeLexeme } from './parseCodeLexeme';
+import { EOL } from 'os';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -130,9 +132,13 @@ export class FSHImporter extends FSHVisitor {
   private currentFile: string;
   private currentDoc: FSHDocument;
   private allAliases: Map<string, string>;
+  paramRuleSets: Map<string, ParamRuleSet>;
+  private topLevelParse: boolean;
 
   constructor() {
     super();
+    this.paramRuleSets = new Map();
+    this.topLevelParse = true;
   }
 
   import(rawFSHes: RawFSH[]): FSHDocument[] {
@@ -145,6 +151,8 @@ export class FSHImporter extends FSHVisitor {
       // Create and store doc for main import process
       const doc = new FSHDocument(rawFSH.path);
       docs.push(doc);
+      this.currentDoc = doc;
+      this.currentFile = this.currentDoc.file ?? '';
 
       // Create and store context for main import process
       // We are appending a newline to the file content if there is not one there already.
@@ -176,7 +184,12 @@ export class FSHImporter extends FSHVisitor {
             doc.aliases.set(name, value);
           }
         }
+        if (e.paramRuleSet()) {
+          this.visitParamRuleSet(e.paramRuleSet());
+        }
       });
+      this.currentDoc = null;
+      this.currentFile = null;
     });
     logger.info(`Preprocessed ${docs.length} documents with ${this.allAliases.size} aliases.`);
 
@@ -368,7 +381,10 @@ export class FSHImporter extends FSHVisitor {
       throw new RequiredMetadataError('InstanceOf', 'Instance', instance.name);
     }
     ruleCtx.forEach(instanceRule => {
-      instance.rules.push(this.visitInstanceRule(instanceRule));
+      const rule = this.visitInstanceRule(instanceRule);
+      if (rule) {
+        instance.rules.push(rule);
+      }
     });
   }
 
@@ -552,7 +568,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitRuleSet(ctx: pc.RuleSetContext): void {
-    const ruleSet = new RuleSet(ctx.SEQUENCE().getText())
+    const ruleSet = new RuleSet(ctx.RULESET_REFERENCE().getText().trim())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.ruleSets.has(ruleSet.name)) {
@@ -576,6 +592,41 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
       }
     });
+  }
+
+  visitParamRuleSet(ctx: pc.ParamRuleSetContext): void {
+    const [rulesetName, ruleParams] = this.parseRulesetReference(
+      ctx.PARAM_RULESET_REFERENCE().getText()
+    );
+    const paramRuleSet = new ParamRuleSet(rulesetName)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.paramRuleSets.has(paramRuleSet.name)) {
+      logger.error(`Skipping RuleSet: a RuleSet named ${paramRuleSet.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      paramRuleSet.parameters = ruleParams
+        .replace(/(^\()|(\)$)/g, '')
+        .split(',')
+        .map(param => param.trim());
+      paramRuleSet.contents = this.visitParamRuleSetContent(ctx.paramRuleSetContent());
+      const unusedParameters = paramRuleSet.getUnusedParameters();
+      if (unusedParameters.length > 0) {
+        logger.warn(
+          `RuleSet ${paramRuleSet.name} contains unused parameter${
+            unusedParameters.length > 1 ? 's' : ''
+          }: ${unusedParameters.join(', ')}`,
+          paramRuleSet.sourceInfo
+        );
+      }
+      this.paramRuleSets.set(paramRuleSet.name, paramRuleSet);
+    }
+  }
+
+  visitParamRuleSetContent(ctx: pc.ParamRuleSetContentContext): string {
+    return ctx.start.getInputStream().getText(ctx.start.start, ctx.stop.stop);
   }
 
   visitMapping(ctx: pc.MappingContext): void {
@@ -625,7 +676,10 @@ export class FSHImporter extends FSHVisitor {
         }
       });
     ruleCtx.forEach(mappingRule => {
-      mapping.rules.push(this.visitMappingEntityRule(mappingRule));
+      const rule = this.visitMappingEntityRule(mappingRule);
+      if (rule) {
+        mapping.rules.push(rule);
+      }
     });
   }
 
@@ -862,7 +916,8 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.obeysRule()) {
       return this.visitObeysRule(ctx.obeysRule());
     } else if (ctx.insertRule()) {
-      return [this.visitInsertRule(ctx.insertRule())];
+      const rule = this.visitInsertRule(ctx.insertRule());
+      return rule ? [rule] : [];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -1384,8 +1439,154 @@ export class FSHImporter extends FSHVisitor {
     const insertRule = new InsertRule()
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    insertRule.ruleSet = ctx.SEQUENCE().getText();
-    return insertRule;
+    const [rulesetName, ruleParams] = this.parseRulesetReference(
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE().getText()
+    );
+    insertRule.ruleSet = rulesetName;
+    if (ruleParams) {
+      insertRule.params = this.parseInsertRuleParams(ruleParams);
+      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
+      if (ruleSet) {
+        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
+        if (ruleSet.parameters.length === insertRule.params.length) {
+          // no need to create the appliedRuleSet again if we already have it
+          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
+            // create a new document with the substituted parameters
+            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
+              insertRule.params
+            )}${EOL}`;
+            const appliedRuleSet = this.parseGeneratedRuleSet(
+              appliedFsh,
+              ruleSet.name,
+              ctx,
+              insertRule
+            );
+            if (appliedRuleSet) {
+              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
+              return insertRule;
+            } else {
+              logger.error(
+                `Failed to parse RuleSet ${
+                  insertRule.ruleSet
+                } with provided parameters (${insertRule.params.join(', ')})`,
+                insertRule.sourceInfo
+              );
+            }
+          }
+        } else {
+          logger.error(
+            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
+            insertRule.sourceInfo
+          );
+        }
+      } else {
+        logger.error(
+          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
+          insertRule.sourceInfo
+        );
+      }
+    } else {
+      return insertRule;
+    }
+  }
+
+  private parseRulesetReference(reference: string): [string, string] {
+    const paramListStart = reference.indexOf('(');
+    if (paramListStart === -1) {
+      return [reference.trim(), null];
+    } else {
+      return [reference.slice(0, paramListStart).trim(), reference.slice(paramListStart)];
+    }
+  }
+
+  private parseInsertRuleParams(ruleText: string): string[] {
+    // first, trim parentheses
+    const ruleNoParens = ruleText.slice(1, ruleText.length - 1);
+    // since backslash is the escape character, deal with literal backslash first
+    const splitBackslash = ruleNoParens.split(/\\\\/g);
+    // then, split the parameters apart with unescaped commas
+    const splitComma = splitBackslash.map(substrBackslash => {
+      return substrBackslash.split(/(?<!\\),/g).map(substrComma => {
+        // then, make all the replacements: closing parenthesis and comma
+        return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
+      });
+    });
+    const paramList: string[] = [];
+    // if splitComma has more than one list, that means we split on literal backslash
+    // so to rejoin all the strings, the last string joins the first string in the next sublist
+    splitComma.forEach((list, index) => {
+      list.forEach((paramPart, subIndex) => {
+        if (index > 0 && subIndex === 0) {
+          // join with \\ on the last param
+          paramList.push(`${paramList.pop()}\\\\${paramPart}`);
+        } else {
+          // push a new param
+          paramList.push(paramPart);
+        }
+      });
+    });
+    // trim whitespace from each parameter, since it may be formatted for readability
+    return paramList.map(param => param.trim());
+  }
+
+  private parseGeneratedRuleSet(
+    input: string,
+    name: string,
+    ctx: pc.InsertRuleContext,
+    insertRule: InsertRule
+  ) {
+    // define a temporary document that will contain this RuleSet
+    const tempDocument = new FSHDocument(this.currentFile);
+    // save the currentDoc so it can be restored after parsing this RuleSet
+    const parentDocument = this.currentDoc;
+    this.currentDoc = tempDocument;
+    // errors should be collected, not printed, when parsing generated documents
+    // we should only retrieve errors if we are currently in the top-level parse
+    let topLevelInfo: LoggerData;
+    if (this.topLevelParse) {
+      this.topLevelParse = false;
+      topLevelInfo = switchToSecretLogger();
+    }
+    try {
+      const subContext = this.parseDoc(input);
+      this.visitDoc(subContext);
+    } finally {
+      // be sure to restore parentDocument
+      this.currentDoc = parentDocument;
+    }
+    // if tempDocument has appliedRuleSets, merge them in
+    tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>
+      this.currentDoc.appliedRuleSets.set(identifier, ruleSet)
+    );
+    if (topLevelInfo) {
+      // exit logger collection mode, write collected errors and warnings
+      const collectedMessages = restoreMainLogger(topLevelInfo);
+      this.topLevelParse = true;
+      if (collectedMessages.errors.length > 0) {
+        logger.error(
+          [
+            `Error${
+              collectedMessages.errors.length > 1 ? 's' : ''
+            } parsing insert rule with parameterized RuleSet ${name}`,
+            ...collectedMessages.errors.map(log => `- ${log.message}`)
+          ].join(EOL),
+          insertRule.sourceInfo
+        );
+      }
+      if (collectedMessages.warnings.length > 0) {
+        logger.warn(
+          [
+            `Warning${
+              collectedMessages.warnings.length > 1 ? 's' : ''
+            } parsing insert rule with parameterized RuleSet ${name}`,
+            ...collectedMessages.warnings.map(log => `- ${log.message}`)
+          ].join(EOL),
+          insertRule.sourceInfo
+        );
+      }
+    }
+    // if the RuleSet parsed successfully, it will be on the document, and we should return it.
+    return tempDocument.ruleSets.get(name);
   }
 
   visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {

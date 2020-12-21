@@ -9,9 +9,19 @@ import {
   assertObeysRule,
   assertInsertRule
 } from '../testhelpers/asserts';
-import { FshCanonical, FshCode, FshQuantity, FshRatio, FshReference } from '../../src/fshtypes';
+import {
+  FshCanonical,
+  FshCode,
+  FshQuantity,
+  FshRatio,
+  FshReference,
+  ParamRuleSet
+} from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { stats } from '../../src/utils/FSHLogger';
 import { importSingleText } from '../testhelpers/importSingleText';
+import { FSHImporter, RawFSH } from '../../src/import';
+import { EOL } from 'os';
 
 describe('FSHImporter', () => {
   describe('Profile', () => {
@@ -1827,6 +1837,93 @@ describe('FSHImporter', () => {
     });
 
     describe('#insertRule', () => {
+      let importer: FSHImporter;
+
+      beforeEach(() => {
+        // To explain a bit about why stats are used here and not in other tests:
+        // When parsing generated documents, the logging level is temporarily raised
+        // in order to suppress console output. However, messages still go to the logger
+        // and therefore are detected by loggerSpy. However, the stats should provide an
+        // accurate reflection of the number of times that errors and warnings were logged
+        // while the logger is at the normal level.
+        loggerSpy.reset();
+        stats.reset();
+        importer = new FSHImporter();
+        // RuleSet: OneParamRuleSet (val)
+        // * status = {val}
+        const oneParamRuleSet = new ParamRuleSet('OneParamRuleSet');
+        oneParamRuleSet.parameters = ['val'];
+        oneParamRuleSet.contents = '* status = {val}';
+        importer.paramRuleSets.set(oneParamRuleSet.name, oneParamRuleSet);
+        // RuleSet: MultiParamRuleSet (status, value, maxNote)
+        // * status = {status}
+        // * valueString = {value}
+        // * note 0..{maxNote}
+        const multiParamRuleSet = new ParamRuleSet('MultiParamRuleSet');
+        multiParamRuleSet.parameters = ['status', 'value', 'maxNote'];
+        multiParamRuleSet.contents = [
+          '* status = {status}',
+          '* valueString = {value}',
+          '* note 0..{maxNote}'
+        ].join(EOL);
+        importer.paramRuleSets.set(multiParamRuleSet.name, multiParamRuleSet);
+        // RuleSet: EntryRules (continuation)
+        // * insert {continuation}Rules (5)
+        const entryRules = new ParamRuleSet('EntryRules');
+        entryRules.parameters = ['continuation'];
+        entryRules.contents = '* insert {continuation}Rules (5)';
+        importer.paramRuleSets.set(entryRules.name, entryRules);
+        // RuleSet: RecursiveRules (value)
+        // * interpretation 0..{value}
+        // * insert EntryRules (BaseCase)
+        const recursiveRules = new ParamRuleSet('RecursiveRules');
+        recursiveRules.parameters = ['value'];
+        recursiveRules.contents = [
+          '* interpretation 0..{value}',
+          '* insert EntryRules (BaseCase)'
+        ].join(EOL);
+        importer.paramRuleSets.set(recursiveRules.name, recursiveRules);
+        // RuleSet: BaseCaseRules (value)
+        // * note 0..{value}
+        const baseCaseRules = new ParamRuleSet('BaseCaseRules');
+        baseCaseRules.parameters = ['value'];
+        baseCaseRules.contents = '* note 0..{value}';
+        importer.paramRuleSets.set(baseCaseRules.name, baseCaseRules);
+        // RuleSet: CardRuleSet (path, min, max)
+        // * {path} {min}..{max}
+        // * note {min}..{max}
+        const cardRuleSet = new ParamRuleSet('CardRuleSet').withFile('RuleSet.fsh');
+        cardRuleSet.parameters = ['path', 'min', 'max'];
+        cardRuleSet.contents = ['* {path} {min}..{max}', '* note {min}..{max}'].join(EOL);
+        importer.paramRuleSets.set(cardRuleSet.name, cardRuleSet);
+        // RuleSet: FirstRiskyRuleSet (value)
+        // * note ={value}
+        // * insert SecondRiskyRuleSet({value})
+        const firstRiskyRuleSet = new ParamRuleSet('FirstRiskyRuleSet').withFile('RuleSet.fsh');
+        firstRiskyRuleSet.parameters = ['value'];
+        firstRiskyRuleSet.contents = [
+          '* note ={value}',
+          '* insert SecondRiskyRuleSet({value})'
+        ].join(EOL);
+        importer.paramRuleSets.set(firstRiskyRuleSet.name, firstRiskyRuleSet);
+        // RuleSet: SecondRiskyRuleSet(value)
+        // * status ={value}
+        const secondRiskyRuleSet = new ParamRuleSet('SecondRiskyRuleSet').withFile('RuleSet.fsh');
+        secondRiskyRuleSet.parameters = ['value'];
+        secondRiskyRuleSet.contents = '* status ={value}';
+        importer.paramRuleSets.set(secondRiskyRuleSet.name, secondRiskyRuleSet);
+        // RuleSet: WarningRuleSet(value)
+        // * focus[0] only Reference(Patient | {value})
+        // * focus[1] only Reference(Group | {value})
+        const warningRuleSet = new ParamRuleSet('WarningRuleSet');
+        warningRuleSet.parameters = ['value'];
+        warningRuleSet.contents = [
+          '* focus[0] only Reference(Patient | {value})',
+          '* focus[1] only Reference(Group | {value})'
+        ].join(EOL);
+        importer.paramRuleSets.set(warningRuleSet.name, warningRuleSet);
+      });
+
       it('should parse an insert rule with a single RuleSet', () => {
         const input = `
         Profile: ObservationProfile
@@ -1837,6 +1934,339 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         assertInsertRule(profile.rules[0], 'MyRuleSet');
+      });
+
+      it('should parse an insert rule with a RuleSet with one parameter', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert OneParamRuleSet (#final)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final']);
+        expect(doc.appliedRuleSets.has(JSON.stringify(['OneParamRuleSet', '#final']))).toBe(true);
+      });
+
+      it('should parse an insert rule with a RuleSet with multiple parameters', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (#preliminary, "this is a string value\\, right?", 4)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+          '#preliminary',
+          '"this is a string value, right?"',
+          '4'
+        ]);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'MultiParamRuleSet',
+            '#preliminary',
+            '"this is a string value, right?"',
+            '4'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('preliminary').withFile('Insert.fsh').withLocation([2, 12, 2, 23]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'this is a string value, right?',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '4');
+      });
+
+      it('should parse an insert rule with a parameter that contains right parenthesis', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert OneParamRuleSet (#final "(Final\\)")
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final "(Final)"']);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['OneParamRuleSet', '#final "(Final)"'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final', undefined, '(Final)')
+            .withFile('Insert.fsh')
+            .withLocation([2, 12, 2, 27]),
+          false,
+          false
+        );
+      });
+
+      it('should parse an insert rule with parameters that contain newline, tab, or backslash characters', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (#final, "very\\nstrange\\rvalue\\\\\\tindeed", 1)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+          '#final',
+          '"very\\nstrange\\rvalue\\\\\\tindeed"',
+          '1'
+        ]);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'MultiParamRuleSet',
+            '#final',
+            '"very\\nstrange\\rvalue\\\\\\tindeed"',
+            '1'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'very\nstrange\rvalue\\\tindeed',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '1');
+      });
+
+      it('should parse an insert rule that separates its parameters onto multiple lines', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (
+          #final,
+          "string value",
+          7
+        )
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', ['#final', '"string value"', '7']);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['MultiParamRuleSet', '#final', '"string value"', '7'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(appliedRuleSet.rules[1], 'valueString', 'string value', false, false);
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
+      });
+
+      it('should generate a RuleSet only once when inserted with the same parameters multiple times in the same document', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (#preliminary, "something", 3)
+        * insert MultiParamRuleSet (#preliminary, "something", 3)
+        `;
+        const visitDocSpy = jest.spyOn(importer, 'visitDoc');
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        expect(doc.appliedRuleSets.size).toBe(1);
+        // expect one call to visitDoc for the Profile, and one for the generated RuleSet
+        expect(visitDocSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert EntryRules (Recursive)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        expect(doc.appliedRuleSets.size).toBe(4);
+
+        const firstEntryRules = doc.appliedRuleSets.get(
+          JSON.stringify(['EntryRules', 'Recursive'])
+        );
+        expect(firstEntryRules).toBeDefined();
+        expect(firstEntryRules.rules).toHaveLength(1);
+        assertInsertRule(firstEntryRules.rules[0], 'RecursiveRules', ['5']);
+
+        const recursiveRules = doc.appliedRuleSets.get(JSON.stringify(['RecursiveRules', '5']));
+        expect(recursiveRules).toBeDefined();
+        expect(recursiveRules.rules).toHaveLength(2);
+        assertCardRule(recursiveRules.rules[0], 'interpretation', 0, '5');
+        assertInsertRule(recursiveRules.rules[1], 'EntryRules', ['BaseCase']);
+
+        const secondEntryRules = doc.appliedRuleSets.get(
+          JSON.stringify(['EntryRules', 'BaseCase'])
+        );
+        expect(secondEntryRules.rules).toHaveLength(1);
+        assertInsertRule(secondEntryRules.rules[0], 'BaseCaseRules', ['5']);
+
+        const baseCaseRules = doc.appliedRuleSets.get(JSON.stringify(['BaseCaseRules', '5']));
+        expect(baseCaseRules).toBeDefined();
+        expect(baseCaseRules.rules).toHaveLength(1);
+        assertCardRule(baseCaseRules.rules[0], 'note', 0, '5');
+      });
+
+      it('should log an error and not add a rule when an insert rule has the wrong number of parameters', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert OneParamRuleSet (#final, "Final")
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Incorrect number of parameters applied to RuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log an error and not add a rule when an insert rule with parameters refers to an undefined parameterized RuleSet', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MysteriousRuleSet ("mystery")
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Could not find parameterized RuleSet named MysteriousRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log an error when an insert rule with parameters results in a parser error in the generated RuleSet', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert CardRuleSet(path with spaces, 1, *)
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+
+        expect(stats.numError).toBe(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Error parsing insert rule with parameterized RuleSet CardRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log one error when nested insert rules with parameters result in multiple parser errors in the generated RuleSets', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * note 0..1
+        * insert FirstRiskyRuleSet("Observation.id")
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(stats.numError).toBe(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Errors parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 5/s);
+      });
+
+      it('should not log an error when an insert rule with parameters results in rules that are syntactically correct but semantically invalid', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert CardRuleSet(nonExistentPath, 7, 4)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+
+        expect(doc.appliedRuleSets.size).toBe(1);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['CardRuleSet', 'nonExistentPath', '7', '4'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        // This rule is nonsense, of course, but figuring that out is the job of the exporter, not the importer.
+        assertCardRule(appliedRuleSet.rules[0], 'nonExistentPath', 7, '4');
+        assertCardRule(appliedRuleSet.rules[1], 'note', 7, '4');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should log one warning when an insert rule with parameters results in warnings', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert WarningRuleSet(Device)
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+
+        expect(stats.numWarn).toBe(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Warnings parsing insert rule with parameterized RuleSet WarningRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+      });
+
+      it('should log one error when an insert rule with parameters results in non-parser errors', () => {
+        const input = `
+        Profile: MyObservation
+        Parent: Observation
+        * insert CardRuleSet(nonExistentPath, , )
+        `;
+        importer.import([new RawFSH(input, 'Insert.fsh')]);
+
+        expect(stats.numError).toBe(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Errors parsing insert rule with parameterized RuleSet CardRuleSet/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 4/s);
       });
     });
   });

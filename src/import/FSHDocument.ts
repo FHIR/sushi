@@ -17,7 +17,8 @@ export class FSHDocument {
   readonly valueSets: Map<string, FshValueSet>;
   readonly codeSystems: Map<string, FshCodeSystem>;
   readonly invariants: Map<string, Invariant>;
-  readonly ruleSets: Map<string, RuleSet>;
+  readonly ruleSets: Map<string, RuleSet>; // rulesets without parameters
+  readonly appliedRuleSets: Map<string, RuleSet>; // rulesets with substitutions applied
   readonly mappings: Map<string, Mapping>;
 
   constructor(public readonly file: string) {
@@ -29,6 +30,7 @@ export class FSHDocument {
     this.codeSystems = new Map();
     this.invariants = new Map();
     this.ruleSets = new Map();
+    this.appliedRuleSets = new Map();
     this.mappings = new Map();
   }
 }

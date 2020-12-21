@@ -117,11 +117,12 @@ export function assertObeysRule(rule: Rule, path: string, invariant: string) {
   expect(obeysRule.invariant).toBe(invariant);
 }
 
-export function assertInsertRule(rule: Rule, ruleSet: string) {
+export function assertInsertRule(rule: Rule, ruleSet: string, params: string[] = []) {
   expect(rule).toBeInstanceOf(InsertRule);
   const insertRule = rule as InsertRule;
   expect(insertRule.path).toBe('');
   expect(insertRule.ruleSet).toBe(ruleSet);
+  expect(insertRule.params).toEqual(params);
 }
 
 export function assertMappingRule(

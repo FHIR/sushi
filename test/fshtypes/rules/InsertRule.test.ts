@@ -6,6 +6,7 @@ describe('InsertRule', () => {
     it('should set the properties correctly', () => {
       const i = new InsertRule();
       expect(i.ruleSet).toBeUndefined();
+      expect(i.params).toBeEmpty();
     });
   });
 });
