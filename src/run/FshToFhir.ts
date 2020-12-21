@@ -15,7 +15,7 @@ import {
  * NOTE: This function is not safe for true asynchronous usage. If two calls of this function are running at once, the error and warnings reported
  * will be inconsistent. Always ensure a given call to this function completes before making a new call.
  * @param {string|string[]} input - A string or array of strings containing FSH
- * @param {fshToFhirOptions} options - An object containing options for processing. Options include canonical, version, dependencies, and logLevel
+ * @param {fshToFhirOptions} options - An object containing options for processing. Options include canonical, version, fhirVersion, dependencies, and logLevel
  * @returns {Promise<{fhir: any[]; errors: ErrorsAndWarnings['errors']; warnings: ErrorsAndWarnings['warnings'];}>} - Object containing generated fhir, and errors/warnings from processing
  */
 export async function fshToFhir(
@@ -52,7 +52,7 @@ export async function fshToFhir(
   const config = {
     canonical: options.canonical ?? 'http://example.org',
     FSHOnly: true,
-    fhirVersion: ['4.0.1'],
+    fhirVersion: [options.fhirVersion ?? '4.0.1'],
     dependencies: options.dependencies,
     version: options.version
   };
@@ -93,6 +93,7 @@ export async function fshToFhir(
 type fshToFhirOptions = {
   canonical?: string;
   version?: string;
+  fhirVersion?: string;
   dependencies?: ImplementationGuideDependsOn[];
   logLevel?: Level;
 };

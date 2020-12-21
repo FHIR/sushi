@@ -6,6 +6,7 @@ import { TestFisher } from '../testhelpers';
 import { Type } from '../../src/utils/Fishable';
 import { Invariant, FshCode } from '../../src/fshtypes';
 import path from 'path';
+import { cloneDeep } from 'lodash';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -653,12 +654,26 @@ describe('ElementDefinition', () => {
   });
 
   describe('#ElementDefinitionType get code', () => {
-    it('should return valueUrl value when extension of fhir-type', () => {
+    it('should return valueUrl value when extension of fhir-type (R4)', () => {
       const code = valueId.type[0].code;
       const trueCodeValue = valueId.type[0].getActualCode();
       expect(code).toEqual('string');
       expect(trueCodeValue).toEqual('http://hl7.org/fhirpath/System.String');
     });
+
+    it('should return valueUri value when extension of fhir-type (R5)', () => {
+      // Create an R5 representation of the valueId (using valueUri instead of valueUrl)
+      const jsonValueIdR5 = cloneDeep(jsonValueId);
+      delete jsonValueIdR5.type[0].extension[0].valueUrl;
+      jsonValueIdR5.type[0].extension[0].valueUri = 'string';
+      const valueIdR5 = ElementDefinition.fromJSON(jsonValueIdR5);
+
+      const code = valueIdR5.type[0].code;
+      const trueCodeValue = valueIdR5.type[0].getActualCode();
+      expect(code).toEqual('string');
+      expect(trueCodeValue).toEqual('http://hl7.org/fhirpath/System.String');
+    });
+
     it('should return code value when extension is not of fhir-type', () => {
       const code = valueX.type[0].code;
       expect(code).toEqual('Quantity');

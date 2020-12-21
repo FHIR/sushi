@@ -78,7 +78,7 @@ export type YAMLConfiguration = {
   license?: ImplementationGuide['license']; // string
 
   // Although fhirVersions is 0..* in the ImplementationGuide resource, it can be a single item OR
-  // an array here (but so far SUSHI only supports 4.0.1 anyway).
+  // an array here (NOTE: SUSHI only supports FHIR 4.x versions).
   fhirVersion:
     | ImplementationGuide['fhirVersion'][0] // string
     | ImplementationGuide['fhirVersion']; // string[]
