@@ -4,9 +4,8 @@ import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
-import { MasterFisher, Type } from '../utils';
+import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
 import { Package } from '.';
-import { resolveSoftIndexing } from './common';
 
 export class CodeSystemExporter {
   constructor(

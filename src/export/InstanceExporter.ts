@@ -1,7 +1,7 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance } from '../fshtypes';
-import { logger, Fishable, Type, Metadata } from '../utils';
+import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -15,7 +15,6 @@ import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
 import { cloneDeep } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
-import { resolveSoftIndexing } from './common';
 
 export class InstanceExporter implements Fishable {
   constructor(

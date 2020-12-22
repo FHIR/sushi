@@ -25,7 +25,7 @@ import {
   CaretValueRule,
   ObeysRule
 } from '../fshtypes/rules';
-import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
+import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } from '../utils';
 import {
   replaceReferences,
   splitOnPathPeriods,
@@ -35,7 +35,6 @@ import {
   getUrlFromFshDefinition
 } from '../fhirtypes/common';
 import { Package } from './Package';
-import { resolveSoftIndexing } from './common';
 
 // Extensions that should not be inherited by derived profiles
 // See: https://jira.hl7.org/browse/FHIR-27535

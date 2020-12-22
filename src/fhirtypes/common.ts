@@ -32,9 +32,8 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import { logger } from '../utils';
+import { logger, resolveSoftIndexing } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
-import { resolveSoftIndexing } from '../export/common';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets

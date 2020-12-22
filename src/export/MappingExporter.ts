@@ -1,13 +1,12 @@
 import { FSHTank } from '../import';
 import { Package } from '.';
-import { logger, Type, MasterFisher } from '../utils';
+import { logger, Type, MasterFisher, resolveSoftIndexing } from '../utils';
 import { Mapping } from '../fshtypes';
 import { StructureDefinition, StructureDefinitionMapping, idRegex } from '../fhirtypes';
 import { InvalidFHIRIdError } from '../errors';
 import { MappingRule } from '../fshtypes/rules';
 import { applyInsertRules } from '../fhirtypes/common';
 import { groupBy, pickBy } from 'lodash';
-import { resolveSoftIndexing } from './common';
 
 export class MappingExporter {
   constructor(
