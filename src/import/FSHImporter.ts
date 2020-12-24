@@ -1462,6 +1462,16 @@ export class FSHImporter extends FSHVisitor {
               insertRule
             );
             if (appliedRuleSet) {
+              // set the source info based on the original source info
+              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
+              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
+              appliedRuleSet.rules.forEach(rule => {
+                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
+                rule.sourceInfo.location.startLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+                rule.sourceInfo.location.endLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+              });
               this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
               return insertRule;
             } else {

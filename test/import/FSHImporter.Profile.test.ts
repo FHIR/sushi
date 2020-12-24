@@ -1851,7 +1851,9 @@ describe('FSHImporter', () => {
         importer = new FSHImporter();
         // RuleSet: OneParamRuleSet (val)
         // * status = {val}
-        const oneParamRuleSet = new ParamRuleSet('OneParamRuleSet');
+        const oneParamRuleSet = new ParamRuleSet('OneParamRuleSet')
+          .withFile('RuleSet.fsh')
+          .withLocation([1, 12, 2, 27]);
         oneParamRuleSet.parameters = ['val'];
         oneParamRuleSet.contents = '* status = {val}';
         importer.paramRuleSets.set(oneParamRuleSet.name, oneParamRuleSet);
@@ -1859,7 +1861,9 @@ describe('FSHImporter', () => {
         // * status = {status}
         // * valueString = {value}
         // * note 0..{maxNote}
-        const multiParamRuleSet = new ParamRuleSet('MultiParamRuleSet');
+        const multiParamRuleSet = new ParamRuleSet('MultiParamRuleSet')
+          .withFile('RuleSet.fsh')
+          .withLocation([4, 12, 7, 30]);
         multiParamRuleSet.parameters = ['status', 'value', 'maxNote'];
         multiParamRuleSet.contents = [
           '* status = {status}',
@@ -1869,14 +1873,18 @@ describe('FSHImporter', () => {
         importer.paramRuleSets.set(multiParamRuleSet.name, multiParamRuleSet);
         // RuleSet: EntryRules (continuation)
         // * insert {continuation}Rules (5)
-        const entryRules = new ParamRuleSet('EntryRules');
+        const entryRules = new ParamRuleSet('EntryRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([9, 12, 10, 43]);
         entryRules.parameters = ['continuation'];
         entryRules.contents = '* insert {continuation}Rules (5)';
         importer.paramRuleSets.set(entryRules.name, entryRules);
         // RuleSet: RecursiveRules (value)
         // * interpretation 0..{value}
         // * insert EntryRules (BaseCase)
-        const recursiveRules = new ParamRuleSet('RecursiveRules');
+        const recursiveRules = new ParamRuleSet('RecursiveRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([12, 12, 14, 41]);
         recursiveRules.parameters = ['value'];
         recursiveRules.contents = [
           '* interpretation 0..{value}',
@@ -1885,21 +1893,27 @@ describe('FSHImporter', () => {
         importer.paramRuleSets.set(recursiveRules.name, recursiveRules);
         // RuleSet: BaseCaseRules (value)
         // * note 0..{value}
-        const baseCaseRules = new ParamRuleSet('BaseCaseRules');
+        const baseCaseRules = new ParamRuleSet('BaseCaseRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([16, 12, 17, 28]);
         baseCaseRules.parameters = ['value'];
         baseCaseRules.contents = '* note 0..{value}';
         importer.paramRuleSets.set(baseCaseRules.name, baseCaseRules);
         // RuleSet: CardRuleSet (path, min, max)
         // * {path} {min}..{max}
         // * note {min}..{max}
-        const cardRuleSet = new ParamRuleSet('CardRuleSet').withFile('RuleSet.fsh');
+        const cardRuleSet = new ParamRuleSet('CardRuleSet')
+          .withFile('RuleSet.fsh')
+          .withLocation([19, 12, 21, 30]);
         cardRuleSet.parameters = ['path', 'min', 'max'];
         cardRuleSet.contents = ['* {path} {min}..{max}', '* note {min}..{max}'].join(EOL);
         importer.paramRuleSets.set(cardRuleSet.name, cardRuleSet);
         // RuleSet: FirstRiskyRuleSet (value)
         // * note ={value}
         // * insert SecondRiskyRuleSet({value})
-        const firstRiskyRuleSet = new ParamRuleSet('FirstRiskyRuleSet').withFile('RuleSet.fsh');
+        const firstRiskyRuleSet = new ParamRuleSet('FirstRiskyRuleSet')
+          .withFile('RuleSet.fsh')
+          .withLocation([23, 12, 25, 47]);
         firstRiskyRuleSet.parameters = ['value'];
         firstRiskyRuleSet.contents = [
           '* note ={value}',
@@ -1908,14 +1922,18 @@ describe('FSHImporter', () => {
         importer.paramRuleSets.set(firstRiskyRuleSet.name, firstRiskyRuleSet);
         // RuleSet: SecondRiskyRuleSet(value)
         // * status ={value}
-        const secondRiskyRuleSet = new ParamRuleSet('SecondRiskyRuleSet').withFile('RuleSet.fsh');
+        const secondRiskyRuleSet = new ParamRuleSet('SecondRiskyRuleSet')
+          .withFile('RuleSet.fsh')
+          .withLocation([27, 12, 28, 28]);
         secondRiskyRuleSet.parameters = ['value'];
         secondRiskyRuleSet.contents = '* status ={value}';
         importer.paramRuleSets.set(secondRiskyRuleSet.name, secondRiskyRuleSet);
         // RuleSet: WarningRuleSet(value)
         // * focus[0] only Reference(Patient | {value})
         // * focus[1] only Reference(Group | {value})
-        const warningRuleSet = new ParamRuleSet('WarningRuleSet');
+        const warningRuleSet = new ParamRuleSet('WarningRuleSet')
+          .withFile('RuleSet.fsh')
+          .withLocation([30, 12, 32, 53]);
         warningRuleSet.parameters = ['value'];
         warningRuleSet.contents = [
           '* focus[0] only Reference(Patient | {value})',
@@ -1949,7 +1967,28 @@ describe('FSHImporter', () => {
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final']);
-        expect(doc.appliedRuleSets.has(JSON.stringify(['OneParamRuleSet', '#final']))).toBe(true);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['OneParamRuleSet', '#final'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 1,
+            startColumn: 12,
+            endLine: 2,
+            endColumn: 27
+          }
+        });
+        expect(appliedRuleSet.rules[0].sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 2,
+            startColumn: 1,
+            endLine: 2,
+            endColumn: 17
+          }
+        });
       });
 
       it('should parse an insert rule with a RuleSet with multiple parameters', () => {
@@ -1978,6 +2017,15 @@ describe('FSHImporter', () => {
           ])
         );
         expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 4,
+            startColumn: 12,
+            endLine: 7,
+            endColumn: 30
+          }
+        });
         expect(appliedRuleSet.rules).toHaveLength(3);
         assertAssignmentRule(
           appliedRuleSet.rules[0],
@@ -1986,6 +2034,9 @@ describe('FSHImporter', () => {
           false,
           false
         );
+        expect(appliedRuleSet.rules[0].sourceInfo.file).toBe('RuleSet.fsh');
+        expect(appliedRuleSet.rules[0].sourceInfo.location.startLine).toBe(5);
+        expect(appliedRuleSet.rules[0].sourceInfo.location.endLine).toBe(5);
         assertAssignmentRule(
           appliedRuleSet.rules[1],
           'valueString',
@@ -1993,7 +2044,13 @@ describe('FSHImporter', () => {
           false,
           false
         );
+        expect(appliedRuleSet.rules[1].sourceInfo.file).toBe('RuleSet.fsh');
+        expect(appliedRuleSet.rules[1].sourceInfo.location.startLine).toBe(6);
+        expect(appliedRuleSet.rules[1].sourceInfo.location.endLine).toBe(6);
         assertCardRule(appliedRuleSet.rules[2], 'note', 0, '4');
+        expect(appliedRuleSet.rules[2].sourceInfo.file).toBe('RuleSet.fsh');
+        expect(appliedRuleSet.rules[2].sourceInfo.location.startLine).toBe(7);
+        expect(appliedRuleSet.rules[2].sourceInfo.location.endLine).toBe(7);
       });
 
       it('should parse an insert rule with a parameter that contains right parenthesis', () => {
@@ -2014,6 +2071,15 @@ describe('FSHImporter', () => {
         );
         expect(appliedRuleSet).toBeDefined();
         expect(appliedRuleSet.rules).toHaveLength(1);
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 1,
+            startColumn: 12,
+            endLine: 2,
+            endColumn: 27
+          }
+        });
         assertAssignmentRule(
           appliedRuleSet.rules[0],
           'status',
@@ -2051,6 +2117,15 @@ describe('FSHImporter', () => {
           ])
         );
         expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 4,
+            startColumn: 12,
+            endLine: 7,
+            endColumn: 30
+          }
+        });
         expect(appliedRuleSet.rules).toHaveLength(3);
         assertAssignmentRule(
           appliedRuleSet.rules[0],
@@ -2090,6 +2165,15 @@ describe('FSHImporter', () => {
           JSON.stringify(['MultiParamRuleSet', '#final', '"string value"', '7'])
         );
         expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 4,
+            startColumn: 12,
+            endLine: 7,
+            endColumn: 30
+          }
+        });
         expect(appliedRuleSet.rules).toHaveLength(3);
         assertAssignmentRule(
           appliedRuleSet.rules[0],
@@ -2135,11 +2219,29 @@ describe('FSHImporter', () => {
           JSON.stringify(['EntryRules', 'Recursive'])
         );
         expect(firstEntryRules).toBeDefined();
+        expect(firstEntryRules.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 9,
+            startColumn: 12,
+            endLine: 10,
+            endColumn: 43
+          }
+        });
         expect(firstEntryRules.rules).toHaveLength(1);
         assertInsertRule(firstEntryRules.rules[0], 'RecursiveRules', ['5']);
 
         const recursiveRules = doc.appliedRuleSets.get(JSON.stringify(['RecursiveRules', '5']));
         expect(recursiveRules).toBeDefined();
+        expect(recursiveRules.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 12,
+            startColumn: 12,
+            endLine: 14,
+            endColumn: 41
+          }
+        });
         expect(recursiveRules.rules).toHaveLength(2);
         assertCardRule(recursiveRules.rules[0], 'interpretation', 0, '5');
         assertInsertRule(recursiveRules.rules[1], 'EntryRules', ['BaseCase']);
@@ -2147,11 +2249,29 @@ describe('FSHImporter', () => {
         const secondEntryRules = doc.appliedRuleSets.get(
           JSON.stringify(['EntryRules', 'BaseCase'])
         );
+        expect(secondEntryRules.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 9,
+            startColumn: 12,
+            endLine: 10,
+            endColumn: 43
+          }
+        });
         expect(secondEntryRules.rules).toHaveLength(1);
         assertInsertRule(secondEntryRules.rules[0], 'BaseCaseRules', ['5']);
 
         const baseCaseRules = doc.appliedRuleSets.get(JSON.stringify(['BaseCaseRules', '5']));
         expect(baseCaseRules).toBeDefined();
+        expect(baseCaseRules.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 16,
+            startColumn: 12,
+            endLine: 17,
+            endColumn: 28
+          }
+        });
         expect(baseCaseRules.rules).toHaveLength(1);
         assertCardRule(baseCaseRules.rules[0], 'note', 0, '5');
       });
@@ -2233,6 +2353,15 @@ describe('FSHImporter', () => {
           JSON.stringify(['CardRuleSet', 'nonExistentPath', '7', '4'])
         );
         expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 19,
+            startColumn: 12,
+            endLine: 21,
+            endColumn: 30
+          }
+        });
         // This rule is nonsense, of course, but figuring that out is the job of the exporter, not the importer.
         assertCardRule(appliedRuleSet.rules[0], 'nonExistentPath', 7, '4');
         assertCardRule(appliedRuleSet.rules[1], 'note', 7, '4');
