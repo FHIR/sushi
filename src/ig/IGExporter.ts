@@ -524,13 +524,7 @@ export class IGExporter {
         name = page.nameUrl.slice(0, lastPeriod);
         fileType = page.nameUrl.slice(lastPeriod + 1);
       }
-      // page content may be in pagecontent or pages folders
-      const pageFolder = ['pagecontent', 'pages'].find(folder => {
-        return existsSync(path.join(this.igDataPath, 'input', folder, page.nameUrl));
-      });
-      if (!pageFolder) {
-        logger.error(`File for configured page ${page.nameUrl} not found.`);
-      }
+      // Any page listed in configuration will be added, even if it does not exist.
       const igPage: ImplementationGuideDefinitionPage = {
         nameUrl: `${name}.html`,
         title: page.title ?? titleCase(words(name).join(' ')),

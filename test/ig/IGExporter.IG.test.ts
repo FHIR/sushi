@@ -739,7 +739,7 @@ describe('IGExporter', () => {
       ]);
     });
 
-    it('should log an error when no file exists for a configured page', () => {
+    it('should not log an error when no file exists for a configured page', () => {
       config.pages = [
         {
           nameUrl: 'index.md',
@@ -768,7 +768,7 @@ describe('IGExporter', () => {
           generation: 'markdown'
         }
       ]);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/nothing\.md not found/s);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should copy over the templates property', () => {
