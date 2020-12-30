@@ -961,6 +961,25 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign elements with both soft and regular indexing used on multiple elements within a path', () => {
+      const assignedValRule = new AssignmentRule('name[0].given');
+      assignedValRule.value = 'John';
+      patientInstance.rules.push(assignedValRule);
+      const assignedValRule2 = new AssignmentRule('name[=].family');
+      assignedValRule2.value = 'Johnson';
+      patientInstance.rules.push(assignedValRule2);
+      const assignedValRule3 = new AssignmentRule('name[=].given[1]');
+      assignedValRule3.value = 'Johnny';
+      patientInstance.rules.push(assignedValRule3);
+      const exported = exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          given: ['John', 'Johnny'],
+          family: 'Johnson'
+        }
+      ]);
+    });
+
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus');
       assignedValRule.value = new FshCode('foo', 'http://foo.com');

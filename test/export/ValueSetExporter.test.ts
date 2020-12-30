@@ -605,6 +605,82 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should apply a CaretValueRule with soft indexing', () => {
+    const valueSet = new FshValueSet('AppleVS');
+    const caretRule1 = new CaretValueRule('');
+    caretRule1.caretPath = 'contact[+].name';
+    caretRule1.value = 'Johnny Appleseed';
+    valueSet.rules.push(caretRule1);
+    const caretRule2 = new CaretValueRule('');
+    caretRule2.caretPath = 'contact[=].telecom[+].rank';
+    caretRule2.value = 1;
+    valueSet.rules.push(caretRule2);
+    const caretRule3 = new CaretValueRule('');
+    caretRule3.caretPath = 'contact[=].telecom[=].value';
+    caretRule3.value = 'email.email@email.com';
+    valueSet.rules.push(caretRule3);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'AppleVS',
+      name: 'AppleVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/AppleVS',
+      version: '1.0.0',
+      status: 'active',
+      contact: [
+        {
+          name: 'Johnny Appleseed',
+          telecom: [
+            {
+              rank: 1,
+              value: 'email.email@email.com'
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  it('should apply a CaretValueRule with both soft and hard indexing', () => {
+    const valueSet = new FshValueSet('AppleVS');
+    const caretRule1 = new CaretValueRule('');
+    caretRule1.caretPath = 'contact[+].name';
+    caretRule1.value = 'Johnny Appleseed';
+    valueSet.rules.push(caretRule1);
+    const caretRule2 = new CaretValueRule('');
+    caretRule2.caretPath = 'contact[0].telecom[0].rank';
+    caretRule2.value = 1;
+    valueSet.rules.push(caretRule2);
+    const caretRule3 = new CaretValueRule('');
+    caretRule3.caretPath = 'contact[=].telecom[0].value';
+    caretRule3.value = 'email.email@email.com';
+    valueSet.rules.push(caretRule3);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'AppleVS',
+      name: 'AppleVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/AppleVS',
+      version: '1.0.0',
+      status: 'active',
+      contact: [
+        {
+          name: 'Johnny Appleseed',
+          telecom: [
+            {
+              rank: 1,
+              value: 'email.email@email.com'
+            }
+          ]
+        }
+      ]
+    });
+  });
+
   it('should log a message when applying invalid CaretValueRule', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);

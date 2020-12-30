@@ -9,6 +9,8 @@ import { CaretValueRule, Rule } from '../fshtypes/rules';
  */
 export function parseFSHPath(fshPath: string): PathPart[] {
   const pathParts: PathPart[] = [];
+  const seenSlices: string[] = [];
+  const indexRegex = new RegExp('^[0-9]$');
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
   for (const pathPart of splitPath) {
     const splitPathPart = pathPart.split('[');
@@ -25,7 +27,16 @@ export function parseFSHPath(fshPath: string): PathPart[] {
         fhirPathBase += '[x]';
         brackets = brackets.slice(1);
       }
-      pathParts.push({ base: fhirPathBase, brackets: brackets });
+      brackets.forEach(bracket => {
+        if (!indexRegex.test(bracket) && !(bracket === '+' || bracket === '=')) {
+          seenSlices.push(bracket);
+        }
+      });
+      if (seenSlices.length > 0) {
+        pathParts.push({ base: fhirPathBase, brackets: brackets, slices: seenSlices });
+      } else {
+        pathParts.push({ base: fhirPathBase, brackets: brackets });
+      }
     }
   }
   return pathParts;
@@ -49,16 +60,44 @@ export function assembleFSHPath(pathParts: PathPart[]): string {
 }
 
 /**
+ *
+ * @param {PathPart} element - A single element in a rules path
+ * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's updated index as the value
+ */
+function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
+  const mapName = element.slices ? element.base.concat(element.slices.join('|')) : element.base;
+  if (!pathMap.has(mapName)) {
+    pathMap.set(mapName, 0);
+    if (element.brackets?.includes('+')) {
+      element.brackets[element.brackets.indexOf('+')] = '0';
+    }
+  } else {
+    element.brackets?.forEach((bracket: string, index: number) => {
+      if (bracket === '+') {
+        const newIndex = pathMap.get(mapName) + 1;
+        element.brackets[index] = newIndex.toString();
+        pathMap.set(mapName, newIndex);
+      } else if (bracket === '=') {
+        const currentIndex = pathMap.get(mapName);
+        element.brackets[index] = currentIndex.toString();
+      }
+    });
+  }
+}
+
+/**
  * Replaces soft indexs in rule paths with corresponding numbers
  * @param {Rule[]} rules - An array of Rules
  */
-export function resolveSoftIndexing(rules: Rule[]): void {
+export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
   const pathMap: Map<string, number> = new Map();
   const caretPathMap: Map<string, Map<string, number>> = new Map();
 
   // Parsing and separating rules by base name and bracket indexes
   const parsedRules = rules.map(rule => {
-    const parsedPath: any = { path: parseFSHPath(rule.path) };
+    const parsedPath: { path: PathPart[]; caretPath?: PathPart[] } = {
+      path: parseFSHPath(rule.path)
+    };
     // If we have a CaretValueRule, we'll need a second round of parsing for the caret path
     if (rule instanceof CaretValueRule) {
       parsedPath.caretPath = parseFSHPath(rule.caretPath);
@@ -67,61 +106,27 @@ export function resolveSoftIndexing(rules: Rule[]): void {
   });
 
   // Replacing Soft indexes with numbers
-  parsedRules.map(rule => {
-    rule.path.forEach((element: PathPart) => {
-      if (!pathMap.has(element.base)) {
-        pathMap.set(element.base, 0);
-        if (element.brackets?.includes('+')) {
-          element.brackets[element.brackets.indexOf('+')] = '0';
-        }
-      } else {
-        element.brackets?.forEach((bracket: string, index: number) => {
-          if (bracket === '+') {
-            const newIndex = pathMap.get(element.base) + 1;
-            element.brackets[index] = newIndex.toString();
-            pathMap.set(element.base, newIndex);
-          } else if (bracket === '=') {
-            const currentIndex = pathMap.get(element.base);
-            element.brackets[index] = currentIndex.toString();
-          }
-        });
-      }
+  parsedRules.forEach((parsedRule, index) => {
+    const originalRule = rules[index];
+    parsedRule.path.forEach((element: PathPart) => {
+      convertSoftIndexes(element, pathMap);
     });
-    rule.path = assembleFSHPath(rule.path); // Assembling the separated rule path back into a normal string
+    originalRule.path = assembleFSHPath(parsedRule.path); // Assembling the separated rule path back into a normal string
 
-    rule.caretPath?.forEach((element: PathPart) => {
+    parsedRule.caretPath?.forEach((element: PathPart) => {
       // Caret path indexes should only be resolved in the context of a specific path
       // Each normal path has a separate map to keep track of the caret path indexes
-      if (!caretPathMap.has(rule.path)) {
-        const caretMap = new Map();
-        caretPathMap.set(rule.path, caretMap);
+      if (!caretPathMap.has(originalRule.path)) {
+        caretPathMap.set(originalRule.path, new Map());
       }
 
-      const workingPathMap = caretPathMap.get(rule.path);
-      if (!workingPathMap.has(element.base)) {
-        workingPathMap.set(element.base, 0);
-        if (element.brackets?.includes('+')) {
-          element.brackets[element.brackets.indexOf('+')] = '0';
-        }
-      } else {
-        element.brackets?.forEach((bracket: string, index: number) => {
-          if (bracket === '+') {
-            const newIndex = workingPathMap.get(element.base) + 1;
-            element.brackets[index] = newIndex.toString();
-            workingPathMap.set(element.base, newIndex);
-          } else if (bracket === '=') {
-            const currentIndex = workingPathMap.get(element.base);
-            element.brackets[index] = currentIndex.toString();
-          }
-        });
-      }
+      const elementCaretPathMap = caretPathMap.get(originalRule.path);
+      convertSoftIndexes(element, elementCaretPathMap);
     });
-    if (rule.caretPath) rule.caretPath = assembleFSHPath(rule.caretPath);
-  });
 
-  // Converting individual elements into whole rule paths
-  rules.forEach((rule, index) => {
-    rule.path = parsedRules[index].path;
-    if (rule instanceof CaretValueRule) rule.caretPath = parsedRules[index].caretPath;
+    // If a rule is a CaretValueRule, we assemble its caretPath as well
+    if (originalRule instanceof CaretValueRule) {
+      originalRule.caretPath = assembleFSHPath(parsedRule.caretPath);
+    }
   });
 }

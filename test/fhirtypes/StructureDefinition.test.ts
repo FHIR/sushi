@@ -1104,7 +1104,11 @@ describe('StructureDefinition', () => {
       expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
       expect(pathParts[0]).toEqual({ base: 'code' });
-      expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['RespRateCode', '0'] }); // 0 in path parts means value will be set in an array
+      expect(pathParts[1]).toEqual({
+        base: 'coding',
+        brackets: ['RespRateCode', '0'],
+        slices: ['RespRateCode']
+      }); // 0 in path parts means value will be set in an array
       expect(pathParts[2]).toEqual({ primitive: true, base: 'id' });
     });
 
@@ -1139,8 +1143,12 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
-      expect(pathParts[0]).toEqual({ base: 'category', brackets: ['VSCat', '0'] });
-      expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['0'] });
+      expect(pathParts[0]).toEqual({
+        base: 'category',
+        brackets: ['VSCat', '0'],
+        slices: ['VSCat']
+      });
+      expect(pathParts[1]).toEqual({ base: 'coding', brackets: ['0'], slices: ['VSCat'] });
       expect(pathParts[2]).toEqual({ primitive: true, base: 'version' });
     });
 
@@ -1152,7 +1160,11 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
-      expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['required', '3'] });
+      expect(pathParts[0]).toEqual({
+        base: 'extension',
+        brackets: ['required', '3'],
+        slices: ['required']
+      });
       expect(pathParts[1]).toEqual({ primitive: true, base: 'value[x]' });
     });
 
@@ -1182,7 +1194,8 @@ describe('StructureDefinition', () => {
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({
         base: 'extension',
-        brackets: ['patient-mothersMaidenName', '0']
+        brackets: ['patient-mothersMaidenName', '0'],
+        slices: ['patient-mothersMaidenName']
       });
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
@@ -1198,7 +1211,8 @@ describe('StructureDefinition', () => {
       expect(pathParts.length).toBe(3);
       expect(pathParts[1]).toEqual({
         base: 'extension',
-        brackets: ['patient-mothersMaidenName', '0']
+        brackets: ['patient-mothersMaidenName', '0'],
+        slices: ['patient-mothersMaidenName']
       });
       expect(respRate.elements.length).toBe(originalLength + 9);
     });
@@ -1546,7 +1560,7 @@ describe('StructureDefinition', () => {
         );
         expect(assignedValue).toBe('Patient');
         expect(pathParts).toEqual([
-          { base: 'contained', brackets: ['DomainsOnly', '0'] },
+          { base: 'contained', brackets: ['DomainsOnly', '0'], slices: ['DomainsOnly'] },
           { base: 'resourceType' }
         ]);
       });
@@ -1559,7 +1573,7 @@ describe('StructureDefinition', () => {
         );
         expect(assignedValue).toBe('Patient');
         expect(pathParts).toEqual([
-          { base: 'contained', brackets: ['PatientsOnly', '0'] },
+          { base: 'contained', brackets: ['PatientsOnly', '0'], slices: ['PatientsOnly'] },
           { base: 'resourceType' }
         ]);
       });
