@@ -205,6 +205,8 @@ export class FSHTank implements Fishable {
         meta.parent = result.parent;
       } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
+      } else if (result instanceof Instance) {
+        meta.instanceUsage = result.usage;
       }
       return meta;
     }
