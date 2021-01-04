@@ -8,9 +8,8 @@ name: MyNonDefaultName
 status: active
 version: 2.0.0
 fhirVersion: 4.0.1
-copyrightYear: 2020+
+copyrightYear: 2021+
 releaseLabel: ci-build
-
 
 # ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
 # │  To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.     │
