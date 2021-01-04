@@ -236,6 +236,38 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should resolve soft indexing when applying Caret Value rules', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const contactRule1 = new CaretValueRule('');
+    contactRule1.caretPath = 'contact[+].name';
+    contactRule1.value = 'Example Name';
+    codeSystem.rules.push(contactRule1);
+
+    const contactRule2 = new CaretValueRule('');
+    contactRule2.caretPath = 'contact[=].telecom[+].rank';
+    contactRule2.value = 1;
+    codeSystem.rules.push(contactRule2);
+
+    const contactRule3 = new CaretValueRule('');
+    contactRule3.caretPath = 'contact[=].telecom[=].value';
+    contactRule3.value = 'example@email.com';
+    codeSystem.rules.push(contactRule3);
+
+    const exported = exporter.exportCodeSystem(codeSystem);
+    expect(exported.contact).toEqual([
+      {
+        name: 'Example Name',
+        telecom: [
+          {
+            rank: 1,
+            value: 'example@email.com'
+          }
+        ]
+      }
+
+    ]);
+  });
+
   it('should not override count when ^count is provided by user', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     const rule = new CaretValueRule('');
@@ -364,6 +396,48 @@ describe('CodeSystemExporter', () => {
 
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.title).toBe('Wow fancy');
+    });
+
+    it('should resolve soft indexing when inserting an insert rule', () => {
+      // RuleSet: Bar
+      // * ^contact[+].name = Example Name
+      // * ^concept[=].telecom[+].rank = 1
+      // * ^concept[=].telecom[=].value = example@email.com
+      //
+      // CodeSystem: Foo
+      // * insert Bar
+      const contactRule1 = new CaretValueRule('');
+      contactRule1.caretPath = 'contact[+].name';
+      contactRule1.value = 'Example Name';
+      ruleSet.rules.push(contactRule1);
+
+      const contactRule2 = new CaretValueRule('');
+      contactRule2.caretPath = 'contact[=].telecom[+].rank';
+      contactRule2.value = 1;
+      ruleSet.rules.push(contactRule2);
+
+      const contactRule3 = new CaretValueRule('');
+      contactRule3.caretPath = 'contact[=].telecom[=].value';
+      contactRule3.value = 'example@email.com';
+      ruleSet.rules.push(contactRule3);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      cs.rules.push(insertRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.contact).toEqual([
+        {
+          name: 'Example Name',
+          telecom: [
+            {
+              rank: 1,
+              value: 'example@email.com'
+            }
+          ]
+        }
+
+      ]);
     });
 
     it('should update count when applying concepts from an insert rule', () => {
