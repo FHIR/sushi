@@ -156,6 +156,16 @@ export class InstanceExporter implements Fishable {
       }
       // Recursively validate children of the current element
       if (Array.isArray(instanceChild)) {
+        // If the child is a slice, and there are no array elements with matching slice names
+        // but there are array elements that could match (since they use numerical indices)
+        // we can go no further in validation, since we can't know which slice is represented
+        if (
+          child.sliceName &&
+          !instanceChild.find((arrayEl: any) => arrayEl?._sliceName === child.sliceName) &&
+          instanceChild.find((arrayEl: any) => !arrayEl?._sliceName)
+        ) {
+          return;
+        }
         // Filter so that if the child is a slice, we only count relevant slices
         instanceChild = instanceChild.filter(
           (arrayEl: any) => !child.sliceName || arrayEl?._sliceName === child.sliceName
