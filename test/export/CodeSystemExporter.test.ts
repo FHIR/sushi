@@ -264,7 +264,6 @@ describe('CodeSystemExporter', () => {
           }
         ]
       }
-
     ]);
   });
 
@@ -436,7 +435,6 @@ describe('CodeSystemExporter', () => {
             }
           ]
         }
-
       ]);
     });
 
