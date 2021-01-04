@@ -324,6 +324,28 @@ describe('FSHImporter', () => {
     expect(profile.description).toBe(expectedDescription);
   });
 
+  it('should not change indentation of multi-line strings when there is at least one unindented non-blank line', () => {
+    const input = `
+    Profile: ObservationProfile
+    Parent: Observation
+    Description: """A long statement follows this.
+
+Long statement:
+
+ This statement is much longer than the previous statement."""`;
+    const expectedDescription = [
+      'A long statement follows this.',
+      '',
+      'Long statement:',
+      '',
+      ' This statement is much longer than the previous statement.'
+    ].join('\n');
+
+    const result = importSingleText(input);
+    const profile = result.profiles.get('ObservationProfile');
+    expect(profile.description).toBe(expectedDescription);
+  });
+
   it('should truncate whitespace lines in multi-line strings', () => {
     const input = `
     Profile: StaircaseObservation
