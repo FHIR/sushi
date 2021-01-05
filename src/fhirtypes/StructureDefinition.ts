@@ -783,6 +783,7 @@ export type PathPart = {
   brackets?: string[];
   primitive?: boolean;
   slices?: string[];
+  pathPosition: number;
 };
 
 /**

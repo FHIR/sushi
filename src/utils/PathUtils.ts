@@ -12,11 +12,12 @@ export function parseFSHPath(fshPath: string): PathPart[] {
   const seenSlices: string[] = [];
   const indexRegex = new RegExp('^[0-9]$');
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
+  let depth = 0;
   for (const pathPart of splitPath) {
     const splitPathPart = pathPart.split('[');
     if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {
       // There are no brackets, or the brackets are for a choice, so just push on the name
-      pathParts.push({ base: pathPart });
+      pathParts.push({ base: pathPart, pathPosition: depth++ });
     } else {
       // We have brackets, let's  save the bracket info
       let fhirPathBase = splitPathPart[0];
@@ -33,9 +34,14 @@ export function parseFSHPath(fshPath: string): PathPart[] {
         }
       });
       if (seenSlices.length > 0) {
-        pathParts.push({ base: fhirPathBase, brackets: brackets, slices: seenSlices });
+        pathParts.push({
+          base: fhirPathBase,
+          brackets: brackets,
+          slices: seenSlices,
+          pathPosition: depth++
+        });
       } else {
-        pathParts.push({ base: fhirPathBase, brackets: brackets });
+        pathParts.push({ base: fhirPathBase, brackets: brackets, pathPosition: depth++ });
       }
     }
   }
@@ -65,7 +71,10 @@ export function assembleFSHPath(pathParts: PathPart[]): string {
  * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's updated index as the value
  */
 function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
-  const mapName = element.slices ? element.base.concat(element.slices.join('|')) : element.base;
+  // Must account for a pathPart's base name, it's position in the path, as well as any slices it's contained in.
+  const mapName = element.slices
+    ? `${element.base}${element.slices.join('|')}${element.pathPosition}`
+    : `${element.base}${element.pathPosition}`;
   if (!pathMap.has(mapName)) {
     pathMap.set(mapName, 0);
     if (element.brackets?.includes('+')) {

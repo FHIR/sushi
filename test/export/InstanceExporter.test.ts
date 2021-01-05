@@ -942,44 +942,6 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it('should assign elements with soft indexing used on multiple elements within a path', () => {
-      const assignedValRule = new AssignmentRule('name[+].given');
-      assignedValRule.value = 'John';
-      patientInstance.rules.push(assignedValRule);
-      const assignedValRule2 = new AssignmentRule('name[=].family');
-      assignedValRule2.value = 'Johnson';
-      patientInstance.rules.push(assignedValRule2);
-      const assignedValRule3 = new AssignmentRule('name[=].given[+]');
-      assignedValRule3.value = 'Johnny';
-      patientInstance.rules.push(assignedValRule3);
-      const exported = exportInstance(patientInstance);
-      expect(exported.name).toEqual([
-        {
-          given: ['John', 'Johnny'],
-          family: 'Johnson'
-        }
-      ]);
-    });
-
-    it('should assign elements with both soft and regular indexing used on multiple elements within a path', () => {
-      const assignedValRule = new AssignmentRule('name[0].given');
-      assignedValRule.value = 'John';
-      patientInstance.rules.push(assignedValRule);
-      const assignedValRule2 = new AssignmentRule('name[=].family');
-      assignedValRule2.value = 'Johnson';
-      patientInstance.rules.push(assignedValRule2);
-      const assignedValRule3 = new AssignmentRule('name[=].given[1]');
-      assignedValRule3.value = 'Johnny';
-      patientInstance.rules.push(assignedValRule3);
-      const exported = exportInstance(patientInstance);
-      expect(exported.name).toEqual([
-        {
-          given: ['John', 'Johnny'],
-          family: 'Johnson'
-        }
-      ]);
-    });
-
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus');
       assignedValRule.value = new FshCode('foo', 'http://foo.com');
@@ -2609,12 +2571,17 @@ describe('InstanceExporter', () => {
 
   describe('#insertRules', () => {
     let instance: Instance;
+    let patientInstance: Instance;
     let ruleSet: RuleSet;
 
     beforeEach(() => {
       instance = new Instance('Foo');
       instance.instanceOf = 'Resource';
       doc.instances.set(instance.name, instance);
+
+      patientInstance = new Instance('TestPatient');
+      patientInstance.instanceOf = 'Patient';
+      doc.instances.set(patientInstance.name, patientInstance);
 
       ruleSet = new RuleSet('Bar');
       doc.ruleSets.set(ruleSet.name, ruleSet);
@@ -2637,6 +2604,36 @@ describe('InstanceExporter', () => {
 
       const exported = exporter.exportInstance(instance);
       expect(exported.id).toBe('my-id');
+    });
+
+    it('should assign elements from a rule set with soft indexing used within a path', () => {
+      const assignedValRule = new AssignmentRule('name[+].given');
+      assignedValRule.value = 'John';
+      ruleSet.rules.push(assignedValRule);
+      const assignedValRule2 = new AssignmentRule('name[=].family');
+      assignedValRule2.value = 'Johnson';
+      ruleSet.rules.push(assignedValRule2);
+      const assignedValRule3 = new AssignmentRule('name[+].given');
+      assignedValRule3.value = 'Johnny';
+      ruleSet.rules.push(assignedValRule3);
+      const assignedValRule4 = new AssignmentRule('name[=].family');
+      assignedValRule4.value = 'Jackson';
+      ruleSet.rules.push(assignedValRule4);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      patientInstance.rules.push(insertRule);
+      const exported = exporter.exportInstance(patientInstance);
+      expect(exported.name).toEqual([
+        {
+          given: ['John'],
+          family: 'Johnson'
+        },
+        {
+          given: ['Johnny'],
+          family: 'Jackson'
+        }
+      ]);
     });
 
     it('should log an error and not apply rules from an invalid insert rule', () => {
