@@ -1,7 +1,12 @@
 import { FSHTank, FSHDocument } from '../../src/import';
 import { Profile, RuleSet, FshCode, FshValueSet } from '../../src/fshtypes';
-import { InsertRule, CardRule, ConceptRule } from '../../src/fshtypes/rules';
-import { loggerSpy, assertCardRule, assertValueSetConceptComponent } from '../testhelpers';
+import { InsertRule, CardRule, ConceptRule, AssignmentRule } from '../../src/fshtypes/rules';
+import {
+  loggerSpy,
+  assertCardRule,
+  assertValueSetConceptComponent,
+  assertAssignmentRule
+} from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
 
@@ -365,5 +370,89 @@ describe('applyInsertRules', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Unable to find definition for RuleSet Bam.*File: NoBam\.fsh.*Line: 1 - 3\D*/s
     );
+  });
+
+  describe('#appliedRuleSet', () => {
+    it('should apply rules from a single level insert rule with parameters', () => {
+      // RuleSet: SimpleRules (value, maxNote)
+      // valueString = {value}
+      // note 0..{maxNote}
+      //
+      // Profile: Foo
+      // Parent: Observation
+      // * insert SimpleRules ("Something", 5)
+      const appliedSimpleRules = new RuleSet('SimpleRules');
+      const valueRule = new AssignmentRule('valueString');
+      valueRule.value = 'Something';
+      valueRule.exactly = false;
+      valueRule.isInstance = false;
+      const noteRule = new CardRule('note');
+      noteRule.min = 0;
+      noteRule.max = '5';
+      appliedSimpleRules.rules.push(valueRule, noteRule);
+      doc.appliedRuleSets.set(
+        JSON.stringify(['SimpleRules', '"Something"', '5']),
+        appliedSimpleRules
+      );
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'SimpleRules';
+      insertRule.params = ['"Something"', '5'];
+      profile.rules.push(insertRule);
+
+      applyInsertRules(profile, tank);
+      expect(profile.rules).toHaveLength(2);
+      assertAssignmentRule(profile.rules[0], 'valueString', 'Something', false, false);
+      assertCardRule(profile.rules[1], 'note', 0, 5);
+    });
+
+    it('should ignore insert rules with parameters that cause a circular dependency, and log an error', () => {
+      // RuleSet: SimpleRules (maxNote)
+      // note 0..{maxNote}
+      // insert FancyRules ({maxNote})
+      //
+      // RuleSet: FancyRules (maxInterpretation)
+      // interpretation 0..{maxInterpretation}
+      // insert SimpleRules ({maxInterpretation})
+      //
+      // Profile: Foo
+      // Parent: Observation
+      // * insert SimpleRules (5)
+      const appliedSimpleRules = new RuleSet('SimpleRules');
+      const simpleCard = new CardRule('note');
+      simpleCard.min = 0;
+      simpleCard.max = '5';
+      const insertFancy = new InsertRule();
+      insertFancy.ruleSet = 'FancyRules';
+      insertFancy.params = ['5'];
+      appliedSimpleRules.rules.push(simpleCard, insertFancy);
+
+      const appliedFancyRules = new RuleSet('FancyRules');
+      const fancyCard = new CardRule('interpretation');
+      fancyCard.min = 0;
+      fancyCard.max = '5';
+      const insertSimple = new InsertRule().withFile('Fancy.fsh').withLocation([4, 9, 4, 29]);
+      insertSimple.ruleSet = 'SimpleRules';
+      insertSimple.params = ['5'];
+      appliedFancyRules.rules.push(fancyCard, insertSimple);
+
+      doc.appliedRuleSets
+        .set(JSON.stringify(['SimpleRules', '5']), appliedSimpleRules)
+        .set(JSON.stringify(['FancyRules', '5']), appliedFancyRules);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'SimpleRules';
+      insertRule.params = ['5'];
+      profile.rules.push(insertRule);
+
+      applyInsertRules(profile, tank);
+      expect(profile.rules).toHaveLength(2);
+      assertCardRule(profile.rules[0], 'note', 0, 5);
+      assertCardRule(profile.rules[1], 'interpretation', 0, 5);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /SimpleRules will cause a circular dependency/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Fancy\.fsh.*Line: 4\D*/s);
+    });
   });
 });

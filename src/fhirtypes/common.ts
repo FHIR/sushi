@@ -433,9 +433,16 @@ export function applyInsertRules(
       expandedRules.push(rule);
       return;
     }
-    const ruleSet = tank.fish(rule.ruleSet, Type.RuleSet) as RuleSet;
+    const ruleSetIdentifier = JSON.stringify([rule.ruleSet, ...rule.params]);
+    let ruleSet: RuleSet;
+    if (rule.params.length) {
+      ruleSet = tank.fishForAppliedRuleSet(ruleSetIdentifier);
+    } else {
+      ruleSet = tank.fish(rule.ruleSet, Type.RuleSet) as RuleSet;
+    }
+
     if (ruleSet) {
-      if (seenRuleSets.includes(ruleSet.name)) {
+      if (seenRuleSets.includes(ruleSetIdentifier)) {
         logger.error(
           `Inserting ${ruleSet.name} will cause a circular dependency, so the rule will be ignored`,
           rule.sourceInfo
@@ -444,7 +451,7 @@ export function applyInsertRules(
       }
       // RuleSets may contain other RuleSets via insert rules on themselves, so before applying the rules
       // from a RuleSet, we must first recursively expand any insert rules on that RuleSet
-      applyInsertRules(ruleSet, tank, [...seenRuleSets, ruleSet.name]);
+      applyInsertRules(ruleSet, tank, [...seenRuleSets, ruleSetIdentifier]);
       ruleSet.rules.forEach(ruleSetRule => {
         // On the import side, a rule that is intended to be a ValueSetConceptComponent can
         // be imported as a ConceptRule because the syntax is identical. If this is the case,
