@@ -59,6 +59,7 @@ import {
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
+import _min from 'lodash/min';
 import { parseCodeLexeme } from './parseCodeLexeme';
 import { EOL } from 'os';
 
@@ -1462,6 +1463,16 @@ export class FSHImporter extends FSHVisitor {
               insertRule
             );
             if (appliedRuleSet) {
+              // set the source info based on the original source info
+              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
+              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
+              appliedRuleSet.rules.forEach(rule => {
+                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
+                rule.sourceInfo.location.startLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+                rule.sourceInfo.location.endLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+              });
               this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
               return insertRule;
             } else {
@@ -1912,14 +1923,17 @@ export class FSHImporter extends FSHVisitor {
     lines = lines.map(l => (/^\s*$/.test(l) ? '' : l));
 
     // find the minimum number of spaces before the first char (ignore zero-length lines)
-    let minSpaces = 0;
-    lines.forEach(line => {
-      const firstNonSpace = line.search(/\S|$/);
-      const lineIsEmpty = /^$/.test(line);
-      if (!lineIsEmpty && firstNonSpace >= 0 && (minSpaces === 0 || firstNonSpace < minSpaces)) {
-        minSpaces = firstNonSpace;
-      }
-    });
+    const minSpaces = _min(
+      lines.map(line => {
+        const firstNonSpace = line.search(/\S|$/);
+        const lineIsEmpty = /^$/.test(line);
+        if (!lineIsEmpty) {
+          return firstNonSpace;
+        } else {
+          return null;
+        }
+      })
+    );
 
     // consistently remove the common leading spaces and join the lines back together
     return lines.map(l => (l.length >= minSpaces ? l.slice(minSpaces) : l)).join('\n');

@@ -1737,6 +1737,21 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should not log an error when a required sliced element could be satisfied by elements without a sliceName', () => {
+      const assignedValueRule = new AssignmentRule('result[0]');
+      assignedValueRule.value = new FshReference('Fsh are friends');
+      lipidInstance.rules.push(assignedValueRule);
+      exportInstance(lipidInstance);
+      const messages = loggerSpy.getAllMessages('error');
+      // No errors relating to specific slices are logged, since result[0] could be referring to any of them
+      expect(messages[messages.length - 2]).toMatch(
+        /DiagnosticReport.status.*File: LipidInstance\.fsh.*Line: 10 - 20/s
+      );
+      expect(messages[messages.length - 1]).toMatch(
+        /DiagnosticReport.result.*File: LipidInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
     it('should log an error when a required element inherited from a resource is not present', () => {
       const observationInstance = new Instance('Pow')
         .withFile('ObservationInstance.fsh')

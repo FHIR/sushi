@@ -157,7 +157,7 @@ describe('ensureConfigurationFile', () => {
       fhirVersion: '4.0.1',
       dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
       parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2020+',
+      copyrightYear: '2021+',
       releaseLabel: 'CI Build',
       template: 'fhir.base.template#current',
       menu: {
@@ -233,7 +233,7 @@ describe('ensureConfigurationFile', () => {
       // No longer any publisher, description, license, dependencies
       fhirVersion: '4.0.1',
       parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2020+',
+      copyrightYear: '2021+',
       releaseLabel: 'CI Build',
       template: 'fhir.base.template#current',
       menu: {
@@ -332,7 +332,7 @@ describe('ensureConfigurationFile', () => {
       fhirVersion: '4.0.1',
       dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
       parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2020+',
+      copyrightYear: '2021+',
       releaseLabel: 'CI Build',
       template: 'fhir.base.template#current',
       menu: {
@@ -491,7 +491,7 @@ describe('ensureConfigurationFile', () => {
       fhirVersion: '4.0.1',
       dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
       parameters: { 'show-inherited-invariants': false }, // no more extra parameter
-      copyrightYear: '2020+', // back to default copyrightYear
+      copyrightYear: '2021+', // back to default copyrightYear
       releaseLabel: 'CI Build', // backto default CI Build
       menu: {
         'IG Home': 'index.html',
@@ -548,7 +548,7 @@ describe('ensureConfigurationFile', () => {
       fhirVersion: '4.0.1',
       dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
       parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2020+',
+      copyrightYear: '2021+',
       releaseLabel: 'CI Build',
       template: 'fhir.base.template#current',
       menu: {
@@ -650,7 +650,7 @@ describe('ensureConfigurationFile', () => {
       fhirVersion: '4.0.1',
       dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
       parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2020+',
+      copyrightYear: '2021+',
       releaseLabel: 'CI Build',
       template: 'fhir.base.template#current',
       menu: {
@@ -725,7 +725,7 @@ describe('ensureConfigurationFile', () => {
       fhirVersion: '4.0.1',
       dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
       parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2020+',
+      copyrightYear: '2021+',
       releaseLabel: 'CI Build',
       template: 'fhir.base.template#current',
       // menu should no longer exist since the provided menu.xml is used
@@ -813,7 +813,7 @@ describe('ensureConfigurationFile', () => {
       fhirVersion: '4.0.1',
       dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
       parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2020+',
+      copyrightYear: '2021+',
       releaseLabel: 'CI Build',
       template: 'fhir.base.template#current',
       menu: {
