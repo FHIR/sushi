@@ -11,7 +11,7 @@ export class FshQuantity extends FshEntity {
     let str = this.value.toString();
     if (this.unit?.code != null) {
       str += ` '${this.unit.code}'`;
-      if (this.unit?.display != null) str += ` "${this.unit.display}"`;
+      if (this.unit.display != null) str += ` "${this.unit.display}"`;
     }
     return str;
   }
