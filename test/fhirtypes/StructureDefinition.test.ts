@@ -1017,7 +1017,7 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toBe('4.0.2');
       expect(pathParts.length).toBe(1);
-      expect(pathParts[0]).toEqual({ primitive: true, base: 'version', pathPosition: 0 });
+      expect(pathParts[0]).toEqual({ primitive: true, base: 'version' });
     });
 
     it('should allow assigning the same instance value over an existing pattern[x]', () => {
@@ -1030,7 +1030,7 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
       expect(pathParts.length).toBe(1);
-      expect(pathParts[0]).toEqual({ base: 'method', pathPosition: 0 });
+      expect(pathParts[0]).toEqual({ base: 'method' });
     });
 
     it('should allow assigning the same instance value over an existing fixed[x]', () => {
@@ -1043,7 +1043,7 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toEqual({ coding: [{ system: 'http://system.com', code: 'foo' }] });
       expect(pathParts.length).toBe(1);
-      expect(pathParts[0]).toEqual({ base: 'method', pathPosition: 0 });
+      expect(pathParts[0]).toEqual({ base: 'method' });
     });
 
     // Invalid paths
@@ -1078,8 +1078,8 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
-      expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'], pathPosition: 0 });
-      expect(pathParts[1]).toEqual({ primitive: true, base: 'value', pathPosition: 1 });
+      expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'value' });
     });
 
     it('should allow assigning an instance value to an element in an array, with implied 0 index', () => {
@@ -1090,8 +1090,8 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
-      expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'], pathPosition: 0 });
-      expect(pathParts[1]).toEqual({ primitive: true, base: 'value', pathPosition: 1 });
+      expect(pathParts[0]).toEqual({ base: 'identifier', brackets: ['0'] });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'value' });
     });
 
     it('should allow assigning an instance value to an element in an array if the element was constrained from an array', () => {
@@ -1103,14 +1103,13 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(3);
-      expect(pathParts[0]).toEqual({ base: 'code', pathPosition: 0 });
+      expect(pathParts[0]).toEqual({ base: 'code' });
       expect(pathParts[1]).toEqual({
         base: 'coding',
         brackets: ['RespRateCode', '0'],
-        slices: ['RespRateCode'],
-        pathPosition: 1
+        slices: ['RespRateCode']
       }); // 0 in path parts means value will be set in an array
-      expect(pathParts[2]).toEqual({ primitive: true, base: 'id', pathPosition: 2 });
+      expect(pathParts[2]).toEqual({ primitive: true, base: 'id' });
     });
 
     it('should not allow using array brackets when an element is not an array', () => {
@@ -1147,16 +1146,14 @@ describe('StructureDefinition', () => {
       expect(pathParts[0]).toEqual({
         base: 'category',
         brackets: ['VSCat', '0'],
-        slices: ['VSCat'],
-        pathPosition: 0
+        slices: ['VSCat']
       });
       expect(pathParts[1]).toEqual({
         base: 'coding',
         brackets: ['0'],
-        slices: ['VSCat'],
-        pathPosition: 1
+        slices: ['VSCat']
       });
-      expect(pathParts[2]).toEqual({ primitive: true, base: 'version', pathPosition: 2 });
+      expect(pathParts[2]).toEqual({ primitive: true, base: 'version' });
     });
 
     it('should allow assigning an instance value on a slice array', () => {
@@ -1170,10 +1167,9 @@ describe('StructureDefinition', () => {
       expect(pathParts[0]).toEqual({
         base: 'extension',
         brackets: ['required', '3'],
-        slices: ['required'],
-        pathPosition: 0
+        slices: ['required']
       });
-      expect(pathParts[1]).toEqual({ primitive: true, base: 'value[x]', pathPosition: 1 });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'value[x]' });
     });
 
     it('should allow setting values directly on extensions by accessing indexes', () => {
@@ -1187,8 +1183,8 @@ describe('StructureDefinition', () => {
       );
       expect(assignedValue).toBe('foo');
       expect(pathParts.length).toBe(2);
-      expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['2'], pathPosition: 0 });
-      expect(pathParts[1]).toEqual({ primitive: true, base: 'url', pathPosition: 1 });
+      expect(pathParts[0]).toEqual({ base: 'extension', brackets: ['2'] });
+      expect(pathParts[1]).toEqual({ primitive: true, base: 'url' });
     });
 
     it('should allow setting arbitrary defined extensions', () => {
@@ -1203,8 +1199,7 @@ describe('StructureDefinition', () => {
       expect(pathParts[0]).toEqual({
         base: 'extension',
         brackets: ['patient-mothersMaidenName', '0'],
-        slices: ['patient-mothersMaidenName'],
-        pathPosition: 0
+        slices: ['patient-mothersMaidenName']
       });
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
@@ -1221,8 +1216,7 @@ describe('StructureDefinition', () => {
       expect(pathParts[1]).toEqual({
         base: 'extension',
         brackets: ['patient-mothersMaidenName', '0'],
-        slices: ['patient-mothersMaidenName'],
-        pathPosition: 1
+        slices: ['patient-mothersMaidenName']
       });
       expect(respRate.elements.length).toBe(originalLength + 9);
     });
@@ -1444,8 +1438,8 @@ describe('StructureDefinition', () => {
         );
         expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
-          { base: 'contained', brackets: ['0'], pathPosition: 0 },
-          { base: 'gender', primitive: true, pathPosition: 0 }
+          { base: 'contained', brackets: ['0'] },
+          { base: 'gender', primitive: true }
         ]);
       });
 
@@ -1462,10 +1456,10 @@ describe('StructureDefinition', () => {
         ]);
         expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
-          { base: 'contained', brackets: ['0'], pathPosition: 0 },
-          { base: 'entry', brackets: ['0'], pathPosition: 0 },
-          { base: 'resource', pathPosition: 1 },
-          { base: 'gender', primitive: true, pathPosition: 0 }
+          { base: 'contained', brackets: ['0'] },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'gender', primitive: true }
         ]);
       });
 
@@ -1482,12 +1476,12 @@ describe('StructureDefinition', () => {
         );
         expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
-          { base: 'contained', brackets: ['0'], pathPosition: 0 },
-          { base: 'entry', brackets: ['0'], pathPosition: 0 },
-          { base: 'resource', pathPosition: 1 },
-          { base: 'entry', brackets: ['0'], pathPosition: 0 },
-          { base: 'resource', pathPosition: 1 },
-          { base: 'gender', primitive: true, pathPosition: 0 }
+          { base: 'contained', brackets: ['0'] },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'entry', brackets: ['0'] },
+          { base: 'resource' },
+          { base: 'gender', primitive: true }
         ]);
       });
 
@@ -1503,9 +1497,9 @@ describe('StructureDefinition', () => {
         ]);
         expect(assignedValue).toBe('slugs');
         expect(pathParts).toEqual([
-          { base: 'contained', brackets: ['0'], pathPosition: 0 },
-          { base: 'valueQuantity', pathPosition: 0 },
-          { base: 'unit', primitive: true, pathPosition: 1 }
+          { base: 'contained', brackets: ['0'] },
+          { base: 'valueQuantity' },
+          { base: 'unit', primitive: true }
         ]);
       });
 
@@ -1557,8 +1551,8 @@ describe('StructureDefinition', () => {
         );
         expect(assignedValue).toBe('Patient');
         expect(pathParts).toEqual([
-          { base: 'contained', brackets: ['0'], pathPosition: 0 },
-          { base: 'resourceType', pathPosition: 1 }
+          { base: 'contained', brackets: ['0'] },
+          { base: 'resourceType' }
         ]);
       });
 
@@ -1573,10 +1567,9 @@ describe('StructureDefinition', () => {
           {
             base: 'contained',
             brackets: ['DomainsOnly', '0'],
-            slices: ['DomainsOnly'],
-            pathPosition: 0
+            slices: ['DomainsOnly']
           },
-          { base: 'resourceType', pathPosition: 1 }
+          { base: 'resourceType' }
         ]);
       });
 
@@ -1591,10 +1584,9 @@ describe('StructureDefinition', () => {
           {
             base: 'contained',
             brackets: ['PatientsOnly', '0'],
-            slices: ['PatientsOnly'],
-            pathPosition: 0
+            slices: ['PatientsOnly']
           },
-          { base: 'resourceType', pathPosition: 1 }
+          { base: 'resourceType' }
         ]);
       });
 

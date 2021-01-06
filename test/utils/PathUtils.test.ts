@@ -26,9 +26,9 @@ describe('PathUtils', () => {
       resolveSoftIndexing(rules);
       expect(rules.map(r => r.path)).toEqual([
         'item[0].item[0].item[0]',
+        'item[0].item[1].item[0]',
         'item[0].item[1].item[1]',
-        'item[0].item[1].item[2]',
-        'item[0].item[1].item[2]'
+        'item[0].item[1].item[1]'
       ]);
     });
 
@@ -38,14 +38,15 @@ describe('PathUtils', () => {
         'item[+].item[+].item[0]',
         'item[0].item[+].item[+]',
         'item[=].item[2].item[+]',
-        'item[=].item[=].item[2]'
+        'item[=].item[=].item[1]'
       ].map(r => new Rule(r));
       resolveSoftIndexing(rules);
+      console.log(JSON.stringify(rules.map(r => r.path)));
       expect(rules.map(r => r.path)).toEqual([
         'item[0].item[0].item[0]',
-        'item[0].item[1].item[1]',
-        'item[0].item[2].item[2]',
-        'item[0].item[1].item[2]'
+        'item[0].item[1].item[0]',
+        'item[0].item[2].item[0]',
+        'item[0].item[2].item[1]'
       ]);
     });
 
@@ -112,6 +113,23 @@ describe('PathUtils', () => {
         'item[Slice1][0]',
         'item[Slice2][0]',
         'item[Slice2][1]'
+      ]);
+    });
+
+    it('should resolve nested soft indexing w/ similar nested path items', () => {
+      // These types of paths are possible in instances of ValueSet
+      const rules = [
+        'compose.include[+].concept[+]',
+        'compose.include[=].concept[+]',
+        'compose.exclude[+].concept[+]',
+        'compose.exclude[=].concept[+]'
+      ].map(r => new Rule(r));
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'compose.include[0].concept[0]',
+        'compose.include[0].concept[1]',
+        'compose.exclude[0].concept[0]',
+        'compose.exclude[0].concept[1]'
       ]);
     });
   });

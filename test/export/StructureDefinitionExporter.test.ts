@@ -2043,8 +2043,9 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(testPatient);
     const sd = pkg.profiles[0];
-    const apartmentNameElement = sd.findElement('Patient.address.line:ApartmentName');
-    expect(apartmentNameElement).toBeDefined();
+    const addressLineElement = sd.findElement('Patient.address.line');
+    expect(addressLineElement.slicing.discriminator[0].type).toEqual('pattern');
+    expect(addressLineElement.slicing.discriminator[0].path).toEqual('code');
   });
 
   it('should not apply a AssignmentRule to a slice when it would conflict with a child slice of the list element', () => {

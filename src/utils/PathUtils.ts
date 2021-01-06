@@ -12,12 +12,11 @@ export function parseFSHPath(fshPath: string): PathPart[] {
   const seenSlices: string[] = [];
   const indexRegex = new RegExp('^[0-9]$');
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
-  let depth = 0;
   for (const pathPart of splitPath) {
     const splitPathPart = pathPart.split('[');
     if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {
       // There are no brackets, or the brackets are for a choice, so just push on the name
-      pathParts.push({ base: pathPart, pathPosition: depth++ });
+      pathParts.push({ base: pathPart });
     } else {
       // We have brackets, let's  save the bracket info
       let fhirPathBase = splitPathPart[0];
@@ -37,11 +36,10 @@ export function parseFSHPath(fshPath: string): PathPart[] {
         pathParts.push({
           base: fhirPathBase,
           brackets: brackets,
-          slices: seenSlices,
-          pathPosition: depth++
+          slices: seenSlices
         });
       } else {
-        pathParts.push({ base: fhirPathBase, brackets: brackets, pathPosition: depth++ });
+        pathParts.push({ base: fhirPathBase, brackets: brackets });
       }
     }
   }
@@ -72,9 +70,8 @@ export function assembleFSHPath(pathParts: PathPart[]): string {
  */
 function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
   // Must account for a pathPart's base name, it's position in the path, as well as any slices it's contained in.
-  const mapName = element.slices
-    ? `${element.base}${element.slices.join('|')}${element.pathPosition}`
-    : `${element.base}${element.pathPosition}`;
+  const mapName = `${element.prefix ?? ''}.${element.base}|${(element.slices ?? []).join('|')}`;
+  const indexRegex = new RegExp('^[0-9]$');
   if (!pathMap.has(mapName)) {
     pathMap.set(mapName, 0);
     if (element.brackets?.includes('+')) {
@@ -89,6 +86,8 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
       } else if (bracket === '=') {
         const currentIndex = pathMap.get(mapName);
         element.brackets[index] = currentIndex.toString();
+      } else if (indexRegex.test(bracket)) {
+        pathMap.set(mapName, parseInt(bracket));
       }
     });
   }
@@ -115,14 +114,19 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
   });
 
   // Replacing Soft indexes with numbers
-  parsedRules.forEach((parsedRule, index) => {
-    const originalRule = rules[index];
-    parsedRule.path.forEach((element: PathPart) => {
+  parsedRules.forEach((parsedRule, ruleIndex) => {
+    const originalRule = rules[ruleIndex];
+    parsedRule.path.forEach((element: PathPart, elementIndex) => {
       convertSoftIndexes(element, pathMap);
+      // Add a prefix property to the next Path Part
+      if (parsedRule.path[elementIndex + 1]) {
+        const nextPathPart = parsedRule.path[elementIndex + 1];
+        nextPathPart.prefix = assembleFSHPath(parsedRule.path.slice(0, elementIndex + 1));
+      }
     });
     originalRule.path = assembleFSHPath(parsedRule.path); // Assembling the separated rule path back into a normal string
 
-    parsedRule.caretPath?.forEach((element: PathPart) => {
+    parsedRule.caretPath?.forEach((element: PathPart, elementIndex) => {
       // Caret path indexes should only be resolved in the context of a specific path
       // Each normal path has a separate map to keep track of the caret path indexes
       if (!caretPathMap.has(originalRule.path)) {
@@ -131,6 +135,11 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
 
       const elementCaretPathMap = caretPathMap.get(originalRule.path);
       convertSoftIndexes(element, elementCaretPathMap);
+      // Add a prefix property to the next Path Part
+      if (parsedRule.caretPath[elementIndex + 1]) {
+        const nextPathPart = parsedRule.caretPath[elementIndex + 1];
+        nextPathPart.prefix = assembleFSHPath(parsedRule.caretPath.slice(0, elementIndex + 1));
+      }
     });
 
     // If a rule is a CaretValueRule, we assemble its caretPath as well
