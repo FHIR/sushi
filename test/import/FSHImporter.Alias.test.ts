@@ -327,5 +327,24 @@ describe('FSHImporter', () => {
       );
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
+
+    it('should log an error when an alias contains reserved characters', () => {
+      const input = `
+      Alias: BAD|LOINC = http://loinc.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = BAD|LOINC#foo
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      // The BAD|LOINC alias does not resolve, since it is not created
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'BAD|LOINC').withFile('Loinc.fsh').withLocation([6, 16, 6, 28])
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/BAD\|LOINC cannot include "\|"/);
+    });
   });
 });

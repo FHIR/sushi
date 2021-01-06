@@ -172,6 +172,13 @@ export class FSHImporter extends FSHVisitor {
             .alias()
             .SEQUENCE()
             .map(s => s.getText());
+          if (name.includes('|')) {
+            logger.error(
+              `Alias ${name} cannot include "|" since the "|" character is reserved for indicating a version`,
+              { file: doc.file ?? '', location: this.extractStartStop(e.alias()) }
+            );
+            return;
+          }
           if (this.allAliases.has(name) && this.allAliases.get(name) !== value) {
             logger.error(
               `Alias ${name} cannot be redefined to ${value}; it is already defined as ${this.allAliases.get(
