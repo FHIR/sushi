@@ -1868,8 +1868,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private aliasAwareValue(parentCtx: ParserRuleContext, value = parentCtx.getText()): string {
-    this.validateAliasResolves(parentCtx, value);
-    return this.allAliases.has(value) ? this.allAliases.get(value) : value;
+    const [valueWithoutVersion, version] = value.split('|');
+    this.validateAliasResolves(parentCtx, valueWithoutVersion);
+    if (this.allAliases.has(valueWithoutVersion)) {
+      return this.allAliases.get(valueWithoutVersion) + (version ? `|${version}` : '');
+    } else {
+      return value;
+    }
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
