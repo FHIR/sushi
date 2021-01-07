@@ -486,7 +486,7 @@ export function applyInsertRules(
       logger.error(`Unable to find definition for RuleSet ${rule.ruleSet}.`, rule.sourceInfo);
     }
   });
-  fshDefinition.rules = expandedRules;
+  fshDefinition.rules = cloneDeep(expandedRules);
 }
 
 /**

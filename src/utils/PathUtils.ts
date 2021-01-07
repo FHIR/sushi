@@ -69,9 +69,9 @@ export function assembleFSHPath(pathParts: PathPart[]): string {
  * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's updated index as the value
  */
 function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
-  // Must account for a pathPart's base name, it's position in the path, as well as any slices it's contained in.
+  // Must account for a pathPart's base name, prior portions of the path, as well as any slices it's contained in.
   const mapName = `${element.prefix ?? ''}.${element.base}|${(element.slices ?? []).join('|')}`;
-  const indexRegex = new RegExp('^[0-9]$');
+  const indexRegex = /^[0-9]+$/;
   if (!pathMap.has(mapName)) {
     pathMap.set(mapName, 0);
     if (element.brackets?.includes('+')) {
@@ -87,6 +87,7 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
         const currentIndex = pathMap.get(mapName);
         element.brackets[index] = currentIndex.toString();
       } else if (indexRegex.test(bracket)) {
+        // If a numeric index is found, we update our pathMap so subsequent soft indexes are converted in that context
         pathMap.set(mapName, parseInt(bracket));
       }
     });
@@ -117,12 +118,9 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
   parsedRules.forEach((parsedRule, ruleIndex) => {
     const originalRule = rules[ruleIndex];
     parsedRule.path.forEach((element: PathPart, elementIndex) => {
+      // Add a prefix to the current element containing previously parsed rule elements
+      element.prefix = assembleFSHPath(parsedRule.path.slice(0, elementIndex));
       convertSoftIndexes(element, pathMap);
-      // Add a prefix property to the next Path Part
-      if (parsedRule.path[elementIndex + 1]) {
-        const nextPathPart = parsedRule.path[elementIndex + 1];
-        nextPathPart.prefix = assembleFSHPath(parsedRule.path.slice(0, elementIndex + 1));
-      }
     });
     originalRule.path = assembleFSHPath(parsedRule.path); // Assembling the separated rule path back into a normal string
 
@@ -134,12 +132,9 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
       }
 
       const elementCaretPathMap = caretPathMap.get(originalRule.path);
+      // Add a prefix to the current element containing previously parsed rule elements
+      element.prefix = assembleFSHPath(parsedRule.caretPath.slice(0, elementIndex));
       convertSoftIndexes(element, elementCaretPathMap);
-      // Add a prefix property to the next Path Part
-      if (parsedRule.caretPath[elementIndex + 1]) {
-        const nextPathPart = parsedRule.caretPath[elementIndex + 1];
-        nextPathPart.prefix = assembleFSHPath(parsedRule.caretPath.slice(0, elementIndex + 1));
-      }
     });
 
     // If a rule is a CaretValueRule, we assemble its caretPath as well
