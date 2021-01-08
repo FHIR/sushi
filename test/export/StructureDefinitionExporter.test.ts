@@ -1745,7 +1745,7 @@ describe('StructureDefinitionExporter', () => {
     expect(assignedAddress.patternAddress).toBeUndefined();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot assign Instance at FakeInstance to element of type Address\D*/s
+      /Cannot assign Instance at path address to element of type Address.*FakeInstance\D*/s
     );
   });
 

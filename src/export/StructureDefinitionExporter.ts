@@ -164,7 +164,7 @@ export class StructureDefinitionExporter implements Fishable {
               if (instance == null) {
                 if (element.type?.length === 1) {
                   logger.error(
-                    `Cannot assign Instance at ${rule.value} to element of type ${element.type[0].code}. Instance definition not found.`
+                    `Cannot assign Instance at path ${rule.path} to element of type ${element.type[0].code}. Definition not found for Instance: ${rule.value}.`
                   );
                 } else {
                   logger.error(
