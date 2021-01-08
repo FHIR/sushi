@@ -1655,6 +1655,24 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should apply an Assignment rule with Canonical of an inline instance', () => {
+    const profile = new Profile('MyObservation');
+    profile.parent = 'Observation';
+    const rule = new AssignmentRule('code.coding.system');
+    rule.value = new FshCanonical('MyCodeSystem');
+    profile.rules.push(rule);
+
+    const inlineInstance = new Instance('MyCodeSystem');
+    inlineInstance.usage = 'Inline';
+    doc.instances.set(inlineInstance.name, inlineInstance);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const assignedSystem = sd.findElement('Observation.code.coding.system');
+    expect(assignedSystem.patternUri).toEqual('#MyCodeSystem');
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should apply an AssignmentRule with Canonical of a FHIR entity', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';

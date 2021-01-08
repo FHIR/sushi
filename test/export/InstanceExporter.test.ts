@@ -1229,6 +1229,25 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should apply an Assignment rule with Canonical of an inline instance', () => {
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const inlineInstance = new Instance('MyMedRequest');
+      inlineInstance.usage = 'Inline';
+      doc.instances.set(inlineInstance.name, inlineInstance);
+
+      const assignedValueRule = new AssignmentRule('code.coding.system');
+      assignedValueRule.value = new FshCanonical('MyMedRequest');
+      observationInstance.rules.push(assignedValueRule);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.code).toEqual({
+        coding: [{ system: '#MyMedRequest' }]
+      });
+    });
+
     it('should not apply an Assignment rule with an invalid Canonical entity and log an error', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';

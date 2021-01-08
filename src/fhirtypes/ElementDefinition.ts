@@ -1223,7 +1223,7 @@ export class ElementDefinition {
       case 'Canonical':
         value = value as FshCanonical;
         // Get the canonical url of the entity
-        let canonicalUrl = fisher.fishForMetadata(
+        const canonicalDefinition = fisher.fishForMetadata(
           value.entityName,
           Type.Resource,
           Type.Type,
@@ -1232,8 +1232,13 @@ export class ElementDefinition {
           Type.ValueSet,
           Type.CodeSystem,
           Type.Instance
-        )?.url;
-        if (!canonicalUrl) {
+        );
+        let canonicalUrl: string;
+        if (canonicalDefinition?.url) {
+          canonicalUrl = canonicalDefinition.url;
+        } else if (canonicalDefinition?.id && canonicalDefinition.instanceUsage === 'Inline') {
+          canonicalUrl = `#${canonicalDefinition.id}`;
+        } else {
           throw new InvalidCanonicalUrlError(value.entityName);
         }
         if (value.version) {
