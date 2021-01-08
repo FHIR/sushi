@@ -172,6 +172,13 @@ export class FSHImporter extends FSHVisitor {
             .alias()
             .SEQUENCE()
             .map(s => s.getText());
+          if (name.includes('|')) {
+            logger.error(
+              `Alias ${name} cannot include "|" since the "|" character is reserved for indicating a version`,
+              { file: doc.file ?? '', location: this.extractStartStop(e.alias()) }
+            );
+            return;
+          }
           if (this.allAliases.has(name) && this.allAliases.get(name) !== value) {
             logger.error(
               `Alias ${name} cannot be redefined to ${value}; it is already defined as ${this.allAliases.get(
@@ -1868,8 +1875,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private aliasAwareValue(parentCtx: ParserRuleContext, value = parentCtx.getText()): string {
-    this.validateAliasResolves(parentCtx, value);
-    return this.allAliases.has(value) ? this.allAliases.get(value) : value;
+    const [valueWithoutVersion, version] = value.split('|');
+    this.validateAliasResolves(parentCtx, valueWithoutVersion);
+    if (this.allAliases.has(valueWithoutVersion)) {
+      return this.allAliases.get(valueWithoutVersion) + (version ? `|${version}` : '');
+    } else {
+      return value;
+    }
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
