@@ -256,7 +256,9 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('foo');
     expect(exported.title).toBe('Foo Profile');
+    expect(exported.elements[0].short).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
+    expect(exported.elements[0].definition).toBe('foo bar foobar');
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
     expect(exported.version).toBe('1.0.0');
     expect(exported.type).toBe('Extension');
@@ -328,6 +330,7 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.name).toBe('Foo');
     expect(exported.id).toBe('Foo');
     expect(exported.title).toBeUndefined();
+    expect(exported.elements[0].short).toBe('Optional Extensions Element');
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
     expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
       'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
