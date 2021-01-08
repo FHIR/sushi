@@ -1,6 +1,7 @@
 import { PathPart } from '../fhirtypes';
 import { splitOnPathPeriods } from '../fhirtypes/common';
 import { CaretValueRule, Rule } from '../fshtypes/rules';
+import { logger } from './FSHLogger';
 
 /**
  * Parses a FSH Path into a more easily usable form
@@ -76,6 +77,12 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
     pathMap.set(mapName, 0);
     if (element.brackets?.includes('+')) {
       element.brackets[element.brackets.indexOf('+')] = '0';
+    } else if (element.brackets?.includes('=')) {
+      // If a sequence begins with a '=', we log an error but assume a value of 0
+      element.brackets[element.brackets.indexOf('=')] = '0';
+      throw new Error(
+        'The first index in a Soft Indexing sequence must be "+", an actual index of "0" has been assumed'
+      );
     }
   } else {
     element.brackets?.forEach((bracket: string, index: number) => {
@@ -120,7 +127,11 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
     parsedRule.path.forEach((element: PathPart, elementIndex) => {
       // Add a prefix to the current element containing previously parsed rule elements
       element.prefix = assembleFSHPath(parsedRule.path.slice(0, elementIndex));
-      convertSoftIndexes(element, pathMap);
+      try {
+        convertSoftIndexes(element, pathMap);
+      } catch (e) {
+        logger.error(e.message, originalRule.sourceInfo);
+      }
     });
     originalRule.path = assembleFSHPath(parsedRule.path); // Assembling the separated rule path back into a normal string
 
@@ -134,7 +145,11 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
       const elementCaretPathMap = caretPathMap.get(originalRule.path);
       // Add a prefix to the current element containing previously parsed rule elements
       element.prefix = assembleFSHPath(parsedRule.caretPath.slice(0, elementIndex));
-      convertSoftIndexes(element, elementCaretPathMap);
+      try {
+        convertSoftIndexes(element, elementCaretPathMap);
+      } catch (e) {
+        logger.error(e.message, originalRule.sourceInfo);
+      }
     });
 
     // If a rule is a CaretValueRule, we assemble its caretPath as well

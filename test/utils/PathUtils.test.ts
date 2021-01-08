@@ -132,5 +132,20 @@ describe('PathUtils', () => {
         'compose.exclude[0].concept[1]'
       ]);
     });
+
+    it('should resolve improper soft indexing, but throw an error', () => {
+      const rules = ['name[=]', 'name[=]', 'name[=]', 'name[+]', 'name[=]'].map(r => new Rule(r));
+      expect(() => {
+        resolveSoftIndexing(rules);
+      }).toThrowError;
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'name[0]',
+        'name[0]',
+        'name[0]',
+        'name[1]',
+        'name[1]'
+      ]);
+    });
   });
 });
