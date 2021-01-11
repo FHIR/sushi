@@ -474,7 +474,7 @@ export function applyInsertRules(
         ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
         ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
         if (isAllowedRule(fshDefinition, ruleSetRule)) {
-          expandedRules.push(ruleSetRule);
+          expandedRules.push(cloneDeep(ruleSetRule));
         } else {
           logger.error(
             `Rule of type ${ruleSetRule.constructor.name} cannot be applied to entity of type ${fshDefinition.constructor.name}`,
@@ -486,7 +486,7 @@ export function applyInsertRules(
       logger.error(`Unable to find definition for RuleSet ${rule.ruleSet}.`, rule.sourceInfo);
     }
   });
-  fshDefinition.rules = cloneDeep(expandedRules);
+  fshDefinition.rules = expandedRules;
 }
 
 /**
