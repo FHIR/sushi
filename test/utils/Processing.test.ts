@@ -770,7 +770,7 @@ describe('Processing', () => {
       expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*input.*ignoreWarnings\.txt/);
 
       expect(getSpy.mock.calls).toHaveLength(4);
-      const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
+      const base = 'http://raw.githubusercontent.com/HL7/ig-publisher-scripts/master/';
       expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
       expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
       expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
@@ -837,7 +837,7 @@ describe('Processing', () => {
       );
 
       expect(getSpy.mock.calls).toHaveLength(4);
-      const base = 'http://raw.githubusercontent.com/FHIR/sample-ig/master/';
+      const base = 'http://raw.githubusercontent.com/HL7/ig-publisher-scripts/master/';
       expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
       expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
       expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');

@@ -371,14 +371,14 @@ export async function init(): Promise<void> {
     path.join(outputDir, 'input', 'ignoreWarnings.txt')
   );
   // Add the _updatePublisher, _genonce, and _gencontinuous scripts
-  console.log('Downloading publisher scripts from https://github.com/FHIR/sample-ig');
+  console.log('Downloading publisher scripts from https://github.com/HL7/ig-publisher-scripts');
   for (const script of [
     '_genonce.bat',
     '_genonce.sh',
     '_updatePublisher.bat',
     '_updatePublisher.sh'
   ]) {
-    const url = `http://raw.githubusercontent.com/FHIR/sample-ig/master/${script}`;
+    const url = `http://raw.githubusercontent.com/HL7/ig-publisher-scripts/master/${script}`;
     try {
       const res = await axios.get(url);
       fs.writeFileSync(path.join(outputDir, script), res.data);
