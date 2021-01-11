@@ -1,3 +1,4 @@
+import '../testhelpers/loggerSpy'; // side-effect: silences logs
 import { CaretValueRule, Rule } from '../../src/fshtypes/rules';
 import { resolveSoftIndexing } from '../../src/utils';
 
@@ -41,7 +42,6 @@ describe('PathUtils', () => {
         'item[=].item[=].item[1]'
       ].map(r => new Rule(r));
       resolveSoftIndexing(rules);
-      console.log(JSON.stringify(rules.map(r => r.path)));
       expect(rules.map(r => r.path)).toEqual([
         'item[0].item[0].item[0]',
         'item[0].item[1].item[0]',
