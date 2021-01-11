@@ -135,6 +135,10 @@ export type Configuration = {
   // When the FSHOnly parameter is set to true, no IG specific content will be generated, SUSHI will
   // only convert FSH definitions to JSON files. When false, IG content is generated.
   FSHOnly?: boolean;
+
+  // When set to true, the "short" and "definition" field on the root element of an Extension will
+  // be set to the "Title" and "Description" of that Extension. Default is true.
+  applyExtensionMetadataToRoot?: boolean;
 };
 
 export type ConfigurationGroup = {

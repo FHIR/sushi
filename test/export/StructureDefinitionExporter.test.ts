@@ -12,7 +12,8 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
-  FshQuantity
+  FshQuantity,
+  Configuration
 } from '../../src/fshtypes';
 import {
   CardRule,
@@ -259,6 +260,36 @@ describe('StructureDefinitionExporter', () => {
     expect(exported.elements[0].short).toBe('Foo Profile');
     expect(exported.description).toBe('foo bar foobar');
     expect(exported.elements[0].definition).toBe('foo bar foobar');
+    expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
+    expect(exported.version).toBe('1.0.0');
+    expect(exported.type).toBe('Extension');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
+
+    // Check that Extension.url is correctly assigned
+    expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/foo'
+    );
+  });
+
+  it('should not set metadata on the root element when applyExtensionMetadataToRoot is false', () => {
+    const config: Configuration = { ...minimalConfig, applyExtensionMetadataToRoot: false };
+    const tank = new FSHTank([doc], config);
+    const testExporter = new StructureDefinitionExporter(tank, pkg, fisher);
+    const extension = new Extension('Foo');
+    extension.id = 'foo';
+    extension.title = 'Foo Profile';
+    extension.description = 'foo bar foobar';
+    doc.extensions.set(extension.name, extension);
+    testExporter.exportStructDef(extension);
+    const exported = pkg.extensions[0];
+    expect(exported.name).toBe('Foo');
+    expect(exported.id).toBe('foo');
+    expect(exported.title).toBe('Foo Profile');
+    expect(exported.elements[0].short).toBe('Optional Extensions Element');
+    expect(exported.description).toBe('foo bar foobar');
+    expect(exported.elements[0].definition).toBe(
+      'Optional Extension Element - found in all resources.'
+    );
     expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
     expect(exported.version).toBe('1.0.0');
     expect(exported.type).toBe('Extension');

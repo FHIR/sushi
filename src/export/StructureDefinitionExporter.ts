@@ -98,7 +98,10 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
-      if (fshDefinition instanceof Extension) {
+      if (
+        fshDefinition instanceof Extension &&
+        !(this.tank.config.applyExtensionMetadataToRoot === false)
+      ) {
         structDef.elements[0].short = fshDefinition.title;
       }
     } else {
@@ -111,7 +114,10 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.contact;
     if (fshDefinition.description) {
       structDef.description = fshDefinition.description;
-      if (fshDefinition instanceof Extension) {
+      if (
+        fshDefinition instanceof Extension &&
+        !(this.tank.config.applyExtensionMetadataToRoot === false)
+      ) {
         structDef.elements[0].definition = fshDefinition.description;
       }
     } else {
