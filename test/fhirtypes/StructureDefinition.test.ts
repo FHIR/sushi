@@ -9,6 +9,7 @@ import { FshCode } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
 import { OnlyRule } from '../../src/fshtypes/rules';
 import { InstanceDefinition } from '../../src/fhirtypes';
+import { cloneDeep } from 'lodash';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
@@ -791,6 +792,83 @@ describe('StructureDefinition', () => {
       expect(exclude.contentReference).toBeUndefined();
       expect(exclude.type).toEqual(include.type);
       expect(valueSet.elements.length).toBe(originalLength + 26);
+    });
+
+    it('should carry over defined extensions from the content reference source element', () => {
+      // Add a valueset-expand-rules extension on the source element that should be carried over
+      const includeExtension = valueSet.elements.find(
+        e => e.id === 'ValueSet.compose.include.extension'
+      );
+      includeExtension.sliceIt('value', 'url');
+      includeExtension.addSlice('expand-rules');
+      const includeExtensionExpandRules = valueSet.elements.find(
+        e => e.id === 'ValueSet.compose.include.extension:expand-rules'
+      );
+      includeExtensionExpandRules.type[0].profile = [
+        'http://hl7.org/fhir/StructureDefinition/valueset-expand-rules'
+      ];
+      // Modify system short on the source element that should NOT be carried over
+      const includeSystem = valueSet.elements.find(e => e.id === 'ValueSet.compose.include.system');
+      includeSystem.short = 'This should not get copied over!';
+      // Verify the extension element is sliced in the contentref
+      const excludeExtension = valueSet.findElementByPath('compose.exclude.extension', fisher);
+      expect(excludeExtension).toBeDefined();
+      expect(excludeExtension.slicing).toEqual({
+        discriminator: [{ type: 'value', path: 'url' }],
+        ordered: false,
+        rules: 'open'
+      });
+      // Verify the valueset-expand-rules extension is present in the contentref
+      const excludeExtensionExpandRules = valueSet.findElementByPath(
+        'compose.exclude.extension[expand-rules]',
+        fisher
+      );
+      expect(excludeExtensionExpandRules).toBeDefined();
+      expect(excludeExtensionExpandRules.sliceName).toBe('expand-rules');
+      expect(excludeExtensionExpandRules.type[0].profile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/valueset-expand-rules'
+      ]);
+      // Verify that the system short was NOT set in the contentref
+      const excludeSystem = valueSet.findElementByPath('compose.exclude.system', fisher);
+      expect(excludeSystem).toBeDefined();
+      expect(excludeSystem.short).toBe('The system the codes come from');
+    });
+
+    it('should carry over further profiled extensions from the content reference source element', () => {
+      // I expect this is an edge case, but we have code for it, so might as well have tests for it too.
+      const questionnaire = fisher.fishForStructureDefinition('cpg-shareablequestionnaire');
+      // Create a profile with item cpg-itemImage extension constrained to cpg-requiredItemImage
+      const profile = cloneDeep(questionnaire);
+      profile.id = 'cpg-profiledshareablequestionnaire';
+      profile.name = 'ProfiledCPGShareableQuestionnaire';
+      profile.url =
+        'http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-profiledshareablequestionnaire';
+      profile.baseDefinition =
+        'http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-shareablequestionnaire';
+      const itemImageExtension = profile.elements.find(
+        e => e.id === 'Questionnaire.item.extension:itemImage'
+      );
+      itemImageExtension.type[0].profile[0] =
+        'http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-requiredItemImage';
+      // Verify the nested itemImage extension slice in the contentref points to the constrained extension
+      const nestedItemImageExtension = profile.findElementByPath(
+        'item.item.extension[itemImage]',
+        fisher
+      );
+      expect(nestedItemImageExtension).toBeDefined();
+      expect(nestedItemImageExtension.sliceName).toBe('itemImage');
+      expect(nestedItemImageExtension.type[0].profile).toEqual([
+        'http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-requiredItemImage'
+      ]);
+      // Verify the nested itemImage extension URL is set in the contentref
+      const nestedItemImageExtensionURL = profile.findElementByPath(
+        'item.item.extension[itemImage].url',
+        fisher
+      );
+      expect(nestedItemImageExtensionURL).toBeDefined();
+      expect(nestedItemImageExtensionURL.fixedUri).toBe(
+        'http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-requiredItemImage'
+      );
     });
 
     it('should find a child of a content reference element by path when the reference uses a full URI', () => {
