@@ -2007,6 +2007,47 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should resolve soft indexing within Caret Paths on profiles', () => {
+    // Profile: TestPatient
+    // Parent: Patient
+    // * address.line ^slicing.discriminator[+].type = #pattern
+    // * address.line ^slicing.discriminator[=].path = "$this"
+    // * address.line ^slicing.rules = #open
+    // * address.line contains ApartmentName 0..1
+
+    const testPatient = new Profile('TestPatient');
+    testPatient.parent = 'Patient';
+
+    const slicingTypeLine = new CaretValueRule('address.line');
+    slicingTypeLine.caretPath = 'slicing.discriminator[+].type';
+    slicingTypeLine.value = new FshCode('pattern');
+    const slicingPathLine = new CaretValueRule('address.line');
+    slicingPathLine.caretPath = 'slicing.discriminator[=].path';
+    slicingPathLine.value = 'code';
+    const slicingRulesLine = new CaretValueRule('address.line');
+    slicingRulesLine.caretPath = 'slicing.rules';
+    slicingRulesLine.value = new FshCode('open');
+    const containsAddressLine = new ContainsRule('address.line');
+    containsAddressLine.items.push({ name: 'ApartmentName' });
+    const apartmentNameCard = new CardRule('address.line[ApartmentName]');
+    apartmentNameCard.min = 0;
+    apartmentNameCard.max = '1';
+
+    testPatient.rules.push(
+      slicingTypeLine,
+      slicingPathLine,
+      slicingRulesLine,
+      containsAddressLine,
+      apartmentNameCard
+    );
+
+    exporter.exportStructDef(testPatient);
+    const sd = pkg.profiles[0];
+    const addressLineElement = sd.findElement('Patient.address.line');
+    expect(addressLineElement.slicing.discriminator[0].type).toEqual('pattern');
+    expect(addressLineElement.slicing.discriminator[0].path).toEqual('code');
+  });
+
   it('should not apply a AssignmentRule to a slice when it would conflict with a child slice of the list element', () => {
     // Instance: CustomPostalAddress
     // InstanceOf: Address

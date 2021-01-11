@@ -4,7 +4,7 @@ import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
-import { MasterFisher, Type } from '../utils';
+import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
 import { Package } from '.';
 
 export class CodeSystemExporter {
@@ -39,6 +39,7 @@ export class CodeSystemExporter {
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
+    resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {
         const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(

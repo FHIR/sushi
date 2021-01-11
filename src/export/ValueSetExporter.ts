@@ -9,7 +9,7 @@ import { FshValueSet, FshCode, ValueSetFilterValue } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError, InvalidUriError } from '../errors';
 import { Package } from '.';
-import { MasterFisher, Type } from '../utils';
+import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
 import {
   CaretValueRule,
   ValueSetComponentRule,
@@ -18,7 +18,6 @@ import {
 } from '../fshtypes/rules';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
-
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
 
@@ -104,6 +103,7 @@ export class ValueSetExporter {
     const vsStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('ValueSet', Type.Resource)
     );
+    resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {
         if (rule instanceof CaretValueRule) {
