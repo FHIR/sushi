@@ -1,3 +1,5 @@
+import { Instance } from '../fshtypes';
+
 export enum Type {
   Profile,
   Extension,
@@ -18,6 +20,7 @@ export interface Metadata {
   url?: string;
   parent?: string;
   abstract?: boolean;
+  instanceUsage?: Instance['usage'];
 }
 
 export interface Fishable {

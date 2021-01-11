@@ -605,6 +605,44 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should apply a CaretValueRule with soft indexing', () => {
+    const valueSet = new FshValueSet('AppleVS');
+    const caretRule1 = new CaretValueRule('');
+    caretRule1.caretPath = 'contact[+].name';
+    caretRule1.value = 'Johnny Appleseed';
+    valueSet.rules.push(caretRule1);
+    const caretRule2 = new CaretValueRule('');
+    caretRule2.caretPath = 'contact[=].telecom[+].rank';
+    caretRule2.value = 1;
+    valueSet.rules.push(caretRule2);
+    const caretRule3 = new CaretValueRule('');
+    caretRule3.caretPath = 'contact[=].telecom[=].value';
+    caretRule3.value = 'email.email@email.com';
+    valueSet.rules.push(caretRule3);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'AppleVS',
+      name: 'AppleVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/AppleVS',
+      version: '1.0.0',
+      status: 'active',
+      contact: [
+        {
+          name: 'Johnny Appleseed',
+          telecom: [
+            {
+              rank: 1,
+              value: 'email.email@email.com'
+            }
+          ]
+        }
+      ]
+    });
+  });
+
   it('should log a message when applying invalid CaretValueRule', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);
@@ -700,6 +738,38 @@ describe('ValueSetExporter', () => {
 
       const exported = exporter.exportValueSet(vs);
       expect(exported.title).toBe('Wow fancy');
+    });
+
+    it('should apply a CaretValueRule from a rule set with soft indexing', () => {
+      const caretRule1 = new CaretValueRule('');
+      caretRule1.caretPath = 'contact[+].name';
+      caretRule1.value = 'Johnny Appleseed';
+      ruleSet.rules.push(caretRule1);
+      const caretRule2 = new CaretValueRule('');
+      caretRule2.caretPath = 'contact[=].telecom[+].rank';
+      caretRule2.value = 1;
+      ruleSet.rules.push(caretRule2);
+      const caretRule3 = new CaretValueRule('');
+      caretRule3.caretPath = 'contact[=].telecom[=].value';
+      caretRule3.value = 'email.email@email.com';
+      ruleSet.rules.push(caretRule3);
+
+      const insertRule = new InsertRule();
+      insertRule.ruleSet = 'Bar';
+      vs.rules.push(insertRule);
+
+      const exported = exporter.exportValueSet(vs);
+      expect(exported.contact).toEqual([
+        {
+          name: 'Johnny Appleseed',
+          telecom: [
+            {
+              rank: 1,
+              value: 'email.email@email.com'
+            }
+          ]
+        }
+      ]);
     });
 
     it('should log an error and not apply rules from an invalid insert rule', () => {

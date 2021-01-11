@@ -2201,6 +2201,20 @@ describe('FSHImporter', () => {
         expect(doc.appliedRuleSets.size).toBe(1);
         // expect one call to visitDoc for the Profile, and one for the generated RuleSet
         expect(visitDocSpy).toHaveBeenCalledTimes(2);
+        // ensure the insert rules are still there (once upon a time, a bug caused the repeated rules to be omitted)
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile).toBeDefined();
+        expect(profile.rules).toHaveLength(2);
+        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+          '#preliminary',
+          '"something"',
+          '3'
+        ]);
+        assertInsertRule(profile.rules[1], 'MultiParamRuleSet', [
+          '#preliminary',
+          '"something"',
+          '3'
+        ]);
       });
 
       it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {

@@ -172,6 +172,13 @@ export class FSHImporter extends FSHVisitor {
             .alias()
             .SEQUENCE()
             .map(s => s.getText());
+          if (name.includes('|')) {
+            logger.error(
+              `Alias ${name} cannot include "|" since the "|" character is reserved for indicating a version`,
+              { file: doc.file ?? '', location: this.extractStartStop(e.alias()) }
+            );
+            return;
+          }
           if (this.allAliases.has(name) && this.allAliases.get(name) !== value) {
             logger.error(
               `Alias ${name} cannot be redefined to ${value}; it is already defined as ${this.allAliases.get(
@@ -1474,7 +1481,6 @@ export class FSHImporter extends FSHVisitor {
                   appliedRuleSet.sourceInfo.location.startLine - 1;
               });
               this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
-              return insertRule;
             } else {
               logger.error(
                 `Failed to parse RuleSet ${
@@ -1482,6 +1488,7 @@ export class FSHImporter extends FSHVisitor {
                 } with provided parameters (${insertRule.params.join(', ')})`,
                 insertRule.sourceInfo
               );
+              return;
             }
           }
         } else {
@@ -1489,16 +1496,17 @@ export class FSHImporter extends FSHVisitor {
             `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
             insertRule.sourceInfo
           );
+          return;
         }
       } else {
         logger.error(
           `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
           insertRule.sourceInfo
         );
+        return;
       }
-    } else {
-      return insertRule;
     }
+    return insertRule;
   }
 
   private parseRulesetReference(reference: string): [string, string] {
@@ -1868,8 +1876,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private aliasAwareValue(parentCtx: ParserRuleContext, value = parentCtx.getText()): string {
-    this.validateAliasResolves(parentCtx, value);
-    return this.allAliases.has(value) ? this.allAliases.get(value) : value;
+    const [valueWithoutVersion, version] = value.split('|');
+    this.validateAliasResolves(parentCtx, valueWithoutVersion);
+    if (this.allAliases.has(valueWithoutVersion)) {
+      return this.allAliases.get(valueWithoutVersion) + (version ? `|${version}` : '');
+    } else {
+      return value;
+    }
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
