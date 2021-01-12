@@ -1,5 +1,4 @@
 import { getPuns, getRandomPun } from '../../src/utils';
-import '../testhelpers/loggerSpy'; // side-effect: suppresses logs
 
 const CLEAN_PUN = 'You are dolphinitely doing great!';
 const WARN_PUN = 'Not bad, but you cod do batter!';
