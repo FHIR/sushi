@@ -1481,7 +1481,6 @@ export class FSHImporter extends FSHVisitor {
                   appliedRuleSet.sourceInfo.location.startLine - 1;
               });
               this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
-              return insertRule;
             } else {
               logger.error(
                 `Failed to parse RuleSet ${
@@ -1489,6 +1488,7 @@ export class FSHImporter extends FSHVisitor {
                 } with provided parameters (${insertRule.params.join(', ')})`,
                 insertRule.sourceInfo
               );
+              return;
             }
           }
         } else {
@@ -1496,16 +1496,17 @@ export class FSHImporter extends FSHVisitor {
             `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
             insertRule.sourceInfo
           );
+          return;
         }
       } else {
         logger.error(
           `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
           insertRule.sourceInfo
         );
+        return;
       }
-    } else {
-      return insertRule;
     }
+    return insertRule;
   }
 
   private parseRulesetReference(reference: string): [string, string] {

@@ -17,11 +17,10 @@ import {
   setPropertyOnDefinitionInstance,
   HasName,
   HasId,
-  splitOnPathPeriods,
   isInheritedResource
 } from './common';
 import { Fishable, Type } from '../utils/Fishable';
-import { applyMixins } from '../utils';
+import { applyMixins, parseFSHPath, assembleFSHPath } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 
 /**
@@ -185,7 +184,7 @@ export class StructureDefinition {
     }
 
     // Parse the FSH Path into a form we can work with
-    const parsedPath = this.parseFSHPath(path);
+    const parsedPath = parseFSHPath(path);
 
     let fhirPathString = this.type;
     let matchingElements = this.elements;
@@ -450,7 +449,7 @@ export class StructureDefinition {
     fisher: Fishable,
     inlineResourceTypes: string[] = []
   ): { assignedValue: any; pathParts: PathPart[] } {
-    const pathParts = this.parseFSHPath(path);
+    const pathParts = parseFSHPath(path);
     let currentPath = '';
     let previousPath = '';
     let currentElement: ElementDefinition;
@@ -554,7 +553,7 @@ export class StructureDefinition {
         );
         if (inlineResourceJSON) {
           const inlineResourceStructDef = StructureDefinition.fromJSON(inlineResourceJSON);
-          const inlinePath = this.assembleFSHPath(pathParts.slice(i + 1));
+          const inlinePath = assembleFSHPath(pathParts.slice(i + 1));
           try {
             const validatedInlineResource = inlineResourceStructDef.validateValueAtPath(
               inlinePath,
@@ -596,52 +595,6 @@ export class StructureDefinition {
     }
 
     return { assignedValue, pathParts };
-  }
-
-  /**
-   * Parses a FSH Path into a more easily usable form
-   * @param {string} fshPath - A syntactically valid path in FSH
-   * @returns {PathPart[]} an array of PathParts that is easier to work with
-   */
-  private parseFSHPath(fshPath: string): PathPart[] {
-    const pathParts: PathPart[] = [];
-    const splitPath = splitOnPathPeriods(fshPath);
-    for (const pathPart of splitPath) {
-      const splitPathPart = pathPart.split('[');
-      if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {
-        // There are no brackets, or the brackets are for a choice, so just push on the name
-        pathParts.push({ base: pathPart });
-      } else {
-        // We have brackets, let's  save the bracket info
-        let fhirPathBase = splitPathPart[0];
-        // Get the bracket elements and slice off the trailing ']'
-        let brackets = splitPathPart.slice(1).map(s => s.slice(0, -1));
-        // Get rid of any remaining [x] elements in the brackets
-        if (brackets[0] === 'x') {
-          fhirPathBase += '[x]';
-          brackets = brackets.slice(1);
-        }
-        pathParts.push({ base: fhirPathBase, brackets: brackets });
-      }
-    }
-    return pathParts;
-  }
-
-  /**
-   * Assembles a PathPart array back to its original form
-   * @param {PathPart[]} pathParts - An array of pathParts
-   * @returns {string} path - The path corresponding to those pathParts
-   */
-  private assembleFSHPath(pathParts: PathPart[]): string {
-    let path = '';
-    pathParts.forEach((pathPart, i) => {
-      path += pathPart.base;
-      pathPart.brackets?.forEach(bracket => (path += `[${bracket}]`));
-      if (i < pathParts.length - 1) {
-        path += '.';
-      }
-    });
-    return path;
   }
 
   /**
@@ -798,7 +751,7 @@ export class StructureDefinition {
    * @returns {string} - The name of the reference if it exists, else undefined
    */
   getReferenceName(path: string, element: ElementDefinition): string {
-    const parsedPath = this.parseFSHPath(path);
+    const parsedPath = parseFSHPath(path);
     const pathEnd = parsedPath.slice(-1)[0];
     if (pathEnd.brackets) {
       const refElement = this.findMatchingRef(pathEnd, [element]);
@@ -829,6 +782,8 @@ export type PathPart = {
   base: string;
   brackets?: string[];
   primitive?: boolean;
+  slices?: string[];
+  prefix?: string;
 };
 
 /**

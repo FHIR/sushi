@@ -25,7 +25,7 @@ import {
   CaretValueRule,
   ObeysRule
 } from '../fshtypes/rules';
-import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
+import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } from '../utils';
 import {
   replaceReferences,
   splitOnPathPeriods,
@@ -163,6 +163,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
   private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
+    resolveSoftIndexing(fshDefinition.rules);
     for (const rule of fshDefinition.rules) {
       const element = structDef.findElementByPath(rule.path, this);
       if (element) {
@@ -174,7 +175,15 @@ export class StructureDefinitionExporter implements Fishable {
               const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
               const instance = instanceExporter.fishForFHIR(rule.value as string);
               if (instance == null) {
-                logger.error(`Cannot find definition for Instance: ${rule.value}. Skipping rule.`);
+                if (element.type?.length === 1) {
+                  logger.error(
+                    `Cannot assign Instance at path ${rule.path} to element of type ${element.type[0].code}. Definition not found for Instance: ${rule.value}.`
+                  );
+                } else {
+                  logger.error(
+                    `Cannot find definition for Instance: ${rule.value}. Skipping rule.`
+                  );
+                }
                 continue;
               }
               rule.value = instance;

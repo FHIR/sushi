@@ -155,7 +155,7 @@ describe('ProfileExporter', () => {
     expect(exported[0].contained).toBeUndefined();
     expect(exporter.deferredRules.size).toBe(1);
     expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredRules.get(exported[0])).toContain(caretValueRule);
+    expect(exporter.deferredRules.get(exported[0])).toContainEqual(caretValueRule);
   });
 
   it('should log an error when an inline extension is used', () => {
