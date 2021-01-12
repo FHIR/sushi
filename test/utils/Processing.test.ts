@@ -234,6 +234,7 @@ describe('Processing', () => {
           { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
         ],
         FSHOnly: false,
+        applyExtensionMetadataToRoot: true,
         parameters: [
           {
             code: 'copyrightyear',
