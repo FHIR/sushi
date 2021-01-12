@@ -152,7 +152,7 @@ describe('IGExporter', () => {
         /^\*\s+To change the contents of this file, edit the "menu" attribute in the tank sushi-config.yaml file\s+\*$/m
       );
       expect(content).toMatch(
-        /^\*\s+or provide your own menu\.xml in the ig-data[\/\\]input[\/\\]includes folder\s+\*$/m
+        /^\*\s+or provide your own menu\.xml in the input[\/\\]includes folder\s+\*$/m
       );
       expect(content).toContain(simpleMenuXMLContent.replace(/\n/g, EOL));
       expect(loggerSpy.getAllMessages()).toHaveLength(0);

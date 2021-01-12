@@ -724,7 +724,8 @@ export class IGExporter {
       });
       menu += '</ul>';
 
-      const filePathString = path.join(path.basename(this.igDataPath), 'input', 'includes');
+      const base = this.isIgPubContext ? '' : path.basename(this.igDataPath);
+      const filePathString = path.join(base, 'input', 'includes');
       const warning = warningBlock(
         `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
