@@ -1763,7 +1763,7 @@ describe('StructureDefinitionExporter', () => {
     expect(assignedAddress.patternAddress).toBeUndefined();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot find definition for Instance: FakeInstance. Skipping rule.\D*/s
+      /Cannot assign Instance at path address to element of type Address.*FakeInstance\D*/s
     );
   });
 
