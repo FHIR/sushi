@@ -98,6 +98,12 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
+      if (
+        fshDefinition instanceof Extension &&
+        !(this.tank.config.applyExtensionMetadataToRoot === false)
+      ) {
+        structDef.elements[0].short = fshDefinition.title;
+      }
     } else {
       delete structDef.title;
     }
@@ -108,6 +114,12 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.contact;
     if (fshDefinition.description) {
       structDef.description = fshDefinition.description;
+      if (
+        fshDefinition instanceof Extension &&
+        !(this.tank.config.applyExtensionMetadataToRoot === false)
+      ) {
+        structDef.elements[0].definition = fshDefinition.description;
+      }
     } else {
       delete structDef.description;
     }
@@ -163,7 +175,15 @@ export class StructureDefinitionExporter implements Fishable {
               const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
               const instance = instanceExporter.fishForFHIR(rule.value as string);
               if (instance == null) {
-                logger.error(`Cannot find definition for Instance: ${rule.value}. Skipping rule.`);
+                if (element.type?.length === 1) {
+                  logger.error(
+                    `Cannot assign Instance at path ${rule.path} to element of type ${element.type[0].code}. Definition not found for Instance: ${rule.value}.`
+                  );
+                } else {
+                  logger.error(
+                    `Cannot find definition for Instance: ${rule.value}. Skipping rule.`
+                  );
+                }
                 continue;
               }
               rule.value = instance;

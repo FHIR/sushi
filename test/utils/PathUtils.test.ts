@@ -1,6 +1,7 @@
 import '../testhelpers/loggerSpy'; // side-effect: silences logs
 import { CaretValueRule, Rule } from '../../src/fshtypes/rules';
 import { resolveSoftIndexing } from '../../src/utils';
+import '../testhelpers/loggerSpy'; // side-effect: suppresses logs
 
 describe('PathUtils', () => {
   describe('#resolveSoftIndexing', () => {

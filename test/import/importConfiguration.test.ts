@@ -40,7 +40,8 @@ describe('importConfiguration', () => {
       ],
       template: 'hl7.fhir.template#0.0.5',
       packageId: 'fhir.us.minimal',
-      FSHOnly: false
+      FSHOnly: false,
+      applyExtensionMetadataToRoot: true
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -197,7 +198,8 @@ describe('importConfiguration', () => {
         ]
       },
       indexPageContent: 'Example Index Page Content',
-      FSHOnly: false
+      FSHOnly: false,
+      applyExtensionMetadataToRoot: true
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
