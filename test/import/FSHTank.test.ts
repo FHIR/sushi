@@ -260,7 +260,8 @@ describe('FSHTank', () => {
     };
     const inst1MD: Metadata = {
       id: 'inst1',
-      name: 'Instance1'
+      name: 'Instance1',
+      instanceUsage: 'Example'
     };
     const inv1MD: Metadata = {
       id: 'Invariant1', // id will always be name on Invariants

@@ -25,7 +25,7 @@ import {
   CaretValueRule,
   ObeysRule
 } from '../fshtypes/rules';
-import { logger, Type, Fishable, Metadata, MasterFisher } from '../utils';
+import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } from '../utils';
 import {
   replaceReferences,
   splitOnPathPeriods,
@@ -151,6 +151,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    */
   private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
+    resolveSoftIndexing(fshDefinition.rules);
     for (const rule of fshDefinition.rules) {
       const element = structDef.findElementByPath(rule.path, this);
       if (element) {

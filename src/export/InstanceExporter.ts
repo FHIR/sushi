@@ -1,7 +1,7 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance } from '../fshtypes';
-import { logger, Fishable, Type, Metadata } from '../utils';
+import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -30,6 +30,7 @@ export class InstanceExporter implements Fishable {
   ): InstanceDefinition {
     // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
+    resolveSoftIndexing(fshInstanceDef.rules);
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {

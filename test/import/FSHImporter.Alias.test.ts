@@ -1,5 +1,6 @@
 import { importText, RawFSH } from '../../src/import';
-import { BindingRule } from '../../src/fshtypes/rules';
+import { AssignmentRule, BindingRule } from '../../src/fshtypes/rules';
+import { FshCode } from '../../src/fshtypes';
 import { importSingleText } from '../testhelpers/importSingleText';
 import { loggerSpy } from '../testhelpers';
 
@@ -287,6 +288,63 @@ describe('FSHImporter', () => {
       expect(results.length).toBe(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 5\D*/s);
+    });
+
+    it('should resolve an alias while accounting for a version', () => {
+      const input = `
+      Alias: LOINC = http://loinc.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = LOINC|123#foo
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'http://loinc.org|123')
+          .withFile('Loinc.fsh')
+          .withLocation([6, 16, 6, 28])
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should resolve an alias while ignoring an empty version', () => {
+      const input = `
+      Alias: LOINC = http://loinc.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = LOINC|#foo
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'http://loinc.org').withFile('Loinc.fsh').withLocation([6, 16, 6, 25])
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when an alias contains reserved characters', () => {
+      const input = `
+      Alias: BAD|LOINC = http://loinc.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = BAD|LOINC#foo
+      `;
+
+      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      // The BAD|LOINC alias does not resolve, since it is not created
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'BAD|LOINC').withFile('Loinc.fsh').withLocation([6, 16, 6, 28])
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/BAD\|LOINC cannot include "\|"/);
     });
   });
 });
