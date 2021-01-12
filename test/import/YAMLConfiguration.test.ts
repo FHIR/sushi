@@ -126,6 +126,8 @@ describe('YAMLConfiguration', () => {
           sequence: 'STU 1'
         }
       });
+      expect(config.FSHOnly).toBeFalse();
+      expect(config.applyExtensionMetadataToRoot).toBeTrue();
     });
   });
 });
