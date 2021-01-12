@@ -335,7 +335,7 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
       'npx',
       [
         '-q',
-        'diff2html',
+        'diff2html-cli',
         '-i',
         'file',
         '-s',
