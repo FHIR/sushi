@@ -341,11 +341,11 @@ export class IGExporter {
         }
       }
 
+      const base = this.isIgPubContext ? '' : path.basename(this.igDataPath);
+      const filePathString = path.join(base, 'input');
       const warning = warningBlock('<!-- index.md {% comment %}', '{% endcomment %} -->', [
         `To change the contents of this file, edit the "indexPageContent" attribute in the tank ${this.configName} file`,
-        `or provide your own index file in the ${path.basename(this.igDataPath)}${path.sep}input${
-          path.sep
-        }pagecontent or ${path.basename(this.igDataPath)}${path.sep}input${path.sep}pages folder.`,
+        `or provide your own index file in the ${filePathString}${path.sep}pagecontent or ${filePathString}${path.sep}pages folder.`,
         'See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input'
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
@@ -724,7 +724,8 @@ export class IGExporter {
       });
       menu += '</ul>';
 
-      const filePathString = path.join(path.basename(this.igDataPath), 'input', 'includes');
+      const base = this.isIgPubContext ? '' : path.basename(this.igDataPath);
+      const filePathString = path.join(base, 'input', 'includes');
       const warning = warningBlock(
         `<!-- ${path.parse(menuXMLOutputPath).base} {% comment %}`,
         '{% endcomment %} -->',
