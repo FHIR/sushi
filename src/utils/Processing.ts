@@ -378,7 +378,7 @@ export async function init(): Promise<void> {
     '_updatePublisher.bat',
     '_updatePublisher.sh'
   ]) {
-    const url = `http://raw.githubusercontent.com/HL7/ig-publisher-scripts/master/${script}`;
+    const url = `http://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/${script}`;
     try {
       const res = await axios.get(url);
       fs.writeFileSync(path.join(outputDir, script), res.data);
