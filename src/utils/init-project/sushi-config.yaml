@@ -12,7 +12,7 @@ copyrightYear: 2020+
 releaseLabel: ci-build
 
 # ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
-# │  To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.     │
+# │  To use a provided input/includes/menu.xml file, delete the "menu" property below.             │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 menu:
   Home: index.html
