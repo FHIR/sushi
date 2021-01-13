@@ -2112,6 +2112,43 @@ describe('InstanceExporter', () => {
         });
       });
 
+      it('should assign an inline resource to an instance when the resource is not a profile and uses meta', () => {
+        // This test reflects a real-world bug reported on Zulip:
+        // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/example.20FSH.20Bundle.20transaction.20with.20Create.20entries
+        const inlineInstance = new Instance('ExampleInlinePatient');
+        inlineInstance.instanceOf = 'Patient';
+        // * meta.security = http://terminology.hl7.org/CodeSystem/v3-ActReason#HTEST
+        const assignedValRule = new AssignmentRule('meta.security');
+        assignedValRule.value = new FshCode(
+          'HTEST',
+          'http://terminology.hl7.org/CodeSystem/v3-ActReason'
+        );
+        inlineInstance.rules.push(assignedValRule);
+        doc.instances.set(inlineInstance.name, inlineInstance);
+
+        // * contained[0] = ExampleInlinePatient
+        const inlineRule = new AssignmentRule('contained[0]');
+        inlineRule.value = 'ExampleInlinePatient';
+        inlineRule.isInstance = true;
+        patientInstance.rules.push(inlineRule);
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained).toEqual([
+          {
+            resourceType: 'Patient',
+            id: 'ExampleInlinePatient',
+            meta: {
+              security: [
+                {
+                  code: 'HTEST',
+                  system: 'http://terminology.hl7.org/CodeSystem/v3-ActReason'
+                }
+              ]
+            }
+          }
+        ]);
+      });
+
       it('should log an error when assigning an inline resource to an invalid choice', () => {
         const bundleValRule = new AssignmentRule('entry[PatientOrOrganization].resource')
           .withFile('BadChoice.fsh')
