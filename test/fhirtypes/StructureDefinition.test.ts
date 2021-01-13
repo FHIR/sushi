@@ -869,6 +869,32 @@ describe('StructureDefinition', () => {
       expect(nestedItemImageExtensionURL.fixedUri).toBe(
         'http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-requiredItemImage'
       );
+      // Verify that when we get three levels deep, it still only carries over the top-level item (and not the recursively nested item)
+      const doubleNestedItemImageExtension = profile.findElementByPath(
+        'item.item.item.extension[itemImage]',
+        fisher
+      );
+      expect(doubleNestedItemImageExtension).toBeDefined();
+      // The nested and double-nested item elements should be unfolded in the profile since we directly referenced them
+      expect(profile.elements.find(e => e.path === 'Questionnaire.item.item')).not.toHaveProperty(
+        'contentReference'
+      );
+      expect(
+        profile.elements.find(e => e.path === 'Questionnaire.item.item.extension')
+      ).toBeDefined();
+      expect(
+        profile.elements.find(e => e.path === 'Questionnaire.item.item.item')
+      ).not.toHaveProperty('contentReference');
+      expect(
+        profile.elements.find(e => e.path === 'Questionnaire.item.item.item.extension')
+      ).toBeDefined();
+      // But the nested item should not be unfolderd into the double-nested item (making a triple-nested item)
+      expect(
+        profile.elements.find(e => e.path === 'Questionnaire.item.item.item.item')
+      ).toHaveProperty('contentReference', '#Questionnaire.item');
+      expect(
+        profile.elements.find(e => e.path === 'Questionnaire.item.item.item.item.extension')
+      ).toBeUndefined();
     });
 
     it('should find a child of a content reference element by path when the reference uses a full URI', () => {
