@@ -182,6 +182,8 @@ export class ElementDefinition {
   patternDecimal: number;
   fixedInteger: number;
   patternInteger: number;
+  fixedInteger64: string;
+  patternInteger64: string;
   fixedUnsignedInt: number;
   patternUnsignedInt: number;
   fixedPositiveInt: number;
@@ -1434,6 +1436,10 @@ export class ElementDefinition {
       (type === 'positiveInt' && Number.isInteger(value) && value > 0)
     ) {
       this.assignFHIRValue(value.toString(), value, exactly, type);
+    } else if (type === 'integer64' && Number.isInteger(value)) {
+      // integer64 is dealt with separately, since it is represented as a string in FHIR
+      // see: http://hl7.org/fhir/2020Sep/datatypes.html#integer64
+      this.assignFHIRValue(value.toString(), value.toString(), exactly, type);
     } else {
       throw new MismatchedTypeError('number', value, type);
     }
