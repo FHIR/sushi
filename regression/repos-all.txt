@@ -1,4 +1,3 @@
-# Added Thu Dec 10 2020 14:15:09 GMT-0500 (Eastern Standard Time)
 HL7/carin-bb#master
 HL7/cimi-pain-assessment#master
 HL7/davinci-ecdx#master
@@ -51,3 +50,10 @@ HL7NZ/nzbase#master
 HL7NZ/cca#master
 HL7NZ/nhi#master
 AudaciousInquiry/fhir-saner#master
+# Added Wed Jan 13 2021 16:55:27 GMT-0500 (Eastern Standard Time)
+IHE/supplement-template#master
+IHE/pharm-vaccination#main
+IHE/pharm-supply#master
+openhie/hiv-ig#main
+openhie/case-reporting#master
+DavidPyke/SAFE-COVID-eCR#master
