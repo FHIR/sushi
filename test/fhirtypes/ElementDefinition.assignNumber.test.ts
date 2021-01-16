@@ -484,47 +484,53 @@ describe('ElementDefinition', () => {
 
     // assigning an integer64
     it('should assign an integer to an integer64', () => {
-      valueInteger64.assignValue(123);
+      valueInteger64.assignValue(BigInt(123));
       expect(valueInteger64.patternInteger64).toBe('123');
       expect(valueInteger64.fixedInteger64).toBeUndefined();
     });
 
     it('should assign an integer to an integer64 (exactly)', () => {
-      valueInteger64.assignValue(123, true);
+      valueInteger64.assignValue(BigInt(123), true);
       expect(valueInteger64.patternInteger64).toBeUndefined();
       expect(valueInteger64.fixedInteger64).toBe('123');
     });
 
+    it('should assign a large integer to an integer64 without losing precision', () => {
+      valueInteger64.assignValue(BigInt('12345678901234567890'));
+      expect(valueInteger64.patternInteger64).toBe('12345678901234567890');
+      expect(valueInteger64.fixedInteger64).toBeUndefined();
+    });
+
     it('should throw ValueAlreadyAssignedError when assigning an already assigned integer by pattern[x]', () => {
-      valueInteger64.assignValue(123);
+      valueInteger64.assignValue(BigInt(123));
       expect(valueInteger64.patternInteger64).toBe('123');
       expect(() => {
-        valueInteger64.assignValue(124);
+        valueInteger64.assignValue(BigInt(124));
       }).toThrow(
         'Cannot assign 124 to this element; a different integer64 is already assigned: "123".'
       );
       expect(() => {
-        valueInteger64.assignValue(124, true);
+        valueInteger64.assignValue(BigInt(124), true);
       }).toThrow(
         'Cannot assign 124 to this element; a different integer64 is already assigned: "123".'
       );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning an already assigned integer by fixed[x]', () => {
-      valueInteger64.assignValue(123, true);
+      valueInteger64.assignValue(BigInt(123), true);
       expect(valueInteger64.fixedInteger64).toBe('123');
       expect(() => {
-        valueInteger64.assignValue(124, true);
+        valueInteger64.assignValue(BigInt(124), true);
       }).toThrow(
         'Cannot assign 124 to this element; a different integer64 is already assigned: "123".'
       );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
-      valueInteger64.assignValue(123, true);
+      valueInteger64.assignValue(BigInt(123), true);
       expect(valueInteger64.fixedInteger64).toBe('123');
       expect(() => {
-        valueInteger64.assignValue(123);
+        valueInteger64.assignValue(BigInt(123));
       }).toThrow(
         'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedInteger64.'
       );

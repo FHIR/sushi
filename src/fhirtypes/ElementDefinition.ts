@@ -1175,6 +1175,9 @@ export class ElementDefinition {
       case 'number':
         this.assignNumber(value as number, exactly);
         break;
+      case 'bigint':
+        this.assignNumber(value as bigint, exactly);
+        break;
       case 'string':
         this.assignString(value as string, exactly);
         break;
@@ -1427,16 +1430,17 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private assignNumber(value: number, exactly = false): void {
+  private assignNumber(value: number | bigint, exactly = false): void {
     const type = this.type[0].code;
+    const valueAsNumber = Number(value);
     if (
       type === 'decimal' ||
-      (type === 'integer' && Number.isInteger(value)) ||
-      (type === 'unsignedInt' && Number.isInteger(value) && value >= 0) ||
-      (type === 'positiveInt' && Number.isInteger(value) && value > 0)
+      (type === 'integer' && Number.isInteger(valueAsNumber)) ||
+      (type === 'unsignedInt' && Number.isInteger(valueAsNumber) && valueAsNumber >= 0) ||
+      (type === 'positiveInt' && Number.isInteger(valueAsNumber) && valueAsNumber > 0)
     ) {
       this.assignFHIRValue(value.toString(), value, exactly, type);
-    } else if (type === 'integer64' && Number.isInteger(value)) {
+    } else if (type === 'integer64' && typeof value === 'bigint') {
       // integer64 is dealt with separately, since it is represented as a string in FHIR
       // see: http://hl7.org/fhir/2020Sep/datatypes.html#integer64
       this.assignFHIRValue(value.toString(), value.toString(), exactly, type);
