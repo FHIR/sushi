@@ -1,8 +1,9 @@
 import path from 'path';
+import fs from 'fs-extra';
 import { cloneDeep } from 'lodash';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
+import { StructureDefinition, ElementDefinition } from '../../src/fhirtypes';
 import { TestFisher } from '../testhelpers';
 
 describe('ElementDefinition', () => {
@@ -1090,6 +1091,65 @@ describe('ElementDefinition', () => {
       );
       expect(valueX.patternString).toBeUndefined();
       expect(valueX.fixedString).toBeUndefined();
+    });
+    describe('#integer64', () => {
+      let valueX: ElementDefinition;
+      let valueInteger64: ElementDefinition;
+      beforeAll(() => {
+        const r5Extension = StructureDefinition.fromJSON(
+          JSON.parse(
+            fs.readFileSync(
+              path.join(
+                __dirname,
+                '..',
+                'testhelpers',
+                'testdefs',
+                'r5-definitions',
+                'StructureDefinition-Extension.json'
+              ),
+              'utf-8'
+            )
+          )
+        );
+        valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
+      });
+
+      beforeEach(() => {
+        valueInteger64 = cloneDeep(valueX);
+        valueInteger64.type = valueInteger64.type.filter(t => t.code === 'integer64');
+      });
+
+      // assigning an integer64
+      it('should assign an integer string to an integer64', () => {
+        valueInteger64.assignValue('123');
+        expect(valueInteger64.patternInteger64).toBe('123');
+        expect(valueInteger64.fixedInteger64).toBeUndefined();
+      });
+
+      it('should assign an integer string to an integer64 (exactly)', () => {
+        valueInteger64.assignValue('123', true);
+        expect(valueInteger64.patternInteger64).toBeUndefined();
+        expect(valueInteger64.fixedInteger64).toBe('123');
+      });
+
+      it('should throw MismatchedTypeError when assigning a decimal string to an integer64 value', () => {
+        expect(() => {
+          valueInteger64.assignValue('12.3');
+        }).toThrow(
+          'Cannot assign string value: 12.3. Value does not match element type: integer64'
+        );
+        expect(() => {
+          valueInteger64.assignValue('12.3', true);
+        }).toThrow(
+          'Cannot assign string value: 12.3. Value does not match element type: integer64'
+        );
+      });
+
+      it('should throw MismatchedTypeError when assigning a string to an integer64 value', () => {
+        expect(() => {
+          valueInteger64.assignValue('foo');
+        }).toThrow('Cannot assign string value: foo. Value does not match element type: integer64');
+      });
     });
   });
 });

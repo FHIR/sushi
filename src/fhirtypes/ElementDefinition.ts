@@ -1484,7 +1484,8 @@ export class ElementDefinition {
       (type === 'oid' && /^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$/.test(value)) ||
       (type === 'id' && /^[A-Za-z0-9\-\.]{1,64}$/.test(value)) ||
       (type === 'markdown' && /^\s*(\S|\s)*$/.test(value)) ||
-      type === 'uuid'
+      type === 'uuid' ||
+      (type === 'integer64' && /^[-]?\d+$/.test(value))
     ) {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
     } else if (type == 'xhtml' && this.checkXhtml(value)) {
