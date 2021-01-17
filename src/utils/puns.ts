@@ -13,8 +13,8 @@ const CLEAN_RUN_PUNS = [
   'Ac-clam-ations!',
   'Fin-tastic job!',
   'You are dolphinitely doing great!',
-  'It doesn’t get any betta than this!',
-  'You’re piranha roll now!'
+  "It doesn't get any betta than this!",
+  "You're piranha roll now!"
 ];
 
 const WARNING_PUNS = [
