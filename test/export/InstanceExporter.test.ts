@@ -1998,7 +1998,7 @@ describe('InstanceExporter', () => {
       });
     });
 
-    it('should something', () => {
+    it('should handle extensions on non-zero element of primitive arrays', () => {
       // * address.line.extension contains
       //     http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator named locator 0..1
       const containsRule = new ContainsRule('address.line.extension');
