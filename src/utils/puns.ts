@@ -3,7 +3,6 @@ import { sample } from 'lodash';
 const CLEAN_RUN_PUNS = [
   'That went swimmingly!',
   'O-fish-ally error free!',
-  "Nice! You're totally krilling it!",
   'Cool and So-fish-ticated!',
   'Well hooked and landed!',
   'You earned a PhD in Ichthyology!',
