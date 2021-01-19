@@ -1998,6 +1998,51 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should something', () => {
+      // * address.line.extension contains
+      //     http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator named locator 0..1
+      const containsRule = new ContainsRule('address.line.extension');
+      containsRule.items.push({
+        name: 'locator',
+        type: 'http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator'
+      });
+      const extensionCard = new CardRule('address.line.extension[locator]');
+      extensionCard.min = 0;
+      extensionCard.max = '1';
+      patient.rules.push(containsRule, extensionCard);
+
+      // * address.line[1].extension[locator] = "3rd floor"
+      const loc = new AssignmentRule('address.line[1].extension[locator].valueString');
+      loc.value = '3rd Floor';
+      patientInstance.rules.push(loc);
+
+      // In-memory result should be correct
+      const result = exportInstance(patientInstance);
+      expect(result.address).toHaveLength(1);
+      expect(result.address[0].line).toBeUndefined();
+      expect(result.address[0]._line).toHaveLength(2);
+      expect(result.address[0]._line[0]).toBeNull();
+      expect(result.address[0]._line[1].extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator',
+          valueString: '3rd Floor'
+        }
+      ]);
+
+      // JSON representation should be correct
+      const json = result.toJSON();
+      expect(json.address).toHaveLength(1);
+      expect(json.address[0].line).toBeUndefined();
+      expect(json.address[0]._line).toHaveLength(2);
+      expect(json.address[0]._line[0]).toBeNull();
+      expect(json.address[0]._line[1].extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator',
+          valueString: '3rd Floor'
+        }
+      ]);
+    });
+
     describe('#Inline Instances', () => {
       beforeEach(() => {
         const inlineInstance = new Instance('MyInlinePatient');
