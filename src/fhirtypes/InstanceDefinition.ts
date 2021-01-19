@@ -53,7 +53,7 @@ export class InstanceDefinition {
  * Otherwise, use all properties from the input.
  *
  * @param input - the value to clone
- * @param keys - optionally, the properties of the value to include in the clone, default's to input keys if not specified
+ * @param keys - optionally, the properties of the value to include in the clone, defaults to input keys if not specified
  * @returns {any} - a clone of the input, with reordered properties
  */
 function orderedCloneDeep(input: any, keys?: string[]): any {
