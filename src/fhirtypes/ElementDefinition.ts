@@ -1149,6 +1149,8 @@ export class ElementDefinition {
       type = 'Canonical';
     } else if (value instanceof InstanceDefinition) {
       type = 'InstanceDefinition';
+    } else if (typeof value === 'bigint') {
+      type = 'number';
     } else {
       type = typeof value;
     }
@@ -1174,9 +1176,6 @@ export class ElementDefinition {
         break;
       case 'number':
         this.assignNumber(value as number, exactly);
-        break;
-      case 'bigint':
-        this.assignNumber(value as bigint, exactly);
         break;
       case 'string':
         this.assignString(value as string, exactly);
@@ -1439,7 +1438,7 @@ export class ElementDefinition {
       (type === 'unsignedInt' && Number.isInteger(valueAsNumber) && valueAsNumber >= 0) ||
       (type === 'positiveInt' && Number.isInteger(valueAsNumber) && valueAsNumber > 0)
     ) {
-      this.assignFHIRValue(value.toString(), value, exactly, type);
+      this.assignFHIRValue(value.toString(), valueAsNumber, exactly, type);
     } else if (type === 'integer64' && typeof value === 'bigint') {
       // integer64 is dealt with separately, since it is represented as a string in FHIR
       // see: http://hl7.org/fhir/2020Sep/datatypes.html#integer64

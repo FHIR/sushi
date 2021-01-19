@@ -1120,6 +1120,7 @@ describe('ElementDefinition', () => {
       });
 
       // assigning an integer64
+      // NOTE: Tests of assigning an integer64 as a number are in ElementDefinition.assignNumber.test.ts
       it('should assign an integer string to an integer64', () => {
         valueInteger64.assignValue('123');
         expect(valueInteger64.patternInteger64).toBe('123');
