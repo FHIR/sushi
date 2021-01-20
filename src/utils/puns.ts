@@ -3,7 +3,6 @@ import { sample } from 'lodash';
 const CLEAN_RUN_PUNS = [
   'That went swimmingly!',
   'O-fish-ally error free!',
-  "Nice! You're totally krilling it!",
   'Cool and So-fish-ticated!',
   'Well hooked and landed!',
   'You earned a PhD in Ichthyology!',
@@ -13,8 +12,8 @@ const CLEAN_RUN_PUNS = [
   'Ac-clam-ations!',
   'Fin-tastic job!',
   'You are dolphinitely doing great!',
-  'It doesn’t get any betta than this!',
-  'You’re piranha roll now!'
+  "It doesn't get any betta than this!",
+  "You're piranha roll now!"
 ];
 
 const WARNING_PUNS = [
