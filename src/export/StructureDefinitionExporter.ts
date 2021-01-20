@@ -221,7 +221,11 @@ export class StructureDefinitionExporter implements Fishable {
                     rule.sourceInfo
                   );
                 }
-                element.addSlice(item.name);
+                try {
+                  element.addSlice(item.name);
+                } catch (e) {
+                  logger.error(e.message, rule.sourceInfo);
+                }
               });
             }
           } else if (rule instanceof CaretValueRule) {
@@ -321,32 +325,36 @@ export class StructureDefinitionExporter implements Fishable {
       element.sliceIt('value', 'url');
     }
     rule.items.forEach(item => {
-      if (item.type) {
-        const extension = this.fishForMetadata(item.type, Type.Extension);
-        if (extension == null) {
-          logger.error(
-            `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
-            rule.sourceInfo
+      try {
+        if (item.type) {
+          const extension = this.fishForMetadata(item.type, Type.Extension);
+          if (extension == null) {
+            logger.error(
+              `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
+              rule.sourceInfo
+            );
+            return;
+          }
+          const slice = element.addSlice(item.name);
+          if (!slice.type[0].profile) {
+            slice.type[0].profile = [];
+          }
+          slice.type[0].profile.push(extension.url);
+        } else {
+          // If the extension is inline, assign its url element automatically to the sliceName
+          const slice = element.addSlice(item.name);
+          const urlElement = structDef.findElementByPath(
+            `${rule.path}[${slice.sliceName}].url`,
+            this
           );
-          return;
+          urlElement.assignValue(slice.sliceName, true);
+          // Inline extensions should not be used on profiles
+          if (fshDefinition instanceof Profile) {
+            logger.error('Inline extensions should not be used on profiles.', rule.sourceInfo);
+          }
         }
-        const slice = element.addSlice(item.name);
-        if (!slice.type[0].profile) {
-          slice.type[0].profile = [];
-        }
-        slice.type[0].profile.push(extension.url);
-      } else {
-        // If the extension is inline, assign its url element automatically to the sliceName
-        const slice = element.addSlice(item.name);
-        const urlElement = structDef.findElementByPath(
-          `${rule.path}[${slice.sliceName}].url`,
-          this
-        );
-        urlElement.assignValue(slice.sliceName, true);
-        // Inline extensions should not be used on profiles
-        if (fshDefinition instanceof Profile) {
-          logger.error('Inline extensions should not be used on profiles.', rule.sourceInfo);
-        }
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
       }
     });
   }
