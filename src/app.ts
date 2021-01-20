@@ -4,15 +4,19 @@ import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';
 import chalk from 'chalk';
-import { pad, padStart, sample, padEnd } from 'lodash';
+import process from 'process';
+import { pad, padStart, padEnd } from 'lodash';
 import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
-import { logger, stats, isSupportedFHIRVersion, Type } from './utils';
 import { loadCustomResources } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
 import {
+  logger,
+  stats,
+  isSupportedFHIRVersion,
+  Type,
   ensureInputDir,
   findInputDir,
   ensureOutputDir,
@@ -21,10 +25,11 @@ import {
   fillTank,
   writeFHIRResources,
   getRawFSHes,
-  init
-} from './utils/Processing';
+  init,
+  getRandomPun
+} from './utils';
 
-const FSH_VERSION = '1.0.0';
+const FSH_VERSION = '1.1.0';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -213,16 +218,10 @@ function printResults(pkg: Package, isIG: boolean) {
   const insNum = pad(pkg.instances.length.toString(), 9);
   const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''}`, 13);
   const wrNumMsg = padStart(`${stats.numWarn} Warning${stats.numWarn !== 1 ? 's' : ''}`, 12);
-  let resultStatus: ResultStatus;
-  if (stats.numError === 0 && stats.numWarn === 0) {
-    resultStatus = 'clean';
-  } else if (stats.numError > 0) {
-    resultStatus = 'errors';
-  } else {
-    resultStatus = 'warnings';
-  }
-  const aWittyMessageInvolvingABadFishPun = padEnd(sample(MESSAGE_MAP[resultStatus]), 36);
-  const clr = COLOR_MAP[resultStatus];
+
+  const aWittyMessageInvolvingABadFishPun = padEnd(getRandomPun(stats.numError, stats.numWarn), 36);
+  const clr =
+    stats.numError > 0 ? chalk.red : stats.numWarn > 0 ? chalk.rgb(179, 98, 0) : chalk.green;
 
   // NOTE: Doing some funky things w/ strings on some lines to keep overall alignment in the code
   const results = [
@@ -240,59 +239,35 @@ function printResults(pkg: Package, isIG: boolean) {
   if (!isIG) {
     results.splice(7, 1);
   }
-  results.forEach(r => console.log(r));
+
+  const convertChars = !supportsFancyCharacters();
+  results.forEach(r => {
+    if (convertChars) {
+      r = r
+        .replace(/[╔╝╚╗╠╣═]/g, '=')
+        .replace(/[╭╯╰╮]/g, ' ')
+        .replace(/[─┬┼┴]/g, '-')
+        .replace(/[║│├┤]/g, '|');
+    }
+    console.log(r);
+  });
 }
 
-type ResultStatus = 'clean' | 'warnings' | 'errors';
+function supportsFancyCharacters(): boolean {
+  // There is no sure-fire way, but we know that most problems are when running in the IG Publisher,
+  // so try to detect that situation (which is still actually pretty tricky and not guaranteed).
 
-const MESSAGE_MAP: { [key in ResultStatus]: string[] } = {
-  clean: [
-    'That went swimmingly!',
-    'O-fish-ally error free!',
-    "Nice! You're totally krilling it!",
-    'Cool and So-fish-ticated!',
-    'Well hooked and landed!',
-    'You earned a PhD in Ichthyology!',
-    'You rock, lobster!',
-    'Everything is ship-shape!',
-    'Ex-clam-ation point!',
-    'Ac-clam-ations!',
-    'Fin-tastic job!',
-    'You are dolphinitely doing great!',
-    'It doesn’t get any betta than this',
-    'You’re piranha roll now!'
-  ],
-  warnings: [
-    'Not bad, but you cod do batter!',
-    'Something smells fishy...',
-    'Warnings... Water those about?',
-    'Looks like you are casting about.',
-    'A bit pitchy, but tuna-ble.',
-    'Do you sea the problem?',
-    'You are skating on fin ice',
-    'You should mullet over'
-  ],
-  errors: [
-    'Ick! Errors!',
-    'Some-fin went wrong...',
-    'Unfor-tuna-tely, there are errors.',
-    'That really smelt.',
-    'You spawned some errors.',
-    'Just keep swimming, Dory.',
-    'This is the one that got away.',
-    'The docs might be bene-fish-al.',
-    'This was a turtle disaster.',
-    'Something went eely wrong there.',
-    'Documentation may be kelp-ful.',
-    'You should do some sole searching.',
-    'Call a FSH sturgeon!',
-    'This is giving me a haddock.',
-    'You whaley need to turn this around'
-  ]
-};
-
-const COLOR_MAP: { [key in ResultStatus]: chalk.Chalk } = {
-  clean: chalk.green,
-  warnings: chalk.rgb(179, 98, 0),
-  errors: chalk.red
-};
+  // 1. Many JVM will insert an environment variable indicating the main Java class being run.
+  //      E.g., JAVA_MAIN_CLASS_25538=org.hl7.fhir.igtools.publisher.Publisher
+  //    We won't check the actual class; we'll just assume that if it's run in Java, best not take chances.
+  if (Object.keys(process.env).some(k => /^JAVA_MAIN_CLASS/.test(k))) {
+    return false;
+  }
+  // 2. It appears that in a Java-launched process, certain aspects of stdout aren't available, so
+  //    use that to test if it's likely the fancy chars will be supported.
+  if (process.stdout.hasColors === undefined) {
+    return false;
+  }
+  // Otherwise, I guess (?) we're OK.  Worst case scenario: user gets rubbish characters in the summary
+  return true;
+}

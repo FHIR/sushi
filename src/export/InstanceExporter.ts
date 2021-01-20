@@ -64,7 +64,7 @@ export class InstanceExporter implements Fishable {
           path: r.path,
           // We only use the first element of the meta.profile array, if a need arises for a more
           // comprehensive approach, we can come back to this later
-          instanceOf: r.value.meta?.profile[0] ?? r.value.resourceType
+          instanceOf: r.value.meta?.profile?.[0] ?? r.value.resourceType
         });
       }
       if (r.path.endsWith('.resourceType') && typeof r.value === 'string') {
