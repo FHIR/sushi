@@ -473,7 +473,9 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const exported = pkg.profiles[0];
     expect(exported.name).toBe('Not-good');
-    expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR name/s);
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /may not be suitable for machine processing applications such as code generation/s
+    );
     expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
 
