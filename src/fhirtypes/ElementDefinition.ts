@@ -5,7 +5,8 @@ import {
   cloneDeep,
   upperFirst,
   intersectionWith,
-  flatten
+  flatten,
+  differenceWith
 } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
@@ -367,8 +368,13 @@ export class ElementDefinition {
       }
       // @ts-ignore
       if (prop && !isEqual(this[prop], original[prop])) {
-        // @ts-ignore
-        diff[prop] = cloneDeep(this[prop]);
+        if (ADDITIVE_PROPS.includes(prop)) {
+          // @ts-ignore
+          diff[prop] = differenceWith(this[prop], original[prop], isEqual);
+        } else {
+          // @ts-ignore
+          diff[prop] = cloneDeep(this[prop]);
+        }
       }
     }
     // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
@@ -2132,3 +2138,10 @@ const PROPS = [
   'binding',
   'mapping'
 ];
+
+/**
+ * These list properties are considered to be additive in the differential.
+ * Thus, the differential should contain only new entries in these lists.
+ * See http://hl7.org/fhir/elementdefinition.html#interpretation.
+ */
+const ADDITIVE_PROPS = ['mapping', 'constraint'];

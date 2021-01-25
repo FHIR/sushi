@@ -400,6 +400,34 @@ describe('ElementDefinition', () => {
       expect(diff.path).toBe('Observation.valueString');
       expect(diff.sliceName).toBeUndefined();
     });
+
+    it('should include only new constraints in a diff when constraints are added', () => {
+      const myInvariant = new Invariant('inv-1');
+      myInvariant.severity = new FshCode('warning');
+      myInvariant.description = 'This is a good idea.';
+      valueX.applyConstraint(myInvariant, 'http://example.org');
+      const diff = valueX.calculateDiff();
+      expect(valueX.constraint.length).toBeGreaterThan(diff.constraint.length);
+      expect(diff.constraint).toHaveLength(1);
+      expect(diff.constraint[0]).toEqual({
+        key: 'inv-1',
+        source: 'http://example.org',
+        severity: 'warning',
+        human: 'This is a good idea.'
+      });
+    });
+
+    it('should include only new mappings in a diff when mappings are added', () => {
+      valueX.applyMapping('test1', 'test1.value', 'Test value mapping', null);
+      const diff = valueX.calculateDiff();
+      expect(valueX.mapping.length).toBeGreaterThan(diff.mapping.length);
+      expect(diff.mapping).toHaveLength(1);
+      expect(diff.mapping[0]).toEqual({
+        identity: 'test1',
+        map: 'test1.value',
+        comment: 'Test value mapping'
+      });
+    });
   });
 
   describe('#parent', () => {
