@@ -1751,10 +1751,20 @@ export class ElementDefinition {
                 );
               });
             elementsToCarryOver.forEach(e => {
-              const eClone = e.clone();
+              // Since these are inherited, we technically should re-captureOriginal() on them so they don't show up in the differential.
+              // But ...it appears that the IG Publisher doesn't build the snapshot correctly in this case, so don't capture the original
+              // and allow these "inherited" elements to be reflected in the differential until we hear otherwise.
+              // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Clarification.20on.20contentReference/near/223399872
+              const eClone = e.clone(false);
               eClone.id = e.id.replace(contentRefId, this.id);
               eClone.structDef = this.structDef;
-              eClone.captureOriginal();
+              // If the only diff is the id/path then re-capture original so it doesn't end up in diff just because of that
+              if (
+                eClone.hasDiff() &&
+                isEqual(Object.keys(eClone.calculateDiff().toJSON()), ['id', 'path'])
+              ) {
+                eClone.captureOriginal();
+              }
               const newElementIdx = newElements.findIndex(e2 => e2.id === eClone.id);
               if (newElementIdx === -1) {
                 newElements.push(eClone);

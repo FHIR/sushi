@@ -832,6 +832,37 @@ describe('StructureDefinition', () => {
       const excludeSystem = valueSet.findElementByPath('compose.exclude.system', fisher);
       expect(excludeSystem).toBeDefined();
       expect(excludeSystem.short).toBe('The system the codes come from');
+      // Now verify these things in the differential as well
+      const json = valueSet.toJSON(false);
+      // Verify the extension element is sliced in the contentref
+      const excludeExtensionDiff = json.differential.element.find(
+        (e: any) => e.path === 'ValueSet.compose.exclude.extension'
+      );
+      expect(excludeExtensionDiff).toBeDefined();
+      expect(excludeExtensionDiff.slicing).toEqual({
+        discriminator: [{ type: 'value', path: 'url' }],
+        ordered: false,
+        rules: 'open'
+      });
+      // Verify the valueset-expand-rules extension is present in the contentref
+      const excludeExtensionExpandRulesDiff = json.differential.element.find(
+        (e: any) =>
+          e.path === 'ValueSet.compose.exclude.extension' && e.sliceName === 'expand-rules'
+      );
+      expect(excludeExtensionExpandRulesDiff).toBeDefined();
+      expect(excludeExtensionExpandRulesDiff.type[0].profile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/valueset-expand-rules'
+      ]);
+      // Verify that the modifierExtension is not in the differential since it did not change
+      const hasExcludeModifierExtensionDiff = json.differential.element.some(
+        (e: any) => e.path === 'ValueSet.compose.exclude.modifierExtension'
+      );
+      expect(hasExcludeModifierExtensionDiff).toBeFalsy();
+      // Verify that the system short is not in the differential since it did not change
+      const hasExcludeSystemDiff = json.differential.element.some(
+        (e: any) => e.path === 'ValueSet.compose.exclude.system'
+      );
+      expect(hasExcludeSystemDiff).toBeFalsy();
     });
 
     it('should carry over further profiled extensions from the content reference source element', () => {
