@@ -54,6 +54,21 @@ describe('FSHImporter', () => {
       expect(mapping.sourceInfo.file).toBe('Mapping.fsh');
     });
 
+    it('should parse numeric Mapping name, id, and source', () => {
+      // NOT recommended, but possible
+      const input = `
+        Mapping: 123
+        Id: 456
+        Source: 789
+        `;
+      const result = importSingleText(input, 'Mapping.fsh');
+      expect(result.mappings.size).toBe(1);
+      const mapping = result.mappings.get('123');
+      expect(mapping.name).toBe('123');
+      expect(mapping.id).toBe('456');
+      expect(mapping.source).toBe('789');
+    });
+
     it('should only apply each metadata attribute the first time it is declared', () => {
       const input = `
         Mapping: MyMapping
@@ -84,7 +99,7 @@ describe('FSHImporter', () => {
     it('should accept and translate an alias for the Source', () => {
       const input = `
         Alias: OBS = http://hl7.org/fhir/StructureDefinition/Observation
-      
+
         Mapping: MyMapping
         Source: OBS
         `;
@@ -106,7 +121,7 @@ describe('FSHImporter', () => {
       const input = `
       Mapping: SameMapping
       Title: "First Mapping"
-      
+
       Mapping: SameMapping
       Title: "Second Mapping"
       `;

@@ -29,6 +29,20 @@ describe('FSHImporter', () => {
         expect(instance.sourceInfo.file).toBe('SimpleInstance.fsh');
       });
 
+      it('should parse numeric instance name and numeric instanceOf', () => {
+        // NOT recommended, but possible
+        const input = `
+        Instance: 123
+        InstanceOf: 456
+        `;
+
+        const result = importSingleText(input, 'SimpleInstance.fsh');
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('123');
+        expect(instance.name).toBe('123');
+        expect(instance.instanceOf).toBe('456');
+      });
+
       it('should parse an instance with an aliased type', () => {
         const input = `
         Alias: obs = Observation
@@ -291,7 +305,7 @@ describe('FSHImporter', () => {
         const input = `
         Instance: MyInstance
         InstanceOf: Observation
-        
+
         Instance: MyInstance
         InstanceOf: Patient
         `;

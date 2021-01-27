@@ -75,6 +75,23 @@ describe('FSHImporter', () => {
         });
       });
 
+      it('should parse profile with numeric name, parent, id, and mixins', () => {
+        const input = `
+        Profile: 123
+        Parent: 456
+        Id: 789
+        Mixins: 24 and 68
+        `;
+
+        const result = importSingleText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('123');
+        expect(profile.name).toBe('123');
+        expect(profile.parent).toBe('456');
+        expect(profile.id).toBe('789');
+        expect(profile.mixins).toEqual(['24', '68']);
+      });
+
       it('should properly parse a multi-string description', () => {
         const input = `
         Profile: ObservationProfile
@@ -804,6 +821,21 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse value set rules w/ numeric names', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category from 123 (required)
+        * code from 456 (extensible)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(2);
+        assertBindingRule(profile.rules[0], 'category', '123', 'required');
+        assertBindingRule(profile.rules[1], 'code', '456', 'extensible');
+      });
+
       it('should parse value set rules w/ no strength and default to required', () => {
         const input = `
         Profile: ObservationProfile
@@ -1432,6 +1464,38 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an only rule with one numeric type name', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * value[x] only 123
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'value[x]', { type: '123' });
+      });
+
+      it('should parse an only rule with multiple numeric type names', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * value[x] only 123 or 456 or 789
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'value[x]',
+          { type: '123' },
+          { type: '456' },
+          { type: '789' }
+        );
+      });
+
       it('should parse an only rule with a reference to one type', () => {
         const input = `
         Profile: ObservationProfile
@@ -1833,6 +1897,18 @@ describe('FSHImporter', () => {
         assertObeysRule(profile.rules[0], 'category', 'SomeInvariant');
         assertObeysRule(profile.rules[1], 'category', 'ThisInvariant');
         assertObeysRule(profile.rules[2], 'category', 'ThatInvariant');
+      });
+
+      it('should parse an obeys rule with a numeric invariant name', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * obeys 123
+        `;
+        const result = importSingleText(input, 'Obeys.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertObeysRule(profile.rules[0], '', '123');
       });
     });
 
