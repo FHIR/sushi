@@ -2611,15 +2611,63 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
-  it('should report an error and not add the extension when an extension ContainsRule tries to add a slice that already exists', () => {
-    // Profile: DoubleExtension
+  it('should report an error and not add the extension when an extension ContainsRule tries to add a slice that already exists but has a different extension URL', () => {
+    // Profile: DoubleConflictingExtension
+    // Parent: resprate
+    // * extension contains http://hl7.org/fhir/StructureDefinition/observation-precondition named precondition
+    // * extension contains
+    //     http://hl7.org/fhir/StructureDefinition/servicerequest-precondition named precondition and
+    //     http://hl7.org/fhir/StructureDefinition/observation-sequelTo named sequelTo
+
+    const profile = new Profile('DoubleConflictingExtension');
+    profile.parent = 'resprate';
+
+    const rule1 = new ContainsRule('extension');
+    rule1.items = [
+      {
+        name: 'precondition',
+        type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition'
+      }
+    ];
+    const rule2 = new ContainsRule('extension');
+    rule2.items = [
+      {
+        name: 'precondition',
+        type: 'http://hl7.org/fhir/StructureDefinition/servicerequest-precondition'
+      },
+      { name: 'sequelTo', type: 'http://hl7.org/fhir/StructureDefinition/observation-sequelTo' }
+    ];
+    profile.rules.push(rule1, rule2);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const baseStructDef = fisher.fishForStructureDefinition('resprate');
+    const precondition = sd.elements.find(e => e.id === 'Observation.extension:precondition');
+    const sequelTo = sd.elements.find(e => e.id === 'Observation.extension:sequelTo');
+
+    expect(sd.elements.length).toBe(baseStructDef.elements.length + 2);
+    expect(precondition).toBeDefined();
+    expect(precondition.type[0].profile).toEqual([
+      'http://hl7.org/fhir/StructureDefinition/observation-precondition'
+    ]);
+    expect(sequelTo).toBeDefined();
+    expect(sequelTo.type[0].profile).toEqual([
+      'http://hl7.org/fhir/StructureDefinition/observation-sequelTo'
+    ]);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Slice named precondition already exists on element Observation\.extension of DoubleConflictingExtension/s
+    );
+  });
+
+  it('should report a warning and not re-add the extension when an extension ContainsRule tries to add a slice that already exists with a matching extension URL', () => {
+    // Profile: DoubleSameExtension
     // Parent: resprate
     // * extension contains http://hl7.org/fhir/StructureDefinition/observation-precondition named precondition
     // * extension contains
     //     http://hl7.org/fhir/StructureDefinition/observation-precondition named precondition and
     //     http://hl7.org/fhir/StructureDefinition/observation-sequelTo named sequelTo
 
-    const profile = new Profile('DoubleExtension');
+    const profile = new Profile('DoubleSameExtension');
     profile.parent = 'resprate';
 
     const rule1 = new ContainsRule('extension');
@@ -2654,8 +2702,8 @@ describe('StructureDefinitionExporter', () => {
     expect(sequelTo.type[0].profile).toEqual([
       'http://hl7.org/fhir/StructureDefinition/observation-sequelTo'
     ]);
-    expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Slice named precondition already exists on element Observation\.extension of DoubleExtension/s
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /Slice named precondition already exists on element Observation\.extension of DoubleSameExtension/s
     );
   });
 

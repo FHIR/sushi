@@ -13,7 +13,8 @@ import {
   ParentDeclaredAsProfileNameError,
   InvalidFHIRIdError,
   InvalidExtensionParentError,
-  ParentDeclaredAsProfileIdError
+  ParentDeclaredAsProfileIdError,
+  DuplicateSliceError
 } from '../errors';
 import {
   CardRule,
@@ -325,22 +326,36 @@ export class StructureDefinitionExporter implements Fishable {
       element.sliceIt('value', 'url');
     }
     rule.items.forEach(item => {
-      try {
-        if (item.type) {
-          const extension = this.fishForMetadata(item.type, Type.Extension);
-          if (extension == null) {
-            logger.error(
-              `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
-              rule.sourceInfo
-            );
-            return;
-          }
+      if (item.type) {
+        const extension = this.fishForMetadata(item.type, Type.Extension);
+        if (extension == null) {
+          logger.error(
+            `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
+            rule.sourceInfo
+          );
+          return;
+        }
+        try {
           const slice = element.addSlice(item.name);
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }
           slice.type[0].profile.push(extension.url);
-        } else {
+        } catch (e) {
+          // If this is a DuplicateSliceError, and it referencs the same extension definition,
+          // then it is most likely a harmless no-op.  In this case, treat it as a warning.
+          if (e instanceof DuplicateSliceError) {
+            const slice = element.getSlices().find(el => el.sliceName === item.name);
+            if (slice?.type[0]?.profile?.some(p => p === extension.url)) {
+              logger.warn(e.message, rule.sourceInfo);
+              return;
+            }
+          }
+          // Otherwise it is a conflicting duplicate extension or some other error
+          logger.error(e.message, rule.sourceInfo);
+        }
+      } else {
+        try {
           // If the extension is inline, assign its url element automatically to the sliceName
           const slice = element.addSlice(item.name);
           const urlElement = structDef.findElementByPath(
@@ -352,9 +367,12 @@ export class StructureDefinitionExporter implements Fishable {
           if (fshDefinition instanceof Profile) {
             logger.error('Inline extensions should not be used on profiles.', rule.sourceInfo);
           }
+        } catch (e) {
+          // Unlike the case above, redeclaring an inline extension is more likely a problem,
+          // as inline extensions require further definition outside of the contains rule, so
+          // there is more likely to be conflict, and detecting such conflict is more difficult.
+          logger.error(e.message, rule.sourceInfo);
         }
-      } catch (e) {
-        logger.error(e.message, rule.sourceInfo);
       }
     });
   }
