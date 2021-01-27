@@ -183,6 +183,8 @@ export class ElementDefinition {
   patternDecimal: number;
   fixedInteger: number;
   patternInteger: number;
+  fixedInteger64: string;
+  patternInteger64: string;
   fixedUnsignedInt: number;
   patternUnsignedInt: number;
   fixedPositiveInt: number;
@@ -1153,6 +1155,8 @@ export class ElementDefinition {
       type = 'Canonical';
     } else if (value instanceof InstanceDefinition) {
       type = 'InstanceDefinition';
+    } else if (typeof value === 'bigint') {
+      type = 'number';
     } else {
       type = typeof value;
     }
@@ -1431,15 +1435,20 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private assignNumber(value: number, exactly = false): void {
+  private assignNumber(value: number | bigint, exactly = false): void {
     const type = this.type[0].code;
+    const valueAsNumber = Number(value);
     if (
       type === 'decimal' ||
-      (type === 'integer' && Number.isInteger(value)) ||
-      (type === 'unsignedInt' && Number.isInteger(value) && value >= 0) ||
-      (type === 'positiveInt' && Number.isInteger(value) && value > 0)
+      (type === 'integer' && Number.isInteger(valueAsNumber)) ||
+      (type === 'unsignedInt' && Number.isInteger(valueAsNumber) && valueAsNumber >= 0) ||
+      (type === 'positiveInt' && Number.isInteger(valueAsNumber) && valueAsNumber > 0)
     ) {
-      this.assignFHIRValue(value.toString(), value, exactly, type);
+      this.assignFHIRValue(value.toString(), valueAsNumber, exactly, type);
+    } else if (type === 'integer64' && typeof value === 'bigint') {
+      // integer64 is dealt with separately, since it is represented as a string in FHIR
+      // see: http://hl7.org/fhir/2020Sep/datatypes.html#integer64
+      this.assignFHIRValue(value.toString(), value.toString(), exactly, type);
     } else {
       throw new MismatchedTypeError('number', value, type);
     }
@@ -1480,7 +1489,8 @@ export class ElementDefinition {
       (type === 'oid' && /^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$/.test(value)) ||
       (type === 'id' && /^[A-Za-z0-9\-\.]{1,64}$/.test(value)) ||
       (type === 'markdown' && /^\s*(\S|\s)*$/.test(value)) ||
-      type === 'uuid'
+      type === 'uuid' ||
+      (type === 'integer64' && /^[-]?\d+$/.test(value))
     ) {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
     } else if (type == 'xhtml' && this.checkXhtml(value)) {

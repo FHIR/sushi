@@ -6,6 +6,7 @@ import { FshCanonical } from '../FshCanonical';
 export type AssignmentValueType =
   | boolean
   | number
+  | bigint
   | string
   | FshCanonical
   | FshCode

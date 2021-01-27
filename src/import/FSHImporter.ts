@@ -1162,7 +1162,10 @@ export class FSHImporter extends FSHVisitor {
     }
 
     if (ctx.NUMBER()) {
-      return parseFloat(ctx.NUMBER().getText());
+      const numberString = ctx.NUMBER().getText();
+      // If the number is an integer, store it as a bigint, a FHIR integer64 may be larger
+      // than an integer we can safely store as a number
+      return /^[-]?\d+$/.test(numberString) ? BigInt(numberString) : parseFloat(numberString);
     }
 
     if (ctx.DATETIME()) {
