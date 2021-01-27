@@ -905,7 +905,7 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueBoolean', true, true);
       });
 
-      it('should parse assigned value number rule', () => {
+      it('should parse assigned value number (decimal) rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -916,6 +916,19 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         assertAssignmentRule(profile.rules[0], 'valueDecimal', 1.23);
+      });
+
+      it('should parse assigned value number (integer) rule', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueInteger = 123
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertAssignmentRule(profile.rules[0], 'valueInteger', BigInt(123));
       });
 
       it('should parse assigned value string rule', () => {

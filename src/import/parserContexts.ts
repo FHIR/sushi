@@ -22,13 +22,13 @@ export interface AliasContext extends ParserRuleContext {
 }
 
 export interface ProfileContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   sdMetadata(): SdMetadataContext[];
   sdRule(): SdRuleContext[];
 }
 
 export interface ExtensionContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   sdMetadata(): SdMetadataContext[];
   sdRule(): SdRuleContext[];
 }
@@ -42,7 +42,7 @@ export interface SdMetadataContext extends ParserRuleContext {
 }
 
 export interface InstanceContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   instanceMetadata(): InstanceMetadataContext[];
   instanceRule(): InstanceRuleContext[];
 }
@@ -61,7 +61,7 @@ export interface InstanceRuleContext extends ParserRuleContext {
 }
 
 export interface ValueSetContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   vsMetadata(): VsMetadataContext[];
   vsRule(): VsRuleContext[];
 }
@@ -79,7 +79,7 @@ export interface VsRuleContext extends ParserRuleContext {
 }
 
 export interface CodeSystemContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   csMetadata(): CsMetadataContext[];
   csRule(): CsRuleContext[];
 }
@@ -96,7 +96,7 @@ export interface CsRuleContext extends ParserRuleContext {
 }
 
 export interface InvariantContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   invariantMetadata(): InvariantMetadataContext[];
 }
 
@@ -128,7 +128,7 @@ export interface ParamRuleSetContentContext extends ParserRuleContext {
 }
 
 export interface MappingContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   mappingMetadata(): MappingMetadataContext[];
   mappingEntityRule(): MappingEntityRuleContext[];
 }
@@ -147,11 +147,11 @@ export interface MappingEntityRuleContext extends ParserRuleContext {
 }
 
 export interface ParentContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
 }
 
 export interface IdContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
 }
 
 export interface TitleContext extends ParserRuleContext {
@@ -169,7 +169,7 @@ export interface UsageContext extends ParserRuleContext {
 
 export interface MixinsContext extends ParserRuleContext {
   COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext[];
+  name(): NameContext[];
 }
 
 export interface ExpressionContext extends ParserRuleContext {
@@ -185,11 +185,11 @@ export interface SeverityContext extends ParserRuleContext {
 }
 
 export interface InstanceOfContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
 }
 
 export interface SourceContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
 }
 
 export interface TargetContext extends ParserRuleContext {
@@ -207,6 +207,10 @@ export interface SdRuleContext extends ParserRuleContext {
   caretValueRule(): CaretValueRuleContext;
   insertRule(): InsertRuleContext;
 }
+
+// NameContext can be so many things, but we really only care about its text,
+// so just supporting getText() should be sifficient (thus ParserRuleContext)
+export type NameContext = ParserRuleContext;
 
 export interface PathContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
@@ -244,7 +248,7 @@ export interface FlagContext extends ParserRuleContext {
 
 export interface ValueSetRuleContext extends ParserRuleContext {
   path(): PathContext;
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   strength(): StrengthContext;
   KW_UNITS(): ParserRuleContext;
 }
@@ -264,7 +268,7 @@ export interface FixedValueRuleContext extends ParserRuleContext {
 }
 
 export interface ValueContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
   NUMBER(): ParserRuleContext;
@@ -324,7 +328,7 @@ export interface ContainsRuleContext extends ParserRuleContext {
 }
 
 export interface ItemContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext[];
+  name(): NameContext[];
   KW_NAMED(): ParserRuleContext;
   CARD(): ParserRuleContext;
   flag(): FlagContext[];
@@ -336,13 +340,13 @@ export interface OnlyRuleContext extends ParserRuleContext {
 }
 
 export interface TargetTypeContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   reference(): ReferenceContext;
 }
 
 export interface ObeysRuleContext extends ParserRuleContext {
   path(): PathContext;
-  SEQUENCE(): ParserRuleContext[];
+  name(): NameContext[];
 }
 
 export interface CaretValueRuleContext extends ParserRuleContext {
@@ -394,12 +398,12 @@ export interface VsComponentFromContext extends ParserRuleContext {
 
 export interface VsFromSystemContext extends ParserRuleContext {
   KW_SYSTEM(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
 }
 
 export interface VsFromValuesetContext extends ParserRuleContext {
   KW_VSREFERENCE(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext[];
+  name(): NameContext[];
   COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
 }
 
@@ -408,7 +412,7 @@ export interface VsFilterListContext extends ParserRuleContext {
 }
 
 export interface VsFilterDefinitionContext extends ParserRuleContext {
-  SEQUENCE(): ParserRuleContext;
+  name(): NameContext;
   vsFilterOperator(): VsFilterOperatorContext;
   vsFilterValue(): VsFilterValueContext;
 }
