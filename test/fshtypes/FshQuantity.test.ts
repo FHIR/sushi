@@ -41,7 +41,7 @@ describe('FshQuantity', () => {
       const code = new FshCode('bar', 'http://foo.com');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual("100 'bar'");
+      expect(result).toEqual('100 http://foo.com#bar');
     });
 
     it('should return string for unit code with display', () => {
@@ -64,7 +64,7 @@ describe('FshQuantity', () => {
       const code = new FshCode('bar', 'http://foo.com', 'Display');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual('100 \'bar\' "Display"');
+      expect(result).toEqual('100 http://foo.com#bar "Display"');
     });
 
     it('should return string for unit code with code with spaces', () => {

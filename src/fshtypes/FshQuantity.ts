@@ -10,7 +10,10 @@ export class FshQuantity extends FshEntity {
   toString(): string {
     let str = this.value.toString();
     if (this.unit?.code != null) {
-      str += ` '${this.unit.code}'`;
+      str +=
+        this.unit.system != null && this.unit.system != 'http://unitsofmeasure.org'
+          ? ` ${this.unit.system}#${this.unit.code}`
+          : ` '${this.unit.code}'`;
       if (this.unit.display != null) str += ` "${this.unit.display}"`;
     }
     return str;
