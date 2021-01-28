@@ -373,6 +373,11 @@ export class ElementDefinition {
         if (ADDITIVE_PROPS.includes(prop)) {
           // @ts-ignore
           diff[prop] = differenceWith(this[prop], original[prop], isEqual);
+          // @ts-ignore
+          if (isEmpty(diff[prop])) {
+            // @ts-ignore
+            delete diff[prop];
+          }
         } else {
           // @ts-ignore
           diff[prop] = cloneDeep(this[prop]);
