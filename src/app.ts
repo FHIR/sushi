@@ -196,8 +196,7 @@ async function app() {
   console.log();
   printResults(outPackage, !config.FSHOnly);
 
-  const exitCode = stats.numError > 0 ? 1 : 0;
-  process.exit(exitCode);
+  process.exit(stats.numError);
 }
 
 function getVersion(): string {
