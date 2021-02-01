@@ -48,6 +48,39 @@ describe('FSHImporter', () => {
         expect(profile.sourceInfo.file).toBe('Simple.fsh');
       });
 
+      it('should parse profile with name matching various possible tokens recognized as name', () => {
+        // This basically exercises all the tokens we accept for name:
+        // SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM | KW_UNITS;
+
+        // Since we'll do the same thing over and over (and over), create a function for it
+        const testToken = (token: string) => {
+          const input = `
+          Profile: ${token}
+          Parent: Observation
+          * value[x] only boolean
+          `;
+          const result = importSingleText(input);
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+          expect(result).toBeDefined();
+          expect(result.profiles.size).toBe(1);
+          const profile = result.profiles.get(token);
+          expect(profile).toBeDefined();
+          expect(profile.name).toBe(token);
+        };
+
+        testToken('MyProfile'); // SEQUENCE
+        testToken('123'); // NUMBER
+        testToken('MS'); // KW_MS
+        testToken('SU'); // KW_SU
+        testToken('TU'); // KW_TU
+        testToken('N'); // KW_NORMATIVE
+        testToken('D'); // KW_DRAFT
+        testToken('codes'); // KW_CODES
+        testToken('valueset'); // KW_VSREFERENCE
+        testToken('system'); // KW_SYSTEM
+        testToken('units'); // KW_UNITS
+      });
+
       it('should parse profile with additional metadata properties', () => {
         const input = `
         Profile: ObservationProfile

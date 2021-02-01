@@ -209,7 +209,7 @@ export interface SdRuleContext extends ParserRuleContext {
 }
 
 // NameContext can be so many things, but we really only care about its text,
-// so just supporting getText() should be sifficient (thus ParserRuleContext)
+// so just supporting getText() should be sufficient (thus ParserRuleContext)
 export type NameContext = ParserRuleContext;
 
 export interface PathContext extends ParserRuleContext {

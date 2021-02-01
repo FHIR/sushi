@@ -95,7 +95,7 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\"$&(*,.02468:<>@BDFHJLNPRTVXZ\\^`bdfhjlnprtvxz|~\u0080\u0082\u0084",
     "\u0086\u0088\u008a\u008c\u008e\u0090\u0092\u0094\u0002\r\u0004\u0002",
     "\u0003\u0006\b\f\u0003\u00029:\u0003\u0002NO\u0003\u0002+,\u0004\u0002",
-    "44KK\b\u0002\t\t\u0019\u001d--01;;KK\u0004\u000200KK\u0003\u0002\u0018",
+    "44KK\u0007\u0002\u0019\u001d--/1;;KK\u0004\u000200KK\u0003\u0002\u0018",
     "\u001d\u0003\u0002\u001f\"\u0003\u0002BC\u0003\u0002)*\u0002\u02c0\u0002",
     "\u0099\u0003\u0002\u0002\u0002\u0004\u00a8\u0003\u0002\u0002\u0002\u0006",
     "\u00aa\u0003\u0002\u0002\u0002\b\u00af\u0003\u0002\u0002\u0002\n\u00bc",
@@ -4182,13 +4182,13 @@ FSHParser.prototype.mixins = function() {
         this.state = 390;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
-        case FSHParser.KW_VALUESET:
         case FSHParser.KW_MS:
         case FSHParser.KW_SU:
         case FSHParser.KW_TU:
         case FSHParser.KW_NORMATIVE:
         case FSHParser.KW_DRAFT:
         case FSHParser.KW_CODES:
+        case FSHParser.KW_VSREFERENCE:
         case FSHParser.KW_SYSTEM:
         case FSHParser.KW_UNITS:
         case FSHParser.NUMBER:
@@ -6150,13 +6150,13 @@ FSHParser.prototype.vsFromValueset = function() {
         this.state = 563;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
-        case FSHParser.KW_VALUESET:
         case FSHParser.KW_MS:
         case FSHParser.KW_SU:
         case FSHParser.KW_TU:
         case FSHParser.KW_NORMATIVE:
         case FSHParser.KW_DRAFT:
         case FSHParser.KW_CODES:
+        case FSHParser.KW_VSREFERENCE:
         case FSHParser.KW_SYSTEM:
         case FSHParser.KW_UNITS:
         case FSHParser.NUMBER:
@@ -6630,8 +6630,8 @@ NameContext.prototype.KW_CODES = function() {
     return this.getToken(FSHParser.KW_CODES, 0);
 };
 
-NameContext.prototype.KW_VALUESET = function() {
-    return this.getToken(FSHParser.KW_VALUESET, 0);
+NameContext.prototype.KW_VSREFERENCE = function() {
+    return this.getToken(FSHParser.KW_VSREFERENCE, 0);
 };
 
 NameContext.prototype.KW_SYSTEM = function() {
@@ -6676,7 +6676,7 @@ FSHParser.prototype.name = function() {
         this.enterOuterAlt(localctx, 1);
         this.state = 589;
         _la = this._input.LA(1);
-        if(!((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_VALUESET) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU) | (1 << FSHParser.KW_TU) | (1 << FSHParser.KW_NORMATIVE) | (1 << FSHParser.KW_DRAFT))) !== 0) || ((((_la - 43)) & ~0x1f) == 0 && ((1 << (_la - 43)) & ((1 << (FSHParser.KW_CODES - 43)) | (1 << (FSHParser.KW_SYSTEM - 43)) | (1 << (FSHParser.KW_UNITS - 43)) | (1 << (FSHParser.NUMBER - 43)) | (1 << (FSHParser.SEQUENCE - 43)))) !== 0))) {
+        if(!((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU) | (1 << FSHParser.KW_TU) | (1 << FSHParser.KW_NORMATIVE) | (1 << FSHParser.KW_DRAFT))) !== 0) || ((((_la - 43)) & ~0x1f) == 0 && ((1 << (_la - 43)) & ((1 << (FSHParser.KW_CODES - 43)) | (1 << (FSHParser.KW_VSREFERENCE - 43)) | (1 << (FSHParser.KW_SYSTEM - 43)) | (1 << (FSHParser.KW_UNITS - 43)) | (1 << (FSHParser.NUMBER - 43)) | (1 << (FSHParser.SEQUENCE - 43)))) !== 0))) {
         this._errHandler.recoverInline(this);
         }
         else {
@@ -8132,13 +8132,13 @@ FSHParser.prototype.targetType = function() {
         this.state = 659;
         this._errHandler.sync(this);
         switch(this._input.LA(1)) {
-        case FSHParser.KW_VALUESET:
         case FSHParser.KW_MS:
         case FSHParser.KW_SU:
         case FSHParser.KW_TU:
         case FSHParser.KW_NORMATIVE:
         case FSHParser.KW_DRAFT:
         case FSHParser.KW_CODES:
+        case FSHParser.KW_VSREFERENCE:
         case FSHParser.KW_SYSTEM:
         case FSHParser.KW_UNITS:
         case FSHParser.NUMBER:
