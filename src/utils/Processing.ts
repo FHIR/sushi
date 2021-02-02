@@ -312,11 +312,11 @@ export function writeFHIRResources(
  */
 export async function init(): Promise<void> {
   console.log(
-    '\n╭──────────────────────────────────────────────────────────╮\n' +
-      '│ This interactive tool will use your answers to create a  │\n' +
-      "│ working SUSHI project configured with your project's     │\n" +
-      '│ basic information.                                       │\n' +
-      '╰──────────────────────────────────────────────────────────╯\n'
+    '\n╭───────────────────────────────────────────────────────────╮\n' +
+      '│ This interactive tool will use your answers to create a   │\n' +
+      "│ working SUSHI project configured with your project's      │\n" +
+      '│ basic information.                                        │\n' +
+      '╰───────────────────────────────────────────────────────────╯\n'
   );
 
   const configDoc = YAML.parseDocument(
@@ -389,21 +389,21 @@ export async function init(): Promise<void> {
       logger.error(`Unable to download ${script} from ${url}: ${e.message}`);
     }
   }
-  const maxLength = 31;
+  const maxLength = 32;
   const printName =
     projectName.length > maxLength ? projectName.slice(0, maxLength - 3) + '...' : projectName;
   console.log(
-    '\n╭──────────────────────────────────────────────────────────╮\n' +
+    '\n╭───────────────────────────────────────────────────────────╮\n' +
       `│ Project initialized at: ./${padEnd(printName, maxLength)}│\n` +
-      '├──────────────────────────────────────────────────────────┤\n' +
-      '│ Now try this:                                            │\n' +
-      '│                                                          │\n' +
+      '├───────────────────────────────────────────────────────────┤\n' +
+      '│ Now try this:                                             │\n' +
+      '│                                                           │\n' +
       `│ > cd ${padEnd(printName, maxLength + 21)}│\n` +
-      '│ > sushi .                                                │\n' +
-      '│                                                          │\n' +
-      '│ For guidance on project structure and configuration see  │\n' +
-      '│ the SUSHI documentation:  https://fshschool.org/sushi    │\n' +
-      '╰──────────────────────────────────────────────────────────╯\n'
+      '│ > sushi .                                                 │\n' +
+      '│                                                           │\n' +
+      '│ For guidance on project structure and configuration see   │\n' +
+      '│ the SUSHI documentation: https://fshschool.org/docs/sushi │\n' +
+      '╰───────────────────────────────────────────────────────────╯\n'
   );
 }
 
