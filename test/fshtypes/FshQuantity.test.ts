@@ -67,7 +67,7 @@ describe('FshQuantity', () => {
       const code = new FshCode('milli meters');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual('100 #milli meters');
+      expect(result).toEqual('100 #"milli meters"');
     });
   });
 });
