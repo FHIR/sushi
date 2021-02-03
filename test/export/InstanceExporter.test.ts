@@ -1917,6 +1917,60 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should not log an error when a reslice element fulfills a cardinality constraint', () => {
+      // Profile: TestPatient
+      // Parent: Patient
+      // * identifier ^slicing.discriminator.type = #value
+      // * identifier ^slicing.discriminator.path = "value"
+      // * identifier contains ParentSlice 1..1
+      // * identifier[ParentSlice] ^slicing.discriminator.type = #value
+      // * identifier[ParentSlice] ^slicing.discriminator.path = "value"
+      // * identifier[ParentSlice] contains ChildSlice 1..1
+      const identifierSlicing = new CaretValueRule('identifier');
+      identifierSlicing.caretPath = 'slicing.discriminator.path';
+      identifierSlicing.value = 'value';
+      const identifierContains = new ContainsRule('identifier');
+      identifierContains.items.push({ name: 'ParentSlice' });
+      const parentCard = new CardRule('identifier[ParentSlice]');
+      parentCard.min = 1;
+      parentCard.max = '1';
+      const parentSlicing = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicing.caretPath = 'slicing.discriminator.path';
+      parentSlicing.value = 'value';
+      const parentContains = new ContainsRule('identifier[ParentSlice]');
+      parentContains.items.push({ name: 'ChildSlice' });
+      const childCard = new CardRule('identifier[ParentSlice][ChildSlice]');
+      childCard.min = 1;
+      childCard.max = '1';
+      patient.rules.push(
+        identifierSlicing,
+        identifierContains,
+        parentCard,
+        parentSlicing,
+        parentContains,
+        childCard
+      );
+      // Instance: PatientInstance
+      // InstanceOf: TestPatient
+      // * identifier[ParentSlice][ChildSlice] = SomeIdentifier
+      const identifierAssignment = new AssignmentRule('identifier[ParentSlice][ChildSlice]');
+      identifierAssignment.isInstance = true;
+      identifierAssignment.value = 'SomeIdentifier';
+      patientInstance.rules.push(identifierAssignment);
+      // Instance: SomeIdentifier
+      // InstanceOf: Identifier
+      // * value = "Something"
+      const someIdentifier = new Instance('SomeIdentifier');
+      someIdentifier.instanceOf = 'Identifier';
+      const valueAssignment = new AssignmentRule('value');
+      valueAssignment.value = 'Something';
+      someIdentifier.rules.push(valueAssignment);
+      doc.instances.set(someIdentifier.name, someIdentifier);
+
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should only export an instance once', () => {
       const bundleInstance = new Instance('MyBundle');
       bundleInstance.instanceOf = 'Bundle';
