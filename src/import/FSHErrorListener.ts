@@ -37,7 +37,7 @@ export class FSHErrorListener extends ErrorListener {
       startLine: line,
       startColumn: column + 1,
       endLine: line,
-      endColumn: column + offendingSymbol.text.length
+      endColumn: column + (offendingSymbol?.text.length ?? 1)
     };
 
     // Now attempt to detect known patterns and improve the error messages
@@ -52,7 +52,7 @@ export class FSHErrorListener extends ErrorListener {
     // > missing '=' at '=http://myserver.com/'
     if (
       /^missing '='/.test(msg) &&
-      /^=/.test(offendingSymbol.text) &&
+      /^=/.test(offendingSymbol?.text) &&
       !/^\^/.test(oneTokenBack?.text)
     ) {
       message =
@@ -95,7 +95,7 @@ export class FSHErrorListener extends ErrorListener {
     // > 'missing '=' at '="Component1"''
     else if (
       /^missing '='/.test(msg) &&
-      /^=/.test(offendingSymbol.text) &&
+      /^=/.test(offendingSymbol?.text) &&
       /^\^/.test(oneTokenBack?.text)
     ) {
       message =

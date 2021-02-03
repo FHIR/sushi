@@ -63,6 +63,24 @@ describe('FSHImporter', () => {
         });
       });
 
+      it('should parse numeric extension name, parent, id, and mixins', () => {
+        // NOT recommended, but possible
+        const input = `
+        Extension: 123
+        Parent: 456
+        Id: 789
+        Mixins: 24 and 68
+        `;
+
+        const result = importSingleText(input);
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('123');
+        expect(extension.name).toBe('123');
+        expect(extension.parent).toBe('456');
+        expect(extension.id).toBe('789');
+        expect(extension.mixins).toEqual(['24', '68']);
+      });
+
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Extension: SomeExtension
@@ -109,7 +127,7 @@ describe('FSHImporter', () => {
         const input = `
         Extension: SomeExtension
         Title: "This Extension"
-        
+
         Extension: SomeExtension
         Title: "That Extension"
         `;
