@@ -35,6 +35,17 @@ describe('FSHImporter', () => {
       assertAssignmentRule(ruleSet.rules[0] as Rule, 'active', true);
     });
 
+    it('should parse a RuleSet with a numeric name', () => {
+      const input = `
+        RuleSet: 123
+        * active = true
+        `;
+      const result = importSingleText(input, 'NumericName.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('123');
+      expect(ruleSet.name).toBe('123');
+    });
+
     it('should parse a RuleSet with multiple rules', () => {
       const input = `
         RuleSet: RuleRuleSet

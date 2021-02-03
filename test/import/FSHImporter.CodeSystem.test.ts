@@ -48,6 +48,19 @@ describe('FSHImporter', () => {
         });
       });
 
+      it('should parse numeric code system name and id', () => {
+        // NOT recommended, but possible
+        const input = `
+        CodeSystem: 123
+        Id: 456
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('123');
+        expect(codeSystem.name).toBe('123');
+        expect(codeSystem.id).toBe('456');
+      });
+
       it('should parse a code system with a multi-line description', () => {
         const input = `
         CodeSystem: ZOO
@@ -132,7 +145,7 @@ describe('FSHImporter', () => {
         const input = `
         CodeSystem: BREAD
         Title: "Known Bread"
-        
+
         CodeSystem: BREAD
         Title: "Unknown Bread"
         `;
