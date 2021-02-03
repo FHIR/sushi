@@ -13,7 +13,12 @@ const CLEAN_RUN_PUNS = [
   'Fin-tastic job!',
   'You are dolphinitely doing great!',
   "It doesn't get any betta than this!",
-  "You're piranha roll now!"
+  "You're piranha roll now!",
+  "Valedictorian of the School of FSH",
+  "If you're FSHing for compliments, you got it!",
+  'Tank you for the great job',
+  "We don't have to print these puns, but we do it for the halibut",
+  "You've proven any-fin is possible"
 ];
 
 const WARNING_PUNS = [
@@ -24,7 +29,11 @@ const WARNING_PUNS = [
   'A bit pitchy, but tuna-ble.',
   'Do you sea the problem?',
   'You are skating on fin ice.',
-  'You should mullet over.'
+  'You should mullet over.',
+  'You might need some Vitamin Sea',
+  'Maybe you should scale back',
+  'Whale, whale, whale, what happened here?',
+  'Did you do this on porpoise?'
 ];
 
 const ERROR_PUNS = [
@@ -42,7 +51,13 @@ const ERROR_PUNS = [
   'You should do some sole searching.',
   'Call a FSH sturgeon!',
   'This is giving me a haddock.',
-  'You whaley need to turn this around.'
+  'You whaley need to turn this around.',
+  'You are battering FSH',
+  'Swim back to School of FSH',
+  'You need to mullet over',
+  "Looks like you're floundering",
+  'Let minnow if you need help',
+  "Don't be koi about asking for help"
 ];
 
 export function getRandomPun(numErrors = 0, numWarnings = 0): string {
