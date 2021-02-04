@@ -14,7 +14,7 @@ const CLEAN_RUN_PUNS = [
   'You are dolphinitely doing great!',
   "It doesn't get any betta than this!",
   "You're piranha roll now!",
-  "Valedictorian of the School of FSH",
+  'Valedictorian of the School of FSH',
   "If you're FSHing for compliments, you got it!",
   'Tank you for the great job',
   "We don't have to print these puns, but we do it for the halibut",
