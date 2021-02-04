@@ -13,7 +13,7 @@ import {
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, uniq } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
 
 export class InstanceExporter implements Fishable {
@@ -299,6 +299,9 @@ export class InstanceExporter implements Fishable {
       fshDefinition
     );
     cleanResource(instanceDef);
+
+    // Once all rules are set, we should ensure that we did not add a duplicate profile URL anywhere
+    if (instanceDef.meta?.profile) instanceDef.meta.profile = uniq(instanceDef.meta.profile);
 
     // check for another instance of the same type with the same id
     // see https://www.hl7.org/fhir/resource.html#id
