@@ -14,7 +14,7 @@ const CLEAN_RUN_PUNS = [
   'You are dolphinitely doing great!',
   "It doesn't get any betta than this!",
   "You're piranha roll now!",
-  "Valedictorian of the School of FSH!",
+  'Valedictorian of the School of FSH!',
   "FSHing for compliments? Super job!",
   'Tank you very much!',
   "Why pun? Just for for the halibut.",
@@ -57,7 +57,7 @@ const ERROR_PUNS = [
   'Swim back to School of FSH',
   'You need to mullet over',
   "Looks like you're floundering",
-  'Let minnow if you need help',
+  'Let minnow if you need some help',
   "Don't be koi about asking for help"
 ];
 
