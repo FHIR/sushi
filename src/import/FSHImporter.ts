@@ -1540,10 +1540,26 @@ export class FSHImporter extends FSHVisitor {
     const splitBackslash = ruleNoParens.split(/\\\\/g);
     // then, split the parameters apart with unescaped commas
     const splitComma = splitBackslash.map(substrBackslash => {
-      return substrBackslash.split(/(?<!\\),/g).map(substrComma => {
-        // then, make all the replacements: closing parenthesis and comma
-        return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
-      });
+      // This workaround is to avoid using the more elegant regex lookbehind when we split (substrBackslash.split(/(?<!\\),/g))
+      let subStringToCombine = '';
+      return substrBackslash
+        .split(/,/g)
+        .map(substrComma => {
+          // If we had a previous substring that ended in an escape character, combine with current substring
+          if (subStringToCombine) {
+            substrComma = `${subStringToCombine},${substrComma}`;
+            subStringToCombine = '';
+          }
+          // If the current substring ends with an escape character, we should be escaping the comma that this was split on
+          // Keep track of this substring to be combined with the next one
+          if (substrComma.endsWith('\\')) {
+            subStringToCombine = substrComma;
+            return null;
+          }
+          // then, make all the replacements: closing parenthesis and comma
+          return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
+        })
+        .filter(s => s); // Filter out any null values from incorrectly split escaped commas
     });
     const paramList: string[] = [];
     // if splitComma has more than one list, that means we split on literal backslash
