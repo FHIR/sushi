@@ -14,11 +14,12 @@ const CLEAN_RUN_PUNS = [
   'You are dolphinitely doing great!',
   "It doesn't get any betta than this!",
   "You're piranha roll now!",
-  "Valedictorian of the School of FSH",
-  "If you're FSHing for compliments, you got it!",
-  'Tank you for the great job',
-  "We don't have to print these puns, but we do it for the halibut",
-  "You've proven any-fin is possible"
+  "Valedictorian of the School of FSH!",
+  "FSHing for compliments? Super job!",
+  'Tank you very much!',
+  "Why pun? Just for for the halibut.",
+  "You've proven any-fin is possible.",
+  'You swim with the sharks!'
 ];
 
 const WARNING_PUNS = [
@@ -32,7 +33,7 @@ const WARNING_PUNS = [
   'You should mullet over.',
   'You might need some Vitamin Sea',
   'Maybe you should scale back',
-  'Whale, whale, whale, what happened here?',
+  'Whale, whale, what happened here?',
   'Did you do this on porpoise?'
 ];
 
