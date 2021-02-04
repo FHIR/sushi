@@ -17,7 +17,7 @@ const CLEAN_RUN_PUNS = [
   'Valedictorian of the School of FSH!',
   'FSHing for compliments? Super job!',
   'Tank you very much!',
-  "Why pun? Just for for the halibut.",
+  'Why pun? Just for for the halibut.',
   "You've proven any-fin is possible.",
   'You swim with the sharks!'
 ];
