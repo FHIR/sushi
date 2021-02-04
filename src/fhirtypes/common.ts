@@ -622,8 +622,10 @@ export class HasName {
   setName(name: string, sourceInfo: SourceInfo) {
     this.name = name;
     if (!nameRegex.test(name)) {
-      logger.error(
-        `The string "${name}" does not represent a valid FHIR name. Valid names start with an upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.`,
+      logger.warn(
+        `The name "${name}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
+          "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
+          "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.",
         sourceInfo
       );
     }

@@ -267,7 +267,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitProfile(ctx: pc.ProfileContext) {
-    const profile = new Profile(ctx.SEQUENCE().getText())
+    const profile = new Profile(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.profiles.has(profile.name)) {
@@ -282,7 +282,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
-    const extension = new Extension(ctx.SEQUENCE().getText())
+    const extension = new Extension(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.extensions.has(extension.name)) {
@@ -333,7 +333,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInstance(ctx: pc.InstanceContext) {
-    const instance = new Instance(ctx.SEQUENCE().getText())
+    const instance = new Instance(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.instances.has(instance.name)) {
@@ -397,7 +397,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSet(ctx: pc.ValueSetContext) {
-    const valueSet = new FshValueSet(ctx.SEQUENCE().getText())
+    const valueSet = new FshValueSet(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.valueSets.has(valueSet.name)) {
@@ -466,7 +466,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCodeSystem(ctx: pc.CodeSystemContext) {
-    const codeSystem = new FshCodeSystem(ctx.SEQUENCE().getText())
+    const codeSystem = new FshCodeSystem(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.codeSystems.has(codeSystem.name)) {
@@ -525,7 +525,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInvariant(ctx: pc.InvariantContext) {
-    const invariant = new Invariant(ctx.SEQUENCE().getText())
+    const invariant = new Invariant(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.invariants.has(invariant.name)) {
@@ -638,7 +638,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitMapping(ctx: pc.MappingContext): void {
-    const mapping = new Mapping(ctx.SEQUENCE().getText())
+    const mapping = new Mapping(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.currentDoc.mappings.has(mapping.name)) {
@@ -800,11 +800,11 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitId(ctx: pc.IdContext): string {
-    return ctx.SEQUENCE().getText();
+    return ctx.name().getText();
   }
 
   visitParent(ctx: pc.ParentContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE());
+    return this.aliasAwareValue(ctx.name());
   }
 
   visitTitle(ctx: pc.TitleContext): string {
@@ -814,14 +814,15 @@ export class FSHImporter extends FSHVisitor {
   visitDescription(ctx: pc.DescriptionContext): string {
     if (ctx.STRING()) {
       return this.extractString(ctx.STRING());
+    } else if (ctx.MULTILINE_STRING()) {
+      return this.extractMultilineString(ctx.MULTILINE_STRING());
     }
-
-    // it must be a multiline string
-    return this.extractMultilineString(ctx.MULTILINE_STRING());
+    // this can happen due to parsing errors, so just return empty string
+    return '';
   }
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE());
+    return this.aliasAwareValue(ctx.name());
   }
 
   visitMixins(ctx: pc.MixinsContext): string[] {
@@ -832,7 +833,7 @@ export class FSHImporter extends FSHVisitor {
         .getText()
         .split(/\s*,\s*/);
     } else {
-      mixins = ctx.SEQUENCE().map(sequence => sequence.getText());
+      mixins = ctx.name().map(name => name.getText());
     }
     mixins = mixins.filter((m, i) => {
       const duplicated = mixins.indexOf(m) !== i;
@@ -890,7 +891,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitSource(ctx: pc.SourceContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE());
+    return this.aliasAwareValue(ctx.name());
   }
 
   visitTarget(ctx: pc.TargetContext): string {
@@ -1104,7 +1105,7 @@ export class FSHImporter extends FSHVisitor {
     const vsRule = new BindingRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
+    vsRule.valueSet = this.aliasAwareValue(ctx.name());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
     if (ctx.KW_UNITS()) {
       logger.warn(
@@ -1139,7 +1140,7 @@ export class FSHImporter extends FSHVisitor {
       );
     }
     assignmentRule.isInstance =
-      ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
+      ctx.value().name() != null && !this.allAliases.has(ctx.value().name().getText());
     return assignmentRule;
   }
 
@@ -1149,8 +1150,8 @@ export class FSHImporter extends FSHVisitor {
       return;
     }
 
-    if (ctx.SEQUENCE()) {
-      return this.aliasAwareValue(ctx, ctx.SEQUENCE().getText());
+    if (ctx.name()) {
+      return this.aliasAwareValue(ctx, ctx.name().getText());
     }
 
     if (ctx.STRING()) {
@@ -1238,14 +1239,25 @@ export class FSHImporter extends FSHVisitor {
 
   visitQuantity(ctx: pc.QuantityContext): FshQuantity {
     const value = parseFloat(ctx.NUMBER().getText());
-    const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
+    let delimitedUnit = ctx.UNIT() ? ctx.UNIT().getText() : ''; // e.g., 'mm'
+    // We'll want to assume the UCUM code system unless another system is specified
+    let unitSystem = 'http://unitsofmeasure.org';
+    // If there's no unit string, then we're using FSHCode syntax
+    if (!delimitedUnit) {
+      const unitCode = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      unitSystem = unitCode.system;
+      delimitedUnit = unitCode.code;
+    } else {
+      delimitedUnit = delimitedUnit.slice(1, -1);
+    }
     let displayUnit: string;
     if (ctx.STRING()) {
       displayUnit = this.extractString(ctx.STRING());
     }
-    // the literal version of quantity always assumes UCUM code system
-    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org', displayUnit)
-      .withLocation(this.extractStartStop(ctx.UNIT()))
+    const unit = new FshCode(delimitedUnit, unitSystem, displayUnit)
+      .withLocation(this.extractStartStop(ctx.UNIT() ? ctx.UNIT() : ctx))
       .withFile(this.currentFile);
     const quantity = new FshQuantity(value, unit)
       .withLocation(this.extractStartStop(ctx))
@@ -1373,7 +1385,7 @@ export class FSHImporter extends FSHVisitor {
           })
         );
       } else {
-        onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE()) });
+        onlyRule.types.push({ type: this.aliasAwareValue(t.name()) });
       }
     });
     return onlyRule;
@@ -1390,12 +1402,12 @@ export class FSHImporter extends FSHVisitor {
       let item: ContainsRuleItem;
       if (i.KW_NAMED()) {
         item = {
-          type: this.aliasAwareValue(i.SEQUENCE()[0], i.SEQUENCE()[0].getText()),
-          name: i.SEQUENCE()[1].getText()
+          type: this.aliasAwareValue(i.name()[0], i.name()[0].getText()),
+          name: i.name()[1].getText()
         };
       } else {
         item = {
-          name: i.SEQUENCE()[0].getText()
+          name: i.name()[0].getText()
         };
       }
       containsRule.items.push(item);
@@ -1429,14 +1441,14 @@ export class FSHImporter extends FSHVisitor {
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
     caretValueRule.isInstance =
-      ctx.value()?.SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
+      ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
     return caretValueRule;
   }
 
   visitObeysRule(ctx: pc.ObeysRuleContext): ObeysRule[] {
     const rules: ObeysRule[] = [];
     const path = ctx.path() ? this.visitPath(ctx.path()) : '';
-    ctx.SEQUENCE().forEach(invariant => {
+    ctx.name().forEach(invariant => {
       const obeysRule = new ObeysRule(path)
         .withLocation(this.extractStartStop(ctx))
         .withFile(this.currentFile);
@@ -1773,14 +1785,14 @@ export class FSHImporter extends FSHVisitor {
   visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
     const from: ValueSetComponentFrom = {};
     if (ctx.vsFromSystem()) {
-      from.system = this.aliasAwareValue(ctx.vsFromSystem().SEQUENCE());
+      from.system = this.aliasAwareValue(ctx.vsFromSystem().name());
     }
     if (ctx.vsFromValueset()) {
-      if (ctx.vsFromValueset().SEQUENCE().length > 0) {
+      if (ctx.vsFromValueset().name().length > 0) {
         from.valueSets = ctx
           .vsFromValueset()
-          .SEQUENCE()
-          .map(sequence => this.aliasAwareValue(sequence));
+          .name()
+          .map(name => this.aliasAwareValue(name));
       } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
         logger.warn(
           'Using "," to list valuesets is deprecated. Please use "and" to list valuesets.',
@@ -1808,7 +1820,7 @@ export class FSHImporter extends FSHVisitor {
    * @see {@link http://hl7.org/fhir/valueset-filter-operator.html}
    */
   visitVsFilterDefinition(ctx: pc.VsFilterDefinitionContext): ValueSetFilter {
-    const property = ctx.SEQUENCE().getText();
+    const property = ctx.name().getText();
     const operator = ctx
       .vsFilterOperator()
       .getText()

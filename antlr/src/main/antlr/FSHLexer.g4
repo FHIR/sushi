@@ -106,8 +106,8 @@ COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
 PARAMETER_DEF_LIST: '(' (SEQUENCE WS* COMMA WS*)* SEQUENCE ')';
 
 
-                        // (NON-WS  WS  ,   WS )+ NON-WS
-COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;
+                        // (NONWS  WS  ,     WS )+ NONWS
+COMMA_DELIMITED_SEQUENCES: (NONWS+ WS* COMMA WS*)+ NONWS+;
 
 // BLOCK_COMMENT must precede SEQUENCE so that a block comment without whitespace does not become a SEQUENCE
 BLOCK_COMMENT:      '/*' .*? '*/' -> skip;

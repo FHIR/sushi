@@ -29,6 +29,19 @@ describe('FSHImporter', () => {
         expect(invariant.sourceInfo.file).toBe('Empty.fsh');
       });
 
+      it('should parse numeric invariant name', () => {
+        // NOT recommended, but possible
+        const input = `
+        Invariant: 123
+        Severity: #error
+        Description: "This does not actually require anything."
+        `;
+        const result = importSingleText(input, 'Empty.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('123');
+        expect(invariant.name).toBe('123');
+      });
+
       it('should parse an invariant with additional metadata', () => {
         const input = `
         Invariant: full-1

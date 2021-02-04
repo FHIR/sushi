@@ -160,8 +160,10 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Strange.Code.System');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR name/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /may not be suitable for machine processing applications such as code generation/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
   });
 
   it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
