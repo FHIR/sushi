@@ -15,7 +15,7 @@ const CLEAN_RUN_PUNS = [
   "It doesn't get any betta than this!",
   "You're piranha roll now!",
   'Valedictorian of the School of FSH!',
-  "FSHing for compliments? Super job!",
+  'FSHing for compliments? Super job!',
   'Tank you very much!',
   "Why pun? Just for for the halibut.",
   "You've proven any-fin is possible.",
