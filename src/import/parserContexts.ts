@@ -295,6 +295,7 @@ export interface ConceptContext extends ParserRuleContext {
 
 export interface QuantityContext extends ParserRuleContext {
   NUMBER(): ParserRuleContext;
+  CODE(): ParserRuleContext;
   UNIT(): ParserRuleContext;
   STRING(): ParserRuleContext;
 }

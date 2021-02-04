@@ -1239,14 +1239,25 @@ export class FSHImporter extends FSHVisitor {
 
   visitQuantity(ctx: pc.QuantityContext): FshQuantity {
     const value = parseFloat(ctx.NUMBER().getText());
-    const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
+    let delimitedUnit = ctx.UNIT() ? ctx.UNIT().getText() : ''; // e.g., 'mm'
+    // We'll want to assume the UCUM code system unless another system is specified
+    let unitSystem = 'http://unitsofmeasure.org';
+    // If there's no unit string, then we're using FSHCode syntax
+    if (!delimitedUnit) {
+      const unitCode = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      unitSystem = unitCode.system;
+      delimitedUnit = unitCode.code;
+    } else {
+      delimitedUnit = delimitedUnit.slice(1, -1);
+    }
     let displayUnit: string;
     if (ctx.STRING()) {
       displayUnit = this.extractString(ctx.STRING());
     }
-    // the literal version of quantity always assumes UCUM code system
-    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org', displayUnit)
-      .withLocation(this.extractStartStop(ctx.UNIT()))
+    const unit = new FshCode(delimitedUnit, unitSystem, displayUnit)
+      .withLocation(this.extractStartStop(ctx.UNIT() ? ctx.UNIT() : ctx))
       .withFile(this.currentFile);
     const quantity = new FshQuantity(value, unit)
       .withLocation(this.extractStartStop(ctx))
