@@ -106,8 +106,10 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('All-you-can-eat');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR name/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D*/s);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /may not be suitable for machine processing applications such as code generation/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D*/s);
   });
 
   it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {

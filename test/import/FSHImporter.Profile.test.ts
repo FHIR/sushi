@@ -48,6 +48,39 @@ describe('FSHImporter', () => {
         expect(profile.sourceInfo.file).toBe('Simple.fsh');
       });
 
+      it('should parse profile with name matching various possible tokens recognized as name', () => {
+        // This basically exercises all the tokens we accept for name:
+        // SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM | KW_UNITS;
+
+        // Since we'll do the same thing over and over (and over), create a function for it
+        const testToken = (token: string) => {
+          const input = `
+          Profile: ${token}
+          Parent: Observation
+          * value[x] only boolean
+          `;
+          const result = importSingleText(input);
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+          expect(result).toBeDefined();
+          expect(result.profiles.size).toBe(1);
+          const profile = result.profiles.get(token);
+          expect(profile).toBeDefined();
+          expect(profile.name).toBe(token);
+        };
+
+        testToken('MyProfile'); // SEQUENCE
+        testToken('123'); // NUMBER
+        testToken('MS'); // KW_MS
+        testToken('SU'); // KW_SU
+        testToken('TU'); // KW_TU
+        testToken('N'); // KW_NORMATIVE
+        testToken('D'); // KW_DRAFT
+        testToken('codes'); // KW_CODES
+        testToken('valueset'); // KW_VSREFERENCE
+        testToken('system'); // KW_SYSTEM
+        testToken('units'); // KW_UNITS
+      });
+
       it('should parse profile with additional metadata properties', () => {
         const input = `
         Profile: ObservationProfile
@@ -73,6 +106,23 @@ describe('FSHImporter', () => {
           endLine: 7,
           endColumn: 55
         });
+      });
+
+      it('should parse profile with numeric name, parent, id, and mixins', () => {
+        const input = `
+        Profile: 123
+        Parent: 456
+        Id: 789
+        Mixins: 24 and 68
+        `;
+
+        const result = importSingleText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('123');
+        expect(profile.name).toBe('123');
+        expect(profile.parent).toBe('456');
+        expect(profile.id).toBe('789');
+        expect(profile.mixins).toEqual(['24', '68']);
       });
 
       it('should properly parse a multi-string description', () => {
@@ -804,6 +854,21 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse value set rules w/ numeric names', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * category from 123 (required)
+        * code from 456 (extensible)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(2);
+        assertBindingRule(profile.rules[0], 'category', '123', 'required');
+        assertBindingRule(profile.rules[1], 'code', '456', 'extensible');
+      });
+
       it('should parse value set rules w/ no strength and default to required', () => {
         const input = `
         Profile: ObservationProfile
@@ -873,7 +938,7 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueBoolean', true, true);
       });
 
-      it('should parse assigned value number rule', () => {
+      it('should parse assigned value number (decimal) rule', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -884,6 +949,19 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         assertAssignmentRule(profile.rules[0], 'valueDecimal', 1.23);
+      });
+
+      it('should parse assigned value number (integer) rule', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueInteger = 123
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertAssignmentRule(profile.rules[0], 'valueInteger', BigInt(123));
       });
 
       it('should parse assigned value string rule', () => {
@@ -1432,6 +1510,38 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an only rule with one numeric type name', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * value[x] only 123
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'value[x]', { type: '123' });
+      });
+
+      it('should parse an only rule with multiple numeric type names', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * value[x] only 123 or 456 or 789
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'value[x]',
+          { type: '123' },
+          { type: '456' },
+          { type: '789' }
+        );
+      });
+
       it('should parse an only rule with a reference to one type', () => {
         const input = `
         Profile: ObservationProfile
@@ -1833,6 +1943,18 @@ describe('FSHImporter', () => {
         assertObeysRule(profile.rules[0], 'category', 'SomeInvariant');
         assertObeysRule(profile.rules[1], 'category', 'ThisInvariant');
         assertObeysRule(profile.rules[2], 'category', 'ThatInvariant');
+      });
+
+      it('should parse an obeys rule with a numeric invariant name', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * obeys 123
+        `;
+        const result = importSingleText(input, 'Obeys.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertObeysRule(profile.rules[0], '', '123');
       });
     });
 

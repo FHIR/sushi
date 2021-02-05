@@ -28,6 +28,21 @@ describe('FSHImporter', () => {
       expect(result.contents).toBe(expectedContents);
     });
 
+    it('should parse a ParamRuleSet with a numeric name', () => {
+      const importer = new FSHImporter();
+      const input = `
+        RuleSet: 123 (system, strength)
+        * code from {system} {strength}
+      `;
+
+      importer.import([new RawFSH(input, 'Params.fsh')]);
+      expect(importer.paramRuleSets.size).toBe(1);
+      expect(importer.paramRuleSets.has('123')).toBe(true);
+      const result = importer.paramRuleSets.get('123');
+      expect(result.name).toBe('123');
+      expect(result.parameters).toEqual(['system', 'strength']);
+    });
+
     it('should parse a ParamRuleSet when there is no space between the ruleset name and parameter list', () => {
       const importer = new FSHImporter();
       const input = `
@@ -55,7 +70,7 @@ describe('FSHImporter', () => {
         RuleSet: MyRuleSet (system, strength)
         * code from http://example.org/{system}/info.html {strength}
         * pig from egg
-        
+
         Profile: MyObservation
         Parent: Observation
       `;
@@ -81,7 +96,7 @@ describe('FSHImporter', () => {
         RuleSet: MyRuleSet (system, strength)
         * code from http://example.org/{system}/info.html {strength}
         * pig from egg
-        
+
         RuleSet: MyRuleSet (someName)
         * name = "Dr. {someName}"
       `;

@@ -35,6 +35,18 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Simple.fsh');
       });
 
+      it('should parse a value set with numeric name and id', () => {
+        const input = `
+        ValueSet: 123
+        Id: 456
+        `;
+        const result = importSingleText(input, 'Simple.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('123');
+        expect(valueSet.name).toBe('123');
+        expect(valueSet.id).toBe('456');
+      });
+
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         ValueSet: SimpleVS
@@ -193,6 +205,23 @@ describe('FSHImporter', () => {
           endColumn: 43
         });
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a value set with a concept specified as #code from numeric named SYSTEM', () => {
+        const input = `
+        ValueSet: ZooVS
+        * #hippo "Hippopotamus" from system 123
+        `;
+
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], '123', undefined, [
+          new FshCode('hippo', '123', 'Hippopotamus')
+            .withLocation([3, 11, 3, 31])
+            .withFile('Zoo.fsh')
+        ]);
       });
 
       it('should parse a value set with a list of concepts', () => {
@@ -441,6 +470,20 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
+      it('should parse a value set that includes all codes from numeric named value sets', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from valueset 123
+        * codes from valueset 456 and 789
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(2);
+        assertValueSetFilterComponent(valueSet.rules[0], undefined, ['123'], []);
+        assertValueSetFilterComponent(valueSet.rules[1], undefined, ['456', '789'], []);
+      });
+
       it('should parse a value set that includes all codes from a system and other value sets', () => {
         const input = `
         ValueSet: ZooVS
@@ -492,6 +535,24 @@ describe('FSHImporter', () => {
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'version',
+            operator: VsOperator.EQUALS,
+            value: '2.0'
+          }
+        ]);
+      });
+
+      it('should parse a value set that uses filter operator with numeric property name', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where 123 = "2.0"
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
+          {
+            property: '123',
             operator: VsOperator.EQUALS,
             value: '2.0'
           }

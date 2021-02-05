@@ -354,6 +354,12 @@ FSHVisitor.prototype.visitVsFilterValue = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#name.
+FSHVisitor.prototype.visitName = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#path.
 FSHVisitor.prototype.visitPath = function(ctx) {
   return this.visitChildren(ctx);

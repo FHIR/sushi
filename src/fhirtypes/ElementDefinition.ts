@@ -5,7 +5,8 @@ import {
   cloneDeep,
   upperFirst,
   intersectionWith,
-  flatten
+  flatten,
+  differenceWith
 } from 'lodash';
 import sax = require('sax');
 import { minify } from 'html-minifier';
@@ -369,8 +370,18 @@ export class ElementDefinition {
       }
       // @ts-ignore
       if (prop && !isEqual(this[prop], original[prop])) {
-        // @ts-ignore
-        diff[prop] = cloneDeep(this[prop]);
+        if (ADDITIVE_PROPS.includes(prop)) {
+          // @ts-ignore
+          diff[prop] = differenceWith(this[prop], original[prop], isEqual);
+          // @ts-ignore
+          if (isEmpty(diff[prop])) {
+            // @ts-ignore
+            delete diff[prop];
+          }
+        } else {
+          // @ts-ignore
+          diff[prop] = cloneDeep(this[prop]);
+        }
       }
     }
     // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
@@ -1742,8 +1753,7 @@ export class ElementDefinition {
     ) {
       let newElements: ElementDefinition[] = [];
       if (this.contentReference) {
-        // If the element is a content reference, we need to unfold from the unconstrained referenced element and then apply any
-        // extensions from the profile.  So far, extensions are the only thing we've been able to confirm should be carried over.
+        // TODO: Implement recursive constraints once the approach is better clarified.
         // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Clarification.20on.20contentReference
 
         // Get the original resource JSON so we unfold unconstrained reference
@@ -1754,57 +1764,17 @@ export class ElementDefinition {
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
           const referencedElement = def.findElement(contentRefId);
-          const recursiveContentReferencePaths: string[] = [];
           newElements = referencedElement?.children().map(e => {
             const eClone = e.clone();
             eClone.id = eClone.id.replace(referencedElement.id, this.id);
             eClone.structDef = this.structDef;
             eClone.captureOriginal();
-            if (e.getContentReferenceId() === contentRefId) {
-              // This is a nested recursive content reference.  We'll want to avoid this when carrying over elements from the profile.
-              recursiveContentReferencePaths.push(e.path);
-            }
             return eClone;
           });
           if (newElements.length > 0) {
             // If we successfully unfolded, this element is no longer a content reference
             this.type = referencedElement.type;
             delete this.contentReference;
-
-            // Now carry over the extension elements (and their children) from the profile
-            const elementsToCarryOver = this.structDef
-              ?.findElement(contentRefId)
-              ?.children()
-              ?.filter(e => {
-                return (
-                  // an extension of child of extension under the unrolled path
-                  /(^|\.)(modifierE|e)xtension([.:]|$)/.test(e.id.slice(contentRefId.length + 1)) &&
-                  // but not under a recursive content reference because that would be a real mess!
-                  !recursiveContentReferencePaths.some(p => e.path.startsWith(`${p}.`))
-                );
-              });
-            elementsToCarryOver.forEach(e => {
-              // Since these are inherited, we technically should re-captureOriginal() on them so they don't show up in the differential.
-              // But ...it appears that the IG Publisher doesn't build the snapshot correctly in this case, so don't capture the original
-              // and allow these "inherited" elements to be reflected in the differential until we hear otherwise.
-              // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Clarification.20on.20contentReference/near/223399872
-              const eClone = e.clone(false);
-              eClone.id = e.id.replace(contentRefId, this.id);
-              eClone.structDef = this.structDef;
-              // If the only diff is the id/path then re-capture original so it doesn't end up in diff just because of that
-              if (
-                eClone.hasDiff() &&
-                isEqual(Object.keys(eClone.calculateDiff().toJSON()), ['id', 'path'])
-              ) {
-                eClone.captureOriginal();
-              }
-              const newElementIdx = newElements.findIndex(e2 => e2.id === eClone.id);
-              if (newElementIdx === -1) {
-                newElements.push(eClone);
-              } else {
-                newElements[newElementIdx] = eClone;
-              }
-            });
           }
         }
       } else if (this.sliceName) {
@@ -2222,3 +2192,10 @@ const PROPS = [
   'binding',
   'mapping'
 ];
+
+/**
+ * These list properties are considered to be additive in the differential.
+ * Thus, the differential should contain only new entries in these lists.
+ * See http://hl7.org/fhir/elementdefinition.html#interpretation.
+ */
+const ADDITIVE_PROPS = ['mapping', 'constraint'];
