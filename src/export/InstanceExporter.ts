@@ -169,8 +169,7 @@ export class InstanceExporter implements Fishable {
         }
         // Filter so that if the child is a slice, we only count relevant slices
         // A slice is relevant if it is the child slice or is a reslice of child.
-        // Since the instance's StructureDefinition was loaded from JSON, we don't have parentSliceName on any element.
-        // The next best thing we can do is guess that a sliceName that starts with child.sliceName + '/' is a reslice.
+        // Typically, a sliceName that starts with child.sliceName + '/' is a reslice.
         instanceChild = instanceChild.filter(
           (arrayEl: any) =>
             !child.sliceName ||
