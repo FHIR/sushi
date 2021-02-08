@@ -252,6 +252,31 @@ describe('FSHImporter', () => {
         expect(instance.rules).toHaveLength(1);
         assertInsertRule(instance.rules[0], 'MyRuleSet');
       });
+
+      it('should parse an insert rule with an empty parameter value', () => {
+        // Example taken from open-hie/case-reporting, which failed a regression in this area
+        const input = `
+        RuleSet: Question(context, linkId, text, type, repeats)
+        * {context}item[+].linkId = "{linkId}"
+        * {context}item[=].text = "{text}"
+        * {context}item[=].type = #{type}
+        * {context}item[=].repeats = {repeats}
+
+        Instance: case-reporting-questionnaire
+        InstanceOf: Questionnaire
+        * insert Question(,title, HIV Case Report, display, false)
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const instance = result.instances.get('case-reporting-questionnaire');
+        expect(instance.rules).toHaveLength(1);
+        assertInsertRule(instance.rules[0], 'Question', [
+          '',
+          'title',
+          'HIV Case Report',
+          'display',
+          'false'
+        ]);
+      });
     });
 
     describe('#instanceMetadata', () => {
