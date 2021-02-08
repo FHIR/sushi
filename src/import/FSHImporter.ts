@@ -1559,7 +1559,7 @@ export class FSHImporter extends FSHVisitor {
           // then, make all the replacements: closing parenthesis and comma
           return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
         })
-        .filter(s => s); // Filter out any null values from incorrectly split escaped commas
+        .filter(s => s != null); // Filter out any null values from incorrectly split escaped commas
     });
     const paramList: string[] = [];
     // if splitComma has more than one list, that means we split on literal backslash
