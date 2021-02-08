@@ -168,8 +168,13 @@ export class InstanceExporter implements Fishable {
           return;
         }
         // Filter so that if the child is a slice, we only count relevant slices
+        // A slice is relevant if it is the child slice or is a reslice of child.
+        // Typically, a sliceName that starts with child.sliceName + '/' is a reslice.
         instanceChild = instanceChild.filter(
-          (arrayEl: any) => !child.sliceName || arrayEl?._sliceName === child.sliceName
+          (arrayEl: any) =>
+            !child.sliceName ||
+            arrayEl?._sliceName === child.sliceName ||
+            arrayEl?._sliceName?.toString().startsWith(`${child.sliceName}/`)
         );
         instanceChild.forEach((arrayEl: any) => {
           if (arrayEl != null) this.validateRequiredChildElements(arrayEl, child, fshDefinition);

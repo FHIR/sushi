@@ -535,11 +535,24 @@ export class ElementDefinition {
     // If element is a slice
     const slicedElement = this.slicedElement();
     if (slicedElement) {
-      // Check that slicedElement max >= new sum of mins
-      const sumOfMins = slicedElement.checkSumOfSliceMins(slicedElement.max, min - this.min);
-      // If new sum of mins > slicedElement min, increase slicedElement min
-      if (sumOfMins > slicedElement.min) {
-        slicedElement.min = sumOfMins;
+      const parentSlice = this.findParentSlice();
+      const sliceSiblings = this.structDef.elements.filter(
+        el =>
+          this !== el &&
+          slicedElement === el.slicedElement() &&
+          parentSlice === el.findParentSlice()
+      );
+      const newParentMin = min + sliceSiblings.reduce((sum, el) => sum + el.min, 0);
+      // if this is a reslice, the parent element will also be a slice of the sliced element.
+      // if this is not a reslice, the parent element is the sliced element.
+      const parentElement = parentSlice ?? slicedElement;
+      // Check that parentElement max >= new sum of mins
+      if (parentElement.max !== '*' && newParentMin > parseInt(parentElement.max)) {
+        throw new InvalidSumOfSliceMinsError(newParentMin, parentElement.max, parentElement.id);
+      }
+      // If new sum of mins > parentElement min, increase parentElement min
+      if (newParentMin > parentElement.min) {
+        parentElement.constrainCardinality(newParentMin, '');
       }
     }
 
@@ -585,6 +598,26 @@ export class ElementDefinition {
       return this.parent().findConnectedSliceElement(
         `.${this.path.split('.').slice(-1)[0]}${postPath}`
       );
+    }
+  }
+
+  findParentSlice(): ElementDefinition {
+    if (this.sliceName) {
+      const slicedElement = this.slicedElement();
+      const parentNameParts = this.sliceName.split('/').slice(0, -1);
+      const potentialParentNames = parentNameParts
+        .map((_part, i) => {
+          return parentNameParts.slice(0, i + 1).join('/');
+        })
+        .reverse();
+      for (const parentName of potentialParentNames) {
+        const potentialParent = this.structDef.elements.find(el => {
+          return el.sliceName === parentName && el.slicedElement() === slicedElement;
+        });
+        if (potentialParent) {
+          return potentialParent;
+        }
+      }
     }
   }
 
@@ -1931,7 +1964,6 @@ export class ElementDefinition {
 
     // Capture the original so that the differential only contains changes from this point on.
     slice.captureOriginal();
-
     slice.sliceName = this.sliceName ? `${this.sliceName}/${name}` : name;
 
     // Usually, when we slice, we do not inherit min cardinality, but rather make it 0.

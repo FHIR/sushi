@@ -168,6 +168,57 @@ describe('ElementDefinition', () => {
       expect(category.min).toBe(3);
     });
 
+    it('should not change the sliced element min when a slice is resliced with the same min', () => {
+      const category = respRate.elements.find(e => e.id === 'Observation.category');
+      const vsCat = respRate.elements.find(e => e.id === 'Observation.category:VSCat');
+      // apply slicing to vsCat
+      vsCat.sliceIt('value', 'coding.code');
+      // * category[VSCat] contains FooSlice 1..1
+      const fooSlice = vsCat.addSlice('FooSlice');
+      fooSlice.constrainCardinality(1, '1');
+      expect(category.min).toBe(1);
+      expect(vsCat.min).toBe(1);
+    });
+
+    it('should update the min for the sliced element and the parent slice when the sum of reslice mins is constrained greater than them', () => {
+      const category = respRate.elements.find(e => e.id === 'Observation.category');
+      const parentSlice = category.addSlice('ParentSlice');
+      parentSlice.constrainCardinality(1, '*');
+      parentSlice.sliceIt('value', 'coding.code');
+      const childSlice = parentSlice.addSlice('ChildSlice');
+      childSlice.constrainCardinality(2, '2');
+      expect(parentSlice.min).toBe(2); // contains 2 ChildSlice
+      expect(category.min).toBe(3); // contains 2 ParentSlice/ChildSlice + 1 VSCat
+    });
+
+    it('should update the min for the sliced element and ancestor slices, but not other slices', () => {
+      const category = respRate.elements.find(e => e.id === 'Observation.category');
+      const parentOne = category.addSlice('ParentOne');
+      parentOne.sliceIt('value', 'coding.code');
+      const childOne = parentOne.addSlice('ChildOne');
+      const childTwo = parentOne.addSlice('ChildTwo');
+      const parentTwo = category.addSlice('ParentTwo');
+      parentTwo.sliceIt('value', 'coding.code');
+      const childThree = parentTwo.addSlice('ChildThree');
+      const childFour = parentTwo.addSlice('ChildFour');
+
+      childOne.constrainCardinality(1, '*');
+      childTwo.constrainCardinality(2, '*');
+      childThree.constrainCardinality(3, '*');
+      childFour.constrainCardinality(4, '*');
+
+      // the children should be unchanged from the values that were set
+      expect(childOne.min).toBe(1);
+      expect(childTwo.min).toBe(2);
+      expect(childThree.min).toBe(3);
+      expect(childFour.min).toBe(4);
+      // the parents should be the sums of only their children, regardless of other slices
+      expect(parentOne.min).toBe(3);
+      expect(parentTwo.min).toBe(7);
+      // the sliced element should be the sum of VSCat + ParentOne + ParentTwo = 1 + 3 + 7 = 11
+      expect(category.min).toBe(11);
+    });
+
     it('should throw InvalidSumOfSliceMinsError when sliced element max is constrained less than sum of slice mins', () => {
       const category = respRate.elements.find(e => e.id === 'Observation.category');
       const fooSlice = category.addSlice('FooSlice');
