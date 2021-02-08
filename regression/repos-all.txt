@@ -63,3 +63,6 @@ paulschneider/auto-ig-builder#master
 HL7NZ/medtech#main
 dvci/vaccine-credential-ig#main
 dvci/vaccine-yellow-card-ig#main
+# Added Mon Feb 08 2021 11:01:34 GMT-0500 (Eastern Standard Time)
+JohnMoehrke/BasicAudit#main
+medicalhome-aprn/smart-web-messaging#master
