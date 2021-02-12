@@ -13,7 +13,7 @@ import {
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { Package } from '.';
-import { cloneDeep, uniq } from 'lodash';
+import { cloneDeep, merge, uniq } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
 
 export class InstanceExporter implements Fishable {
@@ -115,8 +115,17 @@ export class InstanceExporter implements Fishable {
     });
 
     const paths = ['', ...rules.map(rule => rule.path)];
+    // To correctly assign properties, we need to:
+    // 1 - Assign implied properties on the original instance
+    // 2 - Assign rule properties on a copy of the result of 1, so that rule assignment can build on implied assignment
+    // 3 - Merge the result of 2 with the result of 1, so that any implied properties which may have been overwrtiten
+    //     in step 2 are maintained...don't worry I'm confused too
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
-    ruleMap.forEach(rule => setPropertyOnInstance(instanceDef, rule.pathParts, rule.assignedValue));
+    const ruleInstance = cloneDeep(instanceDef);
+    ruleMap.forEach(rule =>
+      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue)
+    );
+    instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;
   }
 
@@ -292,8 +301,6 @@ export class InstanceExporter implements Fishable {
       instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
     }
 
-    this.pkg.instances.push(instanceDef);
-
     applyMixinRules(fshDefinition, this.tank);
     // Set Assigned values based on the FSH rules and the Structure Definition
     instanceDef = this.setAssignedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
@@ -304,6 +311,7 @@ export class InstanceExporter implements Fishable {
       fshDefinition
     );
     cleanResource(instanceDef);
+    this.pkg.instances.push(instanceDef);
 
     // Once all rules are set, we should ensure that we did not add a duplicate profile URL anywhere
     if (instanceDef.meta?.profile) instanceDef.meta.profile = uniq(instanceDef.meta.profile);
