@@ -21,6 +21,7 @@ import {
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
+import { InstanceDefinition } from '../fhirtypes';
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -240,6 +241,26 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
+function checkNullValuesOnArray(resource: any): void {
+  const resourceType = resource instanceof InstanceDefinition ? 'Instance' : resource.resourceType;
+  const resourceName =
+    resource instanceof InstanceDefinition ? resource._instanceMeta.name : resource.title;
+  for (const property in resource) {
+    if (!property.startsWith('_') && Array.isArray(resource[property])) {
+      const nullIndexes: number[] = [];
+      resource[property].forEach((element: any, index: number) => {
+        if (element === null) nullIndexes.push(index);
+      });
+      if (nullIndexes.length > 0)
+        logger.warn(
+          `Null values found at elements ${JSON.stringify(
+            nullIndexes
+          )} within '${property}' on ${resourceType} '${resourceName}'`
+        );
+    }
+  }
+}
+
 export function writeFHIRResources(
   outDir: string,
   outPackage: Package,
@@ -272,6 +293,7 @@ export function writeFHIRResources(
             predef.id === resource.id
         )
       ) {
+        checkNullValuesOnArray(resource);
         fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
           spaces: 2
         });
