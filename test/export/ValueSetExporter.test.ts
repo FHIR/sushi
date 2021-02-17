@@ -14,6 +14,7 @@ import {
   ValueSetFilterComponentRule
 } from '../../src/fshtypes/rules';
 import { minimalConfig } from '../utils/minimalConfig';
+import { ValueSetExpansionContains } from '../../src/fhirtypes/ValueSet';
 
 describe('ValueSetExporter', () => {
   let defs: FHIRDefinitions;
@@ -709,6 +710,293 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(exported[0].compose.include[0].system).toBe('http://food.net/CodeSystem/FoodCS');
+  });
+
+  describe('#expansion', () => {
+    let valueSet: FshValueSet;
+
+    beforeEach(() => {
+      valueSet = new FshValueSet('MyValueSet');
+      const expansionName = new CaretValueRule('');
+      expansionName.caretPath = 'expansion.parameter.name';
+      expansionName.value = 'sushi-generated';
+      const expansionValue = new CaretValueRule('');
+      expansionValue.caretPath = 'expansion.parameter.valueBoolean';
+      expansionValue.value = true;
+      valueSet.rules.push(expansionName, expansionValue);
+      doc.valueSets.set(valueSet.name, valueSet);
+    });
+
+    it('should expand a value set that contains specific concepts', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * includes http://zoo.org/animals|1.0#bear
+      // * includes #tiger and #hippo from system http://zoo.org/animals|1.1
+      const includeBear = new ValueSetConceptComponentRule(true);
+      includeBear.concepts.push(new FshCode('bear', 'http://zoo.org/animals|1.0'));
+      includeBear.from.system = 'http://zoo.org/animals|1.0';
+      const includeTigerHippo = new ValueSetConceptComponentRule(true);
+      includeTigerHippo.concepts.push(
+        new FshCode('tiger', 'http://zoo.org/animals|1.1'),
+        new FshCode('hippo', 'http://zoo.org/animals|1.1')
+      );
+      includeTigerHippo.from.system = 'http://zoo.org/animals|1.1';
+      valueSet.rules.push(includeBear, includeTigerHippo);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(3);
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'bear',
+        system: 'http://zoo.org/animals',
+        version: '1.0'
+      });
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'tiger',
+        system: 'http://zoo.org/animals',
+        version: '1.1'
+      });
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'hippo',
+        system: 'http://zoo.org/animals',
+        version: '1.1'
+      });
+    });
+
+    it('should expand a value set that contains locally defined code systems from JSON', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from AllergyIntoleranceClinicalStatusCodes
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      valueSet.rules.push(includeAllergy);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(2);
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'active',
+        display: 'Active',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1'
+      });
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'inactive',
+        display: 'Inactive',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1',
+        contains: [
+          {
+            code: 'resolved',
+            display: 'Resolved',
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+            version: '4.0.1'
+          }
+        ]
+      });
+    });
+
+    it('should move explicitly included concepts to the top level', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from AllergyIntoleranceClinicalStatusCodes
+      // * include AllergyIntoleranceClinicalStatusCodes#resolved
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      const includeResolved = new ValueSetConceptComponentRule(true);
+      includeResolved.concepts.push(
+        new FshCode('resolved', 'AllergyIntoleranceClinicalStatusCodes')
+      );
+      includeResolved.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      valueSet.rules.push(includeAllergy, includeResolved);
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(3);
+    });
+
+    it('should remove excluded concepts from the expansion', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes
+      // * exclude AllergyIntoleranceClinicalStatusCodes#active
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      const excludeActive = new ValueSetConceptComponentRule(false);
+      excludeActive.concepts.push(new FshCode('active', 'AllergyIntoleranceClinicalStatusCodes'));
+      excludeActive.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      valueSet.rules.push(includeAllergy, excludeActive);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(1);
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'inactive',
+        display: 'Inactive',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1',
+        contains: [
+          {
+            code: 'resolved',
+            display: 'Resolved',
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+            version: '4.0.1'
+          }
+        ]
+      });
+    });
+
+    it('should remove a contained excluded concept', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes
+      // * exclude AllergyIntoleranceClinicalStatusCodes#resolved
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      const excludeResolved = new ValueSetConceptComponentRule(false);
+      excludeResolved.concepts.push(
+        new FshCode('resolved', 'AllergyIntoleranceClinicalStatusCodes')
+      );
+      excludeResolved.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      valueSet.rules.push(includeAllergy, excludeResolved);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(2);
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'active',
+        display: 'Active',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1'
+      });
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'inactive',
+        display: 'Inactive',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1'
+      });
+    });
+
+    it('should keep contained concepts when excluding the top-level concept', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes
+      // * exclude AllergyIntoleranceClinicalStatusCodes#inactive
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      const excludeInactive = new ValueSetConceptComponentRule(false);
+      excludeInactive.concepts.push(
+        new FshCode('inactive', 'AllergyIntoleranceClinicalStatusCodes')
+      );
+      excludeInactive.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      valueSet.rules.push(includeAllergy, excludeInactive);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(2);
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'active',
+        display: 'Active',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1'
+      });
+      // the contained concept moves up a level, and is now in the top-level contains array
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'resolved',
+        display: 'Resolved',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1'
+      });
+    });
+
+    it('should remove all concepts from an excluded code system', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include AllergyIntoleranceClinicalStatusCodes#active
+      // * include AllergyIntoleranceClinicalStatusCodes#inactive
+      // * include http://zoo.org/animals|1.0#bear
+      // * exclude codes from system AllergyIntoleranceClinicalStatusCodes
+      const includeActive = new ValueSetConceptComponentRule(true);
+      includeActive.concepts.push(new FshCode('active', 'AllergyIntoleranceClinicalStatusCodes'));
+      includeActive.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      const includeInactive = new ValueSetConceptComponentRule(true);
+      includeInactive.concepts.push(
+        new FshCode('inactive', 'AllergyIntoleranceClinicalStatusCodes')
+      );
+      includeInactive.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      const includeBear = new ValueSetConceptComponentRule(true);
+      includeBear.concepts.push(new FshCode('bear', 'http://zoo.org/animals|1.0'));
+      includeBear.from.system = 'http://zoo.org/animals|1.0';
+      const excludeAllergy = new ValueSetFilterComponentRule(false);
+      excludeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      valueSet.rules.push(includeActive, includeInactive, includeBear, excludeAllergy);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(1);
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'bear',
+        system: 'http://zoo.org/animals',
+        version: '1.0'
+      });
+    });
+
+    it('should not expand a value set that does not define its composition', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(/No composition defined\./s);
+    });
+
+    it('should not expand a value set that uses a filter operator', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes where definition exists
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      includeAllergy.filters.push({
+        property: 'definition',
+        operator: VsOperator.EXISTS,
+        value: true
+      });
+      valueSet.rules.push(includeAllergy);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Composition contains filter operators\./s);
+    });
+
+    it('should not expand a value set that references other value sets', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from valueset AllergyIntoleranceClinicalStatusCodes
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.valueSets = ['AllergyIntoleranceClinicalStatusCodes'];
+      valueSet.rules.push(includeAllergy);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Composition contains other value sets\./s);
+    });
+
+    it('should not expand value sets that refer to code systems without available definitions', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system http://example.org/CodeSystem/MyCodeSystem
+      const includeUnknown = new ValueSetFilterComponentRule(true);
+      includeUnknown.from.system = 'http://example.org/CodeSystem/MyCodeSystem';
+      valueSet.rules.push(includeUnknown);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Composition contains code systems without available concept lists\./s
+      );
+    });
   });
 
   describe('#insertRules', () => {
