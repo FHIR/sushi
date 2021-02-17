@@ -1204,6 +1204,23 @@ describe('StructureDefinition', () => {
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
 
+    it('should allow setting abritrary defined extensions by url', () => {
+      const originalLength = respRate.elements.length;
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'extension[http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName].value[x]',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'extension',
+        brackets: ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName', '0'],
+        slices: ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 5);
+    });
+
     it('should allow setting nested arbitrary defined extensions', () => {
       const originalLength = respRate.elements.length;
       const { assignedValue, pathParts } = respRate.validateValueAtPath(
