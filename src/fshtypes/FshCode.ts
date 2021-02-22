@@ -7,7 +7,7 @@ export class FshCode extends FshEntity {
   }
 
   toString(): string {
-    const str = `${this.system ?? ''}#${this.code.includes(' ') ? `"${this.code}"` : this.code}`;
+    const str = `${this.system ?? ''}#${/\s/.test(this.code) ? `"${this.code}"` : this.code}`;
     return this.display ? `${str} "${this.display}"` : str;
   }
 
