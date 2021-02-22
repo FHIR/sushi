@@ -8,7 +8,7 @@ import program from 'commander';
 import readlineSync from 'readline-sync';
 import extract from 'extract-zip';
 import opener from 'opener';
-import { union } from 'lodash';
+import { isEqual, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
 
 // Track temporary files so they are deleted when the process exits
@@ -315,6 +315,12 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
     const v1File = path.join(repoSUSHIDir1, file);
     const v2File = path.join(repoSUSHIDir2, file);
     const [v1Contents, v2Contents] = await Promise.all([readFile(v1File), readFile(v2File)]);
+
+    try {
+      if (isEqual(JSON.parse(v1Contents), JSON.parse(v2Contents))) {
+        continue;
+      }
+    } catch {}
 
     const v1Label = path.relative(config.getRepoDir(repo), v1File);
     const v2Label = path.relative(config.getRepoDir(repo), v2File);
