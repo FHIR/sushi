@@ -21,7 +21,7 @@ import {
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
-import { InstanceDefinition } from '../fhirtypes';
+import _ from 'lodash';
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -241,22 +241,25 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
-function checkNullValuesOnArray(resource: any): void {
-  const resourceType = resource instanceof InstanceDefinition ? 'Instance' : resource.resourceType;
-  const resourceName =
-    resource instanceof InstanceDefinition ? resource._instanceMeta.name : resource.title;
+export function checkNullValuesOnArray(resource: any, parentName = ''): void {
+  const resourceName = parentName ? parentName : resource.id ?? resource.name;
   for (const property in resource) {
-    if (!property.startsWith('_') && Array.isArray(resource[property])) {
+    // We'll want to exclude properties beginning with an "_" as those are arrays containing extensions
+    // corresponding to a primitive array, per the FHIR spec
+    if (property.startsWith('_')) continue;
+    if (_.isPlainObject(resource[property]))
+      // If we encounter an object property, we'll want to check its properties as well
+      checkNullValuesOnArray(resource[property], resourceName);
+    if (Array.isArray(resource[property])) {
       const nullIndexes: number[] = [];
       resource[property].forEach((element: any, index: number) => {
         if (element === null) nullIndexes.push(index);
       });
-      if (nullIndexes.length > 0)
+      if (nullIndexes.length > 0) {
         logger.warn(
-          `Null values found at elements ${JSON.stringify(
-            nullIndexes
-          )} within '${property}' on ${resourceType} '${resourceName}'`
+          `The array '${property}' in ${resourceName} is missing values at the following indices: ${nullIndexes}`
         );
+      }
     }
   }
 }
