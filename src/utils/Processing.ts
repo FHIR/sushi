@@ -249,6 +249,9 @@ export function checkNullValuesOnArray(resource: any, parentName = '', priorPath
     // If a property's key begins with "_", we'll want to ignore null values on it's top level
     // but still check any nested objects for null values
     if (propertyKey.startsWith('_')) {
+      if (isPlainObject(property))
+        // If we encounter an object property, we'll want to check its properties as well
+        checkNullValuesOnArray(property, resourceName, currentPath);
       if (Array.isArray(property)) {
         property.forEach((element: any, index: number) => {
           if (isPlainObject(element))

@@ -550,7 +550,7 @@ describe('Processing', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    it('should not log a warning when a resource includes null values in an array nested within an object prefixed with an underscore', () => {
+    it('should log a warning when a resource includes null values in an array nested within an object prefixed with an underscore', () => {
       const exInstance = new InstanceDefinition();
       exInstance.resourceType = 'Profile';
       exInstance.id = 'example-instance';
@@ -559,7 +559,10 @@ describe('Processing', () => {
       };
       exInstance._name = nameObj;
       checkNullValuesOnArray(exInstance);
-      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array '_name.testNames' in example-instance is missing values at the following indices: 0,2,4"
+      );
     });
   });
 
