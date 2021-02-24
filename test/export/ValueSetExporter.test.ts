@@ -15,6 +15,7 @@ import {
 } from '../../src/fshtypes/rules';
 import { minimalConfig } from '../utils/minimalConfig';
 import { ValueSetExpansionContains } from '../../src/fhirtypes/ValueSet';
+import { readFileSync } from 'fs-extra';
 
 describe('ValueSetExporter', () => {
   let defs: FHIRDefinitions;
@@ -725,6 +726,14 @@ describe('ValueSetExporter', () => {
       expansionValue.value = true;
       valueSet.rules.push(expansionName, expansionValue);
       doc.valueSets.set(valueSet.name, valueSet);
+      // Add a CodeSystem with content = "fragment" for use in a test
+      const fragmentCsDef = JSON.parse(
+        readFileSync(
+          path.join(__dirname, '..', 'testhelpers', 'testdefs', 'CodeSystem-fragment.json'),
+          'utf-8'
+        ).trim()
+      );
+      defs.add(fragmentCsDef);
     });
 
     it('should expand a value set that contains specific concepts', () => {
@@ -1058,9 +1067,26 @@ describe('ValueSetExporter', () => {
       // * ^expansion.parameter.name = "sushi-generated"
       // * ^expansion.parameter.valueBoolean = true
       // * include codes from system http://example.org/CodeSystem/MyCodeSystem
+      // This code system's content is "supplement"
       const includeUnknown = new ValueSetFilterComponentRule(true);
       includeUnknown.from.system = 'http://example.org/CodeSystem/MyCodeSystem';
       valueSet.rules.push(includeUnknown);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Composition contains code systems without available concept lists\./s
+      );
+    });
+
+    it('should not expand value sets that refer to code systems with content that is not example or complete', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system http://example.org/CodeSystem/ZooFragmentSet
+      const includeFragment = new ValueSetFilterComponentRule(true);
+      includeFragment.from.system = 'http://example.org/CodeSystem/ZooFragmentSet';
+      valueSet.rules.push(includeFragment);
 
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
