@@ -35,10 +35,16 @@ describe('FshCode', () => {
       expect(result).toEqual('http://foo.com#my-code "Display"');
     });
 
-    it('should return string for code with code with spaces', () => {
+    it('should return string for code with spaces', () => {
       const code = new FshCode('my spacey code');
       const result = code.toString();
       expect(result).toEqual('#"my spacey code"');
+    });
+
+    it('should return string for code with tabs', () => {
+      const code = new FshCode('my\ttabby\tcode');
+      const result = code.toString();
+      expect(result).toEqual('#"my\ttabby\tcode"');
     });
   });
 });
