@@ -796,12 +796,34 @@ describe('ValueSetExporter', () => {
       });
     });
 
-    it('should move explicitly included concepts to the top level', () => {
+    it('should keep explicitly included concepts at the top level', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include AllergyIntoleranceClinicalStatusCodes#resolved
+      // * include codes from AllergyIntoleranceClinicalStatusCodes
+      // Because the #resolved code is already present when the full system is included,
+      // it is not added again. Therefore, it stays in place in the main concept list.
+      const includeResolved = new ValueSetConceptComponentRule(true);
+      includeResolved.concepts.push(
+        new FshCode('resolved', 'AllergyIntoleranceClinicalStatusCodes')
+      );
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      includeResolved.from.system = 'AllergyIntoleranceClinicalStatusCodes';
+      valueSet.rules.push(includeResolved, includeAllergy);
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(3);
+    });
+
+    it('should not change the hierarchy of included codes when a duplicate is added', () => {
       // ValueSet: MyValueSet
       // * ^expansion.parameter.name = "sushi-generated"
       // * ^expansion.parameter.valueBoolean = true
       // * include codes from AllergyIntoleranceClinicalStatusCodes
       // * include AllergyIntoleranceClinicalStatusCodes#resolved
+      // Because the full system is included first, adding the specific code has no effect.
+      // Thus, the hierarchy present in the included system is maintained.
       const includeAllergy = new ValueSetFilterComponentRule(true);
       includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
       const includeResolved = new ValueSetConceptComponentRule(true);
@@ -811,7 +833,7 @@ describe('ValueSetExporter', () => {
       includeResolved.from.system = 'AllergyIntoleranceClinicalStatusCodes';
       valueSet.rules.push(includeAllergy, includeResolved);
       const exported = exporter.exportValueSet(valueSet);
-      expect(exported.expansion.contains).toHaveLength(3);
+      expect(exported.expansion.contains).toHaveLength(2);
     });
 
     it('should remove excluded concepts from the expansion', () => {

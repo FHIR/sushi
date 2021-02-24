@@ -206,19 +206,22 @@ export class ValueSetExporter {
             if (concept.designation) {
               containedItem.designation = cloneDeep(concept.designation);
             }
-            // remove before adding, since we do not want it to be present multiple times
-            this.removeConcept(containedItem, valueSet.expansion.contains);
-            valueSet.expansion.contains.push(containedItem);
+            // add only if the concept is not already present
+            if (!this.isConceptPresent(containedItem, valueSet.expansion.contains)) {
+              valueSet.expansion.contains.push(containedItem);
+            }
           });
           // add known included code systems
           if (!compose.concept?.length && compose.system) {
             const codeSystem = referencedCodeSystems[compose.system];
             const newConcepts = this.getConcepts(codeSystem, codeSystem.concept);
             // flatten so we can remove each existing concept before adding
-            const newConceptsFlat = flatMap(newConcepts, extractContained);
-            newConceptsFlat.forEach(concept =>
-              this.removeConcept(concept, valueSet.expansion.contains)
-            );
+            const existingConceptsFlat = flatMap(valueSet.expansion.contains, extractContained);
+            // remove each existing concept from the set of new concepts, to avoid duplication
+            existingConceptsFlat.forEach(existingConcept => {
+              this.removeConcept(existingConcept, newConcepts);
+            });
+            // add whatever remains
             valueSet.expansion.contains.push(...newConcepts);
           }
         });
@@ -242,6 +245,17 @@ export class ValueSetExporter {
         });
       }
     }
+  }
+
+  private isConceptPresent(
+    target: ValueSetExpansionContains,
+    concepts: ValueSetExpansionContains[]
+  ): boolean {
+    return concepts.some(
+      concept =>
+        (concept.code === target.code && concept.system === target.system) ||
+        this.isConceptPresent(target, concept.contains ?? [])
+    );
   }
 
   private getConcepts(system: any, concepts: any[]): ValueSetExpansionContains[] {
