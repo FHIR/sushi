@@ -49,12 +49,14 @@ export class ValueSetExporter {
       components.forEach(component => {
         const composeElement: ValueSetComposeIncludeOrExclude = {};
         if (component.from.system) {
+          const systemParts = component.from.system.split('|');
           const foundSystem = (
-            this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
+            this.fisher.fishForMetadata(systemParts[0], Type.CodeSystem)?.url ??
             component.from.system
           ).split('|');
           composeElement.system = foundSystem[0];
-          composeElement.version = foundSystem.slice(1).join('|') || undefined;
+          // if the rule specified a version, use that version.
+          composeElement.version = systemParts.slice(1).join('|') || undefined;
           if (!isUri(composeElement.system)) {
             throw new InvalidUriError(composeElement.system);
           }
@@ -136,57 +138,59 @@ export class ValueSetExporter {
   }
 
   private performExpansion(valueSet: ValueSet) {
-    if (
-      valueSet.expansion?.parameter?.find(
-        parameter => parameter.name === 'sushi-generated' && parameter.valueBoolean === true
-      )
-    ) {
+    const shouldExpand = valueSet.expansion?.parameter?.some(
+      parameter => parameter.name === 'sushi-generated' && parameter.valueBoolean === true
+    );
+    if (shouldExpand) {
       const errors: string[] = [];
       // the compose property must be defined
       if (!valueSet.compose) {
         errors.push('No composition defined.');
       }
       // filter operators are prohibited
-      if (
-        [...(valueSet.compose?.include ?? []), ...(valueSet.compose?.exclude ?? [])].some(
-          compose => {
-            return compose.filter?.some(filter => {
-              return filter.op?.length;
-            });
-          }
-        )
-      ) {
+      const hasFilterOperators = [
+        ...(valueSet.compose?.include ?? []),
+        ...(valueSet.compose?.exclude ?? [])
+      ].some(compose => compose.filter != null);
+      if (hasFilterOperators) {
         errors.push('Composition contains filter operators.');
       }
       // including/excluding value sets are prohibited
-      if (
-        [...(valueSet.compose?.include ?? []), ...(valueSet.compose?.exclude ?? [])].some(
-          compose => {
-            return compose.valueSet?.length && !compose.concept?.length;
-          }
-        )
-      ) {
+      const usesValueSet = [
+        ...(valueSet.compose?.include ?? []),
+        ...(valueSet.compose?.exclude ?? [])
+      ].some(compose => compose.valueSet?.length);
+      if (usesValueSet) {
         errors.push('Composition contains other value sets.');
       }
-      // full usage of non-local code systems are prohibited
+      // usage of a code system that we can't fish up is prohibited.
+      // the code system's content must be "complete" or "example".
+      // if the compose specifies a version, the code system's version must match it.
       const referencedCodeSystems = fromPairs(
         [...(valueSet.compose?.include ?? []), ...(valueSet.compose?.exclude ?? [])]
           .filter(compose => {
             return !compose.concept?.length && compose.system;
           })
-          .map(compose => [
-            compose.system,
-            this.fisher.fishForFHIR(compose.system, Type.CodeSystem)
-          ])
+          .map(compose => {
+            const fishedCodeSystem = this.fisher.fishForFHIR(compose.system, Type.CodeSystem);
+            if (compose.version == null || compose.version == fishedCodeSystem?.version) {
+              return [compose.system, fishedCodeSystem];
+            } else {
+              return [compose.system, null];
+            }
+          })
       );
+      const hasUnavailableCodeSystem = Object.values(referencedCodeSystems).some(codeSystem => {
+        return codeSystem == null || !['complete', 'example'].includes(codeSystem.content);
+      });
       // if we were able to fish up definitions for all of these systems, we're good
-      if (Object.values(referencedCodeSystems).includes(undefined)) {
+      if (hasUnavailableCodeSystem) {
         errors.push('Composition contains code systems without available concept lists.');
       }
 
       // what we like best of all is when we just have a list of concepts. they'll even have a system specified already!
       if (errors.length) {
-        logger.error(`Unable to expand ValueSet ${valueSet.name}: ${errors.join(' ')}`);
+        logger.error(`Unable to expand ValueSet ${valueSet.name}:\n  - ${errors.join('\n  - ')}`);
       } else {
         valueSet.expansion.contains = [];
 

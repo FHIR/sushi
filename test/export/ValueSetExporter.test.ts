@@ -767,7 +767,7 @@ describe('ValueSetExporter', () => {
       // ValueSet: MyValueSet
       // * ^expansion.parameter.name = "sushi-generated"
       // * ^expansion.parameter.valueBoolean = true
-      // * include codes from AllergyIntoleranceClinicalStatusCodes
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes
       const includeAllergy = new ValueSetFilterComponentRule(true);
       includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes';
       valueSet.rules.push(includeAllergy);
@@ -796,12 +796,61 @@ describe('ValueSetExporter', () => {
       });
     });
 
+    it('should expand a value set that contains a matching version of a locally defined code system', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes|4.0.1
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes|4.0.1';
+      valueSet.rules.push(includeAllergy);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toHaveLength(2);
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'active',
+        display: 'Active',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1'
+      });
+      expect(exported.expansion.contains).toContainEqual<ValueSetExpansionContains>({
+        code: 'inactive',
+        display: 'Inactive',
+        system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1',
+        contains: [
+          {
+            code: 'resolved',
+            display: 'Resolved',
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+            version: '4.0.1'
+          }
+        ]
+      });
+    });
+
+    it('should not expand a value set that contains a different version of a locally defined code system', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes|7.6.5
+      const includeAllergy = new ValueSetFilterComponentRule(true);
+      includeAllergy.from.system = 'AllergyIntoleranceClinicalStatusCodes|7.6.5';
+      valueSet.rules.push(includeAllergy);
+
+      const exported = exporter.exportValueSet(valueSet);
+      expect(exported.expansion.contains).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Composition contains code systems without available concept lists\./s
+      );
+    });
+
     it('should keep explicitly included concepts at the top level', () => {
       // ValueSet: MyValueSet
       // * ^expansion.parameter.name = "sushi-generated"
       // * ^expansion.parameter.valueBoolean = true
       // * include AllergyIntoleranceClinicalStatusCodes#resolved
-      // * include codes from AllergyIntoleranceClinicalStatusCodes
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes
       // Because the #resolved code is already present when the full system is included,
       // it is not added again. Therefore, it stays in place in the main concept list.
       const includeResolved = new ValueSetConceptComponentRule(true);
@@ -820,7 +869,7 @@ describe('ValueSetExporter', () => {
       // ValueSet: MyValueSet
       // * ^expansion.parameter.name = "sushi-generated"
       // * ^expansion.parameter.valueBoolean = true
-      // * include codes from AllergyIntoleranceClinicalStatusCodes
+      // * include codes from system AllergyIntoleranceClinicalStatusCodes
       // * include AllergyIntoleranceClinicalStatusCodes#resolved
       // Because the full system is included first, adding the specific code has no effect.
       // Thus, the hierarchy present in the included system is maintained.
