@@ -476,8 +476,8 @@ describe('Processing', () => {
       exInstance.name = [null, 'John', null, 'Doe', null];
       checkNullValuesOnArray(exInstance);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /The array 'name' in example-instance is missing values at the following indices: 0,2,4/s
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name' in example-instance is missing values at the following indices: 0,2,4"
       );
     });
 
@@ -486,13 +486,58 @@ describe('Processing', () => {
       exInstance.resourceType = 'Profile';
       exInstance.id = 'example-instance';
       const nameObj = {
-        name: [null, 'John', null, 'Doe', null]
+        testNames: [null, 'John', null, 'Doe', null]
       };
       exInstance.name = nameObj;
       checkNullValuesOnArray(exInstance);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /The array 'name' in example-instance is missing values at the following indices: 0,2,4/s
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name.testNames' in example-instance is missing values at the following indices: 0,2,4"
+      );
+    });
+
+    it('should log a warning when a resource includes null values in an array, nested within both objects and arrays ', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        foo: [
+          {
+            coding: [
+              null, // this is bad
+              { system: 'http://foo.org', code: 'bar' }
+            ]
+          }
+        ]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name.foo[0].coding' in example-instance is missing values at the following indices: 0"
+      );
+    });
+
+    it('should ignore null values on primitive arrays, but warn on null values in nested arrays', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        _foo: [
+          null, // this is ok
+          {
+            extension: [
+              null, // this is NOT ok
+              { url: 'http://foo.org', valueBoolean: true }
+            ]
+          }
+        ]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name._foo[1].extension' in example-instance is missing values at the following indices: 0"
       );
     });
 
@@ -510,7 +555,7 @@ describe('Processing', () => {
       exInstance.resourceType = 'Profile';
       exInstance.id = 'example-instance';
       const nameObj = {
-        name: [null, 'John', null, 'Doe', null]
+        testNames: [null, 'John', null, 'Doe', null]
       };
       exInstance._name = nameObj;
       checkNullValuesOnArray(exInstance);

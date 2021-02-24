@@ -21,7 +21,7 @@ import {
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
-import _ from 'lodash';
+import { isPlainObject } from 'lodash';
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -241,24 +241,38 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
-export function checkNullValuesOnArray(resource: any, parentName = ''): void {
+export function checkNullValuesOnArray(resource: any, parentName = '', priorPath = ''): void {
   const resourceName = parentName ? parentName : resource.id ?? resource.name;
-  for (const property in resource) {
-    // We'll want to exclude properties beginning with an "_" as those are arrays containing extensions
-    // corresponding to a primitive array, per the FHIR spec
-    if (property.startsWith('_')) continue;
-    if (_.isPlainObject(resource[property]))
-      // If we encounter an object property, we'll want to check its properties as well
-      checkNullValuesOnArray(resource[property], resourceName);
-    if (Array.isArray(resource[property])) {
-      const nullIndexes: number[] = [];
-      resource[property].forEach((element: any, index: number) => {
-        if (element === null) nullIndexes.push(index);
-      });
-      if (nullIndexes.length > 0) {
-        logger.warn(
-          `The array '${property}' in ${resourceName} is missing values at the following indices: ${nullIndexes}`
-        );
+  for (const propertyKey in resource) {
+    const property = resource[propertyKey];
+    const currentPath = !priorPath ? propertyKey : priorPath.concat(`.${propertyKey}`);
+    // If a property's key begins with "_", we'll want to ignore null values on it's top level
+    // but still check any nested objects for null values
+    if (propertyKey.startsWith('_')) {
+      if (Array.isArray(property)) {
+        property.forEach((element: any, index: number) => {
+          if (isPlainObject(element))
+            // If we encounter an object property, we'll want to check its properties as well
+            checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+        });
+      }
+    } else {
+      if (isPlainObject(property))
+        // If we encounter an object property, we'll want to check its properties as well
+        checkNullValuesOnArray(property, resourceName, currentPath);
+      if (Array.isArray(property)) {
+        const nullIndexes: number[] = [];
+        property.forEach((element: any, index: number) => {
+          if (element === null) nullIndexes.push(index);
+          if (isPlainObject(element))
+            // If we encounter an object property, we'll want to check its properties as well
+            checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+        });
+        if (nullIndexes.length > 0) {
+          logger.warn(
+            `The array '${currentPath}' in ${resourceName} is missing values at the following indices: ${nullIndexes}`
+          );
+        }
       }
     }
   }
