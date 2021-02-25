@@ -44,3 +44,4 @@ export * from './InvalidResourceTypeError';
 export * from './InvalidExtensionParentError';
 export * from './InvalidTypeAccessError';
 export * from './NonAbstractParentOfSpecializationError';
+export * from './ValueConflictsWithClosedSlicingError';
