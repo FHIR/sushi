@@ -315,12 +315,12 @@ export function replaceField(
   object: { [key: string]: any },
   matchFn: (object: { [key: string]: any }, prop: string) => boolean,
   replaceFn: (object: { [key: string]: any }, prop: string) => void,
-  skipFn: (object: { [key: string]: any }, prop: string) => boolean
+  skipFn: (prop: string) => boolean
 ): void {
   for (const prop in object) {
     if (matchFn(object, prop)) {
       replaceFn(object, prop);
-    } else if (typeof object[prop] === 'object' && !skipFn(object, prop)) {
+    } else if (typeof object[prop] === 'object' && !skipFn(prop)) {
       replaceField(object[prop], matchFn, replaceFn, skipFn);
     }
   }
@@ -333,7 +333,7 @@ export function replaceField(
  */
 export function cleanResource(
   resourceDef: StructureDefinition | InstanceDefinition,
-  skipFn: (object: { [key: string]: any }, prop: string) => boolean = () => false
+  skipFn: (prop: string) => boolean = () => false
 ): void {
   // Remove all _sliceName fields
   replaceField(

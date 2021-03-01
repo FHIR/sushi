@@ -564,14 +564,10 @@ export class StructureDefinitionExporter implements Fishable {
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);
-    // Properties added by SUSHI should be skipped. These properties all start with "_",
-    // but so do the extra properties on primitive-type elements. So, check for a sibling
-    // property with the same name, but no underscore, to identify the primitive-type
-    // extra property objects that should _not_ get skipped.
-    cleanResource(
-      structDef,
-      (object: { [key: string]: any }, prop: string) =>
-        prop == 'elements' || (prop.indexOf('_') == 0 && object[prop.slice(1)] == null)
+    // The elements list does not need to be cleaned up.
+    // And, the _sliceName and _primitive properties added by SUSHI should be skipped.
+    cleanResource(structDef, (prop: string) =>
+      ['elements', '_sliceName', '_primitive'].includes(prop)
     );
     structDef.inProgress = false;
 

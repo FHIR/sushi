@@ -3071,19 +3071,19 @@ describe('StructureDefinitionExporter', () => {
     onlyBoolean.types.push({ type: 'boolean' });
     extension.rules.push(onlyBoolean);
     doc.extensions.set(extension.name, extension);
-    // Profile: ExtensionOnStatus
+    // Profile: ExtensionOnPublisher
     // Parent: Patient
-    // * ^status.extension[MyBooleanExtension].valueBoolean = true
-    const profile = new Profile('ExtensionOnStatus');
+    // * ^publisher.extension[MyBooleanExtension].valueBoolean = true
+    const profile = new Profile('ExtensionOnPublisher');
     profile.parent = 'Patient';
     const rule = new CaretValueRule('');
-    rule.caretPath = 'status.extension[MyBooleanExtension].valueBoolean';
+    rule.caretPath = 'publisher.extension[MyBooleanExtension].valueBoolean';
     rule.value = true;
     profile.rules.push(rule);
 
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
-    expect(sd).toHaveProperty('_status', {
+    expect(sd).toHaveProperty('_publisher', {
       extension: [
         {
           url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
