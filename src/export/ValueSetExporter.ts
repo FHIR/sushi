@@ -161,7 +161,7 @@ export class ValueSetExporter {
         ...(valueSet.compose?.exclude ?? [])
       ].some(compose => compose.valueSet?.length);
       if (usesValueSet) {
-        errors.push('Composition contains other value sets.');
+        errors.push('Composition contains other ValueSets.');
       }
       // usage of a code system that we can't fish up is prohibited.
       // the code system's content must be "complete" or "example".
@@ -185,7 +185,7 @@ export class ValueSetExporter {
       });
       // if we were able to fish up definitions for all of these systems, we're good
       if (hasUnavailableCodeSystem) {
-        errors.push('Composition contains code systems without available concept lists.');
+        errors.push('Composition contains CodeSystems without available concept lists.');
       }
 
       // what we like best of all is when we just have a list of concepts. they'll even have a system specified already!

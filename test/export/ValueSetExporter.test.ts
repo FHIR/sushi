@@ -850,7 +850,7 @@ describe('ValueSetExporter', () => {
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Composition contains code systems without available concept lists\./s
+        /Composition contains CodeSystems without available concept lists\./s
       );
     });
 
@@ -1059,7 +1059,7 @@ describe('ValueSetExporter', () => {
 
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Composition contains other value sets\./s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Composition contains other ValueSets\./s);
     });
 
     it('should not expand value sets that refer to code systems without available definitions', () => {
@@ -1075,7 +1075,7 @@ describe('ValueSetExporter', () => {
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Composition contains code systems without available concept lists\./s
+        /Composition contains CodeSystems without available concept lists\./s
       );
     });
 
@@ -1091,7 +1091,7 @@ describe('ValueSetExporter', () => {
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Composition contains code systems without available concept lists\./s
+        /Composition contains CodeSystems without available concept lists\./s
       );
     });
   });
