@@ -22,6 +22,7 @@ import {
 import { Fishable, Type } from '../utils/Fishable';
 import { applyMixins, parseFSHPath, assembleFSHPath } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
+import { isUri } from 'valid-url';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -481,7 +482,9 @@ export class StructureDefinition {
           if (!extensionElement.slicing) {
             extensionElement.sliceIt('value', 'url');
           }
-          const slice = extensionElement.addSlice(pathPart.brackets[0]);
+          // If an extension is referenced by url, we'll want to add the slice with it's id instead
+          const sliceName = isUri(pathPart.brackets[0]) ? extension.id : pathPart.brackets[0];
+          const slice = extensionElement.addSlice(sliceName);
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }

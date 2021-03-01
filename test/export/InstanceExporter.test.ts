@@ -1321,6 +1321,27 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should apply an Assignment rule with Canonical of a Questionnaire instance', () => {
+      const questionnaireInstance = new Instance('MyQuestionnaire');
+      questionnaireInstance.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire';
+      questionnaireInstance.rules.push(urlRule);
+      doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+      const responseInstance = new Instance('MyQuestionnaireResponse');
+      responseInstance.instanceOf = 'QuestionnaireResponse';
+      const assignedValueRule = new AssignmentRule('questionnaire');
+      assignedValueRule.value = new FshCanonical('MyQuestionnaire');
+      responseInstance.rules.push(assignedValueRule);
+      doc.instances.set(responseInstance.name, responseInstance);
+
+      const exported = exportInstance(responseInstance);
+      expect(exported.questionnaire).toEqual(
+        'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire'
+      );
+    });
+
     it('should apply an Assignment rule with Canonical of an inline instance', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';
@@ -1580,6 +1601,33 @@ describe('InstanceExporter', () => {
           valueString: 'bar'
         }
       ]);
+    });
+
+    it('should assign a nested sliced extension element that is referred to by name', () => {
+      const fooExtension = new Extension('FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const containsRule = new ContainsRule('maritalStatus.extension');
+      containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
+      patient.rules.push(containsRule);
+      const barRule = new AssignmentRule('maritalStatus.extension[foo].valueString');
+      barRule.value = 'bar';
+      const maritalRule = new AssignmentRule('maritalStatus');
+      maritalRule.value = new FshCode('boo');
+      patientInstance.rules.push(maritalRule, barRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus).toEqual({
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+            valueString: 'bar'
+          }
+        ],
+        coding: [
+          {
+            code: 'boo'
+          }
+        ]
+      });
     });
 
     it('should assign a sliced extension element that is referred to by url', () => {
@@ -2509,9 +2557,7 @@ describe('InstanceExporter', () => {
         // * valueQuantity = MyAge
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
-        expect(exported.valueQuantity).toEqual({
-          value: 42
-        });
+        expect(exported.valueQuantity.value).toBe(42);
       });
 
       it('should not overwrite the value property when assigning a Quantity object', () => {
@@ -2565,9 +2611,7 @@ describe('InstanceExporter', () => {
         // * valueQuantity = MySimple
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
-        expect(exported.valueQuantity).toEqual({
-          value: 7
-        });
+        expect(exported.valueQuantity.value).toBe(7);
       });
 
       it('should assign an inline instance of a FSH defined profile of a type to an instance', () => {
@@ -2590,9 +2634,7 @@ describe('InstanceExporter', () => {
         // * valueQuantity = MyQuantity
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
-        expect(exported.valueQuantity).toEqual({
-          value: 7
-        });
+        expect(exported.valueQuantity.value).toBe(7);
       });
 
       it('should assign an inline instance of an extension to an instance', () => {

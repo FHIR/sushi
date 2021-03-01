@@ -1691,6 +1691,30 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should apply an Assignment rule with Canonical of a Questionnaire instance', () => {
+    const questionnaireInstance = new Instance('MyQuestionnaire');
+    questionnaireInstance.usage = 'Definition';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire';
+    questionnaireInstance.rules.push(urlRule);
+    doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+    const profile = new Profile('MyQuestionnaireResponse');
+    profile.parent = 'QuestionnaireResponse';
+    const assignedValueRule = new AssignmentRule('questionnaire');
+    assignedValueRule.value = new FshCanonical('MyQuestionnaire');
+    profile.rules.push(assignedValueRule);
+    doc.profiles.set(profile.name, profile);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const assignedQ = sd.findElement('QuestionnaireResponse.questionnaire');
+    expect(assignedQ.patternCanonical).toEqual(
+      'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should apply an Assignment rule with Canonical of an inline instance', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
