@@ -494,6 +494,18 @@ export class StructureDefinition {
         }
       }
 
+      // If the element is an extension, and we found that extension via some other identifier than the sliceName
+      // we want to replace the path to use the sliceName, since we can assume that was the user's intent
+      if (
+        pathPart.base === 'extension' &&
+        pathPart.slices &&
+        currentElement?.sliceName &&
+        currentElement?.sliceName !== pathPart.slices.join('/')
+      ) {
+        pathPart.slices = currentElement.sliceName.split('/');
+        pathPart.brackets = [...pathPart.slices, ...pathPart.brackets.filter(b => /^\d+$/.test(b))];
+      }
+
       if (
         !currentElement &&
         pathPart.base === 'resourceType' &&
