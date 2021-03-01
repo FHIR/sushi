@@ -242,21 +242,23 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
 }
 
 export function checkNullValuesOnArray(resource: any, parentName = '', priorPath = ''): void {
-  const resourceName = parentName ? parentName : resource.id ?? resource.name;
+  const resourceName = parentName ?? resource.id ?? resource.name;
   for (const propertyKey in resource) {
     const property = resource[propertyKey];
     const currentPath = !priorPath ? propertyKey : priorPath.concat(`.${propertyKey}`);
     // If a property's key begins with "_", we'll want to ignore null values on it's top level
     // but still check any nested objects for null values
     if (propertyKey.startsWith('_')) {
-      if (isPlainObject(property))
+      if (isPlainObject(property)) {
         // If we encounter an object property, we'll want to check its properties as well
         checkNullValuesOnArray(property, resourceName, currentPath);
+      }
       if (Array.isArray(property)) {
         property.forEach((element: any, index: number) => {
-          if (isPlainObject(element))
+          if (isPlainObject(element)) {
             // If we encounter an object property, we'll want to check its properties as well
             checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+          }
         });
       }
     } else {
@@ -267,9 +269,10 @@ export function checkNullValuesOnArray(resource: any, parentName = '', priorPath
         const nullIndexes: number[] = [];
         property.forEach((element: any, index: number) => {
           if (element === null) nullIndexes.push(index);
-          if (isPlainObject(element))
+          if (isPlainObject(element)) {
             // If we encounter an object property, we'll want to check its properties as well
             checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+          }
         });
         if (nullIndexes.length > 0) {
           logger.warn(
