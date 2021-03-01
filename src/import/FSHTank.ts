@@ -10,9 +10,10 @@ import {
   Mapping,
   Configuration
 } from '../fshtypes';
-import flatMap from 'lodash/flatMap';
+import { AssignmentRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
 import { getUrlFromFshDefinition } from '../fhirtypes/common';
+import flatMap from 'lodash/flatMap';
 
 export class FSHTank implements Fishable {
   constructor(public readonly docs: FSHDocument[], public readonly config: Configuration) {}
@@ -215,6 +216,12 @@ export class FSHTank implements Fishable {
       } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
       } else if (result instanceof Instance) {
+        result.rules?.forEach(r => {
+          if (r.path === 'url' && r instanceof AssignmentRule && typeof r.value === 'string') {
+            meta.url = r.value;
+            // don't break; keep looping in case there is a later rule that re-assigns url
+          }
+        });
         meta.instanceUsage = result.usage;
       }
       return meta;

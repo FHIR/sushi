@@ -1321,6 +1321,27 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should apply an Assignment rule with Canonical of a Questionnaire instance', () => {
+      const questionnaireInstance = new Instance('MyQuestionnaire');
+      questionnaireInstance.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire';
+      questionnaireInstance.rules.push(urlRule);
+      doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+      const responseInstance = new Instance('MyQuestionnaireResponse');
+      responseInstance.instanceOf = 'QuestionnaireResponse';
+      const assignedValueRule = new AssignmentRule('questionnaire');
+      assignedValueRule.value = new FshCanonical('MyQuestionnaire');
+      responseInstance.rules.push(assignedValueRule);
+      doc.instances.set(responseInstance.name, responseInstance);
+
+      const exported = exportInstance(responseInstance);
+      expect(exported.questionnaire).toEqual(
+        'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire'
+      );
+    });
+
     it('should apply an Assignment rule with Canonical of an inline instance', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';
