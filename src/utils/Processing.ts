@@ -262,9 +262,10 @@ export function checkNullValuesOnArray(resource: any, parentName = '', priorPath
         });
       }
     } else {
-      if (isPlainObject(property))
+      if (isPlainObject(property)) {
         // If we encounter an object property, we'll want to check its properties as well
         checkNullValuesOnArray(property, resourceName, currentPath);
+      }
       if (Array.isArray(property)) {
         const nullIndexes: number[] = [];
         property.forEach((element: any, index: number) => {
