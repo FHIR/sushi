@@ -181,7 +181,7 @@ export class ValueSetExporter {
           })
       );
       const hasUnavailableCodeSystem = Object.values(referencedCodeSystems).some(codeSystem => {
-        return codeSystem == null || !['complete', 'example'].includes(codeSystem.content);
+        return codeSystem?.content !== 'complete';
       });
       // if we were able to fish up definitions for all of these systems, we're good
       if (hasUnavailableCodeSystem) {

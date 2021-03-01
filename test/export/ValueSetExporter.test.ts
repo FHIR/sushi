@@ -1079,7 +1079,7 @@ describe('ValueSetExporter', () => {
       );
     });
 
-    it('should not expand value sets that refer to code systems with content that is not example or complete', () => {
+    it('should not expand value sets that refer to code systems with content that is not complete', () => {
       // ValueSet: MyValueSet
       // * ^expansion.parameter.name = "sushi-generated"
       // * ^expansion.parameter.valueBoolean = true
