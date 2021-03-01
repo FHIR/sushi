@@ -242,7 +242,7 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
 }
 
 export function checkNullValuesOnArray(resource: any, parentName = '', priorPath = ''): void {
-  const resourceName = parentName ?? resource.id ?? resource.name;
+  const resourceName = parentName ? parentName : resource.id ?? resource.name;
   for (const propertyKey in resource) {
     const property = resource[propertyKey];
     const currentPath = !priorPath ? propertyKey : priorPath.concat(`.${propertyKey}`);
