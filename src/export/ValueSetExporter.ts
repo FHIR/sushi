@@ -164,7 +164,7 @@ export class ValueSetExporter {
         errors.push('Composition contains other ValueSets.');
       }
       // usage of a code system that we can't fish up is prohibited.
-      // the code system's content must be "complete" or "example".
+      // the code system's content must be "complete".
       // if the compose specifies a version, the code system's version must match it.
       const referencedCodeSystems = fromPairs(
         [...(valueSet.compose?.include ?? []), ...(valueSet.compose?.exclude ?? [])]
