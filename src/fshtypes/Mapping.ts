@@ -5,7 +5,6 @@ import { InsertRule, MappingRule } from './rules';
  * The Mapping class is used to contain mapping info for SDs
  */
 export class Mapping extends FshEntity {
-  constructorName = 'Mapping';
   id: string;
   source?: string;
   target?: string;
@@ -17,5 +16,9 @@ export class Mapping extends FshEntity {
     super();
     this.id = name; // init same as name
     this.rules = [];
+  }
+
+  get constructorName() {
+    return 'Mapping';
   }
 }

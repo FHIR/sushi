@@ -6,7 +6,6 @@ import { CaretValueRule, InsertRule, ValueSetComponentRule } from './rules';
  * @see {@link http://hl7.org/fhir/valueset-definitions.html#ValueSet.compose}
  */
 export class FshValueSet extends FshEntity {
-  constructorName = 'FshValueSet';
   id: string;
   title?: string;
   description?: string;
@@ -16,5 +15,9 @@ export class FshValueSet extends FshEntity {
     super();
     this.id = name;
     this.rules = [];
+  }
+
+  get constructorName() {
+    return 'FshValueSet';
   }
 }

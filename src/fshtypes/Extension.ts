@@ -2,7 +2,6 @@ import { FshEntity } from './FshEntity';
 import { SdRule } from './rules';
 
 export class Extension extends FshEntity {
-  constructorName = 'Extension';
   id: string;
   parent: string;
   title?: string;
@@ -19,5 +18,9 @@ export class Extension extends FshEntity {
     this.parent = 'Extension'; // init to 'Extension'
     this.mixins = [];
     this.rules = [];
+  }
+
+  get constructorName() {
+    return 'Extension';
   }
 }

@@ -1,11 +1,14 @@
 import { Rule } from './Rule';
 
 export class OnlyRule extends Rule {
-  constructorName = 'OnlyRule';
   types: OnlyRuleType[] = [];
 
   constructor(path: string) {
     super(path);
+  }
+
+  get constructorName() {
+    return 'OnlyRule';
   }
 }
 

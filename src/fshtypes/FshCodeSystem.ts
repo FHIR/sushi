@@ -7,7 +7,6 @@ import { CaretValueRule, InsertRule, ConceptRule } from './rules';
  * @see {@link http://hl7.org/fhir/codesystem-definitions.html}
  */
 export class FshCodeSystem extends FshEntity {
-  constructorName = 'FshCodeSystem';
   id: string;
   title?: string;
   description?: string;
@@ -17,6 +16,10 @@ export class FshCodeSystem extends FshEntity {
     super();
     this.id = name;
     this.rules = [];
+  }
+
+  get constructorName() {
+    return 'FshCodeSystem';
   }
 
   addConcept(newConcept: ConceptRule) {

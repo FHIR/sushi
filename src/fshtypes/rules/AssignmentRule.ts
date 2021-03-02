@@ -16,12 +16,15 @@ export type AssignmentValueType =
   | InstanceDefinition;
 
 export class AssignmentRule extends Rule {
-  constructorName = 'AssignmentRule';
   value: AssignmentValueType;
   exactly: boolean;
   isInstance: boolean;
 
   constructor(path: string) {
     super(path);
+  }
+
+  get constructorName() {
+    return 'AssignmentRule';
   }
 }

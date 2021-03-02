@@ -1,7 +1,6 @@
 import { Rule } from './Rule';
 
 export class FlagRule extends Rule {
-  constructorName = 'FlagRule';
   mustSupport: boolean;
   summary: boolean;
   modifier: boolean;
@@ -11,5 +10,9 @@ export class FlagRule extends Rule {
 
   constructor(path: string) {
     super(path);
+  }
+
+  get constructorName() {
+    return 'FlagRule';
   }
 }

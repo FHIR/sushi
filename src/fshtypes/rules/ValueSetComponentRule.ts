@@ -3,19 +3,28 @@ import { Rule } from './Rule';
 import { ValueSetComponentFrom, ValueSetFilter } from '..';
 
 export class ValueSetComponentRule extends Rule {
-  constructorName = 'ValueSetComponentRule';
   public from: ValueSetComponentFrom = {};
   constructor(public inclusion: boolean) {
     super('');
   }
+
+  get constructorName() {
+    return 'ValueSetComponentRule';
+  }
 }
 
 export class ValueSetConceptComponentRule extends ValueSetComponentRule {
-  constructorName = 'ValueSetConceptComponentRule';
   public concepts: FshCode[] = [];
+
+  get constructorName() {
+    return 'ValueSetConceptComponentRule';
+  }
 }
 
 export class ValueSetFilterComponentRule extends ValueSetComponentRule {
-  constructorName = 'ValueSetFilterComponentRule';
   public filters: ValueSetFilter[] = [];
+
+  get constructorName() {
+    return 'ValueSetFilterComponentRule';
+  }
 }
