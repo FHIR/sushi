@@ -100,6 +100,8 @@ export type ValueSetComposeFilter = {
 export type ValueSetExpansion = {
   parameter: ValueSetExpansionParameter[];
   contains: ValueSetExpansionContains[];
+  timestamp: string;
+  total?: number;
 };
 
 export type ValueSetExpansionContains = ValueSetComposeConcept & {

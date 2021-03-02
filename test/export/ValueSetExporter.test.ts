@@ -770,6 +770,8 @@ describe('ValueSetExporter', () => {
         system: 'http://zoo.org/animals',
         version: '1.1'
       });
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(3);
     });
 
     it('should expand a value set that contains locally defined code systems from JSON', () => {
@@ -803,6 +805,8 @@ describe('ValueSetExporter', () => {
           }
         ]
       });
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(3);
     });
 
     it('should expand a value set that contains a matching version of a locally defined code system', () => {
@@ -836,6 +840,8 @@ describe('ValueSetExporter', () => {
           }
         ]
       });
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(3);
     });
 
     it('should not expand a value set that contains a different version of a locally defined code system', () => {
@@ -849,6 +855,8 @@ describe('ValueSetExporter', () => {
 
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
+      expect(exported.expansion.timestamp).toBeUndefined();
+      expect(exported.expansion.total).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Composition contains CodeSystems without available concept lists\./s
       );
@@ -872,6 +880,8 @@ describe('ValueSetExporter', () => {
       valueSet.rules.push(includeResolved, includeAllergy);
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toHaveLength(3);
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(3);
     });
 
     it('should not change the hierarchy of included codes when a duplicate is added', () => {
@@ -892,6 +902,8 @@ describe('ValueSetExporter', () => {
       valueSet.rules.push(includeAllergy, includeResolved);
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toHaveLength(2);
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(3);
     });
 
     it('should remove excluded concepts from the expansion', () => {
@@ -923,6 +935,8 @@ describe('ValueSetExporter', () => {
           }
         ]
       });
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(2);
     });
 
     it('should remove a contained excluded concept', () => {
@@ -954,6 +968,8 @@ describe('ValueSetExporter', () => {
         system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
         version: '4.0.1'
       });
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(2);
     });
 
     it('should keep contained concepts when excluding the top-level concept', () => {
@@ -986,6 +1002,8 @@ describe('ValueSetExporter', () => {
         system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
         version: '4.0.1'
       });
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(2);
     });
 
     it('should remove all concepts from an excluded code system', () => {
@@ -1018,6 +1036,8 @@ describe('ValueSetExporter', () => {
         system: 'http://zoo.org/animals',
         version: '1.0'
       });
+      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.total).toBe(1);
     });
 
     it('should not expand a value set that does not define its composition', () => {
@@ -1026,6 +1046,8 @@ describe('ValueSetExporter', () => {
       // * ^expansion.parameter.valueBoolean = true
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
+      expect(exported.expansion.timestamp).toBeUndefined();
+      expect(exported.expansion.total).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(/No composition defined\./s);
     });
 
@@ -1045,6 +1067,8 @@ describe('ValueSetExporter', () => {
 
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
+      expect(exported.expansion.timestamp).toBeUndefined();
+      expect(exported.expansion.total).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Composition contains filter operators\./s);
     });
 
@@ -1059,6 +1083,8 @@ describe('ValueSetExporter', () => {
 
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
+      expect(exported.expansion.timestamp).toBeUndefined();
+      expect(exported.expansion.total).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Composition contains other ValueSets\./s);
     });
 
@@ -1074,6 +1100,8 @@ describe('ValueSetExporter', () => {
 
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
+      expect(exported.expansion.timestamp).toBeUndefined();
+      expect(exported.expansion.total).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Composition contains CodeSystems without available concept lists\./s
       );
@@ -1090,6 +1118,8 @@ describe('ValueSetExporter', () => {
 
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toBeUndefined();
+      expect(exported.expansion.timestamp).toBeUndefined();
+      expect(exported.expansion.total).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Composition contains CodeSystems without available concept lists\./s
       );
