@@ -21,6 +21,7 @@ import {
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
+import { isPlainObject } from 'lodash';
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -240,6 +241,50 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
+export function checkNullValuesOnArray(resource: any, parentName = '', priorPath = ''): void {
+  const resourceName = parentName ? parentName : resource.id ?? resource.name;
+  for (const propertyKey in resource) {
+    const property = resource[propertyKey];
+    const currentPath = !priorPath ? propertyKey : priorPath.concat(`.${propertyKey}`);
+    // If a property's key begins with "_", we'll want to ignore null values on it's top level
+    // but still check any nested objects for null values
+    if (propertyKey.startsWith('_')) {
+      if (isPlainObject(property)) {
+        // If we encounter an object property, we'll want to check its properties as well
+        checkNullValuesOnArray(property, resourceName, currentPath);
+      }
+      if (Array.isArray(property)) {
+        property.forEach((element: any, index: number) => {
+          if (isPlainObject(element)) {
+            // If we encounter an object property, we'll want to check its properties as well
+            checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+          }
+        });
+      }
+    } else {
+      if (isPlainObject(property)) {
+        // If we encounter an object property, we'll want to check its properties as well
+        checkNullValuesOnArray(property, resourceName, currentPath);
+      }
+      if (Array.isArray(property)) {
+        const nullIndexes: number[] = [];
+        property.forEach((element: any, index: number) => {
+          if (element === null) nullIndexes.push(index);
+          if (isPlainObject(element)) {
+            // If we encounter an object property, we'll want to check its properties as well
+            checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+          }
+        });
+        if (nullIndexes.length > 0) {
+          logger.warn(
+            `The array '${currentPath}' in ${resourceName} is missing values at the following indices: ${nullIndexes}`
+          );
+        }
+      }
+    }
+  }
+}
+
 export function writeFHIRResources(
   outDir: string,
   outPackage: Package,
@@ -272,6 +317,7 @@ export function writeFHIRResources(
             predef.id === resource.id
         )
       ) {
+        checkNullValuesOnArray(resource);
         fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
           spaces: 2
         });

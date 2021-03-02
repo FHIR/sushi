@@ -2085,6 +2085,156 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should not assign a value which violates a closed child slicing', () => {
+      // Profile: MyProfile
+      // Parent: Observation
+      // * category.coding ^slicing.discriminator.type = #value
+      // * category.coding ^slicing.discriminator.path = "coding"
+      // * category.coding ^slicing.rules = #closed
+      // * category.coding contains slice1 0..1
+      // * category.coding[slice1] = http://example.com#foo
+      const profile = new Profile('MyProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category.coding');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category.coding');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = 'code';
+      const rulesRule = new CaretValueRule('category.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('category.coding');
+      containsRule.items.push({ name: 'slice1' });
+      const assignmentRule = new AssignmentRule('category.coding[slice1]');
+      assignmentRule.value = new FshCode('foo', 'http://example.com');
+      profile.rules.push(typeRule, pathRule, rulesRule, containsRule, assignmentRule);
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: MyInstance
+      // InstanceOf: MyProfile
+      // * category[0] = http://not-example.org#bar
+      const instance = new Instance('MyInstance');
+      instance.instanceOf = 'MyProfile';
+      const categoryRule = new AssignmentRule('category[0]');
+      categoryRule.value = new FshCode('bar', 'http://not-example.com');
+      instance.rules.push(categoryRule);
+      doc.instances.set(instance.name, instance);
+
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      const exportedInstance = exported.find(i => i._instanceMeta.name === 'MyInstance');
+      expect(exportedInstance.category).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toContainEqual(
+        'Cannot assign {"coding":[{"code":"bar","system":"http://not-example.com"}]} to this element since it conflicts with all values of the closed slicing.'
+      );
+    });
+
+    it('should assign a value which does not violate all elements of a closed child slicing', () => {
+      // Profile: MyProfile
+      // Parent: Observation
+      // * category.coding ^slicing.discriminator.type = #value
+      // * category.coding ^slicing.discriminator.path = "coding"
+      // * category.coding ^slicing.rules = #closed
+      // * category.coding contains slice1 0..1 and slice2 0..1
+      // * category.coding[slice1] = http://example.com#foo
+      // * category.coding[slice2] = http://example.com#bar
+      const profile = new Profile('MyProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category.coding');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category.coding');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = 'code';
+      const rulesRule = new CaretValueRule('category.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('category.coding');
+      containsRule.items.push({ name: 'slice1' });
+      containsRule.items.push({ name: 'slice2' });
+      const assignmentRule = new AssignmentRule('category.coding[slice1]');
+      assignmentRule.value = new FshCode('foo', 'http://example.com');
+      const assignmentRule2 = new AssignmentRule('category.coding[slice2]');
+      assignmentRule2.value = new FshCode('bar', 'http://example.com');
+      profile.rules.push(
+        typeRule,
+        pathRule,
+        rulesRule,
+        containsRule,
+        assignmentRule,
+        assignmentRule2
+      );
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: MyInstance
+      // InstanceOf: MyProfile
+      // * category[0] = http://example#bar
+      const instance = new Instance('MyInstance');
+      instance.instanceOf = 'MyProfile';
+      const categoryRule = new AssignmentRule('category[0]');
+      categoryRule.value = new FshCode('bar', 'http://example.com');
+      instance.rules.push(categoryRule);
+      doc.instances.set(instance.name, instance);
+
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      const exportedInstance = exported.find(i => i._instanceMeta.name === 'MyInstance');
+      expect(exportedInstance.category).toEqual([
+        { coding: [{ code: 'bar', system: 'http://example.com' }] }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).not.toContainEqual(
+        'Cannot assign {"coding":[{"code":"bar","system":"http://not-example.com"}]} to this element since it conflicts with all values of the closed slicing.'
+      );
+    });
+
+    it('should assign a value which violates an open child slicing', () => {
+      // Profile: MyProfile
+      // Parent: Observation
+      // * category.coding ^slicing.discriminator.type = #value
+      // * category.coding ^slicing.discriminator.path = "coding"
+      // * category.coding ^slicing.rules = #open
+      // * category.coding contains slice1 0..1
+      // * category.coding[slice1] = http://example.com#foo
+      const profile = new Profile('MyProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category.coding');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category.coding');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = 'code';
+      const rulesRule = new CaretValueRule('category.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('category.coding');
+      containsRule.items.push({ name: 'slice1' });
+      const assignmentRule = new AssignmentRule('category.coding[slice1]');
+      assignmentRule.value = new FshCode('foo', 'http://example.com');
+      profile.rules.push(typeRule, pathRule, rulesRule, containsRule, assignmentRule);
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: MyInstance
+      // InstanceOf: MyProfile
+      // * category[0] = http://not-example.org#bar
+      const instance = new Instance('MyInstance');
+      instance.instanceOf = 'MyProfile';
+      const categoryRule = new AssignmentRule('category[0]');
+      categoryRule.value = new FshCode('bar', 'http://not-example.com');
+      instance.rules.push(categoryRule);
+      doc.instances.set(instance.name, instance);
+
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      const exportedInstance = exported.find(i => i._instanceMeta.name === 'MyInstance');
+      expect(exportedInstance.category).toEqual([
+        { coding: [{ code: 'bar', system: 'http://not-example.com' }] }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).not.toContainEqual(
+        'Cannot assign {"coding":[{"code":"bar","system":"http://not-example.com"}]} to this element since it conflicts with all values of the closed slicing.'
+      );
+    });
+
     it('should only export an instance once', () => {
       const bundleInstance = new Instance('MyBundle');
       bundleInstance.instanceOf = 'Bundle';

@@ -15,7 +15,8 @@ import {
   getRawFSHes,
   hasFshFiles,
   writeFHIRResources,
-  init
+  init,
+  checkNullValuesOnArray
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -460,6 +461,108 @@ describe('Processing', () => {
     it('should return false if there are no FSH files in any subdirectory', () => {
       const result = hasFshFiles(path.join(tempRoot, 'no-fsh'));
       expect(result).toBe(false);
+    });
+  });
+
+  describe('#checkNullValuesOnArray', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
+    it('should log a warning when a resource includes null values in a top-level array', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      exInstance.name = [null, 'John', null, 'Doe', null];
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name' in example-instance is missing values at the following indices: 0,2,4"
+      );
+    });
+
+    it('should log a warning when a resource includes null values in a nested array', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        testNames: [null, 'John', null, 'Doe', null]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name.testNames' in example-instance is missing values at the following indices: 0,2,4"
+      );
+    });
+
+    it('should log a warning when a resource includes null values in an array, nested within both objects and arrays ', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        foo: [
+          {
+            coding: [
+              null, // this is bad
+              { system: 'http://foo.org', code: 'bar' }
+            ]
+          }
+        ]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name.foo[0].coding' in example-instance is missing values at the following indices: 0"
+      );
+    });
+
+    it('should ignore null values on primitive arrays, but warn on null values in nested arrays', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        _foo: [
+          null, // this is ok
+          {
+            extension: [
+              null, // this is NOT ok
+              { url: 'http://foo.org', valueBoolean: true }
+            ]
+          }
+        ]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name._foo[1].extension' in example-instance is missing values at the following indices: 0"
+      );
+    });
+
+    it('should not log a warning when a resource includes null values in an array prefixed with an underscore', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      exInstance._name = [null, 'John', null, 'Doe', null];
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should log a warning when a resource includes null values in an array nested within an object prefixed with an underscore', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        testNames: [null, 'John', null, 'Doe', null]
+      };
+      exInstance._name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array '_name.testNames' in example-instance is missing values at the following indices: 0,2,4"
+      );
     });
   });
 
