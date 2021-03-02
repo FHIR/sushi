@@ -2,6 +2,7 @@ import { FshEntity } from './FshEntity';
 import { SdRule } from './rules';
 
 export class Profile extends FshEntity {
+  constructorName = 'Profile';
   id: string;
   parent?: string;
   title?: string;

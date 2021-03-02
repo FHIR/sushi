@@ -1,6 +1,7 @@
 import { Rule } from './Rule';
 
 export class ConceptRule extends Rule {
+  constructorName = 'ConceptRule';
   // Allow a system, even though it is unused, to help resolve conflicts between ConceptRule and
   // ValueSetConceptComponentRule on RuleSets
   system: string;

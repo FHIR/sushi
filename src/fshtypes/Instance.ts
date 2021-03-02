@@ -2,6 +2,7 @@ import { AssignmentRule, InsertRule } from './rules';
 import { FshEntity } from './FshEntity';
 
 export class Instance extends FshEntity {
+  constructorName = 'Instance';
   id: string;
   title?: string;
   instanceOf: string;

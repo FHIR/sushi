@@ -2,6 +2,7 @@ import { FshEntity } from './FshEntity';
 import { SdRule } from './rules';
 
 export class Extension extends FshEntity {
+  constructorName = 'Extension';
   id: string;
   parent: string;
   title?: string;

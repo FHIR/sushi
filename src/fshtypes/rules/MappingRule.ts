@@ -2,6 +2,7 @@ import { Rule } from './Rule';
 import { FshCode } from '../FshCode';
 
 export class MappingRule extends Rule {
+  constructorName = 'MappingRule';
   map: string;
   language?: FshCode;
   comment?: string;
