@@ -1691,6 +1691,30 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should apply an Assignment rule with Canonical of a Questionnaire instance', () => {
+    const questionnaireInstance = new Instance('MyQuestionnaire');
+    questionnaireInstance.usage = 'Definition';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire';
+    questionnaireInstance.rules.push(urlRule);
+    doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+    const profile = new Profile('MyQuestionnaireResponse');
+    profile.parent = 'QuestionnaireResponse';
+    const assignedValueRule = new AssignmentRule('questionnaire');
+    assignedValueRule.value = new FshCanonical('MyQuestionnaire');
+    profile.rules.push(assignedValueRule);
+    doc.profiles.set(profile.name, profile);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const assignedQ = sd.findElement('QuestionnaireResponse.questionnaire');
+    expect(assignedQ.patternCanonical).toEqual(
+      'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should apply an Assignment rule with Canonical of an inline instance', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
@@ -2101,7 +2125,7 @@ describe('StructureDefinitionExporter', () => {
     // Parent: Patient
     // * address.line ^slicing.discriminator[0].type = #pattern
     // * address.line ^slicing.discriminator[0].path = "$this"
-    // * address.line ^slicing.rules = #open
+    // * address.line ^slicing.rules = #closed
     // * address.line contains SpecificLine 1..1
     // * address.line[SpecificLine] = "Specific part of address"
     // * address ^slicing.discriminator[0].type = #pattern
@@ -2120,7 +2144,7 @@ describe('StructureDefinitionExporter', () => {
     slicingPathLine.value = 'code';
     const slicingRulesLine = new CaretValueRule('address.line');
     slicingRulesLine.caretPath = 'slicing.rules';
-    slicingRulesLine.value = new FshCode('open');
+    slicingRulesLine.value = new FshCode('closed');
     const containsSpecificLine = new ContainsRule('address.line');
     containsSpecificLine.items.push({ name: 'SpecificLine' });
     const specificLineCard = new CardRule('address.line[SpecificLine]');
@@ -2171,7 +2195,7 @@ describe('StructureDefinitionExporter', () => {
     expect(addressLineElement.patternString).toBeDefined();
     expect(addressSliceElement.patternAddress).toBeUndefined();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot assign First part of address to this element.*File: Assigned\.fsh.*Line: 12\D*/s
+      /Cannot assign.*First part of address.*to this element.*File: Assigned\.fsh.*Line: 12\D*/s
     );
   });
 
