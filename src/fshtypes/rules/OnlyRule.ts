@@ -6,6 +6,10 @@ export class OnlyRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'OnlyRule';
+  }
 }
 
 export type OnlyRuleType = {

@@ -16,4 +16,8 @@ export class FshValueSet extends FshEntity {
     this.id = name;
     this.rules = [];
   }
+
+  get constructorName() {
+    return 'FshValueSet';
+  }
 }

@@ -479,7 +479,7 @@ export function applyInsertRules(
           expandedRules.push(cloneDeep(ruleSetRule));
         } else {
           logger.error(
-            `Rule of type ${ruleSetRule.constructor.name} cannot be applied to entity of type ${fshDefinition.constructor.name}`,
+            `Rule of type ${ruleSetRule.constructorName} cannot be applied to entity of type ${fshDefinition.constructorName}`,
             ruleSetRule.sourceInfo
           );
         }

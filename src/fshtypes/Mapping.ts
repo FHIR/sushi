@@ -17,4 +17,8 @@ export class Mapping extends FshEntity {
     this.id = name; // init same as name
     this.rules = [];
   }
+
+  get constructorName() {
+    return 'Mapping';
+  }
 }

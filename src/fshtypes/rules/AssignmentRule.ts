@@ -23,4 +23,8 @@ export class AssignmentRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'AssignmentRule';
+  }
 }

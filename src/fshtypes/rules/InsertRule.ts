@@ -8,4 +8,8 @@ export class InsertRule extends Rule {
     super('');
     this.params = [];
   }
+
+  get constructorName() {
+    return 'InsertRule';
+  }
 }

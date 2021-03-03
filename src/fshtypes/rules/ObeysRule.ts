@@ -6,4 +6,8 @@ export class ObeysRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'ObeysRule';
+  }
 }

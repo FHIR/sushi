@@ -7,4 +7,8 @@ export class CardRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'CardRule';
+  }
 }

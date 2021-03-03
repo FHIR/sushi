@@ -7,4 +7,8 @@ export class BindingRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'BindingRule';
+  }
 }

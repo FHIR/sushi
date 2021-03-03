@@ -7,4 +7,8 @@ export class ConceptRule extends Rule {
   constructor(public code: string, public display?: string, public definition?: string) {
     super('');
   }
+
+  get constructorName() {
+    return 'ConceptRule';
+  }
 }

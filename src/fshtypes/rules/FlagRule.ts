@@ -11,4 +11,8 @@ export class FlagRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'FlagRule';
+  }
 }

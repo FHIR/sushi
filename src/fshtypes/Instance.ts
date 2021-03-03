@@ -17,6 +17,10 @@ export class Instance extends FshEntity {
     this.rules = [];
     this.usage = 'Example'; // init to Example (default)
   }
+
+  get constructorName() {
+    return 'Instance';
+  }
 }
 
 export type InstanceUsage = 'Example' | 'Definition' | 'Inline';

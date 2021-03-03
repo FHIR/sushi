@@ -27,7 +27,7 @@ import {
   InsertRule,
   ConceptRule
 } from '../../src/fshtypes/rules';
-import { loggerSpy, TestFisher } from '../testhelpers';
+import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType } from '../../src/fhirtypes';
 import path from 'path';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
@@ -3888,38 +3888,12 @@ describe('StructureDefinitionExporter', () => {
 
     exporter.exportStructDef(extension);
     expect(extension.rules).toHaveLength(6);
-    expect(extension.rules).toEqual([
-      {
-        sourceInfo: {},
-        path: 'extension',
-        items: [{ name: 'sliceA' }, { name: 'sliceB' }]
-      },
-      {
-        sourceInfo: {},
-        path: 'extension[sliceA].extension',
-        min: 1,
-        max: '*'
-      },
-      {
-        sourceInfo: {},
-        path: 'extension[sliceA].value[x]',
-        min: 0,
-        max: '0'
-      },
-      {
-        sourceInfo: {},
-        path: 'extension[sliceB].value[x]',
-        min: 1,
-        max: '1'
-      },
-      {
-        sourceInfo: {},
-        path: 'extension[sliceB].extension',
-        min: 0,
-        max: '0'
-      },
-      { sourceInfo: {}, path: 'value[x]', min: 0, max: '0' } // The only rule inferred
-    ]);
+    assertContainsRule(extension.rules[0], 'extension', 'sliceA', 'sliceB');
+    assertCardRule(extension.rules[1], 'extension[sliceA].extension', 1, '*');
+    assertCardRule(extension.rules[2], 'extension[sliceA].value[x]', 0, '0');
+    assertCardRule(extension.rules[3], 'extension[sliceB].value[x]', 1, '1');
+    assertCardRule(extension.rules[4], 'extension[sliceB].extension', 0, '0');
+    assertCardRule(extension.rules[5], 'value[x]', 0, '0'); // The only rule inferred
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
   });
 

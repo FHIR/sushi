@@ -19,4 +19,8 @@ export class Extension extends FshEntity {
     this.mixins = [];
     this.rules = [];
   }
+
+  get constructorName() {
+    return 'Extension';
+  }
 }

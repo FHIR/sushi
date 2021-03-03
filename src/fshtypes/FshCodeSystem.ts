@@ -18,6 +18,10 @@ export class FshCodeSystem extends FshEntity {
     this.rules = [];
   }
 
+  get constructorName() {
+    return 'FshCodeSystem';
+  }
+
   addConcept(newConcept: ConceptRule) {
     if (this.rules.find(rule => rule instanceof ConceptRule && rule.code == newConcept.code)) {
       throw new CodeSystemDuplicateCodeError(this.id, newConcept.code);

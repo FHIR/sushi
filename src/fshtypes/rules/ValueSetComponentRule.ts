@@ -7,12 +7,24 @@ export class ValueSetComponentRule extends Rule {
   constructor(public inclusion: boolean) {
     super('');
   }
+
+  get constructorName() {
+    return 'ValueSetComponentRule';
+  }
 }
 
 export class ValueSetConceptComponentRule extends ValueSetComponentRule {
   public concepts: FshCode[] = [];
+
+  get constructorName() {
+    return 'ValueSetConceptComponentRule';
+  }
 }
 
 export class ValueSetFilterComponentRule extends ValueSetComponentRule {
   public filters: ValueSetFilter[] = [];
+
+  get constructorName() {
+    return 'ValueSetFilterComponentRule';
+  }
 }

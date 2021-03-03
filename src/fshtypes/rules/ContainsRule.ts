@@ -7,6 +7,10 @@ export class ContainsRule extends Rule {
     super(path);
     this.items = [];
   }
+
+  get constructorName() {
+    return 'ContainsRule';
+  }
 }
 
 export type ContainsRuleItem = {

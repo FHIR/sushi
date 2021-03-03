@@ -9,4 +9,8 @@ export class CaretValueRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'CaretValueRule';
+  }
 }
