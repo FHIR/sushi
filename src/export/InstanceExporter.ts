@@ -123,7 +123,7 @@ export class InstanceExporter implements Fishable {
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule =>
-      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue)
+      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher)
     );
     instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;

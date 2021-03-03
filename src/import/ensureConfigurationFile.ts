@@ -129,7 +129,7 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
       getBoxComment(
         `ImplementationGuide-${id}.json`,
         'The properties below are used to create the ImplementationGuide resource. For a list of supported ' +
-          'properties, see: https://fshschool.org/sushi/configuration/'
+          'properties, see: https://fshschool.org/docs/sushi/configuration/'
       )
     )
   );

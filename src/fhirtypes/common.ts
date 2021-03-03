@@ -55,7 +55,7 @@ export function setPropertyOnDefinitionInstance(
   const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
   setImpliedPropertiesOnInstance(instance, instanceSD, [path], fisher);
-  setPropertyOnInstance(instance, pathParts, assignedValue);
+  setPropertyOnInstance(instance, pathParts, assignedValue, fisher);
 }
 
 export function setImpliedPropertiesOnInstance(
@@ -116,14 +116,15 @@ export function setImpliedPropertiesOnInstance(
   });
   sdRuleMap.forEach((value, path) => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, value);
+    setPropertyOnInstance(instanceDef, pathParts, value, fisher);
   });
 }
 
 export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
-  assignedValue: any
+  assignedValue: any,
+  fisher: Fishable
 ): void {
   if (assignedValue != null) {
     // If we can assign the value on the StructureDefinition StructureDefinition, then we can set the
@@ -150,8 +151,9 @@ export function setPropertyOnInstance(
           }
           const sliceIndices: number[] = [];
           // Find the indices where slices are placed
+          const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
           current[pathPart.base]?.forEach((el: any, i: number) => {
-            if (el?._sliceName === sliceName) {
+            if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
               sliceIndices.push(i);
             }
           });
@@ -309,7 +311,7 @@ export function getSliceName(pathPart: PathPart): string {
  * @param { {[key: string]: any} } object - The object to replace fields on
  * @param {(object: { [key: string]: any }, prop: string) => boolean} matchFn - The function to match with
  * @param {(object: { [key: string]: any }, prop: string) => void} replaceFn - The function to replace with
- * @param {string => boolean} skipFn - A function that returns true if a property should not be traversed
+ * @param {(object: { [key: string]: any }, prop: string) => boolean} skipFn - A function that returns true if a property should not be traversed
  */
 export function replaceField(
   object: { [key: string]: any },
@@ -630,6 +632,10 @@ export class HasName {
       );
     }
   }
+}
+
+export function isExtension(path: string): boolean {
+  return ['modifierExtension', 'extension'].includes(path);
 }
 
 export class HasId {

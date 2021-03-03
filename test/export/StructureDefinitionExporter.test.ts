@@ -1691,6 +1691,30 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should apply an Assignment rule with Canonical of a Questionnaire instance', () => {
+    const questionnaireInstance = new Instance('MyQuestionnaire');
+    questionnaireInstance.usage = 'Definition';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire';
+    questionnaireInstance.rules.push(urlRule);
+    doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+    const profile = new Profile('MyQuestionnaireResponse');
+    profile.parent = 'QuestionnaireResponse';
+    const assignedValueRule = new AssignmentRule('questionnaire');
+    assignedValueRule.value = new FshCanonical('MyQuestionnaire');
+    profile.rules.push(assignedValueRule);
+    doc.profiles.set(profile.name, profile);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const assignedQ = sd.findElement('QuestionnaireResponse.questionnaire');
+    expect(assignedQ.patternCanonical).toEqual(
+      'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire'
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should apply an Assignment rule with Canonical of an inline instance', () => {
     const profile = new Profile('MyObservation');
     profile.parent = 'Observation';
@@ -2101,7 +2125,7 @@ describe('StructureDefinitionExporter', () => {
     // Parent: Patient
     // * address.line ^slicing.discriminator[0].type = #pattern
     // * address.line ^slicing.discriminator[0].path = "$this"
-    // * address.line ^slicing.rules = #open
+    // * address.line ^slicing.rules = #closed
     // * address.line contains SpecificLine 1..1
     // * address.line[SpecificLine] = "Specific part of address"
     // * address ^slicing.discriminator[0].type = #pattern
@@ -2120,7 +2144,7 @@ describe('StructureDefinitionExporter', () => {
     slicingPathLine.value = 'code';
     const slicingRulesLine = new CaretValueRule('address.line');
     slicingRulesLine.caretPath = 'slicing.rules';
-    slicingRulesLine.value = new FshCode('open');
+    slicingRulesLine.value = new FshCode('closed');
     const containsSpecificLine = new ContainsRule('address.line');
     containsSpecificLine.items.push({ name: 'SpecificLine' });
     const specificLineCard = new CardRule('address.line[SpecificLine]');
@@ -2171,7 +2195,7 @@ describe('StructureDefinitionExporter', () => {
     expect(addressLineElement.patternString).toBeDefined();
     expect(addressSliceElement.patternAddress).toBeUndefined();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot assign First part of address to this element.*File: Assigned\.fsh.*Line: 12\D*/s
+      /Cannot assign.*First part of address.*to this element.*File: Assigned\.fsh.*Line: 12\D*/s
     );
   });
 
@@ -3063,6 +3087,36 @@ describe('StructureDefinitionExporter', () => {
     expect(sd).toHaveProperty('_url', { id: 'my-id' });
   });
 
+  it('should apply a CaretValueRule on an extension of a primitive element without a path', () => {
+    // Extension: MyBooleanExtension
+    // * value[x] only boolean
+    const extension = new Extension('MyBooleanExtension');
+    const onlyBoolean = new OnlyRule('value[x]');
+    onlyBoolean.types.push({ type: 'boolean' });
+    extension.rules.push(onlyBoolean);
+    doc.extensions.set(extension.name, extension);
+    // Profile: ExtensionOnPublisher
+    // Parent: Patient
+    // * ^publisher.extension[MyBooleanExtension].valueBoolean = true
+    const profile = new Profile('ExtensionOnPublisher');
+    profile.parent = 'Patient';
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'publisher.extension[MyBooleanExtension].valueBoolean';
+    rule.value = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    expect(sd).toHaveProperty('_publisher', {
+      extension: [
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
+          valueBoolean: true
+        }
+      ]
+    });
+  });
+
   it('should not apply an invalid CaretValueRule on an element without a path', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -3194,6 +3248,52 @@ describe('StructureDefinitionExporter', () => {
     expect(ed.code[0]).toEqual({
       code: 'foo',
       system: 'http://hl7.org/fhir/us/minimal/CodeSystem/bar-id'
+    });
+  });
+
+  it('should identify existing extensions by URL when applying a CaretValueRule on a StructureDefintiion', () => {
+    const parentProfile = new Profile('Foo');
+    parentProfile.parent = 'Observation';
+
+    const parentRule = new CaretValueRule('');
+    parentRule.caretPath = 'extension[mothersMaidenName].valueString';
+    parentRule.value = 'ParentName';
+    parentProfile.rules.push(parentRule);
+
+    const childProfile = new Profile('Bar');
+    childProfile.parent = 'Foo';
+
+    const childRule = new CaretValueRule('');
+    childRule.caretPath = 'extension[mothersMaidenName].valueString';
+    childRule.value = 'ChildName';
+    childProfile.rules.push(childRule);
+
+    // Profile: Foo
+    // Parent: Observation
+    // * ^extension[mothersMaidenName].valueString = "ParentName"
+    //
+    // Profile: Bar
+    // Parent: Foo
+    // * ^extension[mothersMaidenName].valueString = "ChildName"
+    exporter.exportStructDef(parentProfile);
+    exporter.exportStructDef(childProfile);
+
+    const sd = pkg.profiles[1];
+
+    // We should only find one copy of the extension
+    expect(
+      sd.extension.filter(
+        e => e.url === 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+      )
+    ).toHaveLength(1);
+    // And it should have the correct value
+    expect(
+      sd.extension.find(
+        e => e.url === 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+      )
+    ).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+      valueString: 'ChildName'
     });
   });
 

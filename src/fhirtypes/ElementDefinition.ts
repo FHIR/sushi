@@ -38,7 +38,8 @@ import {
   InvalidMappingError,
   InvalidFHIRIdError,
   DuplicateSliceError,
-  NonAbstractParentOfSpecializationError
+  NonAbstractParentOfSpecializationError,
+  ValueConflictsWithClosedSlicingError
 } from '../errors';
 import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -1360,14 +1361,12 @@ export class ElementDefinition {
     }
 
     // Children of elements with complex types such as Quantity may already have assigned values
-    this.children().forEach(child => this.checkChildAssignedValue(child, fhirValue));
+    this.checkAssignedValueAgainstChildren(this, fhirValue);
 
     // if this is a slice, make sure that nothing on this.slicedElement() is being violated
     const slicedElement = this.slicedElement();
     if (slicedElement) {
-      slicedElement
-        .children()
-        .forEach(child => slicedElement.checkChildAssignedValue(child, fhirValue));
+      slicedElement.checkAssignedValueAgainstChildren(slicedElement, fhirValue);
     }
 
     // If we made it this far, assign the value using fixed[x] or pattern[x] as appropriate
@@ -1382,7 +1381,39 @@ export class ElementDefinition {
     }
   }
 
-  private checkChildAssignedValue(child: ElementDefinition, fhirValue: any) {
+  private checkAssignedValueAgainstChildren(currentChild: ElementDefinition, fhirValue: any) {
+    const directChildren = currentChild.children(true);
+
+    let i = 0;
+    while (i < directChildren.length) {
+      const child = directChildren[i];
+
+      this.checkAssignedValueAgainstChild(child, fhirValue);
+      this.checkAssignedValueAgainstChildren(child, fhirValue);
+
+      // If the slicing is closed, only throw an error if all slices conflict
+      if (child.slicing?.rules === 'closed') {
+        let numInvalid = 0;
+        child.getSlices().forEach(slice => {
+          try {
+            this.checkAssignedValueAgainstChild(slice, fhirValue);
+            this.checkAssignedValueAgainstChildren(slice, fhirValue);
+          } catch (e) {
+            numInvalid += 1;
+          }
+        });
+        if (numInvalid >= child.getSlices().length) {
+          throw new ValueConflictsWithClosedSlicingError(JSON.stringify(fhirValue));
+        }
+      }
+
+      // If there is any slicing, skip past the slices. Closed slices are handled above
+      // And open slices need not be validated against
+      i += child.slicing ? child.getSlices().length + 1 : 1;
+    }
+  }
+
+  private checkAssignedValueAgainstChild(child: ElementDefinition, fhirValue: any) {
     const childType = child.type[0].code;
     const fixedX = `fixed${upperFirst(childType)}` as keyof ElementDefinition;
     const patternX = `pattern${upperFirst(childType)}` as keyof ElementDefinition;
