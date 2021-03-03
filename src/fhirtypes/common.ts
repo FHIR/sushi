@@ -309,7 +309,7 @@ export function getSliceName(pathPart: PathPart): string {
  * @param { {[key: string]: any} } object - The object to replace fields on
  * @param {(object: { [key: string]: any }, prop: string) => boolean} matchFn - The function to match with
  * @param {(object: { [key: string]: any }, prop: string) => void} replaceFn - The function to replace with
- * @param {string => boolean} skipFn - A function that returns true if a property should not be traversed
+ * @param {(object: { [key: string]: any }, prop: string) => boolean} skipFn - A function that returns true if a property should not be traversed
  */
 export function replaceField(
   object: { [key: string]: any },
