@@ -112,7 +112,7 @@ export class ValueSetExporter {
             rule.value,
             this.fisher
           );
-          setPropertyOnInstance(valueSet, pathParts, assignedValue);
+          setPropertyOnInstance(valueSet, pathParts, assignedValue, this.fisher);
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
