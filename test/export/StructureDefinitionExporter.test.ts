@@ -2125,7 +2125,7 @@ describe('StructureDefinitionExporter', () => {
     // Parent: Patient
     // * address.line ^slicing.discriminator[0].type = #pattern
     // * address.line ^slicing.discriminator[0].path = "$this"
-    // * address.line ^slicing.rules = #open
+    // * address.line ^slicing.rules = #closed
     // * address.line contains SpecificLine 1..1
     // * address.line[SpecificLine] = "Specific part of address"
     // * address ^slicing.discriminator[0].type = #pattern
@@ -2144,7 +2144,7 @@ describe('StructureDefinitionExporter', () => {
     slicingPathLine.value = 'code';
     const slicingRulesLine = new CaretValueRule('address.line');
     slicingRulesLine.caretPath = 'slicing.rules';
-    slicingRulesLine.value = new FshCode('open');
+    slicingRulesLine.value = new FshCode('closed');
     const containsSpecificLine = new ContainsRule('address.line');
     containsSpecificLine.items.push({ name: 'SpecificLine' });
     const specificLineCard = new CardRule('address.line[SpecificLine]');
@@ -2195,7 +2195,7 @@ describe('StructureDefinitionExporter', () => {
     expect(addressLineElement.patternString).toBeDefined();
     expect(addressSliceElement.patternAddress).toBeUndefined();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cannot assign First part of address to this element.*File: Assigned\.fsh.*Line: 12\D*/s
+      /Cannot assign.*First part of address.*to this element.*File: Assigned\.fsh.*Line: 12\D*/s
     );
   });
 
@@ -3085,6 +3085,36 @@ describe('StructureDefinitionExporter', () => {
     exporter.exportStructDef(profile);
     const sd = pkg.profiles[0];
     expect(sd).toHaveProperty('_url', { id: 'my-id' });
+  });
+
+  it('should apply a CaretValueRule on an extension of a primitive element without a path', () => {
+    // Extension: MyBooleanExtension
+    // * value[x] only boolean
+    const extension = new Extension('MyBooleanExtension');
+    const onlyBoolean = new OnlyRule('value[x]');
+    onlyBoolean.types.push({ type: 'boolean' });
+    extension.rules.push(onlyBoolean);
+    doc.extensions.set(extension.name, extension);
+    // Profile: ExtensionOnPublisher
+    // Parent: Patient
+    // * ^publisher.extension[MyBooleanExtension].valueBoolean = true
+    const profile = new Profile('ExtensionOnPublisher');
+    profile.parent = 'Patient';
+    const rule = new CaretValueRule('');
+    rule.caretPath = 'publisher.extension[MyBooleanExtension].valueBoolean';
+    rule.value = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    expect(sd).toHaveProperty('_publisher', {
+      extension: [
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
+          valueBoolean: true
+        }
+      ]
+    });
   });
 
   it('should not apply an invalid CaretValueRule on an element without a path', () => {

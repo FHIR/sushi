@@ -564,7 +564,11 @@ export class StructureDefinitionExporter implements Fishable {
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);
-    cleanResource(structDef, (prop: string) => prop == 'elements' || prop.indexOf('_') == 0);
+    // The elements list does not need to be cleaned up.
+    // And, the _sliceName and _primitive properties added by SUSHI should be skipped.
+    cleanResource(structDef, (prop: string) =>
+      ['elements', '_sliceName', '_primitive'].includes(prop)
+    );
     structDef.inProgress = false;
 
     // check for another structure definition with the same id
