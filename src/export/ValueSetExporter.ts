@@ -248,7 +248,7 @@ export class ValueSetExporter {
           }
         });
         // Now that we're done, let's add a timestamp and a total
-        valueSet.expansion.timestamp = `${new Date()}`;
+        valueSet.expansion.timestamp = new Date().toISOString();
         valueSet.expansion.total = flatMap(valueSet.expansion.contains, extractContained).length;
       }
     }

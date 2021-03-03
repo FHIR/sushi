@@ -715,6 +715,8 @@ describe('ValueSetExporter', () => {
 
   describe('#expansion', () => {
     let valueSet: FshValueSet;
+    // dateTime format from http://hl7.org/fhir/R4/datatypes.html#dateTime
+    const dateTimeFormat = /([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?/;
 
     beforeEach(() => {
       valueSet = new FshValueSet('MyValueSet');
@@ -770,7 +772,7 @@ describe('ValueSetExporter', () => {
         system: 'http://zoo.org/animals',
         version: '1.1'
       });
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(3);
     });
 
@@ -805,7 +807,7 @@ describe('ValueSetExporter', () => {
           }
         ]
       });
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(3);
     });
 
@@ -840,7 +842,7 @@ describe('ValueSetExporter', () => {
           }
         ]
       });
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(3);
     });
 
@@ -880,7 +882,7 @@ describe('ValueSetExporter', () => {
       valueSet.rules.push(includeResolved, includeAllergy);
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toHaveLength(3);
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(3);
     });
 
@@ -902,7 +904,7 @@ describe('ValueSetExporter', () => {
       valueSet.rules.push(includeAllergy, includeResolved);
       const exported = exporter.exportValueSet(valueSet);
       expect(exported.expansion.contains).toHaveLength(2);
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(3);
     });
 
@@ -935,7 +937,7 @@ describe('ValueSetExporter', () => {
           }
         ]
       });
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(2);
     });
 
@@ -968,7 +970,7 @@ describe('ValueSetExporter', () => {
         system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
         version: '4.0.1'
       });
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(2);
     });
 
@@ -1002,7 +1004,7 @@ describe('ValueSetExporter', () => {
         system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
         version: '4.0.1'
       });
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(2);
     });
 
@@ -1036,7 +1038,7 @@ describe('ValueSetExporter', () => {
         system: 'http://zoo.org/animals',
         version: '1.0'
       });
-      expect(exported.expansion.timestamp).toBeDefined();
+      expect(exported.expansion.timestamp).toMatch(dateTimeFormat);
       expect(exported.expansion.total).toBe(1);
     });
 
