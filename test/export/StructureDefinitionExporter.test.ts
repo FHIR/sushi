@@ -3221,6 +3221,52 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should identify existing extensions by URL when applying a CaretValueRule on a StructureDefintiion', () => {
+    const parentProfile = new Profile('Foo');
+    parentProfile.parent = 'Observation';
+
+    const parentRule = new CaretValueRule('');
+    parentRule.caretPath = 'extension[mothersMaidenName].valueString';
+    parentRule.value = 'ParentName';
+    parentProfile.rules.push(parentRule);
+
+    const childProfile = new Profile('Bar');
+    childProfile.parent = 'Foo';
+
+    const childRule = new CaretValueRule('');
+    childRule.caretPath = 'extension[mothersMaidenName].valueString';
+    childRule.value = 'ChildName';
+    childProfile.rules.push(childRule);
+
+    // Profile: Foo
+    // Parent: Observation
+    // * ^extension[mothersMaidenName].valueString = "ParentName"
+    //
+    // Profile: Bar
+    // Parent: Foo
+    // * ^extension[mothersMaidenName].valueString = "ChildName"
+    exporter.exportStructDef(parentProfile);
+    exporter.exportStructDef(childProfile);
+
+    const sd = pkg.profiles[1];
+
+    // We should only find one copy of the extension
+    expect(
+      sd.extension.filter(
+        e => e.url === 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+      )
+    ).toHaveLength(1);
+    // And it should have the correct value
+    expect(
+      sd.extension.find(
+        e => e.url === 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+      )
+    ).toEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+      valueString: 'ChildName'
+    });
+  });
+
   // ObeysRule
   it('should apply an ObeysRule at the specified path', () => {
     const profile = new Profile('Foo');

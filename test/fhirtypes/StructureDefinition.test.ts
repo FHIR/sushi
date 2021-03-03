@@ -1268,6 +1268,28 @@ describe('StructureDefinition', () => {
       expect(respRate.elements.length).toBe(originalLength + 6);
     });
 
+    it('should rename modifierExtensions when they are referred to by name instead of sliceName', () => {
+      const originalLength = respRate.elements.length;
+      const modExtension = respRate.findElementByPath('modifierExtension', fisher);
+      modExtension.sliceIt('type', '$this', false, 'open');
+      const slice = modExtension.addSlice('maiden-name');
+      slice.type[0].profile = ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'];
+
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'modifierExtension[patient-mothersMaidenName].valueString',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'modifierExtension',
+        brackets: ['maiden-name', '0'],
+        slices: ['maiden-name']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 6);
+    });
+
     describe('#Inline Instances', () => {
       beforeEach(() => {
         const contained = respRate.findElementByPath('contained', fisher);

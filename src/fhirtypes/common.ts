@@ -634,6 +634,10 @@ export class HasName {
   }
 }
 
+export function isExtension(path: string): boolean {
+  return ['modifierExtension', 'extension'].includes(path);
+}
+
 export class HasId {
   id?: FHIRId;
   /**

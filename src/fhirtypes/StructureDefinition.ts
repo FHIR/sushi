@@ -17,7 +17,8 @@ import {
   setPropertyOnDefinitionInstance,
   HasName,
   HasId,
-  isInheritedResource
+  isInheritedResource,
+  isExtension
 } from './common';
 import { Fishable, Type } from '../utils/Fishable';
 import { applyMixins, parseFSHPath, assembleFSHPath } from '../utils';
@@ -497,7 +498,7 @@ export class StructureDefinition {
       // If the element is an extension, and we found that extension via some other identifier than the sliceName
       // we want to replace the path to use the sliceName, since we can assume that was the user's intent
       if (
-        pathPart.base === 'extension' &&
+        isExtension(pathPart.base) &&
         pathPart.slices &&
         currentElement?.sliceName &&
         currentElement?.sliceName !== pathPart.slices.join('/')
