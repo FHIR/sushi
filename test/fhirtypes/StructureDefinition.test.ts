@@ -1215,8 +1215,8 @@ describe('StructureDefinition', () => {
       expect(pathParts.length).toBe(2);
       expect(pathParts[0]).toEqual({
         base: 'extension',
-        brackets: ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName', '0'],
-        slices: ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName']
+        brackets: ['patient-mothersMaidenName', '0'],
+        slices: ['patient-mothersMaidenName']
       });
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
@@ -1244,6 +1244,50 @@ describe('StructureDefinition', () => {
       }).toThrow(
         'The element or path you referenced does not exist: extension[fake-extension].value[x]'
       );
+    });
+
+    it('should rename extensions when they are referred to by name instead of sliceName', () => {
+      const originalLength = respRate.elements.length;
+      const extension = respRate.findElementByPath('extension', fisher);
+      extension.sliceIt('type', '$this', false, 'open');
+      const slice = extension.addSlice('maiden-name');
+      slice.type[0].profile = ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'];
+
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'extension[patient-mothersMaidenName].valueString',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'extension',
+        brackets: ['maiden-name', '0'],
+        slices: ['maiden-name']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 6);
+    });
+
+    it('should rename modifierExtensions when they are referred to by name instead of sliceName', () => {
+      const originalLength = respRate.elements.length;
+      const modExtension = respRate.findElementByPath('modifierExtension', fisher);
+      modExtension.sliceIt('type', '$this', false, 'open');
+      const slice = modExtension.addSlice('maiden-name');
+      slice.type[0].profile = ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'];
+
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'modifierExtension[patient-mothersMaidenName].valueString',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'modifierExtension',
+        brackets: ['maiden-name', '0'],
+        slices: ['maiden-name']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 6);
     });
 
     describe('#Inline Instances', () => {

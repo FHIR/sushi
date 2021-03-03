@@ -47,7 +47,7 @@ export class CodeSystemExporter {
           rule.value,
           this.fisher
         );
-        setPropertyOnInstance(codeSystem, pathParts, assignedValue);
+        setPropertyOnInstance(codeSystem, pathParts, assignedValue, this.fisher);
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
