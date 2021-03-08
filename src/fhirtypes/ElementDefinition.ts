@@ -842,7 +842,7 @@ export class ElementDefinition {
         // reference is allowed.
         matchedType = targetTypes.find(
           t2 =>
-            (isReferenceType(t2.code)) &&
+            isReferenceType(t2.code) &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
@@ -927,7 +927,7 @@ export class ElementDefinition {
     for (const match of matches) {
       if (match.metadata.id === newType.code) {
         continue;
-      } else if (isReferenceType(match.code)  && !isReferenceType(match.metadata.sdType)) {
+      } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);
       } else {
         matchedProfiles.push(match.metadata.url);
@@ -1131,6 +1131,7 @@ export class ElementDefinition {
       'code',
       'Coding',
       'CodeableConcept',
+      'CodeableReference',
       'Quantity',
       'string',
       'uri'

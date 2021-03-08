@@ -1,4 +1,3 @@
-import fs from 'fs-extra';
 import { TestFisher } from '../testhelpers';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
@@ -23,27 +22,17 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    r5CarePlan = StructureDefinition.fromJSON(
-      JSON.parse(
-        fs.readFileSync(
-          path.join(
-            __dirname,
-            '..',
-            'testhelpers',
-            'testdefs',
-            'r5-definitions',
-            'StructureDefinition-CarePlan.json'
-          ),
-          'utf-8'
-        )
-      )
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
     );
-    defs.add(r5CarePlan);
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');
     extension = fisher.fishForStructureDefinition('Extension');
+    r5CarePlan = fisher.fishForStructureDefinition('CarePlan');
   });
 
   describe('#constrainType()', () => {
@@ -264,7 +253,9 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a subset', () => {
-      const performedActivity = r5CarePlan.elements.find(e => e.id === 'CarePlan.activity.performedActivity');
+      const performedActivity = r5CarePlan.elements.find(
+        e => e.id === 'CarePlan.activity.performedActivity'
+      );
       const onlyRule = new OnlyRule('activity.performedActivity');
       onlyRule.types = [
         { type: 'Practitioner', isReference: true },
@@ -294,16 +285,16 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single type', () => {
-      const performedActivity = r5CarePlan.elements.find(e => e.id === 'CarePlan.activity.performedActivity');
+      const performedActivity = r5CarePlan.elements.find(
+        e => e.id === 'CarePlan.activity.performedActivity'
+      );
       const onlyRule = new OnlyRule('activity.performedActivity');
-      onlyRule.types = [
-        { type: 'Practitioner', isReference: true },
-      ];
+      onlyRule.types = [{ type: 'Practitioner', isReference: true }];
       performedActivity.constrainType(onlyRule, fisher);
       expect(performedActivity.type).toHaveLength(1);
       expect(performedActivity.type[0]).toEqual(
         new ElementDefinitionType('CodeableReference').withTargetProfiles(
-          'http://hl7.org/fhir/StructureDefinition/Practitioner',
+          'http://hl7.org/fhir/StructureDefinition/Practitioner'
         )
       );
     });
@@ -324,7 +315,9 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile', () => {
-      const performedActivity = r5CarePlan.elements.find(e => e.id === 'CarePlan.activity.performedActivity');
+      const performedActivity = r5CarePlan.elements.find(
+        e => e.id === 'CarePlan.activity.performedActivity'
+      );
       const onlyRule = new OnlyRule('activity.performedActivity');
       onlyRule.types = [
         { type: 'http://hl7.org/fhir/StructureDefinition/actualgroup', isReference: true }
@@ -333,7 +326,7 @@ describe('ElementDefinition', () => {
       expect(performedActivity.type).toHaveLength(1);
       expect(performedActivity.type[0]).toEqual(
         new ElementDefinitionType('CodeableReference').withTargetProfiles(
-          'http://hl7.org/fhir/StructureDefinition/actualgroup',
+          'http://hl7.org/fhir/StructureDefinition/actualgroup'
         )
       );
     });
@@ -356,7 +349,9 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile', () => {
-      const performedActivity = r5CarePlan.elements.find(e => e.id === 'CarePlan.activity.performedActivity');
+      const performedActivity = r5CarePlan.elements.find(
+        e => e.id === 'CarePlan.activity.performedActivity'
+      );
       const onlyRule = new OnlyRule('activity.performedActivity');
       onlyRule.types = [
         { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
@@ -502,9 +497,7 @@ describe('ElementDefinition', () => {
     it('should throw InvalidTypeError when a passed in reference to a type that cannot constrain any existing references to types on a CodeableReference', () => {
       const addresses = r5CarePlan.elements.find(e => e.id === 'CarePlan.addresses');
       const onlyRule = new OnlyRule('addresses');
-      onlyRule.types = [
-        { type: 'Patient', isReference: true },
-      ];
+      onlyRule.types = [{ type: 'Patient', isReference: true }];
       expect(() => {
         addresses.constrainType(onlyRule, fisher);
       }).toThrow(/"Reference\(Patient\).*Reference\(.*Condition\)/);
