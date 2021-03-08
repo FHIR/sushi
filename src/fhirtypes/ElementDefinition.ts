@@ -971,13 +971,18 @@ export class ElementDefinition {
     const intersection: ElementDefinitionType[] = [];
     let match: ElementTypeMatchInfo;
     leftTypes.forEach(left => {
+      // if the left type has profiles, check each of them.
+      // otherwise, just try with the code.
       const matches: ElementTypeMatchInfo[] = [];
-      try {
-        match = this.findTypeMatch({ type: left.code }, rightTypes, fisher);
-        matches.push(match);
-      } catch (ex) {
-        // it's okay if a given type doesn't have any matches.
-      }
+      const typesToTry = left.profile?.length ? left.profile : [left.code];
+      typesToTry.forEach(typeToTry => {
+        try {
+          match = this.findTypeMatch({ type: typeToTry }, rightTypes, fisher);
+          matches.push(match);
+        } catch (ex) {
+          // it's okay if a given type doesn't have any matches.
+        }
+      });
       intersection.push(...this.applyTypeIntersection(left, targetType, matches));
     });
 
