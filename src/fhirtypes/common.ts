@@ -1,4 +1,4 @@
-import { isEmpty, cloneDeep } from 'lodash';
+import { isEmpty, cloneDeep, upperFirst } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -71,7 +71,7 @@ export function setImpliedPropertiesOnInstance(
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
     if (element) {
       // If an element is pointed to by a path, that means we must assign values on its parents, its own
-      // assignable descendents, and assignable descenendents of its parents. An assignable descendent is a 1..n direct child
+      // assignable descendents, and assignable descendents of its parents. An assignable descendent is a 1..n direct child
       // or an assignable descendent of such a child
       const parents = element.getAllParents();
       const associatedElements = [...element.getAssignableDescendents(), ...parents];
@@ -89,11 +89,16 @@ export function setImpliedPropertiesOnInstance(
           let overlapIdx = 0;
           const elParts = element.id.split('.');
           const assocElParts = associatedEl.id.split('.');
-          for (
-            ;
-            overlapIdx < elParts.length && elParts[overlapIdx] === assocElParts[overlapIdx];
-            overlapIdx++
-          );
+          for (; overlapIdx < elParts.length && overlapIdx < assocElParts.length; overlapIdx++) {
+            // If an associated path applies to all choices (e.g., value[x]), and the element path
+            // if a specific choice (e.g., value[x]:valueQuantity), then treat it as a match
+            const [elPart, assocElPart] = [elParts[overlapIdx], assocElParts[overlapIdx]];
+            if (assocElPart.endsWith('[x]') && elPart.startsWith(`${assocElPart}:`)) {
+              continue;
+            } else if (elPart !== assocElPart) {
+              break;
+            }
+          }
           // We must keep the relevant portion of the beginning of path to preserve sliceNames
           // and combine this with portion of the associatedEl's path that is not overlapped
           const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
@@ -109,7 +114,31 @@ export function setImpliedPropertiesOnInstance(
             // Implied paths are found via the index free path
             finalPath.replace(/\[[-+]?\d+\]$/g, '')
           );
-          [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundAssignedValue));
+          [finalPath, ...impliedPaths].forEach(ip => {
+            // Don't let any non-constrained choice paths (e.g., value[x]) through since instances
+            // must specify a particular choice (i.e., value[x] is not a valid path in an instance)
+            if (/\[x]/.test(ip)) {
+              // Fix any single-type choices to be type-specific (e.g., value[x] -> valueString)
+              const parts = ip.split('.');
+              for (let i = 0; i < parts.length; i++) {
+                if (parts[i].endsWith('[x]')) {
+                  const partEl = instanceOfStructureDefinition.findElementByPath(
+                    parts.slice(0, i + 1).join('.'),
+                    fisher
+                  );
+                  if (partEl?.type?.length === 1) {
+                    parts[i] = parts[i].replace('[x]', upperFirst(partEl.type[0].code));
+                  }
+                }
+              }
+              ip = parts.join('.');
+              // If there is still a [x], we couldn't fix it, so skip it
+              if (/\[x]/.test(ip)) {
+                return; // out of the forEach of implied paths
+              }
+            }
+            sdRuleMap.set(ip, foundAssignedValue);
+          });
         }
       }
     }

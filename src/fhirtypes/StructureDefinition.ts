@@ -519,11 +519,6 @@ export class StructureDefinition {
         }
       }
 
-      // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
-      const nonArrayElementIsBasedOnArray =
-        currentElement?.base?.max !== '0' &&
-        currentElement?.base?.max !== '1' &&
-        (currentElement?.max === '0' || currentElement?.max === '1');
       if (
         !currentElement ||
         currentElement.max === '0' ||
@@ -534,17 +529,21 @@ export class StructureDefinition {
         // We throw an error if the currentElement doesn't exist, has been zeroed out,
         // or is being incorrectly accessed as an array
         throw new CannotResolvePathError(path);
-      } else if (
-        (arrayIndex == null &&
-          currentElement.max != null &&
-          currentElement.max !== '0' &&
-          currentElement.max !== '1') ||
-        nonArrayElementIsBasedOnArray
-      ) {
+      }
+
+      // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
+      const baseIsArray =
+        currentElement?.base?.max != null &&
+        currentElement.base.max !== '0' &&
+        currentElement.base.max !== '1';
+      const currentIsArray =
+        currentElement?.max != null && currentElement.max !== '0' && currentElement.max !== '1';
+      if ((arrayIndex == null && baseIsArray) || (baseIsArray && !currentIsArray)) {
         // Modify the path to have 0 indices
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
       }
+
       // Primitive and only primitives have a lower case first letter
       if (
         currentElement.type?.length === 1 &&
