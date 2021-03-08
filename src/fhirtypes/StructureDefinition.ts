@@ -531,15 +531,18 @@ export class StructureDefinition {
         throw new CannotResolvePathError(path);
       }
 
-      // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
+      // Determine if base and/or current are arrays. Note that this is not perfect (if base or current max is missing),
+      // but in practice, it appears to be sufficient. We could walk the inheritance tree to get the base and current values
+      // when they are missing, but this comes at a cost, and as noted above, the current approach works (likely due to
+      // how the publisher populates base in snapshots and how previous code processes the current element).
       const baseIsArray =
         currentElement?.base?.max != null &&
         currentElement.base.max !== '0' &&
         currentElement.base.max !== '1';
       const currentIsArray =
         currentElement?.max != null && currentElement.max !== '0' && currentElement.max !== '1';
-      if ((arrayIndex == null && baseIsArray) || (baseIsArray && !currentIsArray)) {
-        // Modify the path to have 0 indices
+      // If the base is an array and we don't yet have an index or the currentElement is singular, make this index 0.
+      if (baseIsArray && (arrayIndex == null || !currentIsArray)) {
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
       }
