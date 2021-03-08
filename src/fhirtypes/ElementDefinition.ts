@@ -41,7 +41,7 @@ import {
   NonAbstractParentOfSpecializationError,
   ValueConflictsWithClosedSlicingError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
+import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -842,7 +842,7 @@ export class ElementDefinition {
         // reference is allowed.
         matchedType = targetTypes.find(
           t2 =>
-            t2.code === 'Reference' &&
+            (isReferenceType(t2.code)) &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
@@ -927,7 +927,7 @@ export class ElementDefinition {
     for (const match of matches) {
       if (match.metadata.id === newType.code) {
         continue;
-      } else if (match.code === 'Reference' && match.metadata.sdType !== 'Reference') {
+      } else if (isReferenceType(match.code)  && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);
       } else {
         matchedProfiles.push(match.metadata.url);
@@ -1006,7 +1006,7 @@ export class ElementDefinition {
     for (const match of matches) {
       // If the original element type is a Reference, keep it a reference, otherwise take on the
       // input type's type code (as represented in its StructureDefinition.type).
-      const typeString = match.code === 'Reference' ? 'Reference' : match.metadata.sdType;
+      const typeString = isReferenceType(match.code) ? match.code : match.metadata.sdType;
       if (!currentTypeMatches.has(typeString)) {
         currentTypeMatches.set(typeString, []);
       }
