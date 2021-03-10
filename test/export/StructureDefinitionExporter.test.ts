@@ -4392,6 +4392,68 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should apply an OnlyRule using a profile on a sliced element that matches the types available on its slices', () => {
+      // Profile: MyQuestionnaire
+      // Parent: http://hl7.org/fhir/StructureDefinition/cqf-questionnaire
+      // * extension only http://hl7.org/fhir/StructureDefinition/cqf-library
+      const profile = new Profile('MyQuestionnaire');
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/cqf-questionnaire';
+      const onlyRule = new OnlyRule('extension');
+      onlyRule.types.push({
+        type: 'http://hl7.org/fhir/StructureDefinition/cqf-library'
+      });
+      profile.rules.push(onlyRule);
+      doc.profiles.set(profile.name, profile);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const baseExtension = sd.findElement('Questionnaire.extension');
+      const extensionSlice = sd.findElement('Questionnaire.extension:library');
+      const expectedType = new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/cqf-library'
+      );
+      expect(baseExtension.type).toHaveLength(1);
+      expect(baseExtension.type).toContainEqual(expectedType);
+      expect(extensionSlice.type).toHaveLength(1);
+      expect(extensionSlice.type).toContainEqual(expectedType);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply an OnlyRule using multiple profiles on a sliced element where at least one of the profiles matches the types available on its slices', () => {
+      // Profile: MyQuestionnaire
+      // Parent: http://hl7.org/fhir/StructureDefinition/cqf-questionnaire
+      // * extension only http://hl7.org/fhir/StructureDefinition/cqf-library or
+      //   http://hl7.org/fhir/StructureDefinition/familymemberhistory-type
+      const profile = new Profile('MyQuestionnaire');
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/cqf-questionnaire';
+      const onlyRule = new OnlyRule('extension');
+      onlyRule.types.push(
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/cqf-library'
+        },
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type'
+        }
+      );
+      profile.rules.push(onlyRule);
+      doc.profiles.set(profile.name, profile);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const baseExtension = sd.findElement('Questionnaire.extension');
+      const extensionSlice = sd.findElement('Questionnaire.extension:library');
+      const expectedBaseType = new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/cqf-library',
+        'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type'
+      );
+      const expectedSliceType = new ElementDefinitionType('Extension').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/cqf-library'
+      );
+      expect(baseExtension.type).toHaveLength(1);
+      expect(baseExtension.type).toContainEqual(expectedBaseType);
+      expect(extensionSlice.type).toHaveLength(1);
+      expect(extensionSlice.type).toContainEqual(expectedSliceType);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should not apply an OnlyRule on a sliced element that would invalidate any of its slices', () => {
       // * component[Lab].value[x] only Quantity
       // * component.value[x] only Ratio // this would remove all types from the slice!
