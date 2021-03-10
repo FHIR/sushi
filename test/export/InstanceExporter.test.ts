@@ -583,23 +583,6 @@ describe('InstanceExporter', () => {
       expect(exported.deceasedBoolean).toBe(true);
     });
 
-    // Profile: MyObservationProfile
-    // Parent: Observation
-    // * value[x] 1..1
-    // * value[x].id 1..1
-    // * value[x].id = "some-required-id"
-
-    // Instance: MyObservationInstance
-    // InstanceOf: MyObservationProfile
-    // * status = #final
-    // * code = http://foo.org#bar
-
-    // Instance: MyObservationInstance2
-    // InstanceOf: MyObservationProfile
-    // * status = #final
-    // * code = http://foo.org#bar
-    // * valueQuantity = 10 'mm'
-
     it('should not assign fixed values from value[x] children when a specific choice has not been chosen', () => {
       // Profile: ObservationProfile
       // Parent: Observation
