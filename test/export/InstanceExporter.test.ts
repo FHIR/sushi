@@ -583,6 +583,183 @@ describe('InstanceExporter', () => {
       expect(exported.deceasedBoolean).toBe(true);
     });
 
+    // Profile: MyObservationProfile
+    // Parent: Observation
+    // * value[x] 1..1
+    // * value[x].id 1..1
+    // * value[x].id = "some-required-id"
+
+    // Instance: MyObservationInstance
+    // InstanceOf: MyObservationProfile
+    // * status = #final
+    // * code = http://foo.org#bar
+
+    // Instance: MyObservationInstance2
+    // InstanceOf: MyObservationProfile
+    // * status = #final
+    // * code = http://foo.org#bar
+    // * valueQuantity = 10 'mm'
+
+    it('should not assign fixed values from value[x] children when a specific choice has not been chosen', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'Hello World';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] }
+      });
+    });
+
+    it('should assign fixed values from value[x] children using the correct specific choice property name', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'some-id';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * valueQuantity = 5 'mm'
+      const valueQuantityAssignment = new AssignmentRule('valueQuantity');
+      valueQuantityAssignment.value = new FshQuantity(
+        5,
+        new FshCode('mm', 'http://unitsofmeasure.org')
+      );
+      testInstance.rules.push(valueQuantityAssignment);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] },
+        valueQuantity: {
+          id: 'some-id',
+          value: 5,
+          system: 'http://unitsofmeasure.org',
+          code: 'mm'
+        }
+      });
+    });
+
+    it('should assign fixed values from value[x] children using the correct specific choice property name (primitive edition)', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'some-id';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * valueString = 'Hello World'
+      const valueStringAssignment = new AssignmentRule('valueString');
+      valueStringAssignment.value = 'Hello World';
+      testInstance.rules.push(valueStringAssignment);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] },
+        valueString: 'Hello World',
+        _valueString: { id: 'some-id' }
+      });
+    });
+
     it('should assign fixed value[x] correctly even in weird situations (SUSHI #760)', () => {
       // See https://github.com/FHIR/sushi/issues/760
 

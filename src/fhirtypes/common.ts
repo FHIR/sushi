@@ -91,7 +91,7 @@ export function setImpliedPropertiesOnInstance(
           const assocElParts = associatedEl.id.split('.');
           for (; overlapIdx < elParts.length && overlapIdx < assocElParts.length; overlapIdx++) {
             // If an associated path applies to all choices (e.g., value[x]), and the element path
-            // if a specific choice (e.g., value[x]:valueQuantity), then treat it as a match
+            // is a specific choice (e.g., value[x]:valueQuantity), then treat it as a match
             const [elPart, assocElPart] = [elParts[overlapIdx], assocElParts[overlapIdx]];
             if (assocElPart.endsWith('[x]') && elPart.startsWith(`${assocElPart}:`)) {
               continue;
@@ -119,7 +119,7 @@ export function setImpliedPropertiesOnInstance(
             // must specify a particular choice (i.e., value[x] is not a valid path in an instance)
             if (/\[x]/.test(ip)) {
               // Fix any single-type choices to be type-specific (e.g., value[x] -> valueString)
-              const parts = ip.split('.');
+              const parts = splitOnPathPeriods(ip);
               for (let i = 0; i < parts.length; i++) {
                 if (parts[i].endsWith('[x]')) {
                   const partEl = instanceOfStructureDefinition.findElementByPath(
