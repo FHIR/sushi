@@ -583,6 +583,264 @@ describe('InstanceExporter', () => {
       expect(exported.deceasedBoolean).toBe(true);
     });
 
+    it('should not assign fixed values from value[x] children when a specific choice has not been chosen', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'Hello World';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] }
+      });
+    });
+
+    it('should assign fixed values from value[x] children using the correct specific choice property name', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'some-id';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * valueQuantity = 5 'mm'
+      const valueQuantityAssignment = new AssignmentRule('valueQuantity');
+      valueQuantityAssignment.value = new FshQuantity(
+        5,
+        new FshCode('mm', 'http://unitsofmeasure.org')
+      );
+      testInstance.rules.push(valueQuantityAssignment);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] },
+        valueQuantity: {
+          id: 'some-id',
+          value: 5,
+          system: 'http://unitsofmeasure.org',
+          code: 'mm'
+        }
+      });
+    });
+
+    it('should assign fixed values from value[x] children using the correct specific choice property name (primitive edition)', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'some-id';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * valueString = 'Hello World'
+      const valueStringAssignment = new AssignmentRule('valueString');
+      valueStringAssignment.value = 'Hello World';
+      testInstance.rules.push(valueStringAssignment);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] },
+        valueString: 'Hello World',
+        _valueString: { id: 'some-id' }
+      });
+    });
+
+    it('should assign fixed value[x] correctly even in weird situations (SUSHI #760)', () => {
+      // See https://github.com/FHIR/sushi/issues/760
+
+      // Profile: EURMoney
+      // Parent: Money
+      const eurMoney = new Profile('EURMoney');
+      eurMoney.parent = 'Money';
+      // * currency 1..1
+      const currencyRequired = new CardRule('currency');
+      currencyRequired.min = 1;
+      eurMoney.rules.push(currencyRequired);
+      // * currency = #EUR (exactly)
+      const currencyFixed = new AssignmentRule('currency');
+      currencyFixed.value = new FshCode('EUR');
+      currencyFixed.exactly = true;
+      eurMoney.rules.push(currencyFixed);
+      doc.profiles.set(eurMoney.name, eurMoney);
+
+      // Extension: InsuranceCost
+      const insCost = new Extension('InsuranceCost');
+      // * extension contains Amount 1..1
+      const containsAmount = new ContainsRule('extension');
+      containsAmount.items = [{ name: 'Amount' }];
+      insCost.rules.push(containsAmount);
+      const amountRequired = new CardRule('extension[Amount]');
+      amountRequired.min = 1;
+      insCost.rules.push(amountRequired);
+      const noValue = new CardRule('value[x]');
+      noValue.max = '0';
+      insCost.rules.push(noValue);
+      // * extension[Amount].value[x] 1..1
+      const amountValueRequired = new CardRule('extension[Amount].value[x]');
+      amountValueRequired.min = 1;
+      insCost.rules.push(amountValueRequired);
+      const noExtension = new CardRule('extension[Amount].extension');
+      noExtension.max = '0';
+      insCost.rules.push(noExtension);
+      // * extension[Amount].value[x] only EURMoney
+      const amountOnlyEurMoney = new OnlyRule('extension[Amount].value[x]');
+      amountOnlyEurMoney.types = [{ type: 'EURMoney' }];
+      insCost.rules.push(amountOnlyEurMoney);
+      // * extension[Amount].value[x].value ^short = "Cost"
+      const amountMoneyValueShort = new CaretValueRule('extension[Amount].value[x].value');
+      amountMoneyValueShort.caretPath = 'short';
+      amountMoneyValueShort.value = 'Cost';
+      insCost.rules.push(amountMoneyValueShort);
+      doc.extensions.set(insCost.name, insCost);
+
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * extension contains InsuranceCost named InsCost 1..1
+      const containsInsCost = new ContainsRule('extension');
+      containsInsCost.items = [{ name: 'InsCost', type: 'InsuranceCost' }];
+      observationProfile.rules.push(containsInsCost);
+      const insCostRequired = new CardRule('extension[InsCost]');
+      insCostRequired.min = 1;
+      observationProfile.rules.push(insCostRequired);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * extension[InsCost].extension[Amount].valueMoney.value = 5.00
+      const moneyValueFive = new AssignmentRule(
+        'extension[InsCost].extension[Amount].valueMoney.value'
+      );
+      moneyValueFive.value = 5;
+      testInstance.rules.push(moneyValueFive);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/InsuranceCost',
+          extension: [
+            {
+              url: 'Amount',
+              valueMoney: {
+                currency: 'EUR',
+                value: 5
+              }
+            }
+          ]
+        }
+      ]);
+    });
+
     it('should assign an element to a value the same as the assigned value on the Structure Definition', () => {
       const assignedValRule = new AssignmentRule('active');
       assignedValRule.value = true;

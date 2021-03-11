@@ -519,11 +519,6 @@ export class StructureDefinition {
         }
       }
 
-      // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
-      const nonArrayElementIsBasedOnArray =
-        currentElement?.base?.max !== '0' &&
-        currentElement?.base?.max !== '1' &&
-        (currentElement?.max === '0' || currentElement?.max === '1');
       if (
         !currentElement ||
         currentElement.max === '0' ||
@@ -534,17 +529,24 @@ export class StructureDefinition {
         // We throw an error if the currentElement doesn't exist, has been zeroed out,
         // or is being incorrectly accessed as an array
         throw new CannotResolvePathError(path);
-      } else if (
-        (arrayIndex == null &&
-          currentElement.max != null &&
-          currentElement.max !== '0' &&
-          currentElement.max !== '1') ||
-        nonArrayElementIsBasedOnArray
-      ) {
-        // Modify the path to have 0 indices
+      }
+
+      // Determine if base and/or current are arrays. Note that this is not perfect (if base or current max is missing),
+      // but in practice, it appears to be sufficient. We could walk the inheritance tree to get the base and current values
+      // when they are missing, but this comes at a cost, and as noted above, the current approach works (likely due to
+      // how the publisher populates base in snapshots and how previous code processes the current element).
+      const baseIsArray =
+        currentElement?.base?.max != null &&
+        currentElement.base.max !== '0' &&
+        currentElement.base.max !== '1';
+      const currentIsArray =
+        currentElement?.max != null && currentElement.max !== '0' && currentElement.max !== '1';
+      // If the base is an array and we don't yet have an index or the currentElement is singular, make this index 0.
+      if (baseIsArray && (arrayIndex == null || !currentIsArray)) {
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
       }
+
       // Primitive and only primitives have a lower case first letter
       if (
         currentElement.type?.length === 1 &&
