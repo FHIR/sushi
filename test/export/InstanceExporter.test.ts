@@ -1386,6 +1386,44 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    // Assignment on CodeableReference
+    it('should log a meaningful error when assigning a Reference directly to a CodeableReference', () => {
+      const condition = new Instance('TestCondition');
+      condition.instanceOf = 'Condition';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'condition-id';
+      condition.rules.push(assignedIdRule);
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshReference('TestCondition');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(condition.name, condition);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Cannot assign.*Reference\(Condition\/condition-id\).*Assign to CodeableReference.reference\D*/s
+      );
+    });
+
+    it('should log a meaningful error when assigning a code directly to a CodeableReference', () => {
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshCode('foo');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Cannot assign.*#foo.*Assign to CodeableReference.concept\D*/s
+      );
+    });
+
     // Assigning References
     it('should assign a reference while resolving the Instance being referred to', () => {
       const orgInstance = new Instance('TestOrganization');

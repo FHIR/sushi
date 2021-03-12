@@ -39,14 +39,10 @@ import {
   InvalidFHIRIdError,
   DuplicateSliceError,
   NonAbstractParentOfSpecializationError,
-  ValueConflictsWithClosedSlicingError
+  ValueConflictsWithClosedSlicingError,
+  AssignmentToCodeableReferenceError
 } from '../errors';
-import {
-  setPropertyOnDefinitionInstance,
-  splitOnPathPeriods,
-  isReferenceType,
-  getReferenceConstrainingElement
-} from './common';
+import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -1264,9 +1260,19 @@ export class ElementDefinition {
       case 'Reference':
         value = value as FshReference;
 
+        // If we are assigning to a CodeableReference, we want to give a more descriptive error
+        // so we check the type and log this error separately from all other type checking
+        if (this.type[0].code === 'CodeableReference') {
+          throw new AssignmentToCodeableReferenceError('reference', value, 'reference');
+        }
+
         // It is possible the reference constraints do not come from the current element itself, so find the
         // element which is constraining the current element, and check the assignment against it
-        const referenceConstrainingElement = getReferenceConstrainingElement(this);
+        const referenceConstrainingElement =
+          this.type[0].code === 'Reference' &&
+          this.parent()?.type?.[0]?.code === 'CodeableReference'
+            ? this.parent()
+            : this;
         // If no targetProfile is present, there is nothing to check the value against, so just assign it
         if (value.sdType && referenceConstrainingElement.type[0].targetProfile) {
           const validTypes: string[] = [];
@@ -1631,7 +1637,7 @@ export class ElementDefinition {
    * @param {FshCode} code - the code to assign
    * @param {boolean} exactly - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @param {Fishable} fisher - A fishable object used for finding structure definitions
-   * @throws {CodedTypeNotFoundError} when there is no coded type on this element
+   * @throws {MismatchedTypeError} when the type of the value cannot be assigned to the element
    * @throws {ValueAlreadyAssignedError} when the code is already assigned to a different code
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
@@ -1665,8 +1671,10 @@ export class ElementDefinition {
         quantity.comparator = existing.comparator;
       }
       this.assignFHIRValue(code.toString(), quantity, exactly, type);
+    } else if (type === 'CodeableReference') {
+      throw new AssignmentToCodeableReferenceError('code', code, 'concept');
     } else {
-      throw new CodedTypeNotFoundError([type]);
+      throw new MismatchedTypeError('code', code, type);
     }
   }
 
