@@ -722,3 +722,17 @@ export class HasId {
 export function isReferenceType(type: string): boolean {
   return ['Reference', 'CodeableReference'].includes(type);
 }
+
+/**
+ * Gets the ElementDefinition that is providing reference constraints on a given Reference type element.
+ * The current application of this is to get a CodeableReference element that may be constraining its CodeableReference.reference
+ * element
+ * @param ed - The Reference type ElementDefinition.
+ * @returns - The element which contains the type constraints that apply to the Reference type element. If
+ * the element is not of Reference type, it is just returned.
+ */
+export function getReferenceConstrainingElement(ed: ElementDefinition) {
+  return ed.type[0].code === 'Reference' && ed.parent()?.type?.[0]?.code === 'CodeableReference'
+    ? ed.parent()
+    : ed;
+}

@@ -41,7 +41,12 @@ import {
   NonAbstractParentOfSpecializationError,
   ValueConflictsWithClosedSlicingError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
+import {
+  setPropertyOnDefinitionInstance,
+  splitOnPathPeriods,
+  isReferenceType,
+  getReferenceConstrainingElement
+} from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -1258,10 +1263,14 @@ export class ElementDefinition {
         break;
       case 'Reference':
         value = value as FshReference;
+
+        // It is possible the reference constraints do not come from the current element itself, so find the
+        // element which is constraining the current element, and check the assignment against it
+        const referenceConstrainingElement = getReferenceConstrainingElement(this);
         // If no targetProfile is present, there is nothing to check the value against, so just assign it
-        if (value.sdType && this.type[0].targetProfile) {
+        if (value.sdType && referenceConstrainingElement.type[0].targetProfile) {
           const validTypes: string[] = [];
-          this.type[0].targetProfile.forEach(tp => {
+          referenceConstrainingElement.type[0].targetProfile.forEach(tp => {
             const tpType = fisher.fishForMetadata(tp)?.sdType;
             if (tpType) {
               validTypes.push(tpType);
@@ -1270,7 +1279,10 @@ export class ElementDefinition {
 
           const referenceLineage = this.getTypeLineage(value.sdType, fisher);
           if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {
-            throw new InvalidTypeError(`Reference(${value.sdType})`, this.type);
+            throw new InvalidTypeError(
+              `Reference(${value.sdType})`,
+              referenceConstrainingElement.type
+            );
           }
         }
         this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
