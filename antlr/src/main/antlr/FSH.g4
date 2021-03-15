@@ -3,14 +3,16 @@ grammar FSH;
 options { tokenVocab = FSHLexer; }
 
 doc:                entity* EOF;
-entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | paramRuleSet | mapping;
+entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | paramRuleSet | mapping | logical;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name sdMetadata* sdRule*;
+logical:            KW_LOGICAL name sdMetadata* logicalRule*;
 sdMetadata:         parent | id | title | description | mixins;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule;
+logicalRule:        sdRule | addElementRule;
 
 instance:           KW_INSTANCE name instanceMetadata* instanceRule*;
 instanceMetadata:   instanceOf | title | description | usage | mixins;
@@ -71,6 +73,7 @@ obeysRule:          STAR path? KW_OBEYS name (KW_AND name)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 insertRule:         STAR KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
+addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING? STRING?;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );

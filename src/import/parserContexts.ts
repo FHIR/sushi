@@ -15,6 +15,7 @@ export interface EntityContext extends ParserRuleContext {
   ruleSet(): RuleSetContext;
   paramRuleSet(): ParamRuleSetContext;
   mapping(): MappingContext;
+  logical(): LogicalContext;
 }
 
 export interface AliasContext extends ParserRuleContext {
@@ -144,6 +145,17 @@ export interface MappingMetadataContext extends ParserRuleContext {
 export interface MappingEntityRuleContext extends ParserRuleContext {
   mappingRule(): MappingRuleContext;
   insertRule(): InsertRuleContext;
+}
+
+export interface LogicalContext extends ParserRuleContext {
+  name(): NameContext;
+  sdMetadata(): SdMetadataContext[];
+  logicalRule(): AddElementRuleContext[];
+}
+
+export interface LogicalRuleContext extends ParserRuleContext {
+  sdRule(): SdRuleContext;
+  addElementRule(): AddElementRuleContext;
 }
 
 export interface ParentContext extends ParserRuleContext {
@@ -372,6 +384,15 @@ export interface MappingRuleContext extends ParserRuleContext {
   STRING(): ParserRuleContext[];
   CODE(): ParserRuleContext;
 }
+
+export interface AddElementRuleContext extends ParserRuleContext {
+  path(): PathContext;
+  CARD(): ParserRuleContext;
+  flag(): FlagContext[];
+  targetType(): TargetTypeContext[];
+  STRING(): ParserRuleContext[];
+}
+
 export interface VsComponentContext extends ParserRuleContext {
   KW_EXCLUDE(): ParserRuleContext;
   vsConceptComponent(): VsConceptComponentContext;
