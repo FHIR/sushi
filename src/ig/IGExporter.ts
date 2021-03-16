@@ -1305,7 +1305,7 @@ export class IGExporter {
     const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
     if (inputIni.IG) {
       if (inputIni.IG.ig == null) {
-        const igValue = `input/ImplementationGuide-${this.config.id}.json`;
+        const igValue = `fsh-generated/resources/ImplementationGuide-${this.config.id}.json`;
         inputIni.IG.ig = igValue;
         logger.error(
           'The ig.ini file must have an "ig" property pointing to the IG file. Please add the following line ' +
