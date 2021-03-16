@@ -9,10 +9,11 @@ alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name sdMetadata* sdRule*;
-logical:            KW_LOGICAL name sdMetadata* logicalRule*;
+logical:            KW_LOGICAL name sdMetadata* lrRule*;
+resource:           KW_RESOURCE name sdMetadata lrRule*;
 sdMetadata:         parent | id | title | description | mixins;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule;
-logicalRule:        sdRule | addElementRule;
+lrRule:             sdRule | addElementRule;
 
 instance:           KW_INSTANCE name instanceMetadata* instanceRule*;
 instanceMetadata:   instanceOf | title | description | usage | mixins;

@@ -12,6 +12,7 @@ KW_CODESYSTEM:      'CodeSystem' WS* ':';
 KW_RULESET:         'RuleSet' WS* ':' -> pushMode(RULESET_OR_INSERT);
 KW_MAPPING:         'Mapping' WS* ':';
 KW_LOGICAL:         'Logical' WS* ':';
+KW_RESOURCE:        'Resource' WS* ':';
 KW_MIXINS:          'Mixins' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';

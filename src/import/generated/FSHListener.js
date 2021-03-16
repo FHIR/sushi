@@ -65,6 +65,15 @@ FSHListener.prototype.exitLogical = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#resource.
+FSHListener.prototype.enterResource = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#resource.
+FSHListener.prototype.exitResource = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#sdMetadata.
 FSHListener.prototype.enterSdMetadata = function(ctx) {
 };
@@ -83,12 +92,12 @@ FSHListener.prototype.exitSdRule = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#logicalRule.
-FSHListener.prototype.enterLogicalRule = function(ctx) {
+// Enter a parse tree produced by FSHParser#lrRule.
+FSHListener.prototype.enterLrRule = function(ctx) {
 };
 
-// Exit a parse tree produced by FSHParser#logicalRule.
-FSHListener.prototype.exitLogicalRule = function(ctx) {
+// Exit a parse tree produced by FSHParser#lrRule.
+FSHListener.prototype.exitLrRule = function(ctx) {
 };
 
 

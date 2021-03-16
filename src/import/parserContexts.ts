@@ -150,10 +150,16 @@ export interface MappingEntityRuleContext extends ParserRuleContext {
 export interface LogicalContext extends ParserRuleContext {
   name(): NameContext;
   sdMetadata(): SdMetadataContext[];
-  logicalRule(): AddElementRuleContext[];
+  lrRule(): LrRuleContext[];
 }
 
-export interface LogicalRuleContext extends ParserRuleContext {
+export interface ResourceContext extends ParserRuleContext {
+  name(): NameContext;
+  sdMetadata(): SdMetadataContext[];
+  lrRule(): LrRuleContext[];
+}
+
+export interface LrRuleContext extends ParserRuleContext {
   sdRule(): SdRuleContext;
   addElementRule(): AddElementRuleContext;
 }

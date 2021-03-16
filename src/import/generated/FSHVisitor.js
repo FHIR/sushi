@@ -48,6 +48,12 @@ FSHVisitor.prototype.visitLogical = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#resource.
+FSHVisitor.prototype.visitResource = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#sdMetadata.
 FSHVisitor.prototype.visitSdMetadata = function(ctx) {
   return this.visitChildren(ctx);
@@ -60,8 +66,8 @@ FSHVisitor.prototype.visitSdRule = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#logicalRule.
-FSHVisitor.prototype.visitLogicalRule = function(ctx) {
+// Visit a parse tree produced by FSHParser#lrRule.
+FSHVisitor.prototype.visitLrRule = function(ctx) {
   return this.visitChildren(ctx);
 };
 
