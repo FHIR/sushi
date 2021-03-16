@@ -1298,14 +1298,14 @@ export class IGExporter {
     );
     const inputIni = ini.parse(inputIniContents);
     if (Object.keys(inputIni).length > 1 || inputIni.IG == null) {
-      logger.error('igi.ini file must contain an [IG] section with no other sections', {
+      logger.error('ig.ini file must contain an [IG] section with no other sections', {
         file: inputIniPath
       });
     }
     const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
     if (inputIni.IG) {
       if (inputIni.IG.ig == null) {
-        const igValue = `input/ImplementationGuide-${this.config.id}.json`;
+        const igValue = `fsh-generated/resources/ImplementationGuide-${this.config.id}.json`;
         inputIni.IG.ig = igValue;
         logger.error(
           'The ig.ini file must have an "ig" property pointing to the IG file. Please add the following line ' +
