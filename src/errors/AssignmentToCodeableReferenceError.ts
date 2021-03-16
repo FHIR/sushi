@@ -9,7 +9,7 @@ export class AssignmentToCodeableReferenceError extends Error implements Annotat
     public childPath: string
   ) {
     super(
-      `Cannot assign ${valueType} value: ${value.toString()} to CodeableReference. Assign to CodeableReference.${childPath} instead`
+      `Cannot assign ${valueType} value: ${value.toString()} to CodeableReference. Assign to CodeableReference.${childPath} instead.`
     );
   }
 }
