@@ -1,5 +1,6 @@
 import { Annotated } from './Annotated';
 import { ElementDefinitionType } from '../fhirtypes';
+import { isReferenceType } from '../fhirtypes/common';
 
 export class InvalidTypeError extends Error implements Annotated {
   specReferences = [
@@ -28,7 +29,7 @@ function allowedTypesToString(types: ElementDefinitionType[]): string {
   }
   const strings: string[] = [];
   types.forEach(t => {
-    if (t.code === 'Reference') {
+    if (isReferenceType(t.code)) {
       strings.push(`Reference(${(t.targetProfile ?? []).join(' | ')})`);
     } else if (t.profile?.length > 0) {
       strings.push(...t.profile);

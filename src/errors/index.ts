@@ -45,3 +45,4 @@ export * from './InvalidExtensionParentError';
 export * from './InvalidTypeAccessError';
 export * from './NonAbstractParentOfSpecializationError';
 export * from './ValueConflictsWithClosedSlicingError';
+export * from './AssignmentToCodeableReferenceError';
