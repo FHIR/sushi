@@ -16,6 +16,7 @@ export interface EntityContext extends ParserRuleContext {
   paramRuleSet(): ParamRuleSetContext;
   mapping(): MappingContext;
   logical(): LogicalContext;
+  resource(): ResourceContext;
 }
 
 export interface AliasContext extends ParserRuleContext {

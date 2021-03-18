@@ -3,7 +3,7 @@ grammar FSH;
 options { tokenVocab = FSHLexer; }
 
 doc:                entity* EOF;
-entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | paramRuleSet | mapping | logical;
+entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | paramRuleSet | mapping | logical | resource;
 
 alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
 
