@@ -18,3 +18,5 @@ export * from './ParamRuleSet';
 export * from './Mapping';
 export * from './Configuration';
 export * from './AllowedRules';
+export * from './Logical';
+export * from './Resource';
