@@ -12,9 +12,7 @@ describe('#FshToFhir', () => {
   let defaultConfig: Configuration;
 
   beforeAll(() => {
-    loadSpy = jest.spyOn(utils, 'loadExternalDependencies').mockImplementation(() => {
-      return [undefined];
-    });
+    loadSpy = jest.spyOn(utils, 'loadExternalDependencies').mockResolvedValue();
     defaultConfig = {
       canonical: 'http://example.org',
       FSHOnly: true,
@@ -137,13 +135,13 @@ describe('#FshToFhir', () => {
       loadSpy.mockImplementation(defs => {
         defs.add(sd);
         defs.add(patient);
-        return [undefined];
+        return Promise.resolve();
       });
     });
 
     afterAll(() => {
       loadSpy.mockImplementation(() => {
-        return [undefined];
+        return Promise.resolve();
       });
     });
 

@@ -346,8 +346,7 @@ describe('Processing', () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, usCoreDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(2);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(defs.packages).toContain('hl7.fhir.us.core#3.1.0');
@@ -359,8 +358,7 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.5.0'];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, config).then(() => {
         expect(defs.packages).toEqual(['hl7.fhir.r5.core#4.5.0']);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
@@ -372,8 +370,7 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['current'];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, config).then(() => {
         expect(defs.packages).toEqual(['hl7.fhir.r5.core#current']);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
@@ -385,8 +382,7 @@ describe('Processing', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, badDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(1);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -399,8 +395,7 @@ describe('Processing', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.r4.core' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, badDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(1);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(

@@ -143,7 +143,7 @@ async function app() {
 
   // Load dependencies
   const defs = new FHIRDefinitions();
-  const dependencyDefs = loadExternalDependencies(defs, config);
+  await loadExternalDependencies(defs, config);
 
   // Load custom resources
   if (!isIgPubContext) {
@@ -153,8 +153,6 @@ async function app() {
     // In current tank configuration (input/fsh), resources will be in input/
     loadCustomResources(path.join(input, '..'), defs);
   }
-
-  await Promise.all(dependencyDefs);
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);

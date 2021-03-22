@@ -172,10 +172,10 @@ export function readConfig(input: string, isLegacyIgPubContext: boolean): Config
   return config;
 }
 
-export function loadExternalDependencies(
+export async function loadExternalDependencies(
   defs: FHIRDefinitions,
   config: Configuration
-): Promise<FHIRDefinitions | void>[] {
+): Promise<void> {
   // Add FHIR to the dependencies so it is loaded
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
   const fhirVersion = config.fhirVersion.find(v => isSupportedFHIRVersion(v));
@@ -188,8 +188,7 @@ export function loadExternalDependencies(
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
 
   // Load dependencies
-  const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
-  for (const dep of dependencies) {
+  const promises = dependencies.map(dep => {
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
@@ -202,19 +201,14 @@ export function loadExternalDependencies(
           `    uri: ${dep.uri ?? 'http://my-fhir-ig.org/ImplementationGuide/123'}\n` +
           '    version: current'
       );
-      continue;
+      return Promise.resolve();
     }
-    dependencyDefs.push(
-      loadDependency(dep.packageId, dep.version, defs)
-        .then(def => {
-          return def;
-        })
-        .catch(e => {
-          logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
-        })
-    );
-  }
-  return dependencyDefs;
+    return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+      logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
+    });
+  });
+
+  return Promise.all(promises).then(() => {});
 }
 
 export function getRawFSHes(input: string): RawFSH[] {
