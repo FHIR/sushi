@@ -15,6 +15,6 @@ export abstract class FshStructure extends FshEntity {
   }
 
   get constructorName() {
-    return 'Model';
+    return 'FshStructure';
   }
 }
