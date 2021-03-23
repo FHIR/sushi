@@ -1,12 +1,12 @@
 import { FshEntity } from './FshEntity';
-import { SdRule, AddElementRule } from './rules';
+import { Rule } from './rules';
 
-export abstract class Model extends FshEntity {
+export abstract class FshStructure extends FshEntity {
   id: string;
   parent?: string;
   title?: string;
   description?: string;
-  rules: (SdRule | AddElementRule)[];
+  rules: Rule[];
 
   constructor(public name: string) {
     super();
