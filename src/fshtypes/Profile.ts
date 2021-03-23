@@ -1,19 +1,13 @@
-import { FshEntity } from './FshEntity';
+import { FshStructure } from './FshStructure';
 import { SdRule } from './rules';
 
-export class Profile extends FshEntity {
-  id: string;
-  parent?: string;
-  title?: string;
-  description?: string;
+export class Profile extends FshStructure {
   mixins?: string[];
   rules: SdRule[];
 
   constructor(public name: string) {
-    super();
-    this.id = name; // init same as name
+    super(name);
     this.mixins = [];
-    this.rules = [];
   }
 
   get constructorName() {
