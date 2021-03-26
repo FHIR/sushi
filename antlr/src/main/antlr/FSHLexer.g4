@@ -55,7 +55,7 @@ KW_INSERT:          'insert' -> pushMode(RULESET_OR_INSERT);
 
 // SYMBOLS
 EQUAL:              '=';
-STAR:               '*'  [0-9]*;
+STAR:               ([\r\n] | LINE_COMMENT) WS* '*'  [0-9]*;
 COLON:              ':';
 COMMA:              ',';
 ARROW:              '->';
@@ -125,7 +125,7 @@ fragment NONWS_STR: ~[ \t\r\n\f\u00A0\\"];
 
 // IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);
-LINE_COMMENT:       '//' .*? [\r\n] -> skip;
+LINE_COMMENT:       '//' ~[\r\n]* [\r\n] -> skip;
 
 mode RULESET_OR_INSERT;
 PARAM_RULESET_REFERENCE:      WS* NONWS+ (WS* ('(' ('\\)' | '\\\\' | ~[)])+ ')')) -> popMode;

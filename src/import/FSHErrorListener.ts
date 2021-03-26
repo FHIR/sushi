@@ -169,7 +169,8 @@ export class FSHErrorListener extends ErrorListener {
     // > extraneous input '*component' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
     // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING}
     else if (/^extraneous input '\*\S/.test(msg)) {
-      message = "Rules must start with a '*' symbol followed by at least one space";
+      message =
+        "Rules must start with a '*' symbol followed by at least one space, and may only be preceded by whitespace";
     }
 
     return { message, location };

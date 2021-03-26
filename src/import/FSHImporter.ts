@@ -1984,7 +1984,14 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private extractStartStop(ctx: ParserRuleContext): TextLocation {
-    if (ctx instanceof TerminalNode) {
+    if (pc.isStarContext(ctx)) {
+      return {
+        startLine: ctx.STAR().symbol.line + 1,
+        startColumn: ctx.STAR().getText().length - ctx.STAR().getText().indexOf('\n') - 1,
+        endLine: ctx.stop.line,
+        endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
+      };
+    } else if (ctx instanceof TerminalNode) {
       return {
         startLine: ctx.symbol.line,
         startColumn: ctx.symbol.column + 1,
