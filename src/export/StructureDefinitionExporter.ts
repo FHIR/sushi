@@ -567,7 +567,7 @@ export class StructureDefinitionExporter implements Fishable {
     // The elements list does not need to be cleaned up.
     // And, the _sliceName and _primitive properties added by SUSHI should be skipped.
     cleanResource(structDef, (prop: string) =>
-      ['elements', '_sliceName', '_primitive'].includes(prop)
+      ['structDef', '_sliceName', '_primitive'].includes(prop)
     );
     structDef.inProgress = false;
 
