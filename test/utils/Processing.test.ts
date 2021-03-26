@@ -411,6 +411,10 @@ describe('Processing', () => {
   });
 
   describe('#getRawFSHes()', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
     it('should return a RawFSH for each file in the input directory that ends with .fsh', () => {
       const input = path.join(__dirname, 'fixtures', 'fsh-files');
       const rawFSHes = getRawFSHes(input);
@@ -434,11 +438,12 @@ describe('Processing', () => {
     });
 
     describe('#symlinks', () => {
-      const linkPath = path.join(__dirname, 'fixtures', 'fsh-files', 'myLock.fsh');
-      const linkTarget = path.join(__dirname, 'fixtures', 'fsh-files', 'meaninglessTarget');
+      const input = path.join(__dirname, 'fixtures', 'fsh-files');
+      const linkPath = path.join(input, 'myLock.fsh');
+      const linkTarget = path.join(input, 'meaninglessTarget');
 
       beforeAll(() => {
-        if (fs.existsSync(linkPath)) {
+        if (fs.readdirSync(input).includes('myLock.fsh')) {
           fs.removeSync(linkPath);
         }
         try {
@@ -450,21 +455,26 @@ describe('Processing', () => {
       });
 
       it('should return a RawFSH for each real file in the input directory that ends with .fsh', () => {
-        const input = path.join(__dirname, 'fixtures', 'fsh-files');
-        const rawFSHes = getRawFSHes(input);
-        expect(rawFSHes.length).toBe(2);
-        expect(rawFSHes).toContainEqual({
-          content: '// Content of first file',
-          path: path.join(input, 'first.fsh')
-        });
-        expect(rawFSHes).toContainEqual({
-          content: '// Content of second file',
-          path: path.join(input, 'second.fsh')
-        });
+        try {
+          const rawFSHes = getRawFSHes(input);
+          expect(rawFSHes.length).toBe(2);
+          expect(rawFSHes).toContainEqual({
+            content: '// Content of first file',
+            path: path.join(input, 'first.fsh')
+          });
+          expect(rawFSHes).toContainEqual({
+            content: '// Content of second file',
+            path: path.join(input, 'second.fsh')
+          });
+        } catch (err) {
+          console.log(err);
+        } finally {
+          expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        }
       });
 
       afterAll(() => {
-        if (fs.existsSync(linkPath)) {
+        if (fs.readdirSync(input).includes('myLock.fsh')) {
           fs.removeSync(linkPath);
         }
       });

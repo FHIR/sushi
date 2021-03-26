@@ -221,9 +221,10 @@ export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
   try {
     files = getFilesRecursive(input);
-  } catch {
+  } catch (err) {
+    logger.error(err);
     logger.error('Invalid path to FSH definition folder.');
-    throw Error;
+    throw err;
   }
   const rawFSHes = files
     .filter(file => file.endsWith('.fsh'))
