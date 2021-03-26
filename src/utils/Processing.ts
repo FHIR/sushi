@@ -458,7 +458,14 @@ function getFilesRecursive(dir: string): string[] {
   if (fs.statSync(dir).isDirectory()) {
     const descendants = fs
       .readdirSync(dir, 'utf8')
-      .filter(f => fs.existsSync(path.join(dir, f)))
+      .filter(f => {
+        try {
+          fs.accessSync(path.join(dir, f));
+          return true;
+        } catch {
+          return false;
+        }
+      })
       .map(f => getFilesRecursive(path.join(dir, f)));
     return [].concat(...descendants);
   } else {
