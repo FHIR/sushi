@@ -457,10 +457,16 @@ export async function init(): Promise<void> {
 }
 
 function getFilesRecursive(dir: string): string[] {
-  if (fs.statSync(dir).isDirectory()) {
-    const descendants = fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f)));
-    return [].concat(...descendants);
-  } else {
-    return [dir];
+  try {
+    if (fs.statSync(dir).isDirectory()) {
+      const descendants = fs
+        .readdirSync(dir, 'utf8')
+        .map(f => getFilesRecursive(path.join(dir, f)));
+      return [].concat(...descendants);
+    } else {
+      return [dir];
+    }
+  } catch {
+    return [];
   }
 }
