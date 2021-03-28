@@ -40,6 +40,7 @@ export function ensureInputDir(input: string): string {
 
 export function hasFshFiles(path: string): boolean {
   try {
+    fs.statSync(path);
     const files = getFilesRecursive(path).filter(file => file.endsWith('.fsh'));
     return files.length > 0;
   } catch (error) {
@@ -220,6 +221,7 @@ export function loadExternalDependencies(
 export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
   try {
+    fs.statSync(input);
     files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');
@@ -454,13 +456,16 @@ export async function init(): Promise<void> {
 }
 
 function getFilesRecursive(dir: string): string[] {
-  if (fs.statSync(dir).isDirectory()) {
-    const descendants = fs
-      .readdirSync(dir, 'utf8')
-      .filter(f => fs.existsSync(path.join(dir, f)))
-      .map(f => getFilesRecursive(path.join(dir, f)));
-    return [].concat(...descendants);
-  } else {
-    return [dir];
+  try {
+    if (fs.statSync(dir).isDirectory()) {
+      const descendants = fs
+        .readdirSync(dir, 'utf8')
+        .map(f => getFilesRecursive(path.join(dir, f)));
+      return [].concat(...descendants);
+    } else {
+      return [dir];
+    }
+  } catch {
+    return [];
   }
 }
