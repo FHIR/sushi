@@ -460,7 +460,7 @@ function getFilesRecursive(dir: string): string[] {
       .readdirSync(dir, 'utf8')
       .filter(f => {
         try {
-          fs.accessSync(path.join(dir, f));
+          fs.accessSync(path.join(dir, f), fs.constants.R_OK);
           return true;
         } catch {
           return false;
