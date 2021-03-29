@@ -181,8 +181,6 @@ describe('PathUtils', () => {
       const testPath = 'item1[10][Slice1].item2[11][Slice2].item3[12][Slice3]';
       const pathParts = parseFSHPath(testPath);
 
-      console.log(JSON.stringify(pathParts[0]));
-
       expect(pathParts[0]).toEqual({
         base: 'item1',
         brackets: ['10', 'Slice1'],
