@@ -11,7 +11,7 @@ import { logger } from './FSHLogger';
 export function parseFSHPath(fshPath: string): PathPart[] {
   const pathParts: PathPart[] = [];
   const seenSlices: string[] = [];
-  const indexRegex = new RegExp('^[0-9]$');
+  const indexRegex = /^[0-9]+$/;
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
   for (const pathPart of splitPath) {
     const splitPathPart = pathPart.split('[');
