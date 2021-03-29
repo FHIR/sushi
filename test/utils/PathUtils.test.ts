@@ -1,5 +1,5 @@
 import { CaretValueRule, Rule } from '../../src/fshtypes/rules';
-import { resolveSoftIndexing } from '../../src/utils';
+import { resolveSoftIndexing, parseFSHPath } from '../../src/utils';
 import '../testhelpers/loggerSpy'; // side-effect: suppresses logs
 
 describe('PathUtils', () => {
@@ -146,6 +146,58 @@ describe('PathUtils', () => {
         'name[1]',
         'name[1]'
       ]);
+    });
+  });
+
+  describe('#parseFSHPath', () => {
+    it('should properly seperate path elements into PathParts', () => {
+      const testPath = 'item1.item2.item3';
+      const pathParts = parseFSHPath(testPath);
+
+      expect(pathParts[0]).toEqual({ base: 'item1' });
+      expect(pathParts[1]).toEqual({ base: 'item2' });
+      expect(pathParts[2]).toEqual({ base: 'item3' });
+    });
+
+    it('should properly seperate path elements with brackets into PathParts', () => {
+      const testPath = 'item1[0].item2[0].item3[0]';
+      const pathParts = parseFSHPath(testPath);
+
+      expect(pathParts[0]).toEqual({ base: 'item1', brackets: ['0'] });
+      expect(pathParts[1]).toEqual({ base: 'item2', brackets: ['0'] });
+      expect(pathParts[2]).toEqual({ base: 'item3', brackets: ['0'] });
+    });
+
+    it('should properly seperate path elements with multi-digit brackets into PathParts', () => {
+      const testPath = 'item1[10].item2[11].item3[12]';
+      const pathParts = parseFSHPath(testPath);
+
+      expect(pathParts[0]).toEqual({ base: 'item1', brackets: ['10'] });
+      expect(pathParts[1]).toEqual({ base: 'item2', brackets: ['11'] });
+      expect(pathParts[2]).toEqual({ base: 'item3', brackets: ['12'] });
+    });
+
+    it('should properly seperate path elements with slice names into PathParts', () => {
+      const testPath = 'item1[10][Slice1].item2[11][Slice2].item3[12][Slice3]';
+      const pathParts = parseFSHPath(testPath);
+
+      console.log(JSON.stringify(pathParts[0]));
+
+      expect(pathParts[0]).toEqual({
+        base: 'item1',
+        brackets: ['10', 'Slice1'],
+        slices: ['Slice1']
+      });
+      expect(pathParts[1]).toEqual({
+        base: 'item2',
+        brackets: ['11', 'Slice2'],
+        slices: ['Slice1', 'Slice2']
+      });
+      expect(pathParts[2]).toEqual({
+        base: 'item3',
+        brackets: ['12', 'Slice3'],
+        slices: ['Slice1', 'Slice2', 'Slice3']
+      });
     });
   });
 });
