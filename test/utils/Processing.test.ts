@@ -438,8 +438,11 @@ describe('Processing', () => {
       const linkTarget = path.join(__dirname, 'fixtures', 'fsh-files', 'meaninglessTarget');
 
       beforeAll(() => {
-        if (fs.existsSync(linkPath)) {
+        try {
           fs.removeSync(linkPath);
+        } catch {
+          // This will fail if the link doesn't exist, which is fine.
+          // We just want to be extra sure to clean up before making it.
         }
         try {
           fs.symlinkSync(linkTarget, linkPath);
@@ -464,8 +467,10 @@ describe('Processing', () => {
       });
 
       afterAll(() => {
-        if (fs.existsSync(linkPath)) {
+        try {
           fs.removeSync(linkPath);
+        } catch {
+          // This will fail if someone removed the link in the middle of the test.
         }
       });
     });
