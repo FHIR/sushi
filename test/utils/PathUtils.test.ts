@@ -147,6 +147,18 @@ describe('PathUtils', () => {
         'name[1]'
       ]);
     });
+
+    it('should resolve soft indexing beginning with a non-zero index', () => {
+      const rules = ['name[2]', 'name[=]', 'name[=]', 'name[+]', 'name[=]'].map(r => new Rule(r));
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'name[2]',
+        'name[2]',
+        'name[2]',
+        'name[3]',
+        'name[3]'
+      ]);
+    });
   });
 
   describe('#parseFSHPath', () => {
