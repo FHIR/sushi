@@ -77,18 +77,17 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
     const existingNumericBracket = element.brackets?.find(bracket => indexRegex.test(bracket));
     if (existingNumericBracket) {
       pathMap.set(mapName, parseInt(existingNumericBracket));
-      return;
     } else {
       pathMap.set(mapName, 0);
-    }
-    if (element.brackets?.includes('+')) {
-      element.brackets[element.brackets.indexOf('+')] = '0';
-    } else if (element.brackets?.includes('=')) {
-      // If a sequence begins with a '=', we log an error but assume a value of 0
-      element.brackets[element.brackets.indexOf('=')] = '0';
-      throw new Error(
-        'The first index in a Soft Indexing sequence must be "+", an actual index of "0" has been assumed'
-      );
+      if (element.brackets?.includes('+')) {
+        element.brackets[element.brackets.indexOf('+')] = '0';
+      } else if (element.brackets?.includes('=')) {
+        // If a sequence begins with a '=', we log an error but assume a value of 0
+        element.brackets[element.brackets.indexOf('=')] = '0';
+        throw new Error(
+          'The first index in a Soft Indexing sequence must be "+", an actual index of "0" has been assumed'
+        );
+      }
     }
   } else {
     element.brackets?.forEach((bracket: string, index: number) => {
