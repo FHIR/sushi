@@ -74,7 +74,13 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
   const mapName = `${element.prefix ?? ''}.${element.base}|${(element.slices ?? []).join('|')}`;
   const indexRegex = /^[0-9]+$/;
   if (!pathMap.has(mapName)) {
-    pathMap.set(mapName, 0);
+    const existingNumericBracket = element.brackets?.find(bracket => indexRegex.test(bracket));
+    if (existingNumericBracket) {
+      pathMap.set(mapName, parseInt(existingNumericBracket));
+      return;
+    } else {
+      pathMap.set(mapName, 0);
+    }
     if (element.brackets?.includes('+')) {
       element.brackets[element.brackets.indexOf('+')] = '0';
     } else if (element.brackets?.includes('=')) {
