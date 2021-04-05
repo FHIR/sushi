@@ -11,7 +11,7 @@ import { logger } from './FSHLogger';
 export function parseFSHPath(fshPath: string): PathPart[] {
   const pathParts: PathPart[] = [];
   const seenSlices: string[] = [];
-  const indexRegex = new RegExp('^[0-9]$');
+  const indexRegex = /^[0-9]+$/;
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
   for (const pathPart of splitPath) {
     const splitPathPart = pathPart.split('[');
@@ -37,7 +37,7 @@ export function parseFSHPath(fshPath: string): PathPart[] {
         pathParts.push({
           base: fhirPathBase,
           brackets: brackets,
-          slices: seenSlices
+          slices: [...seenSlices]
         });
       } else {
         pathParts.push({ base: fhirPathBase, brackets: brackets });
@@ -74,15 +74,20 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
   const mapName = `${element.prefix ?? ''}.${element.base}|${(element.slices ?? []).join('|')}`;
   const indexRegex = /^[0-9]+$/;
   if (!pathMap.has(mapName)) {
-    pathMap.set(mapName, 0);
-    if (element.brackets?.includes('+')) {
-      element.brackets[element.brackets.indexOf('+')] = '0';
-    } else if (element.brackets?.includes('=')) {
-      // If a sequence begins with a '=', we log an error but assume a value of 0
-      element.brackets[element.brackets.indexOf('=')] = '0';
-      throw new Error(
-        'The first index in a Soft Indexing sequence must be "+", an actual index of "0" has been assumed'
-      );
+    const existingNumericBracket = element.brackets?.find(bracket => indexRegex.test(bracket));
+    if (existingNumericBracket) {
+      pathMap.set(mapName, parseInt(existingNumericBracket));
+    } else {
+      pathMap.set(mapName, 0);
+      if (element.brackets?.includes('+')) {
+        element.brackets[element.brackets.indexOf('+')] = '0';
+      } else if (element.brackets?.includes('=')) {
+        // If a sequence begins with a '=', we log an error but assume a value of 0
+        element.brackets[element.brackets.indexOf('=')] = '0';
+        throw new Error(
+          'The first index in a Soft Indexing sequence must be "+", an actual index of "0" has been assumed'
+        );
+      }
     }
   } else {
     element.brackets?.forEach((bracket: string, index: number) => {
