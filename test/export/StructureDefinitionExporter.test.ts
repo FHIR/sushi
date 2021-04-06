@@ -3170,6 +3170,35 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should apply a CaretValueRule on an extension on ElementDefinition', () => {
+    // Extension: MyBooleanExtension
+    // * value[x] only boolean
+    const extension = new Extension('MyBooleanExtension');
+    const onlyBoolean = new OnlyRule('value[x]');
+    onlyBoolean.types.push({ type: 'boolean' });
+    extension.rules.push(onlyBoolean);
+    doc.extensions.set(extension.name, extension);
+    // Profile: ExtensionOnName
+    // Parent: Patient
+    // * name ^extension[MyBooleanExtension].valueBoolean = true
+    const profile = new Profile('ExtensionOnName');
+    profile.parent = 'Patient';
+    const rule = new CaretValueRule('name');
+    rule.caretPath = 'extension[MyBooleanExtension].valueBoolean';
+    rule.value = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const name = sd.findElement('Patient.name');
+    expect(name.extension).toEqual([
+      {
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
+        valueBoolean: true
+      }
+    ]);
+  });
+
   it('should not apply an invalid CaretValueRule on an element without a path', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
