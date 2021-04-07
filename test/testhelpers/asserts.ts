@@ -1,3 +1,5 @@
+import 'jest-extended';
+import { get } from 'lodash';
 import {
   Rule,
   CardRule,
@@ -14,7 +16,8 @@ import {
   MappingRule,
   InsertRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule
+  ValueSetFilterComponentRule,
+  AddElementRule
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 
@@ -168,4 +171,84 @@ export function assertValueSetFilterComponent(
   expect(filterComponent.from.valueSets).toEqual(fromValueSets);
   expect(filterComponent.filters).toEqual(filters);
   expect(filterComponent.inclusion).toBe(included);
+}
+
+export interface AddElementCard {
+  min: number;
+  max: string;
+}
+
+export interface AddElementFlags {
+  mustSupport?: boolean;
+  summary?: boolean;
+  modifier?: boolean;
+  trialUse?: boolean;
+  normative?: boolean;
+  draft?: boolean;
+}
+
+export interface AddElementType {
+  type: string;
+  isReference?: boolean;
+}
+
+export interface AddElementDefs {
+  short?: string;
+  definition?: string;
+}
+
+export interface AddElementArgs {
+  card: AddElementCard;
+  flags?: AddElementFlags;
+  types: AddElementType[];
+  defs?: AddElementDefs;
+}
+
+export function assertAddElementRule(rule: Rule, path: string, args: AddElementArgs): void {
+  expect(rule).toBeInstanceOf(AddElementRule);
+  const addElementRule = rule as AddElementRule;
+  expect(addElementRule.constructorName).toStrictEqual('AddElementRule');
+  expect(addElementRule.path).toBe(path);
+
+  expect(addElementRule.min).toBe(args.card.min);
+  expect(addElementRule.max).toBe(args.card.max);
+
+  if (args.flags) {
+    if (args.flags.mustSupport) {
+      expect(addElementRule.mustSupport).toBe(args.flags.mustSupport);
+    }
+    if (args.flags.summary) {
+      expect(addElementRule.summary).toBe(args.flags.summary);
+    }
+    if (args.flags.modifier) {
+      expect(addElementRule.modifier).toBe(args.flags.modifier);
+    }
+    if (args.flags.trialUse) {
+      expect(addElementRule.trialUse).toBe(args.flags.trialUse);
+    }
+    if (args.flags.normative) {
+      expect(addElementRule.normative).toBe(args.flags.normative);
+    }
+    if (args.flags.draft) {
+      expect(addElementRule.draft).toBe(args.flags.draft);
+    }
+  }
+
+  // The parser does not return the 'isReference' attribute if it is false.
+  // To compare with the test's expected values, we need to remove the
+  // args.type's 'isReference' attribute if it is false.
+  const expectedTypes = args.types.map(t => {
+    const isRef = get(t, 'isReference', false);
+    return isRef ? t : { type: t.type };
+  });
+  expect(addElementRule.types).toIncludeSameMembers(expectedTypes);
+
+  if (args.defs) {
+    if (args.defs.short) {
+      expect(addElementRule.short).toBe(args.defs.short);
+    }
+    if (args.defs.definition) {
+      expect(addElementRule.definition).toBe(args.defs.definition);
+    }
+  }
 }

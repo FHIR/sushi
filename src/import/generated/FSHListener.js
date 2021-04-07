@@ -677,6 +677,15 @@ FSHListener.prototype.exitReference = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#referenceType.
+FSHListener.prototype.enterReferenceType = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#referenceType.
+FSHListener.prototype.exitReferenceType = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#canonical.
 FSHListener.prototype.enterCanonical = function(ctx) {
 };

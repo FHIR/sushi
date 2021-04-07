@@ -8,6 +8,8 @@ import { FSHParser } from './generated/FSHParser';
 import {
   Profile,
   Extension,
+  Resource,
+  Logical,
   FshCanonical,
   FshCode,
   FshQuantity,
@@ -45,7 +47,10 @@ import {
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
-  SdRule
+  SdRule,
+  LrRule,
+  AddElementRule,
+  OnlyRuleType
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
@@ -121,6 +126,8 @@ enum Flag {
   Draft,
   Unknown
 }
+
+const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 
 /**
  * FSHImporter handles the parsing of FSH documents, constructing the data into FSH types.
@@ -235,33 +242,23 @@ export class FSHImporter extends FSHVisitor {
   visitEntity(ctx: pc.EntityContext): void {
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
-    }
-
-    if (ctx.extension()) {
+    } else if (ctx.extension()) {
       this.visitExtension(ctx.extension());
-    }
-
-    if (ctx.instance()) {
+    } else if (ctx.resource()) {
+      this.visitResource(ctx.resource());
+    } else if (ctx.logical()) {
+      this.visitLogical(ctx.logical());
+    } else if (ctx.instance()) {
       this.visitInstance(ctx.instance());
-    }
-
-    if (ctx.valueSet()) {
+    } else if (ctx.valueSet()) {
       this.visitValueSet(ctx.valueSet());
-    }
-
-    if (ctx.codeSystem()) {
+    } else if (ctx.codeSystem()) {
       this.visitCodeSystem(ctx.codeSystem());
-    }
-
-    if (ctx.invariant()) {
+    } else if (ctx.invariant()) {
       this.visitInvariant(ctx.invariant());
-    }
-
-    if (ctx.ruleSet()) {
+    } else if (ctx.ruleSet()) {
       this.visitRuleSet(ctx.ruleSet());
-    }
-
-    if (ctx.mapping()) {
+    } else if (ctx.mapping()) {
       this.visitMapping(ctx.mapping());
     }
   }
@@ -329,6 +326,81 @@ export class FSHImporter extends FSHVisitor {
       });
     ruleCtx.forEach(sdRule => {
       def.rules.push(...this.visitSdRule(sdRule));
+    });
+  }
+
+  visitResource(ctx: pc.ResourceContext) {
+    const resource = new Resource(ctx.name().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.currentDoc.resources.has(resource.name)) {
+      logger.error(`Skipping Resource: a Resource named ${resource.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseResourceOrLogical(resource, ctx.sdMetadata(), ctx.lrRule());
+      this.currentDoc.resources.set(resource.name, resource);
+    }
+  }
+
+  visitLogical(ctx: pc.LogicalContext) {
+    const logical = new Logical(ctx.name().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.currentDoc.logicals.has(logical.name)) {
+      logger.error(
+        `Skipping Logical Model: a Logical Model named ${logical.name} already exists.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
+      this.parseResourceOrLogical(logical, ctx.sdMetadata(), ctx.lrRule());
+      this.currentDoc.logicals.set(logical.name, logical);
+    }
+  }
+
+  private parseResourceOrLogical(
+    def: Resource | Logical,
+    metaCtx: pc.SdMetadataContext[] = [],
+    ruleCtx: pc.LrRuleContext[] = []
+  ): void {
+    const seenPairs: Map<SdMetadataKey, string | string[]> = new Map();
+    metaCtx
+      .map(sdMeta => ({ ...this.visitSdMetadata(sdMeta), context: sdMeta }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === SdMetadataKey.Id) {
+          def.id = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Parent) {
+          def.parent = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Title) {
+          def.title = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Description) {
+          def.description = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Mixins) {
+          const msg =
+            'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
+            `The assigned "Mixins" for ${def.constructorName} have been ignored!`;
+          logger.error(msg, {
+            file: this.currentFile,
+            location: this.extractStartStop(pair.context)
+          });
+        }
+      });
+    ruleCtx.forEach(lrRule => {
+      def.rules.push(...this.visitLrRule(lrRule));
     });
   }
 
@@ -906,6 +978,69 @@ export class FSHImporter extends FSHVisitor {
     return concept;
   }
 
+  visitLrRule(ctx: pc.LrRuleContext): LrRule[] {
+    if (ctx.addElementRule()) {
+      return [this.visitAddElementRule(ctx.addElementRule())];
+    } else if (ctx.sdRule()) {
+      return this.visitSdRule(ctx.sdRule());
+    }
+    logger.warn(`Unsupported rule: ${ctx.getText()}`, {
+      file: this.currentFile,
+      location: this.extractStartStop(ctx)
+    });
+    return [];
+  }
+
+  visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
+    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
+    const addElementRule = new AddElementRule(path)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+
+    const cardRule = new CardRule(path)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    const card = this.parseCard(ctx.CARD().getText(), cardRule);
+    addElementRule.min = card.min;
+    addElementRule.max = card.max;
+
+    if (ctx.flag() && ctx.flag().length > 0) {
+      const flagRule = new FlagRule(path)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      this.parseFlags(flagRule, ctx.flag());
+      addElementRule.mustSupport = flagRule.mustSupport;
+      addElementRule.summary = flagRule.summary;
+      addElementRule.modifier = flagRule.modifier;
+      addElementRule.trialUse = flagRule.trialUse;
+      addElementRule.normative = flagRule.normative;
+      addElementRule.draft = flagRule.draft;
+    }
+
+    const onlyRule = this.visitOnlyRule(ctx);
+    onlyRule.types.forEach((orType: OnlyRuleType) => {
+      if (FLAGS.includes(orType.type)) {
+        logger.warn(
+          `The targetType '${orType.type}' appears to be a flag value rather than a valid target data type.`,
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    });
+    addElementRule.types = onlyRule.types;
+
+    if (ctx.STRING() && ctx.STRING().length > 0) {
+      addElementRule.short = this.extractString(ctx.STRING()[0]);
+      if (ctx.STRING().length > 1) {
+        addElementRule.definition = this.extractString(ctx.STRING()[1]);
+      }
+    }
+
+    return addElementRule;
+  }
+
   visitSdRule(ctx: pc.SdRuleContext): SdRule[] {
     if (ctx.cardRule()) {
       return this.visitCardRule(ctx.cardRule());
@@ -1361,14 +1496,14 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
-      if (t.reference()) {
+      if (t.referenceType()) {
         let referenceToken: ParserRuleContext;
         let references: string[];
-        if (t.reference().OR_REFERENCE()) {
-          referenceToken = t.reference().OR_REFERENCE();
+        if (t.referenceType().OR_REFERENCE()) {
+          referenceToken = t.referenceType().OR_REFERENCE();
           references = this.parseOrReference(referenceToken.getText());
         } else {
-          referenceToken = t.reference().PIPE_REFERENCE();
+          referenceToken = t.referenceType().PIPE_REFERENCE();
           references = this.parsePipeReference(referenceToken.getText());
           logger.warn(
             'Using "|" to list references is deprecated. Please use "or" to list references.',

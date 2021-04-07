@@ -1,6 +1,8 @@
 import {
   Profile,
   Extension,
+  Resource,
+  Logical,
   Instance,
   FshValueSet,
   FshCodeSystem,
@@ -13,6 +15,8 @@ export class FSHDocument {
   readonly aliases: Map<string, string>;
   readonly profiles: Map<string, Profile>;
   readonly extensions: Map<string, Extension>;
+  readonly resources: Map<string, Resource>;
+  readonly logicals: Map<string, Logical>;
   readonly instances: Map<string, Instance>;
   readonly valueSets: Map<string, FshValueSet>;
   readonly codeSystems: Map<string, FshCodeSystem>;
@@ -25,6 +29,8 @@ export class FSHDocument {
     this.aliases = new Map();
     this.profiles = new Map();
     this.extensions = new Map();
+    this.resources = new Map();
+    this.logicals = new Map();
     this.instances = new Map();
     this.valueSets = new Map();
     this.codeSystems = new Map();

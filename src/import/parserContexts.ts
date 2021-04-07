@@ -91,6 +91,7 @@ export interface CsMetadataContext extends ParserRuleContext {
   title(): TitleContext;
   description(): DescriptionContext;
 }
+
 export interface CsRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   caretValueRule(): CaretValueRuleContext;
@@ -327,10 +328,16 @@ export interface RatioPartContext extends ParserRuleContext {
   NUMBER(): ParserRuleContext;
   quantity(): QuantityContext;
 }
+
 export interface ReferenceContext extends ParserRuleContext {
   OR_REFERENCE(): ParserRuleContext;
   PIPE_REFERENCE(): ParserRuleContext;
   STRING(): ParserRuleContext;
+}
+
+export interface ReferenceTypeContext extends ParserRuleContext {
+  OR_REFERENCE(): ParserRuleContext;
+  PIPE_REFERENCE(): ParserRuleContext;
 }
 
 export interface CanonicalContext extends ParserRuleContext {
@@ -361,7 +368,7 @@ export interface OnlyRuleContext extends ParserRuleContext {
 
 export interface TargetTypeContext extends ParserRuleContext {
   name(): NameContext;
-  reference(): ReferenceContext;
+  referenceType(): ReferenceTypeContext;
 }
 
 export interface ObeysRuleContext extends ParserRuleContext {

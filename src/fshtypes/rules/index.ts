@@ -13,3 +13,4 @@ export * from './ValueSetComponentRule';
 export * from './ConceptRule';
 export * from './AddElementRule';
 export * from './SdRule';
+export * from './LrRule';
