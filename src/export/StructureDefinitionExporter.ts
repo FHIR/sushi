@@ -14,7 +14,8 @@ import {
   InvalidFHIRIdError,
   InvalidExtensionParentError,
   ParentDeclaredAsProfileIdError,
-  DuplicateSliceError
+  DuplicateSliceError,
+  MismatchedBindingTypeError
 } from '../errors';
 import {
   CardRule,
@@ -36,6 +37,7 @@ import {
   getUrlFromFshDefinition
 } from '../fhirtypes/common';
 import { Package } from './Package';
+import { isUri } from 'valid-url';
 
 // Extensions that should not be inherited by derived profiles
 // See: https://jira.hl7.org/browse/FHIR-27535
@@ -204,7 +206,15 @@ export class StructureDefinitionExporter implements Fishable {
             const target = structDef.getReferenceName(rule.path, element);
             element.constrainType(rule, this, target);
           } else if (rule instanceof BindingRule) {
-            const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
+            const vsURI =
+              this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url.split('|')[0] ??
+              rule.valueSet;
+            const csURI =
+              this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url.split('|')[0] ??
+              rule.valueSet;
+            if (isUri(csURI) && !isUri(vsURI)) {
+              throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
+            }
             element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
             const isExtension =
