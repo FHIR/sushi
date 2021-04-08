@@ -19,18 +19,6 @@ export class AddElementRule extends Rule {
     return 'AddElementRule';
   }
 
-  get flags(): string[] {
-    const flags: string[] = [];
-    if (this.mustSupport) flags.push('MS');
-    if (this.modifier) flags.push('?!');
-    if (this.summary) flags.push('SU');
-    if (this.draft) flags.push('D');
-    else if (this.trialUse) flags.push('TU');
-    else if (this.normative) flags.push('N');
-
-    return flags;
-  }
-
   toFSH(): string {
     const cardPart = `${this.min}..${this.max}`;
     const flagPart = this.flags.length ? ` ${this.flags.join(' ')}` : '';

@@ -1,4 +1,5 @@
 import { Rule } from './Rule';
+import { EOL } from 'os';
 
 export class ContainsRule extends Rule {
   items: ContainsRuleItem[];
@@ -10,6 +11,24 @@ export class ContainsRule extends Rule {
 
   get constructorName() {
     return 'ContainsRule';
+  }
+
+  toFSH(): string {
+    const itemsWithAssociatedRules = this.items.map(item => {
+      let line = '';
+
+      // Add contains rule info
+      if (item.type) {
+        line += `${item.type} named ${item.name}`;
+      } else {
+        line += `${item.name}`;
+      }
+      return line;
+    });
+
+    return `* ${this.path} contains${
+      itemsWithAssociatedRules.length > 1 ? `${EOL}    ` : ' '
+    }${itemsWithAssociatedRules.join(` and${EOL}    `)}`; // New line and indent each
   }
 }
 

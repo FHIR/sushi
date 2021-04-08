@@ -11,4 +11,12 @@ export class CardRule extends Rule {
   get constructorName() {
     return 'CardRule';
   }
+
+  cardToString(): string {
+    return `${this.min ?? ''}..${this.max ?? ''}`;
+  }
+
+  toFSH(): string {
+    return `* ${this.path} ${this.cardToString()}`;
+  }
 }

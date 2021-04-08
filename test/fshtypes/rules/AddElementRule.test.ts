@@ -21,7 +21,7 @@ describe('AddElementRule', () => {
   });
 
   describe('#toFSH', () => {
-    it('should produce FSH for a rule with cardinality and one type', () => {
+    it('should produce FSH for an AddElementRule with cardinality and one type', () => {
       const rule = new AddElementRule('barley');
       rule.min = 0;
       rule.max = '*';
@@ -32,7 +32,7 @@ describe('AddElementRule', () => {
       expect(rule.toFSH()).toEqual(expectedFSH);
     });
 
-    it('should produce FSH for a rule that contains flags', () => {
+    it('should produce FSH for an AddElementRule that contains flags', () => {
       const rule = new AddElementRule('road.brick');
       rule.min = 0;
       rule.max = '7';
@@ -46,7 +46,7 @@ describe('AddElementRule', () => {
       expect(rule.toFSH()).toEqual(expectedFSH);
     });
 
-    it('should produce FSH for a rule that contains short text', () => {
+    it('should produce FSH for an AddElementRule that contains short text', () => {
       const rule = new AddElementRule('barley');
       rule.min = 0;
       rule.max = '*';
@@ -58,7 +58,7 @@ describe('AddElementRule', () => {
       expect(rule.toFSH()).toEqual(expectedFSH);
     });
 
-    it('should produce FSH for a rule that contains short and definition text', () => {
+    it('should produce FSH for an AddElementRule that contains short and definition text', () => {
       const rule = new AddElementRule('barley');
       rule.min = 0;
       rule.max = '*';
@@ -72,7 +72,7 @@ describe('AddElementRule', () => {
       expect(rule.toFSH()).toEqual(expectedFSH);
     });
 
-    it('should produce FSH for a rule that contains multiple types', () => {
+    it('should produce FSH for an AddElementRule that contains multiple types', () => {
       const rule = new AddElementRule('barley');
       rule.min = 0;
       rule.max = '*';
@@ -89,7 +89,7 @@ describe('AddElementRule', () => {
       expect(rule.toFSH()).toEqual(expectedFSH);
     });
 
-    it('should produce FSH for a rule that contains flags, multiple types, short text, and definition text', () => {
+    it('should produce FSH for an AddElementRule that contains flags, multiple types, short text, and definition text', () => {
       const rule = new AddElementRule('barley');
       rule.min = 0;
       rule.max = '*';
