@@ -14,7 +14,8 @@ import {
   MappingRule,
   InsertRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule
+  ValueSetFilterComponentRule,
+  ConceptRule
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 
@@ -168,4 +169,12 @@ export function assertValueSetFilterComponent(
   expect(filterComponent.from.valueSets).toEqual(fromValueSets);
   expect(filterComponent.filters).toEqual(filters);
   expect(filterComponent.inclusion).toBe(included);
+}
+
+export function assertConceptRule(rule: Rule, code: string, display?: string, definition?: string) {
+  expect(rule).toBeInstanceOf(ConceptRule);
+  const conceptRule = rule as ConceptRule;
+  expect(conceptRule.code).toBe(code);
+  expect(conceptRule.display).toBe(display);
+  expect(conceptRule.definition).toBe(definition);
 }

@@ -45,7 +45,8 @@ import {
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
-  SdRule
+  SdRule,
+  Rule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
@@ -209,6 +210,8 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = null;
       this.currentFile = null;
     });
+
+    this.expandContextPaths(docs);
 
     let [definitions, instances] = [0, 0];
     docs.forEach(doc => {
@@ -451,6 +454,8 @@ export class FSHImporter extends FSHVisitor {
             existingComponent instanceof ValueSetConceptComponentRule &&
             rule.inclusion == existingComponent.inclusion &&
             rule.from.system == existingComponent.from.system &&
+            rule.sourceInfo.location.startColumn ===
+              existingComponent.sourceInfo.location.startColumn &&
             isEqual(sortBy(rule.from.valueSets), sortBy(existingComponent.from.valueSets))
           );
         }) as ValueSetConceptComponentRule;
@@ -1413,7 +1418,7 @@ export class FSHImporter extends FSHVisitor {
       containsRule.items.push(item);
 
       const cardRule = new CardRule(`${containsRule.path}[${item.name}]`)
-        .withLocation(this.extractStartStop(i))
+        .withLocation(this.extractStartStop(ctx))
         .withFile(this.currentFile);
       const card = this.parseCard(i.CARD().getText(), cardRule);
       cardRule.min = card.min;
@@ -1422,7 +1427,7 @@ export class FSHImporter extends FSHVisitor {
 
       if (i.flag() && i.flag().length > 0) {
         const flagRule = new FlagRule(`${containsRule.path}[${item.name}]`)
-          .withLocation(this.extractStartStop(i))
+          .withLocation(this.extractStartStop(ctx))
           .withFile(this.currentFile);
         this.parseFlags(flagRule, i.flag());
         rules.push(flagRule);
@@ -1666,12 +1671,16 @@ export class FSHImporter extends FSHVisitor {
     const inclusion = ctx.KW_EXCLUDE() == null;
     let vsComponent: ValueSetConceptComponentRule | ValueSetFilterComponentRule;
     if (ctx.vsConceptComponent()) {
-      vsComponent = new ValueSetConceptComponentRule(inclusion);
+      vsComponent = new ValueSetConceptComponentRule(inclusion)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
       [vsComponent.concepts, vsComponent.from] = this.visitVsConceptComponent(
         ctx.vsConceptComponent()
       );
     } else if (ctx.vsFilterComponent()) {
-      vsComponent = new ValueSetFilterComponentRule(inclusion);
+      vsComponent = new ValueSetFilterComponentRule(inclusion)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
       [vsComponent.filters, vsComponent.from] = this.visitVsFilterComponent(
         ctx.vsFilterComponent()
       );
@@ -1916,6 +1925,72 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
+  /**
+   * For each rule, expand the path based on context so that the path is complete
+   * @param docs - The array of FSHDocuments with entities containing rules
+   */
+  private expandContextPaths(docs: FSHDocument[]): void {
+    docs.forEach(doc => {
+      [
+        ...doc.codeSystems.values(),
+        ...doc.extensions.values(),
+        ...doc.profiles.values(),
+        ...doc.valueSets.values(),
+        ...doc.instances.values()
+      ].forEach(definition => {
+        let context: string[] = [];
+        // indentWidth is hard coded for now, but if we later allow non-multiples of 2 to indent, we can change that
+        const indentWidth = 2;
+        const baseIndent = definition.rules[0]?.sourceInfo.location.startColumn;
+        definition.rules.forEach((rule: Rule) => {
+          // We require that all rules are indented a multiple of indentWidth
+          const ruleIndent = rule.sourceInfo.location.startColumn - baseIndent;
+          if (ruleIndent % indentWidth !== 0) {
+            logger.error(
+              `Unable to determine context for rule indented ${ruleIndent} space(s). Rules must be indented in multiples of ${indentWidth} space(s)`,
+              rule.sourceInfo
+            );
+            return;
+          }
+
+          // And we require that rules are not indented too deeply
+          const contextIndex = ruleIndent / indentWidth;
+          if (contextIndex > context.length) {
+            logger.error(
+              `Cannot determine context of rule since it is indented too deeply. Rules must be indented in increments of ${indentWidth} space(s)`,
+              rule.sourceInfo
+            );
+            return;
+          }
+
+          // If the element is not indented, just reset the context, otherwise update the context based on the elemnent's indentation
+          if (contextIndex === 0) {
+            context = [rule.path];
+            return;
+          }
+
+          // Insert Rules cannot be given context, since they do not have a "path"
+          if (
+            rule instanceof InsertRule ||
+            rule instanceof ConceptRule ||
+            rule instanceof ValueSetComponentRule
+          ) {
+            logger.error(
+              `Rule of type ${rule.constructorName} cannot be indented to indicate context. The rule will be processed as if it is not indented`,
+              rule.sourceInfo
+            );
+            return;
+          }
+
+          rule.path = [context[contextIndex - 1], rule.path].join('.');
+          context.splice(contextIndex);
+          // The path we push onto the context should have no "[+]", since we assume users do not want to increment in child elements
+          context.push(rule.path.replace('[+]', '[=]'));
+        });
+      });
+    });
+  }
+
   private extractString(stringCtx: ParserRuleContext): string {
     const str = stringCtx?.getText() ?? '""'; // default to empty string if stringCtx is null
     const strNoQuotes = str.slice(1, str.length - 1); // Strip surrounding quotes
@@ -1987,7 +2062,7 @@ export class FSHImporter extends FSHVisitor {
     if (pc.isStarContext(ctx)) {
       return {
         startLine: ctx.STAR().symbol.line + 1,
-        startColumn: ctx.STAR().getText().length - ctx.STAR().getText().indexOf('\n') - 1,
+        startColumn: ctx.STAR().getText().length - ctx.STAR().getText().lastIndexOf('\n') - 1,
         endLine: ctx.stop.line,
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
