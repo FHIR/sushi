@@ -29,6 +29,7 @@ describe('CardRule', () => {
 
     it('should produce FSH for a CardRule with only a max', () => {
       const rule = new CardRule('contact');
+      rule.min = NaN; // the importer sets min to a result from parseInt, which may be NaN
       rule.max = '5';
 
       expect(rule.toFSH()).toBe('* contact ..5');

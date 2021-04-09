@@ -13,7 +13,7 @@ export class CardRule extends Rule {
   }
 
   cardToString(): string {
-    return `${this.min ?? ''}..${this.max ?? ''}`;
+    return `${this.min && !isNaN(this.min) ? this.min : ''}..${this.max ?? ''}`;
   }
 
   toFSH(): string {
