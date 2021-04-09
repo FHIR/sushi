@@ -16,7 +16,7 @@ describe('CodeSystem', () => {
   });
 
   describe('#toFSH', () => {
-    it('should export the simplest CodeSystem', () => {
+    it('should produce FSH for the simplest CodeSystem', () => {
       const input = new FshCodeSystem('SimpleCodeSystem');
 
       const expectedResult = ['CodeSystem: SimpleCodeSystem', 'Id: SimpleCodeSystem'].join(EOL);
@@ -24,7 +24,7 @@ describe('CodeSystem', () => {
       expect(result).toBe(expectedResult);
     });
 
-    it('should export a CodeSystem with additional metadata', () => {
+    it('should produce FSH for a CodeSystem with additional metadata', () => {
       const input = new FshCodeSystem('MetaCodeSystem');
       input.id = 'meta-code-system';
       input.title = 'Meta CodeSystem';
@@ -40,7 +40,7 @@ describe('CodeSystem', () => {
       expect(result).toBe(expectedResult);
     });
 
-    it('should export a CodeSystem with metadata that contains characters that are escaped in FSH', () => {
+    it('should produce FSH for a CodeSystem with metadata that contains characters that are escaped in FSH', () => {
       const input = new FshCodeSystem('NewlineCodeSystem');
       input.id = 'newline-code-system';
       input.title = 'This title\nhas a newline in it. Is that \\not allowed\\? Is that "not okay"?';
@@ -57,7 +57,7 @@ describe('CodeSystem', () => {
       expect(result).toBe(expectedResult);
     });
 
-    it('should export a CodeSystem with rules', () => {
+    it('should produce FSH for a CodeSystem with rules', () => {
       const input = new FshCodeSystem('MyCodeSystem');
       const conceptRule1 = new ConceptRule('foo');
       conceptRule1.display = 'bar';
