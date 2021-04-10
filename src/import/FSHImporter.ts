@@ -1958,7 +1958,7 @@ export class FSHImporter extends FSHVisitor {
         definition.rules.forEach((rule: Rule) => {
           // We require that all rules are indented a multiple of indentWidth
           const ruleIndent = rule.sourceInfo.location.startColumn - baseIndent;
-          if (ruleIndent % indentWidth !== 0) {
+          if (ruleIndent % indentWidth !== 0 || ruleIndent < 0) {
             logger.error(
               `Unable to determine context for rule indented ${ruleIndent} space(s). Rules must be indented in multiples of ${indentWidth} space(s)`,
               rule.sourceInfo

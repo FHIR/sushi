@@ -211,6 +211,29 @@ describe('FSHImporter', () => {
       assertAssignmentRule(instance.rules[1], 'id', 'bar');
     });
 
+    it('should log an error when a rule is indented a negative amount of spaces', () => {
+      // only 1 space of indent
+      const input = `
+        Instance: Foo
+        InstanceOf: Patient
+          * name.family = "foo"
+        * id = "bar"
+      `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Unable to determine context.*-2 space/);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Patient');
+      expect(instance.rules.length).toBe(2);
+      assertAssignmentRule(instance.rules[0], 'name.family', 'foo');
+      // rule is not assigned any context
+      assertAssignmentRule(instance.rules[1], 'id', 'bar');
+    });
+
     it('should log an error when a rule is indented too deeply', () => {
       // 4 spaces of indent
       const input = `
