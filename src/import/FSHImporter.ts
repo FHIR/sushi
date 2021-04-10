@@ -1947,10 +1947,12 @@ export class FSHImporter extends FSHVisitor {
         ...doc.extensions.values(),
         ...doc.profiles.values(),
         ...doc.valueSets.values(),
-        ...doc.instances.values()
+        ...doc.instances.values(),
+        ...doc.appliedRuleSets.values(),
+        ...doc.ruleSets.values()
       ].forEach(definition => {
         let context: string[] = [];
-        // indentWidth is hard coded for now, but if we later allow non-multiples of 2 to indent, we can change that
+        // NOTE: indentWidth is hard coded for now, but if we later allow non-multiples of 2 to indent, we can change that
         const indentWidth = 2;
         const baseIndent = definition.rules[0]?.sourceInfo.location.startColumn;
         definition.rules.forEach((rule: Rule) => {
@@ -1974,13 +1976,14 @@ export class FSHImporter extends FSHVisitor {
             return;
           }
 
-          // If the element is not indented, just reset the context, otherwise update the context based on the elemnent's indentation
+          // If the element is not indented, just reset the context
           if (contextIndex === 0) {
             context = [rule.path];
             return;
           }
 
-          // Insert Rules cannot be given context, since they do not have a "path"
+          // Insert Rules cannot be given context, since they do not have a "path".
+          // Rules on VS and CS cannot be indented, for style consistency we are still checking them here
           if (
             rule instanceof InsertRule ||
             rule instanceof ConceptRule ||

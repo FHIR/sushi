@@ -11,7 +11,8 @@ import {
   ConceptRule,
   ValueSetComponentRule,
   MappingRule,
-  Rule
+  Rule,
+  PathRule
 } from './rules';
 
 const allowedRulesMap = new Map<any, any[]>([
@@ -25,7 +26,8 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      BindingRule
+      BindingRule,
+      PathRule
     ]
   ],
   [
@@ -38,10 +40,11 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      BindingRule
+      BindingRule,
+      PathRule
     ]
   ],
-  [Instance, [AssignmentRule]],
+  [Instance, [AssignmentRule, PathRule]],
   [FshValueSet, [ValueSetComponentRule, CaretValueRule]],
   [FshCodeSystem, [ConceptRule, CaretValueRule]],
   [Mapping, [MappingRule]],
@@ -58,7 +61,8 @@ const allowedRulesMap = new Map<any, any[]>([
       ObeysRule,
       OnlyRule,
       ValueSetComponentRule,
-      BindingRule
+      BindingRule,
+      PathRule
     ]
   ]
 ]);
