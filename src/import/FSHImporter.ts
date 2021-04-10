@@ -46,7 +46,8 @@ import {
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
   SdRule,
-  Rule
+  Rule,
+  PathRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
@@ -932,6 +933,8 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.insertRule()) {
       const rule = this.visitInsertRule(ctx.insertRule());
       return rule ? [rule] : [];
+    } else if (ctx.pathRule()) {
+      return [this.visitPathRule(ctx.pathRule())];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -940,11 +943,13 @@ export class FSHImporter extends FSHVisitor {
     return [];
   }
 
-  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule {
+  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule | PathRule {
     if (ctx.fixedValueRule()) {
       return this.visitFixedValueRule(ctx.fixedValueRule());
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.pathRule()) {
+      return this.visitPathRule(ctx.pathRule());
     }
   }
 
@@ -1461,6 +1466,12 @@ export class FSHImporter extends FSHVisitor {
       rules.push(obeysRule);
     });
     return rules;
+  }
+
+  visitPathRule(ctx: pc.PathRuleContext): PathRule {
+    return new PathRule(this.visitPath(ctx.path()))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
   }
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
@@ -1982,10 +1993,10 @@ export class FSHImporter extends FSHVisitor {
             return;
           }
 
-          rule.path = [context[contextIndex - 1], rule.path].join('.');
+          // Replace '[+]' with '[=]' in higher level ccontexts, since children are at the same index as the parent contexts
+          rule.path = [context[contextIndex - 1].replace('[+]', '[=]'), rule.path].join('.');
           context.splice(contextIndex);
-          // The path we push onto the context should have no "[+]", since we assume users do not want to increment in child elements
-          context.push(rule.path.replace('[+]', '[=]'));
+          context.push(rule.path);
         });
       });
     });

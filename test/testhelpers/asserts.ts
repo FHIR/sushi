@@ -15,7 +15,8 @@ import {
   InsertRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
-  ConceptRule
+  ConceptRule,
+  PathRule
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 
@@ -177,4 +178,10 @@ export function assertConceptRule(rule: Rule, code: string, display?: string, de
   expect(conceptRule.code).toBe(code);
   expect(conceptRule.display).toBe(display);
   expect(conceptRule.definition).toBe(definition);
+}
+
+export function assertPathRule(rule: Rule, path: string) {
+  expect(rule).toBeInstanceOf(PathRule);
+  const pathRule = rule as PathRule;
+  expect(pathRule.path).toBe(path);
 }

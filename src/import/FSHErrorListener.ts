@@ -81,12 +81,18 @@ export class FSHErrorListener extends ErrorListener {
     }
 
     // * active= true
-    // > no viable alternative at input '* active= true'
+    // > extraneous input 'true'
     // * active =true
-    // > no viable alternative at input '* active =true'
+    // > extraneous input '=active'
     // * active=true
     // > no viable alternative at input '* active=true'
-    else if (/^no viable alternative at input '.*((\S=)|(=\S))/.test(msg)) {
+    // * valueString="My String"
+    // > extraneous input 'String"'
+    else if (
+      /^no viable alternative at input '.*((\S=)|(=\S))/.test(msg) ||
+      (/^extraneous input/.test(msg) && /=/.test(oneTokenBack?.text)) ||
+      (/^extraneous input/.test(msg) && /^=/.test(offendingSymbol?.text))
+    ) {
       message =
         "Assignment rules must include at least one space both before and after the '=' sign";
     }

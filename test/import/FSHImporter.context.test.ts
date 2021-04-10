@@ -5,6 +5,7 @@ import {
   assertCardRule,
   assertConceptRule,
   assertInsertRule,
+  assertPathRule,
   assertValueSetConceptComponent,
   assertValueSetFilterComponent
 } from '../testhelpers/asserts';
@@ -123,6 +124,68 @@ describe('FSHImporter', () => {
       assertCardRule(profile.rules[2], 'name.family.id', 1, 1);
       assertCardRule(profile.rules[3], 'name.family.id.id', 1, 1);
       assertCardRule(profile.rules[4], 'name.given', 1, 1);
+    });
+
+    it('should parse a rule that only sets a path context', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * name
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(1);
+      assertPathRule(profile.rules[0], 'name');
+    });
+
+    it('should use context from rules that only set context', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * name
+        * family 1..1
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(2);
+      assertPathRule(profile.rules[0], 'name');
+      assertCardRule(profile.rules[1], 'name.family', 1, 1);
+    });
+
+    it('should change + to = when setting context on children of soft indexed rules', () => {
+      const input = `
+      Instance: Foo
+      InstanceOf: Questionnaire
+      * item[+]
+        * linkId = "foo"
+        * item[+]
+          * linkId = "bar"
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Questionnaire');
+      expect(instance.rules.length).toBe(4);
+      assertPathRule(instance.rules[0], 'item[+]');
+      assertAssignmentRule(instance.rules[1], 'item[=].linkId', 'foo');
+      assertPathRule(instance.rules[2], 'item[=].item[+]');
+      assertAssignmentRule(instance.rules[3], 'item[=].item[=].linkId', 'bar');
     });
 
     it('should log an error when a rule is indented an invalid amount of spaces', () => {

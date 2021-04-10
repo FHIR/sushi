@@ -61,6 +61,7 @@ export interface InstanceMetadataContext extends ParserRuleContext {
 export interface InstanceRuleContext extends ParserRuleContext {
   fixedValueRule(): FixedValueRuleContext;
   insertRule(): InsertRuleContext;
+  pathRule(): PathRuleContext;
 }
 
 export interface ValueSetContext extends ParserRuleContext {
@@ -226,6 +227,7 @@ export interface SdRuleContext extends ParserRuleContext {
   obeysRule(): ObeysRuleContext;
   caretValueRule(): CaretValueRuleContext;
   insertRule(): InsertRuleContext;
+  pathRule(): PathRuleContext;
 }
 
 // NameContext can be so many things, but we really only care about its text,
@@ -402,6 +404,11 @@ export interface MappingRuleContext extends ParserRuleContext {
   path(): PathContext;
   STRING(): ParserRuleContext[];
   CODE(): ParserRuleContext;
+}
+
+export interface PathRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
+  path(): PathContext;
 }
 
 export interface AddElementRuleContext extends ParserRuleContext {

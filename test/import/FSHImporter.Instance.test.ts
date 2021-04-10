@@ -1,4 +1,4 @@
-import { assertAssignmentRule, assertInsertRule } from '../testhelpers/asserts';
+import { assertAssignmentRule, assertInsertRule, assertPathRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -237,6 +237,20 @@ describe('FSHImporter', () => {
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
         expect(instance.rules.length).toBe(1);
         assertAssignmentRule(instance.rules[0], 'contained[0]', 'SomeInstance', false, true);
+      });
+    });
+
+    describe('#pathRule', () => {
+      it('should parse a pathRule', () => {
+        const input = `
+        Instance: PatientProfile
+        InstanceOf: Patient
+        * name
+        `;
+        const result = importSingleText(input, 'Path.fsh');
+        const i = result.instances.get('PatientProfile');
+        expect(i.rules).toHaveLength(1);
+        assertPathRule(i.rules[0], 'name');
       });
     });
 
