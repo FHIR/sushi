@@ -662,7 +662,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  parseRuleSet(ruleSet: RuleSet, rules: pc.RuleSetRuleContext[]) {
+  private parseRuleSet(ruleSet: RuleSet, rules: pc.RuleSetRuleContext[]) {
     rules.forEach(rule => {
       if (rule.sdRule()) {
         ruleSet.rules.push(...this.visitSdRule(rule.sdRule()));
@@ -724,7 +724,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  parseMapping(
+  private parseMapping(
     mapping: Mapping,
     metaCtx: pc.MappingMetadataContext[] = [],
     ruleCtx: pc.MappingEntityRuleContext[] = []
@@ -992,44 +992,19 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
-    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
-    const addElementRule = new AddElementRule(path)
+    const addElementRule = new AddElementRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
 
-    const cardRule = new CardRule(path)
-      .withLocation(this.extractStartStop(ctx))
-      .withFile(this.currentFile);
-    const card = this.parseCard(ctx.CARD().getText(), cardRule);
+    const card = this.parseCard(ctx.CARD().getText(), addElementRule);
     addElementRule.min = card.min;
     addElementRule.max = card.max;
 
     if (ctx.flag() && ctx.flag().length > 0) {
-      const flagRule = new FlagRule(path)
-        .withLocation(this.extractStartStop(ctx))
-        .withFile(this.currentFile);
-      this.parseFlags(flagRule, ctx.flag());
-      addElementRule.mustSupport = flagRule.mustSupport;
-      addElementRule.summary = flagRule.summary;
-      addElementRule.modifier = flagRule.modifier;
-      addElementRule.trialUse = flagRule.trialUse;
-      addElementRule.normative = flagRule.normative;
-      addElementRule.draft = flagRule.draft;
+      this.parseFlags(addElementRule, ctx.flag());
     }
 
-    const onlyRule = this.visitOnlyRule(ctx);
-    onlyRule.types.forEach((orType: OnlyRuleType) => {
-      if (FLAGS.includes(orType.type)) {
-        logger.warn(
-          `The targetType '${orType.type}' appears to be a flag value rather than a valid target data type.`,
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-      }
-    });
-    addElementRule.types = onlyRule.types;
+    addElementRule.types = this.parseTargetType(ctx);
 
     if (ctx.STRING() && ctx.STRING().length > 0) {
       addElementRule.short = this.extractString(ctx.STRING()[0]);
@@ -1162,7 +1137,7 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  private parseCard(card: string, rule: CardRule): { min: number; max: string } {
+  private parseCard(card: string, rule: CardRule | AddElementRule): { min: number; max: string } {
     const parts = card.split('..', 2);
     if (parts[0] === '' && parts[1] === '') {
       logger.error(
@@ -1197,7 +1172,7 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
-  private parseFlags(flagRule: FlagRule, flagContext: pc.FlagContext[]): void {
+  private parseFlags(flagRule: FlagRule | AddElementRule, flagContext: pc.FlagContext[]): void {
     const flags = flagContext.map(f => this.visitFlag(f));
     if (flags.includes(Flag.MustSupport)) {
       flagRule.mustSupport = true;
@@ -1495,6 +1470,13 @@ export class FSHImporter extends FSHVisitor {
     const onlyRule = new OnlyRule(this.visitPath(ctx.path()))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+
+    onlyRule.types = this.parseTargetType(ctx);
+    return onlyRule;
+  }
+
+  private parseTargetType(ctx: pc.AddElementRuleContext | pc.OnlyRuleContext): OnlyRuleType[] {
+    const orTypes: OnlyRuleType[] = [];
     ctx.targetType().forEach(t => {
       if (t.referenceType()) {
         let referenceToken: ParserRuleContext;
@@ -1509,21 +1491,34 @@ export class FSHImporter extends FSHVisitor {
             'Using "|" to list references is deprecated. Please use "or" to list references.',
             {
               file: this.currentFile,
-              location: this.extractStartStop(ctx)
+              location: this.extractStartStop(t)
             }
           );
         }
         references.forEach(r =>
-          onlyRule.types.push({
+          orTypes.push({
             type: this.aliasAwareValue(referenceToken, r),
             isReference: true
           })
         );
       } else {
-        onlyRule.types.push({ type: this.aliasAwareValue(t.name()) });
+        orTypes.push({ type: this.aliasAwareValue(t.name()) });
       }
     });
-    return onlyRule;
+
+    orTypes.forEach(orType => {
+      if (FLAGS.includes(orType.type)) {
+        logger.warn(
+          `The targetType '${orType.type}' appears to be a flag value rather than a valid target data type.`,
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    });
+
+    return orTypes;
   }
 
   visitContainsRule(ctx: pc.ContainsRuleContext): (ContainsRule | CardRule | FlagRule)[] {

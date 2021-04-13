@@ -25,6 +25,8 @@ import { FSHImporter, RawFSH } from '../../src/import';
 import { EOL } from 'os';
 
 describe('FSHImporter', () => {
+  beforeEach(() => loggerSpy.reset());
+
   describe('SD Rules', () => {
     // These rules are shared across all StructureDefinition entities:
     //   Profile, Extension, Resource, Logical

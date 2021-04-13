@@ -15,6 +15,8 @@ import {
 import { FshCode } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
+  beforeEach(() => loggerSpy.reset());
+
   describe('Logical', () => {
     describe('#sdMetadata', () => {
       it('should parse the simplest possible logical model', () => {
@@ -45,7 +47,7 @@ describe('FSHImporter', () => {
         const testToken = (token: string) => {
           const input = `
           Logical: ${token}
-          Parent: Observation
+          Parent: BaseObservationModel
           * value[x] only boolean
           `;
           const result = importSingleText(input);
@@ -82,7 +84,7 @@ describe('FSHImporter', () => {
       it('should parse logical model with additional metadata properties', () => {
         const input = `
         Logical: MyObservationModel
-        Parent: Observation
+        Parent: BaseObservationModel
         Id: observation-model
         Title: "An Observation-based Logical Model"
         Description: "A logical model based on Observation"
@@ -92,7 +94,7 @@ describe('FSHImporter', () => {
         expect(result.logicals.size).toBe(1);
         const logical = result.logicals.get('MyObservationModel');
         expect(logical.name).toBe('MyObservationModel');
-        expect(logical.parent).toBe('Observation');
+        expect(logical.parent).toBe('BaseObservationModel');
         expect(logical.id).toBe('observation-model');
         expect(logical.title).toBe('An Observation-based Logical Model');
         expect(logical.description).toBe('A logical model based on Observation');
@@ -122,7 +124,7 @@ describe('FSHImporter', () => {
       it('should properly parse a multi-string description', () => {
         const input = `
         Logical: MyObservationModel
-        Parent: Observation
+        Parent: BaseObservationModel
         Description:
           """
           This is a multi-string description
@@ -160,7 +162,7 @@ describe('FSHImporter', () => {
 
       it('should accept and translate an alias for the parent', () => {
         const input = `
-        Alias: OBS = http://hl7.org/fhir/StructureDefinition/Observation
+        Alias: OBS = http://example.com/fhir/StructureDefinition/BaseObservationModel
 
         Logical: MyObservationModel
         Parent: OBS
@@ -170,17 +172,19 @@ describe('FSHImporter', () => {
         expect(result.logicals.size).toBe(1);
         const logical = result.logicals.get('MyObservationModel');
         expect(logical.name).toBe('MyObservationModel');
-        expect(logical.parent).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
+        expect(logical.parent).toBe(
+          'http://example.com/fhir/StructureDefinition/BaseObservationModel'
+        );
       });
 
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Logical: MyObservationModel
-        Parent: Observation
+        Parent: BaseObservationModel
         Id: observation-model
         Title: "An Observation-based Logical Model"
         Description: "A logical model based on Observation"
-        Parent: DuplicateObservation
+        Parent: DuplicateBaseObservationModel
         Id: duplicate-observation-model
         Title: "Duplicate Observation-based Logical Model"
         Description: "Duplicate logical model based on Observation"
@@ -190,7 +194,7 @@ describe('FSHImporter', () => {
         expect(result.logicals.size).toBe(1);
         const logical = result.logicals.get('MyObservationModel');
         expect(logical.name).toBe('MyObservationModel');
-        expect(logical.parent).toBe('Observation');
+        expect(logical.parent).toBe('BaseObservationModel');
         expect(logical.id).toBe('observation-model');
         expect(logical.title).toBe('An Observation-based Logical Model');
         expect(logical.description).toBe('A logical model based on Observation');
@@ -199,11 +203,11 @@ describe('FSHImporter', () => {
       it('should log an error when encountering a duplicate metadata attribute', () => {
         const input = `
         Logical: MyObservationModel
-        Parent: Observation
+        Parent: BaseObservationModel
         Id: observation-model
         Title: "An Observation-based Logical Model"
         Description: "A logical model based on Observation"
-        Parent: DuplicateObservation
+        Parent: DuplicateBaseObservationModel
         Id: duplicate-observation-model
         Title: "Duplicate Observation-based Logical Model"
         Description: "Duplicate logical model based on Observation"
@@ -219,11 +223,11 @@ describe('FSHImporter', () => {
       it('should log an error and skip the logical model when encountering a logical model with a name used by another logical model', () => {
         const input = `
         Logical: MyObservationModel
-        Parent: Observation
+        Parent: BaseObservationModel
         Title: "An Observation-based Logical Model"
 
         Logical: MyObservationModel
-        Parent: Observation
+        Parent: BaseObservationModel
         Title: "Second Observation-based Logical Model"
         `;
         const result = importSingleText(input, 'SameName.fsh');
@@ -237,7 +241,7 @@ describe('FSHImporter', () => {
       });
     });
 
-    // Tests for all supported rules are in FSHImporter.SD-Rules.test.ts
+    // Tests for all supported rules are in FSHImporter.SDRules.test.ts
     // Since Logicals use the same rule parsing code as other StructureDefinitions, only do minimal tests of rules
     describe('#cardRule', () => {
       it('should parse simple card rules', () => {
