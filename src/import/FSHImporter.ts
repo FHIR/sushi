@@ -1005,6 +1005,17 @@ export class FSHImporter extends FSHVisitor {
     }
 
     addElementRule.types = this.parseTargetType(ctx);
+    addElementRule.types.forEach(onlyRuleType => {
+      if (FLAGS.includes(onlyRuleType.type)) {
+        logger.warn(
+          `The targetType '${onlyRuleType.type}' appears to be a flag value rather than a valid target data type.`,
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    });
 
     if (ctx.STRING() && ctx.STRING().length > 0) {
       addElementRule.short = this.extractString(ctx.STRING()[0]);
@@ -1505,19 +1516,6 @@ export class FSHImporter extends FSHVisitor {
         orTypes.push({ type: this.aliasAwareValue(t.name()) });
       }
     });
-
-    orTypes.forEach(orType => {
-      if (FLAGS.includes(orType.type)) {
-        logger.warn(
-          `The targetType '${orType.type}' appears to be a flag value rather than a valid target data type.`,
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-      }
-    });
-
     return orTypes;
   }
 

@@ -555,6 +555,38 @@ describe('FSHImporter', () => {
           types: [{ type: 'Address' }]
         });
       });
+
+      it('should log a warning when a data type is defined with a flag value', () => {
+        const input = `
+        Logical: LogicalModel
+        * isValid 1..1 MS boolean "is it valid?"
+        * stuff 0..* N "just stuff" "a list of some stuff"
+        * address 1..* Address
+        `;
+
+        const result = importSingleText(input, 'WarnDataType.fsh');
+        const logical = result.logicals.get('LogicalModel');
+        expect(logical.rules).toHaveLength(3);
+        assertAddElementRule(logical.rules[0], 'isValid', {
+          card: { min: 1, max: '1' },
+          flags: { mustSupport: true },
+          types: [{ type: 'boolean' }],
+          defs: { short: 'is it valid?' }
+        });
+        assertAddElementRule(logical.rules[1], 'stuff', {
+          card: { min: 0, max: '*' },
+          types: [{ type: 'N' }],
+          defs: { short: 'just stuff', definition: 'a list of some stuff' }
+        });
+        assertAddElementRule(logical.rules[2], 'address', {
+          card: { min: 1, max: '*' },
+          types: [{ type: 'Address' }]
+        });
+
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /The targetType 'N' appears to be a flag value rather than a valid target data type./s
+        );
+      });
     });
   });
 });
