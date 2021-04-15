@@ -1996,7 +1996,7 @@ export class FSHImporter extends FSHVisitor {
             return;
           }
 
-          // Replace '[+]' with '[=]' in higher level ccontexts, since children are at the same index as the parent contexts
+          // Replace '[+]' with '[=]' in higher level contexts, since children are at the same index as the parent contexts
           rule.path = [context[contextIndex - 1].replace('[+]', '[=]'), rule.path].join('.');
           context.splice(contextIndex);
           context.push(rule.path);
