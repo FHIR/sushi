@@ -1645,11 +1645,9 @@ export class ElementDefinition {
   private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
     if (code.system) {
       const csURI = code.system.split('|')[0];
-      if (fisher) {
-        const vsURI = fisher.fishForMetadata(code.system, Type.ValueSet)?.url.split('|')[0] ?? '';
-        if (isUri(vsURI)) {
-          throw new MismatchedBindingTypeError(code.system, this.path, 'Code System');
-        }
+      const vsURI = fisher?.fishForMetadata(code.system, Type.ValueSet)?.url ?? '';
+      if (vsURI) {
+        throw new MismatchedBindingTypeError(code.system, this.path, 'Code System');
       } else if (!isUri(csURI)) {
         throw new InvalidUriError(code.system);
       }
