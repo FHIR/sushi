@@ -191,14 +191,14 @@ describe('ElementDefinition', () => {
           false,
           fisher
         );
-      }).toThrow(/Code System/);
+      }).toThrow(/CodeSystem/);
       expect(() => {
         clone.assignValue(
           new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category'),
           true,
           fisher
         );
-      }).toThrow(/Code System/);
+      }).toThrow(/CodeSystem/);
     });
 
     it('should assign a code to a Coding', () => {

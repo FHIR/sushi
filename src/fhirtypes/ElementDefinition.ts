@@ -1647,7 +1647,7 @@ export class ElementDefinition {
       const csURI = code.system.split('|')[0];
       const vsURI = fisher?.fishForMetadata(code.system, Type.ValueSet)?.url ?? '';
       if (vsURI) {
-        throw new MismatchedBindingTypeError(code.system, this.path, 'Code System');
+        throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
       } else if (!isUri(csURI)) {
         throw new InvalidUriError(code.system);
       }
