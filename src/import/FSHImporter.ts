@@ -1960,7 +1960,7 @@ export class FSHImporter extends FSHVisitor {
           const ruleIndent = rule.sourceInfo.location.startColumn - baseIndent;
           if (ruleIndent % indentWidth !== 0 || ruleIndent < 0) {
             logger.error(
-              `Unable to determine context for rule indented ${ruleIndent} space(s). Rules must be indented in multiples of ${indentWidth} space(s)`,
+              `Unable to determine context for rule indented ${ruleIndent} space(s). Rules must be indented in multiples of ${indentWidth} space(s).`,
               rule.sourceInfo
             );
             return;
@@ -1970,7 +1970,7 @@ export class FSHImporter extends FSHVisitor {
           const contextIndex = ruleIndent / indentWidth;
           if (contextIndex > context.length) {
             logger.error(
-              `Cannot determine context of rule since it is indented too deeply. Rules must be indented in increments of ${indentWidth} space(s)`,
+              `Cannot determine context of rule since it is indented too deeply. Rules must be indented in increments of ${indentWidth} space(s).`,
               rule.sourceInfo
             );
             return;
@@ -1990,14 +1990,26 @@ export class FSHImporter extends FSHVisitor {
             rule instanceof ValueSetComponentRule
           ) {
             logger.error(
-              `Rule of type ${rule.constructorName} cannot be indented to indicate context. The rule will be processed as if it is not indented`,
+              `Rule of type ${rule.constructorName} cannot be indented to indicate context. The rule will be processed as if it is not indented.`,
               rule.sourceInfo
             );
             return;
           }
 
           // Replace '[+]' with '[=]' in higher level contexts, since children are at the same index as the parent contexts
-          rule.path = [context[contextIndex - 1].replace('[+]', '[=]'), rule.path].join('.');
+          let expandedPath = context[contextIndex - 1].replace('[+]', '[=]');
+          if (expandedPath === '') {
+            logger.error(
+              'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
+              rule.sourceInfo
+            );
+            return;
+          }
+
+          if (rule.path) {
+            expandedPath = `${expandedPath}.${rule.path}`;
+          }
+          rule.path = expandedPath;
           context.splice(contextIndex);
           context.push(rule.path);
         });

@@ -3,8 +3,10 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import {
   assertAssignmentRule,
   assertCardRule,
+  assertCaretValueRule,
   assertConceptRule,
   assertInsertRule,
+  assertObeysRule,
   assertPathRule,
   assertValueSetConceptComponent,
   assertValueSetFilterComponent
@@ -186,6 +188,49 @@ describe('FSHImporter', () => {
       assertAssignmentRule(instance.rules[1], 'item[=].linkId', 'foo');
       assertPathRule(instance.rules[2], 'item[=].item[+]');
       assertAssignmentRule(instance.rules[3], 'item[=].item[=].linkId', 'bar');
+    });
+
+    it('should parse child rules that have a blank path', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * name 1..1
+        * ^short = "foo"
+        * obeys inv1
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(3);
+      assertCardRule(profile.rules[0], 'name', 1, 1);
+      assertCaretValueRule(profile.rules[1], 'name', 'short', 'foo', false);
+      assertObeysRule(profile.rules[2], 'name', 'inv1');
+    });
+
+    it('should log an error when a rule is indented below a rule without a path', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * ^url = "http://example.org"
+        * name 1..1
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Rule cannot be indented/);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(2);
+      assertCaretValueRule(profile.rules[0], '', 'url', 'http://example.org', false);
+      assertCardRule(profile.rules[1], 'name', 1, 1);
     });
 
     it('should log an error when a rule is indented an invalid amount of spaces', () => {
