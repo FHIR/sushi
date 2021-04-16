@@ -148,6 +148,7 @@ export interface MappingMetadataContext extends ParserRuleContext {
 export interface MappingEntityRuleContext extends ParserRuleContext {
   mappingRule(): MappingRuleContext;
   insertRule(): InsertRuleContext;
+  pathRule(): PathRuleContext;
 }
 
 export interface LogicalContext extends ParserRuleContext {

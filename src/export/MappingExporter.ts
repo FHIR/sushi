@@ -45,21 +45,23 @@ export class MappingExporter {
     // Before applying mapping rules, applyInsertRules will expand any insert rules into mapping rules
     applyInsertRules(fshDefinition, this.tank);
     resolveSoftIndexing(fshDefinition.rules);
-    for (const rule of fshDefinition.rules as MappingRule[]) {
-      const element = structDef.findElementByPath(rule.path, this.fisher);
-      if (element) {
-        try {
-          element.applyMapping(fshDefinition.id, rule.map, rule.comment, rule.language);
-        } catch (e) {
-          logger.error(e.message, rule.sourceInfo);
+    fshDefinition.rules
+      .filter(rule => rule instanceof MappingRule)
+      .forEach((rule: MappingRule) => {
+        const element = structDef.findElementByPath(rule.path, this.fisher);
+        if (element) {
+          try {
+            element.applyMapping(fshDefinition.id, rule.map, rule.comment, rule.language);
+          } catch (e) {
+            logger.error(e.message, rule.sourceInfo);
+          }
+        } else {
+          logger.error(
+            `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`,
+            rule.sourceInfo
+          );
         }
-      } else {
-        logger.error(
-          `No element found at path ${rule.path} for ${fshDefinition.name}, skipping rule`,
-          rule.sourceInfo
-        );
-      }
-    }
+      });
   }
 
   /**

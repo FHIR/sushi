@@ -46,7 +46,7 @@ paramRuleSetContent:   STAR
 
 mapping:            KW_MAPPING name mappingMetadata* mappingEntityRule*;
 mappingMetadata:    id | source | target | description | title;
-mappingEntityRule:  mappingRule | insertRule;
+mappingEntityRule:  mappingRule | insertRule | pathRule;
 
 // METADATA FIELDS
 parent:             KW_PARENT name;

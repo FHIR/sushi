@@ -47,7 +47,7 @@ const allowedRulesMap = new Map<any, any[]>([
   [Instance, [AssignmentRule, PathRule]],
   [FshValueSet, [ValueSetComponentRule, CaretValueRule]],
   [FshCodeSystem, [ConceptRule, CaretValueRule]],
-  [Mapping, [MappingRule]],
+  [Mapping, [MappingRule, PathRule]],
   [
     RuleSet,
     [

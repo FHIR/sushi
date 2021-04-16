@@ -990,11 +990,13 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule {
+  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule | PathRule {
     if (ctx.mappingRule()) {
       return this.visitMappingRule(ctx.mappingRule());
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.pathRule()) {
+      return this.visitPathRule(ctx.pathRule());
     }
   }
 
@@ -1949,7 +1951,8 @@ export class FSHImporter extends FSHVisitor {
         ...doc.valueSets.values(),
         ...doc.instances.values(),
         ...doc.appliedRuleSets.values(),
-        ...doc.ruleSets.values()
+        ...doc.ruleSets.values(),
+        ...doc.mappings.values()
       ].forEach(definition => {
         let context: string[] = [];
         // NOTE: indentWidth is hard coded for now, but if we later allow non-multiples of 2 to indent, we can change that
