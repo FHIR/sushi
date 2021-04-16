@@ -996,6 +996,16 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
     } else if (ctx.pathRule()) {
+      // A path rule may swallow a mapping rule that has no spaces, so catch that case here
+      if (this.visitPath(ctx.pathRule().path()).includes('->')) {
+        logger.error(
+          "Mapping rules must include at least one space both before and after the '->' operator",
+          {
+            location: this.extractStartStop(ctx.pathRule()),
+            file: this.currentFile
+          }
+        );
+      }
       return this.visitPathRule(ctx.pathRule());
     }
   }

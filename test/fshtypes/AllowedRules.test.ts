@@ -14,7 +14,8 @@ import {
   InsertRule,
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule
+  ValueSetFilterComponentRule,
+  PathRule
 } from '../../src/fshtypes/rules';
 import {
   isAllowedRule,
@@ -41,6 +42,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(p, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new OnlyRule('foo'))).toBeTrue();
       expect(isAllowedRule(p, new BindingRule('foo'))).toBeTrue();
+      expect(isAllowedRule(p, new PathRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on a Profile', () => {
@@ -65,6 +67,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(e, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new OnlyRule('foo'))).toBeTrue();
       expect(isAllowedRule(e, new BindingRule('foo'))).toBeTrue();
+      expect(isAllowedRule(e, new PathRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on an Extension', () => {
@@ -82,6 +85,7 @@ describe('isAllowedRule', () => {
     });
     it('should allow valid rules on an Instance', () => {
       expect(isAllowedRule(i, new AssignmentRule('foo'))).toBeTrue();
+      expect(isAllowedRule(i, new PathRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on Instance', () => {
@@ -122,6 +126,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(v, new ObeysRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new OnlyRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new BindingRule('foo'))).toBeFalse();
+      expect(isAllowedRule(v, new PathRule('foo'))).toBeFalse();
     });
   });
 
@@ -146,6 +151,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(c, new OnlyRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new BindingRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new ValueSetComponentRule(true))).toBeFalse();
+      expect(isAllowedRule(c, new PathRule('foo'))).toBeFalse();
     });
   });
 
@@ -156,6 +162,7 @@ describe('isAllowedRule', () => {
     });
     it('should allow valid rules on a Mapping', () => {
       expect(isAllowedRule(m, new MappingRule('foo'))).toBeTrue();
+      expect(isAllowedRule(m, new PathRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on a Maping', () => {
@@ -190,6 +197,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(r, new MappingRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ValueSetComponentRule(true))).toBeTrue();
       expect(isAllowedRule(r, new ConceptRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new PathRule('foo'))).toBeTrue();
     });
 
     it('should not allow invalid rules on a RuleSet', () => {

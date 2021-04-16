@@ -151,7 +151,11 @@ export class FSHErrorListener extends ErrorListener {
     // > mismatched input '->\"Patient.identifier\"' expecting '->'
     // * identifier->"Patient.identifier"
     // > mismatched input '<EOF>' expecting '->'
-    else if (/^mismatched input .+ expecting '->'$/.test(msg)) {
+    else if (
+      /^mismatched input .+ expecting '->'$/.test(msg) ||
+      (/^extraneous input/.test(msg) && /->/.test(oneTokenBack?.text)) ||
+      (/^extraneous input/.test(msg) && /^->/.test(offendingSymbol?.text))
+    ) {
       message =
         "Mapping rules must include at least one space both before and after the '->' operator";
       // Need to adjust the location to match the previous token (where '=' is)
