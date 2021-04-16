@@ -40,7 +40,8 @@ import {
   DuplicateSliceError,
   NonAbstractParentOfSpecializationError,
   ValueConflictsWithClosedSlicingError,
-  AssignmentToCodeableReferenceError
+  AssignmentToCodeableReferenceError,
+  MismatchedBindingTypeError
 } from '../errors';
 import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -1644,8 +1645,14 @@ export class ElementDefinition {
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
   private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
-    if (code.system && !isUri(code.system.split('|')[0])) {
-      throw new InvalidUriError(code.system);
+    if (code.system) {
+      const csURI = code.system.split('|')[0];
+      const vsURI = fisher?.fishForMetadata(code.system, Type.ValueSet)?.url ?? '';
+      if (vsURI) {
+        throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
+      } else if (!isUri(csURI)) {
+        throw new InvalidUriError(code.system);
+      }
     }
 
     const type = this.type[0].code;
