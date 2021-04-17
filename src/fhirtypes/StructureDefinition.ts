@@ -12,11 +12,10 @@ import {
   InvalidResourceTypeError,
   InvalidTypeAccessError
 } from '../errors';
+import { HasName, HasId } from './mixins';
 import {
   getArrayIndex,
   setPropertyOnDefinitionInstance,
-  HasName,
-  HasId,
   isInheritedResource,
   isExtension
 } from './common';

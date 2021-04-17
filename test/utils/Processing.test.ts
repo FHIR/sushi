@@ -12,6 +12,7 @@ import {
   ensureOutputDir,
   readConfig,
   loadExternalDependencies,
+  loadSupplementalFHIRPackage,
   getRawFSHes,
   hasFshFiles,
   writeFHIRResources,
@@ -324,12 +325,8 @@ describe('Processing', () => {
         .spyOn(loadModule, 'loadDependency')
         .mockImplementation(
           async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
-            // the mock loader can find hl7.fhir.r4.core, hl7.fhir.r5.core, and hl7.fhir.us.core
-            if (
-              packageName === 'hl7.fhir.r4.core' ||
-              packageName === 'hl7.fhir.r5.core' ||
-              packageName === 'hl7.fhir.us.core'
-            ) {
+            // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core
+            if (/^hl7.fhir.(r2|r3|r4|r5|us).core$/.test(packageName)) {
               FHIRDefs.packages.push(`${packageName}#${version}`);
               return Promise.resolve(FHIRDefs);
             } else {
@@ -378,6 +375,58 @@ describe('Processing', () => {
       });
     });
 
+    it('should support virtual FHIR extension packages', () => {
+      // We want to do this for each, so make a function we'll just call for each version
+      const testExtPackage = async (
+        extId: string,
+        suppFhirId: string,
+        suppFhirVersion: string,
+        fhirId: string,
+        fhirVersion: string
+      ) => {
+        const virtualExtensionsConfig = cloneDeep(minimalConfig);
+        virtualExtensionsConfig.fhirVersion = [fhirVersion];
+        virtualExtensionsConfig.dependencies = [{ packageId: extId, version: fhirVersion }];
+        const defs = new FHIRDefinitions();
+        return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
+          expect(defs.packages.length).toBe(1);
+          expect(defs.packages).toContain(`${fhirId}#${fhirVersion}`);
+          expect(defs.supplementalFHIRPackages).toEqual([`${suppFhirId}#${suppFhirVersion}`]);
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        });
+      };
+      return Promise.all([
+        testExtPackage(
+          'hl7.fhir.extensions.r2',
+          'hl7.fhir.r2.core',
+          '1.0.2',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r3',
+          'hl7.fhir.r3.core',
+          '3.0.2',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r4',
+          'hl7.fhir.r4.core',
+          '4.0.1',
+          'hl7.fhir.r5.core',
+          '4.5.0'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r5',
+          'hl7.fhir.r5.core',
+          'current',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        )
+      ]);
+    });
+
     it('should log an error when it fails to load a dependency', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
@@ -400,6 +449,76 @@ describe('Processing', () => {
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.fhir\.r4\.core: No version specified\./s
+        );
+      });
+    });
+  });
+
+  describe('#loadSupplementalFHIRPackage()', () => {
+    let loadDependencySpy: jest.SpyInstance;
+    beforeAll(() => {
+      loadDependencySpy = jest.spyOn(loadModule, 'loadDependency');
+      loadDependencySpy.mockImplementation(
+        async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
+          // the mock loader can find R2, R3, and R5
+          if (/hl7\.fhir\.r(2|3|5).core/.test(packageName)) {
+            FHIRDefs.packages.push(`${packageName}#${version}`);
+            return Promise.resolve(FHIRDefs);
+          } else {
+            throw new PackageLoadError(`${packageName}#${version}`);
+          }
+        }
+      );
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      loadDependencySpy.mockClear();
+    });
+
+    it('should load specified supplemental FHIR version', () => {
+      const defs = new FHIRDefinitions();
+      return loadSupplementalFHIRPackage('hl7.fhir.r3.core#3.0.2', defs).then(() => {
+        expect(loadDependencySpy).toHaveBeenCalledTimes(1);
+        expect(defs.packages.length).toBe(0);
+        expect(defs.supplementalFHIRPackages).toEqual(['hl7.fhir.r3.core#3.0.2']);
+        expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+    });
+
+    it('should load multiple supplemental FHIR versions', () => {
+      const defs = new FHIRDefinitions();
+      const promises = [
+        'hl7.fhir.r2.core#1.0.2',
+        'hl7.fhir.r3.core#3.0.2',
+        'hl7.fhir.r5.core#current'
+      ].map(version => {
+        return loadSupplementalFHIRPackage(version, defs);
+      });
+      return Promise.all(promises).then(() => {
+        expect(loadDependencySpy).toHaveBeenCalledTimes(3);
+        expect(defs.packages.length).toBe(0);
+        expect(defs.supplementalFHIRPackages).toEqual([
+          'hl7.fhir.r2.core#1.0.2',
+          'hl7.fhir.r3.core#3.0.2',
+          'hl7.fhir.r5.core#current'
+        ]);
+        expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+    });
+
+    it('should log an error when it fails to load a FHIR version', () => {
+      const defs = new FHIRDefinitions();
+      // Although the real one should suport R4, the mock loader does not
+      return loadSupplementalFHIRPackage('hl7.fhir.r4.core#4.0.1', defs).then(() => {
+        expect(loadDependencySpy).toHaveBeenCalledTimes(1);
+        expect(defs.packages.length).toBe(0);
+        expect(defs.supplementalFHIRPackages.length).toBe(0);
+        expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Failed to load supplemental FHIR package hl7\.fhir\.r4\.core#4.0.1/s
         );
       });
     });

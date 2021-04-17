@@ -2,12 +2,18 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
-import { logger } from './FSHLogger';
-import { loadDependency } from '../fhirdefs/load';
-import { FHIRDefinitions } from '../fhirdefs';
-import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
-import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
+import { isPlainObject, cloneDeep, padEnd } from 'lodash';
+import { logger } from './FSHLogger';
+import { loadDependency, FHIRDefinitions } from '../fhirdefs';
+import {
+  FSHTank,
+  RawFSH,
+  importText,
+  ensureConfiguration,
+  importConfiguration,
+  loadConfigurationFromIgResource
+} from '../import';
 import { Package } from '../export';
 import {
   filterInlineInstances,
@@ -20,8 +26,13 @@ import {
   filterProfileInstances
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
-import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
-import { isPlainObject } from 'lodash';
+
+const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
+  'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
+  'hl7.fhir.extensions.r3': 'hl7.fhir.r3.core#3.0.2',
+  'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
+  'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#current'
+};
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -202,13 +213,42 @@ export async function loadExternalDependencies(
           '    version: current'
       );
       return Promise.resolve();
+    } else if (EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]) {
+      // It is a special "virtual" FHIR extensions package indicating we need to load supplemental
+      // FHIR versions to support "implied extensions".
+      if (dep.version !== fhirVersion) {
+        logger.warning(
+          `Incorrect package version: ${dep.packageId}#${dep.version}. FHIR extensions packages ` +
+            "should use the same version as the implementation guide's fhirVersion. Version " +
+            `${fhirVersion} will be used instead. Update the dependency version in ` +
+            'sushi-config.yaml to eliminate this warning.'
+        );
+      }
+      logger.info(
+        `Loading supplemental version of FHIR to support virtual extensions package: ${dep.packageId}`
+      );
+      return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
+    } else {
+      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+        logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
+      });
     }
-    return loadDependency(dep.packageId, dep.version, defs).catch(e => {
-      logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
-    });
   });
 
   return Promise.all(promises).then(() => {});
+}
+
+export async function loadSupplementalFHIRPackage(
+  fhirPackage: string,
+  defs: FHIRDefinitions
+): Promise<void> {
+  const supplementalDefs = new FHIRDefinitions(true);
+  const [fhirPackageId, fhirPackageVersion] = fhirPackage.split('#');
+  return loadDependency(fhirPackageId, fhirPackageVersion, supplementalDefs)
+    .then(def => defs.addSupplementalFHIRDefinitions(fhirPackage, def))
+    .catch(e => {
+      logger.error(`Failed to load supplemental FHIR package ${fhirPackage}: ${e.message}`);
+    });
 }
 
 export function getRawFSHes(input: string): RawFSH[] {
