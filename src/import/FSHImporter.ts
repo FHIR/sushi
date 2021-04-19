@@ -1965,25 +1965,25 @@ export class FSHImporter extends FSHVisitor {
         ...doc.mappings.values()
       ].forEach(definition => {
         let context: string[] = [];
-        // NOTE: indentWidth is hard coded for now, but if we later allow non-multiples of 2 to indent, we can change that
-        const indentWidth = 2;
+        // NOTE: INDENT_WIDTH is hard coded for now, but if we later allow non-multiples of 2 to indent, we can change that
+        const INDENT_WIDTH = 2;
         const baseIndent = definition.rules[0]?.sourceInfo.location.startColumn;
         definition.rules.forEach((rule: Rule) => {
-          // We require that all rules are indented a multiple of indentWidth
+          // We require that all rules are indented a multiple of INDENT_WIDTH
           const ruleIndent = rule.sourceInfo.location.startColumn - baseIndent;
-          if (ruleIndent % indentWidth !== 0 || ruleIndent < 0) {
+          if (ruleIndent % INDENT_WIDTH !== 0 || ruleIndent < 0) {
             logger.error(
-              `Unable to determine context for rule indented ${ruleIndent} space(s). Rules must be indented in multiples of ${indentWidth} space(s).`,
+              `Unable to determine context for rule indented ${ruleIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
               rule.sourceInfo
             );
             return;
           }
 
           // And we require that rules are not indented too deeply
-          const contextIndex = ruleIndent / indentWidth;
+          const contextIndex = ruleIndent / INDENT_WIDTH;
           if (contextIndex > context.length) {
             logger.error(
-              `Cannot determine context of rule since it is indented too deeply. Rules must be indented in increments of ${indentWidth} space(s).`,
+              `Cannot determine context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
               rule.sourceInfo
             );
             return;
@@ -2010,7 +2010,7 @@ export class FSHImporter extends FSHVisitor {
           }
 
           // Replace '[+]' with '[=]' in higher level contexts, since children are at the same index as the parent contexts
-          let expandedPath = context[contextIndex - 1].replace('[+]', '[=]');
+          let expandedPath = context[contextIndex - 1].replace(/\[\+\]/g, '[=]');
           if (expandedPath === '') {
             logger.error(
               'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',

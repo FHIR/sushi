@@ -190,6 +190,30 @@ describe('FSHImporter', () => {
       assertAssignmentRule(instance.rules[3], 'item[=].item[=].linkId', 'bar');
     });
 
+    it('should change nested + to = when setting context on children of soft indexed rules', () => {
+      const input = `
+      Instance: Foo
+      InstanceOf: Questionnaire
+      * item[+].item[+]
+        * linkId = "foo"
+        * item[+]
+          * linkId = "bar"
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Questionnaire');
+      expect(instance.rules.length).toBe(4);
+      assertPathRule(instance.rules[0], 'item[+].item[+]');
+      assertAssignmentRule(instance.rules[1], 'item[=].item[=].linkId', 'foo');
+      assertPathRule(instance.rules[2], 'item[=].item[=].item[+]');
+      assertAssignmentRule(instance.rules[3], 'item[=].item[=].item[=].linkId', 'bar');
+    });
+
     it('should parse child rules that have a blank path', () => {
       const input = `
       Profile: Foo
@@ -257,7 +281,7 @@ describe('FSHImporter', () => {
     });
 
     it('should log an error when a rule is indented a negative amount of spaces', () => {
-      // only 1 space of indent
+      // -2 spaces of indent
       const input = `
         Instance: Foo
         InstanceOf: Patient
