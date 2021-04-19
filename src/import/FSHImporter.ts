@@ -61,7 +61,9 @@ import {
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
 } from '../errors';
+import isEmpty from 'lodash/isEmpty';
 import isEqual from 'lodash/isEqual';
+import isNil from 'lodash/isNil';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
 import _min from 'lodash/min';
@@ -992,11 +994,30 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
-    const addElementRule = new AddElementRule(this.visitPath(ctx.path()))
+    const path = this.visitPath(ctx.path());
+    const addElementRule = new AddElementRule(path)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
 
     const card = this.parseCard(ctx.CARD().getText(), addElementRule);
+    if (isNil(card.min) || Number.isNaN(card.min)) {
+      logger.error(
+        `The 'min' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    if (isEmpty(card.max)) {
+      logger.error(
+        `The 'max' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
     addElementRule.min = card.min;
     addElementRule.max = card.max;
 

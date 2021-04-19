@@ -2488,6 +2488,44 @@ describe('FSHImporter', () => {
         expect(resource.rules).toHaveLength(3);
       });
 
+      it('should log an error when min cardinality is not specified', () => {
+        const input = `
+        Logical: LogicalModel
+        * isInValid ..* string
+        `;
+
+        const result = importSingleText(input, 'Invalid.fsh');
+        const logical = result.logicals.get('LogicalModel');
+
+        expect(logical.rules).toHaveLength(1);
+        assertAddElementRule(logical.rules[0], 'isInValid', {
+          card: { min: NaN, max: '*' },
+          types: [{ type: 'string' }]
+        });
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'min' cardinality attribute in AddElementRule/s
+        );
+      });
+
+      it('should log an error when max cardinality is not specified', () => {
+        const input = `
+        Logical: LogicalModel
+        * isInValid 0.. string
+        `;
+
+        const result = importSingleText(input, 'Invalid.fsh');
+        const logical = result.logicals.get('LogicalModel');
+
+        expect(logical.rules).toHaveLength(1);
+        assertAddElementRule(logical.rules[0], 'isInValid', {
+          card: { min: 0, max: '' },
+          types: [{ type: 'string' }]
+        });
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'max' cardinality attribute in AddElementRule/s
+        );
+      });
+
       it('should log an error for extra docs/strings', () => {
         const input = `
         Resource: TestResource

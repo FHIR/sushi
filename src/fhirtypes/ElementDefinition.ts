@@ -14,7 +14,7 @@ import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
-import { AssignmentValueType, OnlyRule } from '../fshtypes/rules';
+import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
   BindingStrengthError,
   CodedTypeNotFoundError,
@@ -415,6 +415,54 @@ export class ElementDefinition {
   }
 
   /**
+   * Apply the AddElementRule to this new element using the appropriate methods
+   * for specific rules for the AddElementRule's implied rules (i.e., cardinality,
+   * type constraints, and flags).
+   * @param {AddElementRule} rule - specific instance of the rule
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   */
+  applyAddElementRule(rule: AddElementRule, fisher: Fishable): void {
+    // The constrainType() method applies a type constraint to an existing
+    // ElementDefinition.type. Since this is a new ElementDefinition, it
+    // does not yet have a 'type', so we need to assign an "initial" value
+    // that the constrainType() method can process.
+    const initialTypes: ElementDefinitionType[] = [];
+    rule.types.forEach(t => {
+      const edt = new ElementDefinitionType(t.type);
+      initialTypes.push(edt);
+    });
+    this.type = initialTypes;
+    const target = this.structDef.getReferenceName(rule.path, this);
+    this.constrainType(rule, fisher, target);
+
+    this.constrainCardinality(rule.min, rule.max);
+
+    this.applyFlags(
+      rule.mustSupport,
+      rule.summary,
+      rule.modifier,
+      rule.trialUse,
+      rule.normative,
+      rule.draft
+    );
+
+    // Since 'short' and 'definition' are plain string values, directly assign the values.
+    if (!isEmpty(rule.short)) {
+      this.short = rule.short;
+    }
+    if (!isEmpty(rule.definition)) {
+      this.definition = rule.definition;
+    }
+
+    // Add the base attribute
+    this.base = {
+      path: `${this.structDef.type}.${rule.path}`,
+      min: rule.min,
+      max: rule.max
+    };
+  }
+
+  /**
    * Apply invariant to the Element.constraint
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.constraint}
    * @param invariant The invariant to be applied to the constraint
@@ -670,7 +718,7 @@ export class ElementDefinition {
    *   types
    * @throws {SliceTypeRemovalError} when a rule would eliminate all types on a slice
    */
-  constrainType(rule: OnlyRule, fisher: Fishable, target?: string): void {
+  constrainType(rule: OnlyRule | AddElementRule, fisher: Fishable, target?: string): void {
     const types = rule.types;
     // Establish the target types (if applicable)
     const targetType = this.getTargetType(target, fisher);
@@ -771,6 +819,7 @@ export class ElementDefinition {
       const targetSD = fisher.fishForMetadata(
         target,
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension
@@ -1299,6 +1348,7 @@ export class ElementDefinition {
         const canonicalDefinition = fisher.fishForMetadata(
           value.entityName,
           Type.Resource,
+          Type.Logical,
           Type.Type,
           Type.Profile,
           Type.Extension,

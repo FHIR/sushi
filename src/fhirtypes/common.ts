@@ -1,37 +1,38 @@
-import { isEmpty, cloneDeep, upperFirst } from 'lodash';
+import { cloneDeep, isEmpty, upperFirst } from 'lodash';
 import {
-  StructureDefinition,
-  PathPart,
+  CodeSystem,
   ElementDefinition,
   InstanceDefinition,
-  ValueSet,
-  CodeSystem
+  PathPart,
+  StructureDefinition,
+  ValueSet
 } from '.';
 import {
   AssignmentRule,
-  Rule,
-  InsertRule,
-  ConceptRule,
-  ValueSetConceptComponentRule,
-  SdRule,
+  AssignmentValueType,
   CaretValueRule,
-  AssignmentValueType
+  ConceptRule,
+  InsertRule,
+  Rule,
+  SdRule,
+  ValueSetConceptComponentRule
 } from '../fshtypes/rules';
 import {
-  FshReference,
-  Instance,
-  SourceInfo,
-  FshCode,
-  Profile,
   Extension,
-  RuleSet,
-  FshValueSet,
+  FshCode,
   FshCodeSystem,
+  FshReference,
+  FshValueSet,
+  Instance,
+  isAllowedRule,
+  Logical,
   Mapping,
-  isAllowedRule
+  Profile,
+  RuleSet,
+  SourceInfo
 } from '../fshtypes';
 import { FSHTank } from '../import';
-import { Type, Fishable } from '../utils/Fishable';
+import { Fishable, Type } from '../utils/Fishable';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
 
@@ -41,7 +42,7 @@ export function splitOnPathPeriods(path: string): string[] {
 
 /**
  * This function sets an instance property of an SD or ED if possible
- * @param {StructureDefinition | ElementDefinition} - The instance to assign a value on
+ * @param {StructureDefinition | ElementDefinition} instance - The instance to assign a value on
  * @param {string} path - The path to assign a value at
  * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -282,6 +283,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const instanceMeta = fisher.fishForMetadata(
       instance?.instanceOf,
       Type.Resource,
+      Type.Logical,
       Type.Type,
       Type.Profile,
       Type.Extension
@@ -454,7 +456,15 @@ export function applyMixinRules(
  * @param tank - The FSHTank containing the fshDefinition
  */
 export function applyInsertRules(
-  fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
+  fshDefinition:
+    | Profile
+    | Extension
+    | Logical
+    | Instance
+    | FshValueSet
+    | FshCodeSystem
+    | Mapping
+    | RuleSet,
   tank: FSHTank,
   seenRuleSets: string[] = []
 ): void {
@@ -613,7 +623,7 @@ export function isInheritedResource(
  * @returns {string} - The URL to use to refer to the FHIR entity
  */
 export function getUrlFromFshDefinition(
-  fshDefinition: Profile | Extension | FshValueSet | FshCodeSystem,
+  fshDefinition: Profile | Extension | Logical | FshValueSet | FshCodeSystem,
   canonical: string
 ): string {
   for (const rule of fshDefinition.rules) {

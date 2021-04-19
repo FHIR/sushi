@@ -37,6 +37,7 @@ describe('ProfileExporter', () => {
 
   it('should export a single profile', () => {
     const profile = new Profile('Foo');
+    profile.parent = 'Basic';
     doc.profiles.set(profile.name, profile);
     const exported = exporter.export().profiles;
     expect(exported.length).toBe(1);
@@ -44,7 +45,9 @@ describe('ProfileExporter', () => {
 
   it('should export multiple profiles', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
+    profileBar.parent = 'Basic';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     const exported = exporter.export().profiles;
@@ -55,6 +58,7 @@ describe('ProfileExporter', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Baz';
     const profileBar = new Profile('Bar');
+    profileBar.parent = 'Basic';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     const exported = exporter.export().profiles;
@@ -72,6 +76,7 @@ describe('ProfileExporter', () => {
 
   it('should export profiles with FSHy parents', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
     doc.profiles.set(profileFoo.name, profileFoo);
@@ -85,6 +90,7 @@ describe('ProfileExporter', () => {
 
   it('should export profiles with the same FSHy parents', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
     const profileBaz = new Profile('Baz');
@@ -103,6 +109,7 @@ describe('ProfileExporter', () => {
 
   it('should export profiles with deep FSHy parents', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
     const profileBaz = new Profile('Baz');
@@ -125,6 +132,7 @@ describe('ProfileExporter', () => {
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Baz';
     const profileBaz = new Profile('Baz');
+    profileBaz.parent = 'Basic';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     doc.profiles.set(profileBaz.name, profileBaz);
@@ -143,6 +151,7 @@ describe('ProfileExporter', () => {
     doc.instances.set(instance.name, instance);
 
     const profile = new Profile('ContainingProfile');
+    profile.parent = 'Basic';
     const caretValueRule = new CaretValueRule('');
     caretValueRule.caretPath = 'contained';
     caretValueRule.value = 'myResource';
@@ -173,7 +182,7 @@ describe('ProfileExporter', () => {
 
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyObservation\.fsh.*Line: 3\D*/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Inline extensions should not be used on profiles/s
+      /Inline extensions should only be defined in Extensions/s
     );
   });
 });

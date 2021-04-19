@@ -779,6 +779,24 @@ export class StructureDefinition {
     }
     return;
   }
+
+  /**
+   * The elements are initially those of the parent (base definition). For some cases
+   * (e.g., logical models), the root values must be changed to reflect the new
+   * StructureDefinition type.
+   * @param {string} newRoot - new root value based on the fshDefinition's type (i.e., 'id')
+   */
+  resetRootIdAndPath(newRoot: string): void {
+    // The ElementDefinitions will have the same values for both 'id' and 'path'.
+    // Therefore, use the 'id' as the source of the conversion and reset the 'id'
+    // value with the new base value. The 'id' mutator will automatically reset
+    // the 'path' value'.
+    this.elements.forEach(e => {
+      const pathParts: PathPart[] = parseFSHPath(e.id);
+      pathParts[0].base = newRoot;
+      e.id = assembleFSHPath(pathParts);
+    });
+  }
 }
 
 export interface StructureDefinition extends HasName, HasId {}
