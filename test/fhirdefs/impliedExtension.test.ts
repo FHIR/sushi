@@ -65,7 +65,7 @@ describe('impliedExtensions', () => {
       const r5Defs = new FHIRDefinitions(true);
       loadFromPath(
         path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-        'hl7.fhir.r5.core#4.5.0',
+        'hl7.fhir.r5.core#4.6.0',
         r5Defs
       );
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#current', r5Defs);
@@ -605,7 +605,7 @@ describe('impliedExtensions', () => {
         id: 'extension-MedicationRequest.informationSource',
         url:
           'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.informationSource',
-        version: '4.5.0',
+        version: '4.6.0',
         name: 'Extension_MedicationRequest_informationSource',
         title: 'Implied extension for MedicationRequest.informationSource',
         status: 'active',
@@ -689,7 +689,7 @@ describe('impliedExtensions', () => {
         resourceType: 'StructureDefinition',
         id: 'extension-MedicationRequest.substitution',
         url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution',
-        version: '4.5.0',
+        version: '4.6.0',
         name: 'Extension_MedicationRequest_substitution',
         title: 'Implied extension for MedicationRequest.substitution',
         status: 'active',
@@ -813,7 +813,7 @@ describe('impliedExtensions', () => {
       expect(snapReason).toMatchObject(diffReason);
     });
 
-    it.skip('should materialize a complex R5 extension for CodeableReference', () => {
+    it('should materialize a complex R5 extension for CodeableReference', () => {
       const ext = materializeImpliedExtension(
         'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.medication',
         defs
@@ -823,7 +823,7 @@ describe('impliedExtensions', () => {
         resourceType: 'StructureDefinition',
         id: 'extension-MedicationRequest.medication',
         url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.medication',
-        version: '4.5.0',
+        version: '4.6.0',
         name: 'Extension_MedicationRequest_medication',
         title: 'Implied extension for MedicationRequest.medication',
         status: 'active',
@@ -882,15 +882,11 @@ describe('impliedExtensions', () => {
         max: '0'
       });
 
-      const diffExt = ext.differential?.element?.find((e: any) => e.id === 'Extension.extension');
-      expect(diffExt).toEqual({
-        id: 'Extension.extension',
-        path: 'Extension.extension',
-        min: 1
-      });
       const snapExt = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.extension');
       expect(snapExt).toMatchObject({
-        ...diffExt,
+        id: 'Extension.extension',
+        path: 'Extension.extension',
+        min: 0,
         max: '*',
         slicing: {
           discriminator: [{ type: 'value', path: 'url' }],
@@ -925,6 +921,32 @@ describe('impliedExtensions', () => {
       );
       expect(snapConcept).toMatchObject(diffConcept);
 
+      // It should move the binding from the CodeableReference to the CodeableReference.concept
+      const diffConceptValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:concept.value[x]'
+      );
+      expect(diffConceptValue).toEqual({
+        id: 'Extension.extension:concept.value[x]',
+        path: 'Extension.extension.value[x]',
+        binding: {
+          // It's unclear if extensions should be carried over or not.  For now, we don't.
+          // See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Use.205.2E0.20Extension/near/233501779
+          // extension: [
+          //   {
+          //     url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName',
+          //     valueString: 'MedicationCodee'
+          //   }
+          // ],
+          strength: 'example',
+          description: 'A coded concept identifying substance or product that can be ordered.',
+          valueSet: 'http://hl7.org/fhir/ValueSet/medication-codes'
+        }
+      });
+      const snapConceptValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:concept.value[x]'
+      );
+      expect(snapConceptValue).toMatchObject(diffConceptValue);
+
       const diffReference = ext.differential?.element?.find(
         (e: any) => e.id === 'Extension.extension:reference'
       );
@@ -950,6 +972,25 @@ describe('impliedExtensions', () => {
         (e: any) => e.id === 'Extension.extension:reference'
       );
       expect(snapReference).toMatchObject(diffReference);
+
+      // It should move the reference types from the CodeableReference to the CodeableReference.reference
+      const diffReferenceValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reference.value[x]'
+      );
+      expect(diffReferenceValue).toEqual({
+        id: 'Extension.extension:reference.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [
+          {
+            code: 'Reference',
+            targetProfile: ['http://hl7.org/fhir/StructureDefinition/Medication']
+          }
+        ]
+      });
+      const snapReferenceValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reference.value[x]'
+      );
+      expect(snapReferenceValue).toMatchObject(diffReferenceValue);
     });
   });
 
@@ -959,7 +1000,7 @@ describe('impliedExtensions', () => {
       defs = new FHIRDefinitions();
       loadFromPath(
         path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-        'hl7.fhir.r5.core#4.5.0',
+        'hl7.fhir.r5.core#4.6.0',
         defs
       );
       const r4Defs = new FHIRDefinitions(true);
@@ -987,7 +1028,7 @@ describe('impliedExtensions', () => {
         title: 'Implied extension for Bundle.signature',
         status: 'active',
         description: 'Implied extension for Bundle.signature',
-        fhirVersion: '4.5.0',
+        fhirVersion: '4.6.0',
         kind: 'complex-type',
         abstract: false,
         context: [{ type: 'element', expression: 'Element' }],
@@ -1067,7 +1108,7 @@ describe('impliedExtensions', () => {
         title: 'Implied extension for Bundle.link',
         status: 'active',
         description: 'Implied extension for Bundle.link',
-        fhirVersion: '4.5.0',
+        fhirVersion: '4.6.0',
         kind: 'complex-type',
         abstract: false,
         context: [{ type: 'element', expression: 'Element' }],

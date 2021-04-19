@@ -5,6 +5,7 @@ import { cloneDeep, union } from 'lodash';
 import { logger, Type } from '../utils';
 import { ElementDefinition, ElementDefinitionType, StructureDefinition } from '../fhirtypes';
 import { FHIRDefinitions } from '../fhirdefs';
+import { OnlyRule } from '../fshtypes/rules';
 
 export const IMPLIED_EXTENSION_REGEX = /^http:\/\/hl7\.org\/fhir\/([1345]\.0)\/StructureDefinition\/extension-(([^./]+)\.[^\/]+)$/;
 
@@ -68,7 +69,7 @@ export function materializeImpliedExtension(url: string, defs: FHIRDefinitions):
     logger.error(`Cannot materialize implied extension (${url}) since its type is Resource`);
     return;
   } else if (isComplex(ed, defs)) {
-    handleComplexValue(ext, sd, ed, version);
+    handleComplexValue(ext, sd, ed, version, defs, supplementalDefs);
   } else {
     handleSimpleValue(ext, ed, version);
   }
@@ -158,33 +159,80 @@ function handleSimpleValue(ext: StructureDefinition, ed: any, version: string): 
   ext.findElement('Extension.extension').constrainCardinality(0, '0');
 }
 
-function handleComplexValue(ext: StructureDefinition, sd: any, ed: any, version: string): void {
+function handleComplexValue(
+  ext: StructureDefinition,
+  sd: any,
+  ed: any,
+  version: string,
+  defs: FHIRDefinitions,
+  supplementalDefs: FHIRDefinitions
+): void {
   // Create the sub-extensions
   const extRoot = ext.findElement('Extension.extension');
-  const edId: string = ed.id ?? ed.path;
-  sd.snapshot.element.forEach((e: any) => {
-    const id: string = e.id ?? e.path;
-    if (id?.startsWith(`${edId}.`)) {
-      const tail = id.slice(edId.length + 1);
-      if (tail.indexOf('.') === -1 && !IGNORED_CHILDREN.includes(tail)) {
-        const slice = extRoot.addSlice(tail);
-        applyMetadataToElement(slice, e);
-        slice.type = [
-          new ElementDefinitionType('Extension').withProfiles(
-            `http://hl7.org/fhir/${version}/StructureDefinition/extension-${e.id ?? e.path}`
-          )
-        ];
+  let edId: string = ed.id ?? ed.path;
+  // First look for children directly in the SD
+  let childElements = sd.snapshot.element.filter((e: any) =>
+    (e.id ?? e.path).startsWith(`${edId}.`)
+  );
+  // If no children are found, this may be a type not supported in this version of FHIR,
+  // so use the unknown type's children instead
+  if (childElements.length === 0) {
+    const edTypes = getTypes(ed, version);
+    if (edTypes.length === 1) {
+      const typeSD = supplementalDefs.fishForFHIR(edTypes[0].code, Type.Resource, Type.Type);
+      if (typeSD) {
+        // Reset edId to the root of the type's SD since all paths will be relative to it
+        edId = typeSD.id ?? typeSD.path;
+        childElements = typeSD.snapshot.element.slice(1);
       }
     }
+  }
+  // Now go through the child elements building up the complex extensions structure
+  childElements.forEach((e: any) => {
+    const id: string = e.id ?? e.path;
+    const tail = id.slice(edId.length + 1);
+    if (tail.indexOf('.') === -1 && !IGNORED_CHILDREN.includes(tail)) {
+      const slice = extRoot.addSlice(tail);
+      applyMetadataToElement(slice, e);
+      slice.type = [
+        new ElementDefinitionType('Extension').withProfiles(
+          `http://hl7.org/fhir/${version}/StructureDefinition/extension-${e.id ?? e.path}`
+        )
+      ];
+    }
   });
+  // Now apply special logic to handle R5 CodeableReference, which puts bindings and type restrictions
+  // on the CodeableReference instead of underlying concept and reference elemenst
+  if (ed.type?.[0]?.code === 'CodeableReference') {
+    if (ed.binding) {
+      const crConcept = ext.findElementByPath('extension[concept].value[x]', defs);
+      crConcept.bindToVS(ed.binding.valueSet, ed.binding.strength);
+      if (ed.binding.description) {
+        crConcept.binding.description = ed.binding.description;
+      }
+    }
+    const validTargets = ed.type[0].targetProfile?.filter((p: string) =>
+      defs.fishForFHIR(p, Type.Resource, Type.Profile)
+    );
+    if (validTargets.length > 0) {
+      const crRef = ext.findElementByPath('extension[reference].value[x]', defs);
+      const onlyRule = new OnlyRule('extension[reference].value[x]');
+      onlyRule.types = validTargets.map((t: string) => {
+        return { type: t, isReference: true };
+      });
+      crRef.constrainType(onlyRule, defs);
+    }
+  }
 
   // Zero out the value[x] element
   ext.findElement('Extension.value[x]').constrainCardinality(0, '0');
 }
 
 function getTypes(ed: any, version: string): ElementDefinitionType[] {
-  if (version === '4.0' || version === '5.0') {
-    return (ed.type ?? []).map(ElementDefinitionType.fromJSON);
+  if (ed.type == null || ed.type.length === 0) {
+    return [];
+  } else if (version === '4.0' || version === '5.0') {
+    return ed.type.map(ElementDefinitionType.fromJSON);
   } else if (version === '3.0') {
     // STU3 only has 0..1 profile and 0..1 targetProfile, so multiple profiles are represented as multiple types w/ duplicated codes.
     // We need to merge these multiple types w/ the same code into single R4 types where applicable.
@@ -212,7 +260,7 @@ function getTypes(ed: any, version: string): ElementDefinitionType[] {
     return r4types;
   } else if (version === '1.0') {
     // DSTU2 has 0..* profile but no targetProfile, so if it is a Reference, make it a targetProfile
-    return (ed.type || []).map((r2Type: R2Type) => {
+    return ed.type.map((r2Type: R2Type) => {
       const r4Type = new ElementDefinitionType(r2Type.code);
       if (r2Type.code === 'Reference' && r2Type.profile != null) {
         r4Type.targetProfile = cloneDeep(r2Type.profile);
