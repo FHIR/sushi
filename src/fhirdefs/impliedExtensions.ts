@@ -1,7 +1,7 @@
 // This file contains logic to support "implied" extensions, described in the FHIR spec here:
 // http://hl7.org/fhir/versions.html#extensions
 
-import { cloneDeep, union } from 'lodash';
+import { union } from 'lodash';
 import { logger, Type } from '../utils';
 import { ElementDefinition, ElementDefinitionType, StructureDefinition } from '../fhirtypes';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -9,11 +9,57 @@ import { OnlyRule } from '../fshtypes/rules';
 
 export const IMPLIED_EXTENSION_REGEX = /^http:\/\/hl7\.org\/fhir\/([1345]\.0)\/StructureDefinition\/extension-(([^./]+)\.[^\/]+)$/;
 
+// This map represents the relationship from the version part of the extension URL to the FHIR package
 const VERSION_TO_PACKAGE_MAP: { [key: string]: string } = {
   '1.0': 'hl7.fhir.r2.core#1.0.2',
   '3.0': 'hl7.fhir.r3.core#3.0.2',
   '4.0': 'hl7.fhir.r4.core#4.0.1',
   '5.0': 'hl7.fhir.r5.core#current'
+};
+
+// This map represents how old resource types (R2/R3) map to R4/R5 or how new resource types (R5) map to R4.
+// This is only used for references, otherwise a complex extension representing the resource should be used
+// instead. We need this for references because there is no way to point a reference at an extension.
+// For conversation on this, see: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Use.205.2E0.20Extension/near/232846364
+// TODO: Redo when implied extension behavior is clarified in R5 and to confirm R5-based mappings are still correct.
+const RESOURCE_TO_RESOURCE_MAP: { [key: string]: string } = {
+  // Mappings R2 -> R4/R5
+  BodySite: 'BodyStructure',
+  Conformance: 'CapabilityStatement',
+  DeviceComponent: 'DeviceDefinition',
+  DeviceUseRequest: 'DeviceRequest',
+  DiagnosticOrder: 'ServiceRequest',
+  EligibilityRequest: 'CoverageEligibilityRequest',
+  EligibilityResponse: 'CoverageEligibilityResponse',
+  MedicationOrder: 'MedicationRequest',
+  ProcedureRequest: 'ServiceRequest',
+  ReferralRequest: 'ServiceRequest',
+  // Mappings R3 -> R4/R5 (no new mappings, already covered by R2 -> R4/R5)
+  // Mappings R4 -> R5
+  DeviceUseStatement: 'DeviceUsage',
+  MedicationStatement: 'MedicationUsage',
+  MedicinalProduct: 'MedicinalProductDefinition',
+  MedicinalProductAuthorization: 'RegulatedAuthorization',
+  MedicinalProductContraindication: 'ClinicalUseIssue',
+  MedicinalProductIndication: 'ClinicalUseIssue',
+  MedicinalProductIngredient: 'Ingredient',
+  MedicinalProductInteraction: 'ClinicalUseIssue',
+  MedicinalProductManufactured: 'ManufacturedItemDefinition',
+  MedicinalProductPackaged: 'PackagedProductDefinition',
+  MedicinalProductPharmaceutical: 'AdministrableProductDefinition',
+  MedicinalProductUndesirableEffect: 'ClinicalUseIssue',
+  SubstanceSpecification: 'SubstanceDefinition',
+  // Mappings R5 -> R4
+  AdministrableProductDefinition: 'MedicinalProductPharmaceutical',
+  CapabilityStatement2: 'CapabilityStatement',
+  DeviceUsage: 'DeviceUseStatement',
+  Ingredient: 'MedicinalProductIngredient',
+  ManufacturedItemDefinition: 'MedicinalProductManufactured',
+  MedicationUsage: 'MedicationUseStatement',
+  MedicinalProductDefinition: 'MedicinalProduct',
+  PackagedProductDefinition: 'MedicinalProductPackaged',
+  RegulatedAuthorization: 'MedicinalProductAuthorization',
+  SubstanceDefinition: 'SubstanceSpecification'
 };
 
 // It's sad to ignore any child, but really, we don't care about these particular
@@ -71,7 +117,7 @@ export function materializeImpliedExtension(url: string, defs: FHIRDefinitions):
   } else if (isComplex(ed, defs)) {
     handleComplexValue(ext, sd, ed, version, defs, supplementalDefs);
   } else {
-    handleSimpleValue(ext, ed, version);
+    handleSimpleValue(ext, ed, version, defs);
   }
 
   return ext.toJSON(true);
@@ -141,7 +187,12 @@ function applyUrlElement(ext: StructureDefinition): void {
   url.assignValue(ext.url, true);
 }
 
-function handleSimpleValue(ext: StructureDefinition, ed: any, version: string): void {
+function handleSimpleValue(
+  ext: StructureDefinition,
+  ed: any,
+  version: string,
+  defs: FHIRDefinitions
+): void {
   const value = ext.findElement('Extension.value[x]');
   value.type = getTypes(ed, version);
   if (ed.binding) {
@@ -153,7 +204,14 @@ function handleSimpleValue(ext: StructureDefinition, ed: any, version: string): 
     if (ed.binding.description) {
       value.binding.description = ed.binding.description;
     }
+    // NOTE: Even though there might be extensions on bindings, we are intentionally not carrying
+    // them over because (a) it's not clear that we should, (b) the extension might not exist in
+    // our version of FHIR, (c) the extension might exist but its definition may have changed, and
+    // (d) if we support extensions on binding, shouldn't we support them everywhere?  Where do you
+    // draw the line?  So... we favor sanity and maintainability over implementing something that
+    // is very likely totally unecessary and inconsequential anyway.
   }
+  filterAndFixTypes(ext, value, defs);
 
   // Zero out the extension element
   ext.findElement('Extension.extension').constrainCardinality(0, '0');
@@ -211,16 +269,14 @@ function handleComplexValue(
         crConcept.binding.description = ed.binding.description;
       }
     }
-    const validTargets = ed.type[0].targetProfile?.filter((p: string) =>
-      defs.fishForFHIR(p, Type.Resource, Type.Profile)
-    );
-    if (validTargets.length > 0) {
+    if (ed.type[0].targetProfile?.length > 0) {
       const crRef = ext.findElementByPath('extension[reference].value[x]', defs);
       const onlyRule = new OnlyRule('extension[reference].value[x]');
-      onlyRule.types = validTargets.map((t: string) => {
+      onlyRule.types = ed.type[0].targetProfile.map((t: string) => {
         return { type: t, isReference: true };
       });
       crRef.constrainType(onlyRule, defs);
+      filterAndFixTypes(ext, crRef, defs);
     }
   }
 
@@ -259,17 +315,91 @@ function getTypes(ed: any, version: string): ElementDefinitionType[] {
     }
     return r4types;
   } else if (version === '1.0') {
-    // DSTU2 has 0..* profile but no targetProfile, so if it is a Reference, make it a targetProfile
-    return ed.type.map((r2Type: R2Type) => {
-      const r4Type = new ElementDefinitionType(r2Type.code);
-      if (r2Type.code === 'Reference' && r2Type.profile != null) {
-        r4Type.targetProfile = cloneDeep(r2Type.profile);
+    // DSTU2 has 0..* profile but no targetProfile, so if it is a Reference, make it a targetProfile.
+    // It also sometimes represents the same type.code over multiple types, so normalize those.
+    const r4types: ElementDefinitionType[] = [];
+    for (const r2Type of ed.type as R2Type[]) {
+      let r4Type = r4types.find(t => t.code === r2Type.code);
+      if (r4Type == null) {
+        r4Type = new ElementDefinitionType(r2Type.code);
+        r4types.push(r4Type);
+      }
+      if (r2Type.profile != null) {
+        if (r2Type.code === 'Reference') {
+          r4Type.targetProfile = union(r4Type.targetProfile ?? [], r2Type.profile);
+        } else {
+          r4Type.profile = union(r4Type.profile ?? [], r2Type.profile);
+        }
       }
       if (r2Type.aggregation != null) {
         r4Type.aggregation = union(r4Type.aggregation ?? [], r2Type.aggregation);
       }
-      return r4Type;
+    }
+    return r4types;
+  }
+}
+
+function filterAndFixTypes(
+  ext: StructureDefinition,
+  ed: ElementDefinition,
+  defs: FHIRDefinitions
+): void {
+  const unsupportedTypes: string[] = [];
+  ed.type = ed.type?.filter(t => {
+    // Maintain types w/ no code; they're valid but there's nothing for us to do. NOTE: these should be rare.
+    if (t.code == null) {
+      return true;
+    }
+    // Unknown codes are handled by a complex extension when there is only one type, but in a choice we
+    // should just filter them out so they're no longer a choice (since they're not valid in this version of FHIR).
+    if (defs.fishForFHIR(t.code, Type.Resource, Type.Type) == null) {
+      unsupportedTypes.push(t.code);
+      return false;
+    }
+    // Remove unknown profile references.
+    // NOTE: Search extension definitions since extensions are { code: 'Extension', profile: '{extensionURL}' }.
+    t.profile = t.profile?.filter(p => {
+      if (defs.fishForFHIR(p, Type.Profile, Type.Extension) == null) {
+        unsupportedTypes.push(p);
+        return false;
+      }
+      return true;
     });
+    // If we're left with none (or there were none), it's better to leave the type wide open.
+    if (t.profile?.length === 0) {
+      delete t.profile;
+    }
+    // Replace unknown reference target resources with corresponding known replacement resources
+    // (e.g., MedicationOrder -> MedicationRequest). If no replacement exists, filter it out.
+    t.targetProfile = t.targetProfile
+      ?.map(p => {
+        if (defs.fishForFHIR(p, Type.Resource, Type.Profile)) {
+          return p;
+        }
+        // It wasn't found, so try to find a renamed resource
+        const match = p.match(/^http:\/\/hl7\.org\/fhir\/StructureDefinition\/(.+)$/);
+        if (match) {
+          const renamed = RESOURCE_TO_RESOURCE_MAP[match[1]];
+          if (renamed) {
+            return `http://hl7.org/fhir/StructureDefinition/${renamed}`;
+          }
+        }
+        unsupportedTypes.push(p);
+        return null;
+      })
+      .filter(p => p != null);
+    // If we're left with none (or there were none), it's better to leave the reference wide open.
+    if (t.targetProfile?.length === 0) {
+      delete t.targetProfile;
+    }
+    return true;
+  });
+  if (unsupportedTypes.length > 0) {
+    const typesHave = unsupportedTypes.length === 1 ? 'type has' : 'types have';
+    logger.warn(
+      `Implied extension (${ext.url}) is incomplete since the following ${typesHave} no ` +
+        `equivalent in FHIR ${ext.fhirVersion}: ${unsupportedTypes.join(', ')}.`
+    );
   }
 }
 

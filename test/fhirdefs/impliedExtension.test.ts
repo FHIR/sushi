@@ -210,6 +210,9 @@ describe('impliedExtensions', () => {
       });
       const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
       expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should materialize a complex R2 extension', () => {
@@ -329,6 +332,9 @@ describe('impliedExtensions', () => {
         (e: any) => e.id === 'Extension.extension:telecom'
       );
       expect(snapTelecom).toMatchObject(diffTelecom);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should materialize a simple R3 extension', () => {
@@ -404,14 +410,6 @@ describe('impliedExtensions', () => {
         path: 'Extension.value[x]',
         type: [{ code: 'CodeableConcept' }],
         binding: {
-          // It's unclear if extensions should be carried over or not.  For now, we don't.
-          // See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Use.205.2E0.20Extension/near/233501779
-          // extension: [
-          //   {
-          //     url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName',
-          //     valueString: 'AnimalSpecies'
-          //   }
-          // ],
           strength: 'example',
           description: 'The species of an animal.',
           valueSet: 'http://hl7.org/fhir/ValueSet/animal-species'
@@ -419,6 +417,9 @@ describe('impliedExtensions', () => {
       });
       const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
       expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should materialize a complex R3 extension', () => {
@@ -592,6 +593,9 @@ describe('impliedExtensions', () => {
         (e: any) => e.id === 'Extension.extension:genderStatus'
       );
       expect(snapGender).toMatchObject(diffGender);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should materialize a simple R5 extension', () => {
@@ -677,6 +681,9 @@ describe('impliedExtensions', () => {
       });
       const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
       expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should materialize a complex R5 extension', () => {
@@ -811,6 +818,9 @@ describe('impliedExtensions', () => {
         (e: any) => e.id === 'Extension.extension:reason'
       );
       expect(snapReason).toMatchObject(diffReason);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should materialize a complex R5 extension for CodeableReference', () => {
@@ -929,14 +939,6 @@ describe('impliedExtensions', () => {
         id: 'Extension.extension:concept.value[x]',
         path: 'Extension.extension.value[x]',
         binding: {
-          // It's unclear if extensions should be carried over or not.  For now, we don't.
-          // See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Use.205.2E0.20Extension/near/233501779
-          // extension: [
-          //   {
-          //     url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName',
-          //     valueString: 'MedicationCodee'
-          //   }
-          // ],
           strength: 'example',
           description: 'A coded concept identifying substance or product that can be ordered.',
           valueSet: 'http://hl7.org/fhir/ValueSet/medication-codes'
@@ -991,6 +993,175 @@ describe('impliedExtensions', () => {
         (e: any) => e.id === 'Extension.extension:reference.value[x]'
       );
       expect(snapReferenceValue).toMatchObject(diffReferenceValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should automatically convert references to resources that have been renamed', () => {
+      const ext = materializeImpliedExtension(
+        'http://hl7.org/fhir/1.0/StructureDefinition/extension-MedicationAdministration.prescription',
+        defs
+      );
+      expect(ext).toBeDefined();
+      expect(ext).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-MedicationAdministration.prescription',
+        url:
+          'http://hl7.org/fhir/1.0/StructureDefinition/extension-MedicationAdministration.prescription',
+        version: '1.0.2',
+        name: 'Extension_MedicationAdministration_prescription',
+        title: 'Implied extension for MedicationAdministration.prescription',
+        status: 'active',
+        description: 'Implied extension for MedicationAdministration.prescription',
+        fhirVersion: '4.0.1',
+        kind: 'complex-type',
+        abstract: false,
+        context: [{ type: 'element', expression: 'Element' }],
+        type: 'Extension',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        derivation: 'constraint'
+      });
+
+      const diffRoot = ext.differential?.element?.[0];
+      expect(diffRoot).toEqual({
+        id: 'Extension',
+        path: 'Extension',
+        short: 'Order administration performed against',
+        definition: 'The original request, instruction or authority to perform the administration.',
+        max: '1'
+      });
+      const snapRoot = ext.snapshot?.element?.[0];
+      expect(snapRoot).toMatchObject(diffRoot);
+
+      const diffExt = ext.differential?.element?.find((e: any) => e.id === 'Extension.extension');
+      expect(diffExt).toEqual({
+        id: 'Extension.extension',
+        path: 'Extension.extension',
+        max: '0'
+      });
+      const snapExt = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.extension');
+      expect(snapExt).toMatchObject({
+        ...diffExt,
+        min: 0,
+        max: '0'
+      });
+
+      const diffUrl = ext.differential?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(diffUrl).toEqual({
+        id: 'Extension.url',
+        path: 'Extension.url',
+        fixedUri:
+          'http://hl7.org/fhir/1.0/StructureDefinition/extension-MedicationAdministration.prescription'
+      });
+      const snapUrl = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(snapUrl).toMatchObject(diffUrl);
+
+      const diffValue = ext.differential?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(diffValue).toEqual({
+        id: 'Extension.value[x]',
+        path: 'Extension.value[x]',
+        // NOTE: targetProfile to MedicationRequest (not MedicationOrder)
+        type: [
+          {
+            code: 'Reference',
+            targetProfile: ['http://hl7.org/fhir/StructureDefinition/MedicationRequest']
+          }
+        ]
+      });
+      const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should remove types w/ no existing equivalent and issue a warning', () => {
+      const ext = materializeImpliedExtension(
+        'http://hl7.org/fhir/1.0/StructureDefinition/extension-DiagnosticReport.imagingStudy',
+        defs
+      );
+      expect(ext).toBeDefined();
+      expect(ext).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-DiagnosticReport.imagingStudy',
+        url: 'http://hl7.org/fhir/1.0/StructureDefinition/extension-DiagnosticReport.imagingStudy',
+        version: '1.0.2',
+        name: 'Extension_DiagnosticReport_imagingStudy',
+        title: 'Implied extension for DiagnosticReport.imagingStudy',
+        status: 'active',
+        description: 'Implied extension for DiagnosticReport.imagingStudy',
+        fhirVersion: '4.0.1',
+        kind: 'complex-type',
+        abstract: false,
+        context: [{ type: 'element', expression: 'Element' }],
+        type: 'Extension',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        derivation: 'constraint'
+      });
+
+      const diffRoot = ext.differential?.element?.[0];
+      expect(diffRoot).toEqual({
+        id: 'Extension',
+        path: 'Extension',
+        short: 'Reference to full details of imaging associated with the diagnostic report',
+        definition:
+          'One or more links to full details of any imaging performed during the diagnostic ' +
+          'investigation. Typically, this is imaging performed by DICOM enabled modalities, but ' +
+          'this is not required. A fully enabled PACS viewer can use this information to ' +
+          'provide views of the source images.',
+        comment:
+          'ImagingStudy and ImageObjectStudy and the image element are somewhat overlapping - ' +
+          'typically, the list of image references in the image element will also be found in ' +
+          'one of the imaging study resources. However each caters to different types of ' +
+          'displays for different types of purposes. Neither, either, or both may be provided.'
+      });
+      const snapRoot = ext.snapshot?.element?.[0];
+      expect(snapRoot).toMatchObject(diffRoot);
+
+      const diffExt = ext.differential?.element?.find((e: any) => e.id === 'Extension.extension');
+      expect(diffExt).toEqual({
+        id: 'Extension.extension',
+        path: 'Extension.extension',
+        max: '0'
+      });
+      const snapExt = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.extension');
+      expect(snapExt).toMatchObject({
+        ...diffExt,
+        min: 0,
+        max: '0'
+      });
+
+      const diffUrl = ext.differential?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(diffUrl).toEqual({
+        id: 'Extension.url',
+        path: 'Extension.url',
+        fixedUri:
+          'http://hl7.org/fhir/1.0/StructureDefinition/extension-DiagnosticReport.imagingStudy'
+      });
+      const snapUrl = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(snapUrl).toMatchObject(diffUrl);
+
+      const diffValue = ext.differential?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(diffValue).toEqual({
+        id: 'Extension.value[x]',
+        path: 'Extension.value[x]',
+        type: [
+          {
+            code: 'Reference',
+            targetProfile: ['http://hl7.org/fhir/StructureDefinition/ImagingStudy']
+          }
+        ]
+      });
+      const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllMessages('warn')).toEqual([
+        'Implied extension (http://hl7.org/fhir/1.0/StructureDefinition/extension-DiagnosticReport.imagingStudy) ' +
+          'is incomplete since the following type has no equivalent in FHIR 4.0.1: ' +
+          'http://hl7.org/fhir/StructureDefinition/ImagingObjectSelection.'
+      ]);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
   });
 
@@ -1091,6 +1262,9 @@ describe('impliedExtensions', () => {
       });
       const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
       expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should materialize a complex R4 extension', () => {
@@ -1222,10 +1396,9 @@ describe('impliedExtensions', () => {
         (e: any) => e.id === 'Extension.extension:url'
       );
       expect(snapLinkUrl).toMatchObject(diffLinkUrl);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
   });
-
-  // TODO: Test type conversions (MedicationOrder --> MedicationRequest)
-  // TODO: Test supported/unsupported extensions (like in Patient.animal.species binding)
-  // TODO: Test unrepresentable due to reference to unsupported type
 });
