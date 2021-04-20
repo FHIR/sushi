@@ -84,8 +84,12 @@ export function materializeImpliedExtension(url: string, defs: FHIRDefinitions):
   const supplementalPackage = VERSION_TO_PACKAGE_MAP[version]; // guaranteed not to be null thanks to REGEX check above
   const supplementalDefs = defs.getSupplementalFHIRDefinitions(supplementalPackage);
   if (supplementalDefs == null) {
+    const extRelease = version === '1.0' ? 'r2' : `r${version[0]}`;
+    const fhirVersion = defs.fishForFHIR('StructureDefinition', Type.Resource)?.fhirVersion;
     logger.error(
-      `Cannot materialize implied extension (${url}) since ${supplementalPackage} is not loaded`
+      `Cannot materialize implied extension: ${url}.\n` +
+        'To fix this, add the following dependency to your sushi-config.yaml file:\n' +
+        `  hl7.fhir.extensions.${extRelease}: ${fhirVersion}`
     );
     return;
   }

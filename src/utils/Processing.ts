@@ -217,7 +217,7 @@ export async function loadExternalDependencies(
       // It is a special "virtual" FHIR extensions package indicating we need to load supplemental
       // FHIR versions to support "implied extensions".
       if (dep.version !== fhirVersion) {
-        logger.warning(
+        logger.warn(
           `Incorrect package version: ${dep.packageId}#${dep.version}. FHIR extensions packages ` +
             "should use the same version as the implementation guide's fhirVersion. Version " +
             `${fhirVersion} will be used instead. Update the dependency version in ` +

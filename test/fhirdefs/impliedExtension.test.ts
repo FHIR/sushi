@@ -96,18 +96,6 @@ describe('impliedExtensions', () => {
       );
     });
 
-    it('should log an error if the supplemental FHIR version is not loaded', () => {
-      expect(
-        materializeImpliedExtension(
-          'http://hl7.org/fhir/5.0/StructureDefinition/extension-Substance.quantity',
-          defs
-        )
-      ).toBeUndefined();
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension \(http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Substance\.quantity\) .* hl7\.fhir\.r5\.core#current/
-      );
-    });
-
     it('should log an error if the target resource does not exist in the target version', () => {
       expect(
         materializeImpliedExtension(
@@ -1182,6 +1170,21 @@ describe('impliedExtensions', () => {
       );
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r4.core#4.0.1', r4Defs);
       loggerSpy.reset();
+    });
+
+    // This test is here (instead of w/ the other error checking tests) because the other suite
+    // loads all the supplemental versions of FHIR, so we can't test a condition for unloaded
+    // versions of FHIR there.
+    it('should log an error if the supplemental FHIR version is not loaded', () => {
+      expect(
+        materializeImpliedExtension(
+          'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal.species',
+          defs
+        )
+      ).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot materialize implied extension: http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal\.species\.\n.*\n.*hl7\.fhir\.extensions\.r3: 4\.6\.0/
+      );
     });
 
     it('should materialize a simple R4 extension', () => {

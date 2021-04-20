@@ -427,6 +427,24 @@ describe('Processing', () => {
       ]);
     });
 
+    it('should log a warning if wrong virtual FHIR extension package version is used', () => {
+      const virtualExtensionsConfig = cloneDeep(minimalConfig);
+      virtualExtensionsConfig.fhirVersion = ['4.0.1'];
+      virtualExtensionsConfig.dependencies = [
+        { packageId: 'hl7.fhir.extensions.r2', version: '1.0.2' }
+      ];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
+        expect(defs.packages.length).toBe(1);
+        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
+        expect(defs.supplementalFHIRPackages).toEqual(['hl7.fhir.r2.core#1.0.2']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Incorrect package version: hl7\.fhir\.extensions\.r2#1\.0\.2\./
+        );
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+    });
+
     it('should log an error when it fails to load a dependency', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
