@@ -28,6 +28,7 @@ import {
   Logical,
   Mapping,
   Profile,
+  Resource,
   RuleSet,
   SourceInfo
 } from '../fshtypes';
@@ -460,6 +461,7 @@ export function applyInsertRules(
     | Profile
     | Extension
     | Logical
+    | Resource
     | Instance
     | FshValueSet
     | FshCodeSystem
@@ -623,7 +625,7 @@ export function isInheritedResource(
  * @returns {string} - The URL to use to refer to the FHIR entity
  */
 export function getUrlFromFshDefinition(
-  fshDefinition: Profile | Extension | Logical | FshValueSet | FshCodeSystem,
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem,
   canonical: string
 ): string {
   for (const rule of fshDefinition.rules) {

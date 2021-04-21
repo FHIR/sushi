@@ -6,7 +6,7 @@ import {
   InstanceDefinition,
   StructureDefinition
 } from '../fhirtypes';
-import { Extension, Invariant, Logical, Profile } from '../fshtypes';
+import { Extension, Invariant, Logical, Profile, Resource } from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
 import {
@@ -14,6 +14,7 @@ import {
   InvalidExtensionParentError,
   InvalidLogicalParentError,
   InvalidProfileParentError,
+  InvalidResourceParentError,
   InvalidFHIRIdError,
   ParentDeclaredAsNameError,
   ParentDeclaredAsIdError,
@@ -71,13 +72,13 @@ export class StructureDefinitionExporter implements Fishable {
    * Processes the fshDefinition's parent, validating it according to its type.
    * Returns the parent's StructureDefinition as the basis for the new StructureDefinition
    * for the provided fshDefinition.
-   * @param {Extension | Profile | Logical} fshDefinition - The definition to do preprocessing on.
-   *                                                        It is updated directly based on processing.
+   * @param {Extension | Profile | Logical | Resource} fshDefinition - The definition
+   *        to do preprocessing on. It is updated directly based on processing.
    * @returns {StructureDefinition} for this fshDefinition
    * @private
    */
   private getStructureDefinition(
-    fshDefinition: Profile | Extension | Logical
+    fshDefinition: Profile | Extension | Logical | Resource
   ): StructureDefinition {
     // Process/validate the fshDefinition.parent value with the purpose of
     // obtaining the parent's StructureDefinition as the basis for this
@@ -93,6 +94,8 @@ export class StructureDefinitionExporter implements Fishable {
         fshDefinition.parent = 'Extension';
       } else if (fshDefinition instanceof Logical) {
         fshDefinition.parent = 'Element';
+      } else if (fshDefinition instanceof Resource) {
+        fshDefinition.parent = 'DomainResource';
       }
     }
     const parentName = fshDefinition.parent;
@@ -154,6 +157,16 @@ export class StructureDefinitionExporter implements Fishable {
       // A logical model can only have another logical model as a parent
       // or it can have the Element resource as a parent
       throw new InvalidLogicalParentError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
+    } else if (
+      fshDefinition instanceof Resource &&
+      !(parentJson.type === 'Resource' || parentJson.type === 'DomainResource')
+    ) {
+      // A resource can only have the 'Resource' or 'DomainResource' as a parent
+      throw new InvalidResourceParentError(
+        fshDefinition.name,
+        parentName,
+        fshDefinition.sourceInfo
+      );
     }
 
     return StructureDefinition.fromJSON(parentJson);
@@ -166,11 +179,11 @@ export class StructureDefinitionExporter implements Fishable {
    * This essentially aligns closely with the approach that Forge uses (ensuring some consistency across tools).
    * @see {@link https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Bad.20links.20on.20Detailed.20Description.20tab/near/186766845}
    * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
-   * @param {Profile | Extension | Logical} fshDefinition - The definition we are exporting
+   * @param {Profile | Extension | Logical | Resource} fshDefinition - The definition we are exporting
    */
   private setMetadata(
     structDef: StructureDefinition,
-    fshDefinition: Profile | Extension | Logical
+    fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     // First save the original URL, as that is the URL we'll want to set as the baseDefinition
     const baseURL = structDef.url;
@@ -245,13 +258,13 @@ export class StructureDefinitionExporter implements Fishable {
       delete structDef.context;
       delete structDef.contextInvariant;
     }
-    // keep type since this should not change except for logical models
-    if (fshDefinition instanceof Logical) {
+    // keep type since this should not change except for logical models or resources
+    if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
       // By definition, the 'type' is the same as the 'id'
       structDef.type = fshDefinition.id;
     }
     structDef.baseDefinition = baseURL;
-    if (fshDefinition instanceof Logical) {
+    if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
       structDef.derivation = 'specialization';
     } else {
       // always constraint for profiles/extensions
@@ -280,11 +293,11 @@ export class StructureDefinitionExporter implements Fishable {
   /**
    * Sets the rules for the StructureDefinition
    * @param {StructureDefinition} structDef - The StructureDefinition to set rules on
-   * @param {Profile | Extension | Logical} fshDefinition - The definition we are exporting
+   * @param {Profile | Extension | Logical | Resource} fshDefinition - The definition we are exporting
    */
   private setRules(
     structDef: StructureDefinition,
-    fshDefinition: Profile | Extension | Logical
+    fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     resolveSoftIndexing(fshDefinition.rules);
 
@@ -472,7 +485,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {ElementDefinition} element - the element to apply the rule to
    */
   private handleExtensionContainsRule(
-    fshDefinition: Profile | Extension | Logical,
+    fshDefinition: Profile | Extension | Logical | Resource,
     rule: ContainsRule,
     structDef: StructureDefinition,
     element: ElementDefinition
@@ -519,7 +532,7 @@ export class StructureDefinitionExporter implements Fishable {
           );
           urlElement.assignValue(slice.sliceName, true);
           // Inline extensions should only be used in extensions
-          if (fshDefinition instanceof Profile || fshDefinition instanceof Logical) {
+          if (!(fshDefinition instanceof Extension)) {
             logger.error(
               'Inline extensions should only be defined in Extensions.',
               rule.sourceInfo
@@ -537,11 +550,12 @@ export class StructureDefinitionExporter implements Fishable {
 
   /**
    * Does any necessary preprocessing of profiles, extensions, and logical models.
-   * @param {Extension | Profile | Logical} fshDefinition - The definition to do preprocessing on. It is updated directly based on processing.
+   * @param {Extension | Profile | Logical | Resource} fshDefinition - The definition
+   *        to do preprocessing on. It is updated directly based on processing.
    * @param {boolean} isExtension - fshDefinition is/is not an Extension
    */
   private preprocessStructureDefinition(
-    fshDefinition: Extension | Profile | Logical,
+    fshDefinition: Extension | Profile | Logical | Resource,
     isExtension: boolean
   ): void {
     const inferredCardRulesMap = new Map(); // key is the rule, value is a boolean of whether it should be set
@@ -628,13 +642,19 @@ export class StructureDefinitionExporter implements Fishable {
     if (
       result == null &&
       (types.length === 0 ||
-        types.some(t => t === Type.Profile || t === Type.Extension || t === Type.Logical))
+        types.some(
+          t =>
+            t === Type.Profile || t === Type.Extension || t === Type.Logical || t === Type.Resource
+        ))
     ) {
       // If we find a FSH definition, then we can export and fish for it again
-      const fshDefinition = this.tank.fish(item, Type.Profile, Type.Extension, Type.Logical) as
-        | Profile
-        | Extension
-        | Logical;
+      const fshDefinition = this.tank.fish(
+        item,
+        Type.Profile,
+        Type.Extension,
+        Type.Logical,
+        Type.Resource
+      ) as Profile | Extension | Logical | Resource;
       if (fshDefinition) {
         this.exportStructDef(fshDefinition);
         result = this.fisher.fishForFHIR(item, ...types);
@@ -662,7 +682,8 @@ export class StructureDefinitionExporter implements Fishable {
     if (
       this.pkg.profiles.some(sd => sd.name === fshDefinition.name) ||
       this.pkg.extensions.some(sd => sd.name === fshDefinition.name) ||
-      this.pkg.logicals.some(sd => sd.name === fshDefinition.name)
+      this.pkg.logicals.some(sd => sd.name === fshDefinition.name) ||
+      this.pkg.resources.some(sd => sd.name === fshDefinition.name)
     ) {
       return;
     }
@@ -681,9 +702,10 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.inProgress = true;
 
     // For profiles and extensions, the id and path attributes for the ElementDefinitions
-    // are correct. For logical models, they need to be changed to reflect the type of the
-    // logical model. By definition for logical models, the 'type' is the same as the 'id'.
-    if (fshDefinition instanceof Logical) {
+    // are already correct. For logical models and resources, they need to be changed to reflect
+    // the type of the logical model/resource. By definition for logical models and resources,
+    // the 'type' is the same as the 'id'.
+    if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
       structDef.resetRootIdAndPath(fshDefinition.id);
     }
 
@@ -695,6 +717,8 @@ export class StructureDefinitionExporter implements Fishable {
       this.pkg.extensions.push(structDef);
     } else if (structDef.kind === 'logical') {
       this.pkg.logicals.push(structDef);
+    } else if (structDef.kind === 'resource' && structDef.derivation === 'specialization') {
+      this.pkg.resources.push(structDef);
     } else {
       this.pkg.profiles.push(structDef);
     }
@@ -721,11 +745,10 @@ export class StructureDefinitionExporter implements Fishable {
     // see https://www.hl7.org/fhir/resource.html#id
     // the structure definition has already been added to the package, so it's fine if it matches itself
     if (
-      this.pkg.profiles.some(profile => structDef.id === profile.id && structDef !== profile) ||
-      this.pkg.extensions.some(
-        extension => structDef.id === extension.id && structDef !== extension
-      ) ||
-      this.pkg.logicals.some(logical => structDef.id === logical.id && structDef !== logical)
+      this.pkg.profiles.some(prof => structDef.id === prof.id && structDef !== prof) ||
+      this.pkg.extensions.some(extn => structDef.id === extn.id && structDef !== extn) ||
+      this.pkg.logicals.some(logical => structDef.id === logical.id && structDef !== logical) ||
+      this.pkg.resources.some(resource => structDef.id === resource.id && structDef !== resource)
     ) {
       logger.error(
         `Multiple structure definitions with id ${structDef.id}. Each structure definition must have a unique id.`,

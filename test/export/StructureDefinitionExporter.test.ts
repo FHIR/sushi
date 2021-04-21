@@ -14,6 +14,7 @@ import {
   Invariant,
   Logical,
   Profile,
+  Resource,
   RuleSet
 } from '../../src/fshtypes';
 import {
@@ -30,7 +31,7 @@ import {
   OnlyRule
 } from '../../src/fshtypes/rules';
 import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
-import { ElementDefinitionType } from '../../src/fhirtypes';
+import { ElementDefinitionType, StructureDefinitionMapping } from '../../src/fhirtypes';
 import path from 'path';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
@@ -57,12 +58,12 @@ describe('StructureDefinitionExporter', () => {
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
     fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
-    loggerSpy.reset();
   });
 
   describe('#StructureDefinition', () => {
@@ -386,11 +387,23 @@ describe('StructureDefinitionExporter', () => {
       const logical = new Logical('MyPatientModel');
       logical.parent = 'Patient';
       logical.id = 'PatientModel';
-      doc.extensions.set(logical.name, logical);
+      doc.logicals.set(logical.name, logical);
       expect(() => {
         exporter.exportStructDef(logical);
       }).toThrow(
         'Parent Patient is not of type Logical, so it is an invalid Parent for Logical MyPatientModel.'
+      );
+    });
+
+    it('should throw InvalidResourceParentError when a resource does not have Resource or DomainResource for a parent', () => {
+      const resource = new Resource('MyCustomPatient');
+      resource.parent = 'Patient';
+      resource.id = 'CustomPatient';
+      doc.resources.set(resource.name, resource);
+      expect(() => {
+        exporter.exportStructDef(resource);
+      }).toThrow(
+        'Parent Patient is not of type Resource or DomainResource, so it is an invalid Parent for Resource MyCustomPatient.'
       );
     });
   });
@@ -1025,6 +1038,268 @@ describe('StructureDefinitionExporter', () => {
 
       const prop3 = exported.findElement('MyModel.backboneProp.address');
       expect(prop3.path).toBe('MyModel.backboneProp.address');
+      const expectedType3 = new ElementDefinitionType('Address');
+      expect(prop3.type).toStrictEqual([expectedType3]);
+    });
+  });
+
+  describe('#Resource', () => {
+    it('should have the correct baseDefinition of Element when parent is not provided', () => {
+      const resource = new Resource('Foo');
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('Foo');
+      expect(exported.baseDefinition).toBe(
+        'http://hl7.org/fhir/StructureDefinition/DomainResource'
+      );
+    });
+
+    it('should have the correct baseDefinition for a Resource parent', () => {
+      const resource = new Resource('Foo');
+      resource.parent = 'Resource';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('Foo');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
+    });
+
+    it('should have the correct baseDefinition for a DomainResource parent', () => {
+      const resource = new Resource('Foo');
+      resource.parent = 'DomainResource';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('Foo');
+      expect(exported.baseDefinition).toBe(
+        'http://hl7.org/fhir/StructureDefinition/DomainResource'
+      );
+    });
+
+    it('should set all user-provided metadata for a resource', () => {
+      const resource = new Resource('Foo');
+      resource.id = 'foo';
+      resource.title = 'Custom Foo Resource';
+      resource.description = 'foo bar foobar';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('Foo');
+      expect(exported.id).toBe('foo');
+      expect(exported.title).toBe('Custom Foo Resource');
+      expect(exported.description).toBe('foo bar foobar');
+      expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
+      expect(exported.version).toBe('1.0.0');
+      expect(exported.type).toBe('foo');
+      expect(exported.baseDefinition).toBe(
+        'http://hl7.org/fhir/StructureDefinition/DomainResource'
+      );
+    });
+
+    it('should properly set/clear all metadata properties for a resource', () => {
+      const resource = new Resource('Foo');
+      resource.parent = 'Resource';
+      resource.title = 'Custom Foo Resource';
+      resource.description = 'foo bar foobar';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('Foo');
+      expect(exported.id).toBe('Foo'); // defaulted from user-provided name
+      expect(exported.title).toBe('Custom Foo Resource');
+      expect(exported.meta).toBeUndefined();
+      expect(exported.implicitRules).toBeUndefined();
+      expect(exported.language).toBeUndefined();
+      expect(exported.text).toBeUndefined();
+      expect(exported.contained).toBeUndefined();
+      expect(exported.modifierExtension).toBeUndefined();
+      expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
+      expect(exported.identifier).toBeUndefined();
+      expect(exported.version).toBe('1.0.0'); // provided by config
+      expect(exported.name).toBe('Foo'); // provided by user
+      expect(exported.status).toBe('active'); // always active
+      expect(exported.experimental).toBeUndefined();
+      expect(exported.date).toBeUndefined();
+      expect(exported.publisher).toBeUndefined();
+      expect(exported.contact).toBeUndefined();
+      expect(exported.description).toBe('foo bar foobar');
+      expect(exported.useContext).toBeUndefined();
+      expect(exported.jurisdiction).toBeUndefined();
+      expect(exported.purpose).toBeUndefined();
+      expect(exported.copyright).toBeUndefined();
+      expect(exported.keyword).toBeUndefined();
+      expect(exported.fhirVersion).toBe('4.0.1'); // Inherited from Resource
+      const mapping: StructureDefinitionMapping = {
+        identity: 'rim',
+        uri: 'http://hl7.org/v3',
+        name: 'RIM Mapping'
+      };
+      expect(exported.mapping).toStrictEqual([mapping]); // inherited from Resource
+      expect(exported.kind).toBe('resource'); // inherited from Resource
+      expect(exported.abstract).toBe(false); // always abstract
+      expect(exported.context).toBeUndefined(); // inherited from Resource
+      expect(exported.contextInvariant).toBeUndefined(); // inherited from Resource
+      expect(exported.type).toBe('Foo'); // inherited from Resource
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource'); // url for Resource
+      expect(exported.derivation).toBe('specialization'); // always specialization for resource
+    });
+
+    it('should not overwrite metadata that is not given for a resource', () => {
+      const resource = new Resource('Foo');
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('Foo');
+      expect(exported.id).toBe('Foo');
+      expect(exported.title).toBeUndefined();
+      expect(exported.description).toBeUndefined();
+      expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
+      expect(exported.version).toBe('1.0.0');
+      expect(exported.type).toBe('Foo');
+      expect(exported.baseDefinition).toBe(
+        'http://hl7.org/fhir/StructureDefinition/DomainResource'
+      );
+      expect(exported.derivation).toBe('specialization');
+    });
+
+    it('should allow metadata to be overwritten with caret rule', () => {
+      const resource = new Resource('Foo');
+      doc.resources.set(resource.name, resource);
+      const rule = new CaretValueRule('');
+      rule.caretPath = 'status';
+      rule.value = new FshCode('draft');
+      resource.rules.push(rule);
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+      expect(exported.name).toBe('Foo');
+      expect(exported.status).toBe('draft');
+    });
+
+    it('should log an error when multiple resources have the same id', () => {
+      const firstResource = new Resource('FirstResource')
+        .withFile('Resources.fsh')
+        .withLocation([2, 8, 6, 25]);
+      firstResource.id = 'my-resource';
+      const secondResource = new Resource('SecondResource')
+        .withFile('Resources.fsh')
+        .withLocation([8, 8, 11, 25]);
+      secondResource.id = 'my-resource';
+      doc.resources.set(firstResource.name, firstResource);
+      doc.resources.set(secondResource.name, secondResource);
+
+      exporter.export();
+      expect(pkg.resources).toHaveLength(2);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Multiple structure definitions with id my-resource/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Resources\.fsh.*Line: 8 - 11\D*/s);
+    });
+
+    it('should log an error when a resource and a logical model have the same id', () => {
+      const resource = new Resource('MyResource')
+        .withFile('Resource.fsh')
+        .withLocation([2, 8, 5, 15]);
+      resource.id = 'custom-id';
+      doc.resources.set(resource.name, resource);
+
+      const logical = new Logical('MyModel').withFile('Logicals.fsh').withLocation([3, 8, 5, 19]);
+      logical.id = 'custom-id';
+      doc.logicals.set(logical.name, logical);
+
+      exporter.export();
+      expect(pkg.resources).toHaveLength(1);
+      expect(pkg.logicals).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Multiple structure definitions with id custom-id/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Resource\.fsh.*Line: 2 - 5\D*/s);
+    });
+
+    it('should include added elements along with parent elements', () => {
+      const resource = new Resource('MyTestResource');
+      resource.parent = 'DomainResource';
+      resource.id = 'MyResource';
+
+      const addElementRule1 = new AddElementRule('prop1');
+      addElementRule1.min = 0;
+      addElementRule1.max = '1';
+      addElementRule1.types = [{ type: 'dateTime' }];
+      addElementRule1.short = 'short of property1';
+      resource.rules.push(addElementRule1);
+
+      const addElementRule2 = new AddElementRule('prop2');
+      addElementRule2.min = 0;
+      addElementRule2.max = '*';
+      addElementRule2.mustSupport = true;
+      addElementRule2.types = [{ type: 'string' }];
+      addElementRule2.short = 'short of property2';
+      resource.rules.push(addElementRule2);
+
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('MyTestResource');
+      expect(exported.id).toBe('MyResource');
+      expect(exported.type).toBe('MyResource');
+      expect(exported.elements).toHaveLength(11); // 9 - DomainResource + 2 AddElementRules
+    });
+
+    it('should include added elements for BackboneElement and children', () => {
+      const resource = new Resource('MyTestResource');
+      resource.parent = 'Resource';
+      resource.id = 'MyResource';
+
+      const addElementRule1 = new AddElementRule('backboneProp');
+      addElementRule1.min = 0;
+      addElementRule1.max = '*';
+      addElementRule1.types = [{ type: 'BackboneElement' }];
+      addElementRule1.short = 'short of backboneProp';
+      resource.rules.push(addElementRule1);
+
+      const addElementRule2 = new AddElementRule('backboneProp.name');
+      addElementRule2.min = 1;
+      addElementRule2.max = '1';
+      addElementRule2.types = [{ type: 'HumanName' }];
+      addElementRule2.short = 'short of backboneProp.name';
+      resource.rules.push(addElementRule2);
+
+      const addElementRule3 = new AddElementRule('backboneProp.address');
+      addElementRule3.min = 0;
+      addElementRule3.max = '*';
+      addElementRule3.types = [{ type: 'Address' }];
+      addElementRule3.short = 'short of backboneProp.address';
+      resource.rules.push(addElementRule3);
+
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('MyTestResource');
+      expect(exported.id).toBe('MyResource');
+      expect(exported.type).toBe('MyResource');
+      expect(exported.elements).toHaveLength(8);
+
+      const prop1 = exported.findElement('MyResource.backboneProp');
+      expect(prop1.path).toBe('MyResource.backboneProp');
+      const expectedType1 = new ElementDefinitionType('BackboneElement');
+      expect(prop1.type).toStrictEqual([expectedType1]);
+
+      const prop2 = exported.findElement('MyResource.backboneProp.name');
+      expect(prop2.path).toBe('MyResource.backboneProp.name');
+      const expectedType2 = new ElementDefinitionType('HumanName');
+      expect(prop2.type).toStrictEqual([expectedType2]);
+
+      const prop3 = exported.findElement('MyResource.backboneProp.address');
+      expect(prop3.path).toBe('MyResource.backboneProp.address');
       const expectedType3 = new ElementDefinitionType('Address');
       expect(prop3.type).toStrictEqual([expectedType3]);
     });

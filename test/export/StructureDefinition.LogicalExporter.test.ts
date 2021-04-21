@@ -23,6 +23,7 @@ describe('LogicalExporter', () => {
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
@@ -62,12 +63,22 @@ describe('LogicalExporter', () => {
     expect(exported[0].name).toBe('Bar');
   });
 
-  it('should log a message with source information when the parent is not found', () => {
+  it('should log an error with source information when the parent is invalid', () => {
+    const logical = new Logical('BadParent').withFile('BadParent.fsh').withLocation([2, 9, 4, 23]);
+    logical.parent = 'Basic';
+    doc.logicals.set(logical.name, logical);
+    exporter.export();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadParent\.fsh.*Line: 2 - 4\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/is not of type Logical/s);
+  });
+
+  it('should log an error with source information when the parent is not found', () => {
     const logical = new Logical('Bogus').withFile('Bogus.fsh').withLocation([2, 9, 4, 23]);
     logical.parent = 'BogusParent';
     doc.logicals.set(logical.name, logical);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Parent BogusParent not found for Bogus/s);
   });
 
   it('should export logical models with FSHy parents', () => {

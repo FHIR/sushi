@@ -440,7 +440,7 @@ export class StructureDefinition {
    * @param {string} path - The path to the ElementDefinition to assign
    * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @param {inlineResourceTypes} - Types that will be used to replace Resource elements
+   * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
    * @returns {any} - The object or value to assign
@@ -665,6 +665,7 @@ export class StructureDefinition {
    * Looks for a slice within the set of elements that matches the fhirPath
    * @param {PathPart} pathPart - The path to match sliceName against
    * @param {ElementDefinition[]} elements - The set of elements to search through
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition} - The sliceElement if found, else undefined
    */
   private findMatchingSlice(
@@ -782,7 +783,7 @@ export class StructureDefinition {
 
   /**
    * The elements are initially those of the parent (base definition). For some cases
-   * (e.g., logical models), the root values must be changed to reflect the new
+   * (i.e., logical models and resources), the root values must be changed to reflect the new
    * StructureDefinition type.
    * @param {string} newRoot - new root value based on the fshDefinition's type (i.e., 'id')
    */
