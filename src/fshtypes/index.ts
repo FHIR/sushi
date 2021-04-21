@@ -9,6 +9,7 @@ export * from './FshQuantity';
 export * from './FshRatio';
 export * from './FshReference';
 export * from './Instance';
+export * from './InstanceUsage';
 export * from './Profile';
 export * from './FshValueSet';
 export * from './ValueSetComponentTypes';

@@ -1,6 +1,9 @@
 import { Rule } from './Rule';
-import { FshCode, FshQuantity, FshRatio, FshReference } from '../index';
-import { InstanceDefinition } from '../../fhirtypes';
+import { FshCode } from '../FshCode';
+import { FshQuantity } from '../FshQuantity';
+import { FshRatio } from '../FshRatio';
+import { FshReference } from '../FshReference';
+import { InstanceDefinition } from '../../fhirtypes/InstanceDefinition';
 import { FshCanonical } from '../FshCanonical';
 import { fshifyString } from '../common';
 
@@ -31,7 +34,11 @@ export class AssignmentRule extends Rule {
 
   toFSH(): string {
     let printableValue = '';
-    if (typeof this.value === 'boolean' || typeof this.value === 'number') {
+    if (
+      typeof this.value === 'boolean' ||
+      typeof this.value === 'number' ||
+      typeof this.value === 'bigint'
+    ) {
       printableValue = String(this.value);
     } else if (typeof this.value === 'string') {
       printableValue = this.isInstance ? this.value : `"${fshifyString(this.value)}"`;
@@ -39,10 +46,11 @@ export class AssignmentRule extends Rule {
       this.value instanceof FshCode ||
       this.value instanceof FshQuantity ||
       this.value instanceof FshRatio ||
-      this.value instanceof FshReference
+      this.value instanceof FshReference ||
+      this.value instanceof FshCanonical
     ) {
       printableValue = this.value.toString();
-    } else if (this.value instanceof InstanceDefinition) {
+    } else {
       printableValue = this.value.id;
     }
 

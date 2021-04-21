@@ -1,6 +1,6 @@
 import { FshCode } from '../FshCode';
 import { Rule } from './Rule';
-import { ValueSetComponentFrom, ValueSetFilter } from '..';
+import { ValueSetComponentFrom, ValueSetFilter } from '../ValueSetComponentTypes';
 import { EOL } from 'os';
 
 export class ValueSetComponentRule extends Rule {

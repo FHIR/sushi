@@ -1,4 +1,4 @@
-import { OnlyRuleType } from './rules';
+import { OnlyRuleType } from './rules/OnlyRule';
 import { partition } from 'lodash';
 
 export function typeString(types: OnlyRuleType[]): string {

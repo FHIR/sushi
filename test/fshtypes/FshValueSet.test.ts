@@ -51,7 +51,7 @@ describe('ValueSet', () => {
       const expectedResult = [
         'ValueSet: MyValueSet',
         'Id: MyValueSet',
-        '* include GoodCodes#goodthing',
+        '* GoodCodes#goodthing',
         '* exclude codes from valueset BadVS and TerribleVS'
       ].join(EOL);
       expect(vs.toFSH()).toEqual(expectedResult);

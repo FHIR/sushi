@@ -2,6 +2,7 @@ import { AssignmentRule, InsertRule } from './rules';
 import { FshEntity } from './FshEntity';
 import { EOL } from 'os';
 import { fshifyString } from './common';
+import { InstanceUsage } from './InstanceUsage';
 
 export class Instance extends FshEntity {
   id: string;
@@ -51,10 +52,4 @@ export class Instance extends FshEntity {
     const rulesFSH = this.rules.map(r => r.toFSH()).join(EOL);
     return `${metadataFSH}${rulesFSH.length ? EOL + rulesFSH : ''}`;
   }
-}
-
-export type InstanceUsage = 'Example' | 'Definition' | 'Inline';
-
-export function isInstanceUsage(s: string): s is InstanceUsage {
-  return ['Example', 'Definition', 'Inline'].indexOf(s) >= 0;
 }
