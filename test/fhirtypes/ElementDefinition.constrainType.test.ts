@@ -4,10 +4,14 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType } from '../../src/fhirtypes';
 import { Type } from '../../src/utils';
-import cloneDeep from 'lodash/cloneDeep';
-import path from 'path';
 import { OnlyRule } from '../../src/fshtypes/rules';
 import { readFileSync } from 'fs-extra';
+import { Package, StructureDefinitionExporter } from '../../src/export';
+import { minimalConfig } from '../utils/minimalConfig';
+import { Profile } from '../../src/fshtypes';
+import { FSHTank } from '../../src/import';
+import cloneDeep from 'lodash/cloneDeep';
+import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -15,6 +19,9 @@ describe('ElementDefinition', () => {
   let extension: StructureDefinition;
   let r5CarePlan: StructureDefinition;
   let fisher: TestFisher;
+  let exporter: StructureDefinitionExporter;
+  let pkg: Package;
+
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -27,7 +34,9 @@ describe('ElementDefinition', () => {
       'r5',
       defs
     );
-    fisher = new TestFisher().withFHIR(defs);
+    pkg = new Package(minimalConfig);
+    fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
+    exporter = new StructureDefinitionExporter(new FSHTank([], minimalConfig), pkg, fisher);
   });
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');
@@ -134,10 +143,6 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it.skip('should allow a profile to be constrained to a more specific profile', () => {
-      // Cannot find any examples to use for testing.  Will revisit when we can reference FSH profiles
-    });
-
     it('should allow Resource to be constrained to a resource', () => {
       const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
@@ -158,6 +163,50 @@ describe('ElementDefinition', () => {
       expect(entryResource.type[0]).toEqual(
         new ElementDefinitionType('Observation').withProfiles(
           'http://hl7.org/fhir/StructureDefinition/bp'
+        )
+      );
+    });
+
+    it('should allow a profile to be constrained to a more specific profile', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Observation').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp'
+      );
+
+      const profile = new Profile('Foo');
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/bp';
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'Foo' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+        )
+      );
+    });
+
+    it('should allow a profile to be constrained to a more specific profile of a child type', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Resource').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp'
+      );
+
+      const profile = new Profile('Foo');
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/bp';
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'Foo' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
         )
       );
     });
