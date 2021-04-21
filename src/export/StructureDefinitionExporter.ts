@@ -26,7 +26,16 @@ import {
   CaretValueRule,
   ObeysRule
 } from '../fshtypes/rules';
-import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } from '../utils';
+import {
+  logger,
+  Type,
+  Fishable,
+  Metadata,
+  MasterFisher,
+  resolveSoftIndexing,
+  parseFSHPath,
+  assembleFSHPath
+} from '../utils';
 import {
   replaceReferences,
   splitOnPathPeriods,
@@ -487,6 +496,64 @@ export class StructureDefinitionExporter implements Fishable {
     return this.fisher.fishForMetadata(item, ...types);
   }
 
+  applyElementProfiles(caretRules: CaretValueRule[], structDef: StructureDefinition): void {
+    const profileElementExtension =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+
+    caretRules.forEach(rule => {
+      // If the rule isn't applied to an element, it's not relevant
+      if (rule.path) {
+        const currentElement = rule.path;
+        const parsedCaret = parseFSHPath(rule.caretPath);
+
+        if (
+          parsedCaret.length === 2 &&
+          parsedCaret[0].base === 'type' &&
+          parsedCaret[1].base === 'profile'
+        ) {
+          const associatedCaretPaths = [
+            `${assembleFSHPath(parsedCaret)}.extension[0].url`,
+            `${assembleFSHPath(parsedCaret)}.extension.url`,
+            `${assembleFSHPath(parsedCaret)}.extension[0].valueString`,
+            `${assembleFSHPath(parsedCaret)}.extension.valueString`
+          ];
+
+          const profileExtensionRule = caretRules.filter(
+            rule =>
+              associatedCaretPaths.includes(rule.caretPath) &&
+              rule.path === currentElement &&
+              rule.caretPath.includes('url') &&
+              rule.value === profileElementExtension
+          )[0];
+
+          const targetElementRule = caretRules.filter(
+            rule =>
+              associatedCaretPaths.includes(rule.caretPath) &&
+              rule.path === currentElement &&
+              rule.caretPath.includes('valueString')
+          )[0];
+
+          const baseElementName = `${structDef.type}.${currentElement}`;
+
+          if (
+            profileExtensionRule &&
+            targetElementRule &&
+            !(rule.value === structDef.url && targetElementRule.value === baseElementName)
+          ) {
+            const targetProfile = this.fisher.fishForFHIR(rule.value as string, Type.Profile);
+            const def = StructureDefinition.fromJSON(targetProfile);
+            const targetElement = def.findElement(targetElementRule.value as string);
+            const baseElement = structDef.findElement(baseElementName);
+
+            if (baseElement) {
+              baseElement.copyFromParent(targetElement, structDef);
+            }
+          }
+        }
+      }
+    });
+  }
+
   /**
    * Exports Profile or Extension to StructureDefinition
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
@@ -562,6 +629,11 @@ export class StructureDefinitionExporter implements Fishable {
     // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
+
+    const caretRules: CaretValueRule[] = fshDefinition.rules.filter(
+      rule => rule instanceof CaretValueRule
+    ) as CaretValueRule[];
+    this.applyElementProfiles(caretRules, structDef);
 
     this.setRules(structDef, fshDefinition);
     // The recursive structDef fields on elements should be ignored to avoid infinite looping

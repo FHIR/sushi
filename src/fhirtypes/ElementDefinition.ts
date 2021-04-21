@@ -111,6 +111,7 @@ export class ElementDefinitionType {
     elDefType.aggregation = json.aggregation;
     elDefType.versioning = json.versioning;
     elDefType.extension = json.extension;
+
     return elDefType;
   }
 }
@@ -1818,7 +1819,25 @@ export class ElementDefinition {
         // Get the original resource JSON so we unfold unconstrained reference
         const type = this.structDef.type;
         const json = fisher.fishForFHIR(type, Type.Resource);
-        if (json) {
+        const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
+        if (profileJson && this.hasProfileElementExtension(profileJson)) {
+          const def = StructureDefinition.fromJSON(profileJson);
+          // Content references start with #, slice that off to id of referenced element
+          const contentRefId = this.getContentReferenceId();
+          const referencedElement = def.findElement(contentRefId);
+          newElements = referencedElement?.children().map(e => {
+            const eClone = e.clone();
+            eClone.id = eClone.id.replace(referencedElement.id, this.id);
+            eClone.structDef = this.structDef;
+            eClone.captureOriginal();
+            return eClone;
+          });
+          if (newElements.length > 0) {
+            // If we successfully unfolded, this element is no longer a content reference
+            this.type = referencedElement.type;
+            delete this.contentReference;
+          }
+        } else if (json) {
           const def = StructureDefinition.fromJSON(json);
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
@@ -1880,6 +1899,30 @@ export class ElementDefinition {
       }
     }
     return [];
+  }
+
+  private hasProfileElementExtension(profileJson: any): boolean {
+    const contentRefId = this.getContentReferenceId();
+    const profileElementExtension =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+
+    const elementType = profileJson.differential.element.find(
+      (element: any) => element.id === contentRefId
+    ).type[0];
+
+    if (elementType) {
+      const profileCanonical = elementType.profile[0];
+      const extensionUrl = elementType._profile[0].extension[0].url;
+      const targetElement = elementType._profile[0].extension[0].valueString;
+
+      return (
+        profileCanonical === this.structDef.url &&
+        extensionUrl === profileElementExtension &&
+        targetElement === contentRefId
+      );
+    } else {
+      return false;
+    }
   }
 
   private getContentReferenceId(): string | undefined {
@@ -2049,6 +2092,47 @@ export class ElementDefinition {
     }
     this.structDef.addElement(slice);
     return slice;
+  }
+
+  copyFromParent(profiledElement: ElementDefinition, structDef: StructureDefinition): void {
+    const propertiesToIgnore: string[] = [
+      '_id',
+      'path',
+      'sliceName',
+      'short',
+      'structDef',
+      '_original',
+      '_edStructureDefinition'
+    ];
+
+    // First we copy properties of the profiledElement itself
+    Object.keys(profiledElement).forEach((property: string) => {
+      if (!propertiesToIgnore.includes(property)) {
+        const assignableProperty = property as keyof ElementDefinition;
+        // @ts-ignore: Type 'any' is not assignable to type 'never'
+        this[assignableProperty] = profiledElement[assignableProperty];
+      }
+    });
+
+    const childrenToAdd = profiledElement.children();
+
+    // Then we copy poerties from the profiled element's children, creating new ones if they don't exist
+    childrenToAdd.forEach(childElement => {
+      const childPath = childElement.path;
+      const childElementName = childPath.substring(childPath.indexOf('.'), childPath.length);
+
+      const currentElementName = `${this.structDef.type}${childElementName}`;
+      const existingChildElement = structDef.findElement(currentElementName);
+
+      if (existingChildElement) {
+        existingChildElement.copyFromParent(childElement, structDef);
+      } else {
+        const newElement = childElement.clone();
+        newElement._id = currentElementName;
+        newElement.path = currentElementName;
+        structDef.addElement(newElement);
+      }
+    });
   }
 
   /**

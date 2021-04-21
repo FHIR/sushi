@@ -250,6 +250,63 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
+  it('should profile an individual element when the profile-element extension is applied to an element', () => {
+    const profile = new Profile('ExPatient');
+    profile.parent = 'Patient';
+    profile.id = 'test-patient';
+
+    const profileRule = new CaretValueRule('name');
+    profileRule.caretPath = 'type.profile';
+    profileRule.value = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient';
+    const extensionRule = new CaretValueRule('name');
+    extensionRule.caretPath = 'type.profile.extension.url';
+    extensionRule.value =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+    const targetElementRule = new CaretValueRule('name');
+    targetElementRule.caretPath = 'type.profile.extension.valueString';
+    targetElementRule.value = 'Patient.name';
+
+    profile.rules.push(profileRule, extensionRule, targetElementRule);
+    doc.profiles.set(profile.name, profile);
+    const nameElement = exporter.export().profiles[0].findElement('Patient.name');
+
+    // The name element should have a minimum cardinality of 1, taken from USCorePatient's name constraint
+    expect(nameElement.min).toEqual(1);
+  });
+
+  it('should apply constraints to all instances of contentReference elements when the profile-element extension is applied', () => {
+    const profile = new Profile('TestQuestionnaire');
+    profile.parent = 'Questionnaire';
+    profile.id = 'example-q';
+
+    const shortRule = new CaretValueRule('item');
+    shortRule.caretPath = 'short';
+    shortRule.value = 'This should be copied as well';
+
+    const profileRule = new CaretValueRule('item');
+    profileRule.caretPath = 'type.profile';
+    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
+    const extensionRule = new CaretValueRule('item');
+    extensionRule.caretPath = 'type.profile.extension.url';
+    extensionRule.value =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+    const targetElementRule = new CaretValueRule('item');
+    targetElementRule.caretPath = 'type.profile.extension.valueString';
+    targetElementRule.value = 'Questionnaire.item';
+
+    profile.rules.push(shortRule, profileRule, extensionRule, targetElementRule);
+    doc.profiles.set(profile.name, profile);
+
+    // The element unfolded into the contentRef's structDef object should contain constraints
+    // added on this profile, rather than the base element definition
+    const exportedProfile = exporter.export().profiles[0];
+    const exportedOriginialElement = exportedProfile.findElement('Questionnaire.item');
+    const exportedContentRefElement = exportedProfile
+      .findElement('Questionnaire.item.item')
+      .structDef.findElement('Questionnaire.item');
+    expect(exportedContentRefElement.short).toEqual(exportedOriginialElement.short);
+  });
+
   // Extension
   it('should set all user-provided metadata for an extension', () => {
     const extension = new Extension('Foo');
