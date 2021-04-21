@@ -380,8 +380,8 @@ export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTan
     const outPath = path.relative(inDir, doc.file);
     fs.ensureFileSync(path.join(preprocessedPath, outPath));
     fs.writeFileSync(path.join(preprocessedPath, outPath), fileContent);
-    logger.info(`Wrote preprocessed FSH to ${preprocessedPath}`);
   });
+  logger.info(`Wrote preprocessed FSH to ${preprocessedPath}`);
 }
 
 /**
