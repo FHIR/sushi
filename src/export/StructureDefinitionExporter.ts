@@ -551,7 +551,7 @@ export class StructureDefinitionExporter implements Fishable {
             const targetElement = def.findElement(targetElementRule.value as string);
             const baseElement = structDef.findElement(baseElementName);
 
-            if (baseElement) {
+            if (baseElement && targetElement) {
               baseElement.copyFromParent(targetElement, structDef);
             }
           }
