@@ -28,6 +28,7 @@ describe('FSHImporter', () => {
         expect(result.logicals.size).toBe(1);
         const logical = result.logicals.get('MyLogicalModel');
         expect(logical.name).toBe('MyLogicalModel');
+        expect(logical.parent).toBe('Base');
         // if no id is explicitly set, should default to name
         expect(logical.id).toBe('MyLogicalModel');
         expect(logical.sourceInfo.location).toEqual({

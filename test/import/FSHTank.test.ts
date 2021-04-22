@@ -39,13 +39,13 @@ describe('FSHTank', () => {
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
     doc2.logicals.set('Logical1', new Logical('Logical1'));
     doc2.logicals.get('Logical1').id = 'log1';
-    doc2.logicals.get('Logical1').parent = 'Observation';
+    doc2.logicals.get('Logical1').parent = 'Element';
     doc2.resources.set('Resource1', new Resource('Resource1'));
     doc2.resources.get('Resource1').id = 'res1';
     const doc3 = new FSHDocument('doc3.fsh');
     doc3.logicals.set('Logical2', new Logical('Logical2'));
     doc3.logicals.get('Logical2').id = 'log2';
-    doc3.logicals.get('Logical2').parent = 'Encounter';
+    doc3.logicals.get('Logical2').parent = 'Logical1';
     doc3.resources.set('Resource2', new Resource('Resource2'));
     doc3.resources.get('Resource2').id = 'res2';
     doc3.valueSets.set('ValueSet2', new FshValueSet('ValueSet2'));
@@ -320,11 +320,12 @@ describe('FSHTank', () => {
       id: 'log1',
       name: 'Logical1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
-      parent: 'Observation'
+      parent: 'Element'
     };
     const res1MD: Metadata = {
       id: 'res1',
       name: 'Resource1',
+      parent: 'DomainResource',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/res1'
     };
     const vs1MD: Metadata = {

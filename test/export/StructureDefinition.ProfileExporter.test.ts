@@ -67,12 +67,23 @@ describe('ProfileExporter', () => {
     expect(exported[0].name).toBe('Bar');
   });
 
-  it('should log a message with source information when the parent is not found', () => {
+  it('should log a error with source information when the parent is not found', () => {
     const profile = new Profile('Bogus').withFile('Bogus.fsh').withLocation([2, 9, 4, 23]);
     profile.parent = 'BogusParent';
     doc.profiles.set(profile.name, profile);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Parent BogusParent not found for Bogus/s);
+  });
+
+  it('should log a error with source information when the parent is not provided', () => {
+    const profile = new Profile('Missing').withFile('Missing.fsh').withLocation([2, 9, 4, 23]);
+    doc.profiles.set(profile.name, profile);
+    exporter.export();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Missing\.fsh.*Line: 2 - 4\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The definition for Missing does not include a Parent/s
+    );
   });
 
   it('should export profiles with FSHy parents', () => {

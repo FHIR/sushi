@@ -63,13 +63,79 @@ describe('LogicalExporter', () => {
     expect(exported[0].name).toBe('Bar');
   });
 
+  it('should export a single logical model with Base parent when parent not defined', () => {
+    const logical = new Logical('Foo');
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
+  });
+
+  it('should export a single logical model with Base parent by id', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'Base';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
+  });
+
+  it('should export a single logical model with Base parent by url', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'http://hl7.org/fhir/StructureDefinition/Base';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
+  });
+
+  it('should export a single logical model with Element parent by id', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'Element';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+  });
+
+  it('should export a single logical model with Element parent by url', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'http://hl7.org/fhir/StructureDefinition/Element';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+  });
+
+  it('should export a single logical model with another logical model parent by id', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'AlternateIdentification';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
+    );
+  });
+
+  it('should export a single logical model with another logical model parent by url', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
+    );
+  });
+
   it('should log an error with source information when the parent is invalid', () => {
     const logical = new Logical('BadParent').withFile('BadParent.fsh').withLocation([2, 9, 4, 23]);
     logical.parent = 'Basic';
     doc.logicals.set(logical.name, logical);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadParent\.fsh.*Line: 2 - 4\D*/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/is not of type Logical/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/is not of type Logical or Element or Base/s);
   });
 
   it('should log an error with source information when the parent is not found', () => {

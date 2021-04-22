@@ -6,7 +6,7 @@ describe('Logical', () => {
       const l = new Logical('MyLogical');
       expect(l.name).toBe('MyLogical');
       expect(l.id).toBe('MyLogical');
-      expect(l.parent).toBeUndefined();
+      expect(l.parent).toBe('Base');
       expect(l.title).toBeUndefined();
       expect(l.description).toBeUndefined();
       expect(l.rules).toBeEmpty();

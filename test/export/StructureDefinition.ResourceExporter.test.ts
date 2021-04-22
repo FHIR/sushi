@@ -63,7 +63,7 @@ describe('ResourceExporter', () => {
     expect(exported[0].name).toBe('Bar');
   });
 
-  it('should export resource with Resource parent', () => {
+  it('should export resource with Resource parent by id', () => {
     const resource = new Resource('Foo');
     resource.parent = 'Resource';
     doc.resources.set(resource.name, resource);
@@ -73,9 +73,31 @@ describe('ResourceExporter', () => {
     expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
   });
 
-  it('should export resource with DomainResource parent', () => {
+  it('should export resource with Resource parent by url', () => {
+    const resource = new Resource('Foo');
+    resource.parent = 'http://hl7.org/fhir/StructureDefinition/Resource';
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
+  });
+
+  it('should export resource with DomainResource parent by id', () => {
     const resource = new Resource('Foo');
     resource.parent = 'DomainResource';
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/StructureDefinition/DomainResource'
+    );
+  });
+
+  it('should export resource with DomainResource parent by url', () => {
+    const resource = new Resource('Foo');
+    resource.parent = 'http://hl7.org/fhir/StructureDefinition/DomainResource';
     doc.resources.set(resource.name, resource);
     const exported = exporter.export().resources;
     expect(exported.length).toBe(1);

@@ -26,7 +26,7 @@ describe('FSHImporter', () => {
         expect(result.resources.size).toBe(1);
         const resource = result.resources.get('Simple');
         expect(resource.name).toBe('Simple');
-        expect(resource.parent).toBeUndefined();
+        expect(resource.parent).toBe('DomainResource');
         // if no id is explicitly set, should default to name
         expect(resource.id).toBe('Simple');
         expect(resource.sourceInfo.location).toEqual({
@@ -91,7 +91,7 @@ describe('FSHImporter', () => {
         expect(result.resources.size).toBe(1);
         const resource = result.resources.get('TestWithMeta');
         expect(resource.name).toBe('TestWithMeta');
-        expect(resource.parent).toBeUndefined();
+        expect(resource.parent).toBe('DomainResource');
         expect(resource.id).toBe('test-with-meta');
         expect(resource.title).toBe('A Test with Meta Resource');
         expect(resource.description).toBe('Test resource with meta');

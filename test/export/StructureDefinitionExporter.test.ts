@@ -208,6 +208,20 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/dateTime');
     });
 
+    it('should create an extension with default parent of Base when the definition does not specify a parent', () => {
+      const extension = new Extension('MyExtension');
+      extension.id = 'my-extension';
+      doc.extensions.set(extension.name, extension);
+
+      expect(() => {
+        exporter.exportStructDef(extension);
+      }).not.toThrow();
+
+      const exported = pkg.extensions[0];
+      expect(exported.name).toBe('MyExtension');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
+    });
+
     it('should create an extension when the definition specifies the base Extension for a parent', () => {
       const extension = new Extension('MyExtension');
       extension.parent = 'Extension';
@@ -240,7 +254,7 @@ describe('StructureDefinitionExporter', () => {
       );
     });
 
-    it('should create a logical model with default parent of Element when the definition does not specify a parent', () => {
+    it('should create a logical model with default parent of Base when the definition does not specify a parent', () => {
       const logical = new Logical('MyPatientModel');
       logical.id = 'PatientModel';
       doc.logicals.set(logical.name, logical);
@@ -251,22 +265,7 @@ describe('StructureDefinitionExporter', () => {
 
       const exported = pkg.logicals[0];
       expect(exported.name).toBe('MyPatientModel');
-      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
-    });
-
-    it('should create a logical model with default parent of Element when the definition specifies an empty parent', () => {
-      const logical = new Logical('MyPatientModel');
-      logical.parent = '';
-      logical.id = 'PatientModel';
-      doc.logicals.set(logical.name, logical);
-
-      expect(() => {
-        exporter.exportStructDef(logical);
-      }).not.toThrow();
-
-      const exported = pkg.logicals[0];
-      expect(exported.name).toBe('MyPatientModel');
-      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
     });
 
     it('should create a logical model when the definition specifies Element for a parent', () => {
@@ -299,6 +298,15 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.baseDefinition).toBe(
         'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
       );
+    });
+
+    it('should throw ParentNotProvidedError when parent specifies an empty parent', () => {
+      const profile = new Profile('Foo');
+      profile.parent = '';
+      doc.profiles.set(profile.name, profile);
+      expect(() => {
+        exporter.exportStructDef(profile);
+      }).toThrow('The definition for Foo does not include a Parent');
     });
 
     it('should throw ParentNotDefinedError when parent resource is not found', () => {
@@ -391,7 +399,7 @@ describe('StructureDefinitionExporter', () => {
       expect(() => {
         exporter.exportStructDef(logical);
       }).toThrow(
-        'Parent Patient is not of type Logical, so it is an invalid Parent for Logical MyPatientModel.'
+        'Parent Patient is not of type Logical or Element or Base, so it is an invalid Parent for Logical MyPatientModel.'
       );
     });
 
@@ -812,7 +820,7 @@ describe('StructureDefinitionExporter', () => {
       const exported = pkg.logicals[0];
 
       expect(exported.name).toBe('Foo');
-      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
     });
 
     it('should have the correct baseDefinition for a provided parent', () => {
@@ -844,7 +852,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('foo');
-      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
     });
 
     it('should properly set/clear all metadata properties for a logical model', () => {
@@ -903,7 +911,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
       expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('Foo');
-      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
       expect(exported.derivation).toBe('specialization');
     });
 
@@ -1354,7 +1362,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
       expect(exported.type).toBe('MyModel');
-      expect(exported.elements).toHaveLength(4); // 3 for parent Element plus 1 for AddElementRule
+      expect(exported.elements).toHaveLength(2); // 1 for parent Base plus 1 for AddElementRule
 
       const prop1 = exported.findElement('MyModel.prop1');
       expect(prop1.path).toBe('MyModel.prop1');
@@ -1388,7 +1396,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.created[x]');
       const expectedType1 = new ElementDefinitionType('instant');
@@ -1414,7 +1422,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       expect(prop1.mustSupport).toBeTrue();
@@ -1439,7 +1447,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       // When flags are set to false, the attributes are not generated rather than set to false
@@ -1465,7 +1473,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       // When standards flags are set to true, an extension is created
@@ -1493,7 +1501,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       // When standards flags are set to true, an extension is created
@@ -1521,7 +1529,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       // When standards flags are set to true, an extension is created
@@ -1549,7 +1557,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       // When standards flags are set to false, the underlying extension is not created
@@ -1576,7 +1584,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       // When multiple standards flags are set to true and an error is logged,
@@ -1602,7 +1610,7 @@ describe('StructureDefinitionExporter', () => {
       exporter.exportStructDef(logical);
       const exported = pkg.logicals[0];
 
-      expect(exported.elements).toHaveLength(4);
+      expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
       expect(prop1.short).toBe('short description for prop1');

@@ -73,7 +73,7 @@ export class StructureDefinitionExporter implements Fishable {
    * Returns the parent's StructureDefinition as the basis for the new StructureDefinition
    * for the provided fshDefinition.
    * @param {Extension | Profile | Logical | Resource} fshDefinition - The definition
-   *        to do preprocessing on. It is updated directly based on processing.
+   *        to be preprocessed. It is updated directly based on this processing.
    * @returns {StructureDefinition} for this fshDefinition
    * @private
    */
@@ -82,23 +82,18 @@ export class StructureDefinitionExporter implements Fishable {
   ): StructureDefinition {
     // Process/validate the fshDefinition.parent value with the purpose of
     // obtaining the parent's StructureDefinition as the basis for this
-    // fshDefinition's StructureDefinition,
+    // fshDefinition's StructureDefinition.
+    // RECALL: fshDefinition.parent can be specified as the 'id', 'name', or 'url'.
 
     if (isEmpty(fshDefinition.parent)) {
-      // Handle cases where the parent is not specified by throwing an error
-      // or setting an appropriate default according to the definition type
-      if (fshDefinition instanceof Profile) {
-        // Parent for a profile is required. Throw an error since one is not provided.
-        throw new ParentNotProvidedError(fshDefinition.name, fshDefinition.sourceInfo);
-      } else if (fshDefinition instanceof Extension) {
-        fshDefinition.parent = 'Extension';
-      } else if (fshDefinition instanceof Logical) {
-        fshDefinition.parent = 'Element';
-      } else if (fshDefinition instanceof Resource) {
-        fshDefinition.parent = 'DomainResource';
-      }
+      // Handle cases where the parent is not specified by throwing an error.
+      // - Profile has a hard requirement to define a parent and does not have a default
+      //   parent defined in the Profile class. Therefore, we need to throw this error.
+      // - Extension, Logical, and Resource all have a default parent, so we should never
+      //   get to this point where it is not defined. That said, if something somewhere
+      //   in the code were to change/remove the default, this error will then be thrown.
+      throw new ParentNotProvidedError(fshDefinition.name, fshDefinition.sourceInfo);
     }
-    const parentName = fshDefinition.parent;
 
     let defnType: Type;
     if (fshDefinition instanceof Extension) {
@@ -109,8 +104,8 @@ export class StructureDefinitionExporter implements Fishable {
       defnType = Type.Resource;
     }
 
-    if (fshDefinition.name === parentName) {
-      const result = this.fishForMetadata(parentName, defnType);
+    if (fshDefinition.name === fshDefinition.parent) {
+      const result = this.fishForMetadata(fshDefinition.parent, defnType);
       throw new ParentDeclaredAsNameError(
         fshDefinition.constructorName,
         fshDefinition.name,
@@ -119,8 +114,8 @@ export class StructureDefinitionExporter implements Fishable {
       );
     }
 
-    if (fshDefinition.id === parentName) {
-      const result = this.fishForMetadata(parentName, defnType);
+    if (fshDefinition.id === fshDefinition.parent) {
+      const result = this.fishForMetadata(fshDefinition.parent, defnType);
       throw new ParentDeclaredAsIdError(
         fshDefinition.constructorName,
         fshDefinition.name,
@@ -130,33 +125,56 @@ export class StructureDefinitionExporter implements Fishable {
       );
     }
 
-    // Now that we have a valid parent name, retrieve its StructureDefinition.
-    // Then make sure it is a valid StructureDefinition based on the type of
-    // the fshDefinition.
+    // Now that we have a usable fshDefinition.parent, retrieve its StructureDefinition.
+    // Then make sure it is a valid StructureDefinition based on the type of the fshDefinition.
 
-    const parentJson = this.fishForFHIR(parentName);
+    let parentJson = this.fishForFHIR(fshDefinition.parent);
+    if (
+      !parentJson &&
+      fshDefinition instanceof Logical &&
+      (fshDefinition.parent === 'Base' ||
+        fshDefinition.parent === 'http://hl7.org/fhir/StructureDefinition/Base')
+    ) {
+      parentJson = this.createR4BaseStructureDefinition();
+    }
     if (!parentJson) {
       // If parentJson is not defined, then the provided parent's StructureDefinition is not defined
-      throw new ParentNotDefinedError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
+      throw new ParentNotDefinedError(
+        fshDefinition.name,
+        fshDefinition.parent,
+        fshDefinition.sourceInfo
+      );
     }
 
     if (fshDefinition instanceof Profile && parentJson.kind === 'logical') {
       // A profile cannot have a logical model as a parent
-      throw new InvalidProfileParentError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
+      throw new InvalidProfileParentError(
+        fshDefinition.name,
+        parentJson.name,
+        fshDefinition.sourceInfo
+      );
     } else if (fshDefinition instanceof Extension && parentJson.type !== 'Extension') {
       // An extension can only have an Extension as a parent
       throw new InvalidExtensionParentError(
         fshDefinition.name,
-        parentName,
+        parentJson.name,
         fshDefinition.sourceInfo
       );
     } else if (
       fshDefinition instanceof Logical &&
-      !(parentJson.kind === 'logical' || parentJson.type === 'Element')
+      !(
+        parentJson.kind === 'logical' ||
+        parentJson.type === 'Base' ||
+        parentJson.type === 'Element'
+      )
     ) {
       // A logical model can only have another logical model as a parent
-      // or it can have the Element resource as a parent
-      throw new InvalidLogicalParentError(fshDefinition.name, parentName, fshDefinition.sourceInfo);
+      // or it can have the Base or Element resource as a parent
+      throw new InvalidLogicalParentError(
+        fshDefinition.name,
+        parentJson.name,
+        fshDefinition.sourceInfo
+      );
     } else if (
       fshDefinition instanceof Resource &&
       !(parentJson.type === 'Resource' || parentJson.type === 'DomainResource')
@@ -164,12 +182,113 @@ export class StructureDefinitionExporter implements Fishable {
       // A resource can only have the 'Resource' or 'DomainResource' as a parent
       throw new InvalidResourceParentError(
         fshDefinition.name,
-        parentName,
+        parentJson.name,
         fshDefinition.sourceInfo
       );
     }
 
     return StructureDefinition.fromJSON(parentJson);
+  }
+
+  /**
+   * Creates a 'Base' StructureDefinition for use by R4 logical models.
+   *
+   * In FHIR R5, the 'Base' type has been defined as the type that all other
+   * FHIR types specialize, in particular 'Element' and 'Resource'. In addition,
+   * 'Base' is used in Logical Models that don't have or want id/extension.
+   * The 'Base' type does not exist in FHIR R4, so we need to "create" it.
+   * Since we are only using this 'Base' as the initial StructureDefinition
+   * that gets modified to become the exported StructureDefinition for logical
+   * models, "creating" a R4 'Base' should not be a problem.
+   *
+   * NOTE: The R5 Base StructureDefinition version 4.6.0 as of 2021-04-15
+   *       is being used to create our version. The following changes were made:
+   *       - Set both "fhirVersion" and "version" to '4.0.1'
+   *       - Removed following from root element:
+   *         - "definition"
+   *         - "extension"
+   *         - "mapping"
+   *         - "short"
+   * @see http://build.fhir.org/types.html#Base
+   * @private
+   */
+  private createR4BaseStructureDefinition(): string {
+    const base = `
+{
+  "abstract": true,
+  "contact": [{
+      "telecom": [{
+          "system": "url",
+          "value": "http://hl7.org/fhir"
+        }
+      ]
+    }
+  ],
+  "date": "2021-04-15T12:25:09+10:00",
+  "description": "Base StructureDefinition for Base Type: Base definition for all types defined in FHIR type system.",
+  "differential": {
+    "element": [{
+        "id": "Base",
+        "max": "*",
+        "min": 0,
+        "path": "Base"
+      }
+    ]
+  },
+  "extension": [{
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+      "valueCode": "normative"
+    }, {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "4.0.0"
+    }
+  ],
+  "fhirVersion": "4.0.1",
+  "id": "Base",
+  "kind": "complex-type",
+  "mapping": [{
+      "identity": "rim",
+      "name": "RIM Mapping",
+      "uri": "http://hl7.org/v3"
+    }
+  ],
+  "name": "Base",
+  "publisher": "HL7 FHIR Standard",
+  "resourceType": "StructureDefinition",
+  "snapshot": {
+    "element": [{
+        "base": {
+          "max": "*",
+          "min": 0,
+          "path": "Base"
+        },
+        "constraint": [{
+            "expression": "hasValue() or (children().count() > id.count())",
+            "human": "All FHIR elements must have a @value or children",
+            "key": "ele-1",
+            "severity": "error",
+            "source": "http://hl7.org/fhir/StructureDefinition/Element",
+            "xpath": "@value|f:*|h:div"
+          }
+        ],
+        "id": "Base",
+        "isModifier": false,
+        "max": "*",
+        "min": 0,
+        "path": "Base"
+      }
+    ]
+  },
+  "status": "active",
+  "text": {
+    "div": "<div xmlns=\\"http://www.w3.org/1999/xhtml\\"><table border=\\"0\\" cellpadding=\\"0\\" cellspacing=\\"0\\" style=\\"border: 0px #F0F0F0 solid; font-size: 11px; font-family: verdana; vertical-align: top;\\"><tr style=\\"border: 1px #F0F0F0 solid; font-size: 11px; font-family: verdana; vertical-align: top\\"><th style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\"><a href=\\"formats.html#table\\" title=\\"The logical name of the element\\">Name</a></th><th style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\"><a href=\\"formats.html#table\\" title=\\"Information about the use of the element\\">Flags</a></th><th style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\"><a href=\\"formats.html#table\\" title=\\"Minimum and Maximum # of times the the element can appear in the instance\\">Card.</a></th><th style=\\"width: 100px\\" class=\\"hierarchy\\"><a href=\\"formats.html#table\\" title=\\"Reference to the type of the element\\">Type</a></th><th style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\"><a href=\\"formats.html#table\\" title=\\"Additional information about the element\\">Description &amp; Constraints</a><span style=\\"float: right\\"><a href=\\"formats.html#table\\" title=\\"Legend for this format\\"><img src=\\"help16.png\\" alt=\\"doco\\" style=\\"background-color: inherit\\"/></a></span></th></tr><tr style=\\"border: 0px #F0F0F0 solid; padding:0px; vertical-align: top; background-color: white\\"><td style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px; white-space: nowrap; background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAACCAYAAACg/LjIAAAAJUlEQVR4Xu3IIQEAAAgDsHd9/w4EQIOamFnaBgAA4MMKAACAKwNp30CqZFfFmwAAAABJRU5ErkJggg==)\\" class=\\"hierarchy\\"><img src=\\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAWCAYAAAABxvaqAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzIs1vtcMQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAE0lEQVQI12P4//8/AxMDAwNdCABMPwMo2ctnoQAAAABJRU5ErkJggg==\\" alt=\\".\\" style=\\"background-color: inherit\\" class=\\"hierarchy\\"/><img src=\\"data:image/png;base64,R0lGODlhEAAQAMQfAGm6/idTd4yTmF+v8Xa37KvW+lyh3KHJ62aq41ee2bXZ98nm/2mt5W2Ck5XN/C1chEZieho8WXXA/2Gn4P39/W+y6V+l3qjP8Njt/lx2izxPYGyv51Oa1EJWZ////////yH5BAEAAB8ALAAAAAAQABAAAAWH4Cd+Xml6Y0pCQts0EKp6GbYshaM/skhjhCChUmFIeL4OsHIxXRAISQTl6SgIG8+FgfBMoh2qtbLZQr0TQJhk3TC4pYPBApiyFVDEwSOf18UFXxMWBoUJBn9sDgmDewcJCRyJJBoEkRyYmAABPZQEAAOhA5seFDMaDw8BAQ9TpiokJyWwtLUhADs=\\" alt=\\".\\" style=\\"background-color: white; background-color: inherit\\" title=\\"Choice of Types\\" class=\\"hierarchy\\"/> <a href=\\"types-definitions.html#Base\\" title=\\"Base : Base definition for all types defined in FHIR type system.\\">Base</a></td><td style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\"><a style=\\"padding-left: 3px; padding-right: 3px; color: black; null\\" href=\\"uml.html#interface\\" title=\\"This is an interface resource\\">«I»</a><a style=\\"padding-left: 3px; padding-right: 3px; border: 1px grey solid; font-weight: bold; color: black; background-color: #e6ffe6\\" href=\\"versions.html#std-process\\" title=\\"Standards Status = Normative\\">N</a></td><td style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\"></td><td style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\"></td><td style=\\"vertical-align: top; text-align : left; background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px\\" class=\\"hierarchy\\">Base for all types and resources</td></tr>\\r\\n<tr><td colspan=\\"5\\" class=\\"hierarchy\\"><br/><a href=\\"formats.html#table\\" title=\\"Legend for this format\\"><img src=\\"help16.png\\" alt=\\"doco\\" style=\\"background-color: inherit\\"/> Documentation for this format</a></td></tr></table></div>",
+    "status": "generated"
+  },
+  "type": "Base",
+  "url": "http://hl7.org/fhir/StructureDefinition/Base",
+  "version": "4.0.1"
+}`;
+    return JSON.parse(base);
   }
 
   /**
@@ -213,6 +332,9 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
+      if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
+        structDef.elements[0].short = fshDefinition.title;
+      }
       if (
         fshDefinition instanceof Extension &&
         !(this.tank.config.applyExtensionMetadataToRoot === false)
@@ -229,6 +351,9 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.contact;
     if (fshDefinition.description) {
       structDef.description = fshDefinition.description;
+      if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
+        structDef.elements[0].definition = fshDefinition.description;
+      }
       if (
         fshDefinition instanceof Extension &&
         !(this.tank.config.applyExtensionMetadataToRoot === false)
