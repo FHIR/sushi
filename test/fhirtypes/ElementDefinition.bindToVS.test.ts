@@ -8,7 +8,6 @@ import path from 'path';
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
-  let r5CarePlan: StructureDefinition;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -17,16 +16,10 @@ describe('ElementDefinition', () => {
       'testPackage',
       defs
     );
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
-      defs
-    );
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');
-    r5CarePlan = fisher.fishForStructureDefinition('CarePlan');
   });
 
   describe('#bindToVS()', () => {
@@ -72,13 +65,6 @@ describe('ElementDefinition', () => {
       uri.bindToVS('http://myvaluesets.org/myvs', 'required');
       expect(uri.binding.valueSet).toBe('http://myvaluesets.org/myvs');
       expect(uri.binding.strength).toBe('required');
-    });
-
-    it('should bind a value set on a CodeableReference', () => {
-      const addresses = r5CarePlan.elements.find(e => e.id === 'CarePlan.addresses');
-      addresses.bindToVS('http://myvaluesets.org/myvs', 'required');
-      expect(addresses.binding.valueSet).toBe('http://myvaluesets.org/myvs');
-      expect(addresses.binding.strength).toBe('required');
     });
 
     it('should bind a value set with a version on a CodeableConcept', () => {
@@ -193,6 +179,33 @@ describe('ElementDefinition', () => {
       clone.bindToVS('http://myvaluesets.org/myvs4', 'required');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs4');
       expect(clone.binding.strength).toBe('required');
+    });
+  });
+});
+
+describe('ElementDefinition R5', () => {
+  let defs: FHIRDefinitions;
+  let r5CarePlan: StructureDefinition;
+  let fisher: TestFisher;
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
+    );
+    fisher = new TestFisher().withFHIR(defs);
+  });
+  beforeEach(() => {
+    r5CarePlan = fisher.fishForStructureDefinition('CarePlan');
+  });
+
+  describe('#bindToVS()', () => {
+    it('should bind a value set on a CodeableReference', () => {
+      const addresses = r5CarePlan.elements.find(e => e.id === 'CarePlan.addresses');
+      addresses.bindToVS('http://myvaluesets.org/myvs', 'required');
+      expect(addresses.binding.valueSet).toBe('http://myvaluesets.org/myvs');
+      expect(addresses.binding.strength).toBe('required');
     });
   });
 });
