@@ -5,7 +5,6 @@ import { union } from 'lodash';
 import { logger, Type } from '../utils';
 import { ElementDefinition, ElementDefinitionType, StructureDefinition } from '../fhirtypes';
 import { FHIRDefinitions } from '../fhirdefs';
-import { OnlyRule } from '../fshtypes/rules';
 
 export const IMPLIED_EXTENSION_REGEX = /^http:\/\/hl7\.org\/fhir\/([1345]\.0)\/StructureDefinition\/extension-(([^./]+)\.[^\/]+)$/;
 
@@ -109,20 +108,16 @@ export function materializeImpliedExtension(url: string, defs: FHIRDefinitions):
       `Cannot materialize implied extension (${url}) since ${id} is not a valid id in ${type}`
     );
     return;
+  } else if (isUnsupported(ed)) {
+    logger.error(`Cannot materialize implied extension (${url}) since its type is Resource`);
+    return;
   }
 
   const ext = StructureDefinition.fromJSON(defs.fishForFHIR('Extension'));
   applyMetadataToExtension(ext, sd, ed, version);
-  applyMetadataToElement(ext.findElement('Extension'), ed);
-  applyUrlElement(ext);
-  if (isUnsupported(ed)) {
-    logger.error(`Cannot materialize implied extension (${url}) since its type is Resource`);
-    return;
-  } else if (isComplex(ed, defs)) {
-    handleComplexValue(ext, sd, ed, version, defs, supplementalDefs);
-  } else {
-    handleSimpleValue(ext, ed, version, defs);
-  }
+  const rootElement = ext.findElement('Extension');
+  applyMetadataToElement(rootElement, ed);
+  applyContent(sd, ed, version, ext, rootElement, [], defs, supplementalDefs);
 
   return ext.toJSON(true);
 }
@@ -186,27 +181,56 @@ function applyMetadataToElement(element: ElementDefinition, ed: any): void {
   }
 }
 
-function applyUrlElement(ext: StructureDefinition): void {
-  const url = ext.findElement('Extension.url');
-  url.assignValue(ext.url, true);
+function applyContent(
+  fromSD: any,
+  fromED: any,
+  fromVersion: string,
+  toExt: StructureDefinition,
+  toBaseED: ElementDefinition,
+  visitedTypes: string[],
+  defs: FHIRDefinitions,
+  supplementalDefs: FHIRDefinitions
+): void {
+  const url = toBaseED.sliceName ?? toExt.url;
+  toExt.findElement(`${toBaseED.id}.url`).assignValue(url, true);
+  const valueED = toExt.findElement(`${toBaseED.id}.value[x]`);
+  const extensionED = toExt.findElement(`${toBaseED.id}.extension`);
+  if (isComplex(fromED, defs)) {
+    applyToExtensionElement(
+      fromSD,
+      fromED,
+      fromVersion,
+      toExt,
+      extensionED,
+      visitedTypes.slice(0), // pass down a clone so that siblings aren't adding to the same array (we only care recursive descendents)
+      defs,
+      supplementalDefs
+    );
+    valueED.constrainCardinality(0, '0');
+  } else {
+    applyToValueXElement(fromED, fromVersion, toExt, valueED, defs);
+    extensionED.constrainCardinality(0, '0');
+  }
 }
 
-function handleSimpleValue(
-  ext: StructureDefinition,
-  ed: any,
-  version: string,
+function applyToValueXElement(
+  fromED: any,
+  fromVersion: string,
+  toExt: StructureDefinition,
+  toED: ElementDefinition,
   defs: FHIRDefinitions
 ): void {
-  const value = ext.findElement('Extension.value[x]');
-  value.type = getTypes(ed, version);
-  if (ed.binding) {
-    value.bindToVS(
+  toED.type = getTypes(fromED, fromVersion);
+  if (fromED.binding) {
+    toED.bindToVS(
       // Handle different representation in DSTU2 and STU3
-      ed.binding.valueSet ?? ed.binding.valueSetUri ?? ed.binding.valueSetReference.reference,
-      ed.binding.strength
+      fromED.binding.valueSet ??
+        fromED.binding.valueSetUri ??
+        fromED.binding.valueSetReference.reference,
+      fromED.binding.strength
     );
-    if (ed.binding.description) {
-      value.binding.description = ed.binding.description;
+    if (fromED.binding.description) {
+      toED.binding.description = fromED.binding.description;
     }
     // NOTE: Even though there might be extensions on bindings, we are intentionally not carrying
     // them over because (a) it's not clear that we should, (b) the extension might not exist in
@@ -215,34 +239,45 @@ function handleSimpleValue(
     // draw the line?  So... we favor sanity and maintainability over implementing something that
     // is very likely totally unecessary and inconsequential anyway.
   }
-  filterAndFixTypes(ext, value, defs);
-
-  // Zero out the extension element
-  ext.findElement('Extension.extension').constrainCardinality(0, '0');
+  filterAndFixTypes(toExt, toED, defs);
 }
 
-function handleComplexValue(
-  ext: StructureDefinition,
-  sd: any,
-  ed: any,
-  version: string,
+function applyToExtensionElement(
+  fromSD: any,
+  fromED: any,
+  fromVersion: string,
+  toExt: StructureDefinition,
+  toED: ElementDefinition,
+  visitedTypes: string[],
   defs: FHIRDefinitions,
   supplementalDefs: FHIRDefinitions
 ): void {
-  // Create the sub-extensions
-  const extRoot = ext.findElement('Extension.extension');
-  let edId: string = ed.id ?? ed.path;
+  let edId: string = fromED.id ?? fromED.path;
   // First look for children directly in the SD
-  let childElements = sd.snapshot.element.filter((e: any) =>
+  let childElements = fromSD.snapshot.element.filter((e: any) =>
     (e.id ?? e.path).startsWith(`${edId}.`)
   );
   // If no children are found, this may be a type not supported in this version of FHIR,
   // so use the unknown type's children instead
   if (childElements.length === 0) {
-    const edTypes = getTypes(ed, version);
+    const edTypes = getTypes(fromED, fromVersion);
     if (edTypes.length === 1) {
       const typeSD = supplementalDefs.fishForFHIR(edTypes[0].code, Type.Resource, Type.Type);
       if (typeSD) {
+        if (visitedTypes.indexOf(typeSD.url) !== -1) {
+          // Infinite recursion should be rare, and perhaps never happens under normal circumstances, but it
+          // could happen if an unknown type (which we are handling here) has an element whose type is itself.
+          // In testing, this happened because the test environment did not have all types, and an unknown primitive
+          // type's value element referred back to itself (via the special FHIRPath URL). Anyway, this code
+          // stops those kinds of shenanigans!
+          const parentId = toED.id.replace(/\.extension$/, '');
+          logger.warn(
+            `Implied extension (${toExt.url}) is incomplete because ${parentId} causes sub-extension recursion.`
+          );
+          return;
+        } else {
+          visitedTypes.push(typeSD.url);
+        }
         // Reset edId to the root of the type's SD since all paths will be relative to it
         edId = typeSD.id ?? typeSD.path;
         childElements = typeSD.snapshot.element.slice(1);
@@ -254,38 +289,38 @@ function handleComplexValue(
     const id: string = e.id ?? e.path;
     const tail = id.slice(edId.length + 1);
     if (tail.indexOf('.') === -1 && !IGNORED_CHILDREN.includes(tail)) {
-      const slice = extRoot.addSlice(tail);
+      const slice = toED.addSlice(tail);
       applyMetadataToElement(slice, e);
-      slice.type = [
-        new ElementDefinitionType('Extension').withProfiles(
-          `http://hl7.org/fhir/${version}/StructureDefinition/extension-${e.id ?? e.path}`
-        )
-      ];
+      slice.type = [new ElementDefinitionType('Extension')];
+      slice.unfold(defs);
+      applyContent(
+        fromSD,
+        e,
+        fromVersion,
+        toExt,
+        slice,
+        visitedTypes.slice(0), // pass down a clone so that siblings aren't adding to the same array (we only care recursive descendents)
+        defs,
+        supplementalDefs
+      );
     }
   });
   // Now apply special logic to handle R5 CodeableReference, which puts bindings and type restrictions
   // on the CodeableReference instead of underlying concept and reference elemenst
-  if (ed.type?.[0]?.code === 'CodeableReference') {
-    if (ed.binding) {
-      const crConcept = ext.findElementByPath('extension[concept].value[x]', defs);
-      crConcept.bindToVS(ed.binding.valueSet, ed.binding.strength);
-      if (ed.binding.description) {
-        crConcept.binding.description = ed.binding.description;
+  if (fromED.type?.[0]?.code === 'CodeableReference') {
+    if (fromED.binding) {
+      const crConcept = toExt.findElement(`${toED.id}:concept.value[x]`);
+      crConcept.bindToVS(fromED.binding.valueSet, fromED.binding.strength);
+      if (fromED.binding.description) {
+        crConcept.binding.description = fromED.binding.description;
       }
     }
-    if (ed.type[0].targetProfile?.length > 0) {
-      const crRef = ext.findElementByPath('extension[reference].value[x]', defs);
-      const onlyRule = new OnlyRule('extension[reference].value[x]');
-      onlyRule.types = ed.type[0].targetProfile.map((t: string) => {
-        return { type: t, isReference: true };
-      });
-      crRef.constrainType(onlyRule, defs);
-      filterAndFixTypes(ext, crRef, defs);
+    if (fromED.type[0].targetProfile?.length > 0) {
+      const crRef = toExt.findElement(`${toED.id}:reference.value[x]`);
+      crRef.type[0].targetProfile = fromED.type[0].targetProfile.slice(0);
+      filterAndFixTypes(toExt, crRef, defs);
     }
   }
-
-  // Zero out the value[x] element
-  ext.findElement('Extension.value[x]').constrainCardinality(0, '0');
 }
 
 function getTypes(ed: any, version: string): ElementDefinitionType[] {

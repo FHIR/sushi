@@ -286,15 +286,36 @@ describe('impliedExtensions', () => {
         comment: 'If there is no named individual, the telecom is for the organization as a whole.',
         min: 0,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: ['http://hl7.org/fhir/1.0/StructureDefinition/extension-ValueSet.contact.name']
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapName = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.extension:name');
       expect(snapName).toMatchObject(diffName);
+
+      const diffNameURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:name.url'
+      );
+      expect(diffNameURL).toEqual({
+        id: 'Extension.extension:name.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'name'
+      });
+      const snapNameURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:name.url'
+      );
+      expect(snapNameURL).toMatchObject(diffNameURL);
+
+      const diffNameValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:name.value[x]'
+      );
+      expect(diffNameValue).toEqual({
+        id: 'Extension.extension:name.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'string' }]
+      });
+      const snapNameValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:name.value[x]'
+      );
+      expect(snapNameValue).toMatchObject(diffNameValue);
 
       const diffTelecom = ext.differential?.element?.find(
         (e: any) => e.id === 'Extension.extension:telecom'
@@ -307,19 +328,38 @@ describe('impliedExtensions', () => {
         definition: 'Contact details for individual (if a name was provided) or the publisher.',
         min: 0,
         max: '*',
-        type: [
-          {
-            code: 'Extension',
-            profile: [
-              'http://hl7.org/fhir/1.0/StructureDefinition/extension-ValueSet.contact.telecom'
-            ]
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapTelecom = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:telecom'
       );
       expect(snapTelecom).toMatchObject(diffTelecom);
+
+      const diffTelecomURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:telecom.url'
+      );
+      expect(diffTelecomURL).toEqual({
+        id: 'Extension.extension:telecom.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'telecom'
+      });
+      const snapTelecomURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:telecom.url'
+      );
+      expect(snapTelecomURL).toMatchObject(diffTelecomURL);
+
+      const diffTelecomValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:telecom.value[x]'
+      );
+      expect(diffTelecomValue).toEqual({
+        id: 'Extension.extension:telecom.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'ContactPoint' }]
+      });
+      const snapTelecomValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:telecom.value[x]'
+      );
+      expect(snapTelecomValue).toMatchObject(diffTelecomValue);
 
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -514,19 +554,43 @@ describe('impliedExtensions', () => {
         requirements: 'Need to know what kind of animal.',
         min: 1,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: [
-              'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal.species'
-            ]
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapSpecies = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:species'
       );
       expect(snapSpecies).toMatchObject(diffSpecies);
+
+      const diffSpeciesURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:species.url'
+      );
+      expect(diffSpeciesURL).toEqual({
+        id: 'Extension.extension:species.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'species'
+      });
+      const snapSpeciesURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:species.url'
+      );
+      expect(snapSpeciesURL).toMatchObject(diffSpeciesURL);
+
+      const diffSpeciesValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:species.value[x]'
+      );
+      expect(diffSpeciesValue).toEqual({
+        id: 'Extension.extension:species.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'CodeableConcept' }],
+        binding: {
+          description: 'The species of an animal.',
+          strength: 'example',
+          valueSet: 'http://hl7.org/fhir/ValueSet/animal-species'
+        }
+      });
+      const snapSpeciesValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:species.value[x]'
+      );
+      expect(snapSpeciesValue).toMatchObject(diffSpeciesValue);
 
       const diffBreed = ext.differential?.element?.find(
         (e: any) => e.id === 'Extension.extension:breed'
@@ -544,17 +608,43 @@ describe('impliedExtensions', () => {
         requirements: 'May need to know the specific kind within the species.',
         min: 0,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: ['http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal.breed']
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapBreed = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:breed'
       );
       expect(snapBreed).toMatchObject(diffBreed);
+
+      const diffBreedURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:breed.url'
+      );
+      expect(diffBreedURL).toEqual({
+        id: 'Extension.extension:breed.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'breed'
+      });
+      const snapBreedURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:breed.url'
+      );
+      expect(snapBreedURL).toMatchObject(diffBreedURL);
+
+      const diffBreedValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:breed.value[x]'
+      );
+      expect(diffBreedValue).toEqual({
+        id: 'Extension.extension:breed.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'CodeableConcept' }],
+        binding: {
+          description: 'The breed of an animal.',
+          strength: 'example',
+          valueSet: 'http://hl7.org/fhir/ValueSet/animal-breeds'
+        }
+      });
+      const snapBreedValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:breed.value[x]'
+      );
+      expect(snapBreedValue).toMatchObject(diffBreedValue);
 
       const diffGender = ext.differential?.element?.find(
         (e: any) => e.id === 'Extension.extension:genderStatus'
@@ -568,19 +658,43 @@ describe('impliedExtensions', () => {
         requirements: 'Gender status can affect housing and animal behavior.',
         min: 0,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: [
-              'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal.genderStatus'
-            ]
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapGender = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:genderStatus'
       );
       expect(snapGender).toMatchObject(diffGender);
+
+      const diffGenderURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:genderStatus.url'
+      );
+      expect(diffGenderURL).toEqual({
+        id: 'Extension.extension:genderStatus.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'genderStatus'
+      });
+      const snapGenderURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:genderStatus.url'
+      );
+      expect(snapGenderURL).toMatchObject(diffGenderURL);
+
+      const diffGenderValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:genderStatus.value[x]'
+      );
+      expect(diffGenderValue).toEqual({
+        id: 'Extension.extension:genderStatus.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'CodeableConcept' }],
+        binding: {
+          description: "The state of the animal's reproductive organs.",
+          strength: 'example',
+          valueSet: 'http://hl7.org/fhir/ValueSet/animal-genderstatus'
+        }
+      });
+      const snapGenderValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:genderStatus.value[x]'
+      );
+      expect(snapGenderValue).toMatchObject(diffGenderValue);
 
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -767,19 +881,43 @@ describe('impliedExtensions', () => {
           'cannot be ignored.',
         min: 1,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: [
-              'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution.allowed[x]'
-            ]
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapAllowed = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:allowed[x]'
       );
       expect(snapAllowed).toMatchObject(diffAllowed);
+
+      const diffAllowedURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:allowed[x].url'
+      );
+      expect(diffAllowedURL).toEqual({
+        id: 'Extension.extension:allowed[x].url',
+        path: 'Extension.extension.url',
+        fixedUri: 'allowed[x]'
+      });
+      const snapAllowedURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:allowed[x].url'
+      );
+      expect(snapAllowedURL).toMatchObject(diffAllowedURL);
+
+      const diffAllowedValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:allowed[x].value[x]'
+      );
+      expect(diffAllowedValue).toEqual({
+        id: 'Extension.extension:allowed[x].value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'boolean' }, { code: 'CodeableConcept' }],
+        binding: {
+          description: 'Identifies the type of substitution allowed.',
+          strength: 'example',
+          valueSet: 'http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode'
+        }
+      });
+      const snapAllowedValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:allowed[x].value[x]'
+      );
+      expect(snapAllowedValue).toMatchObject(diffAllowedValue);
 
       const diffReason = ext.differential?.element?.find(
         (e: any) => e.id === 'Extension.extension:reason'
@@ -793,19 +931,43 @@ describe('impliedExtensions', () => {
           'Indicates the reason for the substitution, or why substitution must or must not be performed.',
         min: 0,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: [
-              'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution.reason'
-            ]
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapReason = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:reason'
       );
       expect(snapReason).toMatchObject(diffReason);
+
+      const diffReasonURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reason.url'
+      );
+      expect(diffReasonURL).toEqual({
+        id: 'Extension.extension:reason.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'reason'
+      });
+      const snapReasonURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reason.url'
+      );
+      expect(snapReasonURL).toMatchObject(diffReasonURL);
+
+      const diffReasonValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reason.value[x]'
+      );
+      expect(diffReasonValue).toEqual({
+        id: 'Extension.extension:reason.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'CodeableConcept' }],
+        binding: {
+          description: 'SubstanceAdminSubstitutionReason',
+          strength: 'example',
+          valueSet: 'http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason'
+        }
+      });
+      const snapReasonValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reason.value[x]'
+      );
+      expect(snapReasonValue).toMatchObject(diffReasonValue);
 
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -905,19 +1067,25 @@ describe('impliedExtensions', () => {
           'classto the degree of precision found in the terminology.',
         min: 0,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: [
-              'http://hl7.org/fhir/5.0/StructureDefinition/extension-CodeableReference.concept'
-            ]
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapConcept = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:concept'
       );
       expect(snapConcept).toMatchObject(diffConcept);
+
+      const diffConceptURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:concept.url'
+      );
+      expect(diffConceptURL).toEqual({
+        id: 'Extension.extension:concept.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'concept'
+      });
+      const snapConceptURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:concept.url'
+      );
+      expect(snapConceptURL).toMatchObject(diffConceptURL);
 
       // It should move the binding from the CodeableReference to the CodeableReference.concept
       const diffConceptValue = ext.differential?.element?.find(
@@ -926,6 +1094,7 @@ describe('impliedExtensions', () => {
       expect(diffConceptValue).toEqual({
         id: 'Extension.extension:concept.value[x]',
         path: 'Extension.extension.value[x]',
+        type: [{ code: 'CodeableConcept' }],
         binding: {
           strength: 'example',
           description: 'A coded concept identifying substance or product that can be ordered.',
@@ -949,19 +1118,25 @@ describe('impliedExtensions', () => {
           'A reference to a resource the provides exact details about the information being referenced.',
         min: 0,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: [
-              'http://hl7.org/fhir/5.0/StructureDefinition/extension-CodeableReference.reference'
-            ]
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapReference = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:reference'
       );
       expect(snapReference).toMatchObject(diffReference);
+
+      const diffReferenceURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reference.url'
+      );
+      expect(diffReferenceURL).toEqual({
+        id: 'Extension.extension:reference.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'reference'
+      });
+      const snapReferenceURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:reference.url'
+      );
+      expect(snapReferenceURL).toMatchObject(diffReferenceURL);
 
       // It should move the reference types from the CodeableReference to the CodeableReference.reference
       const diffReferenceValue = ext.differential?.element?.find(
@@ -1187,6 +1362,125 @@ describe('impliedExtensions', () => {
       );
     });
 
+    // We force the infinite recursion situation in test by referring to an element whose type refers
+    // to itself and does not exist in our test R5 package. A simple primitive does the trick.
+    it('should avoid infinite recursion of recursive elements', () => {
+      const ext = materializeImpliedExtension(
+        'http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.timestamp',
+        defs
+      );
+      expect(ext).toBeDefined();
+      expect(ext).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-Bundle.timestamp',
+        url: 'http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.timestamp',
+        version: '4.0.1',
+        name: 'Extension_Bundle_timestamp',
+        title: 'Implied extension for Bundle.timestamp',
+        status: 'active',
+        description: 'Implied extension for Bundle.timestamp',
+        fhirVersion: '4.6.0',
+        kind: 'complex-type',
+        abstract: false,
+        context: [{ type: 'element', expression: 'Element' }],
+        type: 'Extension',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        derivation: 'constraint'
+      });
+
+      const diffRoot = ext.differential?.element?.[0];
+      expect(diffRoot).toEqual({
+        id: 'Extension',
+        path: 'Extension',
+        short: 'When the bundle was assembled',
+        definition:
+          'The date/time that the bundle was assembled - i.e. when the resources were placed ' +
+          'in the bundle.',
+        comment:
+          'For many bundles, the timestamp is equal to .meta.lastUpdated, because they are not ' +
+          'stored (e.g. search results). When a bundle is placed in a persistent store, ' +
+          '.meta.lastUpdated will be usually be changed by the server. When the bundle is a ' +
+          'message, a middleware agent altering the message (even if not stored) SHOULD update ' +
+          '.meta.lastUpdated. .timestamp is used to track the original time of the Bundle, and ' +
+          'SHOULD be populated.  \n\nUsage:\n\n* document : the date the document was created. ' +
+          'Note: the composition may predate the document, or be associated with multiple ' +
+          'documents. The date of the composition - the authoring time - may be earlier than the ' +
+          'document assembly time\n* message : the date that the content of the message was ' +
+          'assembled. This date is not changed by middleware engines unless they add additional ' +
+          'data that changes the meaning of the time of the message\n* history : the date that ' +
+          'the history was assembled. This time would be used as the _since time to ask for ' +
+          'subsequent updates\n* searchset : the time that the search set was assembled. Note ' +
+          'that different pages MAY have different timestamps but need not. Having different ' +
+          'timestamps does not imply that subsequent pages will represent or include changes ' +
+          'made since the initial query\n* transaction | transaction-response | batch | ' +
+          'batch-response | collection : no particular assigned meaning\n\nThe timestamp value ' +
+          'should be greater than the lastUpdated and other timestamps in the resources in the ' +
+          'bundle, and it should be equal or earlier than the .meta.lastUpdated on the Bundle ' +
+          'itself.',
+        max: '1'
+      });
+      const snapRoot = ext.snapshot?.element?.[0];
+      expect(snapRoot).toMatchObject(diffRoot);
+
+      const diffUrl = ext.differential?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(diffUrl).toEqual({
+        id: 'Extension.url',
+        path: 'Extension.url',
+        fixedUri: 'http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.timestamp'
+      });
+      const snapUrl = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(snapUrl).toMatchObject(diffUrl);
+
+      const diffValue = ext.differential?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(diffValue).toEqual({
+        id: 'Extension.value[x]',
+        path: 'Extension.value[x]',
+        max: '0'
+      });
+      const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(snapValue).toMatchObject({
+        ...diffValue,
+        min: 0,
+        max: '0'
+      });
+
+      const diffExtValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:value'
+      );
+      expect(diffExtValue).toEqual({
+        id: 'Extension.extension:value',
+        path: 'Extension.extension',
+        sliceName: 'value',
+        short: 'Primitive value for instant',
+        definition: 'The actual value',
+        min: 0,
+        max: '1',
+        type: [{ code: 'Extension' }]
+      });
+      const snapExtValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:value'
+      );
+      expect(snapExtValue).toMatchObject(diffExtValue);
+
+      const diffExtValueURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:value.url'
+      );
+      expect(diffExtValueURL).toEqual({
+        id: 'Extension.extension:value.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'value'
+      });
+      const snapExtValueURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:value.url'
+      );
+      expect(snapExtValueURL).toMatchObject(diffExtValueURL);
+
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        'Implied extension (http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.timestamp) ' +
+          'is incomplete because Extension.extension:value causes sub-extension recursion.'
+      );
+    });
+
     it('should materialize a simple R4 extension', () => {
       const ext = materializeImpliedExtension(
         'http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.signature',
@@ -1365,17 +1659,38 @@ describe('impliedExtensions', () => {
           '(http://www.iana.org/assignments/link-relations/link-relations.xhtml#link-relations-1).',
         min: 1,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: ['http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.link.relation']
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapRelation = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:relation'
       );
       expect(snapRelation).toMatchObject(diffRelation);
+
+      const diffRelationURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:relation.url'
+      );
+      expect(diffRelationURL).toEqual({
+        id: 'Extension.extension:relation.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'relation'
+      });
+      const snapRelationURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:relation.url'
+      );
+      expect(snapRelationURL).toMatchObject(diffRelationURL);
+
+      const diffRelationValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:relation.value[x]'
+      );
+      expect(diffRelationValue).toEqual({
+        id: 'Extension.extension:relation.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'string' }]
+      });
+      const snapRelationValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:relation.value[x]'
+      );
+      expect(snapRelationValue).toMatchObject(diffRelationValue);
 
       const diffLinkUrl = ext.differential?.element?.find(
         (e: any) => e.id === 'Extension.extension:url'
@@ -1388,17 +1703,38 @@ describe('impliedExtensions', () => {
         definition: 'The reference details for the link.',
         min: 1,
         max: '1',
-        type: [
-          {
-            code: 'Extension',
-            profile: ['http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.link.url']
-          }
-        ]
+        type: [{ code: 'Extension' }]
       });
       const snapLinkUrl = ext.snapshot?.element?.find(
         (e: any) => e.id === 'Extension.extension:url'
       );
       expect(snapLinkUrl).toMatchObject(diffLinkUrl);
+
+      const diffUrlURL = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:url.url'
+      );
+      expect(diffUrlURL).toEqual({
+        id: 'Extension.extension:url.url',
+        path: 'Extension.extension.url',
+        fixedUri: 'url'
+      });
+      const snapUrlURL = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:url.url'
+      );
+      expect(snapUrlURL).toMatchObject(diffUrlURL);
+
+      const diffUrlValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:url.value[x]'
+      );
+      expect(diffUrlValue).toEqual({
+        id: 'Extension.extension:url.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'uri' }]
+      });
+      const snapUrlValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:url.value[x]'
+      );
+      expect(snapUrlValue).toMatchObject(diffUrlValue);
 
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
