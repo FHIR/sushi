@@ -39,9 +39,11 @@ import {
   InvalidFHIRIdError,
   DuplicateSliceError,
   NonAbstractParentOfSpecializationError,
-  ValueConflictsWithClosedSlicingError
+  ValueConflictsWithClosedSlicingError,
+  AssignmentToCodeableReferenceError,
+  MismatchedBindingTypeError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
+import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -842,15 +844,17 @@ export class ElementDefinition {
         // reference is allowed.
         matchedType = targetTypes.find(
           t2 =>
-            t2.code === 'Reference' &&
+            isReferenceType(t2.code) &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
-        // Look for exact match on the code (w/ no profile) or a match on the same base type with
+        // Look for exact match on the code (w/ no profile) or a match on an allowed base type with
         // a matching profile
         matchedType = targetTypes.find(t2 => {
           const matchesUnprofiledResource = t2.code === md.id && isEmpty(t2.profile);
-          const matchesProfile = t2.code === md.sdType && t2.profile?.includes(md.url);
+          const matchesProfile =
+            this.getTypeLineage(md.sdType, fisher).some(ancestor => ancestor.sdType === t2.code) &&
+            t2.profile?.includes(md.url);
           // True if we match an unprofiled type that is not abstract, is a parent, and that we are
           // specializing (the type does not match the sdType of the type to match)
           specializationOfNonAbstractType =
@@ -927,7 +931,7 @@ export class ElementDefinition {
     for (const match of matches) {
       if (match.metadata.id === newType.code) {
         continue;
-      } else if (match.code === 'Reference' && match.metadata.sdType !== 'Reference') {
+      } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);
       } else {
         matchedProfiles.push(match.metadata.url);
@@ -1006,7 +1010,7 @@ export class ElementDefinition {
     for (const match of matches) {
       // If the original element type is a Reference, keep it a reference, otherwise take on the
       // input type's type code (as represented in its StructureDefinition.type).
-      const typeString = match.code === 'Reference' ? 'Reference' : match.metadata.sdType;
+      const typeString = isReferenceType(match.code) ? match.code : match.metadata.sdType;
       if (!currentTypeMatches.has(typeString)) {
         currentTypeMatches.set(typeString, []);
       }
@@ -1131,6 +1135,7 @@ export class ElementDefinition {
       'code',
       'Coding',
       'CodeableConcept',
+      'CodeableReference',
       'Quantity',
       'string',
       'uri'
@@ -1257,10 +1262,24 @@ export class ElementDefinition {
         break;
       case 'Reference':
         value = value as FshReference;
+
+        // If we are assigning to a CodeableReference, we want to give a more descriptive error
+        // so we check the type and log this error separately from all other type checking
+        if (this.type[0].code === 'CodeableReference') {
+          throw new AssignmentToCodeableReferenceError('reference', value, 'reference');
+        }
+
+        // It is possible the reference constraints do not come from the current element itself, so find the
+        // element which is constraining the current element, and check the assignment against it
+        const referenceConstrainingElement =
+          this.type[0].code === 'Reference' &&
+          this.parent()?.type?.[0]?.code === 'CodeableReference'
+            ? this.parent()
+            : this;
         // If no targetProfile is present, there is nothing to check the value against, so just assign it
-        if (value.sdType && this.type[0].targetProfile) {
+        if (value.sdType && referenceConstrainingElement.type[0].targetProfile) {
           const validTypes: string[] = [];
-          this.type[0].targetProfile.forEach(tp => {
+          referenceConstrainingElement.type[0].targetProfile.forEach(tp => {
             const tpType = fisher.fishForMetadata(tp)?.sdType;
             if (tpType) {
               validTypes.push(tpType);
@@ -1269,7 +1288,10 @@ export class ElementDefinition {
 
           const referenceLineage = this.getTypeLineage(value.sdType, fisher);
           if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {
-            throw new InvalidTypeError(`Reference(${value.sdType})`, this.type);
+            throw new InvalidTypeError(
+              `Reference(${value.sdType})`,
+              referenceConstrainingElement.type
+            );
           }
         }
         this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
@@ -1618,13 +1640,19 @@ export class ElementDefinition {
    * @param {FshCode} code - the code to assign
    * @param {boolean} exactly - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @param {Fishable} fisher - A fishable object used for finding structure definitions
-   * @throws {CodedTypeNotFoundError} when there is no coded type on this element
+   * @throws {MismatchedTypeError} when the type of the value cannot be assigned to the element
    * @throws {ValueAlreadyAssignedError} when the code is already assigned to a different code
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
   private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
-    if (code.system && !isUri(code.system.split('|')[0])) {
-      throw new InvalidUriError(code.system);
+    if (code.system) {
+      const csURI = code.system.split('|')[0];
+      const vsURI = fisher?.fishForMetadata(code.system, Type.ValueSet)?.url ?? '';
+      if (vsURI) {
+        throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
+      } else if (!isUri(csURI)) {
+        throw new InvalidUriError(code.system);
+      }
     }
 
     const type = this.type[0].code;
@@ -1652,8 +1680,10 @@ export class ElementDefinition {
         quantity.comparator = existing.comparator;
       }
       this.assignFHIRValue(code.toString(), quantity, exactly, type);
+    } else if (type === 'CodeableReference') {
+      throw new AssignmentToCodeableReferenceError('code', code, 'concept');
     } else {
-      throw new CodedTypeNotFoundError([type]);
+      throw new MismatchedTypeError('code', code, type);
     }
   }
 

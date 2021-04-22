@@ -47,6 +47,11 @@ describe('StructureDefinitionExporter', () => {
       'testPackage',
       defs
     );
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
+    );
   });
 
   beforeEach(() => {
@@ -1626,6 +1631,29 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
+  it('should apply a Reference AssignmentRule and replace the Reference on a CodeableReference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Condition';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new AssignmentRule('addresses.reference');
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addressesReference = sd.findElement('CarePlan.addresses.reference');
+
+    expect(addressesReference.patternReference).toEqual({
+      reference: 'Condition/bar-id'
+    });
+  });
+
   it('should not apply a Reference AssignmentRule with invalid type and log an error', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -1648,6 +1676,31 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /The type "Reference\(Condition\)" does not match any of the allowed types\D*/s
+    );
+  });
+
+  it('should not apply a Reference AssignmentRule with invalid type constraints on a parent CodeableReference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new AssignmentRule('addresses.reference');
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addressesReference = sd.findElement('CarePlan.addresses.reference');
+
+    expect(addressesReference.patternReference).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
     );
   });
 
@@ -3115,6 +3168,35 @@ describe('StructureDefinitionExporter', () => {
         }
       ]
     });
+  });
+
+  it('should apply a CaretValueRule on an extension on ElementDefinition', () => {
+    // Extension: MyBooleanExtension
+    // * value[x] only boolean
+    const extension = new Extension('MyBooleanExtension');
+    const onlyBoolean = new OnlyRule('value[x]');
+    onlyBoolean.types.push({ type: 'boolean' });
+    extension.rules.push(onlyBoolean);
+    doc.extensions.set(extension.name, extension);
+    // Profile: ExtensionOnName
+    // Parent: Patient
+    // * name ^extension[MyBooleanExtension].valueBoolean = true
+    const profile = new Profile('ExtensionOnName');
+    profile.parent = 'Patient';
+    const rule = new CaretValueRule('name');
+    rule.caretPath = 'extension[MyBooleanExtension].valueBoolean';
+    rule.value = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const name = sd.findElement('Patient.name');
+    expect(name.extension).toEqual([
+      {
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
+        valueBoolean: true
+      }
+    ]);
   });
 
   it('should not apply an invalid CaretValueRule on an element without a path', () => {

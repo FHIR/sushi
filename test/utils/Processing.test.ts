@@ -564,6 +564,48 @@ describe('Processing', () => {
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Invalid path to FSH definition folder\./s);
     });
+
+    describe('#symlinks', () => {
+      const linkPath = path.join(__dirname, 'fixtures', 'fsh-files', 'myLock.fsh');
+      const linkTarget = path.join(__dirname, 'fixtures', 'fsh-files', 'meaninglessTarget');
+
+      beforeAll(() => {
+        try {
+          fs.removeSync(linkPath);
+        } catch {
+          // This will fail if the link doesn't exist, which is fine.
+          // We just want to be extra sure to clean up before making it.
+        }
+        try {
+          fs.symlinkSync(linkTarget, linkPath);
+        } catch {
+          // This may fail if the user running the test doesn't have permission to create a symbolic link.
+          // On Windows systems, normal users do not have this permission.
+        }
+      });
+
+      it('should return a RawFSH for each real file in the input directory that ends with .fsh', () => {
+        const input = path.join(__dirname, 'fixtures', 'fsh-files');
+        const rawFSHes = getRawFSHes(input);
+        expect(rawFSHes.length).toBe(2);
+        expect(rawFSHes).toContainEqual({
+          content: '// Content of first file',
+          path: path.join(input, 'first.fsh')
+        });
+        expect(rawFSHes).toContainEqual({
+          content: '// Content of second file',
+          path: path.join(input, 'second.fsh')
+        });
+      });
+
+      afterAll(() => {
+        try {
+          fs.removeSync(linkPath);
+        } catch {
+          // This will fail if someone removed the link in the middle of the test.
+        }
+      });
+    });
   });
 
   describe('#hasFshFiles()', () => {

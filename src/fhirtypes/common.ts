@@ -634,3 +634,12 @@ export function getUrlFromFshDefinition(
 export function isExtension(path: string): boolean {
   return ['modifierExtension', 'extension'].includes(path);
 }
+
+/**
+ * Checks if a provided type can be treated as a Reference
+ * @param type - The type being checked
+ * @returns - True if the type can be treated as a reference, false otherwise
+ */
+export function isReferenceType(type: string): boolean {
+  return ['Reference', 'CodeableReference'].includes(type);
+}

@@ -56,6 +56,24 @@ FSHListener.prototype.exitExtension = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#logical.
+FSHListener.prototype.enterLogical = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#logical.
+FSHListener.prototype.exitLogical = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#resource.
+FSHListener.prototype.enterResource = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#resource.
+FSHListener.prototype.exitResource = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#sdMetadata.
 FSHListener.prototype.enterSdMetadata = function(ctx) {
 };
@@ -71,6 +89,15 @@ FSHListener.prototype.enterSdRule = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#sdRule.
 FSHListener.prototype.exitSdRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#lrRule.
+FSHListener.prototype.enterLrRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#lrRule.
+FSHListener.prototype.exitLrRule = function(ctx) {
 };
 
 
@@ -431,6 +458,15 @@ FSHListener.prototype.enterInsertRule = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#insertRule.
 FSHListener.prototype.exitInsertRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#addElementRule.
+FSHListener.prototype.enterAddElementRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#addElementRule.
+FSHListener.prototype.exitAddElementRule = function(ctx) {
 };
 
 
