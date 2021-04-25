@@ -1215,10 +1215,23 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitConcept(ctx: pc.ConceptContext): ConceptRule {
-    const codePart = this.visitCode(ctx.code());
-    const concept = new ConceptRule(codePart.code, codePart.display)
+    const allCodes = ctx.CODE().map(codeCtx => this.parseCodeLexeme(codeCtx.getText(), codeCtx));
+    // the last code in allCodes is the one we are actually defining.
+    // the rest are the hierarchy, which may be empty.
+    const codePart = allCodes.slice(-1)[0];
+    const availableStrings = ctx.STRING().map(strCtx => this.extractString(strCtx));
+    const concept = new ConceptRule(codePart.code)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+    concept.hierarchy = allCodes.slice(0, -1).map(code => code.code);
+    if (availableStrings.length > 0) {
+      concept.display = availableStrings[0];
+    }
+    if (availableStrings.length > 1) {
+      concept.definition = availableStrings[1];
+    } else if (ctx.MULTILINE_STRING()) {
+      concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
+    }
     if (codePart.system) {
       logger.error(
         'Do not include the system when listing concepts for a code system.',
@@ -1228,11 +1241,6 @@ export class FSHImporter extends FSHVisitor {
       // be a ValueSetConceptComponent, and not a ConceptRule, in which case we should carry through
       // the system
       concept.system = codePart.system;
-    }
-    if (ctx.STRING()) {
-      concept.definition = this.extractString(ctx.STRING());
-    } else if (ctx.MULTILINE_STRING()) {
-      concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
     return concept;
   }

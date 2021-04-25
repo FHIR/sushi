@@ -307,8 +307,8 @@ export interface CodeContext extends ParserRuleContext {
 }
 
 export interface ConceptContext extends ParserRuleContext {
-  code(): CodeContext;
-  STRING(): ParserRuleContext;
+  CODE(): ParserRuleContext[];
+  STRING(): ParserRuleContext[];
   MULTILINE_STRING(): ParserRuleContext;
 }
 

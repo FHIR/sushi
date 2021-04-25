@@ -100,7 +100,7 @@ strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | canonical | code | quantity | ratio | bool | name;
 item:               name (KW_NAMED name)? CARD flag*;
 code:               CODE STRING?;
-concept:            STAR code (STRING | MULTILINE_STRING)?;
+concept:            STAR CODE+ STRING? (STRING | MULTILINE_STRING)?;
 quantity:           NUMBER (UNIT | CODE) STRING?;
 ratio:              ratioPart COLON ratioPart;
 reference:          (OR_REFERENCE | PIPE_REFERENCE) STRING?;
