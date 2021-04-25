@@ -484,7 +484,10 @@ export interface VsFilterValueContext extends ParserRuleContext {
 export function isStarContext(ctx: ParserRuleContext): ctx is StarContext {
   return (ctx as any).STAR != null;
 }
-
-interface StarContext extends ParserRuleContext {
+export interface StarContext extends ParserRuleContext {
   STAR(): ParserRuleContext & TerminalNode;
+}
+
+export function containsPathContext(ctx: ParserRuleContext) {
+  return (ctx as any).path != null;
 }

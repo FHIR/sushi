@@ -12,5 +12,4 @@ export * from './InsertRule';
 export * from './ValueSetComponentRule';
 export * from './ConceptRule';
 export * from './AddElementRule';
-export * from './PathRule';
 export * from './SdRule';

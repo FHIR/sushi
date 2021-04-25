@@ -45,9 +45,7 @@ import {
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
-  SdRule,
-  Rule,
-  PathRule
+  SdRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
@@ -124,6 +122,8 @@ enum Flag {
   Unknown
 }
 
+const INDENT_WIDTH = 2;
+
 /**
  * FSHImporter handles the parsing of FSH documents, constructing the data into FSH types.
  * FSHImporter uses a visitor pattern approach with some accomodations due to the ANTLR4
@@ -137,6 +137,8 @@ export class FSHImporter extends FSHVisitor {
   private allAliases: Map<string, string>;
   paramRuleSets: Map<string, ParamRuleSet>;
   private topLevelParse: boolean;
+  private pathContext: string[];
+  private baseIndent: number;
 
   constructor() {
     super();
@@ -212,8 +214,6 @@ export class FSHImporter extends FSHVisitor {
       this.currentFile = null;
     });
 
-    this.expandContextPaths(docs);
-
     let [definitions, instances] = [0, 0];
     docs.forEach(doc => {
       definitions +=
@@ -237,6 +237,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
+    // Reset the pathContext and baseIndent level for each entity
+    this.pathContext = [];
+    this.baseIndent = this.extractStartStop(ctx).startColumn;
+
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
     }
@@ -455,8 +459,6 @@ export class FSHImporter extends FSHVisitor {
             existingComponent instanceof ValueSetConceptComponentRule &&
             rule.inclusion == existingComponent.inclusion &&
             rule.from.system == existingComponent.from.system &&
-            rule.sourceInfo.location.startColumn ===
-              existingComponent.sourceInfo.location.startColumn &&
             isEqual(sortBy(rule.from.valueSets), sortBy(existingComponent.from.valueSets))
           );
         }) as ValueSetConceptComponentRule;
@@ -934,7 +936,8 @@ export class FSHImporter extends FSHVisitor {
       const rule = this.visitInsertRule(ctx.insertRule());
       return rule ? [rule] : [];
     } else if (ctx.pathRule()) {
-      return [this.visitPathRule(ctx.pathRule())];
+      this.visitPathRule(ctx.pathRule());
+      return [];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -943,13 +946,14 @@ export class FSHImporter extends FSHVisitor {
     return [];
   }
 
-  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule | PathRule {
+  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule {
     if (ctx.fixedValueRule()) {
       return this.visitFixedValueRule(ctx.fixedValueRule());
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
     } else if (ctx.pathRule()) {
-      return this.visitPathRule(ctx.pathRule());
+      this.visitPathRule(ctx.pathRule());
+      return;
     }
   }
 
@@ -990,7 +994,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule | PathRule {
+  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule {
     if (ctx.mappingRule()) {
       return this.visitMappingRule(ctx.mappingRule());
     } else if (ctx.insertRule()) {
@@ -1006,15 +1010,20 @@ export class FSHImporter extends FSHVisitor {
           }
         );
       }
-      return this.visitPathRule(ctx.pathRule());
+      this.visitPathRule(ctx.pathRule());
+      return;
     }
   }
 
+  getPathWithContext(path: string, parentCtx: ParserRuleContext, isPathRule = false) {
+    return this.prependPathContext(path, parentCtx, isPathRule);
+  }
+
   visitPath(ctx: pc.PathContext): string {
-    if (ctx.KW_SYSTEM()) {
+    if (ctx?.KW_SYSTEM()) {
       return ctx.KW_SYSTEM().getText();
     }
-    return ctx.SEQUENCE().getText();
+    return ctx?.SEQUENCE().getText() || '';
   }
 
   visitCaretPath(ctx: pc.CaretPathContext): string {
@@ -1031,7 +1040,7 @@ export class FSHImporter extends FSHVisitor {
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
     const rules: (CardRule | FlagRule)[] = [];
 
-    const cardRule = new CardRule(this.visitPath(ctx.path()))
+    const cardRule = new CardRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     const card = this.parseCard(ctx.CARD().getText(), cardRule);
@@ -1066,13 +1075,13 @@ export class FSHImporter extends FSHVisitor {
   visitFlagRule(ctx: pc.FlagRuleContext): FlagRule[] {
     let paths: string[];
     if (ctx.path().length > 0) {
-      paths = ctx.path().map(path => this.visitPath(path));
+      paths = ctx.path().map(path => this.getPathWithContext(this.visitPath(path), ctx));
     } else if (ctx.paths()) {
       logger.warn('Using "," to list paths is deprecated. Please use "and" to list paths.', {
         file: this.currentFile,
         location: this.extractStartStop(ctx.paths())
       });
-      paths = this.visitPaths(ctx.paths());
+      paths = this.visitPaths(ctx.paths()).map(path => this.getPathWithContext(path, ctx));
     }
 
     return paths.map(path => {
@@ -1124,7 +1133,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSetRule(ctx: pc.ValueSetRuleContext): BindingRule {
-    const vsRule = new BindingRule(this.visitPath(ctx.path()))
+    const vsRule = new BindingRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.name());
@@ -1150,7 +1159,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFixedValueRule(ctx: pc.FixedValueRuleContext): AssignmentRule {
-    const assignmentRule = new AssignmentRule(this.visitPath(ctx.path()))
+    const assignmentRule = new AssignmentRule(
+      this.getPathWithContext(this.visitPath(ctx.path()), ctx)
+    )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     assignmentRule.value = this.visitValue(ctx.value());
@@ -1379,7 +1390,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitOnlyRule(ctx: pc.OnlyRuleContext): OnlyRule {
-    const onlyRule = new OnlyRule(this.visitPath(ctx.path()))
+    const onlyRule = new OnlyRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
@@ -1415,7 +1426,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitContainsRule(ctx: pc.ContainsRuleContext): (ContainsRule | CardRule | FlagRule)[] {
     const rules: (ContainsRule | CardRule | FlagRule)[] = [];
-    const containsRule = new ContainsRule(this.visitPath(ctx.path()))
+    const containsRule = new ContainsRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
 
@@ -1454,8 +1465,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCaretValueRule(ctx: pc.CaretValueRuleContext): CaretValueRule {
-    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
-    const caretValueRule = new CaretValueRule(path)
+    const caretValueRule = new CaretValueRule(
+      this.getPathWithContext(this.visitPath(ctx.path()), ctx)
+    )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
 
@@ -1469,7 +1481,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitObeysRule(ctx: pc.ObeysRuleContext): ObeysRule[] {
     const rules: ObeysRule[] = [];
-    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
+    const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
     ctx.name().forEach(invariant => {
       const obeysRule = new ObeysRule(path)
         .withLocation(this.extractStartStop(ctx))
@@ -1480,10 +1492,8 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  visitPathRule(ctx: pc.PathRuleContext): PathRule {
-    return new PathRule(this.visitPath(ctx.path()))
-      .withLocation(this.extractStartStop(ctx))
-      .withFile(this.currentFile);
+  visitPathRule(ctx: pc.PathRuleContext) {
+    this.getPathWithContext(this.visitPath(ctx.path()), ctx, true);
   }
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
@@ -1617,6 +1627,8 @@ export class FSHImporter extends FSHVisitor {
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet
     const parentDocument = this.currentDoc;
+    // save the baseIndent so it can be restored after parsing this RuleSet
+    const parentIndent = this.baseIndent;
     this.currentDoc = tempDocument;
     // errors should be collected, not printed, when parsing generated documents
     // we should only retrieve errors if we are currently in the top-level parse
@@ -1631,6 +1643,8 @@ export class FSHImporter extends FSHVisitor {
     } finally {
       // be sure to restore parentDocument
       this.currentDoc = parentDocument;
+      // and to restore the parentIndent
+      this.baseIndent = parentIndent;
     }
     // if tempDocument has appliedRuleSets, merge them in
     tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>
@@ -1668,8 +1682,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {
-    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
-    const mappingRule = new MappingRule(path)
+    const mappingRule = new MappingRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     mappingRule.map = this.extractString(ctx.STRING()[0]);
@@ -1949,85 +1962,64 @@ export class FSHImporter extends FSHVisitor {
   }
 
   /**
-   * For each rule, expand the path based on context so that the path is complete
-   * @param docs - The array of FSHDocuments with entities containing rules
+   * Given a path and the context containing it, apply the path context indicated by the path's indent
+   * @param path - The path to apply context to
+   * @param parentCtx - The parent element containing the path
+   * @param isPathRule - Flag to indicate that the path is for a PathRule which is only used to set context
+   * @returns {string} - The path with context prepended
    */
-  private expandContextPaths(docs: FSHDocument[]): void {
-    docs.forEach(doc => {
-      [
-        ...doc.codeSystems.values(),
-        ...doc.extensions.values(),
-        ...doc.profiles.values(),
-        ...doc.valueSets.values(),
-        ...doc.instances.values(),
-        ...doc.appliedRuleSets.values(),
-        ...doc.ruleSets.values(),
-        ...doc.mappings.values()
-      ].forEach(definition => {
-        let context: string[] = [];
-        // NOTE: INDENT_WIDTH is hard coded for now, but if we later allow non-multiples of 2 to indent, we can change that
-        const INDENT_WIDTH = 2;
-        const baseIndent = definition.rules[0]?.sourceInfo.location.startColumn;
-        definition.rules.forEach((rule: Rule) => {
-          // We require that all rules are indented a multiple of INDENT_WIDTH
-          const ruleIndent = rule.sourceInfo.location.startColumn - baseIndent;
-          if (ruleIndent % INDENT_WIDTH !== 0 || ruleIndent < 0) {
-            logger.error(
-              `Unable to determine context for rule indented ${ruleIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
-              rule.sourceInfo
-            );
-            return;
-          }
+  private prependPathContext(path: string, parentCtx: any, isPathRule: boolean): string {
+    const location = this.extractStartStop(parentCtx);
+    const currentIndent = location.startColumn - this.baseIndent;
 
-          // And we require that rules are not indented too deeply
-          const contextIndex = ruleIndent / INDENT_WIDTH;
-          if (contextIndex > context.length) {
-            logger.error(
-              `Cannot determine context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
-              rule.sourceInfo
-            );
-            return;
-          }
+    if (currentIndent > 0 && this.pathContext.length === 0) {
+      logger.error(
+        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
+        location
+      );
+      return path;
+    }
 
-          // If the element is not indented, just reset the context
-          if (contextIndex === 0) {
-            context = [rule.path];
-            return;
-          }
+    if (currentIndent % INDENT_WIDTH !== 0 || currentIndent < 0) {
+      logger.error(
+        `Unable to determine path context for rule indented ${currentIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
+        location
+      );
+      return path;
+    }
 
-          // Insert Rules cannot be given context, since they do not have a "path".
-          // Rules on VS and CS cannot be indented, for style consistency we are still checking them here
-          if (
-            rule instanceof InsertRule ||
-            rule instanceof ConceptRule ||
-            rule instanceof ValueSetComponentRule
-          ) {
-            logger.error(
-              `Rule of type ${rule.constructorName} cannot be indented to indicate context. The rule will be processed as if it is not indented.`,
-              rule.sourceInfo
-            );
-            return;
-          }
+    // And we require that rules are not indented too deeply
+    const contextIndex = currentIndent / INDENT_WIDTH;
+    if (contextIndex > this.pathContext.length) {
+      logger.error(
+        `Cannot determine path context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
+        location
+      );
+      return path;
+    }
 
-          // Replace '[+]' with '[=]' in higher level contexts, since children are at the same index as the parent contexts
-          let expandedPath = context[contextIndex - 1].replace(/\[\+\]/g, '[=]');
-          if (expandedPath === '') {
-            logger.error(
-              'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
-              rule.sourceInfo
-            );
-            return;
-          }
+    // If the element is not indented, just reset the context
+    // Replace '[+]' with '[=]' in the version of the path to add to pathContext, unless the rule is only used to set a path
+    const newContext = isPathRule ? path : path.replace(/\[\+\]/g, '[=]');
+    if (contextIndex === 0) {
+      this.pathContext = [newContext];
+      return path;
+    }
 
-          if (rule.path) {
-            expandedPath = `${expandedPath}.${rule.path}`;
-          }
-          rule.path = expandedPath;
-          context.splice(contextIndex);
-          context.push(rule.path);
-        });
-      });
-    });
+    const currentContext = this.pathContext[contextIndex - 1];
+    if (currentContext === '') {
+      logger.error(
+        'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
+        location
+      );
+      return path;
+    }
+
+    this.pathContext.splice(contextIndex);
+    // Once we have used the existing context, clear it of any [+] so that a rule that is only setting path only applies [+] once
+    this.pathContext = this.pathContext.map(pc => pc.replace(/\[\+\]/g, '[=]'));
+    this.pathContext.push(newContext ? `${currentContext}.${newContext}` : currentContext);
+    return path ? `${currentContext}.${path}` : currentContext;
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
@@ -2099,12 +2091,19 @@ export class FSHImporter extends FSHVisitor {
 
   private extractStartStop(ctx: ParserRuleContext): TextLocation {
     if (pc.isStarContext(ctx)) {
-      return {
+      const location = {
         startLine: ctx.STAR().symbol.line + 1,
-        startColumn: ctx.STAR().getText().length - ctx.STAR().getText().lastIndexOf('\n') - 1,
+        startColumn: this.getStarContextStartColumn(ctx),
         endLine: ctx.stop.line,
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
+      if (!pc.containsPathContext(ctx) && location.startColumn - this.baseIndent > 0) {
+        logger.error(
+          'A rule that does not use a path cannot be indented to indicate context. The rule will be processed as if it is not indented.',
+          location
+        );
+      }
+      return location;
     } else if (ctx instanceof TerminalNode) {
       return {
         startLine: ctx.symbol.line,
@@ -2120,6 +2119,10 @@ export class FSHImporter extends FSHVisitor {
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
     }
+  }
+
+  private getStarContextStartColumn(ctx: pc.StarContext): number {
+    return ctx.STAR().getText().length - ctx.STAR().getText().lastIndexOf('\n') - 2;
   }
 
   // NOTE: Since the ANTLR parser/lexer is JS (not typescript), we need to use some ts-ignore here.

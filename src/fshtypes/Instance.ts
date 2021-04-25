@@ -1,4 +1,4 @@
-import { AssignmentRule, InsertRule, PathRule } from './rules';
+import { AssignmentRule, InsertRule } from './rules';
 import { FshEntity } from './FshEntity';
 
 export class Instance extends FshEntity {
@@ -8,7 +8,7 @@ export class Instance extends FshEntity {
   description?: string;
   usage?: InstanceUsage;
   mixins?: string[];
-  rules: (AssignmentRule | InsertRule | PathRule)[];
+  rules: (AssignmentRule | InsertRule)[];
 
   constructor(public name: string) {
     super();

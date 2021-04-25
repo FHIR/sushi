@@ -303,4 +303,20 @@ describe('FSHErrorListener', () => {
       /Mapping rules must include at least one space both before and after the '->' operator.*File: Invalid\.fsh.*Line: 7\D*/s
     );
   });
+
+  // ########################################################################
+  // # Missing space after *                                                #
+  // ########################################################################
+
+  it('should make sense of errors due to no space after * in a rule', () => {
+    const input = `
+    Profile: SampleObservation
+    Parent: Observation
+    *component = FOO#bar
+    `;
+    importSingleText(input, 'Invalid.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Rules must start with a '\*' symbol followed by at least one space.*File: Invalid\.fsh.*Line: 4\D*/s
+    );
+  });
 });

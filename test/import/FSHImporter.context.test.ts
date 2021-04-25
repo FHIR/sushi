@@ -5,9 +5,9 @@ import {
   assertCardRule,
   assertCaretValueRule,
   assertConceptRule,
+  assertFlagRule,
   assertInsertRule,
   assertObeysRule,
-  assertPathRule,
   assertValueSetConceptComponent,
   assertValueSetFilterComponent
 } from '../testhelpers/asserts';
@@ -142,8 +142,8 @@ describe('FSHImporter', () => {
       const profile = result.profiles.get('Foo');
       expect(profile.name).toBe('Foo');
       expect(profile.parent).toBe('Patient');
-      expect(profile.rules.length).toBe(1);
-      assertPathRule(profile.rules[0], 'name');
+      // Path Rules are not added to the rules array
+      expect(profile.rules.length).toBe(0);
     });
 
     it('should use context from rules that only set context', () => {
@@ -161,9 +161,8 @@ describe('FSHImporter', () => {
       const profile = result.profiles.get('Foo');
       expect(profile.name).toBe('Foo');
       expect(profile.parent).toBe('Patient');
-      expect(profile.rules.length).toBe(2);
-      assertPathRule(profile.rules[0], 'name');
-      assertCardRule(profile.rules[1], 'name.family', 1, 1);
+      expect(profile.rules.length).toBe(1);
+      assertCardRule(profile.rules[0], 'name.family', 1, 1);
     });
 
     it('should change + to = when setting context on children of soft indexed rules', () => {
@@ -183,11 +182,9 @@ describe('FSHImporter', () => {
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(4);
-      assertPathRule(instance.rules[0], 'item[+]');
-      assertAssignmentRule(instance.rules[1], 'item[=].linkId', 'foo');
-      assertPathRule(instance.rules[2], 'item[=].item[+]');
-      assertAssignmentRule(instance.rules[3], 'item[=].item[=].linkId', 'bar');
+      expect(instance.rules.length).toBe(2);
+      assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'foo');
+      assertAssignmentRule(instance.rules[1], 'item[=].item[+].linkId', 'bar');
     });
 
     it('should change nested + to = when setting context on children of soft indexed rules', () => {
@@ -207,11 +204,9 @@ describe('FSHImporter', () => {
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(4);
-      assertPathRule(instance.rules[0], 'item[+].item[+]');
-      assertAssignmentRule(instance.rules[1], 'item[=].item[=].linkId', 'foo');
-      assertPathRule(instance.rules[2], 'item[=].item[=].item[+]');
-      assertAssignmentRule(instance.rules[3], 'item[=].item[=].item[=].linkId', 'bar');
+      expect(instance.rules.length).toBe(2);
+      assertAssignmentRule(instance.rules[0], 'item[+].item[+].linkId', 'foo');
+      assertAssignmentRule(instance.rules[1], 'item[=].item[=].item[+].linkId', 'bar');
     });
 
     it('should parse child rules that have a blank path', () => {
@@ -234,6 +229,123 @@ describe('FSHImporter', () => {
       assertCardRule(profile.rules[0], 'name', 1, 1);
       assertCaretValueRule(profile.rules[1], 'name', 'short', 'foo', false);
       assertObeysRule(profile.rules[2], 'name', 'inv1');
+    });
+
+    it('should apply context to multiple paths', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * name
+        * family and given MS
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(2);
+      assertFlagRule(
+        profile.rules[0],
+        'name.family',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+      assertFlagRule(
+        profile.rules[1],
+        'name.given',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+    });
+
+    it('should apply the last path in a list when multiple paths are used to set context', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * name and birthDate MS
+        * ^short = "foo"
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(3);
+      assertFlagRule(
+        profile.rules[0],
+        'name',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+      assertFlagRule(
+        profile.rules[1],
+        'birthDate',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+      assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
+    });
+
+    it('should apply the last path in a comma separated list when multiple paths are used to set context', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * name, birthDate MS
+        * ^short = "foo"
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      // One warning related to deprecated usage of commas
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(3);
+      assertFlagRule(
+        profile.rules[0],
+        'name',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+      assertFlagRule(
+        profile.rules[1],
+        'birthDate',
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+      assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
     });
 
     it('should log an error when a rule is indented below a rule without a path', () => {
@@ -268,7 +380,9 @@ describe('FSHImporter', () => {
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Unable to determine context.*1 space/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Unable to determine path context.*1 space/
+      );
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.instances.size).toBe(1);
       const instance = result.instances.get('Foo');
@@ -281,7 +395,31 @@ describe('FSHImporter', () => {
     });
 
     it('should log an error when a rule is indented a negative amount of spaces', () => {
-      // -2 spaces of indent
+      // -2 space of indent
+      const input = `
+        Instance: Foo
+        InstanceOf: Patient
+      * name.family = "foo"
+        * id = "bar"
+      `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Unable to determine path context.*-2 space/
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Patient');
+      expect(instance.rules.length).toBe(2);
+      assertAssignmentRule(instance.rules[0], 'name.family', 'foo');
+      // rule is not assigned any context
+      assertAssignmentRule(instance.rules[1], 'id', 'bar');
+    });
+
+    it('should log an error when the first rule of a definition is indented', () => {
       const input = `
         Instance: Foo
         InstanceOf: Patient
@@ -291,7 +429,9 @@ describe('FSHImporter', () => {
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Unable to determine context.*-2 space/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /first rule of a definition cannot be indented/
+      );
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.instances.size).toBe(1);
       const instance = result.instances.get('Foo');
@@ -336,7 +476,9 @@ describe('FSHImporter', () => {
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/InsertRule cannot be indented/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /rule that does not use a path cannot be indented/
+      );
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.instances.size).toBe(1);
       const instance = result.instances.get('Foo');
@@ -357,7 +499,9 @@ describe('FSHImporter', () => {
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/ConceptRule cannot be indented/);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /rule that does not use a path cannot be indented/
+      );
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.codeSystems.size).toBe(1);
       const cs = result.codeSystems.get('Foo');
@@ -378,7 +522,7 @@ describe('FSHImporter', () => {
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /ValueSetFilterComponentRule cannot be indented/
+        /rule that does not use a path cannot be indented/
       );
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.valueSets.size).toBe(1);
@@ -400,19 +544,17 @@ describe('FSHImporter', () => {
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /ValueSetConceptComponentRule cannot be indented/
+        /rule that does not use a path cannot be indented/
       );
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.valueSets.size).toBe(1);
       const vs = result.valueSets.get('Foo');
       expect(vs.name).toBe('Foo');
-      expect(vs.rules.length).toBe(2);
+      expect(vs.rules.length).toBe(1);
       assertValueSetConceptComponent(vs.rules[0], 'http://example.org', undefined, [
         new FshCode('foo', 'http://example.org')
           .withLocation([3, 11, 3, 32])
-          .withFile('Context.fsh')
-      ]);
-      assertValueSetConceptComponent(vs.rules[1], 'http://example.org', undefined, [
+          .withFile('Context.fsh'),
         new FshCode('bar', 'http://example.org')
           .withLocation([4, 13, 4, 34])
           .withFile('Context.fsh')
