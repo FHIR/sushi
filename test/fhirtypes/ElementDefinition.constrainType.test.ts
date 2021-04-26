@@ -602,7 +602,11 @@ describe('ElementDefinition R5', () => {
       defs
     );
     pkg = new Package(minimalConfig);
-    fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
+    fisher = new TestFisher()
+      .withFHIR(defs)
+      .withPackage(pkg)
+      .withCachePackageName('hl7.fhir.r5.core#current')
+      .withTestPackageName('r5-definitions');
   });
 
   beforeEach(() => {

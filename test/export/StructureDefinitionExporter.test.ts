@@ -5193,7 +5193,7 @@ describe('StructureDefinitionExporter R5', () => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
+    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#current', 'r5-definitions');
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
     loggerSpy.reset();
   });

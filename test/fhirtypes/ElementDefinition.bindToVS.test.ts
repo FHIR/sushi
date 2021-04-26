@@ -194,7 +194,10 @@ describe('ElementDefinition R5', () => {
       'r5',
       defs
     );
-    fisher = new TestFisher().withFHIR(defs);
+    fisher = new TestFisher()
+      .withFHIR(defs)
+      .withCachePackageName('hl7.fhir.r5.core#current')
+      .withTestPackageName('r5-definitions');
   });
   beforeEach(() => {
     r5CarePlan = fisher.fishForStructureDefinition('CarePlan');
