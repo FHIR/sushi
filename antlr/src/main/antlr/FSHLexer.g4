@@ -55,7 +55,7 @@ KW_INSERT:          'insert' -> pushMode(RULESET_OR_INSERT);
 
 // SYMBOLS
 EQUAL:              '=';
-STAR:               ([\r\n] | LINE_COMMENT) WS* '* ';
+STAR:               ([\r\n] | LINE_COMMENT) WS* '*' [ \u00A0];
 COLON:              ':';
 COMMA:              ',';
 ARROW:              '->';
