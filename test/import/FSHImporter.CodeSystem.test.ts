@@ -1,7 +1,13 @@
 import { importSingleText } from '../testhelpers/importSingleText';
 import { assertCaretValueRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
+import {
+  Rule,
+  CaretValueRule,
+  InsertRule,
+  ConceptRule,
+  CodeCaretValueRule
+} from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
   describe('CodeSystem', () => {
@@ -460,6 +466,58 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
+      });
+    });
+
+    describe('#codeCaretValueRule', () => {
+      it('should parse a code system that uses a CodeCaretValueRule on a top-level concept', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #anteater "Anteater"
+        * #anteater ^property[0].valueString = "Their threat pose is really cute."
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        const concept = codeSystem.rules[0] as ConceptRule;
+        expect(concept.code).toBe('anteater');
+        expect(concept.hierarchy).toEqual([]);
+        expect(concept.sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.rules[1]).toBeInstanceOf(CodeCaretValueRule);
+        const codeCaret = codeSystem.rules[1] as CodeCaretValueRule;
+        expect(codeCaret.codePath).toEqual(['anteater']);
+        expect(codeCaret.path).toBe('');
+        expect(codeCaret.caretPath).toBe('property[0].valueString');
+        expect(codeCaret.value).toBe('Their threat pose is really cute.');
+        expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a code system that uses a CodeCaretValueRule on a nested concept', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #anteater "Anteater"
+        * #anteater #northern "Northern tamandua"
+        * #anteater #northern ^property[0].valueString = "They are strong climbers."
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        let concept = codeSystem.rules[0] as ConceptRule;
+        expect(concept.code).toBe('anteater');
+        expect(concept.hierarchy).toEqual([]);
+        expect(concept.sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.rules[1]).toBeInstanceOf(ConceptRule);
+        concept = codeSystem.rules[1] as ConceptRule;
+        expect(concept.code).toBe('northern');
+        expect(concept.hierarchy).toEqual(['anteater']);
+        expect(concept.sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.rules[2]).toBeInstanceOf(CodeCaretValueRule);
+        const codeCaret = codeSystem.rules[2] as CodeCaretValueRule;
+        expect(codeCaret.codePath).toEqual(['anteater', 'northern']);
+        expect(codeCaret.path).toBe('');
+        expect(codeCaret.caretPath).toBe('property[0].valueString');
+        expect(codeCaret.value).toBe('They are strong climbers.');
+        expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
       });
     });
 
