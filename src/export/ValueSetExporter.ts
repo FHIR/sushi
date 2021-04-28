@@ -142,6 +142,9 @@ export class ValueSetExporter {
       parameter => parameter.name === 'sushi-generated' && parameter.valueBoolean === true
     );
     if (shouldExpand) {
+      logger.warn(
+        `ValueSet ${valueSet.name}: expansion is deprecated and will be removed in a future SUSHI release.`
+      );
       const errors: string[] = [];
       // the compose property must be defined
       if (!valueSet.compose) {
