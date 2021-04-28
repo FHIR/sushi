@@ -6,7 +6,7 @@ import { Resource } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { ContainsRule } from '../../src/fshtypes/rules';
+import { AddElementRule, ContainsRule } from '../../src/fshtypes/rules';
 
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
@@ -140,7 +140,12 @@ describe('ResourceExporter', () => {
 
   it('should log an error when an inline extension is used', () => {
     const resource = new Resource('MyResource');
-    const containsRule = new ContainsRule('extension')
+    const addElementRule = new AddElementRule('myExtension');
+    addElementRule.min = 0;
+    addElementRule.max = '*';
+    addElementRule.types = [{ type: 'Extension' }];
+    resource.rules.push(addElementRule);
+    const containsRule = new ContainsRule('myExtension')
       .withFile('MyResource.fsh')
       .withLocation([3, 8, 3, 25]);
     containsRule.items.push({

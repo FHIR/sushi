@@ -1,5 +1,16 @@
-import { Profile, Extension, FshCodeSystem, FshValueSet, Instance, Mapping, RuleSet } from '.';
 import {
+  Profile,
+  Extension,
+  FshCodeSystem,
+  FshValueSet,
+  Instance,
+  Mapping,
+  RuleSet,
+  Logical,
+  Resource
+} from '.';
+import {
+  AddElementRule,
   CardRule,
   CaretValueRule,
   ContainsRule,
@@ -16,7 +27,7 @@ import {
 
 const allowedRulesMap = new Map<any, any[]>([
   [
-    Profile,
+    'Profile',
     [
       CardRule,
       CaretValueRule,
@@ -29,7 +40,7 @@ const allowedRulesMap = new Map<any, any[]>([
     ]
   ],
   [
-    Extension,
+    'Extension',
     [
       CardRule,
       CaretValueRule,
@@ -41,12 +52,12 @@ const allowedRulesMap = new Map<any, any[]>([
       BindingRule
     ]
   ],
-  [Instance, [AssignmentRule]],
-  [FshValueSet, [ValueSetComponentRule, CaretValueRule]],
-  [FshCodeSystem, [ConceptRule, CaretValueRule]],
-  [Mapping, [MappingRule]],
+  ['Instance', [AssignmentRule]],
+  ['FshValueSet', [ValueSetComponentRule, CaretValueRule]],
+  ['FshCodeSystem', [ConceptRule, CaretValueRule]],
+  ['Mapping', [MappingRule]],
   [
-    RuleSet,
+    'RuleSet',
     [
       CardRule,
       CaretValueRule,
@@ -58,6 +69,34 @@ const allowedRulesMap = new Map<any, any[]>([
       ObeysRule,
       OnlyRule,
       ValueSetComponentRule,
+      BindingRule
+    ]
+  ],
+  [
+    'Logical',
+    [
+      AddElementRule,
+      CardRule,
+      CaretValueRule,
+      ContainsRule,
+      AssignmentRule,
+      FlagRule,
+      ObeysRule,
+      OnlyRule,
+      BindingRule
+    ]
+  ],
+  [
+    'Resource',
+    [
+      AddElementRule,
+      CardRule,
+      CaretValueRule,
+      ContainsRule,
+      AssignmentRule,
+      FlagRule,
+      ObeysRule,
+      OnlyRule,
       BindingRule
     ]
   ]
@@ -72,8 +111,17 @@ const allowedRulesMap = new Map<any, any[]>([
  * @returns - true if rule is allowed on fshDefinition, false otherwise
  */
 export function isAllowedRule(
-  fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
+  fshDefinition:
+    | Profile
+    | Extension
+    | Logical
+    | Resource
+    | Instance
+    | FshValueSet
+    | FshCodeSystem
+    | Mapping
+    | RuleSet,
   rule: Rule
 ): boolean {
-  return allowedRulesMap.get(fshDefinition.constructor)?.some(r => rule instanceof r);
+  return allowedRulesMap.get(fshDefinition.constructorName)?.some(r => rule instanceof r);
 }

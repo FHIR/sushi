@@ -24,6 +24,7 @@ import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
+
 describe('Processing', () => {
   temp.track();
 
@@ -584,6 +585,10 @@ describe('Processing', () => {
       myProfile.id = 'my-profile';
       const myExtension = new StructureDefinition();
       myExtension.id = 'my-extension';
+      const myLogical = new StructureDefinition();
+      myLogical.id = 'my-logical';
+      const myResource = new StructureDefinition();
+      myResource.id = 'my-resource';
       const myValueSet = new ValueSet();
       myValueSet.id = 'my-value-set';
       const myCodeSystem = new CodeSystem();
@@ -644,6 +649,8 @@ describe('Processing', () => {
 
       outPackage.profiles.push(myProfile, myFSHDefinedProfile);
       outPackage.extensions.push(myExtension);
+      outPackage.logicals.push(myLogical);
+      outPackage.resources.push(myResource);
       outPackage.valueSets.push(myValueSet);
       outPackage.codeSystems.push(myCodeSystem);
       outPackage.instances.push(
@@ -677,11 +684,13 @@ describe('Processing', () => {
         const generatedPath = path.join(tempIGPubRoot, 'fsh-generated', 'resources');
         expect(fs.existsSync(generatedPath)).toBeTruthy();
         const allGeneratedFiles = fs.readdirSync(generatedPath);
-        expect(allGeneratedFiles.length).toBe(12);
+        expect(allGeneratedFiles.length).toBe(14);
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile-instance.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-extension.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-extension-instance.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-logical.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-resource.json');
         expect(allGeneratedFiles).toContain('ValueSet-my-value-set.json');
         expect(allGeneratedFiles).toContain('CodeSystem-my-code-system.json');
         expect(allGeneratedFiles).toContain('ConceptMap-my-concept-map.json');
@@ -799,12 +808,13 @@ describe('Processing', () => {
         const resourcesPath = path.join(tempRoot, 'input', 'resources');
         expect(fs.existsSync(resourcesPath)).toBeTruthy();
         const resourcesFiles = fs.readdirSync(resourcesPath);
-        expect(resourcesFiles.length).toBe(1);
+        expect(resourcesFiles.length).toBe(2);
+        expect(resourcesFiles).toContain('StructureDefinition-my-resource.json');
         expect(resourcesFiles).toContain('Observation-my-other-instance.json');
       });
 
       it('should write an info message with the number of instances exported', () => {
-        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 14 FHIR resources/s);
       });
     });
   });

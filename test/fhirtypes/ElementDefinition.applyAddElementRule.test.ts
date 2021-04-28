@@ -53,10 +53,25 @@ describe('ElementDefinition', () => {
       expect(newElement.extension).toBeUndefined(); // standards flags extensions
       expect(newElement.short).toBeUndefined();
       expect(newElement.definition).toBeUndefined();
+
       // NOTE: base attribute should be defined
       expect(newElement.base.path).toBe(newElement.path);
       expect(newElement.base.min).toBe(newElement.min);
       expect(newElement.base.max).toBe(newElement.max);
+      // NOTE: constraint attribute should be defined
+      expect(newElement.constraint[0].key).toBe('ele-1');
+      expect(newElement.constraint[0].requirements).toBeUndefined();
+      expect(newElement.constraint[0].severity).toBe('error');
+      expect(newElement.constraint[0].human).toBe(
+        'All FHIR elements must have a @value or children'
+      );
+      expect(newElement.constraint[0].expression).toBe(
+        'hasValue() or (children().count() > id.count())'
+      );
+      expect(newElement.constraint[0].xpath).toBe('@value|f:*|h:div');
+      expect(newElement.constraint[0].source).toBe(
+        'http://hl7.org/fhir/StructureDefinition/Element'
+      );
     });
 
     it('should apply AddElementRule with multiple targetTypes', () => {
@@ -246,7 +261,8 @@ describe('ElementDefinition', () => {
 
       expect(newElement2.path).toBe('AlternateIdentification.prop2');
       expect(newElement2.short).toBe(addElementRule2.short);
-      expect(newElement2.definition).toBeUndefined();
+      // definition gets defaulted to short
+      expect(newElement2.definition).toBe(addElementRule2.short);
 
       const newElement3: ElementDefinition = alternateIdentification.newElement(
         addElementRule3.path

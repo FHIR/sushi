@@ -1,6 +1,6 @@
 import 'jest-extended';
-import { Profile } from '../../src/fshtypes/Profile';
 import {
+  AddElementRule,
   CardRule,
   ConceptRule,
   CaretValueRule,
@@ -18,7 +18,10 @@ import {
 } from '../../src/fshtypes/rules';
 import {
   isAllowedRule,
+  Profile,
   Extension,
+  Logical,
+  Resource,
   Instance,
   FshValueSet,
   FshCodeSystem,
@@ -72,6 +75,56 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(e, new InsertRule())).toBeFalse();
       expect(isAllowedRule(e, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(e, new ConceptRule('foo'))).toBeFalse();
+    });
+  });
+
+  describe('#Logical', () => {
+    let l: Logical;
+    beforeAll(() => {
+      l = new Logical('Bar');
+    });
+    it('should allow valid rules on an Logical', () => {
+      expect(isAllowedRule(l, new AddElementRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new CardRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new CaretValueRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new ContainsRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new AssignmentRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new FlagRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new ObeysRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new OnlyRule('foo'))).toBeTrue();
+      expect(isAllowedRule(l, new BindingRule('foo'))).toBeTrue();
+    });
+
+    it('should not allow invalid rules on an Logical', () => {
+      expect(isAllowedRule(l, new MappingRule('foo'))).toBeFalse();
+      expect(isAllowedRule(l, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(l, new ValueSetComponentRule(true))).toBeFalse();
+      expect(isAllowedRule(l, new ConceptRule('foo'))).toBeFalse();
+    });
+  });
+
+  describe('#Resource', () => {
+    let r: Resource;
+    beforeAll(() => {
+      r = new Resource('Bar');
+    });
+    it('should allow valid rules on an Resource', () => {
+      expect(isAllowedRule(r, new AddElementRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new CardRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new CaretValueRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new ContainsRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new AssignmentRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new FlagRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new ObeysRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new OnlyRule('foo'))).toBeTrue();
+      expect(isAllowedRule(r, new BindingRule('foo'))).toBeTrue();
+    });
+
+    it('should not allow invalid rules on an Resource', () => {
+      expect(isAllowedRule(r, new MappingRule('foo'))).toBeFalse();
+      expect(isAllowedRule(r, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(r, new ValueSetComponentRule(true))).toBeFalse();
+      expect(isAllowedRule(r, new ConceptRule('foo'))).toBeFalse();
     });
   });
 

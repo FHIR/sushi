@@ -399,6 +399,7 @@ export class ElementDefinition {
     }
     return diff;
   }
+
   /**
    * Gets the id of an element on the differential using the shortcut syntax described here
    * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
@@ -450,7 +451,13 @@ export class ElementDefinition {
     if (!isEmpty(rule.short)) {
       this.short = rule.short;
     }
-    if (!isEmpty(rule.definition)) {
+    if (isEmpty(rule.definition)) {
+      if (!isEmpty(rule.short)) {
+        // According to sdf-3 in http://hl7.org/fhir/structuredefinition.html#invs,
+        // definition should be provided. Default it here if possible.
+        this.definition = rule.short;
+      }
+    } else {
       this.definition = rule.definition;
     }
 
@@ -460,6 +467,18 @@ export class ElementDefinition {
       min: rule.min,
       max: rule.max
     };
+
+    // Add the 'ele-1' constraint attribute
+    this.constraint = [
+      {
+        key: 'ele-1',
+        severity: 'error',
+        human: 'All FHIR elements must have a @value or children',
+        expression: 'hasValue() or (children().count() > id.count())',
+        xpath: '@value|f:*|h:div',
+        source: 'http://hl7.org/fhir/StructureDefinition/Element'
+      }
+    ];
   }
 
   /**
@@ -1821,6 +1840,7 @@ export class ElementDefinition {
       );
     });
   }
+
   /**
    * Finds and returns all assignable descendents of the element. A assignable descendent is a direct child of the
    * element that has minimum cardinality greater than 0, and all assignable descendents of such children

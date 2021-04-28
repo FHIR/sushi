@@ -4,11 +4,14 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
-import { TestFisher } from '../testhelpers';
-import { FshCode } from '../../src/fshtypes';
+import { loggerSpy, TestFisher } from '../testhelpers';
+import { FshCode, Logical, Resource } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
-import { OnlyRule } from '../../src/fshtypes/rules';
+import { AddElementRule, OnlyRule } from '../../src/fshtypes/rules';
 import { InstanceDefinition } from '../../src/fhirtypes';
+import { FSHDocument, FSHTank } from '../../src/import';
+import { minimalConfig } from '../utils/minimalConfig';
+import { Package, StructureDefinitionExporter } from '../../src/export';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
@@ -16,6 +19,7 @@ describe('StructureDefinition', () => {
   let observation: StructureDefinition;
   let resprate: StructureDefinition;
   let fisher: TestFisher;
+
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(
@@ -26,13 +30,14 @@ describe('StructureDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
-
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
   });
+
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
     resprate = fisher.fishForStructureDefinition('resprate');
   });
+
   describe('#fromJSON', () => {
     it('should load a resource properly', () => {
       // Don't test everything, but get a sample anyway
@@ -411,6 +416,121 @@ describe('StructureDefinition', () => {
       expect(catDiff).toEqual({
         id: 'Observation.category',
         path: 'Observation.category'
+      });
+    });
+
+    describe('#toJson - Logicals and Resources', () => {
+      let addElementRule1: AddElementRule;
+      let addElementRule2: AddElementRule;
+      let doc: FSHDocument;
+      let exporter: StructureDefinitionExporter;
+
+      beforeAll(() => {
+        addElementRule1 = new AddElementRule('prop1');
+        addElementRule1.min = 0;
+        addElementRule1.max = '1';
+        addElementRule1.types = [{ type: 'dateTime' }];
+        addElementRule1.short = 'property1 dateTime';
+
+        addElementRule2 = new AddElementRule('prop2');
+        addElementRule2.min = 0;
+        addElementRule2.max = '*';
+        addElementRule2.types = [{ type: 'string' }];
+        addElementRule2.short = 'property2 string';
+      });
+
+      beforeEach(() => {
+        loggerSpy.reset();
+        doc = new FSHDocument('fileName');
+        const input = new FSHTank([doc], minimalConfig);
+        const pkg = new Package(input.config);
+        const fisher = new TestFisher(input, defs, pkg);
+        exporter = new StructureDefinitionExporter(input, pkg, fisher);
+      });
+
+      it('should properly serialize snapshot and differential for logical model with parent set to Base', () => {
+        const logical = new Logical('MyTestModel');
+        logical.parent = 'Base';
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(3);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for logical model with parent set to Element', () => {
+        const logical = new Logical('MyTestModel');
+        logical.parent = 'Element';
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(5);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for logical model with parent set to AlternateIdentification', () => {
+        const logical = new Logical('MyTestModel');
+        logical.parent = 'AlternateIdentification';
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(8);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for custom resource with parent set to Resource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'Resource';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(7);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for custom resource with parent set to DomainResource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'DomainResource';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(11);
+        expect(json.differential.element).toHaveLength(3);
       });
     });
   });

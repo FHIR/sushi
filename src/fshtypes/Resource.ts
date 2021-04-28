@@ -1,8 +1,8 @@
 import { FshStructure } from './FshStructure';
-import { AddElementRule, SdRule } from './rules';
+import { LrRule } from './rules';
 
 export class Resource extends FshStructure {
-  rules: (AddElementRule | SdRule)[];
+  rules: LrRule[];
 
   constructor(public name: string) {
     super(name);

@@ -1,9 +1,10 @@
-import { isEmpty } from 'lodash';
+import { cloneDeep, isEmpty } from 'lodash';
 import {
   ElementDefinition,
   ElementDefinitionBindingStrength,
   idRegex,
   InstanceDefinition,
+  PathPart,
   StructureDefinition
 } from '../fhirtypes';
 import { Extension, Invariant, Logical, Profile, Resource } from '../fshtypes';
@@ -33,7 +34,16 @@ import {
   OnlyRule,
   SdRule
 } from '../fshtypes/rules';
-import { Fishable, logger, MasterFisher, Metadata, resolveSoftIndexing, Type } from '../utils';
+import {
+  assembleFSHPath,
+  Fishable,
+  logger,
+  MasterFisher,
+  Metadata,
+  parseFSHPath,
+  resolveSoftIndexing,
+  Type
+} from '../utils';
 import {
   applyInsertRules,
   applyMixinRules,
@@ -299,6 +309,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @see {@link https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Bad.20links.20on.20Detailed.20Description.20tab/near/186766845}
    * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
    * @param {Profile | Extension | Logical | Resource} fshDefinition - The definition we are exporting
+   * @private
    */
   private setMetadata(
     structDef: StructureDefinition,
@@ -332,9 +343,6 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
-      if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
-        structDef.elements[0].short = fshDefinition.title;
-      }
       if (
         fshDefinition instanceof Extension &&
         !(this.tank.config.applyExtensionMetadataToRoot === false)
@@ -351,9 +359,6 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.contact;
     if (fshDefinition.description) {
       structDef.description = fshDefinition.description;
-      if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
-        structDef.elements[0].definition = fshDefinition.description;
-      }
       if (
         fshDefinition instanceof Extension &&
         !(this.tank.config.applyExtensionMetadataToRoot === false)
@@ -416,35 +421,109 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   /**
-   * Sets the rules for the StructureDefinition
-   * @param {StructureDefinition} structDef - The StructureDefinition to set rules on
+   * At this point, 'structDef' contains the parent's ElementDefinitions. For profiles
+   * and extensions, these ElementDefinitions are already correct, so no processing is
+   * necessary. For logical models and resources, the id and path attributes need to be
+   * changed to reflect the type of the logical model/resource. By definition for logical
+   * models and resources, the 'type' is the same as the 'id'. Therefore, the elements
+   * must be changed to reflect the new StructureDefinition type.
+   *
+   * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
    * @param {Profile | Extension | Logical | Resource} fshDefinition - The definition we are exporting
+   * @private
    */
-  private setRules(
+  private resetParentElements(
     structDef: StructureDefinition,
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
-    resolveSoftIndexing(fshDefinition.rules);
+    if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
+      return;
+    }
 
-    // Segregate the AddElementRules from all other SD rules. This allows us
-    // to create the new elements and apply the AddElementRules on each one.
-    // Once the new elements are created, we can process all of the SD rules
-    // on all elements, including the newly created elements.
+    const elements = cloneDeep(structDef.elements);
+
+    // The Elements will have the same values for both 'id' and 'path'.
+    // Therefore, use the 'id' as the source of the conversion and reset
+    // the 'id' value with the new base value. The 'id' mutator will
+    // automatically reset the 'path' value'.
+    elements.forEach(e => {
+      const pathParts: PathPart[] = parseFSHPath(e.id);
+      pathParts[0].base = fshDefinition.id;
+      e.id = assembleFSHPath(pathParts);
+    });
+
+    // The root element's base.path should be the same as root element's path
+    elements[0].base.path = elements[0].path;
+    // Reset the root element's short and definition
+    if (fshDefinition.title) {
+      elements[0].short = fshDefinition.title;
+    }
+    if (fshDefinition.description) {
+      elements[0].definition = fshDefinition.description;
+    }
+
+    structDef.elements = elements;
+    structDef.captureOriginalElements();
+    // Still need the root element so clear its _original
+    structDef.elements[0].clearOriginal();
+
+    // Update each element's copy of structDef
+    structDef.elements.forEach(e => {
+      e.structDef = structDef;
+    });
+  }
+
+  /**
+   * Applies the AddElementRules to add the new elements to the structDef. These rules must
+   * be applied early in the processing to ensure all elements are defined before other rules
+   * can be processed since other rules can apply to the newly created elements.
+   *
+   * @param {StructureDefinition} structDef - The StructureDefinition to set metadata on
+   * @param {Profile | Extension | Logical | Resource} fshDefinition - The definition we are exporting
+   * @private
+   */
+  private applyAddElementRules(
+    structDef: StructureDefinition,
+    fshDefinition: Profile | Extension | Logical | Resource
+  ): void {
+    if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
+      // AddElement rules can only be applied to logical models and custom resources
+      return;
+    }
     const addElementRules = fshDefinition.rules.filter(
       rule => rule.constructorName === 'AddElementRule'
     ) as AddElementRule[];
-    const sdRules = fshDefinition.rules.filter(
-      rule => rule.constructorName !== 'AddElementRule'
-    ) as SdRule[];
 
     for (const rule of addElementRules) {
       try {
-        const newElement: ElementDefinition = structDef.newElement(rule.path);
+        // Note: newElement() method automatically adds the new element to its structDef.elements
+        const newElement = structDef.newElement(rule.path);
         newElement.applyAddElementRule(rule, this);
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
     }
+  }
+
+  /**
+   * Sets the SD Rules rules for the StructureDefinition
+   * @param {StructureDefinition} structDef - The StructureDefinition to set rules on
+   * @param {Profile | Extension | Logical | Resource} fshDefinition - The definition we are exporting
+   * @private
+   */
+  private setSdRules(
+    structDef: StructureDefinition,
+    fshDefinition: Profile | Extension | Logical | Resource
+  ): void {
+    resolveSoftIndexing(fshDefinition.rules);
+
+    // The AddElementRules have already been processed so structDef.elements
+    // already contains the newly added elements; therefore, remove the
+    // AddElementRules from all other SD rules. This allows us to process all
+    // of the SD rules on all elements, including the newly created elements.
+    const sdRules = fshDefinition.rules.filter(
+      rule => rule.constructorName !== 'AddElementRule'
+    ) as SdRule[];
 
     for (const rule of sdRules) {
       const element = structDef.findElementByPath(rule.path, this);
@@ -608,6 +687,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {ContainsRule} rule - the ContainsRule that is on an extension element
    * @param {StructureDefinition} structDef - the StructDef of the resulting profile or element
    * @param {ElementDefinition} element - the element to apply the rule to
+   * @private
    */
   private handleExtensionContainsRule(
     fshDefinition: Profile | Extension | Logical | Resource,
@@ -678,6 +758,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {Extension | Profile | Logical | Resource} fshDefinition - The definition
    *        to do preprocessing on. It is updated directly based on processing.
    * @param {boolean} isExtension - fshDefinition is/is not an Extension
+   * @private
    */
   private preprocessStructureDefinition(
     fshDefinition: Extension | Profile | Logical | Resource,
@@ -794,8 +875,9 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   /**
-   * Exports Profile, Extension, Logical model to StructureDefinition
-   * @param {Profile | Extension | Logical} fshDefinition - The Profile or Extension or Logical model we are exporting
+   * Exports Profile, Extension, Logical model, and custom Resource to StructureDefinition
+   * @param {Profile | Extension | Logical | Resource} fshDefinition - The Profile or Extension
+   *         or Logical model or custom Resource we are exporting
    * @returns {StructureDefinition}
    * @throws {ParentDeclaredAsNameError} when the fshDefinition declares itself as the parent
    * @throws {ParentDeclaredAsIdError} when the fshDefinition declares itself as the parent
@@ -803,7 +885,7 @@ export class StructureDefinitionExporter implements Fishable {
    * @throws {InvalidExtensionParentError} when Extension does not have valid parent
    * @throws {InvalidLogicalParentError} when Logical does not have valid parent
    */
-  exportStructDef(fshDefinition: Profile | Extension | Logical): StructureDefinition {
+  exportStructDef(fshDefinition: Profile | Extension | Logical | Resource): StructureDefinition {
     if (
       this.pkg.profiles.some(sd => sd.name === fshDefinition.name) ||
       this.pkg.extensions.some(sd => sd.name === fshDefinition.name) ||
@@ -826,15 +908,15 @@ export class StructureDefinitionExporter implements Fishable {
 
     structDef.inProgress = true;
 
-    // For profiles and extensions, the id and path attributes for the ElementDefinitions
-    // are already correct. For logical models and resources, they need to be changed to reflect
-    // the type of the logical model/resource. By definition for logical models and resources,
-    // the 'type' is the same as the 'id'.
-    if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
-      structDef.resetRootIdAndPath(fshDefinition.id);
-    }
-
+    // At this point, 'structDef' contains the parent's metadata and elements; therefore,
+    // transform the current 'structDef' from the parent to the new StructureDefinition to
+    // be exported.
+    // Reset the parent's 'structDef.elements' as required.
+    this.resetParentElements(structDef, fshDefinition);
+    // Reset the original parent's metadata to that for the new StructureDefinition
     this.setMetadata(structDef, fshDefinition);
+    // Apply the AddElementRules to create the new elements before any other processing
+    this.applyAddElementRules(structDef, fshDefinition);
 
     // These are being pushed now in order to allow for
     // incomplete definitions to be used to resolve circular reference issues.
@@ -857,7 +939,7 @@ export class StructureDefinitionExporter implements Fishable {
 
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
-    this.setRules(structDef, fshDefinition);
+    this.setSdRules(structDef, fshDefinition);
 
     // The elements list does not need to be cleaned up.
     // And, the _sliceName and _primitive properties added by SUSHI should be skipped.

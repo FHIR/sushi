@@ -208,7 +208,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/dateTime');
     });
 
-    it('should create an extension with default parent of Base when the definition does not specify a parent', () => {
+    it('should create an extension with default parent of base Extension when the definition does not specify a parent', () => {
       const extension = new Extension('MyExtension');
       extension.id = 'my-extension';
       doc.extensions.set(extension.name, extension);
@@ -971,7 +971,7 @@ describe('StructureDefinitionExporter', () => {
 
     it('should include added elements along with parent elements', () => {
       const logical = new Logical('MyTestModel');
-      logical.parent = 'Element';
+      logical.parent = 'Base';
       logical.id = 'MyModel';
 
       const addElementRule1 = new AddElementRule('prop1');
@@ -996,7 +996,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
       expect(exported.type).toBe('MyModel');
-      expect(exported.elements).toHaveLength(5);
+      expect(exported.elements).toHaveLength(3); // 1 Base element + 2 added elements
     });
 
     it('should include added elements for BackboneElement and children', () => {
@@ -1032,7 +1032,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
       expect(exported.type).toBe('MyModel');
-      expect(exported.elements).toHaveLength(6);
+      expect(exported.elements).toHaveLength(6); // 3 Element elements + 3 added elements
 
       const prop1 = exported.findElement('MyModel.backboneProp');
       expect(prop1.path).toBe('MyModel.backboneProp');
@@ -1231,7 +1231,7 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Resource\.fsh.*Line: 2 - 5\D*/s);
     });
 
-    it('should include added elements along with parent elements', () => {
+    it('should include added elements along with parent root element', () => {
       const resource = new Resource('MyTestResource');
       resource.parent = 'DomainResource';
       resource.id = 'MyResource';
@@ -1258,7 +1258,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.name).toBe('MyTestResource');
       expect(exported.id).toBe('MyResource');
       expect(exported.type).toBe('MyResource');
-      expect(exported.elements).toHaveLength(11); // 9 - DomainResource + 2 AddElementRules
+      expect(exported.elements).toHaveLength(11); // 9 - DomainResource elements + 2 AddElementRules
     });
 
     it('should include added elements for BackboneElement and children', () => {
@@ -1294,7 +1294,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.name).toBe('MyTestResource');
       expect(exported.id).toBe('MyResource');
       expect(exported.type).toBe('MyResource');
-      expect(exported.elements).toHaveLength(8);
+      expect(exported.elements).toHaveLength(8); // 5 - Resource elements + 3 AddElementRules
 
       const prop1 = exported.findElement('MyResource.backboneProp');
       expect(prop1.path).toBe('MyResource.backboneProp');
@@ -1597,6 +1597,8 @@ describe('StructureDefinitionExporter', () => {
     it('should add an element with supported doc attributes', () => {
       const logical = new Logical('MyTestModel');
       logical.id = 'MyModel';
+      logical.title = 'MyTestModel title is here';
+      logical.description = 'MyTestModel description is here';
 
       const addElementRule = new AddElementRule('prop1');
       addElementRule.min = 0;
@@ -1611,6 +1613,8 @@ describe('StructureDefinitionExporter', () => {
       const exported = pkg.logicals[0];
 
       expect(exported.elements).toHaveLength(2);
+      expect(exported.elements[0].short).toBe(logical.title);
+      expect(exported.elements[0].definition).toBe(logical.description);
 
       const prop1 = exported.findElement('MyModel.prop1');
       expect(prop1.short).toBe('short description for prop1');
