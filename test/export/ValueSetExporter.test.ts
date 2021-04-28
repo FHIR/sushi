@@ -37,6 +37,7 @@ describe('ValueSetExporter', () => {
     const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new ValueSetExporter(input, pkg, fisher);
+    loggerSpy.reset();
   });
 
   it('should output empty results with empty input', () => {
@@ -736,6 +737,26 @@ describe('ValueSetExporter', () => {
         ).trim()
       );
       defs.add(fragmentCsDef);
+    });
+
+    it('should log a deprecation warning when expanding a value set', () => {
+      // ValueSet: MyValueSet
+      // * ^expansion.parameter.name = "sushi-generated"
+      // * ^expansion.parameter.valueBoolean = true
+      // * includes http://zoo.org/animals|1.0#bear
+      // * includes #tiger and #hippo from system http://zoo.org/animals|1.1
+      const includeBear = new ValueSetConceptComponentRule(true);
+      includeBear.concepts.push(new FshCode('bear', 'http://zoo.org/animals|1.0'));
+      includeBear.from.system = 'http://zoo.org/animals|1.0';
+      const includeTigerHippo = new ValueSetConceptComponentRule(true);
+      includeTigerHippo.concepts.push(
+        new FshCode('tiger', 'http://zoo.org/animals|1.1'),
+        new FshCode('hippo', 'http://zoo.org/animals|1.1')
+      );
+      includeTigerHippo.from.system = 'http://zoo.org/animals|1.1';
+      valueSet.rules.push(includeBear, includeTigerHippo);
+      exporter.exportValueSet(valueSet);
+      expect(loggerSpy.getLastMessage('warn')).toMatch('expansion is deprecated');
     });
 
     it('should expand a value set that contains specific concepts', () => {
