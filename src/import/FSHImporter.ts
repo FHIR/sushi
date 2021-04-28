@@ -1239,7 +1239,7 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.MULTILINE_STRING()) {
       concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
-    if (codePart.system) {
+    if (allCodes.some(listedConcept => listedConcept.system)) {
       logger.error(
         'Do not include the system when listing concepts for a code system.',
         concept.sourceInfo
@@ -1247,7 +1247,9 @@ export class FSHImporter extends FSHVisitor {
       // If this is on a ruleset, and if this rule is then used on a ValueSet, this could actually
       // be a ValueSetConceptComponent, and not a ConceptRule, in which case we should carry through
       // the system
-      concept.system = codePart.system;
+      if (codePart.system) {
+        concept.system = codePart.system;
+      }
     }
     return concept;
   }

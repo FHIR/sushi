@@ -411,17 +411,20 @@ describe('FSHImporter', () => {
         * #goat
         * ZOO#bat
         * CRYPTID#jackalope
+        * ZOO#goat #mountaingoat
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
-        expect(codeSystem.rules.length).toBe(3);
+        expect(codeSystem.rules.length).toBe(4);
         expect((codeSystem.rules[0] as ConceptRule).code).toBe('goat');
         expect((codeSystem.rules[1] as ConceptRule).code).toBe('bat');
         expect((codeSystem.rules[2] as ConceptRule).code).toBe('jackalope');
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 5\D*/s);
+        expect((codeSystem.rules[3] as ConceptRule).code).toBe('mountaingoat');
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 5\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 6\D*/s);
       });
     });
 
