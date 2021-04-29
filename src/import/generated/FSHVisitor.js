@@ -300,6 +300,12 @@ FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#codeCaretValueRule.
+FSHVisitor.prototype.visitCodeCaretValueRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#mappingRule.
 FSHVisitor.prototype.visitMappingRule = function(ctx) {
   return this.visitChildren(ctx);
