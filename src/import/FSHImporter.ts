@@ -45,7 +45,8 @@ import {
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
-  SdRule
+  SdRule,
+  CodeCaretValueRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
@@ -598,6 +599,8 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitVsComponent(rule.vsComponent()));
       } else if (rule.concept()) {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
+      } else if (rule.codeCaretValueRule()) {
+        ruleSet.rules.push(this.visitCodeCaretValueRule(rule.codeCaretValueRule()));
       }
     });
   }
@@ -962,9 +965,13 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitCsRule(ctx: pc.CsRuleContext): ConceptRule | CaretValueRule | InsertRule {
+  visitCsRule(
+    ctx: pc.CsRuleContext
+  ): ConceptRule | CodeCaretValueRule | CaretValueRule | InsertRule {
     if (ctx.concept()) {
       return this.visitConcept(ctx.concept());
+    } else if (ctx.codeCaretValueRule()) {
+      return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
     } else if (ctx.caretValueRule()) {
       const rule = this.visitCaretValueRule(ctx.caretValueRule());
       if (rule.path) {
@@ -973,7 +980,7 @@ export class FSHImporter extends FSHVisitor {
           rule.sourceInfo
         );
       } else {
-        return this.visitCaretValueRule(ctx.caretValueRule());
+        return rule;
       }
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
@@ -1215,11 +1222,24 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitConcept(ctx: pc.ConceptContext): ConceptRule {
-    const codePart = this.visitCode(ctx.code());
-    const concept = new ConceptRule(codePart.code, codePart.display)
+    const allCodes = ctx.CODE().map(codeCtx => this.parseCodeLexeme(codeCtx.getText(), codeCtx));
+    // the last code in allCodes is the one we are actually defining.
+    // the rest are the hierarchy, which may be empty.
+    const codePart = allCodes.slice(-1)[0];
+    const availableStrings = ctx.STRING().map(strCtx => this.extractString(strCtx));
+    const concept = new ConceptRule(codePart.code)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (codePart.system) {
+    concept.hierarchy = allCodes.slice(0, -1).map(code => code.code);
+    if (availableStrings.length > 0) {
+      concept.display = availableStrings[0];
+    }
+    if (availableStrings.length > 1) {
+      concept.definition = availableStrings[1];
+    } else if (ctx.MULTILINE_STRING()) {
+      concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
+    }
+    if (allCodes.some(listedConcept => listedConcept.system)) {
       logger.error(
         'Do not include the system when listing concepts for a code system.',
         concept.sourceInfo
@@ -1227,12 +1247,9 @@ export class FSHImporter extends FSHVisitor {
       // If this is on a ruleset, and if this rule is then used on a ValueSet, this could actually
       // be a ValueSetConceptComponent, and not a ConceptRule, in which case we should carry through
       // the system
-      concept.system = codePart.system;
-    }
-    if (ctx.STRING()) {
-      concept.definition = this.extractString(ctx.STRING());
-    } else if (ctx.MULTILINE_STRING()) {
-      concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
+      if (codePart.system) {
+        concept.system = codePart.system;
+      }
     }
     return concept;
   }
@@ -1443,6 +1460,21 @@ export class FSHImporter extends FSHVisitor {
     caretValueRule.isInstance =
       ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
     return caretValueRule;
+  }
+
+  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CodeCaretValueRule {
+    const codePath = ctx.CODE().map(code => {
+      return this.parseCodeLexeme(code.getText(), ctx).code;
+    });
+    const codeCaretValueRule = new CodeCaretValueRule(codePath)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    // Get the caret path, but slice off the starting ^
+    codeCaretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
+    codeCaretValueRule.value = this.visitValue(ctx.value());
+    codeCaretValueRule.isInstance =
+      ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
+    return codeCaretValueRule;
   }
 
   visitObeysRule(ctx: pc.ObeysRuleContext): ObeysRule[] {

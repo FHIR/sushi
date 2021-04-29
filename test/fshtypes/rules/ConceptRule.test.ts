@@ -9,6 +9,7 @@ describe('ConceptRule', () => {
       expect(c.code).toBe('foo');
       expect(c.display).toBe('bar');
       expect(c.definition).toBe('baz');
+      expect(c.hierarchy).toHaveLength(0);
     });
   });
 

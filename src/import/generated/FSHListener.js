@@ -443,6 +443,15 @@ FSHListener.prototype.exitCaretValueRule = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#codeCaretValueRule.
+FSHListener.prototype.enterCodeCaretValueRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#codeCaretValueRule.
+FSHListener.prototype.exitCodeCaretValueRule = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#mappingRule.
 FSHListener.prototype.enterMappingRule = function(ctx) {
 };
