@@ -1,51 +1,52 @@
 import {
+  cloneDeep,
+  differenceWith,
+  flatten,
+  intersectionWith,
   isEmpty,
   isEqual,
   isMatch,
-  cloneDeep,
-  upperFirst,
-  intersectionWith,
-  flatten,
-  differenceWith
+  upperFirst
 } from 'lodash';
-import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
-import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
+import { FshCanonical, FshCode, FshQuantity, FshRatio, FshReference, Invariant } from '../fshtypes';
 import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
+  AssignmentToCodeableReferenceError,
   BindingStrengthError,
   CodedTypeNotFoundError,
-  ValueAlreadyAssignedError,
-  NoSingleTypeError,
-  MismatchedTypeError,
+  DuplicateSliceError,
+  FixedToPatternError,
   InvalidCanonicalUrlError,
   InvalidCardinalityError,
+  InvalidFHIRIdError,
+  InvalidMappingError,
+  InvalidMaxOfSliceError,
+  InvalidMustSupportError,
+  InvalidSumOfSliceMinsError,
   InvalidTypeError,
+  InvalidUriError,
+  MismatchedTypeError,
+  MultipleStandardsStatusError,
+  NarrowingRootCardinalityError,
+  NonAbstractParentOfSpecializationError,
+  NoSingleTypeError,
+  SliceTypeRemovalError,
   SlicingDefinitionError,
   SlicingNotDefinedError,
   TypeNotFoundError,
-  WideningCardinalityError,
-  InvalidSumOfSliceMinsError,
-  InvalidMaxOfSliceError,
-  NarrowingRootCardinalityError,
-  SliceTypeRemovalError,
-  InvalidUriError,
-  FixedToPatternError,
-  MultipleStandardsStatusError,
-  InvalidMappingError,
-  InvalidFHIRIdError,
-  DuplicateSliceError,
-  NonAbstractParentOfSpecializationError,
+  ValueAlreadyAssignedError,
   ValueConflictsWithClosedSlicingError,
-  AssignmentToCodeableReferenceError
+  WideningCardinalityError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
-import { Fishable, Type, Metadata, logger } from '../utils';
+import { isReferenceType, setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
+import { Fishable, logger, Metadata, Type } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
+import sax = require('sax');
 
 export class ElementDefinitionType {
   private _code: string;
@@ -427,12 +428,7 @@ export class ElementDefinition {
     // ElementDefinition.type. Since this is a new ElementDefinition, it
     // does not yet have a 'type', so we need to assign an "initial" value
     // that the constrainType() method can process.
-    const initialTypes: ElementDefinitionType[] = [];
-    rule.types.forEach(t => {
-      const edt = new ElementDefinitionType(t.type);
-      initialTypes.push(edt);
-    });
-    this.type = initialTypes;
+    this.type = this.initializeElementType(rule, fisher);
     const target = this.structDef.getReferenceName(rule.path, this);
     this.constrainType(rule, fisher, target);
 
@@ -479,6 +475,40 @@ export class ElementDefinition {
         source: 'http://hl7.org/fhir/StructureDefinition/Element'
       }
     ];
+  }
+
+  /**
+   * Define and return the initial ElementDefinition.type from the AddElementRule.
+   * @param {AddElementRule} rule - specific instance of the rule
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   * @returns {ElementDefinitionType[]} The element types as defined by the AddElementRule
+   * @private
+   */
+  private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
+    const initialTypes: ElementDefinitionType[] = [];
+    // If there are multiple reference types, only one EDT is created having
+    // one or more targetProfiles for the single reference type
+    let referenceEdt: ElementDefinitionType;
+    const targetProfiles: string[] = [];
+    rule.types.forEach(t => {
+      if (t.isReference) {
+        referenceEdt = referenceEdt ?? new ElementDefinitionType('Reference');
+        const metadata = fisher.fishForMetadata(t.type, Type.Resource, Type.Profile);
+        if (metadata) {
+          targetProfiles.push(metadata.url);
+        } else {
+          throw new TypeNotFoundError(t.type);
+        }
+      } else {
+        const edt = new ElementDefinitionType(t.type);
+        initialTypes.push(edt);
+      }
+    });
+    if (referenceEdt) {
+      referenceEdt.targetProfile = targetProfiles;
+      initialTypes.push(referenceEdt);
+    }
+    return initialTypes;
   }
 
   /**
@@ -1146,6 +1176,11 @@ export class ElementDefinition {
 
     const connectedElements = this.findConnectedElements();
     if (mustSupport === true) {
+      if (this.structDef.derivation === 'specialization') {
+        // MustSupport is only allowed in profiles
+        throw new InvalidMustSupportError(this.structDef.name, this.id);
+      }
+
       this.mustSupport = mustSupport;
       // MS only gets applied to connected elements that are not themselves slices
       // For example, Observation.component.interpretation MS implies Observation.component:Lab.interpretation MS
@@ -1856,7 +1891,7 @@ export class ElementDefinition {
   }
 
   /**
-   * Finds and returns the elemnent being sliced
+   * Finds and returns the element being sliced
    * @returns {ElementDefinition | undefined} the sliced element or undefined if the element is not a slice
    */
   slicedElement(): ElementDefinition | undefined {

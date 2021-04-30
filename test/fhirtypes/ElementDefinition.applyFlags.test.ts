@@ -19,7 +19,7 @@ describe('ElementDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
-    observation = fisher.fishForStructureDefinition('Observation');
+    observation = fisher.fishForStructureDefinition('us-core-observation-lab');
   });
 
   describe('#applyFlags()', () => {

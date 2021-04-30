@@ -90,20 +90,79 @@ describe('ElementDefinition', () => {
       expect(newElement.type).toStrictEqual([expectedType1, expectedType2, expectedType3]);
     });
 
+    it('should apply AddElementRule with multiple targetTypes including a reference', () => {
+      const addElementRule = new AddElementRule('entity[x]');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'string' },
+        { type: 'uri' },
+        { type: 'Organization', isReference: true }
+      ];
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.entity[x]');
+      const expectedType1 = new ElementDefinitionType('string');
+      const expectedType2 = new ElementDefinitionType('uri');
+      const expectedType3 = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization'
+      );
+      expect(newElement.type).toStrictEqual([expectedType1, expectedType2, expectedType3]);
+    });
+
+    it('should apply AddElementRule with single Reference targetType', () => {
+      const addElementRule = new AddElementRule('org');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'Organization', isReference: true }];
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.org');
+      const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization'
+      );
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
+    it('should apply AddElementRule with multiple Reference targetType', () => {
+      const addElementRule = new AddElementRule('org');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'Organization', isReference: true },
+        { type: 'Practitioner', isReference: true }
+      ];
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.org');
+      const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization',
+        'http://hl7.org/fhir/StructureDefinition/Practitioner'
+      );
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
     it('should apply AddElementRule with all boolean flags set to true', () => {
       const addElementRule = new AddElementRule('comments');
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
-      addElementRule.mustSupport = true;
       addElementRule.summary = true;
       addElementRule.modifier = true;
+      // MustSupport must be false/undefined for logical models and resources;
+      // otherwise, error will be thrown - tested elsewhere
 
       const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
       newElement.applyAddElementRule(addElementRule, fisher);
 
       expect(newElement.path).toBe('AlternateIdentification.comments');
-      expect(newElement.mustSupport).toBeTrue();
+      expect(newElement.mustSupport).toBeFalsy();
       expect(newElement.isSummary).toBeTrue();
       expect(newElement.isModifier).toBeTrue();
       expect(newElement.extension).toBeUndefined(); // standards flags extensions

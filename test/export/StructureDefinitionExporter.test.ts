@@ -281,6 +281,9 @@ describe('StructureDefinitionExporter', () => {
       const exported = pkg.logicals[0];
       expect(exported.name).toBe('MyPatientModel');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+      // When the parent is defined as Element, the Element.extension values
+      // should not have been brought forward
+      expect(exported.elements[0].extension).toBeUndefined();
     });
 
     it('should create a logical model when the definition specifies another logical model for a parent', () => {
@@ -1049,6 +1052,32 @@ describe('StructureDefinitionExporter', () => {
       const expectedType3 = new ElementDefinitionType('Address');
       expect(prop3.type).toStrictEqual([expectedType3]);
     });
+
+    it('should log an error when MustSupport is true in a logical model', () => {
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const addElementRule = new AddElementRule('prop1')
+        .withFile('MustSupportFlag.fsh')
+        .withLocation([3, 1, 8, 12]);
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'string' }];
+      addElementRule.mustSupport = true;
+      logical.rules.push(addElementRule);
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+
+      expect(exported.elements).toHaveLength(2);
+
+      exported.findElement('MyModel.prop1');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /File: MustSupportFlag\.fsh.*Line: 3 - 8\D*/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/The MustSupport flag is not permitted/s);
+    });
   });
 
   describe('#Resource', () => {
@@ -1311,6 +1340,32 @@ describe('StructureDefinitionExporter', () => {
       const expectedType3 = new ElementDefinitionType('Address');
       expect(prop3.type).toStrictEqual([expectedType3]);
     });
+
+    it('should log an error when MustSupport is true in a resource', () => {
+      const resource = new Resource('MyTestResource');
+      resource.id = 'MyResource';
+
+      const addElementRule = new AddElementRule('prop1')
+        .withFile('MustSupportFlag.fsh')
+        .withLocation([3, 1, 8, 12]);
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'string' }];
+      addElementRule.mustSupport = true;
+      resource.rules.push(addElementRule);
+      doc.resources.set(resource.name, resource);
+
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.elements).toHaveLength(10);
+
+      exported.findElement('MyResource.prop1');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /File: MustSupportFlag\.fsh.*Line: 3 - 8\D*/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/The MustSupport flag is not permitted/s);
+    });
   });
 
   describe('#Rules', () => {
@@ -1413,7 +1468,9 @@ describe('StructureDefinitionExporter', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
-      addElementRule.mustSupport = true;
+      // MustSupport must be false/undefined for logical models and resources;
+      // otherwise, error will be thrown - tested elsewhere
+      addElementRule.mustSupport = false;
       addElementRule.summary = true;
       addElementRule.modifier = true;
 
@@ -1425,7 +1482,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.elements).toHaveLength(2);
 
       const prop1 = exported.findElement('MyModel.prop1');
-      expect(prop1.mustSupport).toBeTrue();
+      expect(prop1.mustSupport).toBeFalsy();
       expect(prop1.isSummary).toBeTrue();
       expect(prop1.isModifier).toBeTrue();
     });

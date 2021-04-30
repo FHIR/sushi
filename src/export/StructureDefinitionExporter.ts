@@ -462,6 +462,16 @@ export class StructureDefinitionExporter implements Fishable {
       elements[0].definition = fshDefinition.description;
     }
 
+    if (
+      fshDefinition.parent === 'Element' ||
+      fshDefinition.parent === 'http://hl7.org/fhir/StructureDefinition/Element'
+    ) {
+      // The FHIR Element StructureDefinition contains extensions related to being
+      // defined as 'normative'. These extensions should not be carried forward in
+      // the new StructureDefinition.
+      delete elements[0].extension;
+    }
+
     structDef.elements = elements;
     structDef.captureOriginalElements();
     // Still need the root element so clear its _original
