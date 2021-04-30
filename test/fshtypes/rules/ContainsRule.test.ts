@@ -17,7 +17,7 @@ describe('ContainsRule', () => {
       const rule = new ContainsRule('component');
       rule.items = [{ name: 'systolic' }];
 
-      expect(rule.toFSH()).toBe('* component contains systolic');
+      expect(rule.toFSH()).toBe('* component contains systolic 0..');
     });
 
     it('should produce FSH for a ContainsRule with one named item', () => {
@@ -25,7 +25,7 @@ describe('ContainsRule', () => {
       const rule = new ContainsRule('component');
       rule.items = [{ name: 'systolic', type: 'SystolicBP' }];
 
-      expect(rule.toFSH()).toBe('* component contains SystolicBP named systolic');
+      expect(rule.toFSH()).toBe('* component contains SystolicBP named systolic 0..');
     });
 
     it('should produce FSH for a ContainsRule with multiple items', () => {
@@ -36,7 +36,7 @@ describe('ContainsRule', () => {
         { name: 'diastolic', type: 'DiastolicBP' }
       ];
 
-      const expectedFSH = `* component contains${EOL}    SystolicBP named systolic and${EOL}    DiastolicBP named diastolic`;
+      const expectedFSH = `* component contains${EOL}    SystolicBP named systolic 0.. and${EOL}    DiastolicBP named diastolic 0..`;
 
       expect(rule.toFSH()).toBe(expectedFSH);
     });

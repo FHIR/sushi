@@ -45,7 +45,7 @@ async function app() {
     .usage('[path-to-fsh-defs] [options]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
-    .option('-p, --preprocessed', 'output FSH produced by pre-processing steps')
+    .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .option('-i, --init', 'initialize a SUSHI project')
     .version(getVersion(), '-v, --version', 'print SUSHI version')

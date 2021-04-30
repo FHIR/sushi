@@ -23,6 +23,9 @@ export class ContainsRule extends Rule {
       } else {
         line += `${item.name}`;
       }
+      // Add a cardinality for syntactic correctness.
+      // A later CardRule on this element should provide the correct cardinality.
+      line += ' 0..';
       return line;
     });
 

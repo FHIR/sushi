@@ -5,7 +5,7 @@ import { FshCode } from '../FshCode';
 import { FshQuantity } from '../FshQuantity';
 import { FshRatio } from '../FshRatio';
 import { FshReference } from '../FshReference';
-import { EOL } from 'os';
+import { fshifyString } from '../common';
 
 export class CaretValueRule extends Rule {
   caretPath: string;
@@ -37,12 +37,10 @@ export class CaretValueRule extends Rule {
     ) {
       value = this.value;
     } else if (typeof this.value === 'string') {
-      value = this.isInstance ? this.value : `"${this.value}"`;
+      value = this.isInstance ? this.value : `"${fshifyString(this.value)}"`;
     } else if (this.value) {
       value = this.value._instanceMeta.name;
     }
-    const lines: string[] = [];
-    lines.push(`* ${this.path !== '' ? this.path + ' ' : ''}^${this.caretPath} = ${value}`);
-    return lines.join(EOL);
+    return `* ${this.path !== '' ? this.path + ' ' : ''}^${this.caretPath} = ${value}`;
   }
 }

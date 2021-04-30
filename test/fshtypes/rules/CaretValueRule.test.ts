@@ -17,9 +17,9 @@ describe('CaretValueRule', () => {
     it('should produce FSH for a CaretValueRule assigning a string', () => {
       const rule = new CaretValueRule('');
       rule.caretPath = 'short';
-      rule.value = 'Important summary';
+      rule.value = 'Important "value" summary';
 
-      expect(rule.toFSH()).toBe('* ^short = "Important summary"');
+      expect(rule.toFSH()).toBe('* ^short = "Important \\"value\\" summary"');
     });
 
     it('should produce FSH for a CaretValueRule assigning an instance', () => {
