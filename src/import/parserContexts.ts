@@ -491,3 +491,7 @@ export interface StarContext extends ParserRuleContext {
 export function containsPathContext(ctx: ParserRuleContext) {
   return (ctx as any).path != null;
 }
+
+export function hasPathRule(ctx: ParserRuleContext) {
+  return (ctx as any).pathRule != null && (ctx as any).pathRule() != null;
+}

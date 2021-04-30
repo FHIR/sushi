@@ -1015,8 +1015,8 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  getPathWithContext(path: string, parentCtx: ParserRuleContext, isPathRule = false) {
-    return this.prependPathContext(path, parentCtx, isPathRule);
+  getPathWithContext(path: string, parentCtx: ParserRuleContext) {
+    return this.prependPathContext(path, parentCtx);
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1493,7 +1493,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitPathRule(ctx: pc.PathRuleContext) {
-    this.getPathWithContext(this.visitPath(ctx.path()), ctx, true);
+    this.getPathWithContext(this.visitPath(ctx.path()), ctx);
   }
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
@@ -1965,10 +1965,9 @@ export class FSHImporter extends FSHVisitor {
    * Given a path and the context containing it, apply the path context indicated by the path's indent
    * @param path - The path to apply context to
    * @param parentCtx - The parent element containing the path
-   * @param isPathRule - Flag to indicate that the path is for a PathRule which is only used to set context
    * @returns {string} - The path with context prepended
    */
-  private prependPathContext(path: string, parentCtx: any, isPathRule: boolean): string {
+  private prependPathContext(path: string, parentCtx: any): string {
     const location = this.extractStartStop(parentCtx);
     const currentIndent = location.startColumn - this.baseIndent;
 
@@ -1998,9 +1997,9 @@ export class FSHImporter extends FSHVisitor {
       return path;
     }
 
-    // If the element is not indented, just reset the context
     // Replace '[+]' with '[=]' in the version of the path to add to pathContext, unless the rule is only used to set a path
-    const newContext = isPathRule ? path : path.replace(/\[\+\]/g, '[=]');
+    const newContext = pc.hasPathRule(parentCtx.parentCtx) ? path : path.replace(/\[\+\]/g, '[=]');
+    // If the element is not indented, just reset the context
     if (contextIndex === 0) {
       this.pathContext = [newContext];
       return path;
@@ -2017,7 +2016,11 @@ export class FSHImporter extends FSHVisitor {
 
     this.pathContext.splice(contextIndex);
     // Once we have used the existing context, clear it of any [+] so that a rule that is only setting path only applies [+] once
-    this.pathContext = this.pathContext.map(pc => pc.replace(/\[\+\]/g, '[=]'));
+    if (this.pathContext.length > 0) {
+      this.pathContext[this.pathContext.length - 1] = this.pathContext[
+        this.pathContext.length - 1
+      ].replace(/\[\+\]/g, '[=]');
+    }
     this.pathContext.push(newContext ? `${currentContext}.${newContext}` : currentContext);
     return path ? `${currentContext}.${path}` : currentContext;
   }
