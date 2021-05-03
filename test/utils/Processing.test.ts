@@ -896,7 +896,17 @@ describe('Processing', () => {
       thirdDoc.invariants.set('inv-1', new Invariant('inv-1').withLocation([222, 0, 224, 9]));
       thirdDoc.ruleSets.set('MyRuleSet', new RuleSet('MyRuleSet').withLocation([33, 0, 39, 15]));
       thirdDoc.mappings.set('MyMapping', new Mapping('MyMapping').withLocation([10, 0, 21, 18]));
-      tank = new FSHTank([firstDoc, secondDoc, thirdDoc], null);
+      const onlyAliases = new FSHDocument(path.join(tempIn, 'extra', 'aliases.fsh'));
+      onlyAliases.aliases.set(
+        'USCoreCondition',
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition'
+      );
+      onlyAliases.aliases.set(
+        'USCoreDiagnosticReportLab',
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab'
+      );
+
+      tank = new FSHTank([firstDoc, secondDoc, thirdDoc, onlyAliases], null);
       writePreprocessedFSH(tempOut, tempIn, tank);
     });
 
@@ -908,6 +918,7 @@ describe('Processing', () => {
       expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'first.fsh')));
       expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'second.fsh')));
       expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'third.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'aliases.fsh')));
     });
 
     it('should write all entities that exist after preprocessing', () => {
@@ -966,6 +977,15 @@ describe('Processing', () => {
       expect(codeSystemLocation).toBeGreaterThan(-1);
       expect(codeSystemLocation).toBeLessThan(instanceLocation);
       expect(instanceLocation).toBeLessThan(valueSetLocation);
+    });
+
+    it('should write a comment for a file with no entities after preprocessing', () => {
+      // A file with only Alias definitions will have no content after preprocessing.
+      const aliasContent = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'aliases.fsh'),
+        'utf-8'
+      );
+      expect(aliasContent).toBe('// This file has no content after preprocessing.');
     });
   });
 

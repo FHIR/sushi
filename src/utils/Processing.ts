@@ -379,6 +379,9 @@ export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTan
       fileContent += `// Originally defined on lines ${entity.sourceInfo.location.startLine} - ${entity.sourceInfo.location.endLine}${EOL}`;
       fileContent += `${entity.toFSH()}${EOL}${EOL}`;
     });
+    if (fileContent.length === 0) {
+      fileContent = '// This file has no content after preprocessing.';
+    }
     const outPath = path.relative(inDir, doc.file);
     fs.ensureFileSync(path.join(preprocessedPath, outPath));
     fs.writeFileSync(path.join(preprocessedPath, outPath), fileContent);
