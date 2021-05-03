@@ -896,17 +896,13 @@ describe('Processing', () => {
       thirdDoc.invariants.set('inv-1', new Invariant('inv-1').withLocation([222, 0, 224, 9]));
       thirdDoc.ruleSets.set('MyRuleSet', new RuleSet('MyRuleSet').withLocation([33, 0, 39, 15]));
       thirdDoc.mappings.set('MyMapping', new Mapping('MyMapping').withLocation([10, 0, 21, 18]));
-      const onlyAliases = new FSHDocument(path.join(tempIn, 'extra', 'aliases.fsh'));
-      onlyAliases.aliases.set(
-        'USCoreCondition',
-        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition'
+      const ruleSetDoc = new FSHDocument(path.join(tempIn, 'extra', 'rulesets.fsh'));
+      ruleSetDoc.ruleSets.set('OneRuleSet', new RuleSet('OneRuleSet').withLocation([8, 0, 18, 35]));
+      ruleSetDoc.ruleSets.set(
+        'TwoRuleSet',
+        new RuleSet('TwoRuleSet').withLocation([20, 0, 35, 21])
       );
-      onlyAliases.aliases.set(
-        'USCoreDiagnosticReportLab',
-        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab'
-      );
-
-      tank = new FSHTank([firstDoc, secondDoc, thirdDoc, onlyAliases], null);
+      tank = new FSHTank([firstDoc, secondDoc, thirdDoc, ruleSetDoc], null);
       writePreprocessedFSH(tempOut, tempIn, tank);
     });
 
@@ -922,19 +918,18 @@ describe('Processing', () => {
     });
 
     it('should write all entities that exist after preprocessing', () => {
-      // first.fsh should contain MyProfile and MyExtension
+      // first.fsh should contain LOINC (an Alias), MyProfile, and MyExtension
       const firstContents = fs.readFileSync(
         path.join(tempOut, '_preprocessed', 'first.fsh'),
         'utf-8'
       );
+      expect(firstContents).toMatch('Alias: LOINC');
       expect(firstContents).toMatch(
         `// Originally defined on lines 3 - 15${EOL}Profile: MyProfile`
       );
       expect(firstContents).toMatch(
         `// Originally defined on lines 17 - 20${EOL}Extension: MyExtension`
       );
-      // Aliases do not exist after preprocessing
-      expect(firstContents).not.toMatch('Alias: LOINC');
       // second.fsh should contain MyCodeSystem, MyInstance, and MyValueSet
       const secondContents = fs.readFileSync(
         path.join(tempOut, '_preprocessed', 'second.fsh'),
@@ -980,12 +975,12 @@ describe('Processing', () => {
     });
 
     it('should write a comment for a file with no entities after preprocessing', () => {
-      // A file with only Alias definitions will have no content after preprocessing.
-      const aliasContent = fs.readFileSync(
-        path.join(tempOut, '_preprocessed', 'extra', 'aliases.fsh'),
+      // A file with only RuleSet definitions will have no content after preprocessing.
+      const ruleSetContent = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'rulesets.fsh'),
         'utf-8'
       );
-      expect(aliasContent).toBe('// This file has no content after preprocessing.');
+      expect(ruleSetContent).toBe('// This file has no content after preprocessing.');
     });
   });
 

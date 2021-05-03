@@ -360,11 +360,20 @@ export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTan
   const preprocessedPath = path.join(outDir, '_preprocessed');
   fs.ensureDirSync(preprocessedPath);
   // Because this is the FSH that exists after processing, some entities from the original FSH are gone.
-  // Specifically, Aliases have already been resolved to their corresponding values, and the insertion
-  // of RuleSets have already been applied.
+  // Specifically, RuleSets have already been applied.
+  // Aliases have already been resolved for most cases, but since they may still
+  // be used in a slice name, they are included.
   // TODO: Add Resources and Logicals once they are being imported and stored in docs
   tank.docs.forEach(doc => {
     let fileContent = '';
+    // First, get all Aliases. They don't have source information.
+    if (doc.aliases.size > 0) {
+      doc.aliases.forEach((url, alias) => {
+        fileContent += `Alias: ${alias} = ${url}${EOL}`;
+      });
+      fileContent += EOL;
+    }
+    // Then, get all other applicable entities. They will have source information.
     const entities = [
       ...doc.profiles.values(),
       ...doc.extensions.values(),
