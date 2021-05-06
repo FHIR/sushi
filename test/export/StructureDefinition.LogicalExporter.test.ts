@@ -6,7 +6,7 @@ import { Logical } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { ContainsRule } from '../../src/fshtypes/rules';
+import { AddElementRule, CardRule, ContainsRule, FlagRule } from '../../src/fshtypes/rules';
 
 describe('LogicalExporter', () => {
   let defs: FHIRDefinitions;
@@ -229,7 +229,76 @@ describe('LogicalExporter', () => {
 
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyModel\.fsh.*Line: 3\D*/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Inline extensions should only be defined in Extensions/s
+      /Use of 'ContainsRule' is not permitted for 'Logical'/s
     );
+  });
+
+  it('should log an error when constraining a parent element', () => {
+    const logical = new Logical('MyTestModel');
+    logical.parent = 'AlternateIdentification';
+    logical.id = 'MyModel';
+
+    const addElementRule1 = new AddElementRule('backboneProp');
+    addElementRule1.min = 0;
+    addElementRule1.max = '*';
+    addElementRule1.types = [{ type: 'BackboneElement' }];
+    addElementRule1.short = 'short of backboneProp';
+    logical.rules.push(addElementRule1);
+
+    const addElementRule2 = new AddElementRule('backboneProp.name');
+    addElementRule2.min = 1;
+    addElementRule2.max = '1';
+    addElementRule2.types = [{ type: 'HumanName' }];
+    addElementRule2.short = 'short of backboneProp.name';
+    logical.rules.push(addElementRule2);
+
+    const addElementRule3 = new AddElementRule('backboneProp.address');
+    addElementRule3.min = 0;
+    addElementRule3.max = '*';
+    addElementRule3.types = [{ type: 'Address' }];
+    addElementRule3.short = 'short of backboneProp.address';
+    logical.rules.push(addElementRule3);
+
+    const flagRule1 = new FlagRule('effectiveTime')
+      .withFile('ConstrainParent.fsh')
+      .withLocation([6, 1, 6, 16]);
+    flagRule1.summary = true;
+    logical.rules.push(flagRule1);
+
+    const cardRule1 = new CardRule('effectiveTime')
+      .withFile('ConstrainParent.fsh')
+      .withLocation([7, 1, 7, 18]);
+    cardRule1.min = 1;
+    cardRule1.max = '1';
+    logical.rules.push(cardRule1);
+
+    const flagRule2 = new FlagRule('backboneProp.address');
+    flagRule2.summary = true;
+    logical.rules.push(flagRule2);
+
+    const cardRule2 = new CardRule('backboneProp.address');
+    cardRule2.min = 1;
+    cardRule2.max = '100';
+    logical.rules.push(cardRule2);
+
+    doc.logicals.set(logical.name, logical);
+
+    const exported = exporter.export().logicals[0];
+
+    const logs = loggerSpy.getAllMessages('error');
+    expect(logs).toHaveLength(2);
+    logs.forEach(log => {
+      expect(log).toMatch(
+        /FHIR prohibits constraining parent elements. Skipping.*at path 'effectiveTime'.*File: ConstrainParent\.fsh.*Line:\D*/s
+      );
+    });
+
+    expect(exported.name).toBe('MyTestModel');
+    expect(exported.id).toBe('MyModel');
+    expect(exported.type).toBe('MyModel');
+    expect(exported.baseDefinition).toBe(
+      'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
+    );
+    expect(exported.elements).toHaveLength(9); // 6 AlternateIdentification elements + 3 added elements
   });
 });

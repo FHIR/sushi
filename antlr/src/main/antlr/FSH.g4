@@ -30,7 +30,7 @@ csMetadata:         id | title | description;
 csRule:             concept | caretValueRule | insertRule;
 
 ruleSet:            KW_RULESET RULESET_REFERENCE ruleSetRule+;
-ruleSetRule:        sdRule | concept | vsComponent;
+ruleSetRule:        sdRule | concept | vsComponent  | addElementRule;
 
 paramRuleSet:       KW_RULESET PARAM_RULESET_REFERENCE paramRuleSetContent;
 paramRuleSetContent:   STAR
@@ -74,7 +74,7 @@ obeysRule:          STAR path? KW_OBEYS name (KW_AND name)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 insertRule:         STAR KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
-addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING? STRING?;
+addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING STRING?;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );

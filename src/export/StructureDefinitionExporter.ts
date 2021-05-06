@@ -7,7 +7,7 @@ import {
   PathPart,
   StructureDefinition
 } from '../fhirtypes';
-import { Extension, Invariant, Logical, Profile, Resource } from '../fshtypes';
+import { Extension, Invariant, isAllowedRule, Logical, Profile, Resource } from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
 import {
@@ -380,28 +380,22 @@ export class StructureDefinitionExporter implements Fishable {
       structDef.kind = 'logical';
     }
     structDef.abstract = false; // always reset to false, assuming most children of abstracts aren't abstract; can be overridden w/ rule
-    // context and contextInvariant only apply to extensions.
-    // keep context, assuming context is still valid for child extensions
-    // keep contextInvariant, assuming context is still valid for child extensions
-    if (!(fshDefinition instanceof Extension)) {
-      // Should not be defined for profiles, logical models, but clear just to be sure
-      delete structDef.context;
-      delete structDef.contextInvariant;
-    }
-    // keep type since this should not change except for logical models or resources
+    structDef.baseDefinition = baseURL;
     if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
       // By definition, the 'type' is the same as the 'id'
       structDef.type = fshDefinition.id;
-    }
-    structDef.baseDefinition = baseURL;
-    if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
       structDef.derivation = 'specialization';
     } else {
+      // keep type since this should not change except for logical models or resources
       // always constraint for profiles/extensions
       structDef.derivation = 'constraint';
     }
 
     if (fshDefinition instanceof Extension) {
+      // context and contextInvariant only apply to extensions.
+      // Keep context, assuming context is still valid for child extensions.
+      // Keep contextInvariant, assuming context is still valid for child extensions.
+
       // Automatically set url.fixedUri on Extensions
       const url = structDef.findElement('Extension.url');
       url.fixedUri = structDef.url;
@@ -417,6 +411,10 @@ export class StructureDefinitionExporter implements Fishable {
           }
         ];
       }
+    } else {
+      // Should not be defined for non-extensions, but clear just to be sure
+      delete structDef.context;
+      delete structDef.contextInvariant;
     }
   }
 
@@ -536,7 +534,33 @@ export class StructureDefinitionExporter implements Fishable {
     ) as SdRule[];
 
     for (const rule of sdRules) {
+      // Specific rules are permitted for each structure definition type
+      // (i.e., Profile, Logical, etc.). Log an error for disallowed rules
+      // and continue to next rule.
+      if (!isAllowedRule(fshDefinition, rule)) {
+        logger.error(
+          `Use of '${rule.constructorName}' is not permitted for '${fshDefinition.constructorName}'. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
+          rule.sourceInfo
+        );
+        continue;
+      }
+
       const element = structDef.findElementByPath(rule.path, this);
+
+      if (element && (fshDefinition instanceof Logical || fshDefinition instanceof Resource)) {
+        // The FHIR spec prohibits constraining any parent element in a 'specialization'
+        // (i.e., logical model and resource), therefore log an error if that is attempted
+        // and continue to the next rule.
+        if (element.path !== element.base.path) {
+          // The AddElementRule always sets the element.base.path to the value of element.path.
+          // All parent elements will have the element.base.path pointing to the parent
+          logger.error(
+            `FHIR prohibits constraining parent elements. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
+            rule.sourceInfo
+          );
+          continue;
+        }
+      }
 
       // CaretValueRules apply to both StructureDefinitions and ElementDefinitions; therefore,
       // rule handling for CaretValueRules must be outside the 'if (element) {...}' code block.
@@ -925,8 +949,6 @@ export class StructureDefinitionExporter implements Fishable {
     this.resetParentElements(structDef, fshDefinition);
     // Reset the original parent's metadata to that for the new StructureDefinition
     this.setMetadata(structDef, fshDefinition);
-    // Apply the AddElementRules to create the new elements before any other processing
-    this.applyAddElementRules(structDef, fshDefinition);
 
     // These are being pushed now in order to allow for
     // incomplete definitions to be used to resolve circular reference issues.
@@ -946,6 +968,8 @@ export class StructureDefinitionExporter implements Fishable {
     }
     // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
+    // Apply the AddElementRules to create the new elements before any other processing
+    this.applyAddElementRules(structDef, fshDefinition);
 
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
@@ -977,7 +1001,7 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   /**
-   * Exports Profiles, Extensions, and Logical models to StructureDefinitions
+   * Exports Profiles, Extensions, Logical models, and Resources to StructureDefinitions
    * @returns {Package}
    */
   export(): Package {

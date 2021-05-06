@@ -672,6 +672,8 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitVsComponent(rule.vsComponent()));
       } else if (rule.concept()) {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
+      } else if (rule.addElementRule()) {
+        ruleSet.rules.push(this.visitAddElementRule(rule.addElementRule()));
       }
     });
   }
@@ -1038,10 +1040,21 @@ export class FSHImporter extends FSHVisitor {
       }
     });
 
-    if (ctx.STRING() && ctx.STRING().length > 0) {
+    if (isEmpty(ctx.STRING())) {
+      logger.error(
+        `The 'short' attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
       addElementRule.short = this.extractString(ctx.STRING()[0]);
       if (ctx.STRING().length > 1) {
         addElementRule.definition = this.extractString(ctx.STRING()[1]);
+      } else {
+        // Default definition to the value of short
+        addElementRule.definition = addElementRule.short;
       }
     }
 

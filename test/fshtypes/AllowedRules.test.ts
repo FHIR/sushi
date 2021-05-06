@@ -83,12 +83,11 @@ describe('isAllowedRule', () => {
     beforeAll(() => {
       l = new Logical('Bar');
     });
+
     it('should allow valid rules on an Logical', () => {
       expect(isAllowedRule(l, new AddElementRule('foo'))).toBeTrue();
       expect(isAllowedRule(l, new CardRule('foo'))).toBeTrue();
       expect(isAllowedRule(l, new CaretValueRule('foo'))).toBeTrue();
-      expect(isAllowedRule(l, new ContainsRule('foo'))).toBeTrue();
-      expect(isAllowedRule(l, new AssignmentRule('foo'))).toBeTrue();
       expect(isAllowedRule(l, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(l, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(l, new OnlyRule('foo'))).toBeTrue();
@@ -100,6 +99,8 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(l, new InsertRule())).toBeFalse();
       expect(isAllowedRule(l, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(l, new ConceptRule('foo'))).toBeFalse();
+      expect(isAllowedRule(l, new ContainsRule('foo'))).toBeFalse();
+      expect(isAllowedRule(l, new AssignmentRule('foo'))).toBeFalse();
     });
   });
 
@@ -108,12 +109,11 @@ describe('isAllowedRule', () => {
     beforeAll(() => {
       r = new Resource('Bar');
     });
+
     it('should allow valid rules on an Resource', () => {
       expect(isAllowedRule(r, new AddElementRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new CardRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new CaretValueRule('foo'))).toBeTrue();
-      expect(isAllowedRule(r, new ContainsRule('foo'))).toBeTrue();
-      expect(isAllowedRule(r, new AssignmentRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new FlagRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ObeysRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new OnlyRule('foo'))).toBeTrue();
@@ -125,6 +125,8 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(r, new InsertRule())).toBeFalse();
       expect(isAllowedRule(r, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(r, new ConceptRule('foo'))).toBeFalse();
+      expect(isAllowedRule(r, new ContainsRule('foo'))).toBeFalse();
+      expect(isAllowedRule(r, new AssignmentRule('foo'))).toBeFalse();
     });
   });
 
@@ -231,7 +233,9 @@ describe('isAllowedRule', () => {
     beforeAll(() => {
       r = new RuleSet('Bar');
     });
+
     it('should allow valid rules on a RuleSet', () => {
+      expect(isAllowedRule(r, new AddElementRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new CardRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new CaretValueRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ContainsRule('foo'))).toBeTrue();

@@ -816,7 +816,7 @@ describe('StructureDefinitionExporter', () => {
   });
 
   describe('#LogicalModel', () => {
-    it('should have the correct baseDefinition of Element when parent is not provided', () => {
+    it('should have the correct baseDefinition of Base when parent is not provided', () => {
       const logical = new Logical('Foo');
       doc.logicals.set(logical.name, logical);
       exporter.exportStructDef(logical);

@@ -11,7 +11,7 @@ export class AddElementRule extends Rule {
   trialUse?: boolean;
   normative?: boolean;
   draft?: boolean;
-  short?: string;
+  short: string;
   definition?: string;
 
   constructor(path: string) {

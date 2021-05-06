@@ -119,6 +119,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   sdRule(): SdRuleContext;
   vsComponent(): VsComponentContext;
   concept(): ConceptContext;
+  addElementRule(): AddElementRuleContext;
 }
 
 export interface ParamRuleSetContext extends ParserRuleContext {

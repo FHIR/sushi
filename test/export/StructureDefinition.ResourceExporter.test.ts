@@ -6,7 +6,7 @@ import { Resource } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { AddElementRule, ContainsRule } from '../../src/fshtypes/rules';
+import { AddElementRule, CardRule, ContainsRule, FlagRule } from '../../src/fshtypes/rules';
 
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
@@ -157,7 +157,74 @@ describe('ResourceExporter', () => {
 
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyResource\.fsh.*Line: 3\D*/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Inline extensions should only be defined in Extensions/s
+      /Use of 'ContainsRule' is not permitted for 'Resource'/s
     );
+  });
+
+  it('should log an error when constraining a parent element', () => {
+    const resource = new Resource('MyTestResource');
+    // Parent defaults to DomainResource
+    resource.id = 'MyResource';
+
+    const addElementRule1 = new AddElementRule('backboneProp');
+    addElementRule1.min = 0;
+    addElementRule1.max = '*';
+    addElementRule1.types = [{ type: 'BackboneElement' }];
+    addElementRule1.short = 'short of backboneProp';
+    resource.rules.push(addElementRule1);
+
+    const addElementRule2 = new AddElementRule('backboneProp.name');
+    addElementRule2.min = 1;
+    addElementRule2.max = '1';
+    addElementRule2.types = [{ type: 'HumanName' }];
+    addElementRule2.short = 'short of backboneProp.name';
+    resource.rules.push(addElementRule2);
+
+    const addElementRule3 = new AddElementRule('backboneProp.address');
+    addElementRule3.min = 0;
+    addElementRule3.max = '*';
+    addElementRule3.types = [{ type: 'Address' }];
+    addElementRule3.short = 'short of backboneProp.address';
+    resource.rules.push(addElementRule3);
+
+    const flagRule1 = new FlagRule('language')
+      .withFile('ConstrainParent.fsh')
+      .withLocation([6, 1, 6, 16]);
+    flagRule1.summary = true;
+    resource.rules.push(flagRule1);
+
+    const cardRule1 = new CardRule('language')
+      .withFile('ConstrainParent.fsh')
+      .withLocation([7, 1, 7, 18]);
+    cardRule1.min = 1;
+    cardRule1.max = '1';
+    resource.rules.push(cardRule1);
+
+    const flagRule2 = new FlagRule('backboneProp.address');
+    flagRule2.summary = true;
+    resource.rules.push(flagRule2);
+
+    const cardRule2 = new CardRule('backboneProp.address');
+    cardRule2.min = 1;
+    cardRule2.max = '100';
+    resource.rules.push(cardRule2);
+
+    doc.resources.set(resource.name, resource);
+
+    const exported = exporter.export().resources[0];
+
+    const logs = loggerSpy.getAllMessages('error');
+    expect(logs).toHaveLength(2);
+    logs.forEach(log => {
+      expect(log).toMatch(
+        /FHIR prohibits constraining parent elements. Skipping.*at path 'language'.*File: ConstrainParent\.fsh.*Line:\D*/s
+      );
+    });
+
+    expect(exported.name).toBe('MyTestResource');
+    expect(exported.id).toBe('MyResource');
+    expect(exported.type).toBe('MyResource');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
+    expect(exported.elements).toHaveLength(12); // 9 AlternateIdentification elements + 3 added elements
   });
 });
