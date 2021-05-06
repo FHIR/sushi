@@ -1974,7 +1974,7 @@ export class FSHImporter extends FSHVisitor {
     if (currentIndent > 0 && this.pathContext.length === 0) {
       logger.error(
         'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
-        location
+        { location, file: this.currentFile }
       );
       return path;
     }
@@ -1982,7 +1982,7 @@ export class FSHImporter extends FSHVisitor {
     if (currentIndent % INDENT_WIDTH !== 0 || currentIndent < 0) {
       logger.error(
         `Unable to determine path context for rule indented ${currentIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
-        location
+        { location, file: this.currentFile }
       );
       return path;
     }
@@ -1992,7 +1992,7 @@ export class FSHImporter extends FSHVisitor {
     if (contextIndex > this.pathContext.length) {
       logger.error(
         `Cannot determine path context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
-        location
+        { location, file: this.currentFile }
       );
       return path;
     }
@@ -2009,7 +2009,7 @@ export class FSHImporter extends FSHVisitor {
     if (currentContext === '') {
       logger.error(
         'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
-        location
+        { location, file: this.currentFile }
       );
       return path;
     }
