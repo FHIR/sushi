@@ -2103,7 +2103,7 @@ export class FSHImporter extends FSHVisitor {
       if (!pc.containsPathContext(ctx) && location.startColumn - this.baseIndent > 0) {
         logger.error(
           'A rule that does not use a path cannot be indented to indicate context. The rule will be processed as if it is not indented.',
-          location
+          { location, file: this.currentFile }
         );
       }
       return location;
