@@ -248,5 +248,19 @@ describe('FSHImporter', () => {
         assertInsertRule(mapping.rules[0], 'MyRuleSet');
       });
     });
+
+    describe('#pathRule', () => {
+      it('should parse a pathRule', () => {
+        const input = `
+        Mapping: MyMapping
+        Source: Patient1
+        Target: http://example.org/target
+        * name
+        `;
+        const result = importSingleText(input, 'Path.fsh');
+        const mapping = result.mappings.get('MyMapping');
+        expect(mapping.rules).toHaveLength(0);
+      });
+    });
   });
 });
