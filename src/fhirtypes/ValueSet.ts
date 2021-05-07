@@ -40,7 +40,6 @@ export class ValueSet {
   purpose: string;
   copyright: string;
   compose: ValueSetCompose;
-  expansion: ValueSetExpansion;
 
   /**
    * Get the file name for serializing to disk.
@@ -95,28 +94,4 @@ export type ValueSetComposeFilter = {
   property: string;
   op: string;
   value: string;
-};
-
-export type ValueSetExpansion = {
-  parameter: ValueSetExpansionParameter[];
-  contains: ValueSetExpansionContains[];
-  timestamp: string;
-  total?: number;
-};
-
-export type ValueSetExpansionContains = ValueSetComposeConcept & {
-  system: string;
-  version?: string;
-  contains?: ValueSetExpansionContains[];
-};
-
-export type ValueSetExpansionParameter = {
-  name: string;
-  valueString?: string;
-  valueBoolean?: boolean;
-  valueInteger?: number;
-  valueDecimal?: number;
-  valueUri?: string;
-  valueCode?: string;
-  valueDateTime?: string;
 };

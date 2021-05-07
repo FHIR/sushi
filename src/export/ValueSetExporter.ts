@@ -2,8 +2,7 @@ import {
   ValueSet,
   ValueSetComposeIncludeOrExclude,
   ValueSetComposeConcept,
-  StructureDefinition,
-  ValueSetExpansionContains
+  StructureDefinition
 } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import { FshValueSet, FshCode, ValueSetFilterValue } from '../fshtypes';
@@ -19,9 +18,6 @@ import {
 } from '../fshtypes/rules';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
-import fromPairs from 'lodash/fromPairs';
-import cloneDeep from 'lodash/cloneDeep';
-import flatMap from 'lodash/flatMap';
 
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
@@ -137,174 +133,6 @@ export class ValueSetExporter {
     }
   }
 
-  private performExpansion(valueSet: ValueSet) {
-    const shouldExpand = valueSet.expansion?.parameter?.some(
-      parameter => parameter.name === 'sushi-generated' && parameter.valueBoolean === true
-    );
-    if (shouldExpand) {
-      const errors: string[] = [];
-      // the compose property must be defined
-      if (!valueSet.compose) {
-        errors.push('No composition defined.');
-      }
-      // filter operators are prohibited
-      const hasFilterOperators = [
-        ...(valueSet.compose?.include ?? []),
-        ...(valueSet.compose?.exclude ?? [])
-      ].some(compose => compose.filter != null);
-      if (hasFilterOperators) {
-        errors.push('Composition contains filter operators.');
-      }
-      // including/excluding value sets are prohibited
-      const usesValueSet = [
-        ...(valueSet.compose?.include ?? []),
-        ...(valueSet.compose?.exclude ?? [])
-      ].some(compose => compose.valueSet?.length);
-      if (usesValueSet) {
-        errors.push('Composition contains other ValueSets.');
-      }
-      // usage of a code system that we can't fish up is prohibited.
-      // the code system's content must be "complete".
-      // if the compose specifies a version, the code system's version must match it.
-      const referencedCodeSystems = fromPairs(
-        [...(valueSet.compose?.include ?? []), ...(valueSet.compose?.exclude ?? [])]
-          .filter(compose => {
-            return !compose.concept?.length && compose.system;
-          })
-          .map(compose => {
-            const fishedCodeSystem = this.fisher.fishForFHIR(compose.system, Type.CodeSystem);
-            if (compose.version == null || compose.version == fishedCodeSystem?.version) {
-              return [compose.system, fishedCodeSystem];
-            } else {
-              return [compose.system, null];
-            }
-          })
-      );
-      const hasUnavailableCodeSystem = Object.values(referencedCodeSystems).some(codeSystem => {
-        return codeSystem?.content !== 'complete';
-      });
-      // if we were able to fish up definitions for all of these systems, we're good
-      if (hasUnavailableCodeSystem) {
-        errors.push('Composition contains CodeSystems without available concept lists.');
-      }
-
-      // what we like best of all is when we just have a list of concepts. they'll even have a system specified already!
-      if (errors.length) {
-        logger.error(`Unable to expand ValueSet ${valueSet.name}:\n  - ${errors.join('\n  - ')}`);
-      } else {
-        valueSet.expansion.contains = [];
-
-        valueSet.compose.include.forEach(compose => {
-          // add specific included codes
-          compose.concept?.forEach(concept => {
-            const containedItem: ValueSetExpansionContains = {
-              system: compose.system,
-              code: concept.code
-            };
-            if (compose.version) {
-              containedItem.version = compose.version;
-            }
-            if (concept.display) {
-              containedItem.display = concept.display;
-            }
-            if (concept.designation) {
-              containedItem.designation = cloneDeep(concept.designation);
-            }
-            // add only if the concept is not already present
-            if (!this.isConceptPresent(containedItem, valueSet.expansion.contains)) {
-              valueSet.expansion.contains.push(containedItem);
-            }
-          });
-          // add known included code systems
-          if (!compose.concept?.length && compose.system) {
-            const codeSystem = referencedCodeSystems[compose.system];
-            const newConcepts = this.getConcepts(codeSystem, codeSystem.concept);
-            // flatten so we can remove each existing concept before adding
-            const existingConceptsFlat = flatMap(valueSet.expansion.contains, extractContained);
-            // remove each existing concept from the set of new concepts, to avoid duplication
-            existingConceptsFlat.forEach(existingConcept => {
-              this.removeConcept(existingConcept, newConcepts);
-            });
-            // add whatever remains
-            valueSet.expansion.contains.push(...newConcepts);
-          }
-        });
-        valueSet.compose.exclude?.forEach(compose => {
-          // remove specific excluded codes
-          compose.concept?.forEach(concept => {
-            this.removeConcept(
-              { system: compose.system, code: concept.code },
-              valueSet.expansion.contains
-            );
-          });
-          // remove known excluded code systems
-          // this is a little unusual to do, but we'll allow it.
-          if (!compose.concept?.length && compose.system) {
-            const codeSystem = referencedCodeSystems[compose.system];
-            const conceptsToRemove = flatMap(this.getConcepts(codeSystem, codeSystem.concept));
-            conceptsToRemove.forEach(concept =>
-              this.removeConcept(concept, valueSet.expansion.contains)
-            );
-          }
-        });
-        // Now that we're done, let's add a timestamp and a total
-        valueSet.expansion.timestamp = new Date().toISOString();
-        valueSet.expansion.total = flatMap(valueSet.expansion.contains, extractContained).length;
-      }
-    }
-  }
-
-  private isConceptPresent(
-    target: ValueSetExpansionContains,
-    concepts: ValueSetExpansionContains[]
-  ): boolean {
-    return concepts.some(
-      concept =>
-        (concept.code === target.code && concept.system === target.system) ||
-        this.isConceptPresent(target, concept.contains ?? [])
-    );
-  }
-
-  private getConcepts(system: any, concepts: any[]): ValueSetExpansionContains[] {
-    return concepts.map(concept => {
-      const contained: ValueSetExpansionContains = {
-        system: system.url,
-        code: concept.code
-      };
-      if (system.version) {
-        contained.version = system.version;
-      }
-      if (concept.display) {
-        contained.display = concept.display;
-      }
-      if (concept.concept?.length > 0) {
-        contained.contains = this.getConcepts(system, concept.concept);
-      }
-      return contained;
-    });
-  }
-
-  private removeConcept(target: ValueSetExpansionContains, concepts: ValueSetExpansionContains[]) {
-    const targetIndex = concepts.findIndex(concept => {
-      return concept.code === target.code && concept.system === target.system;
-    });
-    if (targetIndex > -1) {
-      const [removedConcept] = concepts.splice(targetIndex, 1);
-      if (removedConcept.contains?.length) {
-        concepts.splice(targetIndex, 0, ...removedConcept.contains);
-      }
-    } else {
-      concepts.forEach(concept => {
-        if (concept.contains?.length) {
-          this.removeConcept(target, concept.contains);
-          if (concept.contains.length === 0) {
-            delete concept.contains;
-          }
-        }
-      });
-    }
-  }
-
   export(): Package {
     const valueSets = this.tank.getAllValueSets();
     for (const valueSet of valueSets) {
@@ -341,7 +169,6 @@ export class ValueSetExporter {
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);
     }
-    this.performExpansion(vs);
 
     // check for another value set with the same id
     // see https://www.hl7.org/fhir/resource.html#id
@@ -355,10 +182,4 @@ export class ValueSetExporter {
     this.pkg.valueSets.push(vs);
     return vs;
   }
-}
-
-// If the minimum node version reaches 11 or higher, Array.prototype.flat becomes available
-// and this can be reimplemented without needing lodash.
-function extractContained(c: ValueSetExpansionContains): ValueSetExpansionContains[] {
-  return [{ code: c.code, system: c.system }, ...flatMap(c.contains || [], extractContained)];
 }
