@@ -240,6 +240,19 @@ describe('FSHImporter', () => {
       });
     });
 
+    describe('#pathRule', () => {
+      it('should parse a pathRule', () => {
+        const input = `
+        Instance: PatientProfile
+        InstanceOf: Patient
+        * name
+        `;
+        const result = importSingleText(input, 'Path.fsh');
+        const i = result.instances.get('PatientProfile');
+        expect(i.rules).toHaveLength(0);
+      });
+    });
+
     describe('#insertRule', () => {
       it('should parse an insert rule with a single RuleSet', () => {
         const input = `

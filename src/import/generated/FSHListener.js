@@ -470,6 +470,15 @@ FSHListener.prototype.exitAddElementRule = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#pathRule.
+FSHListener.prototype.enterPathRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#pathRule.
+FSHListener.prototype.exitPathRule = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#vsComponent.
 FSHListener.prototype.enterVsComponent = function(ctx) {
 };

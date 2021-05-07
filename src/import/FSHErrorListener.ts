@@ -81,12 +81,18 @@ export class FSHErrorListener extends ErrorListener {
     }
 
     // * active= true
-    // > no viable alternative at input '* active= true'
+    // > extraneous input 'true'
     // * active =true
-    // > no viable alternative at input '* active =true'
+    // > extraneous input '=active'
     // * active=true
     // > no viable alternative at input '* active=true'
-    else if (/^no viable alternative at input '.*((\S=)|(=\S))/.test(msg)) {
+    // * valueString="My String"
+    // > extraneous input 'String"'
+    else if (
+      /^no viable alternative at input '.*((\S=)|(=\S))/.test(msg) ||
+      (/^extraneous input/.test(msg) && /=/.test(oneTokenBack?.text)) ||
+      (/^extraneous input/.test(msg) && /^=/.test(offendingSymbol?.text))
+    ) {
       message =
         "Assignment rules must include at least one space both before and after the '=' sign";
     }
@@ -145,7 +151,11 @@ export class FSHErrorListener extends ErrorListener {
     // > mismatched input '->\"Patient.identifier\"' expecting '->'
     // * identifier->"Patient.identifier"
     // > mismatched input '<EOF>' expecting '->'
-    else if (/^mismatched input .+ expecting '->'$/.test(msg)) {
+    else if (
+      /^mismatched input .+ expecting '->'$/.test(msg) ||
+      (/^extraneous input/.test(msg) && /->/.test(oneTokenBack?.text)) ||
+      (/^extraneous input/.test(msg) && /^->/.test(offendingSymbol?.text))
+    ) {
       message =
         "Mapping rules must include at least one space both before and after the '->' operator";
       // Need to adjust the location to match the previous token (where '=' is)
@@ -169,7 +179,8 @@ export class FSHErrorListener extends ErrorListener {
     // > extraneous input '*component' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
     // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING}
     else if (/^extraneous input '\*\S/.test(msg)) {
-      message = "Rules must start with a '*' symbol followed by at least one space";
+      message =
+        "Rules must start with a '*' symbol followed by at least one space, and may only be preceded by whitespace";
     }
 
     return { message, location };

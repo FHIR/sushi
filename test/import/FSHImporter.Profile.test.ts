@@ -1958,6 +1958,19 @@ describe('FSHImporter', () => {
       });
     });
 
+    describe('#pathRule', () => {
+      it('should parse a pathRule', () => {
+        const input = `
+        Profile: PatientProfile
+        Parent: Patient
+        * name
+        `;
+        const result = importSingleText(input, 'Path.fsh');
+        const profile = result.profiles.get('PatientProfile');
+        expect(profile.rules).toHaveLength(0);
+      });
+    });
+
     describe('#insertRule', () => {
       let importer: FSHImporter;
 
@@ -2469,7 +2482,7 @@ describe('FSHImporter', () => {
         importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(stats.numError).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Errors parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
+          /Error parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 5/s);
       });
