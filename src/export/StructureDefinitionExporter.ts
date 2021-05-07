@@ -173,7 +173,8 @@ export class StructureDefinitionExporter implements Fishable {
     } else if (
       fshDefinition instanceof Logical &&
       !(
-        parentJson.kind === 'logical' ||
+        (['logical', 'resource'].includes(parentJson.kind) &&
+          parentJson.derivation === 'specialization') ||
         parentJson.type === 'Base' ||
         parentJson.type === 'Element'
       )

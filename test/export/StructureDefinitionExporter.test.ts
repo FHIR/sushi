@@ -394,15 +394,15 @@ describe('StructureDefinitionExporter', () => {
       );
     });
 
-    it('should throw InvalidLogicalParentError when a logical model has a non-logical model for a parent', () => {
-      const logical = new Logical('MyPatientModel');
-      logical.parent = 'Patient';
-      logical.id = 'PatientModel';
+    it('should throw InvalidLogicalParentError when a logical model has a profile for a parent', () => {
+      const logical = new Logical('MyGroupModel');
+      logical.parent = 'actualgroup'; // Profile
+      logical.id = 'GroupModel';
       doc.logicals.set(logical.name, logical);
       expect(() => {
         exporter.exportStructDef(logical);
       }).toThrow(
-        'Parent Patient is not of type Logical or Element or Base, so it is an invalid Parent for Logical MyPatientModel.'
+        'Parent Actual Group is not of type Logical or Resource or Element or Base, so it is an invalid Parent for Logical MyGroupModel.'
       );
     });
 

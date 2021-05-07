@@ -129,13 +129,33 @@ describe('LogicalExporter', () => {
     );
   });
 
+  it('should export a single logical model with a resource parent by id', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'Appointment';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Appointment');
+  });
+
+  it('should export a single logical model with a resource parent by url', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'http://hl7.org/fhir/StructureDefinition/Appointment';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Appointment');
+  });
+
   it('should log an error with source information when the parent is invalid', () => {
     const logical = new Logical('BadParent').withFile('BadParent.fsh').withLocation([2, 9, 4, 23]);
-    logical.parent = 'Basic';
+    logical.parent = 'actualgroup'; // Profile
     doc.logicals.set(logical.name, logical);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadParent\.fsh.*Line: 2 - 4\D*/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/is not of type Logical or Element or Base/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /is not of type Logical or Resource or Element or Base/s
+    );
   });
 
   it('should log an error with source information when the parent is not found', () => {

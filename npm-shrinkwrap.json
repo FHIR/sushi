@@ -3808,11 +3808,11 @@
       "integrity": "sha512-aN3pcx/DSmtyoovUudctc8+6Hl4T+hI9GBBHLjA76jdZl7+b1sgh5g4k+u/GL3dTy1/pnYzKp69FpJ0OicE3Wg=="
     },
     "fhir": {
-      "version": "4.7.9",
-      "resolved": "https://registry.npmjs.org/fhir/-/fhir-4.7.9.tgz",
-      "integrity": "sha512-f8cpFML+/8RxnDLmbsyxB40D0qqPmjrDt7Qa5gBAnyEnhRietAnxRSp7hZ1BeBosnJ24FjfqCh+e1hcp1oEA3A==",
+      "version": "4.8.2",
+      "resolved": "https://registry.npmjs.org/fhir/-/fhir-4.8.2.tgz",
+      "integrity": "sha512-4F29bMxILAxrFaSYMsmCaJ8NcUYfzqMhzCnYJCSYVWctNbf5I7KSXhRBsCkrHUoz7rcFMfuL4gSAziF1Qcz2hQ==",
       "requires": {
-        "lodash": "^4.17.14",
+        "lodash": "^4.17.19",
         "path": "^0.12.7",
         "q": "^1.4.1",
         "randomatic": "^3.1.0",
@@ -3824,7 +3824,7 @@
           "bundled": true
         },
         "lodash": {
-          "version": "4.17.15",
+          "version": "4.17.19",
           "bundled": true
         },
         "path": {
@@ -4377,9 +4377,9 @@
       "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="
     },
     "ini": {
-      "version": "1.3.5",
-      "resolved": "https://registry.npmjs.org/ini/-/ini-1.3.5.tgz",
-      "integrity": "sha512-RZY5huIKCMRWDUqZlEi72f/lmXKMvuszcMBduliQ3nnWbx9X/ZBQO7DijMEYS9EhHBb2qacRUMtC7svLwe0lcw=="
+      "version": "1.3.8",
+      "resolved": "https://registry.npmjs.org/ini/-/ini-1.3.8.tgz",
+      "integrity": "sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew=="
     },
     "inquirer": {
       "version": "7.1.0",
@@ -7007,9 +7007,9 @@
       }
     },
     "lodash": {
-      "version": "4.17.19",
-      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.19.tgz",
-      "integrity": "sha512-JNvd8XER9GQX0v2qJgsaN/mzFCNA5BRe/j8JN9d+tWyGLSodKQHKFicdwNYzWwI3wjRnaKPsGj1XkBjx/F96DQ=="
+      "version": "4.17.21",
+      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz",
+      "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="
     },
     "lodash.memoize": {
       "version": "4.1.2",
@@ -9459,9 +9459,9 @@
       "dev": true
     },
     "y18n": {
-      "version": "4.0.0",
-      "resolved": "https://registry.npmjs.org/y18n/-/y18n-4.0.0.tgz",
-      "integrity": "sha512-r9S/ZyXu/Xu9q1tYlpsLIsa3EeLXXk0VwlxqTcFRfg9EhMW+17kbt9G0NrgCmhGb5vT2hyhJZLfDGx+7+5Uj/w==",
+      "version": "4.0.3",
+      "resolved": "https://registry.npmjs.org/y18n/-/y18n-4.0.3.tgz",
+      "integrity": "sha512-JKhqTOwSrqNA1NY5lSztJ1GrBiUodLMmIZuLiDaMRJ+itFd+ABVE8XBjOvIWL+rSqNDC74LCSFmlb/U4UZ4hJQ==",
       "dev": true
     },
     "yallist": {
