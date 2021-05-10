@@ -1820,14 +1820,11 @@ export class ElementDefinition {
     ) {
       let newElements: ElementDefinition[] = [];
       if (this.contentReference) {
-        // TODO: Implement recursive constraints once the approach is better clarified.
-        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Clarification.20on.20contentReference
-
         // Get the original resource JSON so we unfold unconstrained reference
         const type = this.structDef.type;
         const json = fisher.fishForFHIR(type, Type.Resource);
         const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
-        if (profileJson && this.hasProfileElementExtension(profileJson)) {
+        if (this.hasProfileElementExtension(profileJson)) {
           const def = StructureDefinition.fromJSON(profileJson);
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
@@ -1876,6 +1873,12 @@ export class ElementDefinition {
       if (newElements.length === 0) {
         // If it has a profile, use that, otherwise use the code
         const type = this.type[0].profile?.[0] ?? this.type[0].code;
+        const profileJson = fisher.fishForFHIR(
+          this.structDef.id,
+          Type.Profile,
+          Type.Resource,
+          Type.Extension
+        );
         const json = fisher.fishForFHIR(
           type,
           Type.Resource,
@@ -1883,7 +1886,18 @@ export class ElementDefinition {
           Type.Profile,
           Type.Extension
         );
-        if (json) {
+        const backboneProfile = this.hasProfileElementExtension(profileJson);
+        if (backboneProfile) {
+          const def = StructureDefinition.fromJSON(json);
+          const targetElement = def.findElement(backboneProfile as string);
+          newElements = targetElement?.children().map(e => {
+            const eClone = e.clone();
+            eClone.id = eClone.id.replace(targetElement.id, this.id);
+            eClone.structDef = this.structDef;
+            eClone.captureOriginal();
+            return eClone;
+          });
+        } else if (json) {
           const def = StructureDefinition.fromJSON(json);
           if (def.inProgress) {
             logger.debug(
@@ -1908,25 +1922,44 @@ export class ElementDefinition {
     return [];
   }
 
-  private hasProfileElementExtension(profileJson: any): boolean {
-    const contentRefId = this.getContentReferenceId();
+  /**
+   * Checks a StructureDefinition's differential to determine if the profile element extension has been used on
+   * an element.
+   * @param {Object} profileJson - The json reprsentation of this ElementDefinition's structDef
+   * @returns {boolean | string} If the profile element extension is not found, false if returned. If it is found,
+   * the id of the BackBone Element being profiled is returned.
+   */
+  private hasProfileElementExtension(profileJson: any): boolean | string {
+    if (!profileJson) return false;
+    const elementName = this.getContentReferenceId() || this.id;
     const profileElementExtension =
       'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
     const elementType = profileJson.differential.element.find(
-      (element: any) => element.id === contentRefId
-    ).type[0];
+      (element: any) => element.id === elementName
+    )?.type?.[0];
 
-    if (elementType) {
-      const profileCanonical = elementType.profile[0];
-      const extensionUrl = elementType._profile[0].extension[0].url;
-      const targetElement = elementType._profile[0].extension[0].valueString;
+    if (!elementType) {
+      return false;
+    }
 
+    const profileCanonical = elementType.profile?.[0];
+    let extensionUrl, targetElement: string;
+    if (elementType._profile) {
+      extensionUrl = elementType._profile[0].extension[0].url;
+      targetElement = elementType._profile[0].extension[0].valueString;
+    } else {
+      return false;
+    }
+
+    if (this.contentReference) {
       return (
-        profileCanonical === this.structDef.url &&
+        profileCanonical === this.structDef.id &&
         extensionUrl === profileElementExtension &&
-        targetElement === contentRefId
+        targetElement === elementName
       );
+    } else if (extensionUrl === profileElementExtension && targetElement) {
+      return targetElement;
     } else {
       return false;
     }
