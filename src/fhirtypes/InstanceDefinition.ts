@@ -1,8 +1,8 @@
 import { difference, remove, pull, cloneDeep, isObjectLike } from 'lodash';
 import { Meta } from './specialTypes';
-import { HasId } from './common';
-import { applyMixins } from '../utils';
-import { InstanceUsage } from '../fshtypes';
+import { HasId } from './mixins';
+import { applyMixins } from '../utils/Mixin';
+import { InstanceUsage } from '../fshtypes/InstanceUsage';
 
 /**
  * A class representing a FHIR Instance.

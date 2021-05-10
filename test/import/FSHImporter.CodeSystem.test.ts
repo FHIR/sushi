@@ -1,7 +1,13 @@
 import { importSingleText } from '../testhelpers/importSingleText';
 import { assertCaretValueRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
+import {
+  Rule,
+  CaretValueRule,
+  InsertRule,
+  ConceptRule,
+  CodeCaretValueRule
+} from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
   describe('CodeSystem', () => {
@@ -176,6 +182,7 @@ describe('FSHImporter', () => {
         expect(concept.code).toBe('lion');
         expect(concept.display).toBeUndefined();
         expect(concept.definition).toBeUndefined();
+        expect(concept.hierarchy).toHaveLength(0);
         expect(concept.sourceInfo.location).toEqual({
           startLine: 3,
           startColumn: 9,
@@ -200,6 +207,7 @@ describe('FSHImporter', () => {
         expect(concept.code).toBe('tiger');
         expect(concept.display).toBe('Tiger');
         expect(concept.definition).toBeUndefined();
+        expect(concept.hierarchy).toHaveLength(0);
         expect(concept.sourceInfo.location).toEqual({
           startLine: 3,
           startColumn: 9,
@@ -224,6 +232,7 @@ describe('FSHImporter', () => {
         expect(concept.code).toBe('bear');
         expect(concept.display).toBe('Bear');
         expect(concept.definition).toBe('A member of family Ursidae.');
+        expect(concept.hierarchy).toHaveLength(0);
         expect(concept.sourceInfo.location).toEqual({
           startLine: 3,
           startColumn: 9,
@@ -255,6 +264,7 @@ describe('FSHImporter', () => {
           'about the greatest ape of all.'
         ].join('\n');
         expect(concept.definition).toBe(expectedDefinition);
+        expect(concept.hierarchy).toHaveLength(0);
         expect(concept.sourceInfo.location).toEqual({
           startLine: 3,
           startColumn: 9,
@@ -281,6 +291,7 @@ describe('FSHImporter', () => {
         expect(concept.code).toBe('lion');
         expect(concept.display).toBeUndefined();
         expect(concept.definition).toBeUndefined();
+        expect(concept.hierarchy).toHaveLength(0);
         expect(concept.sourceInfo.location).toEqual({
           startLine: 3,
           startColumn: 9,
@@ -293,6 +304,7 @@ describe('FSHImporter', () => {
         expect(concept.code).toBe('tiger');
         expect(concept.display).toBe('Tiger');
         expect(concept.definition).toBeUndefined();
+        expect(concept.hierarchy).toHaveLength(0);
         expect(concept.sourceInfo.location).toEqual({
           startLine: 4,
           startColumn: 9,
@@ -305,6 +317,7 @@ describe('FSHImporter', () => {
         expect(concept.code).toBe('bear');
         expect(concept.display).toBe('Bear');
         expect(concept.definition).toBe('A member of family Ursidae.');
+        expect(concept.hierarchy).toHaveLength(0);
         expect(concept.sourceInfo.location).toEqual({
           startLine: 5,
           startColumn: 9,
@@ -312,6 +325,56 @@ describe('FSHImporter', () => {
           endColumn: 52
         });
         expect(concept.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a code system with hierarchical codes', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #bear "Bear" "A member of family Ursidae."
+        * #bear #sunbear "Sun bear" "Helarctos malayanus"
+        * #bear #sunbear #ursula "Ursula the sun bear"
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.rules.length).toBe(3);
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        let concept = codeSystem.rules[0] as ConceptRule;
+        expect(concept.code).toBe('bear');
+        expect(concept.display).toBe('Bear');
+        expect(concept.definition).toBe('A member of family Ursidae.');
+        expect(concept.hierarchy).toHaveLength(0);
+        expect(concept.sourceInfo.location).toEqual({
+          startLine: 3,
+          startColumn: 9,
+          endLine: 3,
+          endColumn: 52
+        });
+        expect(codeSystem.rules[1]).toBeInstanceOf(ConceptRule);
+        concept = codeSystem.rules[1] as ConceptRule;
+        expect(concept.code).toBe('sunbear');
+        expect(concept.display).toBe('Sun bear');
+        expect(concept.definition).toBe('Helarctos malayanus');
+        expect(concept.hierarchy).toEqual(['bear']);
+        expect(concept.sourceInfo.location).toEqual({
+          startLine: 4,
+          startColumn: 9,
+          endLine: 4,
+          endColumn: 57
+        });
+        expect(codeSystem.rules[2]).toBeInstanceOf(ConceptRule);
+        concept = codeSystem.rules[2] as ConceptRule;
+        expect(concept.code).toBe('ursula');
+        expect(concept.display).toBe('Ursula the sun bear');
+        expect(concept.definition).toBeUndefined();
+        expect(concept.hierarchy).toEqual(['bear', 'sunbear']);
+        expect(concept.sourceInfo.location).toEqual({
+          startLine: 5,
+          startColumn: 9,
+          endLine: 5,
+          endColumn: 54
+        });
       });
 
       it('should log an error when encountering a duplicate code', () => {
@@ -328,23 +391,40 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
       });
 
+      it('should log an error when encountering a code with an incorrectly defined hierarchy', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #bear "Bear" "A member of family Ursidae."
+        * #bear #sunbear #ursula "Ursula the sun bear"
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.rules.length).toBe(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
+      });
+
       it('should log an error when a concept includes a system declaration', () => {
         const input = `
         CodeSystem: ZOO
         * #goat
         * ZOO#bat
         * CRYPTID#jackalope
+        * ZOO#goat #mountaingoat
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.name).toBe('ZOO');
-        expect(codeSystem.rules.length).toBe(3);
+        expect(codeSystem.rules.length).toBe(4);
         expect((codeSystem.rules[0] as ConceptRule).code).toBe('goat');
         expect((codeSystem.rules[1] as ConceptRule).code).toBe('bat');
         expect((codeSystem.rules[2] as ConceptRule).code).toBe('jackalope');
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 5\D*/s);
+        expect((codeSystem.rules[3] as ConceptRule).code).toBe('mountaingoat');
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 5\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 6\D*/s);
       });
     });
 
@@ -389,6 +469,58 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
+      });
+    });
+
+    describe('#codeCaretValueRule', () => {
+      it('should parse a code system that uses a CodeCaretValueRule on a top-level concept', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #anteater "Anteater"
+        * #anteater ^property[0].valueString = "Their threat pose is really cute."
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        const concept = codeSystem.rules[0] as ConceptRule;
+        expect(concept.code).toBe('anteater');
+        expect(concept.hierarchy).toEqual([]);
+        expect(concept.sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.rules[1]).toBeInstanceOf(CodeCaretValueRule);
+        const codeCaret = codeSystem.rules[1] as CodeCaretValueRule;
+        expect(codeCaret.codePath).toEqual(['anteater']);
+        expect(codeCaret.path).toBe('');
+        expect(codeCaret.caretPath).toBe('property[0].valueString');
+        expect(codeCaret.value).toBe('Their threat pose is really cute.');
+        expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      });
+
+      it('should parse a code system that uses a CodeCaretValueRule on a nested concept', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #anteater "Anteater"
+        * #anteater #northern "Northern tamandua"
+        * #anteater #northern ^property[0].valueString = "They are strong climbers."
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.rules[0]).toBeInstanceOf(ConceptRule);
+        let concept = codeSystem.rules[0] as ConceptRule;
+        expect(concept.code).toBe('anteater');
+        expect(concept.hierarchy).toEqual([]);
+        expect(concept.sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.rules[1]).toBeInstanceOf(ConceptRule);
+        concept = codeSystem.rules[1] as ConceptRule;
+        expect(concept.code).toBe('northern');
+        expect(concept.hierarchy).toEqual(['anteater']);
+        expect(concept.sourceInfo.file).toBe('Zoo.fsh');
+        expect(codeSystem.rules[2]).toBeInstanceOf(CodeCaretValueRule);
+        const codeCaret = codeSystem.rules[2] as CodeCaretValueRule;
+        expect(codeCaret.codePath).toEqual(['anteater', 'northern']);
+        expect(codeCaret.path).toBe('');
+        expect(codeCaret.caretPath).toBe('property[0].valueString');
+        expect(codeCaret.value).toBe('They are strong climbers.');
+        expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
       });
     });
 

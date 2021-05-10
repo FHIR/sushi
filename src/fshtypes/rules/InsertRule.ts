@@ -12,4 +12,17 @@ export class InsertRule extends Rule {
   get constructorName() {
     return 'InsertRule';
   }
+
+  private fshifyParameters(): string {
+    return this.params
+      .map(originalParam => {
+        return originalParam.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/\)/g, '\\)');
+      })
+      .join(', ');
+  }
+
+  toFSH(): string {
+    const paramPart = this.params.length > 0 ? `(${this.fshifyParameters()})` : '';
+    return `* insert ${this.ruleSet}${paramPart}`;
+  }
 }
