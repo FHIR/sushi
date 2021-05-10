@@ -48,6 +48,9 @@ import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
 
+const profileElementExtension =
+  'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+
 export class ElementDefinitionType {
   private _code: string;
   profile?: string[];
@@ -1823,6 +1826,8 @@ export class ElementDefinition {
         // Get the original resource JSON so we unfold unconstrained reference
         const type = this.structDef.type;
         const json = fisher.fishForFHIR(type, Type.Resource);
+        // contentReference elements will not contain a type field, so we must fish for the StructDef and
+        // check the differential
         const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
         if (this.hasProfileElementExtension(profileJson)) {
           const def = StructureDefinition.fromJSON(profileJson);
@@ -1873,12 +1878,6 @@ export class ElementDefinition {
       if (newElements.length === 0) {
         // If it has a profile, use that, otherwise use the code
         const type = this.type[0].profile?.[0] ?? this.type[0].code;
-        const profileJson = fisher.fishForFHIR(
-          this.structDef.id,
-          Type.Profile,
-          Type.Resource,
-          Type.Extension
-        );
         const json = fisher.fishForFHIR(
           type,
           Type.Resource,
@@ -1886,7 +1885,7 @@ export class ElementDefinition {
           Type.Profile,
           Type.Extension
         );
-        const backboneProfile = this.hasProfileElementExtension(profileJson);
+        const backboneProfile = this.hasProfileElementExtension();
         if (backboneProfile) {
           const def = StructureDefinition.fromJSON(json);
           const targetElement = def.findElement(backboneProfile as string);
@@ -1929,15 +1928,18 @@ export class ElementDefinition {
    * @returns {boolean | string} If the profile element extension is not found, false if returned. If it is found,
    * the id of the BackBone Element being profiled is returned.
    */
-  private hasProfileElementExtension(profileJson: any): boolean | string {
-    if (!profileJson) return false;
+  private hasProfileElementExtension(profileJson?: any): boolean | string {
+    // contentReference elements will not contain a type field, so we must check the structDef from the
+    // fisher in order to check for the profile-element extension
+    if (this.contentReference && !profileJson) {
+      return false;
+    }
     const elementName = this.getContentReferenceId() || this.id;
-    const profileElementExtension =
-      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
-    const elementType = profileJson.differential.element.find(
-      (element: any) => element.id === elementName
-    )?.type?.[0];
+    const elementType =
+      this.type?.[0] ||
+      profileJson.differential.element.find((element: any) => element.id === elementName)
+        ?.type?.[0];
 
     if (!elementType) {
       return false;
@@ -1954,7 +1956,7 @@ export class ElementDefinition {
 
     if (this.contentReference) {
       return (
-        profileCanonical === this.structDef.id &&
+        profileCanonical === this.structDef.url &&
         extensionUrl === profileElementExtension &&
         targetElement === elementName
       );
