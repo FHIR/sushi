@@ -2,11 +2,14 @@ import {
   loadFromPath,
   loadDependency,
   loadCustomResources,
-  cleanCachedPackage
+  cleanCachedPackage,
+  loadSupplementalFHIRPackage
 } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { Type } from '../../src/utils';
+import { PackageLoadError } from '../../src/errors';
 import { TestFisher, loggerSpy } from '../testhelpers';
+import * as loadModule from '../../src/fhirdefs/load';
 import path from 'path';
 import fs from 'fs-extra';
 import tar from 'tar';
@@ -478,5 +481,78 @@ describe('#cleanCachedPackage', () => {
     const packagePath = path.join(cachePath, 'sushi-test#current');
     cleanCachedPackage(packagePath);
     expect(renameSpy.mock.calls.length).toBe(0);
+  });
+});
+
+describe('#loadSupplementalFHIRPackage()', () => {
+  let loadDependencySpy: jest.SpyInstance;
+  beforeAll(() => {
+    loadDependencySpy = jest.spyOn(loadModule, 'loadDependency');
+    loadDependencySpy.mockImplementation(
+      async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
+        // the mock loader can find R2, R3, and R5
+        if (/hl7\.fhir\.r(2|3|5).core/.test(packageName)) {
+          FHIRDefs.packages.push(`${packageName}#${version}`);
+          return Promise.resolve(FHIRDefs);
+        } else {
+          throw new PackageLoadError(`${packageName}#${version}`);
+        }
+      }
+    );
+  });
+
+  beforeEach(() => {
+    loggerSpy.reset();
+  });
+
+  afterEach(() => {
+    loadDependencySpy.mockClear();
+  });
+
+  it('should load specified supplemental FHIR version', () => {
+    const defs = new FHIRDefinitions();
+    return loadSupplementalFHIRPackage('hl7.fhir.r3.core#3.0.2', defs).then(() => {
+      expect(loadDependencySpy).toHaveBeenCalledTimes(1);
+      expect(defs.packages.length).toBe(0);
+      expect(defs.supplementalFHIRPackages).toEqual(['hl7.fhir.r3.core#3.0.2']);
+      expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+  });
+
+  it('should load multiple supplemental FHIR versions', () => {
+    const defs = new FHIRDefinitions();
+    const promises = [
+      'hl7.fhir.r2.core#1.0.2',
+      'hl7.fhir.r3.core#3.0.2',
+      'hl7.fhir.r5.core#current'
+    ].map(version => {
+      return loadSupplementalFHIRPackage(version, defs);
+    });
+    return Promise.all(promises).then(() => {
+      expect(loadDependencySpy).toHaveBeenCalledTimes(3);
+      expect(defs.packages.length).toBe(0);
+      expect(defs.supplementalFHIRPackages).toEqual([
+        'hl7.fhir.r2.core#1.0.2',
+        'hl7.fhir.r3.core#3.0.2',
+        'hl7.fhir.r5.core#current'
+      ]);
+      expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+  });
+
+  it('should log an error when it fails to load a FHIR version', () => {
+    const defs = new FHIRDefinitions();
+    // Although the real one should suport R4, the mock loader does not
+    return loadSupplementalFHIRPackage('hl7.fhir.r4.core#4.0.1', defs).then(() => {
+      expect(loadDependencySpy).toHaveBeenCalledTimes(1);
+      expect(defs.packages.length).toBe(0);
+      expect(defs.supplementalFHIRPackages.length).toBe(0);
+      expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Failed to load supplemental FHIR package hl7\.fhir\.r4\.core#4.0.1/s
+      );
+    });
   });
 });

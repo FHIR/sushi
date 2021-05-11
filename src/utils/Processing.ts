@@ -5,7 +5,7 @@ import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { isPlainObject, cloneDeep, padEnd } from 'lodash';
 import { logger } from './FSHLogger';
-import { loadDependency, FHIRDefinitions } from '../fhirdefs';
+import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
   FSHTank,
   RawFSH,
@@ -237,19 +237,6 @@ export async function loadExternalDependencies(
   });
 
   return Promise.all(promises).then(() => {});
-}
-
-export async function loadSupplementalFHIRPackage(
-  fhirPackage: string,
-  defs: FHIRDefinitions
-): Promise<void> {
-  const supplementalDefs = new FHIRDefinitions(true);
-  const [fhirPackageId, fhirPackageVersion] = fhirPackage.split('#');
-  return loadDependency(fhirPackageId, fhirPackageVersion, supplementalDefs)
-    .then(def => defs.addSupplementalFHIRDefinitions(fhirPackage, def))
-    .catch(e => {
-      logger.error(`Failed to load supplemental FHIR package ${fhirPackage}: ${e.message}`);
-    });
 }
 
 export function getRawFSHes(input: string): RawFSH[] {

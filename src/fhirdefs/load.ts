@@ -293,6 +293,33 @@ export function loadFromPath(
 }
 
 /**
+ * Loads a "supplemental" FHIR package other than the primary FHIR version being used. This is
+ * needed to support extensions for converting between versions (e.g., "implied" extensions).
+ * The definitions from the supplemental FHIR package are not loaded into the main set of
+ * definitions, but rather, are loaded into their own private FHIRDefinitions instance accessible
+ * within the primary FHIRDefinitions instance passed into this function.
+ * @param fhirPackage - the FHIR package to load in the format {packageId}#{version}
+ * @param defs - the FHIRDefinitions object to load the supplemental FHIR defs into
+ * @returns Promise<void> promise that always resolves successfully (even if there is an error)
+ */
+export async function loadSupplementalFHIRPackage(
+  fhirPackage: string,
+  defs: FHIRDefinitions
+): Promise<void> {
+  const supplementalDefs = new FHIRDefinitions(true);
+  const [fhirPackageId, fhirPackageVersion] = fhirPackage.split('#');
+  // Testing Hack: Use exports.loadDependency instead of loadDependency so that this function
+  // calls the mocked loadDependency in unit tests.  In normal (non-test) use, this should
+  // have no negative effects.
+  return exports
+    .loadDependency(fhirPackageId, fhirPackageVersion, supplementalDefs)
+    .then((def: FHIRDefinitions) => defs.addSupplementalFHIRDefinitions(fhirPackage, def))
+    .catch((e: Error) => {
+      logger.error(`Failed to load supplemental FHIR package ${fhirPackage}: ${e.message}`);
+    });
+}
+
+/**
  * Takes a date in format YYYYMMDDHHmmss and converts to YYYY-MM-DDTHH:mm:ss
  * @param {string} date - The date to format
  * @returns {string} the formatted date
