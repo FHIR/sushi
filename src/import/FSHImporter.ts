@@ -63,7 +63,6 @@ import {
 } from '../errors';
 import isEmpty from 'lodash/isEmpty';
 import isEqual from 'lodash/isEqual';
-import isNil from 'lodash/isNil';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
 import _min from 'lodash/min';
@@ -1002,7 +1001,7 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
 
     const card = this.parseCard(ctx.CARD().getText(), addElementRule);
-    if (isNil(card.min) || Number.isNaN(card.min)) {
+    if (card.min == null || Number.isNaN(card.min)) {
       logger.error(
         `The 'min' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
         {

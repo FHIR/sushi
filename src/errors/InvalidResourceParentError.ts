@@ -4,7 +4,7 @@ import { SourceInfo } from '../fshtypes';
 export class InvalidResourceParentError extends Error implements WithSource {
   constructor(public childName: string, public parentName: string, public sourceInfo: SourceInfo) {
     super(
-      `Parent ${parentName} is not of type Resource or DomainResource, so it is an invalid Parent for Resource ${childName}.`
+      `Invalid parent ${parentName} specified for resource ${childName}. The parent of a resource must be Resource or DomainResource.`
     );
   }
 }

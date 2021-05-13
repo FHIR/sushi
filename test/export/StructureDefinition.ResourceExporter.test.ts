@@ -126,7 +126,9 @@ describe('ResourceExporter', () => {
     doc.resources.set(resource.name, resource);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadParent\.fsh.*Line: 2 - 4\D*/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/not of type Resource or DomainResource/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The parent of a resource must be Resource or DomainResource./s
+    );
   });
 
   it('should log an error with source information when the parent is not found', () => {
@@ -144,6 +146,7 @@ describe('ResourceExporter', () => {
     addElementRule.min = 0;
     addElementRule.max = '*';
     addElementRule.types = [{ type: 'Extension' }];
+    addElementRule.short = 'short definition';
     resource.rules.push(addElementRule);
     const containsRule = new ContainsRule('myExtension')
       .withFile('MyResource.fsh')
@@ -217,7 +220,7 @@ describe('ResourceExporter', () => {
     expect(logs).toHaveLength(2);
     logs.forEach(log => {
       expect(log).toMatch(
-        /FHIR prohibits constraining parent elements. Skipping.*at path 'language'.*File: ConstrainParent\.fsh.*Line:\D*/s
+        /FHIR prohibits logical models and resources from constraining parent elements. Skipping.*at path 'language'.*File: ConstrainParent\.fsh.*Line:\D*/s
       );
     });
 

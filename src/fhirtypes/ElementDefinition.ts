@@ -6,6 +6,7 @@ import {
   isEmpty,
   isEqual,
   isMatch,
+  uniqWith,
   upperFirst
 } from 'lodash';
 import { minify } from 'html-minifier';
@@ -40,7 +41,9 @@ import {
   TypeNotFoundError,
   ValueAlreadyAssignedError,
   ValueConflictsWithClosedSlicingError,
-  WideningCardinalityError
+  WideningCardinalityError,
+  InvalidChoiceTypeRulePathError,
+  CannotResolvePathError
 } from '../errors';
 import { isReferenceType, setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
 import { Fishable, logger, Metadata, Type } from '../utils';
@@ -424,6 +427,13 @@ export class ElementDefinition {
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
   applyAddElementRule(rule: AddElementRule, fisher: Fishable): void {
+    // Verify the rule path. When adding a new element, a parent will always be defined,
+    // even it the parent element is the root element. If parent is not defined, there
+    // is something wrong with the rule.path value.
+    if (!this.parent()) {
+      throw new CannotResolvePathError(rule.path);
+    }
+
     // The constrainType() method applies a type constraint to an existing
     // ElementDefinition.type. Since this is a new ElementDefinition, it
     // does not yet have a 'type', so we need to assign an "initial" value
@@ -450,7 +460,7 @@ export class ElementDefinition {
     if (isEmpty(rule.definition)) {
       if (!isEmpty(rule.short)) {
         // According to sdf-3 in http://hl7.org/fhir/structuredefinition.html#invs,
-        // definition should be provided. Default it here if possible.
+        // definition should be provided. Default it here.
         this.definition = rule.short;
       }
     } else {
@@ -464,51 +474,57 @@ export class ElementDefinition {
       max: rule.max
     };
 
-    // Add the 'ele-1' constraint attribute
-    this.constraint = [
-      {
-        key: 'ele-1',
-        severity: 'error',
-        human: 'All FHIR elements must have a @value or children',
-        expression: 'hasValue() or (children().count() > id.count())',
-        xpath: '@value|f:*|h:div',
-        source: 'http://hl7.org/fhir/StructureDefinition/Element'
-      }
-    ];
+    // Add the root element's constraints
+    const elementSD = fisher.fishForFHIR('Element', Type.Type);
+    // The root element's constraint does not define the source property
+    // because it is the source. So, we need to add the missing source property.
+    elementSD.snapshot.element[0].constraint.forEach((c: ElementDefinitionConstraint) => {
+      c.source = elementSD.url;
+    });
+    this.constraint = elementSD.snapshot.element[0].constraint;
   }
 
   /**
-   * Define and return the initial ElementDefinition.type from the AddElementRule.
+   * Define and return the initial base ElementDefinition.type from the AddElementRule.
+   * @ref https://github.com/FHIR/sushi/pull/802#discussion_r631300737
    * @param {AddElementRule} rule - specific instance of the rule
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinitionType[]} The element types as defined by the AddElementRule
    * @private
    */
   private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
+    if (rule.types.length > 1 && !rule.path.endsWith('[x]')) {
+      throw new InvalidChoiceTypeRulePathError(rule);
+    }
+
+    let refTypeCnt = 0;
+
     const initialTypes: ElementDefinitionType[] = [];
-    // If there are multiple reference types, only one EDT is created having
-    // one or more targetProfiles for the single reference type
-    let referenceEdt: ElementDefinitionType;
-    const targetProfiles: string[] = [];
     rule.types.forEach(t => {
       if (t.isReference) {
-        referenceEdt = referenceEdt ?? new ElementDefinitionType('Reference');
-        const metadata = fisher.fishForMetadata(t.type, Type.Resource, Type.Profile);
-        if (metadata) {
-          targetProfiles.push(metadata.url);
-        } else {
-          throw new TypeNotFoundError(t.type);
-        }
+        refTypeCnt++;
       } else {
-        const edt = new ElementDefinitionType(t.type);
-        initialTypes.push(edt);
+        const metadata = fisher.fishForMetadata(t.type);
+        initialTypes.push(new ElementDefinitionType(metadata.sdType));
       }
     });
-    if (referenceEdt) {
-      referenceEdt.targetProfile = targetProfiles;
-      initialTypes.push(referenceEdt);
+
+    const finalTypes: ElementDefinitionType[] = uniqWith(initialTypes, isEqual);
+    if (refTypeCnt > 0) {
+      // We only need to capture a single Reference type. The targetProfiles attribute
+      // will contain the URLs for each reference.
+      finalTypes.push(new ElementDefinitionType('Reference'));
     }
-    return initialTypes;
+
+    const refCheckCnt = refTypeCnt > 0 ? refTypeCnt - 1 : 0;
+    if (rule.types.length !== finalTypes.length + refCheckCnt) {
+      logger.warn(
+        `${rule.path} includes duplicate types. Duplicates have been ignored.`,
+        rule.sourceInfo
+      );
+    }
+
+    return finalTypes;
   }
 
   /**

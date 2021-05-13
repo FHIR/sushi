@@ -51,3 +51,5 @@ export * from './NonAbstractParentOfSpecializationError';
 export * from './ValueConflictsWithClosedSlicingError';
 export * from './AssignmentToCodeableReferenceError';
 export * from './InvalidMustSupportError';
+export * from './UnsupportedFshStructureTypeError';
+export * from './InvalidChoiceTypeRulePathError';

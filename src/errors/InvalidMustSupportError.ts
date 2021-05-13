@@ -7,7 +7,7 @@ export class InvalidMustSupportError extends Error implements Annotated {
   ];
   constructor(structDef: string, element: string) {
     super(
-      `The MustSupport flag is not permitted on element ${element} of ${structDef} (allowed only in Profiles).`
+      `The MustSupport flag is not permitted on element ${element} of ${structDef} (allowed only in profiles and extensions).`
     );
   }
 }

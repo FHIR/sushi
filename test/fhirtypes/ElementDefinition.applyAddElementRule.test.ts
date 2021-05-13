@@ -33,14 +33,31 @@ describe('ElementDefinition', () => {
     //       Those methods have their own exhaustive tests in other test suites; therefore,
     //       only minimal tests are provided for those aspects within the AddElementRule.
 
+    it('should throw an error for an invalid AddElementRule path', () => {
+      const addElementRule = new AddElementRule('foo.bar');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'boolean' }];
+      addElementRule.short = 'A bar';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+
+      expect(() => {
+        newElement.applyAddElementRule(addElementRule, fisher);
+      }).toThrow('The element or path you referenced does not exist: foo.bar');
+    });
+
     it('should apply AddElementRule with minimum required attributes', () => {
       const addElementRule = new AddElementRule('comments');
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'provide some comments';
 
       const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
       newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
 
       expect(newElement.path).toBe('AlternateIdentification.comments');
       expect(newElement.min).toBe(0);
@@ -51,8 +68,8 @@ describe('ElementDefinition', () => {
       expect(newElement.mustSupport).toBeUndefined();
       expect(newElement.isSummary).toBeUndefined();
       expect(newElement.extension).toBeUndefined(); // standards flags extensions
-      expect(newElement.short).toBeUndefined();
-      expect(newElement.definition).toBeUndefined();
+      expect(newElement.short).toBe('provide some comments');
+      expect(newElement.definition).toBe('provide some comments');
 
       // NOTE: base attribute should be defined
       expect(newElement.base.path).toBe(newElement.path);
@@ -79,9 +96,12 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'instant' }, { type: 'dateTime' }, { type: 'Period' }];
+      addElementRule.short = 'short definition';
 
       const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
       newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
 
       expect(newElement.path).toBe('AlternateIdentification.created[x]');
       const expectedType1 = new ElementDefinitionType('instant');
@@ -99,9 +119,12 @@ describe('ElementDefinition', () => {
         { type: 'uri' },
         { type: 'Organization', isReference: true }
       ];
+      addElementRule.short = 'short definition';
 
       const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
       newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
 
       expect(newElement.path).toBe('AlternateIdentification.entity[x]');
       const expectedType1 = new ElementDefinitionType('string');
@@ -117,9 +140,12 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'Organization', isReference: true }];
+      addElementRule.short = 'short definition';
 
       const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
       newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
 
       expect(newElement.path).toBe('AlternateIdentification.org');
       const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
@@ -129,22 +155,153 @@ describe('ElementDefinition', () => {
     });
 
     it('should apply AddElementRule with multiple Reference targetType', () => {
-      const addElementRule = new AddElementRule('org');
+      const addElementRule = new AddElementRule('org[x]');
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [
         { type: 'Organization', isReference: true },
         { type: 'Practitioner', isReference: true }
       ];
+      addElementRule.short = 'short definition';
 
       const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
       newElement.applyAddElementRule(addElementRule, fisher);
 
-      expect(newElement.path).toBe('AlternateIdentification.org');
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+
+      expect(newElement.path).toBe('AlternateIdentification.org[x]');
       const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
         'http://hl7.org/fhir/StructureDefinition/Organization',
         'http://hl7.org/fhir/StructureDefinition/Practitioner'
       );
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
+    it('should log a warning when adding duplicate targetTypes', () => {
+      const addElementRule = new AddElementRule('created[x]');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'instant' }, { type: 'instant' }, { type: 'Period' }];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.created[x]');
+      expect(newElement.type).toHaveLength(2);
+      const expectedType1 = new ElementDefinitionType('instant');
+      const expectedType2 = new ElementDefinitionType('Period');
+      expect(newElement.type).toStrictEqual([expectedType1, expectedType2]);
+
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'created[x] includes duplicate types. Duplicates have been ignored.'
+      );
+    });
+
+    it('should not log a duplicate warning when adding multiple Reference targetTypes', () => {
+      const addElementRule = new AddElementRule('prop1[x]');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'string' },
+        { type: 'uri' },
+        { type: 'Organization', isReference: true },
+        { type: 'Practitioner', isReference: true }
+      ];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+
+      expect(newElement.path).toBe('AlternateIdentification.prop1[x]');
+      const expectedType1 = new ElementDefinitionType('string');
+      const expectedType2 = new ElementDefinitionType('uri');
+      const expectedType3 = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization',
+        'http://hl7.org/fhir/StructureDefinition/Practitioner'
+      );
+      expect(newElement.type).toStrictEqual([expectedType1, expectedType2, expectedType3]);
+    });
+
+    it('should throw an error when invalid path for multiple targetTypes', () => {
+      const addElementRule = new AddElementRule('prop1');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'string' }, { type: 'Annotation' }];
+      addElementRule.short = 'prop1 definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+
+      expect(() => {
+        newElement.applyAddElementRule(addElementRule, fisher);
+      }).toThrow(
+        "As a FHIR choice data type, the specified prop1 for AddElementRule must end with '[x]'."
+      );
+    });
+
+    it('should apply AddElementRule with single Profile targetType using the profile id', () => {
+      const addElementRule = new AddElementRule('patient');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'us-core-patient' }];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.patient');
+      const expectedType = new ElementDefinitionType('Patient').withProfiles(
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient'
+      );
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
+    it('should apply AddElementRule with single Profile targetType using the profile name', () => {
+      const addElementRule = new AddElementRule('patient');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'USCorePatientProfile' }];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.patient');
+      const expectedType = new ElementDefinitionType('Patient').withProfiles(
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient'
+      );
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
+    it('should apply AddElementRule with single Logical Model targetType using the model id', () => {
+      const addElementRule = new AddElementRule('serviceModel');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'eLTSSServiceModel' }];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.serviceModel');
+      const expectedType = new ElementDefinitionType('eLTSSServiceModel');
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
+    it('should apply AddElementRule with single Logical Model targetType using the model name', () => {
+      const addElementRule = new AddElementRule('serviceModel');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'ELTSSServiceModel' }];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(newElement.path).toBe('AlternateIdentification.serviceModel');
+      const expectedType = new ElementDefinitionType('eLTSSServiceModel');
       expect(newElement.type).toStrictEqual([expectedType]);
     });
 
@@ -153,6 +310,7 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'short definition';
       addElementRule.summary = true;
       addElementRule.modifier = true;
       // MustSupport must be false/undefined for logical models and resources;
@@ -173,6 +331,7 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'short definition';
       addElementRule.mustSupport = false;
       addElementRule.summary = false;
       addElementRule.modifier = false;
@@ -193,6 +352,7 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'short definition';
       addElementRule.trialUse = true;
       addElementRule.normative = false;
       addElementRule.draft = false;
@@ -214,6 +374,7 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'short definition';
       addElementRule.trialUse = false;
       addElementRule.normative = true;
       addElementRule.draft = false;
@@ -235,6 +396,7 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'short definition';
       addElementRule.trialUse = false;
       addElementRule.normative = false;
       addElementRule.draft = true;
@@ -256,6 +418,7 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'short definition';
       addElementRule.trialUse = false;
       addElementRule.normative = false;
       addElementRule.draft = false;
@@ -273,6 +436,7 @@ describe('ElementDefinition', () => {
       addElementRule.min = 0;
       addElementRule.max = '1';
       addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'short definition';
       addElementRule.trialUse = true;
       addElementRule.normative = true;
       addElementRule.draft = true;
@@ -298,12 +462,6 @@ describe('ElementDefinition', () => {
       addElementRule2.types = [{ type: 'string' }];
       addElementRule2.short = 'short description for prop2';
 
-      const addElementRule3 = new AddElementRule('prop3');
-      addElementRule3.min = 0;
-      addElementRule3.max = '1';
-      addElementRule3.types = [{ type: 'string' }];
-      addElementRule3.definition = 'definition for prop3';
-
       const newElement1: ElementDefinition = alternateIdentification.newElement(
         addElementRule1.path
       );
@@ -322,15 +480,6 @@ describe('ElementDefinition', () => {
       expect(newElement2.short).toBe(addElementRule2.short);
       // definition gets defaulted to short
       expect(newElement2.definition).toBe(addElementRule2.short);
-
-      const newElement3: ElementDefinition = alternateIdentification.newElement(
-        addElementRule3.path
-      );
-      newElement3.applyAddElementRule(addElementRule3, fisher);
-
-      expect(newElement3.path).toBe('AlternateIdentification.prop3');
-      expect(newElement3.short).toBeUndefined();
-      expect(newElement3.definition).toBe(addElementRule3.definition);
     });
   });
 });

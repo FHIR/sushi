@@ -192,6 +192,9 @@ export class IGExporter {
         code: 'autoload-resources',
         value: 'false'
       });
+      logger.info(
+        'The autoload-resources parameter has been set to false because this implementation guide contains custom resources.'
+      );
     }
     // add dependencies
     if (this.config.dependencies?.length) {

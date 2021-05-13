@@ -154,7 +154,7 @@ describe('LogicalExporter', () => {
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadParent\.fsh.*Line: 2 - 4\D*/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /is not of type Logical or Resource or Element or Base/s
+      /The parent of a logical model must be Element, Base, another logical model, or a resource./s
     );
   });
 
@@ -309,7 +309,7 @@ describe('LogicalExporter', () => {
     expect(logs).toHaveLength(2);
     logs.forEach(log => {
       expect(log).toMatch(
-        /FHIR prohibits constraining parent elements. Skipping.*at path 'effectiveTime'.*File: ConstrainParent\.fsh.*Line:\D*/s
+        /FHIR prohibits logical models and resources from constraining parent elements. Skipping.*at path 'effectiveTime'.*File: ConstrainParent\.fsh.*Line:\D*/s
       );
     });
 
