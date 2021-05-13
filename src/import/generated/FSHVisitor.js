@@ -324,6 +324,12 @@ FSHVisitor.prototype.visitAddElementRule = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#pathRule.
+FSHVisitor.prototype.visitPathRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#vsComponent.
 FSHVisitor.prototype.visitVsComponent = function(ctx) {
   return this.visitChildren(ctx);
