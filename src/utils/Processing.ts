@@ -226,7 +226,7 @@ export async function loadExternalDependencies(
         );
       }
       logger.info(
-        `Loading supplemental version of FHIR to support virtual extensions package: ${dep.packageId}`
+        `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
       );
       return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {

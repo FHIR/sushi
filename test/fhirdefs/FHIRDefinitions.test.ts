@@ -121,7 +121,7 @@ describe('FHIRDefinitions', () => {
       );
       expect(patientAnimalExtensionDSTU2).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension: http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Patient\.animal\./
+        /The extension http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Patient\.animal requires/
       );
     });
 

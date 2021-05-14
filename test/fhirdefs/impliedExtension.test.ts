@@ -80,7 +80,7 @@ describe('impliedExtensions', () => {
         )
       ).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension \(http:\/\/hl7\.org\/fhir\/StructureDefinition\/extension-MissingVersion\) .* pattern .*/
+        /Unsupported extension URL: http:\/\/hl7\.org\/fhir\/StructureDefinition\/extension-MissingVersion\./
       );
     });
 
@@ -92,7 +92,7 @@ describe('impliedExtensions', () => {
         )
       ).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension \(http:\/\/hl7\.org\/fhir\/2\.0\/StructureDefinition\/extension-Patient\.animal\) .* pattern .*/
+        /Unsupported extension URL: http:\/\/hl7\.org\/fhir\/2\.0\/StructureDefinition\/extension-Patient\.animal\./
       );
     });
 
@@ -104,7 +104,7 @@ describe('impliedExtensions', () => {
         )
       ).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension \(http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-MedicationRequest\.status\) .* MedicationRequest .*/
+        /Cannot process extension \(http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-MedicationRequest\.status\) .* MedicationRequest .*/
       );
     });
 
@@ -116,7 +116,7 @@ describe('impliedExtensions', () => {
         )
       ).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension \(http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-ValueSet\.happiness\) .* ValueSet.happiness .* ValueSet/
+        /Cannot process extension \(http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-ValueSet\.happiness\) .* ValueSet.happiness .* ValueSet/
       );
     });
 
@@ -128,7 +128,7 @@ describe('impliedExtensions', () => {
         )
       ).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension \(http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Bundle\.entry\.resource\) .* Resource/
+        /Cannot process extension \(http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Bundle\.entry\.resource\) .* Resource/
       );
     });
 
@@ -1320,7 +1320,7 @@ describe('impliedExtensions', () => {
       expect(snapValue).toMatchObject(diffValue);
 
       expect(loggerSpy.getAllMessages('warn')).toEqual([
-        'Implied extension (http://hl7.org/fhir/1.0/StructureDefinition/extension-DiagnosticReport.imagingStudy) ' +
+        'Definition of extension (http://hl7.org/fhir/1.0/StructureDefinition/extension-DiagnosticReport.imagingStudy) ' +
           'is incomplete since the following type has no equivalent in FHIR 4.0.1: ' +
           'http://hl7.org/fhir/StructureDefinition/ImagingObjectSelection.'
       ]);
@@ -1358,7 +1358,7 @@ describe('impliedExtensions', () => {
         )
       ).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot materialize implied extension: http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal\.species\.\n.*\n.*hl7\.fhir\.extensions\.r3: 4\.6\.0/
+        /The extension http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal\.species requires .*\n.*hl7\.fhir\.extensions\.r3: 4\.6\.0/
       );
     });
 
@@ -1476,7 +1476,7 @@ describe('impliedExtensions', () => {
       expect(snapExtValueURL).toMatchObject(diffExtValueURL);
 
       expect(loggerSpy.getLastMessage('warn')).toEqual(
-        'Implied extension (http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.timestamp) ' +
+        'Definition of extension (http://hl7.org/fhir/4.0/StructureDefinition/extension-Bundle.timestamp) ' +
           'is incomplete because Extension.extension:value causes sub-extension recursion.'
       );
     });
