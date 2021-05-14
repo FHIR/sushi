@@ -388,10 +388,11 @@ describe('IGExporter', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation).toEqual({
         reference: { reference: 'StructureDefinition/sample-observation' },
         name: 'ConfiguredSampleObservation',
@@ -411,10 +412,11 @@ describe('IGExporter', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation).toBeUndefined();
     });
 
@@ -430,10 +432,11 @@ describe('IGExporter', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const configOnlyObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/config-only-observation'
-      );
+      const configOnlyObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/config-only-observation'
+        );
       expect(configOnlyObservation).toEqual({
         reference: {
           reference: 'StructureDefinition/config-only-observation'
@@ -507,15 +510,17 @@ describe('IGExporter', () => {
           r?.reference?.reference === 'StructureDefinition/sample-patient'
       );
       expect(samplePatient.groupingId).toBe('MyPatientGroup');
-      const examplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'Patient/patient-example'
-      );
+      const examplePatient: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'Patient/patient-example'
+        );
       expect(examplePatient.groupingId).toBe('MyPatientGroup');
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation.groupingId).toBe('MyObservationGroup');
     });
 

@@ -103,8 +103,7 @@ describe('#loadDependency()', () => {
               repo: 'HL7/US-Core-R4/branches/newbranch/qa.json'
             },
             {
-              url:
-                'http://hl7.org/fhir/sushi-test-no-download/ImplementationGuide/sushi-test-no-download-0.1.0',
+              url: 'http://hl7.org/fhir/sushi-test-no-download/ImplementationGuide/sushi-test-no-download-0.1.0',
               name: 'sushi-test-no-download',
               'package-id': 'sushi-test-no-download',
               'ig-ver': '0.1.0',

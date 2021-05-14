@@ -30,7 +30,8 @@ import { logger, Type } from '../utils';
 import { ElementDefinition, ElementDefinitionType, StructureDefinition } from '../fhirtypes';
 import { FHIRDefinitions } from '../fhirdefs';
 
-export const IMPLIED_EXTENSION_REGEX = /^http:\/\/hl7\.org\/fhir\/([1345]\.0)\/StructureDefinition\/extension-(([^./]+)\..+)$/;
+export const IMPLIED_EXTENSION_REGEX =
+  /^http:\/\/hl7\.org\/fhir\/([1345]\.0)\/StructureDefinition\/extension-(([^./]+)\..+)$/;
 
 // This map represents the relationship from the version part of the extension URL to the FHIR package
 const VERSION_TO_PACKAGE_MAP: { [key: string]: string } = {

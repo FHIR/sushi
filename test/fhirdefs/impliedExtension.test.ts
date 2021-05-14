@@ -709,8 +709,7 @@ describe('impliedExtensions', () => {
       expect(ext).toMatchObject({
         resourceType: 'StructureDefinition',
         id: 'extension-MedicationRequest.informationSource',
-        url:
-          'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.informationSource',
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.informationSource',
         version: '4.6.0',
         name: 'Extension_MedicationRequest_informationSource',
         title: 'Implied extension for MedicationRequest.informationSource',
@@ -1170,8 +1169,7 @@ describe('impliedExtensions', () => {
       expect(ext).toMatchObject({
         resourceType: 'StructureDefinition',
         id: 'extension-MedicationAdministration.prescription',
-        url:
-          'http://hl7.org/fhir/1.0/StructureDefinition/extension-MedicationAdministration.prescription',
+        url: 'http://hl7.org/fhir/1.0/StructureDefinition/extension-MedicationAdministration.prescription',
         version: '1.0.2',
         name: 'Extension_MedicationAdministration_prescription',
         title: 'Implied extension for MedicationAdministration.prescription',
