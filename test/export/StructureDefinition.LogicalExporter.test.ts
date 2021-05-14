@@ -129,6 +129,24 @@ describe('LogicalExporter', () => {
     );
   });
 
+  it('should export a single logical model with a complex-type parent by id', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'Address';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Address');
+  });
+
+  it('should export a single logical model with a complex-type parent by url', () => {
+    const logical = new Logical('Foo');
+    logical.parent = 'http://hl7.org/fhir/StructureDefinition/Address';
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Address');
+  });
+
   it('should export a single logical model with a resource parent by id', () => {
     const logical = new Logical('Foo');
     logical.parent = 'Appointment';

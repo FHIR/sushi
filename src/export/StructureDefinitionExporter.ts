@@ -96,7 +96,7 @@ export class StructureDefinitionExporter implements Fishable {
     if (fshDefinition instanceof Extension) {
       possibleParentTypes = [Type.Extension];
     } else if (fshDefinition instanceof Logical) {
-      possibleParentTypes = [Type.Logical, Type.Resource];
+      possibleParentTypes = [Type.Logical, Type.Resource, Type.Type];
     } else if (fshDefinition instanceof Resource) {
       possibleParentTypes = [Type.Resource];
     } else if (fshDefinition instanceof Profile) {
@@ -171,14 +171,13 @@ export class StructureDefinitionExporter implements Fishable {
     } else if (
       fshDefinition instanceof Logical &&
       !(
-        (['logical', 'resource'].includes(parentJson.kind) &&
+        (['logical', 'resource', 'complex-type'].includes(parentJson.kind) &&
           parentJson.derivation === 'specialization') ||
-        parentJson.type === 'Base' ||
-        parentJson.type === 'Element'
+        ['Base', 'Element'].includes(parentJson.type)
       )
     ) {
-      // A logical model can only have another logical model or a resource as a parent
-      // or it can have the Base or Element resource as a parent
+      // A logical model can only have another logical model, a resource, or a complex-type
+      // as a parent or it can have the Base or Element resource as a parent
       throw new InvalidLogicalParentError(
         fshDefinition.name,
         parentJson.name,
