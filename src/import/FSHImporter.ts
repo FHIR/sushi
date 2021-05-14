@@ -139,6 +139,7 @@ export class FSHImporter extends FSHVisitor {
   paramRuleSets: Map<string, ParamRuleSet>;
   private topLevelParse: boolean;
   private pathContext: string[];
+  private codePathContext: string[][];
   private baseIndent: number;
 
   constructor() {
@@ -238,8 +239,9 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    // Reset the pathContext and baseIndent level for each entity
+    // Reset the pathContext, codePathContext, and baseIndent level for each entity
     this.pathContext = [];
+    this.codePathContext = [];
     this.baseIndent = this.extractStartStop(ctx).startColumn;
 
     if (ctx.profile()) {
@@ -986,16 +988,6 @@ export class FSHImporter extends FSHVisitor {
       return this.visitConcept(ctx.concept());
     } else if (ctx.codeCaretValueRule()) {
       return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
-    } else if (ctx.caretValueRule()) {
-      const rule = this.visitCaretValueRule(ctx.caretValueRule());
-      if (rule.path) {
-        logger.error(
-          'Caret rule on CodeSystem cannot contain path before ^, skipping rule.',
-          rule.sourceInfo
-        );
-      } else {
-        return rule;
-      }
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
     }
@@ -1024,6 +1016,10 @@ export class FSHImporter extends FSHVisitor {
 
   getPathWithContext(path: string, parentCtx: ParserRuleContext) {
     return this.prependPathContext(path, parentCtx);
+  }
+
+  getCodePathWithContext(codePath: string[], parentCtx: ParserRuleContext) {
+    return this.prependCodePathContext(codePath, parentCtx);
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1255,15 +1251,22 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitConcept(ctx: pc.ConceptContext): ConceptRule {
-    const allCodes = ctx.CODE().map(codeCtx => this.parseCodeLexeme(codeCtx.getText(), codeCtx));
+    const localCodePath = ctx
+      .CODE()
+      .map(codeCtx => this.parseCodeLexeme(codeCtx.getText(), codeCtx));
     // the last code in allCodes is the one we are actually defining.
     // the rest are the hierarchy, which may be empty.
-    const codePart = allCodes.slice(-1)[0];
+    // indentation may also be used to define the hierarchy, which is what the code path with context is for.
+    const fullCodePath = this.getCodePathWithContext(
+      localCodePath.map(localCode => localCode.code),
+      ctx
+    );
+    const codePart = localCodePath.slice(-1)[0];
     const availableStrings = ctx.STRING().map(strCtx => this.extractString(strCtx));
     const concept = new ConceptRule(codePart.code)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    concept.hierarchy = allCodes.slice(0, -1).map(code => code.code);
+    concept.hierarchy = fullCodePath.slice(0, -1);
     if (availableStrings.length > 0) {
       concept.display = availableStrings[0];
     }
@@ -1272,7 +1275,7 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.MULTILINE_STRING()) {
       concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
-    if (allCodes.some(listedConcept => listedConcept.system)) {
+    if (localCodePath.some(listedConcept => listedConcept.system)) {
       logger.error(
         'Do not include the system when listing concepts for a code system.',
         concept.sourceInfo
@@ -1496,19 +1499,27 @@ export class FSHImporter extends FSHVisitor {
     return caretValueRule;
   }
 
-  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CodeCaretValueRule {
-    const codePath = ctx.CODE().map(code => {
-      return this.parseCodeLexeme(code.getText(), ctx).code;
-    });
-    const codeCaretValueRule = new CodeCaretValueRule(codePath)
+  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CaretValueRule | CodeCaretValueRule {
+    const localCodePath = ctx.CODE()
+      ? ctx.CODE().map(code => {
+          return this.parseCodeLexeme(code.getText(), ctx).code;
+        })
+      : [];
+    const fullCodePath = this.getCodePathWithContext(localCodePath, ctx);
+    // If there is a code path, use it to make a CodeCaretValueRule.
+    // Otherwise, make a CaretValueRule.
+    const caretRule = (fullCodePath.length > 0
+      ? new CodeCaretValueRule(fullCodePath)
+      : new CaretValueRule('')
+    )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     // Get the caret path, but slice off the starting ^
-    codeCaretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
-    codeCaretValueRule.value = this.visitValue(ctx.value());
-    codeCaretValueRule.isInstance =
+    caretRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
+    caretRule.value = this.visitValue(ctx.value());
+    caretRule.isInstance =
       ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
-    return codeCaretValueRule;
+    return caretRule;
   }
 
   visitObeysRule(ctx: pc.ObeysRuleContext): ObeysRule[] {
@@ -2057,6 +2068,67 @@ export class FSHImporter extends FSHVisitor {
     return path ? `${currentContext}.${path}` : currentContext;
   }
 
+  /**
+   * Given a code path and the context containing it, apply the code path context indicated by the code path's indent
+   * @param codePath - The code path to apply context to
+   * @param parentCtx - The parent element containing the code path
+   * @returns {string[]} - The code path with context prepended
+   */
+  private prependCodePathContext(codePath: string[], parentCtx: ParserRuleContext): string[] {
+    const location = this.extractStartStop(parentCtx);
+    const currentIndent = location.startColumn - this.baseIndent;
+
+    if (currentIndent > 0 && this.codePathContext.length === 0) {
+      logger.error(
+        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
+        { location, file: this.currentFile }
+      );
+      return codePath;
+    }
+
+    if (currentIndent % INDENT_WIDTH !== 0 || currentIndent < 0) {
+      logger.error(
+        `Unable to determine code path context for rule indented ${currentIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
+        { location, file: this.currentFile }
+      );
+      return codePath;
+    }
+
+    // And we require that rules are not indented too deeply
+    const contextIndex = currentIndent / INDENT_WIDTH;
+    if (contextIndex > this.codePathContext.length) {
+      logger.error(
+        `Cannot determine code path context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
+        { location, file: this.currentFile }
+      );
+      return codePath;
+    }
+
+    // A PathRule can set a path, but there's no equivalent for a code path.
+    // And, there's no need to check for soft indexing either.
+    // If there's no indent, use the codePath as-is, and make it the only available context.
+    if (contextIndex === 0) {
+      this.codePathContext = [codePath];
+      return codePath;
+    }
+    // Otherwise, get the context based on the indent level.
+    const currentContext = this.codePathContext[contextIndex - 1];
+    if (currentContext.length === 0) {
+      logger.error(
+        'Rule cannot be indented below rule which has no code path. The rule will be processed as if it is not indented.',
+        { location, file: this.currentFile }
+      );
+      return codePath;
+    }
+
+    // Trim out-of-scope contexts
+    this.codePathContext.splice(contextIndex);
+    const fullCodePath = currentContext.concat(codePath);
+    this.codePathContext.push(fullCodePath);
+
+    return fullCodePath;
+  }
+
   private extractString(stringCtx: ParserRuleContext): string {
     const str = stringCtx?.getText() ?? '""'; // default to empty string if stringCtx is null
     const strNoQuotes = str.slice(1, str.length - 1); // Strip surrounding quotes
@@ -2132,7 +2204,10 @@ export class FSHImporter extends FSHVisitor {
         endLine: ctx.stop.line,
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
-      if (!pc.containsPathContext(ctx) && location.startColumn - this.baseIndent > 0) {
+      if (
+        !(pc.containsPathContext(ctx) || pc.containsCodePathContext(ctx)) &&
+        location.startColumn - this.baseIndent > 0
+      ) {
         logger.error(
           'A rule that does not use a path cannot be indented to indicate context. The rule will be processed as if it is not indented.',
           { location, file: this.currentFile }
