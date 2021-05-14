@@ -12,6 +12,7 @@ import {
   assertValueSetFilterComponent
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
+import { CodeCaretValueRule } from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
   beforeEach(() => {
@@ -490,28 +491,6 @@ describe('FSHImporter', () => {
       assertInsertRule(instance.rules[1], 'Bar');
     });
 
-    it('should log an error when a ConceptRule is indented', () => {
-      const input = `
-        CodeSystem: Foo
-        * #101
-          * #102
-      `;
-
-      const result = importSingleText(input, 'Context.fsh');
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /rule that does not use a path cannot be indented/
-      );
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      expect(result.codeSystems.size).toBe(1);
-      const cs = result.codeSystems.get('Foo');
-      expect(cs.name).toBe('Foo');
-      expect(cs.rules.length).toBe(2);
-      assertConceptRule(cs.rules[0], '101', undefined, undefined, []);
-      // rule is not assigned any context
-      assertConceptRule(cs.rules[1], '102', undefined, undefined, []);
-    });
-
     it('should log an error when a ValueSetFilterComponentRule is indented', () => {
       const input = `
         ValueSet: Foo
@@ -559,6 +538,94 @@ describe('FSHImporter', () => {
           .withLocation([4, 13, 4, 34])
           .withFile('Context.fsh')
       ]);
+    });
+  });
+
+  describe('code context', () => {
+    it('should parse a code system with indented hierarchical rules', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #bear "Bear" "A member of family Ursidae."
+        * #sunbear "Sun bear" "Helarctos malayanus"
+          * #ursula "Ursula the sun bear"
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.codeSystems.size).toBe(1);
+      const codeSystem = result.codeSystems.get('ZOO');
+      expect(codeSystem.name).toBe('ZOO');
+      expect(codeSystem.rules.length).toBe(3);
+      assertConceptRule(codeSystem.rules[0], 'bear', 'Bear', 'A member of family Ursidae.', []);
+      expect(codeSystem.rules[0].sourceInfo.location).toEqual({
+        startLine: 3,
+        startColumn: 7,
+        endLine: 3,
+        endColumn: 50
+      });
+      assertConceptRule(codeSystem.rules[1], 'sunbear', 'Sun bear', 'Helarctos malayanus', [
+        'bear'
+      ]);
+      expect(codeSystem.rules[1].sourceInfo.location).toEqual({
+        startLine: 4,
+        startColumn: 9,
+        endLine: 4,
+        endColumn: 51
+      });
+      assertConceptRule(codeSystem.rules[2], 'ursula', 'Ursula the sun bear', undefined, [
+        'bear',
+        'sunbear'
+      ]);
+      expect(codeSystem.rules[2].sourceInfo.location).toEqual({
+        startLine: 5,
+        startColumn: 11,
+        endLine: 5,
+        endColumn: 41
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a code system that uses an indented CodeCaretValueRule on a top-level concept', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * ^property[0].valueString = "Their threat pose is really cute."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      expect(codeSystem.rules[1]).toBeInstanceOf(CodeCaretValueRule);
+      const codeCaret = codeSystem.rules[1] as CodeCaretValueRule;
+      expect(codeCaret.codePath).toEqual(['anteater']);
+      expect(codeCaret.path).toBe('');
+      expect(codeCaret.caretPath).toBe('property[0].valueString');
+      expect(codeCaret.value).toBe('Their threat pose is really cute.');
+      expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a code system that uses an indented CodeCaretValueRule on a nested concept', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * #northern "Northern tamandua"
+          * ^property[0].valueString = "They are strong climbers."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+      expect(codeSystem.rules[2]).toBeInstanceOf(CodeCaretValueRule);
+      const codeCaret = codeSystem.rules[2] as CodeCaretValueRule;
+      expect(codeCaret.codePath).toEqual(['anteater', 'northern']);
+      expect(codeCaret.path).toBe('');
+      expect(codeCaret.caretPath).toBe('property[0].valueString');
+      expect(codeCaret.value).toBe('They are strong climbers.');
+      expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 });
