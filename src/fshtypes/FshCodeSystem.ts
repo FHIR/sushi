@@ -27,8 +27,22 @@ export class FshCodeSystem extends FshEntity {
   }
 
   addConcept(newConcept: ConceptRule) {
-    if (this.rules.find(rule => rule instanceof ConceptRule && rule.code == newConcept.code)) {
-      throw new CodeSystemDuplicateCodeError(this.id, newConcept.code);
+    const existingConcept = this.rules.find(
+      rule => rule instanceof ConceptRule && rule.code == newConcept.code
+    ) as ConceptRule;
+    if (existingConcept) {
+      // if the new ConceptRule has only a code and a hierarchy,
+      // and the existing ConceptRule with that code has a matching hierarchy,
+      // the user may simply be referencing the existing concept to establish context.
+      if (
+        newConcept.display == null &&
+        newConcept.definition == null &&
+        isEqual(existingConcept.hierarchy, newConcept.hierarchy)
+      ) {
+        return;
+      } else {
+        throw new CodeSystemDuplicateCodeError(this.id, newConcept.code);
+      }
     }
     // check the hierarchy, if applicable
     // for each predecessor element in the new concept's hierarchy, we should be able to find a rule that

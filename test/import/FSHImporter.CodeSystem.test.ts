@@ -345,8 +345,8 @@ describe('FSHImporter', () => {
       it('should log an error when encountering a duplicate code', () => {
         const input = `
         CodeSystem: ZOO
-        * #goat
-        * #goat
+        * #goat "A goat"
+        * #goat "Another goat?"
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
@@ -354,6 +354,20 @@ describe('FSHImporter', () => {
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
+      });
+
+      it('should not log an error when encountering a duplicate code if the new code has no display or definition', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #goat "A goat"
+        * #goat
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.rules.length).toBe(1);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should log an error when encountering a code with an incorrectly defined hierarchy', () => {
