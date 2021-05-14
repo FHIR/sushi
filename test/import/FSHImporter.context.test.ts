@@ -627,5 +627,69 @@ describe('FSHImporter', () => {
       expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
+
+    it('should allow code path context to be set by referencing an existing top-level code', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * #northern "Northern tamandua"
+          * ^property[0].valueString = "They are strong climbers."
+      * #anteater
+        * ^property[0].valueString = "Their threat pose is really cute."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      expect(codeSystem.rules).toHaveLength(4);
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+      expect(codeSystem.rules[2]).toBeInstanceOf(CodeCaretValueRule);
+      const northernCodeCaret = codeSystem.rules[2] as CodeCaretValueRule;
+      expect(northernCodeCaret.codePath).toEqual(['anteater', 'northern']);
+      expect(northernCodeCaret.path).toBe('');
+      expect(northernCodeCaret.caretPath).toBe('property[0].valueString');
+      expect(northernCodeCaret.value).toBe('They are strong climbers.');
+      expect(northernCodeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      const anteaterCodeCaret = codeSystem.rules[3] as CodeCaretValueRule;
+      expect(anteaterCodeCaret.codePath).toEqual(['anteater']);
+      expect(anteaterCodeCaret.path).toBe('');
+      expect(anteaterCodeCaret.caretPath).toBe('property[0].valueString');
+      expect(anteaterCodeCaret.value).toBe('Their threat pose is really cute.');
+      expect(anteaterCodeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should allow code path context to be set by referencing an existing nested code', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * #northern "Northern tamandua"
+        * #southern "Southern tamandua"
+      * #anteater #northern
+        * ^property[0].valueString = "They are strong climbers."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      expect(codeSystem.rules).toHaveLength(4);
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[2], 'southern', 'Southern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      const northernCodeCaret = codeSystem.rules[3] as CodeCaretValueRule;
+      expect(northernCodeCaret.codePath).toEqual(['anteater', 'northern']);
+      expect(northernCodeCaret.path).toBe('');
+      expect(northernCodeCaret.caretPath).toBe('property[0].valueString');
+      expect(northernCodeCaret.value).toBe('They are strong climbers.');
+      expect(northernCodeCaret.sourceInfo.file).toBe('Zoo.fsh');
+    });
   });
 });
