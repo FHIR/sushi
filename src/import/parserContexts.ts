@@ -1,4 +1,5 @@
 import { ParserRuleContext } from 'antlr4';
+import { TerminalNode } from 'antlr4/tree/Tree';
 
 export interface DocContext extends ParserRuleContext {
   entity(): EntityContext[];
@@ -60,6 +61,7 @@ export interface InstanceMetadataContext extends ParserRuleContext {
 export interface InstanceRuleContext extends ParserRuleContext {
   fixedValueRule(): FixedValueRuleContext;
   insertRule(): InsertRuleContext;
+  pathRule(): PathRuleContext;
 }
 
 export interface ValueSetContext extends ParserRuleContext {
@@ -94,6 +96,7 @@ export interface CsMetadataContext extends ParserRuleContext {
 export interface CsRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   caretValueRule(): CaretValueRuleContext;
+  codeCaretValueRule(): CodeCaretValueRuleContext;
   insertRule(): InsertRuleContext;
 }
 
@@ -118,6 +121,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   sdRule(): SdRuleContext;
   vsComponent(): VsComponentContext;
   concept(): ConceptContext;
+  codeCaretValueRule(): CodeCaretValueRuleContext;
 }
 
 export interface ParamRuleSetContext extends ParserRuleContext {
@@ -146,6 +150,7 @@ export interface MappingMetadataContext extends ParserRuleContext {
 export interface MappingEntityRuleContext extends ParserRuleContext {
   mappingRule(): MappingRuleContext;
   insertRule(): InsertRuleContext;
+  pathRule(): PathRuleContext;
 }
 
 export interface LogicalContext extends ParserRuleContext {
@@ -225,6 +230,7 @@ export interface SdRuleContext extends ParserRuleContext {
   obeysRule(): ObeysRuleContext;
   caretValueRule(): CaretValueRuleContext;
   insertRule(): InsertRuleContext;
+  pathRule(): PathRuleContext;
 }
 
 // NameContext can be so many things, but we really only care about its text,
@@ -245,12 +251,14 @@ export interface PathsContext extends ParserRuleContext {
 }
 
 export interface CardRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   CARD(): ParserRuleContext;
   flag(): FlagContext[];
 }
 
 export interface FlagRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext[];
   paths(): PathsContext;
   flag(): FlagContext[];
@@ -266,6 +274,7 @@ export interface FlagContext extends ParserRuleContext {
 }
 
 export interface ValueSetRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   name(): NameContext;
   strength(): StrengthContext;
@@ -280,6 +289,7 @@ export interface StrengthContext extends ParserRuleContext {
 }
 
 export interface FixedValueRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   value(): ValueContext;
   KW_UNITS(): ParserRuleContext;
@@ -307,8 +317,9 @@ export interface CodeContext extends ParserRuleContext {
 }
 
 export interface ConceptContext extends ParserRuleContext {
-  code(): CodeContext;
-  STRING(): ParserRuleContext;
+  STAR(): ParserRuleContext;
+  CODE(): ParserRuleContext[];
+  STRING(): ParserRuleContext[];
   MULTILINE_STRING(): ParserRuleContext;
 }
 
@@ -343,6 +354,7 @@ export interface BoolContext extends ParserRuleContext {
 }
 
 export interface ContainsRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   item(): ItemContext[];
 }
@@ -355,6 +367,7 @@ export interface ItemContext extends ParserRuleContext {
 }
 
 export interface OnlyRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   targetType(): TargetTypeContext[];
 }
@@ -365,17 +378,26 @@ export interface TargetTypeContext extends ParserRuleContext {
 }
 
 export interface ObeysRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   name(): NameContext[];
 }
 
 export interface CaretValueRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   caretPath(): CaretPathContext;
   value(): ValueContext;
 }
 
+export interface CodeCaretValueRuleContext extends ParserRuleContext {
+  CODE(): ParserRuleContext[];
+  caretPath(): CaretPathContext;
+  value(): ValueContext;
+}
+
 export interface InsertRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   RULESET_REFERENCE(): ParserRuleContext;
   PARAM_RULESET_REFERENCE(): ParserRuleContext;
 }
@@ -387,12 +409,19 @@ export interface InsertRuleParamsContext extends ParserRuleContext {
 }
 
 export interface MappingRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   STRING(): ParserRuleContext[];
   CODE(): ParserRuleContext;
 }
 
+export interface PathRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
+  path(): PathContext;
+}
+
 export interface AddElementRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   path(): PathContext;
   CARD(): ParserRuleContext;
   flag(): FlagContext[];
@@ -401,6 +430,7 @@ export interface AddElementRuleContext extends ParserRuleContext {
 }
 
 export interface VsComponentContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
   KW_EXCLUDE(): ParserRuleContext;
   vsConceptComponent(): VsConceptComponentContext;
   vsFilterComponent(): VsFilterComponentContext;
@@ -457,4 +487,19 @@ export interface VsFilterValueContext extends ParserRuleContext {
   KW_FALSE(): ParserRuleContext;
   REGEX(): ParserRuleContext;
   STRING(): ParserRuleContext;
+}
+
+export function isStarContext(ctx: ParserRuleContext): ctx is StarContext {
+  return (ctx as any).STAR != null;
+}
+export interface StarContext extends ParserRuleContext {
+  STAR(): ParserRuleContext & TerminalNode;
+}
+
+export function containsPathContext(ctx: ParserRuleContext) {
+  return (ctx as any).path != null;
+}
+
+export function hasPathRule(ctx: ParserRuleContext) {
+  return (ctx as any).pathRule != null && (ctx as any).pathRule() != null;
 }

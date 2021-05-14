@@ -3,8 +3,8 @@ import { exportFHIR, Package, FHIRExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
-import { Instance, Profile, FshCodeSystem, FshValueSet } from '../../src/fshtypes';
-import { CaretValueRule, ConceptRule, ValueSetFilterComponentRule } from '../../src/fshtypes/rules';
+import { Instance, Profile } from '../../src/fshtypes';
+import { CaretValueRule } from '../../src/fshtypes/rules';
 import { TestFisher, loggerSpy } from '../testhelpers';
 
 describe('FHIRExporter', () => {
@@ -126,52 +126,6 @@ describe('FHIRExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Could not find a resource named oops-no-resource/s
       );
-    });
-
-    it('should allow a value set to be expanded when it refers to an exported code system', () => {
-      // CodeSystem: DessertCodes
-      // * #cake "Cake"
-      // * #icecream "Ice Cream"
-      const codeSystem = new FshCodeSystem('DessertCodes');
-      codeSystem.rules.push(
-        new ConceptRule('cake', 'Cake'),
-        new ConceptRule('icecream', 'Ice Cream')
-      );
-      doc.codeSystems.set(codeSystem.name, codeSystem);
-      // ValueSet: MyValueSet
-      // * ^expansion.parameter.name = "sushi-generated"
-      // * ^expansion.parameter.valueBoolean = true
-      // * include codes from DessertCodes
-      const valueSet = new FshValueSet('MyValueSet');
-      const expansionName = new CaretValueRule('');
-      expansionName.caretPath = 'expansion.parameter.name';
-      expansionName.value = 'sushi-generated';
-      const expansionValue = new CaretValueRule('');
-      expansionValue.caretPath = 'expansion.parameter.valueBoolean';
-      expansionValue.value = true;
-      valueSet.rules.push(expansionName, expansionValue);
-      const includeAllergy = new ValueSetFilterComponentRule(true);
-      includeAllergy.from.system = 'DessertCodes';
-      valueSet.rules.push(includeAllergy);
-      doc.valueSets.set(valueSet.name, valueSet);
-
-      const result = exporter.export();
-      expect(result.valueSets).toHaveLength(1);
-      const expansion = result.valueSets[0].expansion.contains;
-      expect(expansion).toHaveLength(2);
-      expect(expansion).toContainEqual({
-        code: 'cake',
-        display: 'Cake',
-        system: 'http://hl7.org/fhir/us/minimal/CodeSystem/DessertCodes',
-        version: '1.0.0'
-      });
-      expect(expansion).toContainEqual({
-        code: 'icecream',
-        display: 'Ice Cream',
-        system: 'http://hl7.org/fhir/us/minimal/CodeSystem/DessertCodes',
-        version: '1.0.0'
-      });
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 });

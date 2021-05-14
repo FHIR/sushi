@@ -7,17 +7,17 @@ import { FshRatio } from '../FshRatio';
 import { FshReference } from '../FshReference';
 import { fshifyString } from '../common';
 
-export class CaretValueRule extends Rule {
+export class CodeCaretValueRule extends Rule {
   caretPath: string;
   value: AssignmentValueType;
   isInstance: boolean;
 
-  constructor(path: string) {
-    super(path);
+  constructor(public readonly codePath: string[]) {
+    super('');
   }
 
   get constructorName() {
-    return 'CaretValueRule';
+    return 'CodeCaretValueRule';
   }
 
   toFSH(): string {
@@ -41,6 +41,7 @@ export class CaretValueRule extends Rule {
     } else if (this.value) {
       value = this.value._instanceMeta.name;
     }
-    return `* ${this.path !== '' ? this.path + ' ' : ''}^${this.caretPath} = ${value}`;
+    const printablePath = this.codePath.map(code => `#${code}`).join(' ');
+    return `* ${printablePath} ^${this.caretPath} = ${value}`;
   }
 }

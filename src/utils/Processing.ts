@@ -3,7 +3,8 @@ import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
-import { isPlainObject, cloneDeep, padEnd } from 'lodash';
+import { isPlainObject, cloneDeep, padEnd, sortBy } from 'lodash';
+import { EOL } from 'os';
 import { logger } from './FSHLogger';
 import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
@@ -374,6 +375,48 @@ export function writeFHIRResources(
   writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
+}
+
+export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTank) {
+  const preprocessedPath = path.join(outDir, '_preprocessed');
+  fs.ensureDirSync(preprocessedPath);
+  // Because this is the FSH that exists after processing, some entities from the original FSH are gone.
+  // Specifically, RuleSets have already been applied.
+  // Aliases have already been resolved for most cases, but since they may still
+  // be used in a slice name, they are included.
+  // TODO: Add Resources and Logicals once they are being imported and stored in docs
+  tank.docs.forEach(doc => {
+    let fileContent = '';
+    // First, get all Aliases. They don't have source information.
+    if (doc.aliases.size > 0) {
+      doc.aliases.forEach((url, alias) => {
+        fileContent += `Alias: ${alias} = ${url}${EOL}`;
+      });
+      fileContent += EOL;
+    }
+    // Then, get all other applicable entities. They will have source information.
+    const entities = [
+      ...doc.profiles.values(),
+      ...doc.extensions.values(),
+      ...doc.instances.values(),
+      ...doc.valueSets.values(),
+      ...doc.codeSystems.values(),
+      ...doc.invariants.values(),
+      ...doc.mappings.values()
+    ];
+    // Sort entities by original line number, then write them out.
+    sortBy(entities, 'sourceInfo.location.startLine').forEach(entity => {
+      fileContent += `// Originally defined on lines ${entity.sourceInfo.location.startLine} - ${entity.sourceInfo.location.endLine}${EOL}`;
+      fileContent += `${entity.toFSH()}${EOL}${EOL}`;
+    });
+    if (fileContent.length === 0) {
+      fileContent = '// This file has no content after preprocessing.';
+    }
+    const outPath = path.relative(inDir, doc.file);
+    fs.ensureFileSync(path.join(preprocessedPath, outPath));
+    fs.writeFileSync(path.join(preprocessedPath, outPath), fileContent);
+  });
+  logger.info(`Wrote preprocessed FSH to ${preprocessedPath}`);
 }
 
 /**

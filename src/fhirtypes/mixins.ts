@@ -1,5 +1,5 @@
+import { SourceInfo } from '../fshtypes/FshEntity';
 import { logger } from '../utils';
-import { SourceInfo } from '../fshtypes';
 import { FHIRId, idRegex } from './primitiveTypes';
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;

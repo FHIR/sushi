@@ -10,4 +10,8 @@ export class ObeysRule extends Rule {
   get constructorName() {
     return 'ObeysRule';
   }
+
+  toFSH(): string {
+    return `* ${this.path === '.' ? '' : `${this.path} `}obeys ${this.invariant}`;
+  }
 }

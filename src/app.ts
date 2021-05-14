@@ -24,6 +24,7 @@ import {
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
+  writePreprocessedFSH,
   getRawFSHes,
   init,
   getRandomPun
@@ -44,6 +45,7 @@ async function app() {
     .usage('[path-to-fsh-defs] [options]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
+    .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .option('-i, --init', 'initialize a SUSHI project')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
@@ -80,6 +82,9 @@ async function app() {
   logger.info('Arguments:');
   if (program.debug) {
     logger.info('  --debug');
+  }
+  if (program.preprocessed) {
+    logger.info('  --preprocessed');
   }
   if (program.snapshot) {
     logger.info('  --snapshot');
@@ -168,6 +173,11 @@ async function app() {
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
   writeFHIRResources(outDir, outPackage, defs, program.snapshot, isIgPubContext);
+
+  if (program.preprocessed) {
+    logger.info('Writing preprocessed FSH...');
+    writePreprocessedFSH(outDir, input, tank);
+  }
 
   // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
   if (config.FSHOnly) {

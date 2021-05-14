@@ -12,15 +12,16 @@ import {
   InvalidResourceTypeError,
   InvalidTypeAccessError
 } from '../errors';
-import { HasName, HasId } from './mixins';
 import {
   getArrayIndex,
   setPropertyOnDefinitionInstance,
   isInheritedResource,
   isExtension
 } from './common';
+import { HasName, HasId } from './mixins';
 import { Fishable, Type } from '../utils/Fishable';
-import { applyMixins, parseFSHPath, assembleFSHPath } from '../utils';
+import { applyMixins } from '../utils/Mixin';
+import { parseFSHPath, assembleFSHPath } from '../utils/PathUtils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { isUri } from 'valid-url';
 

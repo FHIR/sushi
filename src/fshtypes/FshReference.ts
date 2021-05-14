@@ -1,5 +1,5 @@
 import { FshEntity } from './FshEntity';
-import { Reference } from '../fhirtypes';
+import { Reference } from '../fhirtypes/dataTypes';
 
 export class FshReference extends FshEntity {
   public sdType: string;

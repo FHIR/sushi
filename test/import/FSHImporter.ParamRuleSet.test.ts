@@ -23,7 +23,8 @@ describe('FSHImporter', () => {
       const result = importer.paramRuleSets.get('MyRuleSet');
       expect(result.name).toBe('MyRuleSet');
       expect(result.parameters).toEqual(['system', 'strength']);
-      const expectedContents = `* code from {system} {strength}
+      const expectedContents = `
+        * code from {system} {strength}
         * pig from egg`;
       expect(result.contents).toBe(expectedContents);
     });
@@ -59,7 +60,8 @@ describe('FSHImporter', () => {
       const result = importer.paramRuleSets.get('MyRuleSet');
       expect(result.name).toBe('MyRuleSet');
       expect(result.parameters).toEqual(['system', 'strength']);
-      const expectedContents = `* code from {system} {strength}
+      const expectedContents = `
+        * code from {system} {strength}
         * pig from egg`;
       expect(result.contents).toBe(expectedContents);
     });
@@ -85,7 +87,8 @@ describe('FSHImporter', () => {
       const result = importer.paramRuleSets.get('MyRuleSet');
       expect(result.name).toBe('MyRuleSet');
       expect(result.parameters).toEqual(['system', 'strength']);
-      const expectedContents = `* code from http://example.org/{system}/info.html {strength}
+      const expectedContents = `
+        * code from http://example.org/{system}/info.html {strength}
         * pig from egg`;
       expect(result.contents).toBe(expectedContents);
     });
@@ -109,7 +112,8 @@ describe('FSHImporter', () => {
       const result = importer.paramRuleSets.get('MyRuleSet');
       expect(result.name).toBe('MyRuleSet');
       expect(result.parameters).toEqual(['system', 'strength']);
-      const expectedContents = `* code from http://example.org/{system}/info.html {strength}
+      const expectedContents = `
+        * code from http://example.org/{system}/info.html {strength}
         * pig from egg`;
       expect(result.contents).toBe(expectedContents);
       expect(loggerSpy.getLastMessage('error')).toMatch(/RuleSet named MyRuleSet already exists/s);

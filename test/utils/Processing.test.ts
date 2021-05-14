@@ -16,7 +16,8 @@ import {
   hasFshFiles,
   writeFHIRResources,
   init,
-  checkNullValuesOnArray
+  checkNullValuesOnArray,
+  writePreprocessedFSH
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -24,6 +25,18 @@ import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
+import { FSHTank, FSHDocument } from '../../src/import';
+import {
+  Profile,
+  Extension,
+  Instance,
+  FshValueSet,
+  FshCodeSystem,
+  Invariant,
+  RuleSet,
+  Mapping
+} from '../../src/fshtypes';
+import { EOL } from 'os';
 describe('Processing', () => {
   temp.track();
 
@@ -909,6 +922,126 @@ describe('Processing', () => {
       it('should write an info message with the number of instances exported', () => {
         expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
       });
+    });
+  });
+
+  describe('#writePreprocessedFSH', () => {
+    let tank: FSHTank;
+    let tempIn: string;
+    let tempOut: string;
+
+    beforeAll(() => {
+      tempIn = temp.mkdirSync('input-dir');
+      tempOut = temp.mkdirSync('output-dir');
+      const firstDoc = new FSHDocument(path.join(tempIn, 'first.fsh'));
+      firstDoc.aliases.set('LOINC', 'http://loinc.org');
+      firstDoc.profiles.set('MyProfile', new Profile('MyProfile').withLocation([3, 0, 15, 7]));
+      firstDoc.extensions.set(
+        'MyExtension',
+        new Extension('MyExtension').withLocation([17, 0, 20, 8])
+      );
+      const secondDoc = new FSHDocument(path.join(tempIn, 'second.fsh'));
+      secondDoc.instances.set(
+        'MyInstance',
+        new Instance('MyInstance').withLocation([20, 0, 25, 5])
+      );
+      secondDoc.valueSets.set(
+        'MyValueSet',
+        new FshValueSet('MyValueSet').withLocation([30, 0, 35, 9])
+      );
+      secondDoc.codeSystems.set(
+        'MyCodeSystem',
+        new FshCodeSystem('MyCodeSystem').withLocation([10, 0, 15, 18])
+      );
+      const thirdDoc = new FSHDocument(path.join(tempIn, 'extra', 'third.fsh'));
+      thirdDoc.invariants.set('inv-1', new Invariant('inv-1').withLocation([222, 0, 224, 9]));
+      thirdDoc.ruleSets.set('MyRuleSet', new RuleSet('MyRuleSet').withLocation([33, 0, 39, 15]));
+      thirdDoc.mappings.set('MyMapping', new Mapping('MyMapping').withLocation([10, 0, 21, 18]));
+      const ruleSetDoc = new FSHDocument(path.join(tempIn, 'extra', 'rulesets.fsh'));
+      ruleSetDoc.ruleSets.set('OneRuleSet', new RuleSet('OneRuleSet').withLocation([8, 0, 18, 35]));
+      ruleSetDoc.ruleSets.set(
+        'TwoRuleSet',
+        new RuleSet('TwoRuleSet').withLocation([20, 0, 35, 21])
+      );
+      tank = new FSHTank([firstDoc, secondDoc, thirdDoc, ruleSetDoc], null);
+      writePreprocessedFSH(tempOut, tempIn, tank);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should produce files in a structure that mirrors the input', () => {
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'first.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'second.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'third.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'aliases.fsh')));
+    });
+
+    it('should write all entities that exist after preprocessing', () => {
+      // first.fsh should contain LOINC (an Alias), MyProfile, and MyExtension
+      const firstContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'first.fsh'),
+        'utf-8'
+      );
+      expect(firstContents).toMatch('Alias: LOINC');
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 3 - 15${EOL}Profile: MyProfile`
+      );
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 17 - 20${EOL}Extension: MyExtension`
+      );
+      // second.fsh should contain MyCodeSystem, MyInstance, and MyValueSet
+      const secondContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'second.fsh'),
+        'utf-8'
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 10 - 15${EOL}CodeSystem: MyCodeSystem`
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 20 - 25${EOL}Instance: MyInstance`
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 30 - 35${EOL}ValueSet: MyValueSet`
+      );
+      // third.fsh should contain MyMapping and inv-1
+      const thirdContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'third.fsh'),
+        'utf-8'
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 10 - 21${EOL}Mapping: MyMapping`
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 222 - 224${EOL}Invariant: inv-1`
+      );
+      // RuleSets do not exist after preprocessing
+      expect(thirdContents).not.toMatch('RuleSet: MyRuleSet');
+    });
+
+    it('should write entities in their original order', () => {
+      const secondContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'second.fsh'),
+        'utf-8'
+      );
+      const instanceLocation = secondContents.indexOf('Instance: MyInstance');
+      const valueSetLocation = secondContents.indexOf('ValueSet: MyValueSet');
+      const codeSystemLocation = secondContents.indexOf('CodeSystem: MyCodeSystem');
+      expect(instanceLocation).toBeGreaterThan(-1);
+      expect(valueSetLocation).toBeGreaterThan(-1);
+      expect(codeSystemLocation).toBeGreaterThan(-1);
+      expect(codeSystemLocation).toBeLessThan(instanceLocation);
+      expect(instanceLocation).toBeLessThan(valueSetLocation);
+    });
+
+    it('should write a comment for a file with no entities after preprocessing', () => {
+      // A file with only RuleSet definitions will have no content after preprocessing.
+      const ruleSetContent = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'rulesets.fsh'),
+        'utf-8'
+      );
+      expect(ruleSetContent).toBe('// This file has no content after preprocessing.');
     });
   });
 
