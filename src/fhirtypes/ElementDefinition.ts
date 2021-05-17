@@ -1834,13 +1834,7 @@ export class ElementDefinition {
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
           const referencedElement = def.findElement(contentRefId);
-          newElements = referencedElement?.children().map(e => {
-            const eClone = e.clone();
-            eClone.id = eClone.id.replace(referencedElement.id, this.id);
-            eClone.structDef = this.structDef;
-            eClone.captureOriginal();
-            return eClone;
-          });
+          newElements = this.cloneChildren(referencedElement);
           if (newElements.length > 0) {
             // If we successfully unfolded, this element is no longer a content reference
             this.type = referencedElement.type;
@@ -1851,13 +1845,7 @@ export class ElementDefinition {
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
           const referencedElement = def.findElement(contentRefId);
-          newElements = referencedElement?.children().map(e => {
-            const eClone = e.clone();
-            eClone.id = eClone.id.replace(referencedElement.id, this.id);
-            eClone.structDef = this.structDef;
-            eClone.captureOriginal();
-            return eClone;
-          });
+          newElements = this.cloneChildren(referencedElement);
           if (newElements.length > 0) {
             // If we successfully unfolded, this element is no longer a content reference
             this.type = referencedElement.type;
@@ -1867,13 +1855,7 @@ export class ElementDefinition {
       } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
-        newElements = slicedElement.children().map(e => {
-          const eClone = e.clone();
-          eClone.id = eClone.id.replace(slicedElement.id, this.id);
-          eClone.structDef = this.structDef;
-          eClone.captureOriginal();
-          return eClone;
-        });
+        newElements = this.cloneChildren(slicedElement);
       }
       if (newElements.length === 0) {
         // If it has a profile, use that, otherwise use the code
@@ -1908,6 +1890,16 @@ export class ElementDefinition {
       }
     }
     return [];
+  }
+
+  private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
+    return targetElement?.children().map(e => {
+      const eClone = e.clone();
+      eClone.id = eClone.id.replace(targetElement.id, this.id);
+      eClone.structDef = this.structDef;
+      eClone.captureOriginal();
+      return eClone;
+    });
   }
 
   /**
