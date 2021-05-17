@@ -48,7 +48,7 @@ import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
 
-const profileElementExtension =
+const PROFILE_ELEMENT_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
 export class ElementDefinitionType {
@@ -1830,7 +1830,7 @@ export class ElementDefinition {
         // check the differential
         const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
         if (this.hasProfileElementExtension(profileJson)) {
-          const def = StructureDefinition.fromJSON(profileJson);
+          const def = this.structDef;
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
           const referencedElement = def.findElement(contentRefId);
@@ -1885,18 +1885,7 @@ export class ElementDefinition {
           Type.Profile,
           Type.Extension
         );
-        const backboneProfile = this.hasProfileElementExtension();
-        if (backboneProfile) {
-          const def = StructureDefinition.fromJSON(json);
-          const targetElement = def.findElement(backboneProfile as string);
-          newElements = targetElement?.children().map(e => {
-            const eClone = e.clone();
-            eClone.id = eClone.id.replace(targetElement.id, this.id);
-            eClone.structDef = this.structDef;
-            eClone.captureOriginal();
-            return eClone;
-          });
-        } else if (json) {
+        if (json) {
           const def = StructureDefinition.fromJSON(json);
           if (def.inProgress) {
             logger.debug(
@@ -1924,9 +1913,9 @@ export class ElementDefinition {
   /**
    * Checks a StructureDefinition's differential to determine if the profile element extension has been used on
    * an element.
-   * @param {Object} profileJson - The json reprsentation of this ElementDefinition's structDef
-   * @returns {boolean | string} If the profile element extension is not found, false if returned. If it is found,
-   * the id of the BackBone Element being profiled is returned.
+   * @param {Object} profileJson - The json representation of this ElementDefinition's structDef
+   * @returns {boolean} True if the profile element extension is found on this elements profile property, false
+   * if the extension is not found
    */
   private hasProfileElementExtension(profileJson?: any): boolean | string {
     // contentReference elements will not contain a type field, so we must check the structDef from the
@@ -1957,11 +1946,11 @@ export class ElementDefinition {
     if (this.contentReference) {
       return (
         profileCanonical === this.structDef.url &&
-        extensionUrl === profileElementExtension &&
+        extensionUrl === PROFILE_ELEMENT_EXTENSION &&
         targetElement === elementName
       );
-    } else if (extensionUrl === profileElementExtension && targetElement) {
-      return targetElement;
+    } else if (extensionUrl === PROFILE_ELEMENT_EXTENSION && targetElement) {
+      return true;
     } else {
       return false;
     }
@@ -2134,47 +2123,6 @@ export class ElementDefinition {
     }
     this.structDef.addElement(slice);
     return slice;
-  }
-
-  copyFromParent(profiledElement: ElementDefinition, structDef: StructureDefinition): void {
-    const propertiesToIgnore: string[] = [
-      '_id',
-      'path',
-      'sliceName',
-      'short',
-      'structDef',
-      '_original',
-      '_edStructureDefinition'
-    ];
-
-    // First we copy properties of the profiledElement itself
-    Object.keys(profiledElement).forEach((property: string) => {
-      if (!propertiesToIgnore.includes(property)) {
-        const assignableProperty = property as keyof ElementDefinition;
-        // @ts-ignore: Type 'any' is not assignable to type 'never'
-        this[assignableProperty] = profiledElement[assignableProperty];
-      }
-    });
-
-    const childrenToAdd = profiledElement.children();
-
-    // Then we copy poerties from the profiled element's children, creating new ones if they don't exist
-    childrenToAdd.forEach(childElement => {
-      const childPath = childElement.path;
-      const childElementName = childPath.substring(childPath.indexOf('.'), childPath.length);
-
-      const currentElementName = `${this.structDef.type}${childElementName}`;
-      const existingChildElement = structDef.findElement(currentElementName);
-
-      if (existingChildElement) {
-        existingChildElement.copyFromParent(childElement, structDef);
-      } else {
-        const newElement = childElement.clone();
-        newElement._id = currentElementName;
-        newElement.path = currentElementName;
-        structDef.addElement(newElement);
-      }
-    });
   }
 
   /**

@@ -250,42 +250,6 @@ describe('StructureDefinitionExporter', () => {
     );
   });
 
-  it('should profile an individual element when the profile-element extension is applied to an element', () => {
-    const constraintProfile = new Profile('ConstraintProfile');
-    constraintProfile.parent = 'Patient';
-    constraintProfile.id = 'constraint-patient';
-    const cardRule = new CardRule('name.given');
-    cardRule.min = 2;
-    cardRule.max = '2';
-    constraintProfile.rules.push(cardRule);
-    doc.profiles.set(constraintProfile.name, constraintProfile);
-
-    const profile = new Profile('ExPatient');
-    profile.parent = 'Patient';
-    profile.id = 'extension-patient';
-
-    const profileRule = new CaretValueRule('name');
-    profileRule.caretPath = 'type.profile';
-    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/constraint-patient';
-    const extensionRule = new CaretValueRule('name');
-    extensionRule.caretPath = 'type.profile.extension.url';
-    extensionRule.value =
-      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
-    const targetElementRule = new CaretValueRule('name');
-    targetElementRule.caretPath = 'type.profile.extension.valueString';
-    targetElementRule.value = 'Patient.name';
-    const cardRule2 = new CardRule('name.given');
-    cardRule2.min = 1;
-    cardRule2.max = '1';
-
-    profile.rules.push(profileRule, extensionRule, targetElementRule, cardRule2);
-    doc.profiles.set(profile.name, profile);
-    exporter.export();
-    expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Cardinality constraints cannot widen the cardinality.  1..1 is wider than 2..2./
-    );
-  });
-
   it('should apply constraints to all instances of contentReference elements when the profile-element extension is applied', () => {
     const profile = new Profile('TestQuestionnaire');
     profile.parent = 'Questionnaire';
