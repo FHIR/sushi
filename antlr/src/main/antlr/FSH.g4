@@ -12,12 +12,12 @@ extension:          KW_EXTENSION name sdMetadata* sdRule*;
 logical:            KW_LOGICAL name sdMetadata* lrRule*;
 resource:           KW_RESOURCE name sdMetadata* lrRule*;
 sdMetadata:         parent | id | title | description | mixins;
-sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule;
+sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule | pathRule;
 lrRule:             sdRule | addElementRule;
 
 instance:           KW_INSTANCE name instanceMetadata* instanceRule*;
 instanceMetadata:   instanceOf | title | description | usage | mixins;
-instanceRule:       fixedValueRule | insertRule;
+instanceRule:       fixedValueRule | insertRule | pathRule;
 
 invariant:          KW_INVARIANT name invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
@@ -46,7 +46,7 @@ paramRuleSetContent:   STAR
 
 mapping:            KW_MAPPING name mappingMetadata* mappingEntityRule*;
 mappingMetadata:    id | source | target | description | title;
-mappingEntityRule:  mappingRule | insertRule;
+mappingEntityRule:  mappingRule | insertRule | pathRule;
 
 // METADATA FIELDS
 parent:             KW_PARENT name;
@@ -76,6 +76,7 @@ codeCaretValueRule: STAR (CODE)+ caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 insertRule:         STAR KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
 addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING? STRING?;
+pathRule:           STAR path;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );

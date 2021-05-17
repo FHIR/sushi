@@ -83,21 +83,6 @@ describe('FSHImporter', () => {
     assertAssignmentRule(profile.rules[2], 'bonusCode', expectedBonusCode);
   });
 
-  it('should parse a rule with an identifying integer', () => {
-    const input = `
-    Profile: IdentifyingInteger
-    Parent: Observation
-    *123 code = #"This rule is identified"
-    `;
-    const result = importSingleText(input, 'IdentifyingInteger.fsh');
-    const profile = result.profiles.get('IdentifyingInteger');
-    const expectedCode = new FshCode('This rule is identified')
-      .withLocation([4, 17, 4, 42])
-      .withFile('IdentifyingInteger.fsh');
-    expect(profile.rules).toHaveLength(1);
-    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
-  });
-
   it('should parse a rule that uses non-breaking spaces in a concept string', () => {
     const input = `
     Profile: NonBreakingObservation
