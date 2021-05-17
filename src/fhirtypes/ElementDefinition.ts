@@ -1916,7 +1916,7 @@ export class ElementDefinition {
    * @returns {boolean} True if the profile element extension is found on this elements profile property, false
    * if the extension is not found
    */
-  private hasProfileElementExtension(profileJson?: any): boolean | string {
+  private hasProfileElementExtension(profileJson?: any): boolean {
     // contentReference elements will not contain a type field, so we must check the structDef from the
     // fisher in order to check for the profile-element extension
     if (this.contentReference && !profileJson) {
