@@ -1892,6 +1892,13 @@ export class ElementDefinition {
     return [];
   }
 
+  /**
+   * Returns an array of an ElementDefinition's unfolded children.
+   * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
+   * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
+   * the original property re-captured.
+   */
+
   private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
     return targetElement?.children().map(e => {
       const eClone = e.clone();
