@@ -1,7 +1,7 @@
 import 'jest-extended';
-import { CodeCaretValueRule } from '../../../src/fshtypes/rules/CodeCaretValueRule';
+import { InstanceDefinition } from '../../../src/fhirtypes';
 import { FshCanonical, FshCode, FshQuantity, FshRatio, FshReference } from '../../../src/fshtypes';
-import { InstanceDefinition } from '../../../src/fhirtypes/InstanceDefinition';
+import { CodeCaretValueRule } from '../../../src/fshtypes/rules/CodeCaretValueRule';
 
 describe('CodeCaretValueRule', () => {
   describe('#constructor', () => {

@@ -1506,15 +1506,12 @@ describe('StructureDefinition', () => {
 
       it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle', () => {
         const gender = new FshCode('F');
-        const {
-          assignedValue,
-          pathParts
-        } = respRate.validateValueAtPath('contained[0].entry[0].resource.gender', gender, fisher, [
-          'Bundle',
-          null,
-          'Patient',
-          null
-        ]);
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].entry[0].resource.gender',
+          gender,
+          fisher,
+          ['Bundle', null, 'Patient', null]
+        );
         expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
@@ -1526,10 +1523,7 @@ describe('StructureDefinition', () => {
 
       it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle within a Bundle', () => {
         const gender = new FshCode('F');
-        const {
-          assignedValue,
-          pathParts
-        } = respRate.validateValueAtPath(
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
           'contained[0].entry[0].resource.entry[0].resource.gender',
           gender,
           fisher,
@@ -1548,14 +1542,12 @@ describe('StructureDefinition', () => {
 
       it('should allow overriding a Resource with a Profile', () => {
         const unit = 'slugs';
-        const {
-          assignedValue,
-          pathParts
-        } = respRate.validateValueAtPath('contained[0].valueQuantity.unit', unit, fisher, [
-          'http://hl7.org/fhir/StructureDefinition/resprate',
-          null,
-          null
-        ]);
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].valueQuantity.unit',
+          unit,
+          fisher,
+          ['http://hl7.org/fhir/StructureDefinition/resprate', null, null]
+        );
         expect(assignedValue).toBe('slugs');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },

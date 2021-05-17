@@ -412,9 +412,8 @@ export class StructureDefinitionExporter implements Fishable {
         // See if we can infer any rules about an extension (inline or FSH defined)
         if (pathPart.startsWith('extension')) {
           const relevantContradictoryRule = `${basePath}extension`;
-          const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
-            relevantContradictoryRule
-          );
+          const relevantContradictoryRuleMapEntry =
+            inferredCardRulesMap.get(relevantContradictoryRule);
           if (!(rule instanceof CardRule && rule.max === '0')) {
             if (relevantContradictoryRuleMapEntry) {
               logger.error(
@@ -434,9 +433,8 @@ export class StructureDefinitionExporter implements Fishable {
           }
         } else if (pathPart.startsWith('value')) {
           const relevantContradictoryRule = `${basePath}value[x]`;
-          const relevantContradictoryRuleMapEntry = inferredCardRulesMap.get(
-            relevantContradictoryRule
-          );
+          const relevantContradictoryRuleMapEntry =
+            inferredCardRulesMap.get(relevantContradictoryRule);
           if (!(rule instanceof CardRule && rule.max === '0')) {
             if (relevantContradictoryRuleMapEntry) {
               logger.error(
