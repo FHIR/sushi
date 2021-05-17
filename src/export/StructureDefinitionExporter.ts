@@ -20,8 +20,7 @@ import {
   ParentDeclaredAsNameError,
   ParentDeclaredAsIdError,
   ParentNotDefinedError,
-  ParentNotProvidedError,
-  UnsupportedFshStructureTypeError
+  ParentNotProvidedError
 } from '../errors';
 import {
   AddElementRule,
@@ -92,43 +91,39 @@ export class StructureDefinitionExporter implements Fishable {
       throw new ParentNotProvidedError(fshDefinition.name, fshDefinition.sourceInfo);
     }
 
-    let possibleParentTypes: Type[];
-    if (fshDefinition instanceof Extension) {
-      possibleParentTypes = [Type.Extension];
-    } else if (fshDefinition instanceof Logical) {
-      possibleParentTypes = [Type.Logical, Type.Resource, Type.Type];
-    } else if (fshDefinition instanceof Resource) {
-      possibleParentTypes = [Type.Resource];
+    // We want to ensure that the FSH definition does not set either the name or the id
+    // to be the same value as the parent. Additionally, we want to provide a helpful
+    // error message when this condition exists by suggesting the use of the parent's URL
+    // if we can by using fishForMetadata() for the parent. The caveat is that we cannot
+    // fish for a type that is the same as the FSH definition (e.g., cannot fish for
+    // Type.Profile when FSH definition is an instanceof Profile) because the result of
+    // the fishing would only find itself.
+
+    let possibleParentMeta: Metadata;
+    if (fshDefinition instanceof Logical) {
+      // Logical models can have resources, complex-types, and other logical models as a parent
+      possibleParentMeta = this.fishForMetadata(fshDefinition.parent, Type.Resource, Type.Type);
     } else if (fshDefinition instanceof Profile) {
-      possibleParentTypes = [Type.Profile, Type.Resource];
-    } else {
-      // Should never happen but to be careful...
-      throw new UnsupportedFshStructureTypeError(fshDefinition);
+      // Profiles can have resources and other profiles as a parent
+      possibleParentMeta = this.fishForMetadata(fshDefinition.parent, Type.Resource);
     }
 
-    // TODO: PAQ - Resolve fishForMetadata issue:
-    // Searches for the Metadata associated with the passed in name/id/url.  It will first search
-    // through the local package (which contains FHIR artifacts exported so far), then through the
-    // tank, then through the external FHIR definitions.
-
     if (fshDefinition.name === fshDefinition.parent) {
-      const result = this.fishForMetadata(fshDefinition.parent, ...possibleParentTypes);
       throw new ParentDeclaredAsNameError(
         fshDefinition.constructorName,
         fshDefinition.name,
         fshDefinition.sourceInfo,
-        result?.url
+        possibleParentMeta?.url
       );
     }
 
     if (fshDefinition.id === fshDefinition.parent) {
-      const result = this.fishForMetadata(fshDefinition.parent, ...possibleParentTypes);
       throw new ParentDeclaredAsIdError(
         fshDefinition.constructorName,
         fshDefinition.name,
         fshDefinition.id,
         fshDefinition.sourceInfo,
-        result?.url
+        possibleParentMeta?.url
       );
     }
 
@@ -136,7 +131,7 @@ export class StructureDefinitionExporter implements Fishable {
     // Then make sure it is a valid StructureDefinition based on the type of the fshDefinition.
 
     let parentJson = this.fishForFHIR(fshDefinition.parent);
-    // TODO: PAQ - Resolve https://github.com/FHIR/sushi/pull/802#discussion_r629658476
+
     if (
       !parentJson &&
       fshDefinition instanceof Logical &&

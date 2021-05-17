@@ -312,13 +312,39 @@ describe('StructureDefinitionExporter', () => {
       }).toThrow('The definition for Foo does not include a Parent');
     });
 
-    it('should throw ParentNotDefinedError when parent resource is not found', () => {
+    it('should throw ParentNotDefinedError when parent is not found', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Bar';
       doc.profiles.set(profile.name, profile);
       expect(() => {
         exporter.exportStructDef(profile);
       }).toThrow('Parent Bar not found for Foo');
+    });
+
+    it('should throw ParentDeclaredAsNameError when the extension declares itself as the parent', () => {
+      const extension = new Extension('Foo');
+      extension.parent = 'Foo';
+      doc.logicals.set(extension.name, extension);
+      expect(() => {
+        exporter.exportStructDef(extension);
+      }).toThrow('Extension "Foo" cannot declare itself as a Parent.');
+    });
+
+    it('should throw ParentDeclaredAsIdError when a extension sets the same value for parent and id', () => {
+      const parentExtension = new Extension('InitialExtension');
+      parentExtension.id = 'ParentExtension';
+      doc.extensions.set(parentExtension.name, parentExtension);
+
+      const childExtension = new Extension('OverlappingExtension');
+      childExtension.parent = 'InitialExtension';
+      childExtension.id = 'InitialExtension';
+      doc.extensions.set(childExtension.name, childExtension);
+
+      expect(() => {
+        exporter.exportStructDef(childExtension);
+      }).toThrow(
+        'Extension "OverlappingExtension" cannot declare "InitialExtension" as both Parent and Id.'
+      );
     });
 
     it('should throw ParentDeclaredAsNameError when the profile declares itself as the parent', () => {
@@ -330,8 +356,7 @@ describe('StructureDefinitionExporter', () => {
       }).toThrow('Profile "Foo" cannot declare itself as a Parent.');
     });
 
-    it.skip('should throw ParentDeclaredAsNameError and suggest resource URL when the profile declares itself as the parent and it is a FHIR resource', () => {
-      // TODO: PAQ - resolve fishForMetadata issue
+    it('should throw ParentDeclaredAsNameError and suggest resource URL when the profile declares itself as the parent and it is a FHIR resource', () => {
       const profile = new Profile('Patient');
       profile.parent = 'Patient';
       doc.profiles.set(profile.name, profile);
@@ -359,8 +384,7 @@ describe('StructureDefinitionExporter', () => {
       );
     });
 
-    it.skip('should throw ParentDeclaredAsIdError and suggest resource URL when a profile sets the same value for parent and id and the parent is a FHIR resource', () => {
-      // TODO: PAQ - resolve fishForMetadata issue
+    it('should throw ParentDeclaredAsIdError and suggest resource URL when a profile sets the same value for parent and id and the parent is a FHIR resource', () => {
       const profile = new Profile('KidsFirstPatient');
       profile.parent = 'Patient';
       profile.id = 'Patient';
@@ -369,6 +393,81 @@ describe('StructureDefinitionExporter', () => {
         exporter.exportStructDef(profile);
       }).toThrow(
         'Profile "KidsFirstPatient" cannot declare "Patient" as both Parent and Id. It looks like the parent is an external resource; use its URL (e.g., http://hl7.org/fhir/StructureDefinition/Patient).'
+      );
+    });
+
+    it('should throw ParentDeclaredAsNameError when the resource declares itself as the parent', () => {
+      const resource = new Resource('Foo');
+      resource.parent = 'Foo';
+      doc.resources.set(resource.name, resource);
+      expect(() => {
+        exporter.exportStructDef(resource);
+      }).toThrow('Resource "Foo" cannot declare itself as a Parent.');
+    });
+
+    it('should throw ParentDeclaredAsIdError when a resource sets the same value for parent and id', () => {
+      const parentResource = new Resource('InitialResource');
+      parentResource.id = 'ParentExtension';
+      doc.resources.set(parentResource.name, parentResource);
+
+      const childResource = new Resource('OverlappingResource');
+      childResource.parent = 'InitialResource';
+      childResource.id = 'InitialResource';
+      doc.resources.set(childResource.name, childResource);
+
+      expect(() => {
+        exporter.exportStructDef(childResource);
+      }).toThrow(
+        'Resource "OverlappingResource" cannot declare "InitialResource" as both Parent and Id.'
+      );
+    });
+
+    it('should throw ParentDeclaredAsNameError when the logical model declares itself as the parent', () => {
+      const logical = new Logical('Foo');
+      logical.parent = 'Foo';
+      doc.logicals.set(logical.name, logical);
+      expect(() => {
+        exporter.exportStructDef(logical);
+      }).toThrow('Logical "Foo" cannot declare itself as a Parent.');
+    });
+
+    it('should throw ParentDeclaredAsNameError and suggest resource URL when the logical model declares itself as the parent and it is a FHIR resource', () => {
+      const logical = new Logical('Patient');
+      logical.parent = 'Patient';
+      doc.logicals.set(logical.name, logical);
+      expect(() => {
+        exporter.exportStructDef(logical);
+      }).toThrow(
+        'Logical "Patient" cannot declare itself as a Parent. It looks like the parent is an external resource; use its URL (e.g., http://hl7.org/fhir/StructureDefinition/Patient).'
+      );
+    });
+
+    it('should throw ParentDeclaredAsIdError when a logical model sets the same value for parent and id', () => {
+      const parentLogical = new Logical('InitialLogical');
+      parentLogical.id = 'ParentLogical';
+      doc.logicals.set(parentLogical.name, parentLogical);
+
+      const childLogical = new Logical('OverlappingLogical');
+      childLogical.parent = 'InitialLogical';
+      childLogical.id = 'InitialLogical';
+      doc.logicals.set(childLogical.name, childLogical);
+
+      expect(() => {
+        exporter.exportStructDef(childLogical);
+      }).toThrow(
+        'Logical "OverlappingLogical" cannot declare "InitialLogical" as both Parent and Id.'
+      );
+    });
+
+    it('should throw ParentDeclaredAsIdError and suggest resource URL when a logical model sets the same value for parent and id and the parent is a FHIR resource', () => {
+      const logical = new Logical('KidsFirstPatient');
+      logical.parent = 'Patient';
+      logical.id = 'Patient';
+      doc.logicals.set(logical.name, logical);
+      expect(() => {
+        exporter.exportStructDef(logical);
+      }).toThrow(
+        'Logical "KidsFirstPatient" cannot declare "Patient" as both Parent and Id. It looks like the parent is an external resource; use its URL (e.g., http://hl7.org/fhir/StructureDefinition/Patient).'
       );
     });
 
