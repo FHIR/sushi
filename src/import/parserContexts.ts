@@ -505,7 +505,7 @@ export function containsCodePathContext(ctx: ParserRuleContext) {
   // or a codeCaretValueRule (with a caretPath)
   return (
     ((ctx as any).CODE != null && // If we have CODE,
-    Array.isArray((ctx as any).CODE()) && // and it's a list,
+      Array.isArray((ctx as any).CODE()) && // and it's a list,
       (ctx as any).CODE().length > 0) || // and the list is not empty, or
     ((ctx as any).caretPath != null && (ctx as any).caretPath() != null) // we have a non-null caretPath
   );

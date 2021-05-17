@@ -4,10 +4,11 @@ import {
   assertAssignmentRule,
   assertCardRule,
   assertInsertRule,
-  assertValueSetConceptComponent
+  assertValueSetConceptComponent,
+  assertCodeCaretRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { Rule, ConceptRule, CodeCaretValueRule } from '../../src/fshtypes/rules';
+import { Rule, ConceptRule } from '../../src/fshtypes/rules';
 import { FshCode } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
@@ -132,14 +133,13 @@ describe('FSHImporter', () => {
       expect(concept).toEqual(
         new ConceptRule('lion').withFile('Rules.fsh').withLocation([5, 9, 5, 15])
       );
-      expect(ruleSet.rules[3]).toBeInstanceOf(CodeCaretValueRule);
-      const codeCaret = ruleSet.rules[3] as CodeCaretValueRule;
-      expect(codeCaret.codePath).toEqual(['lion']);
-      expect(codeCaret.path).toBe('');
-      expect(codeCaret.caretPath).toBe('designation.value');
-      expect(codeCaret.value).toBe('Watch out for big cat!');
-      expect(codeCaret.sourceInfo.file).toBe('Rules.fsh');
-      expect(codeCaret.sourceInfo.location).toEqual({
+      assertCodeCaretRule(
+        ruleSet.rules[3],
+        ['lion'],
+        'designation.value',
+        'Watch out for big cat!'
+      );
+      expect(ruleSet.rules[3].sourceInfo.location).toEqual({
         startLine: 6,
         startColumn: 9,
         endLine: 6,

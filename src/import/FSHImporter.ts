@@ -1510,9 +1510,8 @@ export class FSHImporter extends FSHVisitor {
     const fullCodePath = this.getCodePathWithContext(localCodePath, ctx);
     // If there is a code path, use it to make a CodeCaretValueRule.
     // Otherwise, make a CaretValueRule.
-    const caretRule = (fullCodePath.length > 0
-      ? new CodeCaretValueRule(fullCodePath)
-      : new CaretValueRule('')
+    const caretRule = (
+      fullCodePath.length > 0 ? new CodeCaretValueRule(fullCodePath) : new CaretValueRule('')
     )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);

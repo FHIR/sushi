@@ -9,10 +9,10 @@ import {
   assertInsertRule,
   assertObeysRule,
   assertValueSetConceptComponent,
-  assertValueSetFilterComponent
+  assertValueSetFilterComponent,
+  assertCodeCaretRule
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
-import { CodeCaretValueRule } from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
   beforeEach(() => {
@@ -593,13 +593,13 @@ describe('FSHImporter', () => {
       const codeSystem = result.codeSystems.get('ZOO');
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
       expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
-      expect(codeSystem.rules[1]).toBeInstanceOf(CodeCaretValueRule);
-      const codeCaret = codeSystem.rules[1] as CodeCaretValueRule;
-      expect(codeCaret.codePath).toEqual(['anteater']);
-      expect(codeCaret.path).toBe('');
-      expect(codeCaret.caretPath).toBe('property[0].valueString');
-      expect(codeCaret.value).toBe('Their threat pose is really cute.');
-      expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[1],
+        ['anteater'],
+        'property[0].valueString',
+        'Their threat pose is really cute.'
+      );
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
@@ -618,13 +618,13 @@ describe('FSHImporter', () => {
         'anteater'
       ]);
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
-      expect(codeSystem.rules[2]).toBeInstanceOf(CodeCaretValueRule);
-      const codeCaret = codeSystem.rules[2] as CodeCaretValueRule;
-      expect(codeCaret.codePath).toEqual(['anteater', 'northern']);
-      expect(codeCaret.path).toBe('');
-      expect(codeCaret.caretPath).toBe('property[0].valueString');
-      expect(codeCaret.value).toBe('They are strong climbers.');
-      expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[2],
+        ['anteater', 'northern'],
+        'property[0].valueString',
+        'They are strong climbers.'
+      );
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
@@ -646,19 +646,20 @@ describe('FSHImporter', () => {
         'anteater'
       ]);
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
-      expect(codeSystem.rules[2]).toBeInstanceOf(CodeCaretValueRule);
-      const northernCodeCaret = codeSystem.rules[2] as CodeCaretValueRule;
-      expect(northernCodeCaret.codePath).toEqual(['anteater', 'northern']);
-      expect(northernCodeCaret.path).toBe('');
-      expect(northernCodeCaret.caretPath).toBe('property[0].valueString');
-      expect(northernCodeCaret.value).toBe('They are strong climbers.');
-      expect(northernCodeCaret.sourceInfo.file).toBe('Zoo.fsh');
-      const anteaterCodeCaret = codeSystem.rules[3] as CodeCaretValueRule;
-      expect(anteaterCodeCaret.codePath).toEqual(['anteater']);
-      expect(anteaterCodeCaret.path).toBe('');
-      expect(anteaterCodeCaret.caretPath).toBe('property[0].valueString');
-      expect(anteaterCodeCaret.value).toBe('Their threat pose is really cute.');
-      expect(anteaterCodeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[2],
+        ['anteater', 'northern'],
+        'property[0].valueString',
+        'They are strong climbers.'
+      );
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[3],
+        ['anteater'],
+        'property[0].valueString',
+        'Their threat pose is really cute.'
+      );
+      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
@@ -684,12 +685,14 @@ describe('FSHImporter', () => {
         'anteater'
       ]);
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
-      const northernCodeCaret = codeSystem.rules[3] as CodeCaretValueRule;
-      expect(northernCodeCaret.codePath).toEqual(['anteater', 'northern']);
-      expect(northernCodeCaret.path).toBe('');
-      expect(northernCodeCaret.caretPath).toBe('property[0].valueString');
-      expect(northernCodeCaret.value).toBe('They are strong climbers.');
-      expect(northernCodeCaret.sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[3],
+        ['anteater', 'northern'],
+        'property[0].valueString',
+        'They are strong climbers.'
+      );
+      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 });
