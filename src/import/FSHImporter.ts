@@ -717,9 +717,10 @@ export class FSHImporter extends FSHVisitor {
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
   }
 
-  visitInstanceMetadata(
-    ctx: pc.InstanceMetadataContext
-  ): { key: InstanceMetadataKey; value: string | string[] } {
+  visitInstanceMetadata(ctx: pc.InstanceMetadataContext): {
+    key: InstanceMetadataKey;
+    value: string | string[];
+  } {
     if (ctx.instanceOf()) {
       return { key: InstanceMetadataKey.InstanceOf, value: this.visitInstanceOf(ctx.instanceOf()) };
     } else if (ctx.title()) {
@@ -762,9 +763,10 @@ export class FSHImporter extends FSHVisitor {
     return { key: CsMetadataKey.Unknown, value: ctx.getText() };
   }
 
-  visitInvariantMetadata(
-    ctx: pc.InvariantMetadataContext
-  ): { key: InvariantMetadataKey; value: string | FshCode } {
+  visitInvariantMetadata(ctx: pc.InvariantMetadataContext): {
+    key: InvariantMetadataKey;
+    value: string | FshCode;
+  } {
     if (ctx.description()) {
       return {
         key: InvariantMetadataKey.Description,

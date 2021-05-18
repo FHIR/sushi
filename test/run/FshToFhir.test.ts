@@ -3,7 +3,7 @@ import path from 'path';
 import { loggerSpy } from '../testhelpers';
 import { logger } from '../../src/utils/';
 import { fshToFhir } from '../../src/run';
-import * as utils from '../../src/utils';
+import * as processing from '../../src/utils/Processing';
 import { Configuration } from '../../src/fshtypes';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 
@@ -12,9 +12,7 @@ describe('#FshToFhir', () => {
   let defaultConfig: Configuration;
 
   beforeAll(() => {
-    loadSpy = jest.spyOn(utils, 'loadExternalDependencies').mockImplementation(() => {
-      return [undefined];
-    });
+    loadSpy = jest.spyOn(processing, 'loadExternalDependencies').mockResolvedValue();
     defaultConfig = {
       canonical: 'http://example.org',
       FSHOnly: true,
@@ -137,13 +135,13 @@ describe('#FshToFhir', () => {
       loadSpy.mockImplementation(defs => {
         defs.add(sd);
         defs.add(patient);
-        return [undefined];
+        return Promise.resolve();
       });
     });
 
     afterAll(() => {
       loadSpy.mockImplementation(() => {
-        return [undefined];
+        return Promise.resolve();
       });
     });
 

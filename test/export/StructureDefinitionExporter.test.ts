@@ -47,11 +47,6 @@ describe('StructureDefinitionExporter', () => {
       'testPackage',
       defs
     );
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
-      defs
-    );
   });
 
   beforeEach(() => {
@@ -1664,29 +1659,6 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
-  it('should apply a Reference AssignmentRule and replace the Reference on a CodeableReference', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'CarePlan';
-
-    const instance = new Instance('Bar');
-    instance.id = 'bar-id';
-    instance.instanceOf = 'Condition';
-    doc.instances.set(instance.name, instance);
-
-    const rule = new AssignmentRule('addresses.reference');
-    rule.value = new FshReference('Bar');
-    profile.rules.push(rule);
-
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-
-    const addressesReference = sd.findElement('CarePlan.addresses.reference');
-
-    expect(addressesReference.patternReference).toEqual({
-      reference: 'Condition/bar-id'
-    });
-  });
-
   it('should not apply a Reference AssignmentRule with invalid type and log an error', () => {
     const profile = new Profile('Foo');
     profile.parent = 'Observation';
@@ -1709,31 +1681,6 @@ describe('StructureDefinitionExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /The type "Reference\(Condition\)" does not match any of the allowed types\D*/s
-    );
-  });
-
-  it('should not apply a Reference AssignmentRule with invalid type constraints on a parent CodeableReference', () => {
-    const profile = new Profile('Foo');
-    profile.parent = 'CarePlan';
-
-    const instance = new Instance('Bar');
-    instance.id = 'bar-id';
-    instance.instanceOf = 'Patient';
-    doc.instances.set(instance.name, instance);
-
-    const rule = new AssignmentRule('addresses.reference');
-    rule.value = new FshReference('Bar');
-    profile.rules.push(rule);
-
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-
-    const addressesReference = sd.findElement('CarePlan.addresses.reference');
-
-    expect(addressesReference.patternReference).toEqual(undefined);
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-    expect(loggerSpy.getLastMessage('error')).toMatch(
-      /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
     );
   });
 
@@ -5257,5 +5204,78 @@ describe('StructureDefinitionExporter', () => {
         /ConceptRule.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
+  });
+});
+
+describe('StructureDefinitionExporter R5', () => {
+  let defs: FHIRDefinitions;
+  let doc: FSHDocument;
+  let pkg: Package;
+  let exporter: StructureDefinitionExporter;
+
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
+    );
+  });
+
+  beforeEach(() => {
+    doc = new FSHDocument('fileName');
+    const input = new FSHTank([doc], minimalConfig);
+    pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#current', 'r5-definitions');
+    exporter = new StructureDefinitionExporter(input, pkg, fisher);
+    loggerSpy.reset();
+  });
+
+  it('should apply a Reference AssignmentRule and replace the Reference on a CodeableReference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Condition';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new AssignmentRule('addresses.reference');
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addressesReference = sd.findElement('CarePlan.addresses.reference');
+
+    expect(addressesReference.patternReference).toEqual({
+      reference: 'Condition/bar-id'
+    });
+  });
+
+  it('should not apply a Reference AssignmentRule with invalid type constraints on a parent CodeableReference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new AssignmentRule('addresses.reference');
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addressesReference = sd.findElement('CarePlan.addresses.reference');
+
+    expect(addressesReference.patternReference).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
+    );
   });
 });

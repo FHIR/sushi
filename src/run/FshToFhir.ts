@@ -59,7 +59,7 @@ export async function fshToFhir(
 
   // load dependencies
   const defs = new FHIRDefinitions();
-  await Promise.all(loadExternalDependencies(defs, config));
+  await loadExternalDependencies(defs, config);
 
   // load FSH text into memory
   const rawFSHes: RawFSH[] = [];
