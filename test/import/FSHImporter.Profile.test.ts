@@ -88,7 +88,6 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
         `;
 
         const result = importSingleText(input);
@@ -99,21 +98,19 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 7,
-          endColumn: 55
+          endLine: 6,
+          endColumn: 47
         });
       });
 
-      it('should parse profile with numeric name, parent, id, and mixins', () => {
+      it('should parse profile with numeric name, parent, and id', () => {
         const input = `
         Profile: 123
         Parent: 456
         Id: 789
-        Mixins: 24 and 68
         `;
 
         const result = importSingleText(input);
@@ -122,7 +119,6 @@ describe('FSHImporter', () => {
         expect(profile.name).toBe('123');
         expect(profile.parent).toBe('456');
         expect(profile.id).toBe('789');
-        expect(profile.mixins).toEqual(['24', '68']);
       });
 
       it('should properly parse a multi-string description', () => {
@@ -186,12 +182,10 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1
         Parent: DuplicateObservation
         Id: duplicate-observation-profile
         Title: "Duplicate Observation Profile"
         Description: "A duplicated profile on Observation"
-        Mixins: DuplicateMixin1
         `;
 
         const result = importSingleText(input);
@@ -201,22 +195,6 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1']);
-      });
-
-      it('should deduplicate repeated mixins and log a warning', () => {
-        const input = `
-        Profile: ObservationProfile
-        Parent: Observation
-        Mixins: Mixin1 and Mixin2 and Mixin1
-        `;
-
-        const result = importSingleText(input, 'Dupe.fsh');
-        expect(result.profiles.size).toBe(1);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.name).toBe('ObservationProfile');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2']);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Mixin1.*File: Dupe.fsh.*Line: 4\D*/s);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -253,6 +231,23 @@ describe('FSHImporter', () => {
           /Profile named ObservationProfile already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
+      });
+
+      it('should log an error when the deprecated Mixins keyword is used', () => {
+        const input = `
+        Profile: SomeProfile
+        Parent: Observation
+        Mixins: RuleSet1 and RuleSet2
+        `;
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        expect(result.profiles.size).toBe(1);
+        const extension = result.profiles.get('SomeProfile');
+        expect(extension.name).toBe('SomeProfile');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'Mixins' keyword is no longer supported\./s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
       });
     });
 

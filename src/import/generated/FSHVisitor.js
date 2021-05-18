@@ -234,12 +234,6 @@ FSHVisitor.prototype.visitUsage = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#mixins.
-FSHVisitor.prototype.visitMixins = function(ctx) {
-  return this.visitChildren(ctx);
-};
-
-
 // Visit a parse tree produced by FSHParser#source.
 FSHVisitor.prototype.visitSource = function(ctx) {
   return this.visitChildren(ctx);

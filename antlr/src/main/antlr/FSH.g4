@@ -11,12 +11,12 @@ profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name sdMetadata* sdRule*;
 logical:            KW_LOGICAL name sdMetadata* lrRule*;
 resource:           KW_RESOURCE name sdMetadata* lrRule*;
-sdMetadata:         parent | id | title | description | mixins;
+sdMetadata:         parent | id | title | description;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule | pathRule;
 lrRule:             sdRule | addElementRule;
 
 instance:           KW_INSTANCE name instanceMetadata* instanceRule*;
-instanceMetadata:   instanceOf | title | description | usage | mixins;
+instanceMetadata:   instanceOf | title | description | usage;
 instanceRule:       fixedValueRule | insertRule | pathRule;
 
 invariant:          KW_INVARIANT name invariantMetadata+;
@@ -58,7 +58,6 @@ xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF name;
 usage:              KW_USAGE CODE;
-mixins:             KW_MIXINS ((name KW_AND)* name | COMMA_DELIMITED_SEQUENCES); // deprecated
 source:             KW_SOURCE name;
 target:             KW_TARGET STRING;
 

@@ -41,7 +41,6 @@ export interface SdMetadataContext extends ParserRuleContext {
   id(): IdContext;
   title(): TitleContext;
   description(): DescriptionContext;
-  mixins(): MixinsContext;
 }
 
 export interface InstanceContext extends ParserRuleContext {
@@ -55,7 +54,6 @@ export interface InstanceMetadataContext extends ParserRuleContext {
   title(): TitleContext;
   description(): DescriptionContext;
   usage(): UsageContext;
-  mixins(): MixinsContext;
 }
 
 export interface InstanceRuleContext extends ParserRuleContext {
@@ -189,11 +187,6 @@ export interface DescriptionContext extends ParserRuleContext {
 
 export interface UsageContext extends ParserRuleContext {
   CODE(): ParserRuleContext;
-}
-
-export interface MixinsContext extends ParserRuleContext {
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-  name(): NameContext[];
 }
 
 export interface ExpressionContext extends ParserRuleContext {

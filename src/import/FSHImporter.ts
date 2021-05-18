@@ -69,7 +69,6 @@ enum SdMetadataKey {
   Parent = 'Parent',
   Title = 'Title',
   Description = 'Description',
-  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -78,7 +77,6 @@ enum InstanceMetadataKey {
   Title = 'Title',
   Description = 'Description',
   Usage = 'Usage',
-  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -332,8 +330,6 @@ export class FSHImporter extends FSHVisitor {
           def.title = pair.value as string;
         } else if (pair.key === SdMetadataKey.Description) {
           def.description = pair.value as string;
-        } else if (pair.key === SdMetadataKey.Mixins) {
-          def.mixins = pair.value as string[];
         }
       });
     ruleCtx.forEach(sdRule => {
@@ -390,8 +386,6 @@ export class FSHImporter extends FSHVisitor {
           instance.description = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Usage) {
           instance.usage = pair.value as InstanceUsage;
-        } else if (pair.key === InstanceMetadataKey.Mixins) {
-          instance.mixins = pair.value as string[];
         }
       });
     if (!instance.instanceOf) {
@@ -711,8 +705,6 @@ export class FSHImporter extends FSHVisitor {
       return { key: SdMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     } else if (ctx.description()) {
       return { key: SdMetadataKey.Description, value: this.visitDescription(ctx.description()) };
-    } else if (ctx.mixins()) {
-      return { key: SdMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -735,8 +727,6 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Usage,
         value: this.visitUsage(ctx.usage())
       };
-    } else if (ctx.mixins()) {
-      return { key: InstanceMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -836,29 +826,6 @@ export class FSHImporter extends FSHVisitor {
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
     return this.aliasAwareValue(ctx.name());
-  }
-
-  visitMixins(ctx: pc.MixinsContext): string[] {
-    let mixins: string[];
-    if (ctx.COMMA_DELIMITED_SEQUENCES()) {
-      mixins = ctx
-        .COMMA_DELIMITED_SEQUENCES()
-        .getText()
-        .split(/\s*,\s*/);
-    } else {
-      mixins = ctx.name().map(name => name.getText());
-    }
-    mixins = mixins.filter((m, i) => {
-      const duplicated = mixins.indexOf(m) !== i;
-      if (duplicated) {
-        logger.warn(`Detected duplicated Mixin: ${m}. Ignoring duplicates.`, {
-          location: this.extractStartStop(ctx),
-          file: this.currentFile
-        });
-      }
-      return !duplicated;
-    });
-    return mixins;
   }
 
   visitUsage(ctx: pc.UsageContext): InstanceUsage {

@@ -11,7 +11,6 @@ describe('Instance', () => {
       expect(p.id).toBe('MyInstance');
       expect(p.instanceOf).toBeUndefined();
       expect(p.title).toBeUndefined();
-      expect(p.mixins).toBeEmpty();
       expect(p.rules).toBeEmpty();
     });
   });

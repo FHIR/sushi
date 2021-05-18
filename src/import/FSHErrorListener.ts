@@ -183,6 +183,20 @@ export class FSHErrorListener extends ErrorListener {
         "Rules must start with a '*' symbol followed by at least one space, and may only be preceded by whitespace";
     }
 
+    // ########################################################################
+    // # Deprecated syntax                                           #
+    // ########################################################################
+
+    // Mixins: MyRuleSet
+    // > extraneous input 'Mixins:' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING,
+    // > KW_LOGICAL, KW_RESOURCE}
+    else if (/^extraneous input 'Mixins:'/.test(msg)) {
+      message =
+        "The 'Mixins' keyword is no longer supported. Instead, use the 'insert' keyword " +
+        'to insert a RuleSet at any location in the list of rules.';
+    }
+
     return { message, location };
   }
 }
