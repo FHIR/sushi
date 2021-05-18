@@ -1114,12 +1114,6 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.name());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
-    if (ctx.KW_UNITS()) {
-      logger.warn(
-        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        vsRule.sourceInfo
-      );
-    }
     return vsRule;
   }
 
@@ -1142,12 +1136,6 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     assignmentRule.value = this.visitValue(ctx.value());
     assignmentRule.exactly = ctx.KW_EXACTLY() != null;
-    if (ctx.KW_UNITS()) {
-      logger.warn(
-        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        assignmentRule.sourceInfo
-      );
-    }
     assignmentRule.isInstance =
       ctx.value().name() != null && !this.allAliases.has(ctx.value().name().getText());
     return assignmentRule;

@@ -197,6 +197,17 @@ export class FSHErrorListener extends ErrorListener {
         'to insert a RuleSet at any location in the list of rules.';
     }
 
+    // * valueQuantity units = http://foo.org#bar
+    // * valueQuantity units from MyVS (preferred)
+    // > extraneous input 'units' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING,
+    // > KW_LOGICAL, KW_RESOURCE}
+    else if (/^extraneous input 'units'/.test(msg)) {
+      message =
+        "The 'units' keyword is no longer supported. You can safely remove it from your FSH " +
+        'since quantity assignments and bindings function the same without it.';
+    }
+
     return { message, location };
   }
 }

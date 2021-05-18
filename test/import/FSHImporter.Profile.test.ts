@@ -50,7 +50,7 @@ describe('FSHImporter', () => {
 
       it('should parse profile with name matching various possible tokens recognized as name', () => {
         // This basically exercises all the tokens we accept for name:
-        // SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM | KW_UNITS;
+        // SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM;
 
         // Since we'll do the same thing over and over (and over), create a function for it
         const testToken = (token: string) => {
@@ -78,7 +78,6 @@ describe('FSHImporter', () => {
         testToken('codes'); // KW_CODES
         testToken('valueset'); // KW_VSREFERENCE
         testToken('system'); // KW_SYSTEM
-        testToken('units'); // KW_UNITS
       });
 
       it('should parse profile with additional metadata properties', () => {
@@ -884,11 +883,11 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should ignore the units keyword and log a warning when parsing value set rules on Quantity', () => {
+      it('should parse value set rules on Quantity', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * valueQuantity units from http://unitsofmeasure.org
+        * valueQuantity from http://unitsofmeasure.org
         `;
 
         const result = importSingleText(input, 'UselessQuant.fsh');
@@ -900,8 +899,20 @@ describe('FSHImporter', () => {
           'http://unitsofmeasure.org',
           'required'
         );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessQuant\.fsh.*Line: 4\D*/s
+      });
+
+      it('should log an error when parsing value set rules using the unit keyword', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units from http://unitsofmeasure.org
+        `;
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: Deprecated\.fsh.*Line: 4\D*/s
         );
       });
     });
@@ -1076,22 +1087,34 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueCodeableConcept', expectedCode, true);
       });
 
-      it('should ignore the units keyword and log a warning when parsing an assigned value FSHCode rule with units on Quantity', () => {
+      it('should parse an assigned value FSHCode rule with units on Quantity', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * valueQuantity units = http://unitsofmeasure.org#cGy
+        * valueQuantity = http://unitsofmeasure.org#cGy
         `;
 
         const result = importSingleText(input, 'UselessUnits.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
-          .withLocation([4, 33, 4, 61])
+          .withLocation([4, 27, 4, 55])
           .withFile('UselessUnits.fsh');
         assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedCode);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessUnits\.fsh.*Line: 4\D*/s
+      });
+
+      it('should log an error when parsing an assigned value FSHCode rule using the unit keyword', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units = http://unitsofmeasure.org#cGy
+        `;
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: Deprecated\.fsh.*Line: 4\D*/s
         );
       });
 
