@@ -91,40 +91,42 @@ export class StructureDefinitionExporter implements Fishable {
       throw new ParentNotProvidedError(fshDefinition.name, fshDefinition.sourceInfo);
     }
 
-    // We want to ensure that the FSH definition does not set either the name or the id
-    // to be the same value as the parent. Additionally, we want to provide a helpful
-    // error message when this condition exists by suggesting the use of the parent's URL
-    // if we can by using fishForMetadata() for the parent. The caveat is that we cannot
-    // fish for a type that is the same as the FSH definition (e.g., cannot fish for
-    // Type.Profile when FSH definition is an instanceof Profile) because the result of
-    // the fishing would only find itself.
-
-    let possibleParentMeta: Metadata;
-    if (fshDefinition instanceof Logical) {
-      // Logical models can have resources, complex-types, and other logical models as a parent
-      possibleParentMeta = this.fishForMetadata(fshDefinition.parent, Type.Resource, Type.Type);
-    } else if (fshDefinition instanceof Profile) {
-      // Profiles can have resources and other profiles as a parent
-      possibleParentMeta = this.fishForMetadata(fshDefinition.parent, Type.Resource);
-    }
-
-    if (fshDefinition.name === fshDefinition.parent) {
-      throw new ParentDeclaredAsNameError(
-        fshDefinition.constructorName,
-        fshDefinition.name,
-        fshDefinition.sourceInfo,
-        possibleParentMeta?.url
+    if (fshDefinition.name === fshDefinition.parent || fshDefinition.id === fshDefinition.parent) {
+      // We want to ensure that the FSH definition does not set either the name or the id
+      // to be the same value as the parent. Additionally, we want to provide a helpful
+      // error message when this condition exists by suggesting the use of the parent's URL
+      // if we can by using fishForMetadata() for the parent. The caveat is that we cannot
+      // fish for a type that is the same as the FSH definition (e.g., cannot fish for
+      // Type.Profile when FSH definition is an instanceof Profile) because the result of
+      // the fishing would only find itself.
+      //
+      // Logical models can have resources, complex-types, and other logical models as a parent.
+      // Profiles can have resources, complex-types, and other profiles as a parent.
+      // Therefore, fish for resources and types...
+      const possibleParentMeta = this.fishForMetadata(
+        fshDefinition.parent,
+        Type.Resource,
+        Type.Type
       );
-    }
 
-    if (fshDefinition.id === fshDefinition.parent) {
-      throw new ParentDeclaredAsIdError(
-        fshDefinition.constructorName,
-        fshDefinition.name,
-        fshDefinition.id,
-        fshDefinition.sourceInfo,
-        possibleParentMeta?.url
-      );
+      if (fshDefinition.name === fshDefinition.parent) {
+        throw new ParentDeclaredAsNameError(
+          fshDefinition.constructorName,
+          fshDefinition.name,
+          fshDefinition.sourceInfo,
+          possibleParentMeta?.url
+        );
+      }
+
+      if (fshDefinition.id === fshDefinition.parent) {
+        throw new ParentDeclaredAsIdError(
+          fshDefinition.constructorName,
+          fshDefinition.name,
+          fshDefinition.id,
+          fshDefinition.sourceInfo,
+          possibleParentMeta?.url
+        );
+      }
     }
 
     // Now that we have a usable fshDefinition.parent, retrieve its StructureDefinition.

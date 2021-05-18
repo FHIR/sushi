@@ -479,7 +479,7 @@ describe('StructureDefinitionExporter', () => {
       expect(() => {
         exporter.exportStructDef(profile);
       }).toThrow(
-        'Invalid parent AlternateIdentification specified for profile MyPatientProfile. The parent of a profile must be a resource or another profile.'
+        'Invalid parent AlternateIdentification specified for profile MyPatientProfile. The parent of a profile must be a resource, a type, or another profile.'
       );
     });
 
@@ -503,7 +503,7 @@ describe('StructureDefinitionExporter', () => {
       expect(() => {
         exporter.exportStructDef(logical);
       }).toThrow(
-        'Invalid parent Actual Group specified for logical model MyGroupModel. The parent of a logical model must be Element, Base, another logical model, or a resource.'
+        'Invalid parent Actual Group specified for logical model MyGroupModel. The parent of a logical model must be Element, Base, another logical model, a resource, or a type.'
       );
     });
 

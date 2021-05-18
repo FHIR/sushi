@@ -172,7 +172,7 @@ describe('LogicalExporter', () => {
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadParent\.fsh.*Line: 2 - 4\D*/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /The parent of a logical model must be Element, Base, another logical model, or a resource./s
+      /The parent of a logical model must be Element, Base, another logical model, a resource, or a type./s
     );
   });
 

@@ -4,7 +4,7 @@ import { SourceInfo } from '../fshtypes';
 export class InvalidProfileParentError extends Error implements WithSource {
   constructor(public childName: string, public parentName: string, public sourceInfo: SourceInfo) {
     super(
-      `Invalid parent ${parentName} specified for profile ${childName}. The parent of a profile must be a resource or another profile.`
+      `Invalid parent ${parentName} specified for profile ${childName}. The parent of a profile must be a resource, a type, or another profile.`
     );
   }
 }
