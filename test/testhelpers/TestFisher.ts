@@ -12,6 +12,16 @@ import fs from 'fs-extra';
 const defsCache = new FHIRDefinitions();
 
 export class TestFisher extends MasterFisher {
+  constructor(
+    public tank?: FSHTank,
+    public fhir?: FHIRDefinitions,
+    public pkg?: Package,
+    public cachePkgName = 'hl7.fhir.r4.core#4.0.1',
+    public testPkgName = 'package'
+  ) {
+    super(tank, fhir, pkg);
+  }
+
   withTank(tank: FSHTank) {
     this.tank = tank;
     return this;
@@ -24,6 +34,16 @@ export class TestFisher extends MasterFisher {
 
   withPackage(pkg: Package) {
     this.pkg = pkg;
+    return this;
+  }
+
+  withCachePackageName(pkgName: string) {
+    this.cachePkgName = pkgName;
+    return this;
+  }
+
+  withTestPackageName(pkgName: string) {
+    this.testPkgName = pkgName;
     return this;
   }
 
@@ -58,13 +78,7 @@ export class TestFisher extends MasterFisher {
   }
 
   loadFromCache(item: string, ...types: Type[]): void {
-    const cachePath = path.join(
-      os.homedir(),
-      '.fhir',
-      'packages',
-      'hl7.fhir.r4.core#4.0.1',
-      'package'
-    );
+    const cachePath = path.join(os.homedir(), '.fhir', 'packages', this.cachePkgName, 'package');
     // If there is no defsCache, load the FHIR defs from ~/.fhir
     if (defsCache.size() === 0) {
       loadFromPath(cachePath, 'temp', defsCache);
@@ -74,6 +88,7 @@ export class TestFisher extends MasterFisher {
       // make sure that resource is now copied into the test case package.
       const json = defsCache.fishForFHIR(item, ...types);
       if (json) {
+        console.log(`!!! RESOURCE LOADED FROM LOCAL FHIR CACHE: ${item} !!!`);
         this.fhir.add(json);
         fs.copyFileSync(
           path.join(cachePath, `${json.resourceType}-${json.id}.json`),
@@ -82,7 +97,7 @@ export class TestFisher extends MasterFisher {
             '..',
             'testhelpers',
             'testdefs',
-            'package',
+            this.testPkgName,
             `${json.resourceType}-${json.id}.json`
           )
         );

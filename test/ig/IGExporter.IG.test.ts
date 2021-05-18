@@ -298,6 +298,31 @@ describe('IGExporter', () => {
       });
     });
 
+    it('should not carry over the special virtual extension package dependencies', () => {
+      config.dependencies = [
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+        { packageId: 'hl7.fhir.extensions.r2', version: '4.0.1' },
+        { packageId: 'hl7.fhir.extensions.r3', version: '4.0.1' },
+        { packageId: 'hl7.fhir.extensions.r4', version: '4.0.1' },
+        { packageId: 'hl7.fhir.extensions.r5', version: '4.0.1' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // Ensure US Core is exported but special fhir extension packages are not
+      expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
     it('should issue an error when a dependency url cannot be inferred', () => {
       config.dependencies = [
         // NOTE: Will not find mCODE IG URL because we didn't load the mcode IG
@@ -363,10 +388,11 @@ describe('IGExporter', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation).toEqual({
         reference: { reference: 'StructureDefinition/sample-observation' },
         name: 'ConfiguredSampleObservation',
@@ -386,10 +412,11 @@ describe('IGExporter', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation).toBeUndefined();
     });
 
@@ -405,10 +432,11 @@ describe('IGExporter', () => {
       const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const configOnlyObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/config-only-observation'
-      );
+      const configOnlyObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/config-only-observation'
+        );
       expect(configOnlyObservation).toEqual({
         reference: {
           reference: 'StructureDefinition/config-only-observation'
@@ -482,15 +510,17 @@ describe('IGExporter', () => {
           r?.reference?.reference === 'StructureDefinition/sample-patient'
       );
       expect(samplePatient.groupingId).toBe('MyPatientGroup');
-      const examplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'Patient/patient-example'
-      );
+      const examplePatient: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'Patient/patient-example'
+        );
       expect(examplePatient.groupingId).toBe('MyPatientGroup');
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation.groupingId).toBe('MyObservationGroup');
     });
 
