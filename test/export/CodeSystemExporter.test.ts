@@ -506,6 +506,23 @@ describe('CodeSystemExporter', () => {
     expect(exported[0].count).toBeUndefined();
   });
 
+  it('should log a message when applying an invalid ConceptRule', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    const topCode = new ConceptRule('top');
+    const bottomCode = new ConceptRule('bottom');
+    bottomCode.hierarchy = ['top'];
+    const mistakeCode = new ConceptRule('mistake')
+      .withFile('InvalidHierarchy.fsh')
+      .withLocation([8, 3, 8, 25]);
+    mistakeCode.hierarchy = ['bottom']; // This is an incomplete hierarchy, and will generate an error.
+    codeSystem.rules.push(topCode, bottomCode, mistakeCode);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBe(2); // top and bottom were added, but not mistake
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidHierarchy\.fsh.*Line: 8\D*/s);
+  });
+
   it('should log a message when applying invalid CaretValueRule', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);

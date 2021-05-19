@@ -37,15 +37,23 @@ export class CodeSystemExporter {
         if (concept.definition) {
           newConcept.definition = concept.definition;
         }
-        concept.hierarchy.forEach(ancestorCode => {
+        for (const ancestorCode of concept.hierarchy) {
           const ancestorConcept = conceptContainer.find(
             ancestorConcept => ancestorConcept.code === ancestorCode
           );
-          if (!ancestorConcept.concept) {
-            ancestorConcept.concept = [];
+          if (ancestorConcept) {
+            if (!ancestorConcept.concept) {
+              ancestorConcept.concept = [];
+            }
+            conceptContainer = ancestorConcept.concept;
+          } else {
+            logger.error(
+              `Could not find ${ancestorCode} in concept hierarchy to use as ancestor of ${concept.code}.`,
+              concept.sourceInfo
+            );
+            return;
           }
-          conceptContainer = ancestorConcept.concept;
-        });
+        }
         conceptContainer.push(newConcept);
       });
     }
@@ -76,7 +84,6 @@ export class CodeSystemExporter {
     csStructureDefinition: StructureDefinition,
     rules: CodeCaretValueRule[]
   ) {
-    resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {
         const conceptPath = this.findConceptPath(codeSystem, rule.codePath);
@@ -93,17 +100,17 @@ export class CodeSystemExporter {
   }
 
   private findConceptPath(codeSystem: CodeSystem, codePath: string[]): string {
-    const conceptPath: number[] = [];
+    const conceptIndices: number[] = [];
     let conceptList = codeSystem.concept ?? [];
     for (const codeStep of codePath) {
       const stepIndex = conceptList.findIndex(concept => concept.code === codeStep);
       if (stepIndex === -1) {
         throw new CannotResolvePathError(codePath.map(code => `#${code}`).join(' '));
       }
-      conceptPath.push(stepIndex);
+      conceptIndices.push(stepIndex);
       conceptList = conceptList[stepIndex].concept ?? [];
     }
-    return conceptPath.map(conceptIndex => `concept[${conceptIndex}]`).join('.');
+    return conceptIndices.map(conceptIndex => `concept[${conceptIndex}]`).join('.');
   }
 
   private countConcepts(concepts: CodeSystemConcept[]): number {
