@@ -1735,49 +1735,6 @@ export class FSHImporter extends FSHVisitor {
           location: this.extractStartStop(ctx)
         });
       }
-    } else if (ctx.COMMA_DELIMITED_CODES()) {
-      logger.warn('Using "," to list concepts is deprecated. Please use "and" to list concepts.', {
-        file: this.currentFile,
-        location: this.extractStartStop(ctx)
-      });
-      if (from.system) {
-        const codes = ctx
-          .COMMA_DELIMITED_CODES()
-          .getText()
-          .split(/\s*,\s+#/);
-        codes[0] = codes[0].slice(1);
-        const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
-        codes.forEach(code => {
-          let codePart: string, description: string;
-          if (code.charAt(0) == '"') {
-            // codePart is a quoted string, just like description (if present).
-            [codePart, description] = code
-              .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
-              .map(quotedString => quotedString.slice(1, -1));
-          } else {
-            // codePart is not a quoted string.
-            // if there is a description after the code,
-            // it will be separated by whitespace before the leading "
-            const codeEnd = code.match(/\s+"/)?.index;
-            if (codeEnd) {
-              codePart = code.slice(0, codeEnd);
-              description = code.slice(codeEnd).trim().slice(1, -1);
-            } else {
-              codePart = code.trim();
-            }
-          }
-          concepts.push(
-            new FshCode(codePart, from.system, description)
-              .withLocation(location)
-              .withFile(this.currentFile)
-          );
-        });
-      } else {
-        logger.error('System is required when listing concepts in a value set component', {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        });
-      }
     }
     return [concepts, from];
   }

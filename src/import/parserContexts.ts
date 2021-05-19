@@ -425,7 +425,6 @@ export interface VsComponentContext extends ParserRuleContext {
 export interface VsConceptComponentContext extends ParserRuleContext {
   code(): CodeContext[];
   vsComponentFrom(): VsComponentFromContext;
-  COMMA_DELIMITED_CODES(): ParserRuleContext;
 }
 
 export interface VsFilterComponentContext extends ParserRuleContext {

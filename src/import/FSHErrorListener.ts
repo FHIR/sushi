@@ -208,6 +208,16 @@ export class FSHErrorListener extends ErrorListener {
         'since quantity assignments and bindings function the same without it.';
     }
 
+    // * #hippo, #crocodile , #emu from system ZOO
+    // > no viable alternative at input '\n* #hippo, #crocodile , #emu'
+    else if (
+      /^no viable alternative at input '(\s|\\n|\\t)*\*\s+[^,\s#]*#[^,\s]+\s*,\s*[^,\s#]*#[^,\s]+/.test(
+        msg
+      )
+    ) {
+      message = "Using ',' to list concepts is no longer supported. Use 'and' to list concepts.";
+    }
+
     // * onset[x], abatement[x] MS
     // > no viable alternative at input '\n* onset[x], abatement[x]'
     else if (/^no viable alternative at input '(\s|\\n|\\t)*\*\s+[^,\s]+\s*,\s*[^,\s]+/.test(msg)) {

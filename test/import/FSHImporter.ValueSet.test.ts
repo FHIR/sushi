@@ -363,24 +363,20 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
-      it('should log a warning when concepts are listed with commas', () => {
+      it('should log an error when concepts are listed with commas', () => {
         const input = `
         ValueSet: ZooVS
         * #hippo, #crocodile , #emu from system ZOO
         `;
 
-        const result = importSingleText(input, 'Zoo.fsh');
+        const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.rules.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
-          new FshCode('hippo', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
-          new FshCode('crocodile', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
-          new FshCode('emu', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh')
-        ]);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "," to list concepts is deprecated/s
+        expect(valueSet).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using ',' to list concepts is no longer supported/s
         );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
     });
 
