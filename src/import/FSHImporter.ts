@@ -1006,13 +1006,6 @@ export class FSHImporter extends FSHVisitor {
     return ctx.CARET_SEQUENCE().getText();
   }
 
-  visitPaths(ctx: pc.PathsContext): string[] {
-    return ctx
-      .COMMA_DELIMITED_SEQUENCES()
-      .getText()
-      .split(/\s*,\s*/);
-  }
-
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
     const rules: (CardRule | FlagRule)[] = [];
 
@@ -1049,19 +1042,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFlagRule(ctx: pc.FlagRuleContext): FlagRule[] {
-    let paths: string[];
-    if (ctx.path().length > 0) {
-      paths = ctx.path().map(path => this.getPathWithContext(this.visitPath(path), ctx));
-    } else if (ctx.paths()) {
-      logger.warn('Using "," to list paths is deprecated. Please use "and" to list paths.', {
-        file: this.currentFile,
-        location: this.extractStartStop(ctx.paths())
-      });
-      paths = this.visitPaths(ctx.paths()).map(path => this.getPathWithContext(path, ctx));
-    }
-
-    return paths.map(path => {
-      const flagRule = new FlagRule(path)
+    return ctx.path().map(path => {
+      const flagRule = new FlagRule(this.getPathWithContext(this.visitPath(path), ctx))
         .withLocation(this.extractStartStop(ctx))
         .withFile(this.currentFile);
       this.parseFlags(flagRule, ctx.flag());

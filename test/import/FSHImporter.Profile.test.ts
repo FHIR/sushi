@@ -701,47 +701,20 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when paths are listed with commas', () => {
+      it('should log an error when paths are listed with commas', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
         * category, value[x] , component MS SU N
         `;
 
-        const result = importSingleText(input);
+        const result = importSingleText(input, 'Deprecated.fsh');
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(3);
-        assertFlagRule(
-          profile.rules[0],
-          'category',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using ',' to list paths is no longer supported/s
         );
-        assertFlagRule(
-          profile.rules[1],
-          'value[x]',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        assertFlagRule(
-          profile.rules[2],
-          'component',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list paths is deprecated/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
       });
     });
 

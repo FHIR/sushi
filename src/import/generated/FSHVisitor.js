@@ -396,12 +396,6 @@ FSHVisitor.prototype.visitPath = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#paths.
-FSHVisitor.prototype.visitPaths = function(ctx) {
-  return this.visitChildren(ctx);
-};
-
-
 // Visit a parse tree produced by FSHParser#caretPath.
 FSHVisitor.prototype.visitCaretPath = function(ctx) {
   return this.visitChildren(ctx);

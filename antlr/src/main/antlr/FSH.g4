@@ -64,7 +64,7 @@ target:             KW_TARGET STRING;
 
 // RULES
 cardRule:           STAR path CARD flag*;
-flagRule:           STAR ((path KW_AND)* path | paths) flag+;
+flagRule:           STAR path (KW_AND path)* flag+;
 valueSetRule:       STAR path KW_FROM name strength?;
 fixedValueRule:     STAR path EQUAL value KW_EXACTLY?;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
@@ -94,7 +94,6 @@ vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 // MISC
 name:               SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM;
 path:               SEQUENCE | KW_SYSTEM;
-paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;

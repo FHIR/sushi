@@ -587,15 +587,6 @@ FSHListener.prototype.exitPath = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#paths.
-FSHListener.prototype.enterPaths = function(ctx) {
-};
-
-// Exit a parse tree produced by FSHParser#paths.
-FSHListener.prototype.exitPaths = function(ctx) {
-};
-
-
 // Enter a parse tree produced by FSHParser#caretPath.
 FSHListener.prototype.enterCaretPath = function(ctx) {
 };

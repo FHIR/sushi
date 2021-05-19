@@ -239,10 +239,6 @@ export interface CaretPathContext extends ParserRuleContext {
   CARET_SEQUENCE(): ParserRuleContext;
 }
 
-export interface PathsContext extends ParserRuleContext {
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-}
-
 export interface CardRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext;
@@ -253,7 +249,6 @@ export interface CardRuleContext extends ParserRuleContext {
 export interface FlagRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext[];
-  paths(): PathsContext;
   flag(): FlagContext[];
 }
 
