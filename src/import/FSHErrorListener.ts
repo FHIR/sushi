@@ -44,6 +44,12 @@ export class FSHErrorListener extends ErrorListener {
     const oneTokenBack = getPreviousNonWsToken(recognizer, offendingSymbol);
     const twoTokensBack = getPreviousNonWsToken(recognizer, oneTokenBack);
 
+    // uncomment below to assist in determining algorithm to detect specific error cases that fall through
+    // console.log('SYNTAX ERROR > message:', message);
+    // console.log('SYNTAX ERROR > offendingSymbol:', offendingSymbol?.text);
+    // console.log('SYNTAX ERROR > oneTokenBack:', oneTokenBack?.text);
+    // console.log('SYNTAX ERROR > twoTokensBack:', twoTokensBack?.text);
+
     // ########################################################################
     // # Missing space around =                                               #
     // ########################################################################
@@ -193,8 +199,8 @@ export class FSHErrorListener extends ErrorListener {
     // > KW_LOGICAL, KW_RESOURCE}
     else if (/^extraneous input 'Mixins:'/.test(msg)) {
       message =
-        "The 'Mixins' keyword is no longer supported. Instead, use the 'insert' keyword " +
-        'to insert a RuleSet at any location in the list of rules.';
+        "The 'Mixins' keyword is no longer supported. Use the 'insert' keyword to insert a " +
+        'RuleSet at any location in the list of rules.';
     }
 
     // * valueQuantity units = http://foo.org#bar
@@ -206,6 +212,25 @@ export class FSHErrorListener extends ErrorListener {
       message =
         "The 'units' keyword is no longer supported. You can safely remove it from your FSH " +
         'since quantity assignments and bindings function the same without it.';
+    }
+
+    // * value[x] only Reference(Patient | Practitioner | Person)
+    // > extraneous input '|' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE,
+    // > KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * * value[x] only Reference ( Patient | Practitioner | Person )
+    // > extraneous input '(' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE, KW_INVARIANT,
+    // > KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * value[x] only Reference( Patient | Practitioner | Person )
+    // > extraneous input 'Patient' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    else if (
+      /^extraneous input/.test(msg) &&
+      (/^\|$/.test(offendingSymbol?.text) ||
+        /^Reference\(/.test(oneTokenBack?.text) ||
+        (/^\(/.test(offendingSymbol?.text) && /^Reference$/.test(oneTokenBack?.text)))
+    ) {
+      message =
+        "Using '|' to list references is no longer supported. Use 'or' to list multiple references.";
     }
 
     // * onset[x], abatement[x] MS

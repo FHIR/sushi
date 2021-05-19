@@ -1277,22 +1277,8 @@ export class FSHImporter extends FSHVisitor {
   // This function is called when fixing a value, and a value can only be set
   // to a specific reference, not a choice of references.
   visitReference(ctx: pc.ReferenceContext): FshReference {
-    let ref: FshReference;
-    let parsedReferences: string[];
-    if (ctx.OR_REFERENCE()) {
-      parsedReferences = this.parseOrReference(ctx.OR_REFERENCE().getText());
-      ref = new FshReference(this.aliasAwareValue(ctx.OR_REFERENCE(), parsedReferences[0]));
-    } else {
-      parsedReferences = this.parsePipeReference(ctx.PIPE_REFERENCE().getText());
-      ref = new FshReference(this.aliasAwareValue(ctx.PIPE_REFERENCE(), parsedReferences[0]));
-      logger.warn(
-        'Using "|" to list references is deprecated. Please use "or" to list references.',
-        {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        }
-      );
-    }
+    const parsedReferences = this.parseOrReference(ctx.REFERENCE().getText());
+    const ref = new FshReference(this.aliasAwareValue(ctx.REFERENCE(), parsedReferences[0]));
     if (parsedReferences.length > 1) {
       logger.error(
         'Multiple choices of references are not allowed when setting a value. Only the first choice will be used.',
@@ -1313,13 +1299,6 @@ export class FSHImporter extends FSHVisitor {
     return reference
       .slice(reference.indexOf('(') + 1, reference.length - 1)
       .split(/\s+or\s+/)
-      .map(r => r.trim());
-  }
-
-  private parsePipeReference(reference: string): string[] {
-    return reference
-      .slice(reference.indexOf('(') + 1, reference.length - 1)
-      .split(/\s*\|\s*/)
       .map(r => r.trim());
   }
 
@@ -1351,22 +1330,8 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
       if (t.reference()) {
-        let referenceToken: ParserRuleContext;
-        let references: string[];
-        if (t.reference().OR_REFERENCE()) {
-          referenceToken = t.reference().OR_REFERENCE();
-          references = this.parseOrReference(referenceToken.getText());
-        } else {
-          referenceToken = t.reference().PIPE_REFERENCE();
-          references = this.parsePipeReference(referenceToken.getText());
-          logger.warn(
-            'Using "|" to list references is deprecated. Please use "or" to list references.',
-            {
-              file: this.currentFile,
-              location: this.extractStartStop(ctx)
-            }
-          );
-        }
+        const referenceToken = t.reference().REFERENCE();
+        const references = this.parseOrReference(referenceToken.getText());
         references.forEach(r =>
           onlyRule.types.push({
             type: this.aliasAwareValue(referenceToken, r),

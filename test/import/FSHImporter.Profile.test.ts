@@ -1605,7 +1605,7 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when references are listed with pipes', () => {
+      it('should log an error when references are listed with pipes', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -1614,19 +1614,13 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '\|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
 
-      it('should log a warning when references are listed with pipes with whitespace', () => {
+      it('should log an error when references are listed with pipes with whitespace', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -1635,15 +1629,9 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '\|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
     });
@@ -2057,6 +2045,7 @@ describe('FSHImporter', () => {
         // RuleSet: WarningRuleSet(value)
         // * focus[0] only Reference(Patient | {value})
         // * focus[1] only Reference(Group | {value})
+        // NOTE: This now causes ERRORS (not warnings), so associated test is skipped!
         const warningRuleSet = new ParamRuleSet('WarningRuleSet')
           .withFile('RuleSet.fsh')
           .withLocation([30, 12, 32, 53]);
@@ -2508,7 +2497,10 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should log one warning when an insert rule with parameters results in warnings', () => {
+      // Skipping the following rule because SUSHI no longer has any warnings associated w/ parsing rules.
+      // All deprecated syntaxes are now errors (not warnings).  We can re-enable if/when the importer
+      // produces warnings on rules.
+      it.skip('should log one warning when an insert rule with parameters results in warnings', () => {
         const input = `
         Profile: MyObservation
         Parent: Observation

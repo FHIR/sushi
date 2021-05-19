@@ -87,9 +87,8 @@ TIME:               [0-9][0-9](':'[0-9][0-9](':'[0-9][0-9]('.'[0-9]+)?)?)?('Z' |
                  // DIGITS  ..  (DIGITS |  * )
 CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
 
-                 //  Reference       (        ITEM         |         ITEM         )
-OR_REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
-PIPE_REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
+              //  Reference       (        ITEM         |         ITEM         )
+REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
 
                  // Canonical(Item)
 CANONICAL:         'Canonical' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)? ')';
