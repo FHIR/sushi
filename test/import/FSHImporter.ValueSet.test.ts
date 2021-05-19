@@ -10,6 +10,7 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { Rule } from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
+  afterEach(() => loggerSpy.reset());
   describe('ValueSet', () => {
     describe('#vsMetadata', () => {
       it('should parse a value set with additional metadata', () => {
@@ -373,10 +374,10 @@ describe('FSHImporter', () => {
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet).toBeDefined();
-        expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Using ',' to list concepts is no longer supported/s
+        expect(loggerSpy.getFirstMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
         );
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
+        expect(loggerSpy.getFirstMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
     });
 
@@ -499,24 +500,20 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
-      it('should log a warning when valuesets are listed with commas', () => {
+      it('should log an error when valuesets are listed with commas', () => {
         const input = `
         ValueSet: ZooVS
         * codes from valueset FirstZooVS, SecondZooVS
         `;
 
-        const result = importSingleText(input, 'Zoo.fsh');
+        const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        assertValueSetFilterComponent(
-          valueSet.rules[0],
-          undefined,
-          ['FirstZooVS', 'SecondZooVS'],
-          []
+        expect(valueSet).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
         );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "," to list valuesets is deprecated/s
-        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator =', () => {

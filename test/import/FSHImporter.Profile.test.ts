@@ -712,7 +712,7 @@ describe('FSHImporter', () => {
         const profile = result.profiles.get('ObservationProfile');
         expect(profile).toBeDefined();
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Using ',' to list paths is no longer supported/s
+          /Using ',' to list items is no longer supported/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
       });

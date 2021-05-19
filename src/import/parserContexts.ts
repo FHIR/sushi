@@ -448,7 +448,6 @@ export interface VsFromSystemContext extends ParserRuleContext {
 export interface VsFromValuesetContext extends ParserRuleContext {
   KW_VSREFERENCE(): ParserRuleContext;
   name(): NameContext[];
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
 }
 
 export interface VsFilterListContext extends ParserRuleContext {

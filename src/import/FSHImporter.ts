@@ -1782,22 +1782,6 @@ export class FSHImporter extends FSHVisitor {
           .vsFromValueset()
           .name()
           .map(name => this.aliasAwareValue(name));
-      } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
-        logger.warn(
-          'Using "," to list valuesets is deprecated. Please use "and" to list valuesets.',
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-        from.valueSets = ctx
-          .vsFromValueset()
-          .COMMA_DELIMITED_SEQUENCES()
-          .getText()
-          .split(/\s*,\s*/)
-          .map(fromVs =>
-            this.aliasAwareValue(ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES(), fromVs.trim())
-          );
       }
     }
     return from;

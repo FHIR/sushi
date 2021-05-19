@@ -208,20 +208,17 @@ export class FSHErrorListener extends ErrorListener {
         'since quantity assignments and bindings function the same without it.';
     }
 
-    // * #hippo, #crocodile , #emu from system ZOO
-    // > no viable alternative at input '\n* #hippo, #crocodile , #emu'
-    else if (
-      /^no viable alternative at input '(\s|\\n|\\t)*\*\s+[^,\s#]*#[^,\s]+\s*,\s*[^,\s#]*#[^,\s]+/.test(
-        msg
-      )
-    ) {
-      message = "Using ',' to list concepts is no longer supported. Use 'and' to list concepts.";
-    }
-
     // * onset[x], abatement[x] MS
-    // > no viable alternative at input '\n* onset[x], abatement[x]'
-    else if (/^no viable alternative at input '(\s|\\n|\\t)*\*\s+[^,\s]+\s*,\s*[^,\s]+/.test(msg)) {
-      message = "Using ',' to list paths is no longer supported. Use 'and' to list paths.";
+    // > extraneous input 'abatement[x]' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * #hippo, #crocodile , #emu from system ZOO
+    // > extraneous input '#crocodile' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * codes from valueset FirstZooVS, SecondZooVS
+    // > extraneous input 'SecondZooVS' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    else if (/^extraneous input/.test(msg) && /,$/.test(oneTokenBack?.text)) {
+      message = "Using ',' to list items is no longer supported. Use 'and' to list multiple items.";
     }
 
     return { message, location };

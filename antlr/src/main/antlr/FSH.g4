@@ -84,8 +84,8 @@ vsConceptComponent: code vsComponentFrom?
 vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
 vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValueset (KW_AND vsFromSystem)?);
 vsFromSystem:       KW_SYSTEM name;
-vsFromValueset:     KW_VSREFERENCE ((name KW_AND)* name | COMMA_DELIMITED_SEQUENCES);
-vsFilterList:       (vsFilterDefinition KW_AND)* vsFilterDefinition;
+vsFromValueset:     KW_VSREFERENCE name (KW_AND name)*;
+vsFilterList:       vsFilterDefinition (KW_AND vsFilterDefinition);
 vsFilterDefinition: name vsFilterOperator vsFilterValue?;
 vsFilterOperator:   EQUAL | SEQUENCE;
 vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
