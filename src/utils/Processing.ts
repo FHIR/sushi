@@ -16,16 +16,7 @@ import {
   loadConfigurationFromIgResource
 } from '../import';
 import { Package } from '../export';
-import {
-  filterInlineInstances,
-  filterExampleInstances,
-  filterCapabilitiesInstances,
-  filterVocabularyInstances,
-  filterModelInstances,
-  filterOperationInstances,
-  filterExtensionInstances,
-  filterProfileInstances
-} from './InstanceDefinitionUtils';
+import { filterInlineInstances } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
@@ -84,10 +75,9 @@ export function findInputDir(input: string): string {
     let msg =
       '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n';
     if (fs.existsSync(fshSubdirectoryPath)) {
-      input = path.join(input, 'fsh');
       msg +=
         '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
-        'Use of this folder is DEPRECATED and will be REMOVED in a future release.\n' +
+        'Use of this folder is DEPRECATED and has been REMOVED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
@@ -97,7 +87,7 @@ export function findInputDir(input: string): string {
     } else {
       msg +=
         '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
-        'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
+        'Support for other folder structures is DEPRECATED and has been REMOVED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
@@ -313,7 +303,6 @@ export function writeFHIRResources(
   let count = 0;
   const predefinedResources = defs.allPredefinedResources();
   const writeResources = (
-    folder: string,
     resources: {
       getFileName: () => string;
       toJSON: (snapshot: boolean) => any;
@@ -349,21 +338,14 @@ export function writeFHIRResources(
       }
     });
   };
-  writeResources('profiles', outPackage.profiles);
-  writeResources('extensions', outPackage.extensions);
-  writeResources('vocabulary', [...outPackage.valueSets, ...outPackage.codeSystems]);
+  writeResources(outPackage.profiles);
+  writeResources(outPackage.extensions);
+  writeResources([...outPackage.valueSets, ...outPackage.codeSystems]);
 
-  // Sort instances into appropriate directories
+  // Filter out inline instances
   const instances = cloneDeep(outPackage.instances); // Filter functions below mutate the argument, so clone what is in the package
   filterInlineInstances(instances);
-  writeResources('examples', filterExampleInstances(instances));
-  writeResources('capabilities', filterCapabilitiesInstances(instances));
-  writeResources('vocabulary', filterVocabularyInstances(instances));
-  writeResources('models', filterModelInstances(instances));
-  writeResources('operations', filterOperationInstances(instances));
-  writeResources('extensions', filterExtensionInstances(instances));
-  writeResources('profiles', filterProfileInstances(instances));
-  writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
+  writeResources(instances);
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 }

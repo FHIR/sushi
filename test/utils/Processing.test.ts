@@ -70,7 +70,7 @@ describe('Processing', () => {
       fs.mkdirpSync(path.join(tempRoot, 'has-input', 'input'));
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
-      fs.mkdirpSync(path.join(tempRoot, 'flat-tank', 'ig-data'));
+      fs.mkdirpSync(path.join(tempRoot, 'flat-tank', 'ig-data')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
       fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'notfsh.txt'));
     });
@@ -88,16 +88,6 @@ describe('Processing', () => {
       expect(foundInput).toBe('.');
     });
 
-    // TODO: Tests legacy support. Remove when no longer supported.
-    it('should find a path to the fsh subdirectory if present', () => {
-      const input = path.join(tempRoot, 'has-fsh');
-      const foundInput = findInputDir(input);
-      expect(foundInput).toBe(path.join(tempRoot, 'has-fsh', 'fsh'));
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /Use of this folder is DEPRECATED and will be REMOVED in a future release/s
-      );
-    });
-
     it('should find a path to the input/fsh subdirectory if present', () => {
       const input = path.join(tempRoot, 'has-input-fsh');
       const foundInput = findInputDir(input);
@@ -111,23 +101,37 @@ describe('Processing', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    // TODO: Tests legacy support. Remove when no longer supported.
+    it('should find a path to input/fsh if no fsh files are present, no root level ig-data folder, and no fsh subdirectory (current tank with no fsh files)', () => {
+      const input = path.join(tempRoot, 'no-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'no-fsh', 'input', 'fsh'));
+    });
+
+    // TODO: Tests current tank configuration is preferred over legacy. Remove when legacy error handling is removed.
     it('should prefer path to input/fsh over fsh/ if both present', () => {
       const input = path.join(tempRoot, 'has-fsh-and-input-fsh');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
     });
 
-    it('should find a path to the provided directory if the fsh subdirectory is not present and a root ig-data is present (legacy flat tank)', () => {
+    // TODO: Tests legacy case logs error. Remove when error is removed.
+    it('should log an error and not change input directory if the fsh subdirectory if present (legacy ./fsh/)', () => {
+      const input = path.join(tempRoot, 'has-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'has-fsh'));
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Use of this folder is DEPRECATED and has been REMOVED/s
+      );
+    });
+
+    // TODO: Tests legacy case logs error. Remove when error is removed.
+    it('should log an error and not change input directory if the fsh subdirectory is not present and a root ig-data is present (legacy flat tank)', () => {
       const input = path.join(tempRoot, 'flat-tank');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(input);
-    });
-
-    it('should find a path to input/fsh if no fsh files are present, no root level ig-data folder, and no fsh subdirectory (current tank with no fsh files)', () => {
-      const input = path.join(tempRoot, 'no-fsh');
-      const foundInput = findInputDir(input);
-      expect(foundInput).toBe(path.join(tempRoot, 'no-fsh', 'input', 'fsh'));
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Support for other folder structures is DEPRECATED and has been REMOVED/s
+      );
     });
   });
 
@@ -152,34 +156,17 @@ describe('Processing', () => {
     it('should use and create the output directory when it is provided', () => {
       const input = path.join(tempRoot, 'my-input');
       const output = path.join(tempRoot, 'my-output');
-      const legacyIgContextOutputDir = ensureOutputDir(input, output, false, true);
-      const igContextOutputDir = ensureOutputDir(input, output, true, false);
-      const nonIgContextOutputDir = ensureOutputDir(input, output, false, false);
-      expect(igContextOutputDir).toBe(output);
-      expect(nonIgContextOutputDir).toBe(output);
-      expect(legacyIgContextOutputDir).toBe(output);
+      const outputDir = ensureOutputDir(input, output);
+      expect(outputDir).toBe(output);
       expect(fs.existsSync(output)).toBeTruthy();
     });
 
-    it('should default the output directory to "build" when not running in IG Publisher context', () => {
-      const input = path.join(tempRoot, 'my-input');
-      const outputDir = ensureOutputDir(input, undefined, false, false);
-      expect(outputDir).toBe('build');
-      expect(fs.existsSync(outputDir)).toBeTruthy();
-    });
-
-    it('should default the output directory to the parent of the input when running in legacy IG Publisher context', () => {
-      const input = path.join(tempRoot, 'my-input');
-      const outputDir = ensureOutputDir(input, undefined, false, true);
-      expect(outputDir).toBe(tempRoot);
-      expect(fs.existsSync(outputDir)).toBeTruthy();
-    });
-
-    it('should default the output directory to the grandparent of the input when running in IG Publisher context', () => {
+    it('should default the output directory to the grandparent of the input no output directory provided (e.g. ./input/fsh -> ./)', () => {
       const input = path.join(tempRoot, 'my-input', 'my-fsh');
-      const outputDir = ensureOutputDir(input, undefined, true, false);
+      const outputDir = ensureOutputDir(input, undefined);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
+      expect(loggerSpy.getLastMessage('info')).toMatch(/No output path specified/);
     });
 
     it('should empty the fsh-generated folder if the output directory contains one', () => {
@@ -187,7 +174,7 @@ describe('Processing', () => {
         .spyOn(fs, 'existsSync')
         .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
       const input = path.join(tempRoot, 'my-input', 'my-fsh');
-      const outputDir = ensureOutputDir(input, undefined, true, false);
+      const outputDir = ensureOutputDir(input, undefined);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
       expect(emptyDirSpy.mock.calls).toHaveLength(1);
@@ -202,7 +189,7 @@ describe('Processing', () => {
         .spyOn(fs, 'existsSync')
         .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
       const input = path.join(tempRoot, 'my-input', 'my-fsh');
-      const outputDir = ensureOutputDir(input, undefined, true, false);
+      const outputDir = ensureOutputDir(input, undefined);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
       expect(emptyDirSpy.mock.calls).toHaveLength(1);
@@ -220,7 +207,7 @@ describe('Processing', () => {
 
     it('should return the contents of sushi-config.yaml from the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       expect(config).toEqual({
         filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
         id: 'sushi-test',
@@ -264,29 +251,19 @@ describe('Processing', () => {
 
     it('should allow FHIR R5', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-r5');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       expect(config.fhirVersion).toEqual(['4.5.0']);
     });
 
     it('should allow FHIR current', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-current');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       expect(config.fhirVersion).toEqual(['current']);
     });
 
-    it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent', () => {
+    it('should extract a configuration from an ImplementationGuide JSON when sushi-config.yaml is absent', () => {
       const input = path.join(__dirname, 'fixtures', 'ig-JSON-only');
-      const config = readConfig(input, false);
-      expect(config).toEqual({
-        FSHOnly: true,
-        canonical: 'http://example.org',
-        fhirVersion: ['4.0.1']
-      });
-    });
-
-    it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent (legacy)', () => {
-      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only-legacy', 'fsh');
-      const config = readConfig(input, true);
+      const config = readConfig(input);
       expect(config).toEqual({
         FSHOnly: true,
         canonical: 'http://example.org',
@@ -297,7 +274,7 @@ describe('Processing', () => {
     it('should log and throw an error when sushi-config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/No sushi-config\.yaml/s);
     });
@@ -305,7 +282,7 @@ describe('Processing', () => {
     it('should log and throw an error when the contents of sushi-config.yaml are not valid yaml', () => {
       const input = path.join(__dirname, 'fixtures', 'invalid-yaml');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/not a valid YAML object/s);
     });
@@ -313,7 +290,7 @@ describe('Processing', () => {
     it('should log and throw an error when the configuration uses an unsupported FHIR version (DSTU2)', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-dstu2');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /must specify a supported version of FHIR/s
@@ -323,7 +300,7 @@ describe('Processing', () => {
     it('should log and throw an error when the configuration uses an unsupported FHIR version (4.0.0)', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-four-oh-oh');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /must specify a supported version of FHIR/s
@@ -692,7 +669,7 @@ describe('Processing', () => {
       tempRoot = temp.mkdirSync('output-dir');
       tempIGPubRoot = temp.mkdirSync('output-ig-dir');
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       outPackage = new Package(config);
       defs = new FHIRDefinitions();
 
@@ -782,7 +759,7 @@ describe('Processing', () => {
 
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        writeFHIRResources(tempIGPubRoot, outPackage, defs, false, true);
+        writeFHIRResources(tempIGPubRoot, outPackage, defs, false);
       });
 
       afterAll(() => {
@@ -806,6 +783,7 @@ describe('Processing', () => {
         expect(allGeneratedFiles).toContain('StructureDefinition-my-model.json');
         expect(allGeneratedFiles).toContain('OperationDefinition-my-operation.json');
         expect(allGeneratedFiles).toContain('Observation-my-other-instance.json');
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
       });
 
       it('should not write a resource if that resource already exists in the "input" folder', () => {
@@ -839,88 +817,6 @@ describe('Processing', () => {
             .getAllMessages('error')
             .some(error => error.match(/Ignoring FSH definition for .*my-duplicate-instance/))
         ).toBeTruthy();
-      });
-    });
-
-    describe('legacy IG Publisher mode and legacy flat tank', () => {
-      beforeAll(() => {
-        writeFHIRResources(tempRoot, outPackage, defs, false, false);
-      });
-
-      afterAll(() => {
-        temp.cleanupSync();
-      });
-
-      it('should write profiles and profile instances to the "profiles" directory', () => {
-        const profilesPath = path.join(tempRoot, 'input', 'profiles');
-        expect(fs.existsSync(profilesPath)).toBeTruthy();
-        const profilesFiles = fs.readdirSync(profilesPath);
-        expect(profilesFiles.length).toBe(2);
-        expect(profilesFiles).toContain('StructureDefinition-my-profile.json');
-        expect(profilesFiles).toContain('StructureDefinition-my-profile-instance.json');
-      });
-
-      it('should write extensions and extension instances to the "extensions" directory', () => {
-        const extensionsPath = path.join(tempRoot, 'input', 'extensions');
-        expect(fs.existsSync(extensionsPath)).toBeTruthy();
-        const extensionsFiles = fs.readdirSync(extensionsPath);
-        expect(extensionsFiles.length).toBe(2);
-        expect(extensionsFiles).toContain('StructureDefinition-my-extension.json');
-        expect(extensionsFiles).toContain('StructureDefinition-my-extension-instance.json');
-      });
-
-      it('should write value sets, code systems, and vocabulary instances to the "vocabulary" directory', () => {
-        const vocabularyPath = path.join(tempRoot, 'input', 'vocabulary');
-        expect(fs.existsSync(vocabularyPath)).toBeTruthy();
-        const vocabularyFiles = fs.readdirSync(vocabularyPath);
-        expect(vocabularyFiles.length).toBe(3);
-        expect(vocabularyFiles).toContain('ValueSet-my-value-set.json');
-        expect(vocabularyFiles).toContain('CodeSystem-my-code-system.json');
-        expect(vocabularyFiles).toContain('ConceptMap-my-concept-map.json');
-      });
-
-      it('should write example instances to the "examples" directory', () => {
-        const examplesPath = path.join(tempRoot, 'input', 'examples');
-        expect(fs.existsSync(examplesPath)).toBeTruthy();
-        const examplesFiles = fs.readdirSync(examplesPath);
-        expect(examplesFiles.length).toBe(1);
-        expect(examplesFiles).toContain('Observation-my-example.json');
-      });
-
-      it('should write capability instances to the "capabilities" directory', () => {
-        const capabilitiesPath = path.join(tempRoot, 'input', 'capabilities');
-        expect(fs.existsSync(capabilitiesPath)).toBeTruthy();
-        const capabilitiesFiles = fs.readdirSync(capabilitiesPath);
-        expect(capabilitiesFiles.length).toBe(1);
-        expect(capabilitiesFiles).toContain('CapabilityStatement-my-capabilities.json');
-      });
-
-      it('should write model instances to the "models" directory', () => {
-        const modelsPath = path.join(tempRoot, 'input', 'models');
-        expect(fs.existsSync(modelsPath)).toBeTruthy();
-        const modelsFiles = fs.readdirSync(modelsPath);
-        expect(modelsFiles.length).toBe(1);
-        expect(modelsFiles).toContain('StructureDefinition-my-model.json');
-      });
-
-      it('should write operation instances to the "operations" directory', () => {
-        const operationsPath = path.join(tempRoot, 'input', 'operations');
-        expect(fs.existsSync(operationsPath)).toBeTruthy();
-        const operationsFiles = fs.readdirSync(operationsPath);
-        expect(operationsFiles.length).toBe(1);
-        expect(operationsFiles).toContain('OperationDefinition-my-operation.json');
-      });
-
-      it('should write all other non-inline instances to the "resources" directory', () => {
-        const resourcesPath = path.join(tempRoot, 'input', 'resources');
-        expect(fs.existsSync(resourcesPath)).toBeTruthy();
-        const resourcesFiles = fs.readdirSync(resourcesPath);
-        expect(resourcesFiles.length).toBe(1);
-        expect(resourcesFiles).toContain('Observation-my-other-instance.json');
-      });
-
-      it('should write an info message with the number of instances exported', () => {
-        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
       });
     });
   });
