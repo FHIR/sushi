@@ -1829,7 +1829,7 @@ export class ElementDefinition {
         // contentReference elements will not contain a type field, so we must fish for the StructDef and
         // check the differential
         const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
-        if (this.hasProfileElementExtension(profileJson)) {
+        if (profileJson && this.hasProfileElementExtension(profileJson)) {
           const def = this.structDef;
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
@@ -1916,25 +1916,22 @@ export class ElementDefinition {
    * @returns {boolean} True if the profile element extension is found on this elements profile property, false
    * if the extension is not found
    */
-  private hasProfileElementExtension(profileJson?: any): boolean {
-    // contentReference elements will not contain a type field, so we must check the structDef from the
-    // fisher in order to check for the profile-element extension
-    if (this.contentReference && !profileJson) {
-      return false;
-    }
-    const elementName = this.getContentReferenceId() || this.id;
+  private hasProfileElementExtension(profileJson: any): boolean {
+    const elementName = this.getContentReferenceId();
 
-    const elementType =
-      this.type?.[0] ||
-      profileJson.differential.element.find((element: any) => element.id === elementName)
-        ?.type?.[0];
+    const elementType = profileJson.differential.element.find(
+      (element: any) => element.id === elementName
+    )?.type?.[0];
 
+    // If the type property is not present in the differential, the profile-element extension is not present
     if (!elementType) {
       return false;
     }
 
     const profileCanonical = elementType.profile?.[0];
     let extensionUrl, targetElement: string;
+
+    // If there is no _profile array, the profile-element extension is not present
     if (elementType._profile) {
       extensionUrl = elementType._profile[0].extension[0].url;
       targetElement = elementType._profile[0].extension[0].valueString;
@@ -1942,17 +1939,11 @@ export class ElementDefinition {
       return false;
     }
 
-    if (this.contentReference) {
-      return (
-        profileCanonical === this.structDef.url &&
-        extensionUrl === PROFILE_ELEMENT_EXTENSION &&
-        targetElement === elementName
-      );
-    } else if (extensionUrl === PROFILE_ELEMENT_EXTENSION && targetElement) {
-      return true;
-    } else {
-      return false;
-    }
+    return (
+      profileCanonical === this.structDef.url &&
+      extensionUrl === PROFILE_ELEMENT_EXTENSION &&
+      targetElement === elementName
+    );
   }
 
   private getContentReferenceId(): string | undefined {
