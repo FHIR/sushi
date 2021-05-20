@@ -1,19 +1,16 @@
 import path from 'path';
 import ini from 'ini';
 import { EOL } from 'os';
-import { sortBy, words, pad, padEnd, repeat, orderBy, cloneDeep } from 'lodash';
+import { sortBy, words, pad, padEnd, repeat, cloneDeep } from 'lodash';
 import { titleCase } from 'title-case';
 import {
-  statSync,
   ensureDirSync,
-  copySync,
   outputJSONSync,
   outputFileSync,
   existsSync,
   readdirSync,
   readFileSync
 } from 'fs-extra';
-import table from 'markdown-table';
 import junk from 'junk';
 import { Package } from '../export';
 import {
@@ -61,7 +58,6 @@ const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
 export class IGExporter {
   private ig: ImplementationGuide;
   private readonly configPath: string;
-  private readonly outputLog: Map<string, outputLogDetails>;
   private readonly config: Configuration;
   private readonly configName: string;
   constructor(
@@ -69,14 +65,9 @@ export class IGExporter {
     private readonly fhirDefs: FHIRDefinitions,
     private readonly igDataPath: string
   ) {
-    this.outputLog = new Map();
     this.config = pkg.config;
     this.configPath = path.resolve(this.igDataPath, '..', path.basename(this.config.filePath));
     this.configName = path.basename(this.configPath);
-  }
-
-  getOutputLogDetails(file: string) {
-    return this.outputLog.get(file);
   }
 
   /**
@@ -89,17 +80,17 @@ export class IGExporter {
     ensureDirSync(outPath);
     this.initIG();
     this.addResources();
-    this.addPredefinedResources(outPath);
+    this.addPredefinedResources();
     this.addConfiguredResources();
     this.addConfiguredGroups();
     this.addIndex(outPath);
     if (!this.config.pages?.length) {
-      this.addOtherPageContent(outPath);
+      this.addOtherPageContent();
     } else {
-      this.addConfiguredPageContent(outPath);
+      this.addConfiguredPageContent();
     }
     this.addMenuXML(outPath);
-    this.addIgIni(outPath);
+    this.addIgIni();
     this.addPackageList();
     this.addImplementationGuide(outPath);
   }
@@ -259,9 +250,9 @@ export class IGExporter {
 
   /**
    * Add the index.md file. Creates an index.md based on the "indexPageContent" in sushi-config.yaml.
-   * If the user specified an index file in the ig-data folder, and no "indexPageContent" in sushi-config.yaml is specified,
-   * the file from ig-data is used instead. The provided file may be in one of two locations:
-   * ig-data/input/pagecontent or ig-data/input/pages
+   * If the user provided an index file, and no "indexPageContent" in sushi-config.yaml is specified,
+   * the provided file is used instead. The provided file may be in one of two locations:
+   * ./input/pagecontent or ./input/pages
    *
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
    * @param igPath - the path where the IG is exported to
@@ -302,7 +293,7 @@ export class IGExporter {
           path.relative(this.igDataPath, filePath)
         );
 
-        let preferredFileMessage =
+        const preferredFileMessage =
           `Since a ${filePathString} file was found, the "indexPageContent" property in the ${this.configName} ` +
           'will be ignored and an index.md file will not be generated. Remove the "indexPageContent" ' +
           `property in ${this.configName} to resolve this warning.`;
@@ -335,7 +326,6 @@ export class IGExporter {
       ]);
       const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
-      this.updateOutputLog(outputPath, [this.configPath], 'generated');
       logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
     } else if (existsSync(inputIndexXMLPageContentPath) || existsSync(inputIndexXMLPagesPath)) {
       generation = 'html';
@@ -362,9 +352,8 @@ export class IGExporter {
    * pagecontent, pages, and resource-docs
    *
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
-   * @param {string} igPath - the path where the IG is exported to
    */
-  private addOtherPageContent(igPath: string): void {
+  private addOtherPageContent(): void {
     const pageContentFolderNames: string[] = ['pagecontent', 'pages', 'resource-docs'];
     for (const contentFolder of pageContentFolderNames) {
       const inputPageContentPath = path.join(this.igDataPath, 'input', contentFolder);
@@ -392,8 +381,7 @@ export class IGExporter {
           }
         });
         if (invalidFileTypeIncluded) {
-          const errorString =
-            'Files not in the supported file types (.md and .xml) were detected. These files will be copied over without any processing.';
+          const errorString = 'Files not in the supported file types (.md and .xml) were detected.';
           logger.warn(errorString, {
             file: inputPageContentPath
           });
@@ -405,19 +393,16 @@ export class IGExporter {
   /**
    * Adds additional pages to the IG based on user configuration.
    * Only pages present in the configuration are added, regardless of available files.
-   * All files in the page content folders will be copied,
-   * regardless of configuration.
    *
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#directory-structure}
    * @see {@link https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input}
-   * @param {string} igPath - the path where the IG is exported to
    */
-  addConfiguredPageContent(igPath: string): void {
+  addConfiguredPageContent(): void {
     // only configured pages are added to the implementation guide,
     for (const page of this.config.pages) {
       this.addConfiguredPage(page, this.ig.definition.page.page);
     }
-    // but all files in page content folders are copied to corresponding output folders
+    // all files in page content folders are left alone but checked for supported file types
     const pageContentFolderNames: string[] = ['pagecontent', 'pages', 'resource-docs'];
     for (const contentFolder of pageContentFolderNames) {
       let invalidFileTypeIncluded = false;
@@ -572,7 +557,7 @@ export class IGExporter {
 
   /**
    * Adds menu.xml
-   * A user can define a menu in sushi-config.yaml or provide one in ig-data/input/includes.
+   * A user can define a menu in sushi-config.yaml or provide one in ./input/includes.
    * If neither is provided, the static one SUSHI provides will be used.
    *
    * @param {string} igPath - the path where the IG is exported to
@@ -590,7 +575,7 @@ export class IGExporter {
         'menu.xml'
       );
 
-      let preferredFileMessage =
+      const preferredFileMessage =
         `Since a ${filePathString} file was found, the "menu" property in the ${this.configName} ` +
         `will be ignored and a menu.xml file will not be generated. Remove the ${filePathString} ` +
         `file to use the "menu" property in ${this.configName} to generate a menu.xml file instead.`;
@@ -623,7 +608,6 @@ export class IGExporter {
         ]
       );
       outputFileSync(menuXMLOutputPath, `${warning}${menu}`, 'utf8');
-      this.updateOutputLog(menuXMLOutputPath, [this.configPath], 'generated');
     }
   }
 
@@ -788,10 +772,8 @@ export class IGExporter {
    *
    * This function has similar operation to addResources, and both should be
    * analyzed when making changes to either.
-   *
-   * @param {string} igPath - the path where the IG is exported to
    */
-  private addPredefinedResources(igPath: string): void {
+  private addPredefinedResources(): void {
     // Similar code for loading custom resources exists in load.ts loadCustomResources()
     const pathEnds = [
       'capabilities',
@@ -1021,22 +1003,15 @@ export class IGExporter {
     const igJSONFolder = path.join('fsh-generated', 'resources');
     const igJsonPath = path.join(igPath, igJSONFolder, `ImplementationGuide-${this.ig.id}.json`);
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
-    this.updateOutputLog(
-      igJsonPath,
-      [this.configPath, '{all input resources and pages}'],
-      'generated'
-    );
     logger.info(`Generated ImplementationGuide-${this.ig.id}.json`);
   }
 
   /**
    * Creates an ig.ini file based on the "template" in sushi-config.yaml and exports it to the IG folder.
-   * If the user specified an igi.ini file in the ig-data folder, and no "template" in sushi-config.yaml is specified,
-   * the file from ig-data is used instead.
-   *
-   * @param igPath {string} - the path where the IG is exported to
+   * If the user specified an igi.ini file in the root of the tank, and no "template" in sushi-config.yaml is specified,
+   * the provided file is used instead.
    */
-  addIgIni(igPath: string): void {
+  addIgIni(): void {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     if (this.config.template != null) {
       if (existsSync(inputIniPath)) {
@@ -1057,7 +1032,7 @@ export class IGExporter {
     } else if (existsSync(inputIniPath)) {
       this.processIgIni(inputIniPath);
     } else {
-      // do nothing -- no template in config, no ig.ini in ig-data
+      // do nothing -- no template in config, no ig.ini provided
     }
   }
 
@@ -1154,10 +1129,7 @@ export class IGExporter {
   }
 
   /**
-   * Adds the package-list.json file to the IG. Generated based on the Configuration history
-   * field, or the package-list.json found at ig-data/package-list.json.
-   *
-   * @param igPath {string} - the path where the IG is exported to
+   * Logs a warning if the deprecated "history" property is used in sushi-config.yaml
    */
   addPackageList(): void {
     if (this.config.history) {
@@ -1169,151 +1141,6 @@ export class IGExporter {
       );
     }
   }
-
-  /**
-   * Recursively copies one path to another, logging the output of each file so it can be reported in the
-   * SUSHI-GENERATED-FILES.md file.
-   *
-   * @param inputPath {string} - the input path to copy
-   * @param outputPath {string} - the output path to copy to
-   * @param filter {(string) => boolean} - a filter indicating the files to copy
-   */
-  private copyAsIs(inputPath: string, outputPath: string, filter?: (src: string) => boolean): void {
-    if (!existsSync(inputPath) || junk.is(path.basename(inputPath))) {
-      return;
-    }
-
-    // Don't copy to the same directory it came from
-    const fullInputPath = path.resolve(inputPath);
-    const fullOutputPath = path.resolve(outputPath);
-    if (fullInputPath === fullOutputPath) return;
-
-    copySync(inputPath, outputPath, { filter });
-    this.updateOutputLogForCopiedPath(outputPath, inputPath, filter);
-  }
-
-  /**
-   * Recursively copies input to an output location, adding a warning to the top of the each supported
-   * file indicating that it is a generated file and should not be edited directly. Only .md and .xml
-   * files will have the warning added.  All other files are copied as-is. In addition, this function
-   * will log the output file so it can be reported in the SUSHI-GENERATED-FILES.md file.
-   *
-   * @param inputPath {string} - the input path to copy
-   * @param outputPath {string} - the output path to copy to
-   */
-  private copyWithWarningText(
-    inputPath: string,
-    outputPath: string,
-    filter?: (src: string) => boolean
-  ): void {
-    if (!existsSync(inputPath)) {
-      return;
-    }
-
-    if (statSync(inputPath).isDirectory()) {
-      readdirSync(inputPath).forEach(child => {
-        this.copyWithWarningText(path.join(inputPath, child), path.join(outputPath, child), filter);
-      });
-      return;
-    }
-
-    // Filtered out, don't copy
-    if (filter && !filter(inputPath)) {
-      return;
-    }
-
-    // If it's not xml or md, just copy it as is and we're done.
-    if (!inputPath.endsWith('.md') && !inputPath.endsWith('.xml')) {
-      this.copyAsIs(inputPath, outputPath);
-      return;
-    }
-
-    // Otherwise, it's .md or .xml
-    const extra = [
-      'To change the contents of this file, edit the original source file at:',
-      inputPath.slice(
-        inputPath.indexOf(`${path.sep}${path.basename(this.igDataPath)}${path.sep}`) + 1
-      )
-    ];
-    // .xml files can't have bare jekyll comments at the start of the file, as they fail XML parsing,
-    // so we must surround the warning w/ XML comments.  To avoid the final HTML having just an empty
-    // XML comment tag, we add in the file name -- which is likely useful info in the source anyway;
-    // and for consistency, we do it for both .xml and .md
-    const warning = warningBlock(
-      `<!-- ${path.parse(outputPath).base} {% comment %}`,
-      '{% endcomment %} -->',
-      extra,
-      false
-    );
-    const content = readFileSync(inputPath, 'utf8');
-    outputFileSync(outputPath, `${warning}${content}`, 'utf8');
-    this.updateOutputLogForCopiedPath(outputPath, inputPath);
-  }
-
-  /**
-   * Updates the output log with the files that were copied from input to output. For files that come
-   * directly from SUSHI (e.g., _updatePublisher.sh), don't log the input path.  Just mark it as a
-   * generated file.
-   *
-   * @param outputPath - the output path to report on in the log
-   * @param inputPath - the input path that was copied to the output
-   * @param filter {(string) => boolean} - a filter indicating the files to copy
-   */
-  private updateOutputLogForCopiedPath(
-    outputPath: string,
-    inputPath: string,
-    filter: (src: string) => boolean = () => true
-  ): void {
-    if (existsSync(inputPath) && statSync(inputPath).isDirectory()) {
-      readdirSync(inputPath)
-        .filter(filter)
-        .forEach(child => {
-          this.updateOutputLogForCopiedPath(
-            path.join(outputPath, child),
-            path.join(inputPath, child)
-          );
-        });
-      return;
-    }
-    // If the input path is actually from our SUSHI source code (e.g., a static file),
-    // change the action to generated and suppress the input path
-    if (!filter(inputPath)) {
-      // Filtered out.  Do nothing.
-    } else if (inputPath.startsWith(__dirname)) {
-      this.updateOutputLog(outputPath, [], 'generated');
-    } else {
-      this.updateOutputLog(outputPath, [inputPath], 'copied');
-    }
-  }
-
-  /**
-   * Updates the output log for a specific output file, indicating the file (or files) that were
-   * either copied or used to generate the file. If a log already exists for the output file,
-   * it will update the log.
-   *
-   * @param output {string} - the output file to log
-   * @param inputs {List<string>} - the list of inputs used to create the file
-   * @param action {'copied'|'generated'} - how SUSHI created the file
-   */
-  private updateOutputLog(output: string, inputs: string[], action?: OutputLogAction): void {
-    if (this.outputLog.has(output)) {
-      const details = this.outputLog.get(output);
-      inputs.forEach(input => {
-        // Always use the msot recent action provided
-        if (action) {
-          details.action = action;
-        }
-        // If copied, replace the old inputs with the new ones
-        if (action === 'copied') {
-          details.inputs = inputs.slice();
-        } else if (details.inputs.indexOf(input) === -1) {
-          details.inputs.push(input);
-        }
-      });
-    } else {
-      this.outputLog.set(output, { action, inputs });
-    }
-  }
 }
 
 type PageMetadata = {
@@ -1322,12 +1149,6 @@ type PageMetadata = {
   name: string;
   title: string;
   fileType: string;
-};
-
-type OutputLogAction = 'copied' | 'generated';
-type outputLogDetails = {
-  action: OutputLogAction;
-  inputs: string[];
 };
 
 /**

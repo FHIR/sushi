@@ -116,7 +116,7 @@ export function findInputDir(input: string): string {
     }
     if (getIndexFilePath(path.join(input, 'ig-data'))) {
       msg +=
-        `  - if you used the "indexPageContent" property in your config, remove it and manage an index.md or index.xml file in the` +
+        '  - if you used the "indexPageContent" property in your config, remove it and manage an index.md or index.xml file in the' +
         ` .${path.sep}pagecontent or .${path.sep}pages folder directly. See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input\n`;
     }
     msg +=
