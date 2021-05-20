@@ -67,6 +67,17 @@ export function ensureConfiguration(root: string, allowFromScratch = false): str
     return configPath;
   }
 
+  const deprecatedConfigPath = [path.join(root, 'config.yaml'), path.join(root, 'config.yml')].find(
+    fs.existsSync
+  );
+  if (deprecatedConfigPath) {
+    logger.error(
+      `Use of ${path.basename(
+        deprecatedConfigPath
+      )} is deprecated and has been removed. Please rename configuration file to "sushi-config.yaml" in order to use this configuration file.`
+    );
+  }
+
   // The config doesn't exist, so generate one
   return generateConfiguration(root, allowFromScratch);
 }
