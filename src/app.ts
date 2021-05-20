@@ -57,12 +57,6 @@ async function app() {
       console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
       console.log('    Default: "fsh-generated"');
-      console.log(
-        '    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"'
-      );
-      console.log(
-        '    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"'
-      );
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
@@ -108,9 +102,17 @@ async function app() {
   const fshFolder = path.basename(input) === 'fsh';
   const inputFshFolder = fshFolder && path.basename(path.dirname(input)) === 'input';
   const isIgPubContext = inputFshFolder;
-  // TODO: Legacy support for top level fsh/ subdirectory. Remove when no longer supported.
-  const isLegacyIgPubContext = fshFolder && !inputFshFolder;
-  const outDir = ensureOutputDir(input, program.out, isIgPubContext, isLegacyIgPubContext);
+  if (!isIgPubContext) {
+    // Since current supported tank configuration requires input/fsh folder,
+    // both legacy IG publisher mode and legacy flat tank cases occur when
+    // there is no input/fsh/ folder.
+    // If we detect this case, things are about to go very wrong, so exit immediately.
+    logger.error(
+      'Migration to current SUSHI project structure is required. See above error message for details. Exiting.'
+    );
+    process.exit(1);
+  }
+  const outDir = ensureOutputDir(input, program.out);
 
   let tank: FSHTank;
   let config: Configuration;
@@ -123,23 +125,17 @@ async function app() {
       !fs.existsSync(input)
     ) {
       // If we have a path that ends with input/fsh but that folder does not exist,
-      // we are in a sushi-config.yaml-only case (new tank configuration with no FSH files)
+      // we are in a sushi-config.yaml-only case (current tank configuration with no FSH files)
       // so we can safely say there are no FSH files and therefore rawFSH is empty.
       rawFSH = [];
     } else {
       rawFSH = getRawFSHes(input);
     }
-    if (
-      rawFSH.length === 0 &&
-      !fs.existsSync(path.join(originalInput, 'config.yaml')) &&
-      !fs.existsSync(path.join(originalInput, 'sushi-config.yaml')) &&
-      !fs.existsSync(path.join(originalInput, 'fsh', 'config.yaml')) &&
-      !fs.existsSync(path.join(originalInput, 'fsh', 'sushi-config.yaml'))
-    ) {
+    if (rawFSH.length === 0 && !fs.existsSync(path.join(originalInput, 'sushi-config.yaml'))) {
       logger.info('No FSH files or sushi-config.yaml present.');
       process.exit(0);
     }
-    config = readConfig(isIgPubContext ? originalInput : input, isLegacyIgPubContext);
+    config = readConfig(originalInput);
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
@@ -150,14 +146,8 @@ async function app() {
   const defs = new FHIRDefinitions();
   await loadExternalDependencies(defs, config);
 
-  // Load custom resources
-  if (!isIgPubContext) {
-    // In legacy configuration (both IG publisher context and any other tank), resources are in ig-data/input/
-    loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
-  } else {
-    // In current tank configuration (input/fsh), resources will be in input/
-    loadCustomResources(path.join(input, '..'), defs);
-  }
+  // Load custom resources. In current tank configuration (input/fsh), resources will be in input/
+  loadCustomResources(path.join(input, '..'), defs);
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
@@ -172,7 +162,7 @@ async function app() {
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  writeFHIRResources(outDir, outPackage, defs, program.snapshot, isIgPubContext);
+  writeFHIRResources(outDir, outPackage, defs, program.snapshot);
 
   if (program.preprocessed) {
     logger.info('Writing preprocessed FSH...');
@@ -183,11 +173,9 @@ async function app() {
   if (config.FSHOnly) {
     logger.info('Exporting FSH definitions only. No IG related content will be exported.');
   } else {
-    const igDataPath = isIgPubContext
-      ? path.resolve(input, '..', '..')
-      : path.resolve(input, 'ig-data');
+    const igFilesPath = path.resolve(input, '..', '..');
     logger.info('Assembling Implementation Guide sources...');
-    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
+    const igExporter = new IGExporter(outPackage, defs, igFilesPath);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
     if (

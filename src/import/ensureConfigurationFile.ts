@@ -59,20 +59,11 @@ class CommentPair extends YAMLPair {
 export function ensureConfiguration(root: string, allowFromScratch = false): string {
   const configPath = [
     path.join(root, 'sushi-config.yaml'),
-    path.join(root, 'sushi-config.yml'),
-    path.join(root, 'config.yaml'),
-    path.join(root, 'config.yml')
+    path.join(root, 'sushi-config.yml')
   ].find(fs.existsSync);
   if (configPath) {
     // The config already exists, so return it
     logger.info(`Using configuration file: ${path.resolve(configPath)}`);
-    if (!path.basename(configPath).match(/sushi/)) {
-      logger.warn(
-        `Use of ${path.basename(
-          configPath
-        )} is deprecated and will be removed in a future release. Please rename configuration file to "sushi-config.yaml".`
-      );
-    }
     return configPath;
   }
 

@@ -111,35 +111,29 @@ export function findInputDir(input: string): string {
     if (!fs.existsSync(path.join(input, 'ig-data', 'package-list.json'))) {
       msg += `  - if you used the "history" property in your config, remove it and manage .${path.sep}package-list.json directly\n`;
     }
+    if (fs.existsSync(path.join(input, 'ig-data', 'ignoreWarnings.txt'))) {
+      msg += `  - move .${path.sep}ig-data${path.sep}input${path.sep}ignoreWarnings.txt to .${path.sep}\n`;
+    }
+    if (getIndexFilePath(path.join(input, 'ig-data'))) {
+      msg +=
+        `  - if you used the "indexPageContent" property in your config, remove it and manage an index.md or index.xml file in the` +
+        ` .${path.sep}pagecontent or .${path.sep}pages folder directly. See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input\n`;
+    }
     msg +=
       '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
       '  - add /fsh-generated to your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
-      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n` +
+      `NOTE: After you make these changes, the default output folder for SUSHI will change to .${path.sep}fsh-generated.\n\n` +
       'For detailed migration instructions, see: https://fshschool.org/docs/sushi/migration/\n\n';
-    logger.warn(msg);
+    logger.error(msg);
   }
   return input;
 }
 
-export function ensureOutputDir(
-  input: string,
-  output: string,
-  isIgPubContext: boolean,
-  isLegacyIgPubContext: boolean
-): string {
+export function ensureOutputDir(input: string, output: string): string {
   let outDir = output;
-  if (isLegacyIgPubContext && !output) {
-    // TODO: Legacy support for top level "fsh" directory. Remove when no longer supported.
-    // When running in a legacy IG Publisher context, default output is the parent folder of the tank
-    outDir = path.join(input, '..');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  } else if (isIgPubContext && !output) {
-    // When running in an IG Publisher context, default output is the parent folder of the input/fsh folder
+  if (!output) {
+    // Default output is the parent folder of the input/fsh folder
     outDir = path.join(input, '..', '..');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  } else if (!output) {
-    // Any other time, default output is just to 'build'
-    outDir = path.join('.', 'build');
     logger.info(`No output path specified. Output to ${outDir}`);
   }
   fs.ensureDirSync(outDir);
@@ -157,11 +151,11 @@ export function ensureOutputDir(
   return outDir;
 }
 
-export function readConfig(input: string, isLegacyIgPubContext: boolean): Configuration {
+export function readConfig(input: string): Configuration {
   const configPath = ensureConfiguration(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
-    config = loadConfigurationFromIgResource(isLegacyIgPubContext ? path.dirname(input) : input);
+    config = loadConfigurationFromIgResource(input);
   } else {
     const configYaml = fs.readFileSync(configPath, 'utf8');
     config = importConfiguration(configYaml, configPath);
@@ -313,8 +307,7 @@ export function writeFHIRResources(
   outDir: string,
   outPackage: Package,
   defs: FHIRDefinitions,
-  snapshot: boolean,
-  isIgPubContext: boolean
+  snapshot: boolean
 ) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
@@ -329,9 +322,7 @@ export function writeFHIRResources(
       resourceType?: string;
     }[]
   ) => {
-    const exportDir = isIgPubContext
-      ? path.join(outDir, 'fsh-generated', 'resources')
-      : path.join(outDir, 'input', folder);
+    const exportDir = path.join(outDir, 'fsh-generated', 'resources');
     resources.forEach(resource => {
       if (
         !predefinedResources.find(
@@ -532,4 +523,18 @@ function getFilesRecursive(dir: string): string[] {
   } catch {
     return [];
   }
+}
+
+function getIndexFilePath(basePath: string): string {
+  const inputIndexMarkdownPageContentPath = path.join(basePath, 'input', 'pagecontent', 'index.md');
+  const inputIndexXMLPageContentPath = path.join(basePath, 'input', 'pagecontent', 'index.xml');
+  const inputIndexMarkdownPagesPath = path.join(basePath, 'input', 'pages', 'index.md');
+  const inputIndexXMLPagesPath = path.join(basePath, 'input', 'pages', 'index.xml');
+  let filePath: string;
+  if (fs.existsSync(inputIndexMarkdownPageContentPath))
+    filePath = inputIndexMarkdownPageContentPath;
+  if (fs.existsSync(inputIndexXMLPageContentPath)) filePath = inputIndexXMLPageContentPath;
+  if (fs.existsSync(inputIndexMarkdownPagesPath)) filePath = inputIndexMarkdownPagesPath;
+  if (fs.existsSync(inputIndexXMLPagesPath)) filePath = inputIndexXMLPagesPath;
+  return filePath;
 }
