@@ -1928,13 +1928,26 @@ export class ElementDefinition {
       return false;
     }
 
-    const profileCanonical = elementType.profile?.[0];
-    let extensionUrl, targetElement: string;
+    let profileCanonical, extensionUrl, targetElement: string;
 
-    // If there is no _profile array, the profile-element extension is not present
-    if (elementType._profile) {
-      extensionUrl = elementType._profile[0].extension[0].url;
-      targetElement = elementType._profile[0].extension[0].valueString;
+    // If the profile and _profile arrays are not present, the profile-element extension is not present
+    if (elementType.profile && elementType._profile) {
+      const profileIndex = elementType._profile.findIndex(
+        (profile: any) =>
+          profile &&
+          profile.extension.find(
+            (extension: any) =>
+              extension.hasOwnProperty('url') && extension.hasOwnProperty('valueString')
+          ) !== undefined
+      );
+
+      const extensionIndex = elementType._profile[profileIndex].extension?.findIndex(
+        (extensionObj: any) =>
+          extensionObj.hasOwnProperty('url') && extensionObj.hasOwnProperty('valueString')
+      );
+      extensionUrl = elementType._profile[profileIndex].extension[extensionIndex].url;
+      targetElement = elementType._profile[profileIndex].extension[extensionIndex].valueString;
+      profileCanonical = elementType.profile[profileIndex];
     } else {
       return false;
     }
