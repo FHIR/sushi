@@ -448,6 +448,102 @@ describe('StructureDefinition', () => {
         exporter = new StructureDefinitionExporter(input, pkg, fisher);
       });
 
+      it('should properly serialize snapshot and differential root elements for logical model', () => {
+        const logical = new Logical('MyTestModel');
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(3);
+        expect(json.differential.element).toHaveLength(3);
+
+        const expectedSnapshotRootElement = {
+          id: 'MyModel',
+          path: 'MyModel',
+          min: 0,
+          max: '*',
+          base: {
+            path: 'MyModel',
+            min: 0,
+            max: '*'
+          },
+          constraint: [
+            {
+              key: 'ele-1',
+              severity: 'error',
+              human: 'All FHIR elements must have a @value or children',
+              expression: 'hasValue() or (children().count() > id.count())',
+              xpath: '@value|f:*|h:div',
+              source: 'http://hl7.org/fhir/StructureDefinition/Element'
+            }
+          ],
+          isModifier: false
+        };
+        expect(json.snapshot.element[0]).toStrictEqual(expectedSnapshotRootElement);
+
+        const expectedDifferentialRootElement = {
+          id: 'MyModel',
+          path: 'MyModel'
+        };
+        expect(json.differential.element[0]).toStrictEqual(expectedDifferentialRootElement);
+      });
+
+      it('should properly serialize snapshot and differential root elements for resource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'Resource';
+        resource.title = 'MyTestResource Title';
+        resource.description = 'MyTestResource description goes here.';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(7);
+        expect(json.differential.element).toHaveLength(3);
+
+        const expectedSnapshotRootElement = {
+          id: 'MyResource',
+          path: 'MyResource',
+          short: 'MyTestResource Title',
+          definition: 'MyTestResource description goes here.',
+          min: 0,
+          max: '*',
+          base: {
+            path: 'MyResource',
+            min: 0,
+            max: '*'
+          },
+          isModifier: false,
+          isSummary: false,
+          mapping: [
+            {
+              identity: 'rim',
+              map: 'Entity. Role, or Act'
+            }
+          ]
+        };
+        expect(json.snapshot.element[0]).toStrictEqual(expectedSnapshotRootElement);
+
+        const expectedDifferentialRootElement = {
+          id: 'MyResource',
+          path: 'MyResource',
+          short: 'MyTestResource Title',
+          definition: 'MyTestResource description goes here.'
+        };
+        expect(json.differential.element[0]).toStrictEqual(expectedDifferentialRootElement);
+      });
+
       it('should properly serialize snapshot and differential for logical model with parent set to Base', () => {
         const logical = new Logical('MyTestModel');
         logical.parent = 'Base';

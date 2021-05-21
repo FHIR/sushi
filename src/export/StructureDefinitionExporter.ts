@@ -346,13 +346,6 @@ export class StructureDefinitionExporter implements Fishable {
 
     // The root element's base.path should be the same as root element's path
     elements[0].base.path = elements[0].path;
-    // Reset the root element's short and definition
-    if (fshDefinition.title) {
-      elements[0].short = fshDefinition.title;
-    }
-    if (fshDefinition.description) {
-      elements[0].definition = fshDefinition.description;
-    }
 
     if (
       fshDefinition.parent === 'Element' ||
@@ -364,10 +357,32 @@ export class StructureDefinitionExporter implements Fishable {
       delete elements[0].extension;
     }
 
+    // Hack Alert:
+    // A material change is required to an element AFTER the execution of the
+    // structDef.captureOriginalElements() function to ensure the differential
+    // is properly rendered.
+    // To ensure the differential root element contains only the appropriate
+    // attributes, we are setting an initial value for the prohibited "maxLength"
+    // element attribute that will then be deleted below. The "maxLength"
+    // attribute was selected because it is prohibited in type definitions (i.e.,
+    // logical models and resources).
+    // Ref: http://hl7.org/fhir/elementdefinition.html#interpretation
+    elements[0].maxLength = 0;
+
     structDef.elements = elements;
     structDef.captureOriginalElements();
-    // Still need the root element so clear its _original
-    structDef.elements[0].clearOriginal();
+
+    // Make changes to the root element so the differential root element is
+    // correctly rendered. All of the following changes to the root element
+    // below will be reflected in the differential root element.
+    delete structDef.elements[0].maxLength;
+    // Reset the root element's short and definition
+    if (fshDefinition.title) {
+      structDef.elements[0].short = fshDefinition.title;
+    }
+    if (fshDefinition.description) {
+      structDef.elements[0].definition = fshDefinition.description;
+    }
   }
 
   /**

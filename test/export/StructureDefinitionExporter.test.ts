@@ -303,6 +303,37 @@ describe('StructureDefinitionExporter', () => {
       );
     });
 
+    it('should create a resource with default parent of DomainResource when the definition does not specify a parent', () => {
+      const resource = new Resource('MyPatientResource');
+      resource.id = 'PatientResource';
+      doc.resources.set(resource.name, resource);
+
+      expect(() => {
+        exporter.exportStructDef(resource);
+      }).not.toThrow();
+
+      const exported = pkg.resources[0];
+      expect(exported.name).toBe('MyPatientResource');
+      expect(exported.baseDefinition).toBe(
+        'http://hl7.org/fhir/StructureDefinition/DomainResource'
+      );
+    });
+
+    it('should create a resource when the definition specifies Resource for a parent', () => {
+      const resource = new Resource('MyPatientResource');
+      resource.parent = 'Resource';
+      resource.id = 'PatientResource';
+      doc.resources.set(resource.name, resource);
+
+      expect(() => {
+        exporter.exportStructDef(resource);
+      }).not.toThrow();
+
+      const exported = pkg.resources[0];
+      expect(exported.name).toBe('MyPatientResource');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource');
+    });
+
     it('should throw ParentNotProvidedError when parent specifies an empty parent', () => {
       const profile = new Profile('Foo');
       profile.parent = '';
