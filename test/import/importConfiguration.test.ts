@@ -38,7 +38,6 @@ describe('importConfiguration', () => {
         { code: 'copyrightyear', value: '2020+' },
         { code: 'releaselabel', value: 'Build CI' }
       ],
-      template: 'hl7.fhir.template#0.0.5',
       packageId: 'fhir.us.minimal',
       FSHOnly: false,
       applyExtensionMetadataToRoot: true
