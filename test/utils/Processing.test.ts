@@ -660,13 +660,11 @@ describe('Processing', () => {
   });
 
   describe('#writeFHIRResources()', () => {
-    let tempRoot: string;
     let tempIGPubRoot: string;
     let outPackage: Package;
     let defs: FHIRDefinitions;
 
     beforeAll(() => {
-      tempRoot = temp.mkdirSync('output-dir');
       tempIGPubRoot = temp.mkdirSync('output-ig-dir');
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);

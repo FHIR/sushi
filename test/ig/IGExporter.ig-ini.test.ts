@@ -2,7 +2,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
 import cloneDeep from 'lodash/cloneDeep';
-import { EOL } from 'os';
 import { IGExporter } from '../../src/ig';
 import { Package } from '../../src/export';
 import { loggerSpy } from '../testhelpers/loggerSpy';
@@ -14,13 +13,13 @@ describe('IGExporter', () => {
   temp.track();
 
   describe('#ig-ini', () => {
-    let templatelessConfig: Configuration;
+    let configWithTemplate: Configuration;
     let tempOut: string;
 
     beforeEach(() => {
       tempOut = temp.mkdirSync('sushi-test');
-      templatelessConfig = cloneDeep(minimalConfig);
-      delete templatelessConfig.template;
+      configWithTemplate = cloneDeep(minimalConfig);
+      configWithTemplate.template = 'hl7.fhir.template#0.0.5';
       loggerSpy.reset();
     });
 
@@ -29,7 +28,7 @@ describe('IGExporter', () => {
     });
 
     it('should do nothing when template is undefined and ig.ini is not provided', () => {
-      const pkg = new Package(templatelessConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addIgIni();
@@ -39,7 +38,7 @@ describe('IGExporter', () => {
     });
 
     it('should error if there is an ig.ini file and template is defined in the config and not generate or copy an ig.ini', () => {
-      const pkg = new Package(minimalConfig);
+      const pkg = new Package(configWithTemplate);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addIgIni();
@@ -55,7 +54,7 @@ describe('IGExporter', () => {
     });
 
     it('should error if there is no ig.ini file and template is defined in the config (and not generate an ig.ini)', () => {
-      const pkg = new Package(minimalConfig);
+      const pkg = new Package(configWithTemplate);
       const igDataPath = path.resolve(
         __dirname,
         'fixtures',
@@ -73,7 +72,7 @@ describe('IGExporter', () => {
     });
 
     it('should use user-provided ig.ini when template is not defined', () => {
-      const pkg = new Package(templatelessConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addIgIni();
@@ -83,7 +82,7 @@ describe('IGExporter', () => {
     });
 
     it('should use user-provided ig.ini with local template when template is not defined', () => {
-      const pkg = new Package(templatelessConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(
         __dirname,
         'fixtures',
@@ -98,7 +97,7 @@ describe('IGExporter', () => {
     });
 
     it('should log an error when missing required properties and not copy provided ig.ini when template is not defined', () => {
-      const pkg = new Package(templatelessConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(
         __dirname,
         'fixtures',
@@ -119,7 +118,7 @@ describe('IGExporter', () => {
     });
 
     it('should report deprecated properties in user-provided ig.ini and not copy file when template is not defined', () => {
-      const pkg = new Package(templatelessConfig);
+      const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(
         __dirname,
         'fixtures',

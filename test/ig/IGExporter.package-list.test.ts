@@ -1,4 +1,4 @@
-import fs, { readJSONSync } from 'fs-extra';
+import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
 import { IGExporter } from '../../src/ig';

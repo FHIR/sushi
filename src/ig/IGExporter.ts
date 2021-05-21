@@ -327,7 +327,11 @@ export class IGExporter {
       const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
-    } else if (existsSync(inputIndexXMLPageContentPath) || existsSync(inputIndexXMLPagesPath)) {
+    } else if (existsSync(inputIndexMarkdownPageContentPath)) {
+    } else if (existsSync(inputIndexXMLPageContentPath)) {
+      generation = 'html';
+    } else if (existsSync(inputIndexMarkdownPagesPath)) {
+    } else if (existsSync(inputIndexXMLPagesPath)) {
       generation = 'html';
     } else {
       // do nothing -- no indexPageContent in config, do nothing with index file if provided
@@ -468,8 +472,7 @@ export class IGExporter {
 
   /**
    * Sorts and renames pages based on numeric prefixes.
-   * Numeric prefixes are used for applying a sort order, but should be removed
-   * from the page's name and title unless doing so would cause a name collision.
+   * Numeric prefixes are used for applying a sort order, and remain part of the file name.
    *
    * @param {string[]} pages - list of file names with extensions
    * @returns {PageMetadata []} - sorted list of file information objects
