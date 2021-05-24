@@ -467,6 +467,36 @@ describe('FSHImporter', () => {
           false
         );
       });
+
+      it('should parse caret value rules with triple-quoted string', () => {
+        const input = `
+        Resource: TestResource
+        * status ^short = "foo"
+        * status ^definition = """
+          This definition includes markdown for unordered lists:
+          * Level 1 list item 1
+            * Level 2 list item 1a
+            * Level 2 list item 1b
+          * Level 1 list item 2
+        """
+        * status ^sliceIsConstraining = false
+        * status ^code[0] = foo#bar "baz"
+        `;
+        const result = importSingleText(input);
+        const resource = result.resources.get('TestResource');
+        assertCaretValueRule(resource.rules[0], 'status', 'short', 'foo', false);
+        const expectedDefinition =
+          'This definition includes markdown for unordered lists:\n* Level 1 list item 1\n  * Level 2 list item 1a\n  * Level 2 list item 1b\n* Level 1 list item 2';
+        assertCaretValueRule(resource.rules[1], 'status', 'definition', expectedDefinition, false);
+        assertCaretValueRule(resource.rules[2], 'status', 'sliceIsConstraining', false, false);
+        assertCaretValueRule(
+          resource.rules[3],
+          'status',
+          'code[0]',
+          new FshCode('bar', 'foo', 'baz').withLocation([12, 29, 12, 41]).withFile(''),
+          false
+        );
+      });
     });
 
     describe('#obeysRule', () => {
@@ -503,7 +533,7 @@ describe('FSHImporter', () => {
         Resource: TestResource
         * isValid 1..1 MS boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff"
-        * address 1..* Address
+        * address 1..* Address "Just an address"
         `;
 
         const result = importSingleText(input);
@@ -513,7 +543,7 @@ describe('FSHImporter', () => {
           card: { min: 1, max: '1' },
           flags: { mustSupport: true },
           types: [{ type: 'boolean' }],
-          defs: { short: 'is it valid?' }
+          defs: { short: 'is it valid?', definition: 'is it valid?' }
         });
         assertAddElementRule(resource.rules[1], 'stuff', {
           card: { min: 0, max: '*' },
@@ -522,7 +552,46 @@ describe('FSHImporter', () => {
         });
         assertAddElementRule(resource.rules[2], 'address', {
           card: { min: 1, max: '*' },
-          types: [{ type: 'Address' }]
+          types: [{ type: 'Address' }],
+          defs: { short: 'Just an address', definition: 'Just an address' }
+        });
+      });
+
+      it('should parse complete add element rules with triple-quoted string for definition', () => {
+        const input = `
+        Resource: TestResource
+        * isValid 1..1 MS boolean "is it valid?"
+        * stuff 0..* string "just stuff" "a list of some stuff"
+        * address 1..* Address "Just an address" 
+          """
+            This definition for address includes markdown for unordered lists:
+            * Level 1 list item 1
+              * Level 2 list item 1a
+              * Level 2 list item 1b
+            * Level 1 list item 2
+          """
+        `;
+
+        const result = importSingleText(input);
+        const resource = result.resources.get('TestResource');
+        expect(resource.rules).toHaveLength(3);
+        assertAddElementRule(resource.rules[0], 'isValid', {
+          card: { min: 1, max: '1' },
+          flags: { mustSupport: true },
+          types: [{ type: 'boolean' }],
+          defs: { short: 'is it valid?', definition: 'is it valid?' }
+        });
+        assertAddElementRule(resource.rules[1], 'stuff', {
+          card: { min: 0, max: '*' },
+          types: [{ type: 'string' }],
+          defs: { short: 'just stuff', definition: 'a list of some stuff' }
+        });
+        const expectedDefinition =
+          'This definition for address includes markdown for unordered lists:\n* Level 1 list item 1\n  * Level 2 list item 1a\n  * Level 2 list item 1b\n* Level 1 list item 2';
+        assertAddElementRule(resource.rules[2], 'address', {
+          card: { min: 1, max: '*' },
+          types: [{ type: 'Address' }],
+          defs: { short: 'Just an address', definition: expectedDefinition }
         });
       });
     });

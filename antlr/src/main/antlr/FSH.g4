@@ -74,7 +74,7 @@ obeysRule:          STAR path? KW_OBEYS name (KW_AND name)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 insertRule:         STAR KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
-addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING STRING?;
+addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING (STRING | MULTILINE_STRING)?;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );

@@ -379,7 +379,7 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u0233\u0231\u0003\u0002\u0002\u0002\u0234\u0237\u0003\u0002\u0002\u0002",
     "\u0235\u0233\u0003\u0002\u0002\u0002\u0235\u0236\u0003\u0002\u0002\u0002",
     "\u0236\u0238\u0003\u0002\u0002\u0002\u0237\u0235\u0003\u0002\u0002\u0002",
-    "\u0238\u023a\u0007;\u0002\u0002\u0239\u023b\u0007;\u0002\u0002\u023a",
+    "\u0238\u023a\u0007;\u0002\u0002\u0239\u023b\t\u0003\u0002\u0002\u023a",
     "\u0239\u0003\u0002\u0002\u0002\u023a\u023b\u0003\u0002\u0002\u0002\u023b",
     "g\u0003\u0002\u0002\u0002\u023c\u023e\u00077\u0002\u0002\u023d\u023f",
     "\t\u0005\u0002\u0002\u023e\u023d\u0003\u0002\u0002\u0002\u023e\u023f",
@@ -6004,6 +6004,10 @@ AddElementRuleContext.prototype.KW_OR = function(i) {
 };
 
 
+AddElementRuleContext.prototype.MULTILINE_STRING = function() {
+    return this.getToken(FSHParser.MULTILINE_STRING, 0);
+};
+
 AddElementRuleContext.prototype.enterRule = function(listener) {
     if(listener instanceof FSHListener ) {
         listener.enterAddElementRule(this);
@@ -6074,9 +6078,16 @@ FSHParser.prototype.addElementRule = function() {
         this.state = 568;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
-        if(_la===FSHParser.STRING) {
+        if(_la===FSHParser.STRING || _la===FSHParser.MULTILINE_STRING) {
             this.state = 567;
-            this.match(FSHParser.STRING);
+            _la = this._input.LA(1);
+            if(!(_la===FSHParser.STRING || _la===FSHParser.MULTILINE_STRING)) {
+            this._errHandler.recoverInline(this);
+            }
+            else {
+            	this._errHandler.reportMatch(this);
+                this.consume();
+            }
         }
 
     } catch (re) {

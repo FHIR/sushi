@@ -406,6 +406,7 @@ export interface AddElementRuleContext extends ParserRuleContext {
   flag(): FlagContext[];
   targetType(): TargetTypeContext[];
   STRING(): ParserRuleContext[];
+  MULTILINE_STRING(): ParserRuleContext;
 }
 
 export interface VsComponentContext extends ParserRuleContext {

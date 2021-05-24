@@ -1049,11 +1049,13 @@ export class FSHImporter extends FSHVisitor {
       );
     } else {
       addElementRule.short = this.extractString(ctx.STRING()[0]);
-      if (ctx.STRING().length > 1) {
-        addElementRule.definition = this.extractString(ctx.STRING()[1]);
-      } else {
+      if (isEmpty(ctx.STRING()[1]) && isEmpty(ctx.MULTILINE_STRING())) {
         // Default definition to the value of short
         addElementRule.definition = addElementRule.short;
+      } else if (!isEmpty(ctx.STRING()[1])) {
+        addElementRule.definition = this.extractString(ctx.STRING()[1]);
+      } else {
+        addElementRule.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
       }
     }
 
