@@ -54,7 +54,7 @@ describe('IGExporter', () => {
       const pkg = new Package(config);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
-      exporter.addPackageList();
+      exporter.checkPackageList();
       const pkgListPath = path.join(tempOut, 'package-list.json');
       expect(fs.existsSync(pkgListPath)).toBeFalsy(); // Do not copy user provided file or generate a new file
       expect(loggerSpy.getLastMessage('error')).toMatch(

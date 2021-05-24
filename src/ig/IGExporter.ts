@@ -90,8 +90,8 @@ export class IGExporter {
       this.addConfiguredPageContent();
     }
     this.addMenuXML(outPath);
-    this.addIgIni();
-    this.addPackageList();
+    this.checkIgIni();
+    this.checkPackageList();
     this.addImplementationGuide(outPath);
   }
 
@@ -768,7 +768,7 @@ export class IGExporter {
   }
 
   /**
-   * Adds any user provided resource files
+   * Adds any user provided resource files to the ImplementationGuide JSON file.
    * This includes definitions in:
    * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
    * Based on: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input
@@ -1014,7 +1014,7 @@ export class IGExporter {
    * If the user specified an igi.ini file in the root of the tank, and no "template" in sushi-config.yaml is specified,
    * the provided file is used instead.
    */
-  addIgIni(): void {
+  checkIgIni(): void {
     const inputIniPath = path.join(this.igDataPath, 'ig.ini');
     if (this.config.template != null) {
       if (existsSync(inputIniPath)) {
@@ -1134,7 +1134,7 @@ export class IGExporter {
   /**
    * Logs a warning if the deprecated "history" property is used in sushi-config.yaml
    */
-  addPackageList(): void {
+  checkPackageList(): void {
     if (this.config.history) {
       logger.error(
         'Detected "history" property in configuration. The use of "history" is deprecated. Please remove the property and provide a package-list.json directly. ' +

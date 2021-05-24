@@ -31,7 +31,7 @@ describe('IGExporter', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
-      exporter.addIgIni();
+      exporter.checkIgIni();
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy();
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
@@ -41,7 +41,7 @@ describe('IGExporter', () => {
       const pkg = new Package(configWithTemplate);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
-      exporter.addIgIni();
+      exporter.checkIgIni();
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy(); // Does not copy ig.ini to output
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
@@ -62,7 +62,7 @@ describe('IGExporter', () => {
         'ig-data'
       );
       const exporter = new IGExporter(pkg, null, igDataPath);
-      exporter.addIgIni();
+      exporter.checkIgIni();
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy(); // Does not copy ig.ini to output
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
@@ -75,7 +75,7 @@ describe('IGExporter', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
       const exporter = new IGExporter(pkg, null, igDataPath);
-      exporter.addIgIni();
+      exporter.checkIgIni();
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy();
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
@@ -90,7 +90,7 @@ describe('IGExporter', () => {
         'ig-data'
       );
       const exporter = new IGExporter(pkg, null, igDataPath);
-      exporter.addIgIni();
+      exporter.checkIgIni();
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy();
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
@@ -105,7 +105,7 @@ describe('IGExporter', () => {
         'ig-data'
       );
       const exporter = new IGExporter(pkg, null, igDataPath);
-      exporter.addIgIni();
+      exporter.checkIgIni();
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy(); // Does not copy ig.ini
       expect(loggerSpy.getAllMessages()).toHaveLength(2);
@@ -126,7 +126,7 @@ describe('IGExporter', () => {
         'ig-data'
       );
       const exporter = new IGExporter(pkg, null, igDataPath); //, true); // New tank configuration input/fsh/
-      exporter.addIgIni();
+      exporter.checkIgIni();
       const igIniPath = path.join(tempOut, 'ig.ini');
       expect(fs.existsSync(igIniPath)).toBeFalsy(); // Does not copy ig.ini
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
