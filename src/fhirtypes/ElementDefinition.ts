@@ -228,6 +228,8 @@ export class ElementDefinition {
   structDef: StructureDefinition;
   private _original: ElementDefinition;
   private _edStructureDefinition: StructureDefinition;
+  private _newElementBase: ElementDefinitionBase;
+  private _newElementConstraint: ElementDefinitionConstraint[];
 
   /**
    * Constructs a new ElementDefinition with the given ID.
@@ -270,6 +272,14 @@ export class ElementDefinition {
         return name;
       })
       .join('.');
+  }
+
+  get newElementBase(): ElementDefinitionBase {
+    return this._newElementBase;
+  }
+
+  get newElementConstraint(): ElementDefinitionConstraint[] {
+    return this._newElementConstraint;
   }
 
   getPathWithoutBase(): string {
@@ -467,21 +477,36 @@ export class ElementDefinition {
       this.definition = rule.definition;
     }
 
+    // Special handling is required for the 'base' and 'constraint' attributes for newly
+    // added elements.
+    // The 'base' attribute is required for the snapshot and is optional in the differential.
+    // The 'constraint' attribute is optional for both snapshot and differential.
+    // REF: http://hl7.org/fhir/elementdefinition.html#interpretation
+    // However, convention, based on looking at FHIR resources, is to exclude the 'base'
+    // attribute from the differential and to only include constraint attributes when
+    // specifically defined for an element.
+    // The 'elements' collection in the FSH StructureDefinition is split out into snapshot
+    // and differential in the StructureDefinition.toJSON() method. Therefore, to achieve the
+    // observed convention, we place the 'base' and the "base" element's constraints into
+    // temp holding properties. During execution of the StructureDefinition.toJSON() method,
+    // we use these temp holding properties to properly set the 'base' and 'constraint'
+    // attributes in the snapshot elements.
+
     // Add the base attribute
-    this.base = {
+    this._newElementBase = {
       path: `${this.structDef.type}.${rule.path}`,
       min: rule.min,
       max: rule.max
     };
 
-    // Add the root element's constraints
+    // Add the root element's constraints to this element
     const elementSD = fisher.fishForFHIR('Element', Type.Type);
     // The root element's constraint does not define the source property
     // because it is the source. So, we need to add the missing source property.
     elementSD.snapshot.element[0].constraint.forEach((c: ElementDefinitionConstraint) => {
       c.source = elementSD.url;
     });
-    this.constraint = elementSD.snapshot.element[0].constraint;
+    this._newElementConstraint = elementSD.snapshot.element[0].constraint;
   }
 
   /**

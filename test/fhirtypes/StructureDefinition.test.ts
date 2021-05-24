@@ -5,9 +5,9 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { loggerSpy, TestFisher } from '../testhelpers';
-import { FshCode, Logical, Resource } from '../../src/fshtypes';
+import { FshCode, Invariant, Logical, Resource } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
-import { AddElementRule, OnlyRule } from '../../src/fshtypes/rules';
+import { AddElementRule, ObeysRule, OnlyRule } from '../../src/fshtypes/rules';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { minimalConfig } from '../utils/minimalConfig';
@@ -422,6 +422,7 @@ describe('StructureDefinition', () => {
     describe('#toJson - Logicals and Resources', () => {
       let addElementRule1: AddElementRule;
       let addElementRule2: AddElementRule;
+      let invariant: Invariant;
       let doc: FSHDocument;
       let exporter: StructureDefinitionExporter;
 
@@ -442,6 +443,9 @@ describe('StructureDefinition', () => {
       beforeEach(() => {
         loggerSpy.reset();
         doc = new FSHDocument('fileName');
+        invariant = new Invariant('TestInvariant');
+        doc.invariants.set(invariant.name, invariant);
+
         const input = new FSHTank([doc], minimalConfig);
         const pkg = new Package(input.config);
         const fisher = new TestFisher(input, defs, pkg);
@@ -494,6 +498,40 @@ describe('StructureDefinition', () => {
         expect(json.differential.element[0]).toStrictEqual(expectedDifferentialRootElement);
       });
 
+      it('should properly serialize snapshot and differential elements with constraint for logical model', () => {
+        const logical = new Logical('MyTestModel');
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        const obeysRule = new ObeysRule('prop2');
+        obeysRule.invariant = invariant.id;
+        logical.rules.push(obeysRule);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(3);
+        expect(json.differential.element).toHaveLength(3);
+
+        const prop2Snap = json.snapshot.element.find(
+          (e: ElementDefinition) => e.path === 'MyModel.prop2'
+        );
+        expect(prop2Snap.constraint).toHaveLength(2);
+
+        const prop2Diff = json.differential.element.find(
+          (e: ElementDefinition) => e.path === 'MyModel.prop2'
+        );
+        expect(prop2Diff.constraint).toHaveLength(1);
+        const expectedDiffConstraint = {
+          key: 'TestInvariant',
+          source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel'
+        };
+        expect(prop2Diff.constraint[0]).toStrictEqual(expectedDiffConstraint);
+      });
+
       it('should properly serialize snapshot and differential root elements for resource', () => {
         const resource = new Resource('MyTestResource');
         resource.parent = 'Resource';
@@ -542,6 +580,43 @@ describe('StructureDefinition', () => {
           definition: 'MyTestResource description goes here.'
         };
         expect(json.differential.element[0]).toStrictEqual(expectedDifferentialRootElement);
+      });
+
+      it('should properly serialize snapshot and differential elements with constraint for resource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'Resource';
+        resource.title = 'MyTestResource Title';
+        resource.description = 'MyTestResource description goes here.';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        const obeysRule = new ObeysRule('prop2');
+        obeysRule.invariant = invariant.id;
+        resource.rules.push(obeysRule);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(7);
+        expect(json.differential.element).toHaveLength(3);
+
+        const prop2Snap = json.snapshot.element.find(
+          (e: ElementDefinition) => e.path === 'MyResource.prop2'
+        );
+        expect(prop2Snap.constraint).toHaveLength(2);
+
+        const prop2Diff = json.differential.element.find(
+          (e: ElementDefinition) => e.path === 'MyResource.prop2'
+        );
+        expect(prop2Diff.constraint).toHaveLength(1);
+        const expectedDiffConstraint = {
+          key: 'TestInvariant',
+          source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyResource'
+        };
+        expect(prop2Diff.constraint[0]).toStrictEqual(expectedDiffConstraint);
       });
 
       it('should properly serialize snapshot and differential for logical model with parent set to Base', () => {

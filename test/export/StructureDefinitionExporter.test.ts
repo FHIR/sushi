@@ -1588,10 +1588,83 @@ describe('StructureDefinitionExporter', () => {
       expect(prop1.extension).toBeUndefined(); // standards flags extensions
       expect(prop1.short).toBe('brief description');
       expect(prop1.definition).toBe('brief description');
-      // NOTE: base attribute should be defined
-      expect(prop1.base.path).toBe(prop1.path);
-      expect(prop1.base.min).toBe(prop1.min);
-      expect(prop1.base.max).toBe(prop1.max);
+      // NOTE: base attribute should be defined as newElementBase
+      expect(prop1.base).toBeUndefined();
+      expect(prop1.newElementBase).toBeDefined();
+      expect(prop1.newElementBase.path).toBe(prop1.path);
+      expect(prop1.newElementBase.min).toBe(prop1.min);
+      expect(prop1.newElementBase.max).toBe(prop1.max);
+      // NOTE: constraint attribute should be defined as newElementConstraint
+      expect(prop1.constraint).toBeUndefined();
+      expect(prop1.newElementConstraint).toBeDefined();
+      expect(prop1.newElementConstraint[0].key).toBe('ele-1');
+      expect(prop1.newElementConstraint[0].requirements).toBeUndefined();
+      expect(prop1.newElementConstraint[0].severity).toBe('error');
+      expect(prop1.newElementConstraint[0].human).toBe(
+        'All FHIR elements must have a @value or children'
+      );
+      expect(prop1.newElementConstraint[0].expression).toBe(
+        'hasValue() or (children().count() > id.count())'
+      );
+      expect(prop1.newElementConstraint[0].xpath).toBe('@value|f:*|h:div');
+      expect(prop1.newElementConstraint[0].source).toBe(
+        'http://hl7.org/fhir/StructureDefinition/Element'
+      );
+    });
+
+    it('should add an element with additional constraint attributes', () => {
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const addElementRule = new AddElementRule('prop1');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'string' }];
+      addElementRule.short = 'brief description';
+      logical.rules.push(addElementRule);
+
+      const invariant = new Invariant('TestInvariant');
+      doc.invariants.set(invariant.name, invariant);
+      const constraint = new ObeysRule('prop1');
+      constraint.invariant = invariant.id;
+      logical.rules.push(constraint);
+
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+
+      expect(exported.name).toBe('MyTestModel');
+      expect(exported.id).toBe('MyModel');
+      expect(exported.type).toBe('MyModel');
+      expect(exported.elements).toHaveLength(2); // 1 for parent Base plus 1 for AddElementRule
+
+      const prop1 = exported.findElement('MyModel.prop1');
+
+      // NOTE: constraint attribute should be defined as newElementConstraint with
+      // the actual 'constraint' attribute containing only the added "ObeysRule"
+      expect(prop1.constraint).toBeDefined();
+      const expectedConstraint = [
+        {
+          key: 'TestInvariant',
+          source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel'
+        }
+      ];
+      expect(prop1.constraint).toStrictEqual(expectedConstraint);
+
+      expect(prop1.newElementConstraint).toBeDefined();
+      expect(prop1.newElementConstraint[0].key).toBe('ele-1');
+      expect(prop1.newElementConstraint[0].requirements).toBeUndefined();
+      expect(prop1.newElementConstraint[0].severity).toBe('error');
+      expect(prop1.newElementConstraint[0].human).toBe(
+        'All FHIR elements must have a @value or children'
+      );
+      expect(prop1.newElementConstraint[0].expression).toBe(
+        'hasValue() or (children().count() > id.count())'
+      );
+      expect(prop1.newElementConstraint[0].xpath).toBe('@value|f:*|h:div');
+      expect(prop1.newElementConstraint[0].source).toBe(
+        'http://hl7.org/fhir/StructureDefinition/Element'
+      );
     });
 
     it('should add an element with multiple targetTypes', () => {
