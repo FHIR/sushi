@@ -1021,13 +1021,13 @@ export class IGExporter {
         const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
         const message =
           `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. ` +
-          `The "template" property in ${this.configName} has been deprecated and will be ignored. The existing ` +
+          `The "template" property in ${this.configName} is no longer supported and will be ignored. The existing ` +
           `${filePathString} file will be used instead.  To resolve this error, remove the "template" property in ` +
           `${this.configName} and manage the ig.ini file directly.`;
         logger.error(message, { file: inputIniPath });
       } else {
         const message =
-          `The "template" property in ${this.configName} has been deprecated. Please remove the "template" ` +
+          `The "template" property in ${this.configName} is no longer supported. Please remove the "template" ` +
           `property in ${this.configName} and manage the ig.ini file directly.` +
           ` To resolve this error, create an ig.ini file in your project folder with the following contents:\n\n${this.generateIgIniString()}`;
         logger.error(message);
@@ -1120,7 +1120,7 @@ export class IGExporter {
       if (deprecatedProps.length > 0) {
         const propList = deprecatedProps.join(', ');
         logger.warn(
-          `Your ${filePathString} file contains the following deprecated properties: ${propList}. ` +
+          `Your ${filePathString} file contains the following unsupported properties: ${propList}. ` +
             'These are no longer supported in ig.ini and should be removed.  See the following link for details: ' +
             'https://github.com/HL7/ig-template-base/releases/tag/0.0.2',
           {
@@ -1132,12 +1132,12 @@ export class IGExporter {
   }
 
   /**
-   * Logs a warning if the deprecated "history" property is used in sushi-config.yaml
+   * Logs a warning if the no longer supported "history" property is used in sushi-config.yaml
    */
   checkPackageList(): void {
     if (this.config.history) {
       logger.error(
-        'Detected "history" property in configuration. The use of "history" is deprecated. Please remove the property and provide a package-list.json directly. ' +
+        'Detected "history" property in configuration. The use of "history" is no longer supported. Please remove the property and provide a package-list.json directly. ' +
           'The package-list.json corresponding to the "history" property in the configuration is:\n\n' +
           JSON.stringify(this.config.history, null, 2) +
           '\n'

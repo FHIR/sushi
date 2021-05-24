@@ -33,20 +33,20 @@ describe('ensureConfigurationFile', () => {
     expect(loggerSpy.getLastMessage('info')).toMatch('Using configuration file:');
   });
 
-  it('should log an error and not return a path if there is a pre-existing config.yaml (deprecated)', () => {
+  it('should log an error and not return a path if there is a pre-existing config.yaml (unsupported)', () => {
     const tank = path.join(__dirname, 'fixtures', 'existing-config-yaml');
     const configPath = ensureConfiguration(tank);
     expect(configPath).toBe(undefined);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/Use of config\.yaml is deprecated/);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Use of config\.yaml is no longer supported/);
   });
 
-  it('should log an error and not return a path if there is a pre-existing config.yml (deprecated', () => {
+  it('should log an error and not return a path if there is a pre-existing config.yml (unsupported)', () => {
     const tank = path.join(__dirname, 'fixtures', 'existing-config-yml');
     const configPath = ensureConfiguration(tank);
     expect(configPath).toBe(undefined);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/Use of config\.yml is deprecated/);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Use of config\.yml is no longer supported/);
   });
 
   it('should return undefined on an empty folder (no config file)', () => {

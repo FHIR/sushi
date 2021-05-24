@@ -100,7 +100,7 @@ export type Configuration = {
   // refers to the IG.definiton.template definitions; not the publisher template in ig.ini.
   templates?: ImplementationGuideDefinitionTemplate[];
 
-  // DEPRECATED: Use of the template property is no longer recommended.  Authors should manage the
+  // NO LONGER SUPPORTED: Use of the template property is no longer recommended.  Authors should manage the
   // ig.ini file themselves. Support for the template property will be removed in a future release.
   // The template property will be used to generate an ig.ini file.
   // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file in ig-data.

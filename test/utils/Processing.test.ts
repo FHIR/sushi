@@ -120,7 +120,7 @@ describe('Processing', () => {
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh'));
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Use of this folder is DEPRECATED and has been REMOVED/s
+        /Use of this folder is NO LONGER SUPPORTED/s
       );
     });
 
@@ -130,7 +130,7 @@ describe('Processing', () => {
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(input);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Support for other folder structures is DEPRECATED and has been REMOVED/s
+        /Support for other folder structures is NO LONGER SUPPORTED/s
       );
     });
   });

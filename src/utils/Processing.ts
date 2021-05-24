@@ -77,7 +77,7 @@ export function findInputDir(input: string): string {
     if (fs.existsSync(fshSubdirectoryPath)) {
       msg +=
         '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
-        'Use of this folder is DEPRECATED and has been REMOVED.\n' +
+        'Use of this folder is NO LONGER SUPPORTED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
@@ -87,7 +87,7 @@ export function findInputDir(input: string): string {
     } else {
       msg +=
         '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
-        'Support for other folder structures is DEPRECATED and has been REMOVED.\n' +
+        'Support for other folder structures is NO LONGER SUPPORTED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;

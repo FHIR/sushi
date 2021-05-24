@@ -26,7 +26,7 @@ export function ensureConfiguration(root: string): string {
     logger.error(
       `Use of ${path.basename(
         deprecatedConfigPath
-      )} is deprecated and has been removed. Please rename configuration file to "sushi-config.yaml" in order to use this configuration file.`
+      )} is no longer supported. Please rename configuration file to "sushi-config.yaml" in order to use this configuration file.`
     );
   }
 

@@ -26,7 +26,7 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should log an error that "history" is deprecated when config.history is defined', () => {
+    it('should log an error that "history" is not supported when config.history is defined', () => {
       config.history = {
         'package-id': 'fhir.us.example',
         canonical: 'http://hl7.org/fhir/us/example',
@@ -58,7 +58,7 @@ describe('IGExporter', () => {
       const pkgListPath = path.join(tempOut, 'package-list.json');
       expect(fs.existsSync(pkgListPath)).toBeFalsy(); // Do not copy user provided file or generate a new file
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Detected "history" property in configuration. The use of "history" is deprecated./
+        /Detected "history" property in configuration. The use of "history" is no longer supported./
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(JSON.stringify(config.history, null, 2));
     });

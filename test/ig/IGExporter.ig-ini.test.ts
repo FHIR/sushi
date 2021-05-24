@@ -49,7 +49,7 @@ describe('IGExporter', () => {
         `Found both a "template" property in sushi-config.yaml and an ig.ini file at ig-data${path.sep}ig.ini.`
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        'The "template" property in sushi-config.yaml has been deprecated and will be ignored'
+        'The "template" property in sushi-config.yaml is no longer supported and will be ignored'
       );
     });
 
@@ -117,7 +117,7 @@ describe('IGExporter', () => {
       );
     });
 
-    it('should report deprecated properties in user-provided ig.ini and not copy file when template is not defined', () => {
+    it('should report unsupported properties in user-provided ig.ini and not copy file when template is not defined', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(
         __dirname,
@@ -131,7 +131,7 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igIniPath)).toBeFalsy(); // Does not copy ig.ini
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        `Your ig-data${path.sep}ig.ini file contains the following deprecated properties: ` +
+        `Your ig-data${path.sep}ig.ini file contains the following unsupported properties: ` +
           'copyrightyear, license, version, ballotstatus, fhirspec, excludexml, excludejson, excludettl, excludeMaps.'
       );
     });
