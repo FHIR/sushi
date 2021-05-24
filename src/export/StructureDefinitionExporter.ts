@@ -357,25 +357,12 @@ export class StructureDefinitionExporter implements Fishable {
       delete elements[0].extension;
     }
 
-    // Hack Alert:
-    // A material change is required to an element AFTER the execution of the
-    // structDef.captureOriginalElements() function to ensure the differential
-    // is properly rendered.
-    // To ensure the differential root element contains only the appropriate
-    // attributes, we are setting an initial value for the prohibited "maxLength"
-    // element attribute that will then be deleted below. The "maxLength"
-    // attribute was selected because it is prohibited in type definitions (i.e.,
-    // logical models and resources).
-    // Ref: http://hl7.org/fhir/elementdefinition.html#interpretation
-    elements[0].maxLength = 0;
-
     structDef.elements = elements;
     structDef.captureOriginalElements();
 
-    // Make changes to the root element so the differential root element is
-    // correctly rendered. All of the following changes to the root element
-    // below will be reflected in the differential root element.
-    delete structDef.elements[0].maxLength;
+    // The following changes to the root element will be included in the
+    // differential root element.
+
     // Reset the root element's short and definition
     if (fshDefinition.title) {
       structDef.elements[0].short = fshDefinition.title;

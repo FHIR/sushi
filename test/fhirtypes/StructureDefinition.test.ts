@@ -18,6 +18,8 @@ describe('StructureDefinition', () => {
   let jsonObservation: any;
   let observation: StructureDefinition;
   let resprate: StructureDefinition;
+  let usCoreObservation: StructureDefinition;
+  let jsonUsCoreObservation: StructureDefinition;
   let fisher: TestFisher;
 
   beforeAll(() => {
@@ -31,10 +33,13 @@ describe('StructureDefinition', () => {
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
+    usCoreObservation = fisher.fishForStructureDefinition('us-core-observation-lab');
+    jsonUsCoreObservation = defs.fishForFHIR('us-core-observation-lab', Type.Profile);
   });
 
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    usCoreObservation = StructureDefinition.fromJSON(jsonUsCoreObservation);
     resprate = fisher.fishForStructureDefinition('resprate');
   });
 
@@ -121,12 +126,12 @@ describe('StructureDefinition', () => {
     });
 
     it('should reflect differentials for elements that changed after capturing originals', () => {
-      const code = observation.elements.find(e => e.id === 'Observation.code');
+      const code = usCoreObservation.elements.find(e => e.id === 'Observation.code');
       code.short = 'Special observation code';
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.min = 1;
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       expect(json.differential.element).toHaveLength(2);
       expect(json.differential.element[0]).toEqual({
         id: 'Observation.code',
@@ -141,12 +146,12 @@ describe('StructureDefinition', () => {
     });
 
     it('should reflect differentials for elements that changed after capturing originals without generating snapshot', () => {
-      const code = observation.elements.find(e => e.id === 'Observation.code');
+      const code = usCoreObservation.elements.find(e => e.id === 'Observation.code');
       code.short = 'Special observation code';
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.min = 1;
 
-      const json = observation.toJSON(false);
+      const json = usCoreObservation.toJSON(false);
       expect(json.differential.element).toHaveLength(2);
       expect(json.differential.element[0]).toEqual({
         id: 'Observation.code',
@@ -162,10 +167,12 @@ describe('StructureDefinition', () => {
     });
 
     it('should generate sparse differentials', () => {
-      const componentCode = observation.elements.find(e => e.id === 'Observation.component.code');
+      const componentCode = usCoreObservation.elements.find(
+        e => e.id === 'Observation.component.code'
+      );
       componentCode.short = 'Special component code';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       expect(json.differential.element).toHaveLength(1);
       expect(json.differential.element[0]).toEqual({
         id: 'Observation.component.code',
@@ -175,19 +182,21 @@ describe('StructureDefinition', () => {
     });
 
     it('should reflect basic differential for structure definitions with no changes', () => {
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
     });
 
     it('should reflect basic differential for structure definitions with no changes without generating snapshot', () => {
-      const json = observation.toJSON(false);
+      const json = usCoreObservation.toJSON(false);
       expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
       expect(json.snapshot).toBeUndefined();
     });
 
     it('should properly serialize snapshot and differential for constrained choice type with constraints on specific choices', () => {
       // constrain value[x] to only a Quantity or string and give each its own short
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       valueX.sliceIt('type', '$this', false, 'open');
       const valueConstraint = new OnlyRule('value[x]');
       valueConstraint.types = [{ type: 'Quantity' }, { type: 'string' }];
@@ -197,9 +206,11 @@ describe('StructureDefinition', () => {
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       valueString.short = 'the string choice';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
-      const valueXSnapshot = json.snapshot.element[21];
+      const valueXSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       expect(valueXSnapshot.id).toBe('Observation.value[x]');
       expect(valueXSnapshot.path).toBe('Observation.value[x]');
       expect(valueXSnapshot.type).toEqual([{ code: 'Quantity' }, { code: 'string' }]);
@@ -208,13 +219,17 @@ describe('StructureDefinition', () => {
         ordered: false,
         rules: 'open'
       });
-      const valueQuantitySnapshot = json.snapshot.element[22];
+      const valueQuantitySnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueQuantity'
+      );
       expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
       expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringSnapshot = json.snapshot.element[23];
+      const valueStringSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueString'
+      );
       expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
       expect(valueStringSnapshot.path).toBe('Observation.value[x]');
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
@@ -248,7 +263,7 @@ describe('StructureDefinition', () => {
     });
 
     it('should properly serialize snapshot and differential for unconstrained choice type with constraints on specific choices', () => {
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.sliceIt('type', '$this', false, 'open');
       // note: NOT constraining value[x] types.  Just adding specific elements for valueQuantity and valueString.
       const valueQuantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
@@ -256,9 +271,11 @@ describe('StructureDefinition', () => {
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       valueString.short = 'the string choice';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
-      const valueXSnapshot = json.snapshot.element[21];
+      const valueXSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       expect(valueXSnapshot.id).toBe('Observation.value[x]');
       expect(valueXSnapshot.path).toBe('Observation.value[x]');
       expect(valueXSnapshot.type).toHaveLength(11);
@@ -267,13 +284,17 @@ describe('StructureDefinition', () => {
         ordered: false,
         rules: 'open'
       });
-      const valueQuantitySnapshot = json.snapshot.element[22];
+      const valueQuantitySnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueQuantity'
+      );
       expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
       expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringSnapshot = json.snapshot.element[23];
+      const valueStringSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueString'
+      );
       expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
       expect(valueStringSnapshot.path).toBe('Observation.value[x]');
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
@@ -298,7 +319,7 @@ describe('StructureDefinition', () => {
     it('should properly serialize snapshot and differential for choice type with non-type constraint and with constraints on specific choices', () => {
       // This is the same test as above, but we add a non-type constraint on value[x] to make sure it doesn't get
       // blindly thrown away just because it doesn't constrain the types
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.short = 'a choice of many things';
       valueX.sliceIt('type', '$this', false, 'open');
       // note: NOT constraining value[x] types.  Just adding specific elements for valueQuantity and valueString.
@@ -307,9 +328,11 @@ describe('StructureDefinition', () => {
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       valueString.short = 'the string choice';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
-      const valueXSnapshot = json.snapshot.element[21];
+      const valueXSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       expect(valueXSnapshot.id).toBe('Observation.value[x]');
       expect(valueXSnapshot.path).toBe('Observation.value[x]');
       expect(valueXSnapshot.type).toHaveLength(11);
@@ -319,13 +342,17 @@ describe('StructureDefinition', () => {
         ordered: false,
         rules: 'open'
       });
-      const valueQuantitySnapshot = json.snapshot.element[22];
+      const valueQuantitySnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueQuantity'
+      );
       expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
       expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringSnapshot = json.snapshot.element[23];
+      const valueStringSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueString'
+      );
       expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
       expect(valueStringSnapshot.path).toBe('Observation.value[x]');
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);

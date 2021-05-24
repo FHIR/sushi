@@ -375,8 +375,10 @@ export class StructureDefinition {
 
     // Populate the differential
     j.differential = { element: [] };
-    this.elements.forEach(e => {
-      if (e.hasDiff()) {
+    this.elements.forEach((e, idx) => {
+      // If this is a logical model or a resource (derivation = 'specialization'),
+      // we need to make sure the root element is included in the differential.
+      if (e.hasDiff() || (this.derivation === 'specialization' && idx === 0)) {
         const diff = e.calculateDiff().toJSON();
         const isTypeSlicingChoiceDiff =
           diff.id.endsWith('[x]') &&
