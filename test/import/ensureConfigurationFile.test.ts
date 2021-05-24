@@ -88,25 +88,12 @@ describe('ensureConfigurationFile', () => {
       },
       copyrightYear: `${new Date().getFullYear()}+`,
       releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
       menu: {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: {
           'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html'
-        }
-      },
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
         }
       },
       indexPageContent:
@@ -117,13 +104,7 @@ describe('ensureConfigurationFile', () => {
       'ACTION REQUIRED: EDIT THIS FILE TO ENSURE IT ACCURATELY REFLECTS YOUR PROJECT!'
     );
     expect(configText).toMatch(
-      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
-    );
-    expect(configText).toMatch(
       'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
-    );
-    expect(configText).toMatch(
-      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
     );
   });
 
@@ -159,24 +140,11 @@ describe('ensureConfigurationFile', () => {
       parameters: { 'show-inherited-invariants': false },
       copyrightYear: '2021+',
       releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
       menu: {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
-      },
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
-        }
       },
       indexPageContent: 'Provides a simple example of how FSH can be used to create an IG',
       FSHOnly: true
@@ -187,13 +155,7 @@ describe('ensureConfigurationFile', () => {
       'ACTION REQUIRED: REVIEW AND EDIT THIS FILE TO ENSURE IT ACCURATELY REFLECTS YOUR PROJECT!'
     );
     expect(configText).toMatch(
-      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
-    );
-    expect(configText).toMatch(
       'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
-    );
-    expect(configText).toMatch(
-      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
     );
   });
 
@@ -235,24 +197,11 @@ describe('ensureConfigurationFile', () => {
       parameters: { 'show-inherited-invariants': false },
       copyrightYear: '2021+',
       releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
       menu: {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
-      },
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
-        }
       },
       indexPageContent: '',
       FSHOnly: true
@@ -334,24 +283,11 @@ describe('ensureConfigurationFile', () => {
       parameters: { 'show-inherited-invariants': false },
       copyrightYear: '2021+',
       releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
       menu: {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
-      },
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
-        }
       },
       indexPageContent: 'Provides a simple example of how FSH can be used to create an IG',
       FSHOnly: true
@@ -419,38 +355,18 @@ describe('ensureConfigurationFile', () => {
       },
       copyrightYear: '2018+', // from ig-ini
       releaseLabel: 'STU1', // from ig-ini
-      // no template because the ig.ini will be used directly
+      // no template because the ig.ini should be used directly
       menu: {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
-        }
-      },
       indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
-    // Template should be commented out since we use the one from ig.ini
-    expect(configText).toMatch('# template:');
-    expect(configText).toMatch(
-      'To control the ig.ini using this config, uncomment and set the "template" property.'
-    );
     expect(configText).toMatch(
       'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
-    );
-    expect(configText).toMatch(
-      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
     );
   });
 
@@ -499,200 +415,9 @@ describe('ensureConfigurationFile', () => {
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
       },
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
-        }
-      },
       indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
-
-    // Template should be commented out since we use the one from ig.ini
-    expect(configText).toMatch('# template:');
-  });
-
-  it('should generate an appropriate config for a tank w/ package.json and package-list.json', () => {
-    // Copy the fixture to a temp folder since we actually create files in the tank
-    const tank = temp.mkdirSync('sushi-test');
-    fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-package-list'), tank);
-    const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
-    expect(loggerSpy.getLastMessage('warn')).toBe(
-      `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
-    );
-    const configText = fs.readFileSync(configPath, 'utf8');
-    const configJSON = YAML.parse(configText);
-
-    // Test the formal YAML contents
-    expect(configJSON).toEqual({
-      id: 'sushi-test',
-      canonical: 'http://hl7.org/fhir/sushi-test',
-      version: '0.1.0',
-      name: 'FSHTestIG',
-      title: 'FSH Test IG',
-      status: 'active',
-      publisher: {
-        name: 'James Tuna',
-        url: 'https://tunafish.org/',
-        email: 'tuna@reef.gov'
-      },
-      description: 'Provides a simple example of how FSH can be used to create an IG',
-      license: 'CC0-1.0',
-      fhirVersion: '4.0.1',
-      dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
-      parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2021+',
-      releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
-      menu: {
-        'IG Home': 'index.html',
-        'Table of Contents': 'toc.html',
-        'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
-      },
-      // history should no longer exist since it will just use the provided package-list.json
-      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
-    });
-
-    // history should be commented out since we use the one from ig.ini
-    expect(configText).toMatch('# history:');
-    expect(configText).toMatch(
-      'To control the package-list.json using this config, uncomment and set the "history" property.'
-    );
-
-    // The commented out history should correspond to the existing package-list.json
-    const configTextLines = configText.split('\n');
-    const historyText = configTextLines
-      .slice(configTextLines.findIndex(l => l.startsWith('# history:')))
-      .map(l => l.replace(/^# /, ''))
-      .join('\n');
-    const historyJSON = YAML.parse(historyText);
-    expect(historyJSON.history).toEqual({
-      title: 'FSH Test IG History',
-      introduction: 'Custom intro',
-      current: {
-        version: 'current',
-        desc: 'CI Build (latest in version control)',
-        path: 'http://build.fhir.org/ig/fhir/sushi-test',
-        status: 'ci-build',
-        current: true
-      },
-      '0.2.0': {
-        fhirversion: '4.0.1',
-        date: '2019-09-01',
-        desc: 'Second STU ballot (Sep 2019 Ballot)',
-        path: 'http://hl7.org/fhir/sushi-test/stu2',
-        status: 'ballot',
-        sequence: 'STU 2'
-      },
-      '0.1.0': {
-        fhirversion: '4.0.1',
-        date: '2019-05-01',
-        desc: 'Initial STU ballot (May 2019 Ballot)',
-        path: 'http://hl7.org/fhir/sushi-test/stu1',
-        status: 'ballot',
-        sequence: 'STU 1'
-      }
-    });
-
-    expect(configText).toMatch(
-      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
-    );
-    expect(configText).toMatch(
-      'To use a provided ig-data/input/includes/menu.xml file, delete the "menu" property below.'
-    );
-  });
-
-  it('should generate an appropriate config for a tank w/ package.json and simplest package-list.json', () => {
-    // Copy the fixture to a temp folder since we actually create files in the tank
-    const tank = temp.mkdirSync('sushi-test');
-    fs.copySync(path.join(__dirname, 'fixtures', 'package-json-and-package-list'), tank);
-
-    // Tweak the package list to align w/ expected package-list defaults
-    const packageJSON = fs.readJsonSync(path.join(tank, 'package.json'));
-    const packageList = fs.readJsonSync(path.join(tank, 'ig-data', 'package-list.json'));
-    packageList.title = packageJSON.title;
-    packageList.introduction = packageList.description;
-    packageList.list[0].desc = 'Continuous Integration Build (latest in version control)';
-    fs.writeJsonSync(path.join(tank, 'ig-data', 'package-list.json'), packageList);
-
-    // ensureConfiguration
-    const configPath = ensureConfiguration(tank);
-    expect(configPath).toBe(path.join(tank, 'sushi-config.yaml'));
-    expect(loggerSpy.getLastMessage('warn')).toBe(
-      `Generated new configuration file: ${configPath}. Please review to ensure configuration is correct.`
-    );
-    const configText = fs.readFileSync(configPath, 'utf8');
-    const configJSON = YAML.parse(configText);
-
-    // Test the formal YAML contents
-    expect(configJSON).toEqual({
-      id: 'sushi-test',
-      canonical: 'http://hl7.org/fhir/sushi-test',
-      version: '0.1.0',
-      name: 'FSHTestIG',
-      title: 'FSH Test IG',
-      status: 'active',
-      publisher: {
-        name: 'James Tuna',
-        url: 'https://tunafish.org/',
-        email: 'tuna@reef.gov'
-      },
-      description: 'Provides a simple example of how FSH can be used to create an IG',
-      license: 'CC0-1.0',
-      fhirVersion: '4.0.1',
-      dependencies: { 'hl7.fhir.us.core': '3.1.0', 'hl7.fhir.uv.vhdir': 'current' },
-      parameters: { 'show-inherited-invariants': false },
-      copyrightYear: '2021+',
-      releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
-      menu: {
-        'IG Home': 'index.html',
-        'Table of Contents': 'toc.html',
-        'Artifact Index': 'artifacts.html',
-        Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
-      },
-      // history should still not exist since it will just use the provided package-list.json
-      indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
-    });
-
-    // history should be commented out since we use the one from ig.ini
-    expect(configText).toMatch('# history:');
-
-    // The commented out history should correspond to the existing package-list.json
-    const configTextLines = configText.split('\n');
-    const historyText = configTextLines
-      .slice(configTextLines.findIndex(l => l.startsWith('# history:')))
-      .map(l => l.replace(/^# /, ''))
-      .join('\n');
-    const historyJSON = YAML.parse(historyText);
-    expect(historyJSON.history).toEqual({
-      // no title or introduction since they match package title and description
-      current: 'http://build.fhir.org/ig/fhir/sushi-test', // path only since all other properties match defaults
-      '0.2.0': {
-        fhirversion: '4.0.1',
-        date: '2019-09-01',
-        desc: 'Second STU ballot (Sep 2019 Ballot)',
-        path: 'http://hl7.org/fhir/sushi-test/stu2',
-        status: 'ballot',
-        sequence: 'STU 2'
-      },
-      '0.1.0': {
-        fhirversion: '4.0.1',
-        date: '2019-05-01',
-        desc: 'Initial STU ballot (May 2019 Ballot)',
-        path: 'http://hl7.org/fhir/sushi-test/stu1',
-        status: 'ballot',
-        sequence: 'STU 1'
-      }
-    });
+    // No properties from ig.ini used (ig or template)
   });
 
   it('should generate an appropriate config for a tank w/ package.json and menu.xml', () => {
@@ -727,20 +452,7 @@ describe('ensureConfigurationFile', () => {
       parameters: { 'show-inherited-invariants': false },
       copyrightYear: '2021+',
       releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
       // menu should no longer exist since the provided menu.xml is used
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
-        }
-      },
       indexPageContent: 'Provides a simple example of how FSH can be used to create an IG'
     });
 
@@ -753,7 +465,7 @@ describe('ensureConfigurationFile', () => {
     // The commented out menu should correspond to the generated menu based on provided menu.xml
     const configTextLines = configText.split('\n');
     const start = configTextLines.findIndex(l => l.startsWith('# menu:'));
-    const end = configTextLines.findIndex(l => l.startsWith('# NOTE: The history property'));
+    const end = configTextLines.length - 1; // menu is the last property so get the last line
     const menuText = configTextLines
       .slice(start, end)
       .map(l => l.replace(/^# /, ''))
@@ -774,13 +486,6 @@ describe('ensureConfigurationFile', () => {
         Downloads: 'downloads.html'
       }
     });
-
-    expect(configText).toMatch(
-      'To use a provided ig-data/ig.ini file, delete the "template" property below.'
-    );
-    expect(configText).toMatch(
-      'To use a provided ig-data/package-list.json file, delete the "history" property below.'
-    );
   });
 
   it('should generate an appropriate config for a tank w/ package.json and index.md', () => {
@@ -815,24 +520,11 @@ describe('ensureConfigurationFile', () => {
       parameters: { 'show-inherited-invariants': false },
       copyrightYear: '2021+',
       releaseLabel: 'CI Build',
-      template: 'fhir.base.template#current',
       menu: {
         'IG Home': 'index.html',
         'Table of Contents': 'toc.html',
         'Artifact Index': 'artifacts.html',
         Support: { 'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html' }
-      },
-      history: {
-        current: 'http://build.fhir.org/ig/example/example-ig',
-        '0.0.1': {
-          fhirversion: '4.0.1',
-          date: '2099-01-01',
-          desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-          path: 'http://example.org/fhir/STU1',
-          status: 'ballot',
-          sequence: 'STU 1',
-          current: true
-        }
       }
       // indexPageContent should not exist since the provided index.md is used
     });

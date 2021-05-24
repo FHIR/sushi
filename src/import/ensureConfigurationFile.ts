@@ -1,6 +1,6 @@
 import path from 'path';
 import ini from 'ini';
-import fs, { existsSync, readFileSync, readJSONSync } from 'fs-extra';
+import fs, { existsSync, readFileSync } from 'fs-extra';
 import { Document, createNode } from 'yaml';
 import { YAMLMap, Pair, Schema } from 'yaml/types';
 import wordwrap from 'wordwrap';
@@ -10,9 +10,7 @@ import { PackageJSON } from '../fshtypes';
 import {
   YAMLConfigurationPublisher,
   YAMLConfigurationContactDetail,
-  YAMLConfigurationHistoryItem,
-  YAMLConfigurationMenuTree,
-  YAMLConfigurationHistory
+  YAMLConfigurationMenuTree
 } from './YAMLConfiguration';
 import { logger } from '../utils/FSHLogger';
 import { pad, padEnd } from 'lodash';
@@ -92,7 +90,6 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
   // Generate the config from available ig.ini, package.json, and package-list.json
   const igIni = getIgIni(root);
   const packageJSON = getPackageJSON(root);
-  const packageList = getPackageList(root);
 
   // The config is "from scratch" if there is no package.json to base it on.
   // We know there wasn't a packageJSON if the returned packageJSON is the default one (by reference)
@@ -252,29 +249,6 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
   const setPairs: YAMLPair[] = [];
   const commentedPairs: YAMLPair[] = [];
 
-  if (igIni !== DEFAULT_IG_INI) {
-    commentedPairs.push(
-      new CommentPair('template', igIni.template ?? DEFAULT_IG_INI.template)
-        .withCommentBefore(
-          getBoxComment(
-            'ig.ini',
-            'To control the ig.ini using this config, uncomment and set the "template" property.'
-          )
-        )
-        .withSpaceBefore()
-    );
-  } else {
-    setPairs.push(
-      new YAMLPair('template', igIni.template ?? DEFAULT_IG_INI.template)
-        .withCommentBefore(
-          getBoxComment(
-            'ig.ini',
-            'To use a provided ig-data/ig.ini file, delete the "template" property below.'
-          )
-        )
-        .withSpaceBefore()
-    );
-  }
   // menu
   const menuPath = path.join(root, 'ig-data', 'input', 'includes', 'menu.xml');
   if (fs.existsSync(menuPath)) {
@@ -339,54 +313,6 @@ function generateConfiguration(root: string, allowFromScratch: boolean): string 
     );
   } else {
     // if an index file is provided, don't add anything to config
-  }
-
-  // history
-  // @ts-ignore it's ok that we don't initialize it with current.  It will get current eventually.
-  const yamlHistory: YAMLConfigurationHistory = {};
-  if (packageList['package-id'] != null && packageList['package-id'] !== packageJSON.name) {
-    yamlHistory['package-id'] = packageList['package-id'];
-  }
-  if (packageList.canonical != null && packageList.canonical !== packageJSON.canonical) {
-    yamlHistory.canonical = packageList.canonical;
-  }
-  if (packageList.title != null && packageList.title !== packageJSON.title) {
-    yamlHistory.title = packageList.title;
-  }
-  if (packageList.introduction != null && packageList.introduction !== packageJSON.description) {
-    yamlHistory.introduction = packageList.introduction;
-  }
-  yamlHistory.current = getCurrentFromPackageList(packageList, packageJSON);
-  (packageList.list as any[])?.forEach(item => {
-    if (item.version === 'current') {
-      return;
-    }
-    const yamlItem = cloneDeep(item);
-    delete yamlItem.version;
-    yamlHistory[item.version] = yamlItem;
-  });
-  if (packageList !== DEFAULT_PACKAGE_LIST) {
-    commentedPairs.push(
-      new CommentPair('history', yamlHistory)
-        .withCommentBefore(
-          getBoxComment(
-            'package-list.json',
-            'To control the package-list.json using this config, uncomment and set the "history" property.'
-          )
-        )
-        .withSpaceBefore()
-    );
-  } else {
-    setPairs.push(
-      new YAMLPair('history', yamlHistory)
-        .withCommentBefore(
-          getBoxComment(
-            'package-list.json',
-            'To use a provided ig-data/package-list.json file, delete the "history" property below.'
-          )
-        )
-        .withSpaceBefore()
-    );
   }
 
   // FSHOnly - in SUSHI 0.12.x, presence or absence of ig-data indicated if you wanted an IG or not.
@@ -516,38 +442,6 @@ function getMenuObjectFromMenuXML(menuXML: string): YAMLConfigurationMenuTree {
 }
 
 /**
- * Gets the value for current, preferring a simple path string when all other values match the default
- * @param packageList - the packageList object from package-list.json (or default)
- * @param packageJSON - the packageJSON object from package.json (or default)
- * @returns {string|YAMLConfigurationHistoryItem} - a string for the current path or an object w/ current details
- */
-function getCurrentFromPackageList(
-  packageList: any,
-  packageJSON: PackageJSON
-): string | YAMLConfigurationHistoryItem {
-  const plCurrent = packageList.list.find((item: any) => item.version === 'current');
-  if (plCurrent == null) {
-    return packageJSON.url ?? DEFAULT_PACKAGE_LIST.list[0].path;
-  }
-  for (const key of Object.keys(plCurrent)) {
-    if (
-      key === 'version' ||
-      key === 'path' ||
-      (key === 'desc' && plCurrent.desc === DEFAULT_PACKAGE_LIST.list[0].desc) ||
-      (key === 'status' && plCurrent.status === DEFAULT_PACKAGE_LIST.list[0].status) ||
-      (key === 'current' && plCurrent.current === DEFAULT_PACKAGE_LIST.list[0].current)
-    ) {
-      continue;
-    } else {
-      // return the full object since it contains non-default values besides path
-      return plCurrent;
-    }
-  }
-  // If we got this far, the only significant value is the path, so just return that
-  return plCurrent.path;
-}
-
-/**
  * Gets the ig.ini representation or a default if none is found
  * @param root - the root path for the FSH Tank
  * @returns {object} - the ig.ini object representation
@@ -582,21 +476,6 @@ function getPackageJSON(root: string): PackageJSON {
 
   // No existing package.json, so return one with default values to populate an example config
   return DEFAULT_PACKAGE_JSON;
-}
-
-/**
- * Gets the package-list.json representation or a default if none is found
- * @param root - the root path for the FSH Tank
- * @returns {object} - the package-list.json object representation
- */
-function getPackageList(root: string): any {
-  const packageListPath = path.join(root, 'ig-data', 'package-list.json');
-  if (existsSync(packageListPath)) {
-    return readJSONSync(packageListPath);
-  }
-
-  // No existing package-list.json, so return one with default values to populate an example config
-  return DEFAULT_PACKAGE_LIST;
 }
 
 const DEFAULT_IG_INI: any = {
@@ -634,26 +513,4 @@ const DEFAULT_MENU: YAMLConfigurationMenuTree = {
   Support: {
     'FHIR Spec': 'new-tab http://hl7.org/fhir/R4/index.html'
   }
-};
-
-const DEFAULT_PACKAGE_LIST: any = {
-  list: [
-    {
-      version: 'current',
-      desc: 'Continuous Integration Build (latest in version control)',
-      path: 'http://build.fhir.org/ig/example/example-ig',
-      status: 'ci-build',
-      current: true
-    },
-    {
-      version: DEFAULT_PACKAGE_JSON.version,
-      fhirversion: DEFAULT_PACKAGE_JSON.dependencies['hl7.fhir.r4.core'],
-      date: '2099-01-01',
-      desc: 'Initial STU ballot (Mmm yyyy Ballot)',
-      path: 'http://example.org/fhir/STU1',
-      status: 'ballot',
-      sequence: 'STU 1',
-      current: true
-    }
-  ]
 };
