@@ -1930,7 +1930,7 @@ describe('StructureDefinitionExporter', () => {
       );
     });
 
-    it('should log an error when invalid path for multiple data types in AddElementRule', () => {
+    it('should log an error when path does not have [x] for multiple data types in AddElementRule', () => {
       const logical = new Logical('MyTestModel');
       logical.id = 'MyModel';
 
@@ -1939,7 +1939,11 @@ describe('StructureDefinitionExporter', () => {
         .withLocation([3, 1, 8, 12]);
       addElementRule.min = 0;
       addElementRule.max = '1';
-      addElementRule.types = [{ type: 'string' }, { type: 'Annotation' }];
+      addElementRule.types = [
+        { type: 'string' },
+        { type: 'Annotation' },
+        { type: 'DocumentReference', isReference: true }
+      ];
       addElementRule.short = 'prop1 definition';
       logical.rules.push(addElementRule);
 
@@ -1951,6 +1955,29 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /As a FHIR choice data type, the specified prop1 for AddElementRule must end with '\[x\]'/s
       );
+    });
+
+    it('should not log an error when path does not have [x] for multiple reference types in AddElementRule', () => {
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const addElementRule = new AddElementRule('prop1')
+        .withFile('GoodPath.fsh')
+        .withLocation([3, 1, 8, 12]);
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'Organization', isReference: true },
+        { type: 'Location', isReference: true }
+      ];
+      addElementRule.short = 'prop1 definition with multiple references';
+      logical.rules.push(addElementRule);
+
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+
+      expect(loggerSpy.getLastMessage('error')).toBeUndefined();
     });
   });
 

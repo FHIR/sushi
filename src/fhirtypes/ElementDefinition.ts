@@ -498,7 +498,11 @@ export class ElementDefinition {
    */
   private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
     if (rule.types.length > 1 && !rule.path.endsWith('[x]')) {
-      throw new InvalidChoiceTypeRulePathError(rule);
+      const referenceTypes = rule.types.filter(t => t.isReference);
+      // Reference data type with multiple targets is not considered a choice data type.
+      if (referenceTypes.length < rule.types.length) {
+        throw new InvalidChoiceTypeRulePathError(rule);
+      }
     }
 
     let refTypeCnt = 0;
