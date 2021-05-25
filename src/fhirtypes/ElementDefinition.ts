@@ -1831,7 +1831,7 @@ export class ElementDefinition {
         const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
         if (profileJson && this.hasProfileElementExtension(profileJson)) {
           const def = this.structDef;
-          // Content references start with #, slice that off to id of referenced element
+          // Content references start with #, slice that off to get the id of referenced element
           const contentRefId = this.getContentReferenceId();
           const referencedElement = def.findElement(contentRefId);
           newElements = this.cloneChildren(referencedElement);

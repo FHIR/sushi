@@ -250,9 +250,17 @@ describe('StructureDefinitionExporter', () => {
     profile.parent = 'Questionnaire';
     profile.id = 'example-q';
 
-    const shortRule = new CaretValueRule('item');
-    shortRule.caretPath = 'short';
-    shortRule.value = 'This should be copied as well';
+    const containsRule = new ContainsRule('item.extension');
+    containsRule.items = [
+      {
+        name: 'example-slice',
+        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+      }
+    ];
+
+    const cardRule = new CardRule('item.extension[example-slice]');
+    cardRule.min = 1;
+    cardRule.max = '1';
 
     const profileRule = new CaretValueRule('item');
     profileRule.caretPath = 'type.profile';
@@ -265,17 +273,24 @@ describe('StructureDefinitionExporter', () => {
     targetElementRule.caretPath = 'type.profile.extension.valueString';
     targetElementRule.value = 'Questionnaire.item';
 
-    profile.rules.push(shortRule, profileRule, extensionRule, targetElementRule);
+    const assignmentRule = new AssignmentRule('item.item.linkId');
+    assignmentRule.value = 'item-2';
+
+    profile.rules.push(
+      containsRule,
+      cardRule,
+      profileRule,
+      extensionRule,
+      targetElementRule,
+      assignmentRule
+    );
     doc.profiles.set(profile.name, profile);
 
-    // The element unfolded into the contentRef's structDef object should contain constraints
-    // added on this profile, rather than the base element definition
+    // The slice added to the parent element should be unfolded to the child
     const exportedProfile = exporter.export().profiles[0];
-    const exportedOriginialElement = exportedProfile.findElement('Questionnaire.item');
-    const exportedContentRefElement = exportedProfile
-      .findElement('Questionnaire.item.item')
-      .structDef.findElement('Questionnaire.item');
-    expect(exportedContentRefElement.short).toEqual(exportedOriginialElement.short);
+    expect(
+      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+    ).toBeDefined();
   });
 
   // Extension
