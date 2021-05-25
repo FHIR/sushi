@@ -293,6 +293,55 @@ describe('StructureDefinitionExporter', () => {
     ).toBeDefined();
   });
 
+  it('should not apply constraints to all instances of contentReference elements when the profile-element extension is misapplied', () => {
+    const profile = new Profile('TestQuestionnaire2');
+    profile.parent = 'Questionnaire';
+    profile.id = 'example-q';
+
+    const containsRule = new ContainsRule('item.extension');
+    containsRule.items = [
+      {
+        name: 'example-slice',
+        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+      }
+    ];
+
+    const cardRule = new CardRule('item.extension[example-slice]');
+    cardRule.min = 1;
+    cardRule.max = '1';
+
+    // The extension is targeting another profile
+    const profileRule = new CaretValueRule('item');
+    profileRule.caretPath = 'type.profile';
+    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/wrong-id';
+    const extensionRule = new CaretValueRule('item');
+    extensionRule.caretPath = 'type.profile.extension.url';
+    extensionRule.value =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+    const targetElementRule = new CaretValueRule('item');
+    targetElementRule.caretPath = 'type.profile.extension.valueString';
+    targetElementRule.value = 'Questionnaire.item';
+
+    const assignmentRule = new AssignmentRule('item.item.linkId');
+    assignmentRule.value = 'item-2';
+
+    profile.rules.push(
+      containsRule,
+      cardRule,
+      profileRule,
+      extensionRule,
+      targetElementRule,
+      assignmentRule
+    );
+    doc.profiles.set(profile.name, profile);
+
+    // The slice added to the parent element should be unfolded to the child
+    const exportedProfile = exporter.export().profiles[0];
+    expect(
+      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+    ).not.toBeDefined();
+  });
+
   // Extension
   it('should set all user-provided metadata for an extension', () => {
     const extension = new Extension('Foo');

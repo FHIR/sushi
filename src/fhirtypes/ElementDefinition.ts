@@ -1935,11 +1935,15 @@ export class ElementDefinition {
       const profileIndex = elementType._profile.findIndex(
         (profile: any) =>
           profile &&
-          profile.extension.find(
+          profile.extension.some(
             (extension: any) =>
               extension.hasOwnProperty('url') && extension.hasOwnProperty('valueString')
-          ) !== undefined
+          )
       );
+
+      if (profileIndex === -1) {
+        return false;
+      }
 
       const extensionIndex = elementType._profile[profileIndex].extension?.findIndex(
         (extensionObj: any) =>
