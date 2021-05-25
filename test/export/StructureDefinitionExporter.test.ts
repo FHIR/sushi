@@ -1588,28 +1588,21 @@ describe('StructureDefinitionExporter', () => {
       expect(prop1.extension).toBeUndefined(); // standards flags extensions
       expect(prop1.short).toBe('brief description');
       expect(prop1.definition).toBe('brief description');
-      // NOTE: base attribute should be defined as newElementBase
-      expect(prop1.base).toBeUndefined();
-      expect(prop1.newElementBase).toBeDefined();
-      expect(prop1.newElementBase.path).toBe(prop1.path);
-      expect(prop1.newElementBase.min).toBe(prop1.min);
-      expect(prop1.newElementBase.max).toBe(prop1.max);
-      // NOTE: constraint attribute should be defined as newElementConstraint
-      expect(prop1.constraint).toBeUndefined();
-      expect(prop1.newElementConstraint).toBeDefined();
-      expect(prop1.newElementConstraint[0].key).toBe('ele-1');
-      expect(prop1.newElementConstraint[0].requirements).toBeUndefined();
-      expect(prop1.newElementConstraint[0].severity).toBe('error');
-      expect(prop1.newElementConstraint[0].human).toBe(
-        'All FHIR elements must have a @value or children'
-      );
-      expect(prop1.newElementConstraint[0].expression).toBe(
+      expect(prop1.base).toBeDefined();
+      expect(prop1.base.path).toBe(prop1.path);
+      expect(prop1.base.min).toBe(prop1.min);
+      expect(prop1.base.max).toBe(prop1.max);
+      expect(prop1.constraint).toBeDefined();
+      expect(prop1.constraint).toHaveLength(1);
+      expect(prop1.constraint[0].key).toBe('ele-1');
+      expect(prop1.constraint[0].requirements).toBeUndefined();
+      expect(prop1.constraint[0].severity).toBe('error');
+      expect(prop1.constraint[0].human).toBe('All FHIR elements must have a @value or children');
+      expect(prop1.constraint[0].expression).toBe(
         'hasValue() or (children().count() > id.count())'
       );
-      expect(prop1.newElementConstraint[0].xpath).toBe('@value|f:*|h:div');
-      expect(prop1.newElementConstraint[0].source).toBe(
-        'http://hl7.org/fhir/StructureDefinition/Element'
-      );
+      expect(prop1.constraint[0].xpath).toBe('@value|f:*|h:div');
+      expect(prop1.constraint[0].source).toBe('http://hl7.org/fhir/StructureDefinition/Element');
     });
 
     it('should add an element with additional constraint attributes', () => {
@@ -1640,30 +1633,21 @@ describe('StructureDefinitionExporter', () => {
 
       const prop1 = exported.findElement('MyModel.prop1');
 
-      // NOTE: constraint attribute should be defined as newElementConstraint with
-      // the actual 'constraint' attribute containing only the added "ObeysRule"
       expect(prop1.constraint).toBeDefined();
-      const expectedConstraint = [
-        {
-          key: 'TestInvariant',
-          source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel'
-        }
-      ];
-      expect(prop1.constraint).toStrictEqual(expectedConstraint);
-
-      expect(prop1.newElementConstraint).toBeDefined();
-      expect(prop1.newElementConstraint[0].key).toBe('ele-1');
-      expect(prop1.newElementConstraint[0].requirements).toBeUndefined();
-      expect(prop1.newElementConstraint[0].severity).toBe('error');
-      expect(prop1.newElementConstraint[0].human).toBe(
-        'All FHIR elements must have a @value or children'
-      );
-      expect(prop1.newElementConstraint[0].expression).toBe(
+      expect(prop1.constraint).toHaveLength(2);
+      expect(prop1.constraint[0].key).toBe('ele-1');
+      expect(prop1.constraint[0].requirements).toBeUndefined();
+      expect(prop1.constraint[0].severity).toBe('error');
+      expect(prop1.constraint[0].human).toBe('All FHIR elements must have a @value or children');
+      expect(prop1.constraint[0].expression).toBe(
         'hasValue() or (children().count() > id.count())'
       );
-      expect(prop1.newElementConstraint[0].xpath).toBe('@value|f:*|h:div');
-      expect(prop1.newElementConstraint[0].source).toBe(
-        'http://hl7.org/fhir/StructureDefinition/Element'
+      expect(prop1.constraint[0].xpath).toBe('@value|f:*|h:div');
+      expect(prop1.constraint[0].source).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+
+      expect(prop1.constraint[1].key).toBe('TestInvariant');
+      expect(prop1.constraint[1].source).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel'
       );
     });
 

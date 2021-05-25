@@ -409,8 +409,7 @@ export class StructureDefinitionExporter implements Fishable {
         // The FHIR spec prohibits constraining any parent element in a 'specialization'
         // (i.e., logical model and resource), therefore log an error if that is attempted
         // and continue to the next rule.
-        const base = element.base ?? element.newElementBase;
-        if (element.path !== base.path) {
+        if (element.path !== element.base.path) {
           // The AddElementRule always sets the newElementBase.path to the value of element.path.
           // All parent elements will have the element.base.path pointing to the parent.
           logger.error(

@@ -70,27 +70,23 @@ describe('ElementDefinition', () => {
       expect(newElement.extension).toBeUndefined(); // standards flags extensions
       expect(newElement.short).toBe('provide some comments');
       expect(newElement.definition).toBe('provide some comments');
-
-      // NOTE: base attribute should be defined as newElementBase
-      expect(newElement.base).toBeUndefined();
-      expect(newElement.newElementBase).toBeDefined();
-      expect(newElement.newElementBase.path).toBe(newElement.path);
-      expect(newElement.newElementBase.min).toBe(newElement.min);
-      expect(newElement.newElementBase.max).toBe(newElement.max);
-      // NOTE: constraint attribute should be defined as newElementConstraint
-      expect(newElement.constraint).toBeUndefined();
-      expect(newElement.newElementConstraint).toBeDefined();
-      expect(newElement.newElementConstraint[0].key).toBe('ele-1');
-      expect(newElement.newElementConstraint[0].requirements).toBeUndefined();
-      expect(newElement.newElementConstraint[0].severity).toBe('error');
-      expect(newElement.newElementConstraint[0].human).toBe(
+      expect(newElement.base).toBeDefined();
+      expect(newElement.base.path).toBe(newElement.path);
+      expect(newElement.base.min).toBe(newElement.min);
+      expect(newElement.base.max).toBe(newElement.max);
+      expect(newElement.constraint).toBeDefined();
+      expect(newElement.constraint).toHaveLength(1);
+      expect(newElement.constraint[0].key).toBe('ele-1');
+      expect(newElement.constraint[0].requirements).toBeUndefined();
+      expect(newElement.constraint[0].severity).toBe('error');
+      expect(newElement.constraint[0].human).toBe(
         'All FHIR elements must have a @value or children'
       );
-      expect(newElement.newElementConstraint[0].expression).toBe(
+      expect(newElement.constraint[0].expression).toBe(
         'hasValue() or (children().count() > id.count())'
       );
-      expect(newElement.newElementConstraint[0].xpath).toBe('@value|f:*|h:div');
-      expect(newElement.newElementConstraint[0].source).toBe(
+      expect(newElement.constraint[0].xpath).toBe('@value|f:*|h:div');
+      expect(newElement.constraint[0].source).toBe(
         'http://hl7.org/fhir/StructureDefinition/Element'
       );
     });

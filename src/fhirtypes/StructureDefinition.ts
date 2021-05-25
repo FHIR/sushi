@@ -1,7 +1,6 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
 import escapeRegExp from 'lodash/escapeRegExp';
-import isEmpty from 'lodash/isEmpty';
 import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
@@ -353,24 +352,7 @@ export class StructureDefinition {
 
     // Now handle snapshot and differential
     if (snapshot) {
-      const tempElements: ElementDefinition[] = this.elements.map(ed => {
-        const e = ed.clone(false);
-        // Special handling is required for the 'base' and 'constraint' attributes for elements
-        // added using the AddElementRule. See comments in ElementDefinition.applyAddElementRule()
-        // for details.
-        if (e.newElementBase) {
-          e.base = e.newElementBase;
-        }
-        if (e.newElementConstraint) {
-          if (isEmpty(e.constraint)) {
-            e.constraint = e.newElementConstraint;
-          } else {
-            e.constraint.push(...e.newElementConstraint);
-          }
-        }
-        return e;
-      });
-      j.snapshot = { element: tempElements.map(e => e.toJSON()) };
+      j.snapshot = { element: this.elements.map(e => e.toJSON()) };
     }
 
     // Populate the differential
