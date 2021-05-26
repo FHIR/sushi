@@ -45,7 +45,12 @@ import {
   InvalidChoiceTypeRulePathError,
   CannotResolvePathError
 } from '../errors';
-import { isReferenceType, setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
+import {
+  extractPathTypeFromStructDefType,
+  isReferenceType,
+  setPropertyOnDefinitionInstance,
+  splitOnPathPeriods
+} from './common';
 import { Fishable, logger, Metadata, Type } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -435,8 +440,9 @@ export class ElementDefinition {
     }
 
     // Add the base attribute
+    const pathType = extractPathTypeFromStructDefType(this.structDef.type);
     this.base = {
-      path: `${this.structDef.type}.${rule.path}`,
+      path: `${pathType}.${rule.path}`,
       min: rule.min,
       max: rule.max
     };
@@ -498,9 +504,8 @@ export class ElementDefinition {
    */
   private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
     if (rule.types.length > 1 && !rule.path.endsWith('[x]')) {
-      const referenceTypes = rule.types.filter(t => t.isReference);
       // Reference data type with multiple targets is not considered a choice data type.
-      if (referenceTypes.length < rule.types.length) {
+      if (!rule.types.every(t => t.isReference)) {
         throw new InvalidChoiceTypeRulePathError(rule);
       }
     }

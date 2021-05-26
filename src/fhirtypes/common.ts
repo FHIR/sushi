@@ -645,6 +645,50 @@ export function getUrlFromFshDefinition(
   return `${canonical}/${fhirType}/${fshDefinition.id}`;
 }
 
+/**
+ * Determines the formal FHIR type to use to define to this entity for logical models and
+ * resources. The type for profiles and extension should not be changed. If a caret value
+ * rule has been applied to the entity's type, use the value specified in that rule.
+ * Otherwise, use the appropriate default based on the fshDefinition.
+ *
+ * @param fshDefinition - The FSH definition (Logical or Resource) that the returned type refers to
+ * @param structDef - The parent StructureDefinition for the fshDefinition
+ * @returns The type to specify in the StructureDefinition for this fshDefinition
+ */
+export function getTypeFromFshDefinition(
+  fshDefinition: Profile | Extension | Logical | Resource,
+  structDef: StructureDefinition
+): string {
+  if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
+    return structDef.type;
+  }
+
+  for (const rule of fshDefinition.rules) {
+    if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'type') {
+      // this value should only be a string, but that might change at some point
+      return rule.value.toString();
+    }
+  }
+  // Default type for logical model to the StructureDefinition url;
+  // otherwise default to the id meta property.
+  // Ref: https://chat.fhir.org/#narrow/pm-with/191469,210024,211704,239822-group/near/240237602
+  return fshDefinition instanceof Logical ? structDef.url : fshDefinition.id;
+}
+
+/**
+ * All the elements must start with the StructureDefinition's specified type.
+ * For logical models, since we are defaulting the type to the url, we must
+ * use the trailing path part. Otherwise, we just use the specified type value.
+ * Ref: http://hl7.org/fhir/structuredefinition.html#invs - sdf-8, sdf-8a
+ * @param structDefType - StructureDefinition.type value
+ * @returns The type to specify ElementDefinition.path values
+ */
+export function extractPathTypeFromStructDefType(structDefType: string): string {
+  return structDefType.startsWith('http')
+    ? structDefType.slice(structDefType.lastIndexOf('/') + 1)
+    : structDefType;
+}
+
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
 export class HasName {

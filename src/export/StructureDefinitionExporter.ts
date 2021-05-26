@@ -38,6 +38,8 @@ import {
   applyInsertRules,
   applyMixinRules,
   cleanResource,
+  extractPathTypeFromStructDefType,
+  getTypeFromFshDefinition,
   getUrlFromFshDefinition,
   replaceReferences,
   splitOnPathPeriods
@@ -193,6 +195,13 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     const structDef = StructureDefinition.fromJSON(parentJson);
+
+    // Since the structDef is from the parent, set the URL to be the baseDefinition
+    structDef.baseDefinition = structDef.url;
+    // Now, define the url and type here since these are core properties use by subsequent methods
+    structDef.url = getUrlFromFshDefinition(fshDefinition, this.tank.config.canonical);
+    structDef.type = getTypeFromFshDefinition(fshDefinition, structDef);
+
     this.resetParentElements(structDef, fshDefinition);
 
     return structDef;
@@ -212,10 +221,7 @@ export class StructureDefinitionExporter implements Fishable {
     structDef: StructureDefinition,
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
-    // First save the original URL, as that is the URL we'll want to set as the baseDefinition
-    const baseURL = structDef.url;
-
-    // Now set/clear elements in order of their appearance in Resource/DomainResource/StructureDefinition definitions
+    // Set/clear elements in order of their appearance in Resource/DomainResource/StructureDefinition definitions
     structDef.setId(fshDefinition.id, fshDefinition.sourceInfo);
     delete structDef.meta;
     delete structDef.implicitRules;
@@ -234,7 +240,7 @@ export class StructureDefinitionExporter implements Fishable {
       // for consistency, delete rather than leaving null-valued
       delete structDef.modifierExtension;
     }
-    structDef.url = getUrlFromFshDefinition(fshDefinition, this.tank.config.canonical);
+    // keep url since it was already defined when the StructureDefinition was initially created
     delete structDef.identifier;
     structDef.version = this.tank.config.version; // can be overridden using a rule
     structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
@@ -277,16 +283,12 @@ export class StructureDefinitionExporter implements Fishable {
       structDef.kind = 'logical';
     }
     structDef.abstract = false; // always reset to false, assuming most children of abstracts aren't abstract; can be overridden w/ rule
-    structDef.baseDefinition = baseURL;
-    if (fshDefinition instanceof Logical || fshDefinition instanceof Resource) {
-      // By definition, the 'type' is the same as the 'id'
-      structDef.type = fshDefinition.id;
-      structDef.derivation = 'specialization';
-    } else {
-      // keep type since this should not change except for logical models or resources
-      // always constraint for profiles/extensions
-      structDef.derivation = 'constraint';
-    }
+    // keep baseDefinition since it was already defined when the StructureDefinition was initially created
+    // keep type since it was already defined when the StructureDefinition was initially created
+    structDef.derivation =
+      fshDefinition instanceof Logical || fshDefinition instanceof Resource
+        ? 'specialization'
+        : 'constraint';
 
     if (fshDefinition instanceof Extension) {
       // context and contextInvariant only apply to extensions.
@@ -340,8 +342,9 @@ export class StructureDefinitionExporter implements Fishable {
     // Therefore, use the 'id' as the source of the conversion and reset
     // the 'id' value with the new base value. The 'id' mutator will
     // automatically reset the 'path' value'.
+    const pathType = extractPathTypeFromStructDefType(structDef.type);
     elements.forEach(e => {
-      e.id = e.id.replace(/^[^.]+/, fshDefinition.id);
+      e.id = e.id.replace(/^[^.]+/, pathType);
     });
 
     // The root element's base.path should be the same as root element's path

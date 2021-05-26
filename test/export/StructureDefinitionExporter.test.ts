@@ -986,7 +986,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.description).toBe('foo bar foobar');
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.version).toBe('1.0.0');
-      expect(exported.type).toBe('foo');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
     });
 
@@ -1026,7 +1026,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.abstract).toBe(false); // always abstract
       expect(exported.context).toBeUndefined(); // inherited from AlternateIdentification
       expect(exported.contextInvariant).toBeUndefined(); // inherited from AlternateIdentification
-      expect(exported.type).toBe('Foo'); // inherited from AlternateIdentification
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
       expect(exported.baseDefinition).toBe(
         'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
       ); // url for AlternateIdentification
@@ -1045,7 +1045,7 @@ describe('StructureDefinitionExporter', () => {
       expect(exported.description).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
       expect(exported.version).toBe('1.0.0');
-      expect(exported.type).toBe('Foo');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
       expect(exported.derivation).toBe('specialization');
     });
@@ -1062,6 +1062,20 @@ describe('StructureDefinitionExporter', () => {
       const exported = pkg.logicals[0];
       expect(exported.name).toBe('Foo');
       expect(exported.status).toBe('draft');
+    });
+
+    it('should allow type to be overwritten with caret rule', () => {
+      const logical = new Logical('Foo');
+      logical.parent = 'AlternateIdentification';
+      const rule = new CaretValueRule('');
+      rule.caretPath = 'type';
+      rule.value = 'MyType';
+      logical.rules.push(rule);
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+      expect(exported.name).toBe('Foo');
+      expect(exported.type).toBe('MyType');
     });
 
     it('should log an error when multiple logical models have the same id', () => {
@@ -1130,7 +1144,7 @@ describe('StructureDefinitionExporter', () => {
 
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
-      expect(exported.type).toBe('MyModel');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
       expect(exported.elements).toHaveLength(3); // 1 Base element + 2 added elements
     });
 
@@ -1166,7 +1180,7 @@ describe('StructureDefinitionExporter', () => {
 
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
-      expect(exported.type).toBe('MyModel');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
       expect(exported.elements).toHaveLength(6); // 3 Element elements + 3 added elements
 
       const prop1 = exported.findElement('MyModel.backboneProp');
@@ -1573,7 +1587,7 @@ describe('StructureDefinitionExporter', () => {
 
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
-      expect(exported.type).toBe('MyModel');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
       expect(exported.elements).toHaveLength(2); // 1 for parent Base plus 1 for AddElementRule
 
       const prop1 = exported.findElement('MyModel.prop1');
@@ -1628,7 +1642,7 @@ describe('StructureDefinitionExporter', () => {
 
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
-      expect(exported.type).toBe('MyModel');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
       expect(exported.elements).toHaveLength(2); // 1 for parent Base plus 1 for AddElementRule
 
       const prop1 = exported.findElement('MyModel.prop1');

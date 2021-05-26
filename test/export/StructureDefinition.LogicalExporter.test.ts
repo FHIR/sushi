@@ -333,7 +333,7 @@ describe('LogicalExporter', () => {
 
     expect(exported.name).toBe('MyTestModel');
     expect(exported.id).toBe('MyModel');
-    expect(exported.type).toBe('MyModel');
+    expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
     expect(exported.baseDefinition).toBe(
       'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
     );
