@@ -184,7 +184,7 @@ export function cleanCachedPackage(packageDirectory: string): void {
 }
 
 /**
- * Loads custom resources defined in ig-data into FHIRDefs
+ * Loads custom resources defined in resourceDir into FHIRDefs
  * @param {string} resourceDir - The path to the directory containing the resource subdirs
  * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
  */

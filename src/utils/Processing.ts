@@ -69,7 +69,7 @@ export function findInputDir(input: string): string {
     input = path.join(originalInput, 'input', 'fsh');
   }
 
-  // TODO: Legacy support. Remove when no longer supported.
+  // TODO: Error about unsupported features. Remove when message no longer needed.
   // Use fsh/ subdirectory if not already specified and present
   if (!fs.existsSync(inputFshSubdirectoryPath) && !currentTankWithNoFsh) {
     let msg =
@@ -81,7 +81,7 @@ export function findInputDir(input: string): string {
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
-      if (fs.existsSync(path.join(input, 'ig-data'))) {
+      if (fs.existsSync(path.join(input, 'fsh', 'ig-data'))) {
         msg += `  - move fsh${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
       }
     } else {

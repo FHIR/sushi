@@ -40,8 +40,6 @@ Additional information:
     If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]
   -o, --out <out>
     Default: "fsh-generated"
-    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"
-    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"
 
 ```
 

@@ -133,7 +133,7 @@ export type YAMLConfiguration = {
   templates?: ImplementationGuideDefinitionTemplate | ImplementationGuideDefinitionTemplate[];
 
   // The template property will be used to generate an ig.ini file.
-  // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file in ig-data.
+  // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file.
   template?: string;
 
   // The following two lines correspond to items that used to be in ig.ini but were recently moved
@@ -159,7 +159,7 @@ export type YAMLConfiguration = {
   // canonical, title, and introduction. Authors that wish to provide different values can supply
   // them as properties under history. All other properties under history are assumed to be
   // versions. To provide a custom package-list.json file, remove this property and include a
-  // package-list.json file in ig-data.
+  // package-list.json file.
   //
   // The current version is special. If the author provides only a single string value, it is
   // assumed to be the URL path to the current build. The following default values will then be
