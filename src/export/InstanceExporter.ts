@@ -7,7 +7,6 @@ import {
   replaceReferences,
   cleanResource,
   splitOnPathPeriods,
-  applyMixinRules,
   setImpliedPropertiesOnInstance,
   applyInsertRules
 } from '../fhirtypes/common';
@@ -301,7 +300,6 @@ export class InstanceExporter implements Fishable {
       instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
     }
 
-    applyMixinRules(fshDefinition, this.tank);
     // Set Assigned values based on the FSH rules and the Structure Definition
     instanceDef = this.setAssignedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     instanceDef.validateId(fshDefinition.sourceInfo);

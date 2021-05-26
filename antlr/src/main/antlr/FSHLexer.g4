@@ -13,7 +13,6 @@ KW_RULESET:         'RuleSet' WS* ':' -> pushMode(RULESET_OR_INSERT);
 KW_MAPPING:         'Mapping' WS* ':';
 KW_LOGICAL:         'Logical' WS* ':';
 KW_RESOURCE:        'Resource' WS* ':';
-KW_MIXINS:          'Mixins' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';
 KW_TITLE:           'Title' WS* ':';
@@ -49,7 +48,6 @@ KW_CODES:           'codes';
 KW_WHERE:           'where';
 KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
-KW_UNITS:           'units';
 KW_EXACTLY:         '(' WS* 'exactly' WS* ')';
 KW_INSERT:          'insert' -> pushMode(RULESET_OR_INSERT);
 
@@ -89,9 +87,8 @@ TIME:               [0-9][0-9](':'[0-9][0-9](':'[0-9][0-9]('.'[0-9]+)?)?)?('Z' |
                  // DIGITS  ..  (DIGITS |  * )
 CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
 
-                 //  Reference       (        ITEM         |         ITEM         )
-OR_REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
-PIPE_REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
+              //  Reference       (        ITEM         |         ITEM         )
+REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
 
                  // Canonical(Item)
 CANONICAL:         'Canonical' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)? ')';
@@ -102,14 +99,7 @@ CARET_SEQUENCE:     '^' NONWS+;
                  // '/' EXPRESSION '/'
 REGEX:              '/' ('\\/' | ~[*/\r\n])('\\/' | ~[/\r\n])* '/';
 
-
-COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
-
 PARAMETER_DEF_LIST: '(' (SEQUENCE WS* COMMA WS*)* SEQUENCE ')';
-
-
-                        // (NONWS  WS  ,     WS )+ NONWS
-COMMA_DELIMITED_SEQUENCES: (NONWS+ WS* COMMA WS*)+ NONWS+;
 
 // BLOCK_COMMENT must precede SEQUENCE so that a block comment without whitespace does not become a SEQUENCE
 BLOCK_COMMENT:      '/*' .*? '*/' -> skip;

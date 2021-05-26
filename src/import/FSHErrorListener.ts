@@ -44,6 +44,12 @@ export class FSHErrorListener extends ErrorListener {
     const oneTokenBack = getPreviousNonWsToken(recognizer, offendingSymbol);
     const twoTokensBack = getPreviousNonWsToken(recognizer, oneTokenBack);
 
+    // uncomment below to assist in determining algorithm to detect specific error cases that fall through
+    // console.log('SYNTAX ERROR > message:', message);
+    // console.log('SYNTAX ERROR > offendingSymbol:', offendingSymbol?.text);
+    // console.log('SYNTAX ERROR > oneTokenBack:', oneTokenBack?.text);
+    // console.log('SYNTAX ERROR > twoTokensBack:', twoTokensBack?.text);
+
     // ########################################################################
     // # Missing space around =                                               #
     // ########################################################################
@@ -181,6 +187,63 @@ export class FSHErrorListener extends ErrorListener {
     else if (/^extraneous input '\*\S/.test(msg)) {
       message =
         "Rules must start with a '*' symbol followed by at least one space, and may only be preceded by whitespace";
+    }
+
+    // ########################################################################
+    // # Deprecated syntax                                           #
+    // ########################################################################
+
+    // Mixins: MyRuleSet
+    // > extraneous input 'Mixins:' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING,
+    // > KW_LOGICAL, KW_RESOURCE}
+    else if (/^extraneous input 'Mixins:'/.test(msg)) {
+      message =
+        "The 'Mixins' keyword is no longer supported. Use the 'insert' keyword to insert a " +
+        'RuleSet at any location in the list of rules.';
+    }
+
+    // * valueQuantity units = http://foo.org#bar
+    // * valueQuantity units from MyVS (preferred)
+    // > extraneous input 'units' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING,
+    // > KW_LOGICAL, KW_RESOURCE}
+    else if (/^extraneous input 'units'/.test(msg)) {
+      message =
+        "The 'units' keyword is no longer supported. You can safely remove it from your FSH " +
+        'since quantity assignments and bindings function the same without it.';
+    }
+
+    // * value[x] only Reference(Patient | Practitioner | Person)
+    // > extraneous input '|' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE,
+    // > KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * * value[x] only Reference ( Patient | Practitioner | Person )
+    // > extraneous input '(' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE, KW_INVARIANT,
+    // > KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * value[x] only Reference( Patient | Practitioner | Person )
+    // > extraneous input 'Patient' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    else if (
+      /^extraneous input/.test(msg) &&
+      (/^\|$/.test(offendingSymbol?.text) ||
+        /^Reference\(/.test(oneTokenBack?.text) ||
+        (/^\(/.test(offendingSymbol?.text) && /^Reference$/.test(oneTokenBack?.text)))
+    ) {
+      message =
+        "Using '|' to list references is no longer supported. Use 'or' to list multiple references.";
+    }
+
+    // * onset[x], abatement[x] MS
+    // > extraneous input 'abatement[x]' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * #hippo, #crocodile , #emu from system ZOO
+    // > extraneous input '#crocodile' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * codes from valueset FirstZooVS, SecondZooVS
+    // > extraneous input 'SecondZooVS' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
+    // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    else if (/^extraneous input/.test(msg) && /,$/.test(oneTokenBack?.text)) {
+      message = "Using ',' to list items is no longer supported. Use 'and' to list multiple items.";
     }
 
     return { message, location };

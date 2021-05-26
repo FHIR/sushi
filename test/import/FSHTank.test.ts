@@ -268,7 +268,7 @@ describe('FSHTank', () => {
       name: 'Invariant1'
     };
     const rul1MD: Metadata = {
-      id: 'RuleSet1', // id will always be name for Mixins
+      id: 'RuleSet1', // id will always be name for RuleSets
       name: 'RuleSet1'
     };
     const map1MD: Metadata = {
