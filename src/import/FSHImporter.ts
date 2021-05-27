@@ -69,7 +69,6 @@ enum SdMetadataKey {
   Parent = 'Parent',
   Title = 'Title',
   Description = 'Description',
-  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -78,7 +77,6 @@ enum InstanceMetadataKey {
   Title = 'Title',
   Description = 'Description',
   Usage = 'Usage',
-  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -332,8 +330,6 @@ export class FSHImporter extends FSHVisitor {
           def.title = pair.value as string;
         } else if (pair.key === SdMetadataKey.Description) {
           def.description = pair.value as string;
-        } else if (pair.key === SdMetadataKey.Mixins) {
-          def.mixins = pair.value as string[];
         }
       });
     ruleCtx.forEach(sdRule => {
@@ -390,8 +386,6 @@ export class FSHImporter extends FSHVisitor {
           instance.description = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Usage) {
           instance.usage = pair.value as InstanceUsage;
-        } else if (pair.key === InstanceMetadataKey.Mixins) {
-          instance.mixins = pair.value as string[];
         }
       });
     if (!instance.instanceOf) {
@@ -711,8 +705,6 @@ export class FSHImporter extends FSHVisitor {
       return { key: SdMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     } else if (ctx.description()) {
       return { key: SdMetadataKey.Description, value: this.visitDescription(ctx.description()) };
-    } else if (ctx.mixins()) {
-      return { key: SdMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -735,8 +727,6 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Usage,
         value: this.visitUsage(ctx.usage())
       };
-    } else if (ctx.mixins()) {
-      return { key: InstanceMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -836,29 +826,6 @@ export class FSHImporter extends FSHVisitor {
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
     return this.aliasAwareValue(ctx.name());
-  }
-
-  visitMixins(ctx: pc.MixinsContext): string[] {
-    let mixins: string[];
-    if (ctx.COMMA_DELIMITED_SEQUENCES()) {
-      mixins = ctx
-        .COMMA_DELIMITED_SEQUENCES()
-        .getText()
-        .split(/\s*,\s*/);
-    } else {
-      mixins = ctx.name().map(name => name.getText());
-    }
-    mixins = mixins.filter((m, i) => {
-      const duplicated = mixins.indexOf(m) !== i;
-      if (duplicated) {
-        logger.warn(`Detected duplicated Mixin: ${m}. Ignoring duplicates.`, {
-          location: this.extractStartStop(ctx),
-          file: this.currentFile
-        });
-      }
-      return !duplicated;
-    });
-    return mixins;
   }
 
   visitUsage(ctx: pc.UsageContext): InstanceUsage {
@@ -1039,13 +1006,6 @@ export class FSHImporter extends FSHVisitor {
     return ctx.CARET_SEQUENCE().getText();
   }
 
-  visitPaths(ctx: pc.PathsContext): string[] {
-    return ctx
-      .COMMA_DELIMITED_SEQUENCES()
-      .getText()
-      .split(/\s*,\s*/);
-  }
-
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
     const rules: (CardRule | FlagRule)[] = [];
 
@@ -1082,19 +1042,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFlagRule(ctx: pc.FlagRuleContext): FlagRule[] {
-    let paths: string[];
-    if (ctx.path().length > 0) {
-      paths = ctx.path().map(path => this.getPathWithContext(this.visitPath(path), ctx));
-    } else if (ctx.paths()) {
-      logger.warn('Using "," to list paths is deprecated. Please use "and" to list paths.', {
-        file: this.currentFile,
-        location: this.extractStartStop(ctx.paths())
-      });
-      paths = this.visitPaths(ctx.paths()).map(path => this.getPathWithContext(path, ctx));
-    }
-
-    return paths.map(path => {
-      const flagRule = new FlagRule(path)
+    return ctx.path().map(path => {
+      const flagRule = new FlagRule(this.getPathWithContext(this.visitPath(path), ctx))
         .withLocation(this.extractStartStop(ctx))
         .withFile(this.currentFile);
       this.parseFlags(flagRule, ctx.flag());
@@ -1147,12 +1096,6 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     vsRule.valueSet = this.aliasAwareValue(ctx.name());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
-    if (ctx.KW_UNITS()) {
-      logger.warn(
-        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        vsRule.sourceInfo
-      );
-    }
     return vsRule;
   }
 
@@ -1175,12 +1118,6 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     assignmentRule.value = this.visitValue(ctx.value());
     assignmentRule.exactly = ctx.KW_EXACTLY() != null;
-    if (ctx.KW_UNITS()) {
-      logger.warn(
-        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        assignmentRule.sourceInfo
-      );
-    }
     assignmentRule.isInstance =
       ctx.value().name() != null && !this.allAliases.has(ctx.value().name().getText());
     return assignmentRule;
@@ -1340,22 +1277,8 @@ export class FSHImporter extends FSHVisitor {
   // This function is called when fixing a value, and a value can only be set
   // to a specific reference, not a choice of references.
   visitReference(ctx: pc.ReferenceContext): FshReference {
-    let ref: FshReference;
-    let parsedReferences: string[];
-    if (ctx.OR_REFERENCE()) {
-      parsedReferences = this.parseOrReference(ctx.OR_REFERENCE().getText());
-      ref = new FshReference(this.aliasAwareValue(ctx.OR_REFERENCE(), parsedReferences[0]));
-    } else {
-      parsedReferences = this.parsePipeReference(ctx.PIPE_REFERENCE().getText());
-      ref = new FshReference(this.aliasAwareValue(ctx.PIPE_REFERENCE(), parsedReferences[0]));
-      logger.warn(
-        'Using "|" to list references is deprecated. Please use "or" to list references.',
-        {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        }
-      );
-    }
+    const parsedReferences = this.parseOrReference(ctx.REFERENCE().getText());
+    const ref = new FshReference(this.aliasAwareValue(ctx.REFERENCE(), parsedReferences[0]));
     if (parsedReferences.length > 1) {
       logger.error(
         'Multiple choices of references are not allowed when setting a value. Only the first choice will be used.',
@@ -1376,13 +1299,6 @@ export class FSHImporter extends FSHVisitor {
     return reference
       .slice(reference.indexOf('(') + 1, reference.length - 1)
       .split(/\s+or\s+/)
-      .map(r => r.trim());
-  }
-
-  private parsePipeReference(reference: string): string[] {
-    return reference
-      .slice(reference.indexOf('(') + 1, reference.length - 1)
-      .split(/\s*\|\s*/)
       .map(r => r.trim());
   }
 
@@ -1414,22 +1330,8 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     ctx.targetType().forEach(t => {
       if (t.reference()) {
-        let referenceToken: ParserRuleContext;
-        let references: string[];
-        if (t.reference().OR_REFERENCE()) {
-          referenceToken = t.reference().OR_REFERENCE();
-          references = this.parseOrReference(referenceToken.getText());
-        } else {
-          referenceToken = t.reference().PIPE_REFERENCE();
-          references = this.parsePipeReference(referenceToken.getText());
-          logger.warn(
-            'Using "|" to list references is deprecated. Please use "or" to list references.',
-            {
-              file: this.currentFile,
-              location: this.extractStartStop(ctx)
-            }
-          );
-        }
+        const referenceToken = t.reference().REFERENCE();
+        const references = this.parseOrReference(referenceToken.getText());
         references.forEach(r =>
           onlyRule.types.push({
             type: this.aliasAwareValue(referenceToken, r),
@@ -1798,49 +1700,6 @@ export class FSHImporter extends FSHVisitor {
           location: this.extractStartStop(ctx)
         });
       }
-    } else if (ctx.COMMA_DELIMITED_CODES()) {
-      logger.warn('Using "," to list concepts is deprecated. Please use "and" to list concepts.', {
-        file: this.currentFile,
-        location: this.extractStartStop(ctx)
-      });
-      if (from.system) {
-        const codes = ctx
-          .COMMA_DELIMITED_CODES()
-          .getText()
-          .split(/\s*,\s+#/);
-        codes[0] = codes[0].slice(1);
-        const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
-        codes.forEach(code => {
-          let codePart: string, description: string;
-          if (code.charAt(0) == '"') {
-            // codePart is a quoted string, just like description (if present).
-            [codePart, description] = code
-              .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
-              .map(quotedString => quotedString.slice(1, -1));
-          } else {
-            // codePart is not a quoted string.
-            // if there is a description after the code,
-            // it will be separated by whitespace before the leading "
-            const codeEnd = code.match(/\s+"/)?.index;
-            if (codeEnd) {
-              codePart = code.slice(0, codeEnd);
-              description = code.slice(codeEnd).trim().slice(1, -1);
-            } else {
-              codePart = code.trim();
-            }
-          }
-          concepts.push(
-            new FshCode(codePart, from.system, description)
-              .withLocation(location)
-              .withFile(this.currentFile)
-          );
-        });
-      } else {
-        logger.error('System is required when listing concepts in a value set component', {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        });
-      }
     }
     return [concepts, from];
   }
@@ -1888,22 +1747,6 @@ export class FSHImporter extends FSHVisitor {
           .vsFromValueset()
           .name()
           .map(name => this.aliasAwareValue(name));
-      } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
-        logger.warn(
-          'Using "," to list valuesets is deprecated. Please use "and" to list valuesets.',
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-        from.valueSets = ctx
-          .vsFromValueset()
-          .COMMA_DELIMITED_SEQUENCES()
-          .getText()
-          .split(/\s*,\s*/)
-          .map(fromVs =>
-            this.aliasAwareValue(ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES(), fromVs.trim())
-          );
       }
     }
     return from;

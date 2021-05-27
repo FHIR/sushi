@@ -13,7 +13,6 @@ import {
   InsertRule,
   ConceptRule,
   ValueSetConceptComponentRule,
-  SdRule,
   CaretValueRule,
   AssignmentValueType
 } from '../fshtypes/rules';
@@ -397,53 +396,6 @@ export function cleanResource(
       skipFn
     );
   });
-}
-
-/**
- * Adds Mixin rules onto a Profile, Extension, or Instance
- * @param {Profile | Extension | Instance} fshDefinition - The definition to apply mixin rules on
- * @param {FSHTank} tank - The FSHTank containing the fshDefinition
- */
-export function applyMixinRules(
-  fshDefinition: Profile | Extension | Instance,
-  tank: FSHTank
-): void {
-  if (fshDefinition.mixins.length > 0) {
-    const insertString = fshDefinition.mixins.map(m => `* insert ${m}`).join('\n');
-    logger.warn(
-      'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
-        'Instead, use the "insert" keyword, which can be placed anywhere in a list of rules to indicate ' +
-        'the exact location rules should be inserted. The RuleSets added here with the "Mixin" keyword can ' +
-        `be added with the "insert" keyword by adding the following rule(s):\n${insertString}`,
-      fshDefinition.sourceInfo
-    );
-  }
-  // Rules are added to beginning of rules array, so add the last mixin rules first
-  const mixedInRules: SdRule[] = [];
-  fshDefinition.mixins.forEach(mixinName => {
-    const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
-    if (ruleSet) {
-      ruleSet.rules.forEach(r => {
-        // Record source information of Profile/Extension/Instance on which Mixin is applied
-        r.sourceInfo.appliedFile = fshDefinition.sourceInfo.file;
-        r.sourceInfo.appliedLocation = fshDefinition.sourceInfo.location;
-      });
-      const rules = ruleSet.rules.filter(r => {
-        if (fshDefinition instanceof Instance && !(r instanceof AssignmentRule)) {
-          logger.error(
-            'Rules applied by mixins to an instance must assign a value. Other rules are ignored.',
-            r.sourceInfo
-          );
-          return false;
-        }
-        return true;
-      });
-      mixedInRules.push(...(rules as SdRule[]));
-    } else {
-      logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
-    }
-  });
-  fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
 }
 
 /**

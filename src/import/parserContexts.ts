@@ -41,7 +41,6 @@ export interface SdMetadataContext extends ParserRuleContext {
   id(): IdContext;
   title(): TitleContext;
   description(): DescriptionContext;
-  mixins(): MixinsContext;
 }
 
 export interface InstanceContext extends ParserRuleContext {
@@ -55,7 +54,6 @@ export interface InstanceMetadataContext extends ParserRuleContext {
   title(): TitleContext;
   description(): DescriptionContext;
   usage(): UsageContext;
-  mixins(): MixinsContext;
 }
 
 export interface InstanceRuleContext extends ParserRuleContext {
@@ -191,11 +189,6 @@ export interface UsageContext extends ParserRuleContext {
   CODE(): ParserRuleContext;
 }
 
-export interface MixinsContext extends ParserRuleContext {
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-  name(): NameContext[];
-}
-
 export interface ExpressionContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
 }
@@ -246,10 +239,6 @@ export interface CaretPathContext extends ParserRuleContext {
   CARET_SEQUENCE(): ParserRuleContext;
 }
 
-export interface PathsContext extends ParserRuleContext {
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
-}
-
 export interface CardRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext;
@@ -260,7 +249,6 @@ export interface CardRuleContext extends ParserRuleContext {
 export interface FlagRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext[];
-  paths(): PathsContext;
   flag(): FlagContext[];
 }
 
@@ -278,7 +266,6 @@ export interface ValueSetRuleContext extends ParserRuleContext {
   path(): PathContext;
   name(): NameContext;
   strength(): StrengthContext;
-  KW_UNITS(): ParserRuleContext;
 }
 
 export interface StrengthContext extends ParserRuleContext {
@@ -292,7 +279,6 @@ export interface FixedValueRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext;
   value(): ValueContext;
-  KW_UNITS(): ParserRuleContext;
   KW_EXACTLY(): ParserRuleContext;
 }
 
@@ -339,8 +325,7 @@ export interface RatioPartContext extends ParserRuleContext {
   quantity(): QuantityContext;
 }
 export interface ReferenceContext extends ParserRuleContext {
-  OR_REFERENCE(): ParserRuleContext;
-  PIPE_REFERENCE(): ParserRuleContext;
+  REFERENCE(): ParserRuleContext;
   STRING(): ParserRuleContext;
 }
 
@@ -439,7 +424,6 @@ export interface VsComponentContext extends ParserRuleContext {
 export interface VsConceptComponentContext extends ParserRuleContext {
   code(): CodeContext[];
   vsComponentFrom(): VsComponentFromContext;
-  COMMA_DELIMITED_CODES(): ParserRuleContext;
 }
 
 export interface VsFilterComponentContext extends ParserRuleContext {
@@ -463,7 +447,6 @@ export interface VsFromSystemContext extends ParserRuleContext {
 export interface VsFromValuesetContext extends ParserRuleContext {
   KW_VSREFERENCE(): ParserRuleContext;
   name(): NameContext[];
-  COMMA_DELIMITED_SEQUENCES(): ParserRuleContext;
 }
 
 export interface VsFilterListContext extends ParserRuleContext {

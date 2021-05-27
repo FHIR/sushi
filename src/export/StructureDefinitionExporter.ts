@@ -31,7 +31,6 @@ import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } f
 import {
   replaceReferences,
   splitOnPathPeriods,
-  applyMixinRules,
   cleanResource,
   applyInsertRules,
   getUrlFromFshDefinition
@@ -562,7 +561,6 @@ export class StructureDefinitionExporter implements Fishable {
       this.pkg.profiles.push(structDef);
     }
 
-    applyMixinRules(fshDefinition, this.tank);
     // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');

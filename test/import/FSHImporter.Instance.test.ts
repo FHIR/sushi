@@ -158,18 +158,21 @@ describe('FSHImporter', () => {
     });
 
     describe('#mixins', () => {
-      it('should parse an instance with mixins', () => {
+      it('should log an error when the deprecated Mixins keyword is used', () => {
         const input = `
         Instance: MyObservation
         InstanceOf: Observation
-        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
+        Mixins: RuleSet1 and RuleSet2
         `;
-        const result = importSingleText(input);
+
+        const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.instances.size).toBe(1);
         const instance = result.instances.get('MyObservation');
         expect(instance.name).toBe('MyObservation');
-        expect(instance.instanceOf).toBe('Observation');
-        expect(instance.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'Mixins' keyword is no longer supported\./s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
       });
     });
 
@@ -299,12 +302,10 @@ describe('FSHImporter', () => {
         InstanceOf: Observation
         Title: "My Important Observation"
         Description: "My Observation Description"
-        Mixins: Mixin1
         Usage: #example
         InstanceOf: DuplicateObservation
         Title: "My Duplicate Observation"
         Description: "My Duplicate Observation Description"
-        Mixins: DuplicateMixin1
         Usage: #non-example
         `;
 
@@ -316,7 +317,6 @@ describe('FSHImporter', () => {
         expect(instance.title).toBe('My Important Observation');
         expect(instance.description).toBe('My Observation Description');
         expect(instance.usage).toBe('Example');
-        expect(instance.mixins).toEqual(['Mixin1']);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
