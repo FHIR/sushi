@@ -1501,18 +1501,15 @@ export class FSHImporter extends FSHVisitor {
     return caretValueRule;
   }
 
-  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CaretValueRule | CodeCaretValueRule {
+  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CodeCaretValueRule {
     const localCodePath = ctx.CODE()
       ? ctx.CODE().map(code => {
           return this.parseCodeLexeme(code.getText(), ctx).code;
         })
       : [];
     const fullCodePath = this.getCodePathWithContext(localCodePath, ctx);
-    // If there is a code path, use it to make a CodeCaretValueRule.
-    // Otherwise, make a CaretValueRule.
-    const caretRule = (
-      fullCodePath.length > 0 ? new CodeCaretValueRule(fullCodePath) : new CaretValueRule('')
-    )
+    // It's fine to make a CodeCaretValueRule with an empty code path.
+    const caretRule = new CodeCaretValueRule(fullCodePath)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     // Get the caret path, but slice off the starting ^

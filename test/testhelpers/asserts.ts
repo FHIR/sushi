@@ -193,11 +193,13 @@ export function assertCodeCaretRule(
   rule: Rule,
   codePath: string[],
   caretPath: string,
-  value: AssignmentValueType
+  value: AssignmentValueType,
+  isInstance = false
 ) {
   expect(rule).toBeInstanceOf(CodeCaretValueRule);
   const codeCaretValueRule = rule as CodeCaretValueRule;
   expect(codeCaretValueRule.codePath).toEqual(codePath);
   expect(codeCaretValueRule.caretPath).toBe(caretPath);
   expect(codeCaretValueRule.value).toEqual(value);
+  expect(codeCaretValueRule.isInstance).toBe(isInstance);
 }

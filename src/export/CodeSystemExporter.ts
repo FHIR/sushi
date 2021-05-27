@@ -59,36 +59,20 @@ export class CodeSystemExporter {
     }
   }
 
-  private setCaretRules(
+  private setCaretPathRules(
     codeSystem: CodeSystem,
     csStructureDefinition: StructureDefinition,
-    rules: CaretValueRule[]
-  ): void {
+    rules: (CaretValueRule | CodeCaretValueRule)[]
+  ) {
     resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {
+        let targetPath = rule.caretPath;
+        if (rule instanceof CodeCaretValueRule && rule.codePath.length > 0) {
+          targetPath = `${this.findConceptPath(codeSystem, rule.codePath)}.${targetPath}`;
+        }
         const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-          rule.caretPath,
-          rule.value,
-          this.fisher
-        );
-        setPropertyOnInstance(codeSystem, pathParts, assignedValue, this.fisher);
-      } catch (e) {
-        logger.error(e.message, rule.sourceInfo);
-      }
-    }
-  }
-
-  private setCodeCaretRules(
-    codeSystem: CodeSystem,
-    csStructureDefinition: StructureDefinition,
-    rules: CodeCaretValueRule[]
-  ) {
-    for (const rule of rules) {
-      try {
-        const conceptPath = this.findConceptPath(codeSystem, rule.codePath);
-        const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-          `${conceptPath}.${rule.caretPath}`,
+          targetPath,
           rule.value,
           this.fisher
         );
@@ -160,19 +144,16 @@ export class CodeSystemExporter {
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
-    this.setCaretRules(
-      codeSystem,
-      csStructureDefinition,
-      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
-    );
     this.setConcepts(
       codeSystem,
       fshDefinition.rules.filter(rule => rule instanceof ConceptRule) as ConceptRule[]
     );
-    this.setCodeCaretRules(
+    this.setCaretPathRules(
       codeSystem,
       csStructureDefinition,
-      fshDefinition.rules.filter(rule => rule instanceof CodeCaretValueRule) as CodeCaretValueRule[]
+      fshDefinition.rules.filter(
+        rule => rule instanceof CaretValueRule || rule instanceof CodeCaretValueRule
+      ) as (CaretValueRule | CodeCaretValueRule)[]
     );
 
     // check for another code system with the same id

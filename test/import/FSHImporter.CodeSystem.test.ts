@@ -1,10 +1,5 @@
 import { importSingleText } from '../testhelpers/importSingleText';
-import {
-  assertCaretValueRule,
-  assertConceptRule,
-  assertInsertRule,
-  assertCodeCaretRule
-} from '../testhelpers/asserts';
+import { assertConceptRule, assertInsertRule, assertCodeCaretRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
 
@@ -407,37 +402,6 @@ describe('FSHImporter', () => {
     });
 
     describe('#CaretValueRule', () => {
-      it('should parse a code system that uses a CaretValueRule', () => {
-        const input = `
-          CodeSystem: ZOO
-          * ^publisher = "Matt"
-          `;
-        const result = importSingleText(input);
-        const codeSystem = result.codeSystems.get('ZOO');
-        assertCaretValueRule(codeSystem.rules[0] as Rule, '', 'publisher', 'Matt', false);
-        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      });
-
-      it('should parse a code system that uses CaretValueRules alongside rules', () => {
-        const input = `
-        CodeSystem: ZOO
-        * #lion
-        * ^publisher = "Damon"
-        `;
-        const result = importSingleText(input, 'Zoo.fsh');
-        const codeSystem = result.codeSystems.get('ZOO');
-        assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
-        expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
-        assertCaretValueRule(
-          codeSystem.rules[1] as CaretValueRule,
-          '',
-          'publisher',
-          'Damon',
-          false
-        );
-        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      });
-
       it('should log an error when a CaretValueRule contains a path before ^', () => {
         const input = `
         CodeSystem: ZOO
@@ -451,6 +415,31 @@ describe('FSHImporter', () => {
     });
 
     describe('#codeCaretValueRule', () => {
+      it('should parse a code system that uses a CodeCaretValueRule with no codes', () => {
+        const input = `
+          CodeSystem: ZOO
+          * ^publisher = "Matt"
+          `;
+        const result = importSingleText(input);
+        const codeSystem = result.codeSystems.get('ZOO');
+        assertCodeCaretRule(codeSystem.rules[0] as Rule, [], 'publisher', 'Matt', false);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should parse a code system that uses CodeCaretValueRules with no codes alongside rules', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #lion
+        * ^publisher = "Damon"
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
+        expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+        assertCodeCaretRule(codeSystem.rules[1] as CaretValueRule, [], 'publisher', 'Damon', false);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
       it('should parse a code system that uses a CodeCaretValueRule on a top-level concept', () => {
         const input = `
         CodeSystem: ZOO
