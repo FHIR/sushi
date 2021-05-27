@@ -1937,7 +1937,9 @@ export class ElementDefinition {
           profile &&
           profile.extension.some(
             (extension: any) =>
-              extension.hasOwnProperty('url') && extension.hasOwnProperty('valueString')
+              extension.hasOwnProperty('url') &&
+              extension.hasOwnProperty('valueString') &&
+              extension.url === PROFILE_ELEMENT_EXTENSION
           )
       );
 
@@ -1947,7 +1949,9 @@ export class ElementDefinition {
 
       const extensionIndex = elementType._profile[profileIndex].extension?.findIndex(
         (extensionObj: any) =>
-          extensionObj.hasOwnProperty('url') && extensionObj.hasOwnProperty('valueString')
+          extensionObj.hasOwnProperty('url') &&
+          extensionObj.hasOwnProperty('valueString') &&
+          extensionObj.url === PROFILE_ELEMENT_EXTENSION
       );
       extensionUrl = elementType._profile[profileIndex].extension[extensionIndex].url;
       targetElement = elementType._profile[profileIndex].extension[extensionIndex].valueString;
