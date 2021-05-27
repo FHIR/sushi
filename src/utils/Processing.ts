@@ -101,14 +101,6 @@ export function findInputDir(input: string): string {
     if (!fs.existsSync(path.join(input, 'ig-data', 'package-list.json'))) {
       msg += `  - if you used the "history" property in your config, remove it and manage .${path.sep}package-list.json directly\n`;
     }
-    if (fs.existsSync(path.join(input, 'ig-data', 'ignoreWarnings.txt'))) {
-      msg += `  - move .${path.sep}ig-data${path.sep}input${path.sep}ignoreWarnings.txt to .${path.sep}\n`;
-    }
-    if (getIndexFilePath(path.join(input, 'ig-data'))) {
-      msg +=
-        '  - if you used the "indexPageContent" property in your config, remove it and manage an index.md or index.xml file in the' +
-        ` .${path.sep}pagecontent or .${path.sep}pages folder directly. See: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input\n`;
-    }
     msg +=
       '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
       '  - add /fsh-generated to your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
@@ -505,18 +497,4 @@ function getFilesRecursive(dir: string): string[] {
   } catch {
     return [];
   }
-}
-
-function getIndexFilePath(basePath: string): string {
-  const inputIndexMarkdownPageContentPath = path.join(basePath, 'input', 'pagecontent', 'index.md');
-  const inputIndexXMLPageContentPath = path.join(basePath, 'input', 'pagecontent', 'index.xml');
-  const inputIndexMarkdownPagesPath = path.join(basePath, 'input', 'pages', 'index.md');
-  const inputIndexXMLPagesPath = path.join(basePath, 'input', 'pages', 'index.xml');
-  let filePath: string;
-  if (fs.existsSync(inputIndexMarkdownPageContentPath))
-    filePath = inputIndexMarkdownPageContentPath;
-  if (fs.existsSync(inputIndexXMLPageContentPath)) filePath = inputIndexXMLPageContentPath;
-  if (fs.existsSync(inputIndexMarkdownPagesPath)) filePath = inputIndexMarkdownPagesPath;
-  if (fs.existsSync(inputIndexXMLPagesPath)) filePath = inputIndexXMLPagesPath;
-  return filePath;
 }
