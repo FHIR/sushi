@@ -622,18 +622,24 @@ export function isInheritedResource(
  *
  * @param fshDefinition - The FSH definition that the returned URL refers to
  * @param canonical - The canonical URL for the FSH project
- * @returns {string} - The URL to use to refer to the FHIR entity
+ * @returns The URL to use to refer to the FHIR entity
  */
 export function getUrlFromFshDefinition(
   fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem,
   canonical: string
 ): string {
-  for (const rule of fshDefinition.rules) {
-    if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url') {
-      // this value should only be a string, but that might change at some point
-      return rule.value.toString();
-    }
+  const fshRules: Rule[] = fshDefinition.rules;
+  const caretValueRules = fshRules.filter(
+    rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
+  ) as CaretValueRule[];
+  if (caretValueRules.length > 0) {
+    // Select last CaretValueRule with caretPath === 'url' because rules processing
+    // ends up applying the last rule in the processing order
+    const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+    // this value should only be a string, but that might change at some point
+    return lastCaretValueRule.value.toString();
   }
+
   let fhirType: string;
   if (fshDefinition instanceof FshValueSet) {
     fhirType = 'ValueSet';
@@ -652,41 +658,33 @@ export function getUrlFromFshDefinition(
  * Otherwise, use the appropriate default based on the fshDefinition.
  *
  * @param fshDefinition - The FSH definition (Logical or Resource) that the returned type refers to
- * @param structDef - The parent StructureDefinition for the fshDefinition
+ * @param parentSD - The parent StructureDefinition for the fshDefinition
  * @returns The type to specify in the StructureDefinition for this fshDefinition
  */
-export function getTypeFromFshDefinition(
+export function getTypeFromFshDefinitionOrParent(
   fshDefinition: Profile | Extension | Logical | Resource,
-  structDef: StructureDefinition
+  parentSD: StructureDefinition
 ): string {
   if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
-    return structDef.type;
+    return parentSD.type;
   }
 
-  for (const rule of fshDefinition.rules) {
-    if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'type') {
-      // this value should only be a string, but that might change at some point
-      return rule.value.toString();
-    }
+  const fshRules: Rule[] = fshDefinition.rules;
+  const caretValueRules = fshRules.filter(
+    rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'type'
+  ) as CaretValueRule[];
+  if (caretValueRules.length > 0) {
+    // Select last CaretValueRule with caretPath === 'type' because rules processing
+    // ends up applying the last rule in the processing order
+    const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+    // this value should only be a string, but that might change at some point
+    return lastCaretValueRule.value.toString();
   }
+
   // Default type for logical model to the StructureDefinition url;
   // otherwise default to the id meta property.
   // Ref: https://chat.fhir.org/#narrow/pm-with/191469,210024,211704,239822-group/near/240237602
-  return fshDefinition instanceof Logical ? structDef.url : fshDefinition.id;
-}
-
-/**
- * All the elements must start with the StructureDefinition's specified type.
- * For logical models, since we are defaulting the type to the url, we must
- * use the trailing path part. Otherwise, we just use the specified type value.
- * Ref: http://hl7.org/fhir/structuredefinition.html#invs - sdf-8, sdf-8a
- * @param structDefType - StructureDefinition.type value
- * @returns The type to specify ElementDefinition.path values
- */
-export function extractPathTypeFromStructDefType(structDefType: string): string {
-  return structDefType.startsWith('http')
-    ? structDefType.slice(structDefType.lastIndexOf('/') + 1)
-    : structDefType;
+  return fshDefinition instanceof Logical ? parentSD.url : fshDefinition.id;
 }
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;

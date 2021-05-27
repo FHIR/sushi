@@ -45,12 +45,7 @@ import {
   InvalidChoiceTypeRulePathError,
   CannotResolvePathError
 } from '../errors';
-import {
-  extractPathTypeFromStructDefType,
-  isReferenceType,
-  setPropertyOnDefinitionInstance,
-  splitOnPathPeriods
-} from './common';
+import { isReferenceType, setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
 import { Fishable, logger, Metadata, Type } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -440,9 +435,8 @@ export class ElementDefinition {
     }
 
     // Add the base attribute
-    const pathType = extractPathTypeFromStructDefType(this.structDef.type);
     this.base = {
-      path: `${pathType}.${rule.path}`,
+      path: `${this.structDef.pathType}.${rule.path}`,
       min: rule.min,
       max: rule.max
     };

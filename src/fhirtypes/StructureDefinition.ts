@@ -18,8 +18,7 @@ import {
   HasName,
   HasId,
   isInheritedResource,
-  isExtension,
-  extractPathTypeFromStructDefType
+  isExtension
 } from './common';
 import { Fishable, Type } from '../utils/Fishable';
 import { applyMixins, parseFSHPath, assembleFSHPath } from '../utils';
@@ -112,6 +111,12 @@ export class StructureDefinition {
     return `StructureDefinition-${this.id}.json`;
   }
 
+  get pathType(): string {
+    return this.type.startsWith('http')
+      ? this.type.slice(this.type.lastIndexOf('/') + 1)
+      : this.type;
+  }
+
   /**
    * Get the Structure Definition for Structure Definition
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -178,10 +183,9 @@ export class StructureDefinition {
    * @returns {ElementDefinition} - The found element (or undefined if it is not found)
    */
   findElementByPath(path: string, fisher: Fishable): ElementDefinition {
-    const pathType = extractPathTypeFromStructDefType(this.type);
     // If the path already exists, get it and return the match
     // If !path just return the base parent element
-    const fullPath = path && path !== '.' ? `${pathType}.${path}` : pathType;
+    const fullPath = path && path !== '.' ? `${this.pathType}.${path}` : this.pathType;
     const match = this.elements.find(e => e.path === fullPath && !e.id.includes(':'));
     if (match != null) {
       return match;
@@ -190,7 +194,7 @@ export class StructureDefinition {
     // Parse the FSH Path into a form we can work with
     const parsedPath = parseFSHPath(path);
 
-    let fhirPathString = pathType;
+    let fhirPathString = this.pathType;
     let matchingElements = this.elements;
     let newMatchingElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
@@ -296,8 +300,7 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    const parentName = extractPathTypeFromStructDefType(this.type);
-    if (path === 'type' && value !== parentName) {
+    if (path === 'type' && value !== this.pathType) {
       throw new InvalidTypeAccessError();
     }
     setPropertyOnDefinitionInstance(this, path, value, fisher);

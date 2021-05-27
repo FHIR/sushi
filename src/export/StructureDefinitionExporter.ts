@@ -38,8 +38,7 @@ import {
   applyInsertRules,
   applyMixinRules,
   cleanResource,
-  extractPathTypeFromStructDefType,
-  getTypeFromFshDefinition,
+  getTypeFromFshDefinitionOrParent,
   getUrlFromFshDefinition,
   replaceReferences,
   splitOnPathPeriods
@@ -200,7 +199,7 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.baseDefinition = structDef.url;
     // Now, define the url and type here since these are core properties use by subsequent methods
     structDef.url = getUrlFromFshDefinition(fshDefinition, this.tank.config.canonical);
-    structDef.type = getTypeFromFshDefinition(fshDefinition, structDef);
+    structDef.type = getTypeFromFshDefinitionOrParent(fshDefinition, structDef);
 
     this.resetParentElements(structDef, fshDefinition);
 
@@ -342,9 +341,8 @@ export class StructureDefinitionExporter implements Fishable {
     // Therefore, use the 'id' as the source of the conversion and reset
     // the 'id' value with the new base value. The 'id' mutator will
     // automatically reset the 'path' value'.
-    const pathType = extractPathTypeFromStructDefType(structDef.type);
     elements.forEach(e => {
-      e.id = e.id.replace(/^[^.]+/, pathType);
+      e.id = e.id.replace(/^[^.]+/, structDef.pathType);
     });
 
     // The root element's base.path should be the same as root element's path
@@ -381,7 +379,10 @@ export class StructureDefinitionExporter implements Fishable {
    * @param {Profile | Extension} fshDefinition - The Profile or Extension we are exporting
    * @private
    */
-  private setRules(structDef: StructureDefinition, fshDefinition: Profile | Extension): void {
+  private setRules(
+    structDef: StructureDefinition,
+    fshDefinition: Profile | Extension | Logical | Resource
+  ): void {
     resolveSoftIndexing(fshDefinition.rules);
     for (const rule of fshDefinition.rules) {
       // Specific rules are permitted for each structure definition type
