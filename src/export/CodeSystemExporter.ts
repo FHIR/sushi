@@ -64,15 +64,29 @@ export class CodeSystemExporter {
     csStructureDefinition: StructureDefinition,
     rules: (CaretValueRule | CodeCaretValueRule)[]
   ) {
-    resolveSoftIndexing(rules);
-    for (const rule of rules) {
+    // soft index resolution relies on the rule's path attribute.
+    // a CodeCaretValueRule is created with an empty path, so first
+    // transform its codePath into a path.
+    // Because this.findConceptPath can potentially throw an error,
+    // build a list of successful rules that will actually be applied.
+    const successfulRules: (CaretValueRule | CodeCaretValueRule)[] = [];
+    rules.forEach(rule => {
       try {
-        let targetPath = rule.caretPath;
-        if (rule instanceof CodeCaretValueRule && rule.codePath.length > 0) {
-          targetPath = `${this.findConceptPath(codeSystem, rule.codePath)}.${targetPath}`;
+        if (rule instanceof CodeCaretValueRule) {
+          rule.path = this.findConceptPath(codeSystem, rule.codePath);
+          successfulRules.push(rule);
+        } else {
+          successfulRules.push(rule);
         }
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
+      }
+    });
+    resolveSoftIndexing(successfulRules);
+    for (const rule of successfulRules) {
+      try {
         const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-          targetPath,
+          rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
           rule.value,
           this.fisher
         );

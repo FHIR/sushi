@@ -158,7 +158,7 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
     });
 
     // If a rule is a CaretValueRule, we assemble its caretPath as well
-    if (originalRule instanceof CaretValueRule) {
+    if (originalRule instanceof CaretValueRule || originalRule instanceof CodeCaretValueRule) {
       originalRule.caretPath = assembleFSHPath(parsedRule.caretPath);
     }
   });
