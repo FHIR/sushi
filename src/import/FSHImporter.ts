@@ -2011,30 +2011,9 @@ export class FSHImporter extends FSHVisitor {
   private prependPathContext(path: string, parentCtx: any): string {
     const location = this.extractStartStop(parentCtx);
     const currentIndent = location.startColumn - this.baseIndent;
-
-    if (currentIndent > 0 && this.pathContext.length === 0) {
-      logger.error(
-        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
-        { location, file: this.currentFile }
-      );
-      return path;
-    }
-
-    if (currentIndent % INDENT_WIDTH !== 0 || currentIndent < 0) {
-      logger.error(
-        `Unable to determine path context for rule indented ${currentIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
-        { location, file: this.currentFile }
-      );
-      return path;
-    }
-
-    // And we require that rules are not indented too deeply
     const contextIndex = currentIndent / INDENT_WIDTH;
-    if (contextIndex > this.pathContext.length) {
-      logger.error(
-        `Cannot determine path context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
-        { location, file: this.currentFile }
-      );
+
+    if (!this.isValidContext(location, currentIndent, this.pathContext)) {
       return path;
     }
 
@@ -2075,30 +2054,9 @@ export class FSHImporter extends FSHVisitor {
   private prependCodePathContext(codePath: string[], parentCtx: ParserRuleContext): string[] {
     const location = this.extractStartStop(parentCtx);
     const currentIndent = location.startColumn - this.baseIndent;
-
-    if (currentIndent > 0 && this.codePathContext.length === 0) {
-      logger.error(
-        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
-        { location, file: this.currentFile }
-      );
-      return codePath;
-    }
-
-    if (currentIndent % INDENT_WIDTH !== 0 || currentIndent < 0) {
-      logger.error(
-        `Unable to determine code path context for rule indented ${currentIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
-        { location, file: this.currentFile }
-      );
-      return codePath;
-    }
-
-    // And we require that rules are not indented too deeply
     const contextIndex = currentIndent / INDENT_WIDTH;
-    if (contextIndex > this.codePathContext.length) {
-      logger.error(
-        `Cannot determine code path context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
-        { location, file: this.currentFile }
-      );
+
+    if (!this.isValidContext(location, currentIndent, this.codePathContext)) {
       return codePath;
     }
 
@@ -2125,6 +2083,39 @@ export class FSHImporter extends FSHVisitor {
     this.codePathContext.push(fullCodePath);
 
     return fullCodePath;
+  }
+
+  private isValidContext(
+    location: TextLocation,
+    currentIndent: number,
+    existingContext: string[] | string[][]
+  ): boolean {
+    if (currentIndent > 0 && existingContext.length === 0) {
+      logger.error(
+        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
+        { location, file: this.currentFile }
+      );
+      return false;
+    }
+
+    if (currentIndent % INDENT_WIDTH !== 0 || currentIndent < 0) {
+      logger.error(
+        `Unable to determine path context for rule indented ${currentIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
+        { location, file: this.currentFile }
+      );
+      return false;
+    }
+
+    // And we require that rules are not indented too deeply
+    const contextIndex = currentIndent / INDENT_WIDTH;
+    if (contextIndex > existingContext.length) {
+      logger.error(
+        `Cannot determine path context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
+        { location, file: this.currentFile }
+      );
+      return false;
+    }
+    return true;
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
