@@ -252,6 +252,82 @@ describe('LogicalExporter', () => {
     expect(exported[2].baseDefinition === exported[1].url);
   });
 
+  it('should include added elements having logical model as type without regard to definition order - order Foo then Bar', () => {
+    const logicalFoo = new Logical('Foo');
+    const addElementRuleBars = new AddElementRule('bars');
+    addElementRuleBars.min = 0;
+    addElementRuleBars.max = '1';
+    addElementRuleBars.types = [{ type: 'Bar' }];
+    addElementRuleBars.short = 'short of property bars';
+    logicalFoo.rules.push(addElementRuleBars);
+    doc.logicals.set(logicalFoo.name, logicalFoo);
+
+    const logicalBar = new Logical('Bar');
+    const addElementRuleLength = new AddElementRule('length');
+    addElementRuleLength.min = 0;
+    addElementRuleLength.max = '1';
+    addElementRuleLength.types = [{ type: 'Quantity' }];
+    addElementRuleLength.short = 'short of property length';
+    logicalBar.rules.push(addElementRuleLength);
+    const addElementRuleWidth = new AddElementRule('width');
+    addElementRuleWidth.min = 0;
+    addElementRuleWidth.max = '1';
+    addElementRuleWidth.types = [{ type: 'Quantity' }];
+    addElementRuleWidth.short = 'short of property width';
+    logicalBar.rules.push(addElementRuleWidth);
+    doc.logicals.set(logicalBar.name, logicalBar);
+
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(2);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[1].name).toBe('Bar');
+
+    expect(exported[0].elements).toHaveLength(2); // 1 Base element + 1 added "bars" element
+    expect(exported[0].elements[1].path).toBe('Foo.bars');
+    expect(exported[0].elements[1].base.path).toBe('Foo.bars');
+    expect(exported[0].elements[1].type[0].code).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar'
+    );
+  });
+
+  it('should include added elements having logical model as type without regard to definition order - order Bar then Foo', () => {
+    const logicalBar = new Logical('Bar');
+    const addElementRuleLength = new AddElementRule('length');
+    addElementRuleLength.min = 0;
+    addElementRuleLength.max = '1';
+    addElementRuleLength.types = [{ type: 'Quantity' }];
+    addElementRuleLength.short = 'short of property length';
+    logicalBar.rules.push(addElementRuleLength);
+    const addElementRuleWidth = new AddElementRule('width');
+    addElementRuleWidth.min = 0;
+    addElementRuleWidth.max = '1';
+    addElementRuleWidth.types = [{ type: 'Quantity' }];
+    addElementRuleWidth.short = 'short of property width';
+    logicalBar.rules.push(addElementRuleWidth);
+    doc.logicals.set(logicalBar.name, logicalBar);
+
+    const logicalFoo = new Logical('Foo');
+    const addElementRuleBars = new AddElementRule('bars');
+    addElementRuleBars.min = 0;
+    addElementRuleBars.max = '1';
+    addElementRuleBars.types = [{ type: 'Bar' }];
+    addElementRuleBars.short = 'short of property bars';
+    logicalFoo.rules.push(addElementRuleBars);
+    doc.logicals.set(logicalFoo.name, logicalFoo);
+
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(2);
+    expect(exported[0].name).toBe('Bar');
+    expect(exported[1].name).toBe('Foo');
+
+    expect(exported[1].elements).toHaveLength(2); // 1 Base element + 1 added "bars" element
+    expect(exported[1].elements[1].path).toBe('Foo.bars');
+    expect(exported[1].elements[1].base.path).toBe('Foo.bars');
+    expect(exported[1].elements[1].type[0].code).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar'
+    );
+  });
+
   it('should log an error when an inline extension is used', () => {
     const logical = new Logical('MyModel');
     logical.parent = 'Element';

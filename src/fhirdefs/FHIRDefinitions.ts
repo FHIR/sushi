@@ -1,5 +1,6 @@
 import { Type, Metadata, Fishable } from '../utils/Fishable';
 import cloneDeep from 'lodash/cloneDeep';
+import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
 
 export class FHIRDefinitions implements Fishable {
   private resources: Map<string, any>;
@@ -24,6 +25,11 @@ export class FHIRDefinitions implements Fishable {
     this.codeSystems = new Map();
     this.implementationGuides = new Map();
     this.predefinedResources = new Map();
+
+    // FHIR R4 does not have a StructureDefinition that defines "Base" but FHIR R5 does.
+    // We have defined a "placeholder" StructureDefinition for "Base" for R4.
+    // Inject the R4 "Base" placeholder StructureDefinition
+    this.add(JSON.stringify(STRUCTURE_DEFINITION_R4_BASE));
   }
 
   size(): number {

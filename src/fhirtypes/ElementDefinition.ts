@@ -915,7 +915,7 @@ export class ElementDefinition {
         throw new InvalidTypeError(target, this.type);
       }
 
-      // Re-assign the targetProfiles/profiles as appopriate to remove non-targets
+      // Re-assign the targetProfiles/profiles as appropriate to remove non-targets
       if (targetType.profile?.includes(targetSD.url)) {
         targetType.profile = [targetSD.url];
       } else if (targetType.targetProfile?.includes(targetSD.url)) {
@@ -973,6 +973,10 @@ export class ElementDefinition {
         matchedType = targetTypes.find(t2 => {
           const matchesUnprofiledResource = t2.code === md.id && isEmpty(t2.profile);
           const matchesProfile = t2.code === md.sdType && t2.profile?.includes(md.url);
+          let matchesLogicalType = false;
+          if (this.structDef.kind === 'logical') {
+            matchesLogicalType = t2.code && t2.code === md.sdType;
+          }
           // True if we match an unprofiled type that is not abstract, is a parent, and that we are
           // specializing (the type does not match the sdType of the type to match)
           specializationOfNonAbstractType =
@@ -980,7 +984,7 @@ export class ElementDefinition {
             !md.abstract &&
             md.id !== lineage[0].id &&
             md.id !== lineage[0].sdType;
-          return matchesUnprofiledResource || matchesProfile;
+          return matchesUnprofiledResource || matchesProfile || matchesLogicalType;
         });
       }
 
@@ -1051,10 +1055,19 @@ export class ElementDefinition {
         continue;
       } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);
+      } else if (
+        this.structDef.kind === 'logical' &&
+        newType.code === match.metadata.sdType &&
+        match.metadata.sdType === match.metadata.url
+      ) {
+        // The logical model's newType has a code that is a URL. This should NOT be
+        // included in newType.targetProfile or newType.profile.
+        continue;
       } else {
         matchedProfiles.push(match.metadata.url);
       }
     }
+
     if (targetType) {
       if (!isEmpty(matchedTargetProfiles)) {
         const targetIdx = newType.targetProfile?.indexOf(targetType.targetProfile[0]);

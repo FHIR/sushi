@@ -107,6 +107,12 @@ export class MasterFisher implements Fishable {
         }
       }
       [sdType, parent] = [parentResult?.sdType, parentResult?.parent];
+      // This 'findSdType' method is called when the provided 'fishables' arg is the FshTank.
+      // The FSHTank does not support Type.Type, so the R4 Base metadata cannot be found for
+      // the 'parentResult' above. Therefore, default the values accordiningly.
+      if (!parentResult && meta.parent === 'Base') {
+        [sdType, parent] = [meta.url, meta.parent];
+      }
     }
     return sdType;
   }
