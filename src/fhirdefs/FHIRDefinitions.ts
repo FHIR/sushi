@@ -29,7 +29,7 @@ export class FHIRDefinitions implements Fishable {
     // FHIR R4 does not have a StructureDefinition that defines "Base" but FHIR R5 does.
     // We have defined a "placeholder" StructureDefinition for "Base" for R4.
     // Inject the R4 "Base" placeholder StructureDefinition
-    this.add(JSON.stringify(STRUCTURE_DEFINITION_R4_BASE));
+    this.add(STRUCTURE_DEFINITION_R4_BASE);
   }
 
   size(): number {

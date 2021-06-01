@@ -79,6 +79,12 @@ export class MasterFisher implements Fishable {
     const history = [meta];
     let [sdType, parent] = [meta.sdType, meta.parent];
     while (sdType == null && parent != null) {
+      // A logical model with the Base parent will not have a sdType value. In this case, we know
+      // that the sdType should be the logical model's url and not be based on its parent.
+      if (parent === 'Base') {
+        [sdType, parent] = [meta.url, parent];
+        continue;
+      }
       // Resolve the alias if necessary
       parent = this.tank?.resolveAlias(parent) ?? parent;
 
@@ -107,12 +113,6 @@ export class MasterFisher implements Fishable {
         }
       }
       [sdType, parent] = [parentResult?.sdType, parentResult?.parent];
-      // This 'findSdType' method is called when the provided 'fishables' arg is the FshTank.
-      // The FSHTank does not support Type.Type, so the R4 Base metadata cannot be found for
-      // the 'parentResult' above. Therefore, default the values accordiningly.
-      if (!parentResult && meta.parent === 'Base') {
-        [sdType, parent] = [meta.url, meta.parent];
-      }
     }
     return sdType;
   }
