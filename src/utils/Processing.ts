@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
-import { isPlainObject, cloneDeep, padEnd, sortBy } from 'lodash';
+import { isPlainObject, padEnd, sortBy } from 'lodash';
 import { EOL } from 'os';
 import { logger } from './FSHLogger';
 import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
@@ -16,7 +16,6 @@ import {
   loadConfigurationFromIgResource
 } from '../import';
 import { Package } from '../export';
-import { filterInlineInstances } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
@@ -335,9 +334,7 @@ export function writeFHIRResources(
   writeResources([...outPackage.valueSets, ...outPackage.codeSystems]);
 
   // Filter out inline instances
-  const instances = cloneDeep(outPackage.instances); // Filter functions below mutate the argument, so clone what is in the package
-  filterInlineInstances(instances);
-  writeResources(instances);
+  writeResources(outPackage.instances.filter(i => i._instanceMeta.usage !== 'Inline'));
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 }

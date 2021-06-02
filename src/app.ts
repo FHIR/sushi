@@ -101,8 +101,7 @@ async function app() {
   // If an input/fsh subdirectory is used, we are in an IG Publisher context
   const fshFolder = path.basename(input) === 'fsh';
   const inputFshFolder = fshFolder && path.basename(path.dirname(input)) === 'input';
-  const isIgPubContext = inputFshFolder;
-  if (!isIgPubContext) {
+  if (!inputFshFolder) {
     // Since current supported tank configuration requires input/fsh folder,
     // both legacy IG publisher mode and legacy flat tank cases occur when
     // there is no input/fsh/ folder.
@@ -119,11 +118,7 @@ async function app() {
 
   try {
     let rawFSH: RawFSH[];
-    if (
-      path.basename(path.dirname(input)) === 'input' &&
-      path.basename(input) === 'fsh' &&
-      !fs.existsSync(input)
-    ) {
+    if (!fs.existsSync(input)) {
       // If we have a path that ends with input/fsh but that folder does not exist,
       // we are in a sushi-config.yaml-only case (current tank configuration with no FSH files)
       // so we can safely say there are no FSH files and therefore rawFSH is empty.

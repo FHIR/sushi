@@ -100,8 +100,8 @@ export type Configuration = {
   // refers to the IG.definiton.template definitions; not the publisher template in ig.ini.
   templates?: ImplementationGuideDefinitionTemplate[];
 
-  // NO LONGER SUPPORTED: Use of the template property is no longer recommended.  Authors should manage the
-  // ig.ini file themselves. Support for the template property will be removed in a future release.
+  // NO LONGER SUPPORTED: Use of the template property is no longer supported.  Authors should manage the
+  // ig.ini file themselves.
   // The template property will be used to generate an ig.ini file.
   // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file.
   template?: string;
@@ -112,6 +112,8 @@ export type Configuration = {
   // file, do not include this property and include a `menu.xml` file in input/includes.
   menu?: ConfigurationMenuItem[];
 
+  // NO LONGER SUPPORTED: Use of the history property is no longer supported.  Authors should manage
+  // the package-list.json file directly.
   // The history property corresponds to package-list.json. SUSHI will use the existing top-level
   // properties in its config to populate the top-level package-list.json properties: package-id,
   // canonical, title, and introduction. Authors that wish to provide different values can supply

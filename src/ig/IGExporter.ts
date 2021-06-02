@@ -63,10 +63,10 @@ export class IGExporter {
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
-    private readonly igDataPath: string
+    private readonly inputPath: string
   ) {
     this.config = pkg.config;
-    this.configPath = path.resolve(this.igDataPath, '..', path.basename(this.config.filePath));
+    this.configPath = path.resolve(this.inputPath, '..', path.basename(this.config.filePath));
     this.configName = path.basename(this.configPath);
   }
 
@@ -264,19 +264,19 @@ export class IGExporter {
     // There are four possible locations for it (two filenames in two directories)
     // If more possibilities arise, rewrite this to avoid having to list all of them
     const inputIndexMarkdownPageContentPath = path.join(
-      this.igDataPath,
+      this.inputPath,
       'input',
       'pagecontent',
       'index.md'
     );
     const inputIndexXMLPageContentPath = path.join(
-      this.igDataPath,
+      this.inputPath,
       'input',
       'pagecontent',
       'index.xml'
     );
-    const inputIndexMarkdownPagesPath = path.join(this.igDataPath, 'input', 'pages', 'index.md');
-    const inputIndexXMLPagesPath = path.join(this.igDataPath, 'input', 'pages', 'index.xml');
+    const inputIndexMarkdownPagesPath = path.join(this.inputPath, 'input', 'pages', 'index.md');
+    const inputIndexXMLPagesPath = path.join(this.inputPath, 'input', 'pages', 'index.xml');
     let generation: ImplementationGuideDefinitionPageGeneration = 'markdown';
     let filePath: string;
     if (existsSync(inputIndexMarkdownPageContentPath)) filePath = inputIndexMarkdownPageContentPath;
@@ -289,8 +289,8 @@ export class IGExporter {
 
       if (filePath) {
         const filePathString = path.join(
-          path.basename(this.igDataPath),
-          path.relative(this.igDataPath, filePath)
+          path.basename(this.inputPath),
+          path.relative(this.inputPath, filePath)
         );
 
         const preferredFileMessage =
@@ -305,7 +305,11 @@ export class IGExporter {
           }
         );
 
-        if (existsSync(inputIndexXMLPagesPath) || existsSync(inputIndexXMLPageContentPath)) {
+        if (
+          (!existsSync(inputIndexMarkdownPagesPath) && existsSync(inputIndexXMLPagesPath)) ||
+          (!existsSync(inputIndexMarkdownPageContentPath) &&
+            existsSync(inputIndexXMLPageContentPath))
+        ) {
           generation = 'html';
         }
         // Add user-provided index file to IG definition
@@ -327,11 +331,12 @@ export class IGExporter {
       const outputPath = path.join(pageContentExportPath, 'index.md');
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
-    } else if (existsSync(inputIndexMarkdownPageContentPath)) {
-    } else if (existsSync(inputIndexXMLPageContentPath)) {
+    } else if (
+      !existsSync(inputIndexMarkdownPageContentPath) &&
+      existsSync(inputIndexXMLPageContentPath)
+    ) {
       generation = 'html';
-    } else if (existsSync(inputIndexMarkdownPagesPath)) {
-    } else if (existsSync(inputIndexXMLPagesPath)) {
+    } else if (!existsSync(inputIndexMarkdownPagesPath) && existsSync(inputIndexXMLPagesPath)) {
       generation = 'html';
     } else {
       // do nothing -- no indexPageContent in config, do nothing with index file if provided
@@ -360,14 +365,14 @@ export class IGExporter {
   private addOtherPageContent(): void {
     const pageContentFolderNames: string[] = ['pagecontent', 'pages', 'resource-docs'];
     for (const contentFolder of pageContentFolderNames) {
-      const inputPageContentPath = path.join(this.igDataPath, 'input', contentFolder);
+      const inputPageContentPath = path.join(this.inputPath, 'input', contentFolder);
       if (existsSync(inputPageContentPath)) {
         const organizedPages = this.organizePageContent(readdirSync(inputPageContentPath));
 
         let invalidFileTypeIncluded = false;
         organizedPages.forEach(page => {
           // All user defined pages are included in input/${contentFolder}
-          const pagePath = path.join(this.igDataPath, 'input', contentFolder, page.originalName);
+          const pagePath = path.join(this.inputPath, 'input', contentFolder, page.originalName);
           const isSupportedFileType = page.fileType === 'md' || page.fileType === 'xml';
           const isIntroOrNotesFile = page.name.endsWith('-intro') || page.name.endsWith('-notes');
           if (isSupportedFileType) {
@@ -410,7 +415,7 @@ export class IGExporter {
     const pageContentFolderNames: string[] = ['pagecontent', 'pages', 'resource-docs'];
     for (const contentFolder of pageContentFolderNames) {
       let invalidFileTypeIncluded = false;
-      const inputPageContentPath = path.join(this.igDataPath, 'input', contentFolder);
+      const inputPageContentPath = path.join(this.inputPath, 'input', contentFolder);
       if (existsSync(inputPageContentPath)) {
         for (const contentFile of readdirSync(inputPageContentPath)) {
           const fileType = contentFile.slice(contentFile.lastIndexOf('.') + 1);
@@ -566,13 +571,13 @@ export class IGExporter {
    * @param {string} igPath - the path where the IG is exported to
    */
   addMenuXML(igPath: string): void {
-    const menuXMLDefaultPath = path.join(this.igDataPath, 'input', 'includes', 'menu.xml');
+    const menuXMLDefaultPath = path.join(this.inputPath, 'input', 'includes', 'menu.xml');
     const menuXMLOutputPath = path.join(igPath, 'fsh-generated', 'includes', 'menu.xml');
 
     // If user provided file and config, log a warning but prefer the config.
     if (existsSync(menuXMLDefaultPath) && this.config.menu) {
       const filePathString = path.join(
-        path.basename(this.igDataPath),
+        path.basename(this.inputPath),
         'input',
         'includes',
         'menu.xml'
@@ -789,7 +794,7 @@ export class IGExporter {
       'examples'
     ];
     for (const pathEnd of pathEnds) {
-      const dirPath = path.join(this.igDataPath, 'input', pathEnd);
+      const dirPath = path.join(this.inputPath, 'input', pathEnd);
       if (existsSync(dirPath)) {
         const files = readdirSync(dirPath);
         for (const file of files) {
@@ -1010,19 +1015,17 @@ export class IGExporter {
   }
 
   /**
-   * Creates an ig.ini file based on the "template" in sushi-config.yaml and exports it to the IG folder.
-   * If the user specified an igi.ini file in the root of the tank, and no "template" in sushi-config.yaml is specified,
-   * the provided file is used instead.
+   * Logs an error if the no longer supported "template" property is used in sushi-config.yaml.
    */
   checkIgIni(): void {
-    const inputIniPath = path.join(this.igDataPath, 'ig.ini');
+    const inputIniPath = path.join(this.inputPath, 'ig.ini');
     if (this.config.template != null) {
       if (existsSync(inputIniPath)) {
-        const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
+        const filePathString = path.join(path.basename(this.inputPath), 'ig.ini');
         const message =
           `Found both a "template" property in ${this.configName} and an ig.ini file at ${filePathString}. ` +
           `The "template" property in ${this.configName} is no longer supported and will be ignored. The existing ` +
-          `${filePathString} file will be used instead.  To resolve this error, remove the "template" property in ` +
+          `${filePathString} file will be used instead. To resolve this error, remove the "template" property in ` +
           `${this.configName} and manage the ig.ini file directly.`;
         logger.error(message, { file: inputIniPath });
       } else {
@@ -1080,7 +1083,7 @@ export class IGExporter {
         file: inputIniPath
       });
     }
-    const filePathString = path.join(path.basename(this.igDataPath), 'ig.ini');
+    const filePathString = path.join(path.basename(this.inputPath), 'ig.ini');
     if (inputIni.IG) {
       if (inputIni.IG.ig == null) {
         const igValue = `fsh-generated/resources/ImplementationGuide-${this.config.id}.json`;
@@ -1132,7 +1135,7 @@ export class IGExporter {
   }
 
   /**
-   * Logs a warning if the no longer supported "history" property is used in sushi-config.yaml
+   * Logs an error if the no longer supported "history" property is used in sushi-config.yaml
    */
   checkPackageList(): void {
     if (this.config.history) {
