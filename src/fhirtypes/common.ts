@@ -1,41 +1,40 @@
-import { cloneDeep, isEmpty, upperFirst } from 'lodash';
+import { isEmpty, cloneDeep, upperFirst } from 'lodash';
 import {
-  CodeSystem,
+  StructureDefinition,
+  PathPart,
   ElementDefinition,
   InstanceDefinition,
-  PathPart,
-  StructureDefinition,
-  ValueSet
+  ValueSet,
+  CodeSystem
 } from '.';
 import {
   AssignmentRule,
-  AssignmentValueType,
-  CaretValueRule,
-  ConceptRule,
-  InsertRule,
   Rule,
+  InsertRule,
+  ConceptRule,
+  ValueSetConceptComponentRule,
   SdRule,
-  ValueSetConceptComponentRule
+  CaretValueRule,
+  AssignmentValueType
 } from '../fshtypes/rules';
 import {
-  Extension,
-  FshCode,
-  FshCodeSystem,
   FshReference,
-  FshValueSet,
   Instance,
-  isAllowedRule,
+  FshCode,
   Logical,
-  Mapping,
   Profile,
-  Resource,
+  Extension,
   RuleSet,
+  FshValueSet,
+  FshCodeSystem,
+  Mapping,
+  isAllowedRule,
+  Resource,
   SourceInfo
 } from '../fshtypes';
 import { FSHTank } from '../import';
-import { Fishable, Type } from '../utils/Fishable';
+import { Type, Fishable } from '../utils/Fishable';
 import { logger } from '../utils';
-import { FHIRId, idRegex } from './primitiveTypes';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -405,53 +404,6 @@ export function cleanResource(
 }
 
 /**
- * Adds Mixin rules onto a Profile, Extension, or Instance
- * @param {Profile | Extension | Instance} fshDefinition - The definition to apply mixin rules on
- * @param {FSHTank} tank - The FSHTank containing the fshDefinition
- */
-export function applyMixinRules(
-  fshDefinition: Profile | Extension | Instance,
-  tank: FSHTank
-): void {
-  if (fshDefinition.mixins.length > 0) {
-    const insertString = fshDefinition.mixins.map(m => `* insert ${m}`).join('\n');
-    logger.warn(
-      'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
-        'Instead, use the "insert" keyword, which can be placed anywhere in a list of rules to indicate ' +
-        'the exact location rules should be inserted. The RuleSets added here with the "Mixin" keyword can ' +
-        `be added with the "insert" keyword by adding the following rule(s):\n${insertString}`,
-      fshDefinition.sourceInfo
-    );
-  }
-  // Rules are added to beginning of rules array, so add the last mixin rules first
-  const mixedInRules: SdRule[] = [];
-  fshDefinition.mixins.forEach(mixinName => {
-    const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
-    if (ruleSet) {
-      ruleSet.rules.forEach(r => {
-        // Record source information of Profile/Extension/Instance on which Mixin is applied
-        r.sourceInfo.appliedFile = fshDefinition.sourceInfo.file;
-        r.sourceInfo.appliedLocation = fshDefinition.sourceInfo.location;
-      });
-      const rules = ruleSet.rules.filter(r => {
-        if (fshDefinition instanceof Instance && !(r instanceof AssignmentRule)) {
-          logger.error(
-            'Rules applied by mixins to an instance must assign a value. Other rules are ignored.',
-            r.sourceInfo
-          );
-          return false;
-        }
-        return true;
-      });
-      mixedInRules.push(...(rules as SdRule[]));
-    } else {
-      logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
-    }
-  });
-  fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
-}
-
-/**
  * Adds insert rules onto a Profile, Extension, or Instance
  * @param fshDefinition - The definition to apply rules on
  * @param tank - The FSHTank containing the fshDefinition
@@ -687,85 +639,8 @@ export function getTypeFromFshDefinitionOrParent(
   return fshDefinition instanceof Logical ? parentSD.url : fshDefinition.id;
 }
 
-const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
-
-export class HasName {
-  name?: string;
-  /**
-   * Set the name and check if it matches the regular expression specified
-   * in the invariant for "name" properties. A name must be between 1 and 255 characters long,
-   * begin with an uppercase letter, and contain only uppercase letter, lowercase letter,
-   * numeral, and '_' characters.
-   * If the string does not match, log an error.
-   *
-   * @see {@link http://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.name}
-   * @see {@link http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.name}
-   * @see {@link http://hl7.org/fhir/R4/codesystem-definitions.html#CodeSystem.name}
-   * @param {string} name - The name to check against the name invariant
-   * @param {SourceInfo} sourceInfo - The FSH file and location that specified the name
-   */
-  setName(name: string, sourceInfo: SourceInfo) {
-    this.name = name;
-    if (!nameRegex.test(name)) {
-      logger.warn(
-        `The name "${name}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
-          "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
-          "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.",
-        sourceInfo
-      );
-    }
-  }
-}
-
 export function isExtension(path: string): boolean {
   return ['modifierExtension', 'extension'].includes(path);
-}
-
-export class HasId {
-  id?: FHIRId;
-  /**
-   * Set the id and check if it matches the regular expression specified
-   * in the definition of the "id" type.
-   * If the FHIRId does not match, log an error.
-   *
-   * @param id - The new id to set
-   * @param sourceInfo - The FSH file and location that specified the id
-   */
-  setId(id: FHIRId, sourceInfo: SourceInfo) {
-    this.id = id;
-    this.validateId(sourceInfo);
-  }
-
-  /**
-   * Check if the current id matches the regular expression specified
-   * in the definition of the "id" type.
-   * If the FHIRId does not match, log an error.
-   * If the id is a valid name, sanitize it to a valid id and log a warning
-   *
-   * @param sourceInfo - The FSH file and location that specified the id
-   */
-  validateId(sourceInfo: SourceInfo) {
-    let validId = idRegex.test(this.id);
-    if (!validId && nameRegex.test(this.id)) {
-      // A valid name can be turned into a valid id by replacing _ with - and slicing to 64 character limit
-      const sanitizedId = this.id.replace(/_/g, '-').slice(0, 64);
-      if (idRegex.test(sanitizedId)) {
-        // Use the sanitized id, but warn the user to fix this
-        logger.warn(
-          `The string "${this.id}" represents a valid FHIR name but not a valid FHIR id. FHIR ids cannot contain "_" and can be at most 64 characters. The id will be exported as "${sanitizedId}". Avoid this warning by specifying a valid id directly using the "Id" keyword.`,
-          sourceInfo
-        );
-        this.id = sanitizedId;
-        validId = true;
-      }
-    }
-    if (!validId) {
-      logger.error(
-        `The string "${this.id}" does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
-        sourceInfo
-      );
-    }
-  }
 }
 
 /**

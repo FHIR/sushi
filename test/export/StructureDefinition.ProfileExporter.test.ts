@@ -6,7 +6,7 @@ import { Profile, Instance } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { CaretValueRule, ContainsRule } from '../../src/fshtypes/rules';
+import { BindingRule, CaretValueRule, ContainsRule } from '../../src/fshtypes/rules';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -177,6 +177,19 @@ describe('ProfileExporter', () => {
     expect(exporter.deferredRules.size).toBe(1);
     expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
     expect(exporter.deferredRules.get(exported[0])).toContainEqual(caretValueRule);
+  });
+
+  it('should throw a MismatchedBindingTypeError when a code property is bound to a code system', () => {
+    const profile = new Profile('TestProfile');
+    profile.parent = 'Patient';
+    const bindingRule = new BindingRule('identifier.type');
+    bindingRule.valueSet = 'W3cProvenanceActivityType';
+    bindingRule.strength = 'required';
+    profile.rules.push(bindingRule);
+    doc.profiles.set(profile.name, profile);
+    exporter.export();
+
+    expect(loggerSpy.getLastMessage('error')).toMatch(/A ValueSet must be used./);
   });
 
   it('should log an error when an inline extension is used', () => {

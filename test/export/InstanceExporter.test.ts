@@ -40,11 +40,6 @@ describe('InstanceExporter', () => {
       'testPackage',
       defs
     );
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
-      defs
-    );
   });
 
   beforeEach(() => {
@@ -1386,44 +1381,6 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    // Assignment on CodeableReference
-    it('should log a meaningful error when assigning a Reference directly to a CodeableReference', () => {
-      const condition = new Instance('TestCondition');
-      condition.instanceOf = 'Condition';
-      const assignedIdRule = new AssignmentRule('id');
-      assignedIdRule.value = 'condition-id';
-      condition.rules.push(assignedIdRule);
-
-      const carePlan = new Instance('TestCarePlan');
-      carePlan.instanceOf = 'CarePlan';
-      const assignedRefRule = new AssignmentRule('addresses');
-      assignedRefRule.value = new FshReference('TestCondition');
-      carePlan.rules.push(assignedRefRule);
-
-      doc.instances.set(condition.name, condition);
-      doc.instances.set(carePlan.name, carePlan);
-      const exported = exportInstance(carePlan);
-      expect(exported.addresses).toBeUndefined();
-      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-        /Cannot assign.*Reference\(Condition\/condition-id\).*Assign to CodeableReference.reference\D*/s
-      );
-    });
-
-    it('should log a meaningful error when assigning a code directly to a CodeableReference', () => {
-      const carePlan = new Instance('TestCarePlan');
-      carePlan.instanceOf = 'CarePlan';
-      const assignedRefRule = new AssignmentRule('addresses');
-      assignedRefRule.value = new FshCode('foo');
-      carePlan.rules.push(assignedRefRule);
-
-      doc.instances.set(carePlan.name, carePlan);
-      const exported = exportInstance(carePlan);
-      expect(exported.addresses).toBeUndefined();
-      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-        /Cannot assign.*#foo.*Assign to CodeableReference.concept\D*/s
-      );
-    });
-
     // Assigning References
     it('should assign a reference while resolving the Instance being referred to', () => {
       const orgInstance = new Instance('TestOrganization');
@@ -1439,27 +1396,6 @@ describe('InstanceExporter', () => {
       const exported = exportInstance(patientInstance);
       expect(exported.managingOrganization).toEqual({
         reference: 'Organization/org-id'
-      });
-    });
-
-    it('should assign a reference while resolving the Instance being referred to on a CodeableReference', () => {
-      const condition = new Instance('TestCondition');
-      condition.instanceOf = 'Condition';
-      const assignedIdRule = new AssignmentRule('id');
-      assignedIdRule.value = 'condition-id';
-      condition.rules.push(assignedIdRule);
-
-      const carePlan = new Instance('TestCarePlan');
-      carePlan.instanceOf = 'CarePlan';
-      const assignedRefRule = new AssignmentRule('addresses.reference');
-      assignedRefRule.value = new FshReference('TestCondition');
-      carePlan.rules.push(assignedRefRule);
-
-      doc.instances.set(condition.name, condition);
-      doc.instances.set(carePlan.name, carePlan);
-      const exported = exportInstance(carePlan);
-      expect(exported.addresses[0].reference).toEqual({
-        reference: 'Condition/condition-id'
       });
     });
 
@@ -1545,25 +1481,6 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /The type "Reference\(Observation\)" does not match any of the allowed types\D*/s
-      );
-    });
-
-    it('should log an error when an invalid reference is assigned on a CodeableReference', () => {
-      const patient = new Instance('TestPatient');
-      patient.instanceOf = 'Patient';
-
-      const carePlan = new Instance('TestCarePlan');
-      carePlan.instanceOf = 'CarePlan';
-      const assignedRefRule = new AssignmentRule('addresses.reference');
-      assignedRefRule.value = new FshReference('TestPatient');
-      carePlan.rules.push(assignedRefRule);
-
-      doc.instances.set(patient.name, patient);
-      doc.instances.set(carePlan.name, carePlan);
-      const exported = exportInstance(carePlan);
-      expect(exported.addresses).toBeUndefined();
-      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-        /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
       );
     });
 
@@ -3213,97 +3130,6 @@ describe('InstanceExporter', () => {
     });
   });
 
-  describe('#Mixins', () => {
-    let instance: Instance;
-    let mixin: RuleSet;
-
-    beforeEach(() => {
-      instance = new Instance('Foo').withFile('Instance.fsh').withLocation([5, 6, 7, 16]);
-      instance.instanceOf = 'Patient';
-      doc.instances.set(instance.name, instance);
-
-      mixin = new RuleSet('Bar');
-      doc.ruleSets.set(mixin.name, mixin);
-      instance.mixins.push('Bar');
-    });
-
-    it('should apply rules from a single mixin', () => {
-      const rule = new AssignmentRule('active');
-      rule.value = true;
-      mixin.rules.push(rule);
-
-      const exported = exporter.exportInstance(instance);
-      expect(exported.active).toBe(true);
-    });
-
-    it('should apply rules from multiple mixins in the correct order', () => {
-      const rule1 = new AssignmentRule('active');
-      rule1.value = true;
-      mixin.rules.push(rule1);
-
-      const mixin2 = new RuleSet('Baz');
-      doc.ruleSets.set(mixin2.name, mixin2);
-      const rule2 = new AssignmentRule('active');
-      rule2.value = false;
-      mixin2.rules.push(rule2);
-      instance.mixins.push('Baz');
-
-      const exported = exporter.exportInstance(instance);
-      expect(exported.active).toBe(false);
-    });
-
-    it('should emit an error when the path is not found on a mixin rule', () => {
-      const rule = new AssignmentRule('activez').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.value = true;
-      mixin.rules.push(rule);
-
-      exporter.exportInstance(instance);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/activez/);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-
-    it('should emit an error when applying an invalid mixin rule', () => {
-      const rule = new AssignmentRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.value = 'some string';
-      mixin.rules.push(rule);
-
-      exporter.exportInstance(instance);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/some string/);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-
-    it('should emit an error when a mixin cannot be found', () => {
-      instance.mixins.push('Barz');
-
-      exporter.exportInstance(instance);
-
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Instance\.fsh.*Line: 5 - 7\D*/s);
-    });
-
-    it('should emit an error when a mixin applies a non-assigned value rule', () => {
-      const rule = new CardRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.min = 0;
-      rule.max = '1';
-      mixin.rules.push(rule);
-
-      exporter.exportInstance(instance);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Rules applied by mixins to an instance must assign a value. Other rules are ignored/
-      );
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-  });
-
   describe('#insertRules', () => {
     let instance: Instance;
     let patientInstance: Instance;
@@ -3395,6 +3221,122 @@ describe('InstanceExporter', () => {
       expect(exported.id).toBe('my-id');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /CaretValueRule.*Instance.*File: Caret\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+      );
+    });
+  });
+});
+
+describe('InstanceExporter R5', () => {
+  let defs: FHIRDefinitions;
+  let doc: FSHDocument;
+  let sdExporter: StructureDefinitionExporter;
+  let exporter: InstanceExporter;
+  let exportInstance: (instance: Instance) => InstanceDefinition;
+
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
+    );
+  });
+
+  beforeEach(() => {
+    doc = new FSHDocument('fileName');
+    const input = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#current', 'r5-definitions');
+    sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
+    exporter = new InstanceExporter(input, pkg, fisher);
+    exportInstance = (instance: Instance) => {
+      sdExporter.export();
+      return exporter.exportInstance(instance);
+    };
+  });
+
+  describe('#exportInstance', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
+    // Assignment on CodeableReference
+    it('should log a meaningful error when assigning a Reference directly to a CodeableReference', () => {
+      const condition = new Instance('TestCondition');
+      condition.instanceOf = 'Condition';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'condition-id';
+      condition.rules.push(assignedIdRule);
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshReference('TestCondition');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(condition.name, condition);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Cannot assign.*Reference\(Condition\/condition-id\).*Assign to CodeableReference.reference\D*/s
+      );
+    });
+
+    it('should log a meaningful error when assigning a code directly to a CodeableReference', () => {
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshCode('foo');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Cannot assign.*#foo.*Assign to CodeableReference.concept\D*/s
+      );
+    });
+
+    // Assigning References
+
+    it('should assign a reference while resolving the Instance being referred to on a CodeableReference', () => {
+      const condition = new Instance('TestCondition');
+      condition.instanceOf = 'Condition';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'condition-id';
+      condition.rules.push(assignedIdRule);
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses.reference');
+      assignedRefRule.value = new FshReference('TestCondition');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(condition.name, condition);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses[0].reference).toEqual({
+        reference: 'Condition/condition-id'
+      });
+    });
+
+    it('should log an error when an invalid reference is assigned on a CodeableReference', () => {
+      const patient = new Instance('TestPatient');
+      patient.instanceOf = 'Patient';
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses.reference');
+      assignedRefRule.value = new FshReference('TestPatient');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(patient.name, patient);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
       );
     });
   });

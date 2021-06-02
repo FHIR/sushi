@@ -234,12 +234,6 @@ FSHVisitor.prototype.visitUsage = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#mixins.
-FSHVisitor.prototype.visitMixins = function(ctx) {
-  return this.visitChildren(ctx);
-};
-
-
 // Visit a parse tree produced by FSHParser#source.
 FSHVisitor.prototype.visitSource = function(ctx) {
   return this.visitChildren(ctx);
@@ -300,6 +294,12 @@ FSHVisitor.prototype.visitCaretValueRule = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#codeCaretValueRule.
+FSHVisitor.prototype.visitCodeCaretValueRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#mappingRule.
 FSHVisitor.prototype.visitMappingRule = function(ctx) {
   return this.visitChildren(ctx);
@@ -314,6 +314,12 @@ FSHVisitor.prototype.visitInsertRule = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#addElementRule.
 FSHVisitor.prototype.visitAddElementRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#pathRule.
+FSHVisitor.prototype.visitPathRule = function(ctx) {
   return this.visitChildren(ctx);
 };
 
@@ -386,12 +392,6 @@ FSHVisitor.prototype.visitName = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#path.
 FSHVisitor.prototype.visitPath = function(ctx) {
-  return this.visitChildren(ctx);
-};
-
-
-// Visit a parse tree produced by FSHParser#paths.
-FSHVisitor.prototype.visitPaths = function(ctx) {
   return this.visitChildren(ctx);
 };
 

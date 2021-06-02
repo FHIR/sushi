@@ -1,5 +1,6 @@
 import { FshStructure } from './FshStructure';
 import { LrRule } from './rules';
+import { EOL } from 'os';
 
 export class Logical extends FshStructure {
   rules: LrRule[];
@@ -13,5 +14,11 @@ export class Logical extends FshStructure {
 
   get constructorName() {
     return 'Logical';
+  }
+
+  toFSH(): string {
+    const metadataFSH = this.metadataToFSH();
+    const rulesFSH = this.rules.map(r => r.toFSH()).join(EOL);
+    return `${metadataFSH}${rulesFSH.length ? EOL + rulesFSH : ''}`;
   }
 }

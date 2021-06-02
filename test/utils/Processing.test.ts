@@ -16,7 +16,8 @@ import {
   hasFshFiles,
   writeFHIRResources,
   init,
-  checkNullValuesOnArray
+  checkNullValuesOnArray,
+  writePreprocessedFSH
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -24,7 +25,18 @@ import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
-
+import { FSHTank, FSHDocument } from '../../src/import';
+import {
+  Profile,
+  Extension,
+  Instance,
+  FshValueSet,
+  FshCodeSystem,
+  Invariant,
+  RuleSet,
+  Mapping
+} from '../../src/fshtypes';
+import { EOL } from 'os';
 describe('Processing', () => {
   temp.track();
 
@@ -325,12 +337,8 @@ describe('Processing', () => {
         .spyOn(loadModule, 'loadDependency')
         .mockImplementation(
           async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
-            // the mock loader can find hl7.fhir.r4.core, hl7.fhir.r5.core, and hl7.fhir.us.core
-            if (
-              packageName === 'hl7.fhir.r4.core' ||
-              packageName === 'hl7.fhir.r5.core' ||
-              packageName === 'hl7.fhir.us.core'
-            ) {
+            // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core
+            if (/^hl7.fhir.(r2|r3|r4|r5|us).core$/.test(packageName)) {
               FHIRDefs.packages.push(`${packageName}#${version}`);
               return Promise.resolve(FHIRDefs);
             } else {
@@ -347,8 +355,7 @@ describe('Processing', () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, usCoreDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(2);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(defs.packages).toContain('hl7.fhir.us.core#3.1.0');
@@ -360,8 +367,7 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.5.0'];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, config).then(() => {
         expect(defs.packages).toEqual(['hl7.fhir.r5.core#4.5.0']);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
@@ -373,8 +379,7 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['current'];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, config).then(() => {
         expect(defs.packages).toEqual(['hl7.fhir.r5.core#current']);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
@@ -382,12 +387,81 @@ describe('Processing', () => {
       });
     });
 
+    it('should support virtual FHIR extension packages', () => {
+      // We want to do this for each, so make a function we'll just call for each version
+      const testExtPackage = async (
+        extId: string,
+        suppFhirId: string,
+        suppFhirVersion: string,
+        fhirId: string,
+        fhirVersion: string
+      ) => {
+        const virtualExtensionsConfig = cloneDeep(minimalConfig);
+        virtualExtensionsConfig.fhirVersion = [fhirVersion];
+        virtualExtensionsConfig.dependencies = [{ packageId: extId, version: fhirVersion }];
+        const defs = new FHIRDefinitions();
+        return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
+          expect(defs.packages.length).toBe(1);
+          expect(defs.packages).toContain(`${fhirId}#${fhirVersion}`);
+          expect(defs.supplementalFHIRPackages).toEqual([`${suppFhirId}#${suppFhirVersion}`]);
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        });
+      };
+      return Promise.all([
+        testExtPackage(
+          'hl7.fhir.extensions.r2',
+          'hl7.fhir.r2.core',
+          '1.0.2',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r3',
+          'hl7.fhir.r3.core',
+          '3.0.2',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r4',
+          'hl7.fhir.r4.core',
+          '4.0.1',
+          'hl7.fhir.r5.core',
+          '4.5.0'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r5',
+          'hl7.fhir.r5.core',
+          'current',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        )
+      ]);
+    });
+
+    it('should log a warning if wrong virtual FHIR extension package version is used', () => {
+      const virtualExtensionsConfig = cloneDeep(minimalConfig);
+      virtualExtensionsConfig.fhirVersion = ['4.0.1'];
+      virtualExtensionsConfig.dependencies = [
+        { packageId: 'hl7.fhir.extensions.r2', version: '1.0.2' }
+      ];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
+        expect(defs.packages.length).toBe(1);
+        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
+        expect(defs.supplementalFHIRPackages).toEqual(['hl7.fhir.r2.core#1.0.2']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Incorrect package version: hl7\.fhir\.extensions\.r2#1\.0\.2\./
+        );
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+    });
+
     it('should log an error when it fails to load a dependency', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, badDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(1);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -400,8 +474,7 @@ describe('Processing', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.r4.core' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, badDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(1);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -432,6 +505,48 @@ describe('Processing', () => {
         getRawFSHes(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Invalid path to FSH definition folder\./s);
+    });
+
+    describe('#symlinks', () => {
+      const linkPath = path.join(__dirname, 'fixtures', 'fsh-files', 'myLock.fsh');
+      const linkTarget = path.join(__dirname, 'fixtures', 'fsh-files', 'meaninglessTarget');
+
+      beforeAll(() => {
+        try {
+          fs.removeSync(linkPath);
+        } catch {
+          // This will fail if the link doesn't exist, which is fine.
+          // We just want to be extra sure to clean up before making it.
+        }
+        try {
+          fs.symlinkSync(linkTarget, linkPath);
+        } catch {
+          // This may fail if the user running the test doesn't have permission to create a symbolic link.
+          // On Windows systems, normal users do not have this permission.
+        }
+      });
+
+      it('should return a RawFSH for each real file in the input directory that ends with .fsh', () => {
+        const input = path.join(__dirname, 'fixtures', 'fsh-files');
+        const rawFSHes = getRawFSHes(input);
+        expect(rawFSHes.length).toBe(2);
+        expect(rawFSHes).toContainEqual({
+          content: '// Content of first file',
+          path: path.join(input, 'first.fsh')
+        });
+        expect(rawFSHes).toContainEqual({
+          content: '// Content of second file',
+          path: path.join(input, 'second.fsh')
+        });
+      });
+
+      afterAll(() => {
+        try {
+          fs.removeSync(linkPath);
+        } catch {
+          // This will fail if someone removed the link in the middle of the test.
+        }
+      });
     });
   });
 
@@ -816,6 +931,126 @@ describe('Processing', () => {
       it('should write an info message with the number of instances exported', () => {
         expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 14 FHIR resources/s);
       });
+    });
+  });
+
+  describe('#writePreprocessedFSH', () => {
+    let tank: FSHTank;
+    let tempIn: string;
+    let tempOut: string;
+
+    beforeAll(() => {
+      tempIn = temp.mkdirSync('input-dir');
+      tempOut = temp.mkdirSync('output-dir');
+      const firstDoc = new FSHDocument(path.join(tempIn, 'first.fsh'));
+      firstDoc.aliases.set('LOINC', 'http://loinc.org');
+      firstDoc.profiles.set('MyProfile', new Profile('MyProfile').withLocation([3, 0, 15, 7]));
+      firstDoc.extensions.set(
+        'MyExtension',
+        new Extension('MyExtension').withLocation([17, 0, 20, 8])
+      );
+      const secondDoc = new FSHDocument(path.join(tempIn, 'second.fsh'));
+      secondDoc.instances.set(
+        'MyInstance',
+        new Instance('MyInstance').withLocation([20, 0, 25, 5])
+      );
+      secondDoc.valueSets.set(
+        'MyValueSet',
+        new FshValueSet('MyValueSet').withLocation([30, 0, 35, 9])
+      );
+      secondDoc.codeSystems.set(
+        'MyCodeSystem',
+        new FshCodeSystem('MyCodeSystem').withLocation([10, 0, 15, 18])
+      );
+      const thirdDoc = new FSHDocument(path.join(tempIn, 'extra', 'third.fsh'));
+      thirdDoc.invariants.set('inv-1', new Invariant('inv-1').withLocation([222, 0, 224, 9]));
+      thirdDoc.ruleSets.set('MyRuleSet', new RuleSet('MyRuleSet').withLocation([33, 0, 39, 15]));
+      thirdDoc.mappings.set('MyMapping', new Mapping('MyMapping').withLocation([10, 0, 21, 18]));
+      const ruleSetDoc = new FSHDocument(path.join(tempIn, 'extra', 'rulesets.fsh'));
+      ruleSetDoc.ruleSets.set('OneRuleSet', new RuleSet('OneRuleSet').withLocation([8, 0, 18, 35]));
+      ruleSetDoc.ruleSets.set(
+        'TwoRuleSet',
+        new RuleSet('TwoRuleSet').withLocation([20, 0, 35, 21])
+      );
+      tank = new FSHTank([firstDoc, secondDoc, thirdDoc, ruleSetDoc], null);
+      writePreprocessedFSH(tempOut, tempIn, tank);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should produce files in a structure that mirrors the input', () => {
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'first.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'second.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'third.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'aliases.fsh')));
+    });
+
+    it('should write all entities that exist after preprocessing', () => {
+      // first.fsh should contain LOINC (an Alias), MyProfile, and MyExtension
+      const firstContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'first.fsh'),
+        'utf-8'
+      );
+      expect(firstContents).toMatch('Alias: LOINC');
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 3 - 15${EOL}Profile: MyProfile`
+      );
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 17 - 20${EOL}Extension: MyExtension`
+      );
+      // second.fsh should contain MyCodeSystem, MyInstance, and MyValueSet
+      const secondContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'second.fsh'),
+        'utf-8'
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 10 - 15${EOL}CodeSystem: MyCodeSystem`
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 20 - 25${EOL}Instance: MyInstance`
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 30 - 35${EOL}ValueSet: MyValueSet`
+      );
+      // third.fsh should contain MyMapping and inv-1
+      const thirdContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'third.fsh'),
+        'utf-8'
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 10 - 21${EOL}Mapping: MyMapping`
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 222 - 224${EOL}Invariant: inv-1`
+      );
+      // RuleSets do not exist after preprocessing
+      expect(thirdContents).not.toMatch('RuleSet: MyRuleSet');
+    });
+
+    it('should write entities in their original order', () => {
+      const secondContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'second.fsh'),
+        'utf-8'
+      );
+      const instanceLocation = secondContents.indexOf('Instance: MyInstance');
+      const valueSetLocation = secondContents.indexOf('ValueSet: MyValueSet');
+      const codeSystemLocation = secondContents.indexOf('CodeSystem: MyCodeSystem');
+      expect(instanceLocation).toBeGreaterThan(-1);
+      expect(valueSetLocation).toBeGreaterThan(-1);
+      expect(codeSystemLocation).toBeGreaterThan(-1);
+      expect(codeSystemLocation).toBeLessThan(instanceLocation);
+      expect(instanceLocation).toBeLessThan(valueSetLocation);
+    });
+
+    it('should write a comment for a file with no entities after preprocessing', () => {
+      // A file with only RuleSet definitions will have no content after preprocessing.
+      const ruleSetContent = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'rulesets.fsh'),
+        'utf-8'
+      );
+      expect(ruleSetContent).toBe('// This file has no content after preprocessing.');
     });
   });
 

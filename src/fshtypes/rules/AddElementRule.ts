@@ -1,16 +1,13 @@
 import { Rule } from './Rule';
 import { OnlyRuleType } from './OnlyRule';
+import { typeString, fshifyString, HasFlags } from '../common';
+import { applyMixins } from '../../utils/Mixin';
 
 export class AddElementRule extends Rule {
   min: number;
   max: string;
   types: OnlyRuleType[] = [];
-  mustSupport?: boolean;
-  summary?: boolean;
-  modifier?: boolean;
-  trialUse?: boolean;
-  normative?: boolean;
-  draft?: boolean;
+  // flags provided by HasFlags mixin
   short: string;
   definition?: string;
 
@@ -21,4 +18,16 @@ export class AddElementRule extends Rule {
   get constructorName() {
     return 'AddElementRule';
   }
+
+  toFSH(): string {
+    const cardPart = `${this.min}..${this.max}`;
+    const flagPart = this.flags.length ? ` ${this.flags.join(' ')}` : '';
+    const typePart = typeString(this.types);
+    const shortPart = this.short ? ` "${fshifyString(this.short)}"` : '';
+    const definitionPart = this.definition ? ` "${fshifyString(this.definition)}"` : '';
+    return `* ${this.path} ${cardPart}${flagPart} ${typePart}${shortPart}${definitionPart}`;
+  }
 }
+
+export interface AddElementRule extends Rule, HasFlags {}
+applyMixins(AddElementRule, [HasFlags]);

@@ -17,7 +17,9 @@ import {
   InsertRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
-  AddElementRule
+  AddElementRule,
+  ConceptRule,
+  CodeCaretValueRule
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 
@@ -252,3 +254,35 @@ export function assertAddElementRule(rule: Rule, path: string, args: AddElementA
     }
   }
 }
+export function assertConceptRule(
+  rule: Rule,
+  code: string,
+  display?: string,
+  definition?: string,
+  hierarchy?: string[]
+) {
+  expect(rule).toBeInstanceOf(ConceptRule);
+  const conceptRule = rule as ConceptRule;
+  expect(conceptRule.code).toBe(code);
+  expect(conceptRule.display).toBe(display);
+  expect(conceptRule.definition).toBe(definition);
+  if (hierarchy !== undefined) {
+    expect(conceptRule.hierarchy).toEqual(hierarchy);
+  }
+}
+
+export function assertCodeCaretRule(
+  rule: Rule,
+  codePath: string[],
+  caretPath: string,
+  value: AssignmentValueType,
+  isInstance = false
+) {
+  expect(rule).toBeInstanceOf(CodeCaretValueRule);
+  const codeCaretValueRule = rule as CodeCaretValueRule;
+  expect(codeCaretValueRule.codePath).toEqual(codePath);
+  expect(codeCaretValueRule.caretPath).toBe(caretPath);
+  expect(codeCaretValueRule.value).toEqual(value);
+  expect(codeCaretValueRule.isInstance).toBe(isInstance);
+}
+

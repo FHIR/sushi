@@ -1,4 +1,5 @@
 import { Rule } from './Rule';
+import { typeString } from '../common';
 
 export class OnlyRule extends Rule {
   types: OnlyRuleType[] = [];
@@ -9,6 +10,10 @@ export class OnlyRule extends Rule {
 
   get constructorName() {
     return 'OnlyRule';
+  }
+
+  toFSH(): string {
+    return `* ${this.path} only ${typeString(this.types)}`;
   }
 }
 

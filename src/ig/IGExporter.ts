@@ -196,10 +196,13 @@ export class IGExporter {
         'The autoload-resources parameter has been set to false because this implementation guide contains custom resources.'
       );
     }
-    // add dependencies
-    if (this.config.dependencies?.length) {
+    // add dependencies, filtering out "virtual" extension packages
+    const dependencies = this.config.dependencies?.filter(
+      d => !/^hl7\.fhir\.extensions\.r[2345]$/.test(d.packageId)
+    );
+    if (dependencies?.length) {
       const igs = this.fhirDefs.allImplementationGuides();
-      for (const dependency of this.config.dependencies) {
+      for (const dependency of dependencies) {
         const dependsEntry = this.fixDependsOn(dependency, igs);
         if (dependsEntry) {
           this.ig.dependsOn.push(dependsEntry);

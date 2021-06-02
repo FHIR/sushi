@@ -1,34 +1,34 @@
-import { Package, StructureDefinitionExporter } from '../../src/export';
-import { FSHDocument, FSHTank } from '../../src/import';
+import { StructureDefinitionExporter, Package } from '../../src/export';
+import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
 import {
-  Configuration,
+  Profile,
   Extension,
   FshCanonical,
   FshCode,
-  FshCodeSystem,
-  FshQuantity,
   FshReference,
-  FshValueSet,
   Instance,
+  FshValueSet,
+  FshCodeSystem,
   Invariant,
   Logical,
-  Profile,
   Resource,
-  RuleSet
+  RuleSet,
+  FshQuantity,
+  Configuration
 } from '../../src/fshtypes';
 import {
-  AddElementRule,
-  AssignmentRule,
-  BindingRule,
   CardRule,
-  CaretValueRule,
-  ConceptRule,
-  ContainsRule,
   FlagRule,
-  InsertRule,
+  OnlyRule,
+  BindingRule,
+  AssignmentRule,
+  ContainsRule,
+  CaretValueRule,
   ObeysRule,
-  OnlyRule
+  InsertRule,
+  ConceptRule,
+  AddElementRule
 } from '../../src/fshtypes/rules';
 import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
 import { ElementDefinitionType, StructureDefinitionMapping } from '../../src/fhirtypes';
@@ -702,6 +702,164 @@ describe('StructureDefinitionExporter', () => {
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profiles\.fsh.*Line: 8 - 11\D*/s);
     });
+  });
+
+  it('should apply constraints to all instances of contentReference elements when the profile-element extension is applied', () => {
+    const profile = new Profile('TestQuestionnaire');
+    profile.parent = 'Questionnaire';
+    profile.id = 'example-q';
+
+    const containsRule = new ContainsRule('item.extension');
+    containsRule.items = [
+      {
+        name: 'example-slice',
+        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+      }
+    ];
+
+    const cardRule = new CardRule('item.extension[example-slice]');
+    cardRule.min = 1;
+    cardRule.max = '1';
+
+    const profileRule = new CaretValueRule('item');
+    profileRule.caretPath = 'type.profile';
+    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
+    const extensionRule = new CaretValueRule('item');
+    extensionRule.caretPath = 'type.profile.extension.url';
+    extensionRule.value =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+    const targetElementRule = new CaretValueRule('item');
+    targetElementRule.caretPath = 'type.profile.extension.valueString';
+    targetElementRule.value = 'Questionnaire.item';
+
+    const assignmentRule = new AssignmentRule('item.item.linkId');
+    assignmentRule.value = 'item-2';
+
+    profile.rules.push(
+      containsRule,
+      cardRule,
+      profileRule,
+      extensionRule,
+      targetElementRule,
+      assignmentRule
+    );
+    doc.profiles.set(profile.name, profile);
+
+    // The slice added to the parent element should be unfolded to the child
+    const exportedProfile = exporter.export().profiles[0];
+    expect(
+      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+    ).toBeDefined();
+  });
+
+  it('should apply the profile-element extension when there are several extensions in the type.profile array', () => {
+    const profile = new Profile('TestQuestionnaire');
+    profile.parent = 'Questionnaire';
+    profile.id = 'example-q';
+
+    const containsRule = new ContainsRule('item.extension');
+    containsRule.items = [
+      {
+        name: 'example-slice',
+        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+      }
+    ];
+
+    const cardRule = new CardRule('item.extension[example-slice]');
+    cardRule.min = 1;
+    cardRule.max = '1';
+
+    const fakeProfileRule = new CaretValueRule('item');
+    fakeProfileRule.caretPath = 'type.profile';
+    fakeProfileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
+    const fakeExtensionRule = new CaretValueRule('item');
+    fakeExtensionRule.caretPath = 'type.profile.extension.url';
+    fakeExtensionRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/FakeExtension';
+    const fakeTargetElementRule = new CaretValueRule('item');
+    fakeTargetElementRule.caretPath = 'type.profile.extension.valueString';
+    fakeTargetElementRule.value = 'Foo';
+
+    const profileRule = new CaretValueRule('item');
+    profileRule.caretPath = 'type.profile[1]';
+    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
+    const extensionRule = new CaretValueRule('item');
+    extensionRule.caretPath = 'type.profile[1].extension.url';
+    extensionRule.value =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+    const targetElementRule = new CaretValueRule('item');
+    targetElementRule.caretPath = 'type.profile[1].extension.valueString';
+    targetElementRule.value = 'Questionnaire.item';
+
+    const assignmentRule = new AssignmentRule('item.item.linkId');
+    assignmentRule.value = 'item-2';
+
+    profile.rules.push(
+      containsRule,
+      cardRule,
+      fakeProfileRule,
+      fakeExtensionRule,
+      fakeTargetElementRule,
+      profileRule,
+      extensionRule,
+      targetElementRule,
+      assignmentRule
+    );
+    doc.profiles.set(profile.name, profile);
+
+    // The slice added to the parent element should be unfolded to the child
+    const exportedProfile = exporter.export().profiles[0];
+    expect(
+      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+    ).toBeDefined();
+  });
+
+  it('should not apply constraints to all instances of contentReference elements when the profile-element extension is misapplied', () => {
+    const profile = new Profile('TestQuestionnaire2');
+    profile.parent = 'Questionnaire';
+    profile.id = 'example-q';
+
+    const containsRule = new ContainsRule('item.extension');
+    containsRule.items = [
+      {
+        name: 'example-slice',
+        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+      }
+    ];
+
+    const cardRule = new CardRule('item.extension[example-slice]');
+    cardRule.min = 1;
+    cardRule.max = '1';
+
+    // The extension is targeting another profile
+    const profileRule = new CaretValueRule('item');
+    profileRule.caretPath = 'type.profile';
+    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/wrong-id';
+    const extensionRule = new CaretValueRule('item');
+    extensionRule.caretPath = 'type.profile.extension.url';
+    extensionRule.value =
+      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+    const targetElementRule = new CaretValueRule('item');
+    targetElementRule.caretPath = 'type.profile.extension.valueString';
+    targetElementRule.value = 'Questionnaire.item';
+
+    const assignmentRule = new AssignmentRule('item.item.linkId');
+    assignmentRule.value = 'item-2';
+
+    profile.rules.push(
+      containsRule,
+      cardRule,
+      profileRule,
+      extensionRule,
+      targetElementRule,
+      assignmentRule
+    );
+    doc.profiles.set(profile.name, profile);
+
+    // The slice added to the parent element should be unfolded to the child
+    const exportedProfile = exporter.export().profiles[0];
+    expect(
+      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+    ).not.toBeDefined();
   });
 
   describe('#Extension', () => {
@@ -3044,29 +3202,6 @@ describe('StructureDefinitionExporter', () => {
       });
     });
 
-    it('should apply a Reference AssignmentRule and replace the Reference on a CodeableReference', () => {
-      const profile = new Profile('Foo');
-      profile.parent = 'CarePlan';
-
-      const instance = new Instance('Bar');
-      instance.id = 'bar-id';
-      instance.instanceOf = 'Condition';
-      doc.instances.set(instance.name, instance);
-
-      const rule = new AssignmentRule('addresses.reference');
-      rule.value = new FshReference('Bar');
-      profile.rules.push(rule);
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-
-      const addressesReference = sd.findElement('CarePlan.addresses.reference');
-
-      expect(addressesReference.patternReference).toEqual({
-        reference: 'Condition/bar-id'
-      });
-    });
-
     it('should not apply a Reference AssignmentRule with invalid type and log an error', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
@@ -3089,31 +3224,6 @@ describe('StructureDefinitionExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /The type "Reference\(Condition\)" does not match any of the allowed types\D*/s
-      );
-    });
-
-    it('should not apply a Reference AssignmentRule with invalid type constraints on a parent CodeableReference', () => {
-      const profile = new Profile('Foo');
-      profile.parent = 'CarePlan';
-
-      const instance = new Instance('Bar');
-      instance.id = 'bar-id';
-      instance.instanceOf = 'Patient';
-      doc.instances.set(instance.name, instance);
-
-      const rule = new AssignmentRule('addresses.reference');
-      rule.value = new FshReference('Bar');
-      profile.rules.push(rule);
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-
-      const addressesReference = sd.findElement('CarePlan.addresses.reference');
-
-      expect(addressesReference.patternReference).toEqual(undefined);
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
       );
     });
 
@@ -4589,6 +4699,35 @@ describe('StructureDefinitionExporter', () => {
         ]
       });
     });
+
+  it('should apply a CaretValueRule on an extension on ElementDefinition', () => {
+    // Extension: MyBooleanExtension
+    // * value[x] only boolean
+    const extension = new Extension('MyBooleanExtension');
+    const onlyBoolean = new OnlyRule('value[x]');
+    onlyBoolean.types.push({ type: 'boolean' });
+    extension.rules.push(onlyBoolean);
+    doc.extensions.set(extension.name, extension);
+    // Profile: ExtensionOnName
+    // Parent: Patient
+    // * name ^extension[MyBooleanExtension].valueBoolean = true
+    const profile = new Profile('ExtensionOnName');
+    profile.parent = 'Patient';
+    const rule = new CaretValueRule('name');
+    rule.caretPath = 'extension[MyBooleanExtension].valueBoolean';
+    rule.value = true;
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+    const name = sd.findElement('Patient.name');
+    expect(name.extension).toEqual([
+      {
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
+        valueBoolean: true
+      }
+    ]);
+  });
 
     it('should not apply an invalid CaretValueRule on an element without a path', () => {
       const profile = new Profile('Foo');
@@ -6428,132 +6567,6 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
-  describe('#Mixins', () => {
-    let profile: Profile;
-    let mixin: RuleSet;
-
-    beforeEach(() => {
-      profile = new Profile('Foo').withFile('Profile.fsh').withLocation([5, 6, 7, 16]);
-      profile.parent = 'Patient';
-      doc.profiles.set(profile.name, profile);
-
-      mixin = new RuleSet('Bar');
-      doc.ruleSets.set(mixin.name, mixin);
-      profile.mixins.push('Bar');
-    });
-
-    it('should apply rules from a single mixin', () => {
-      const nameRule = new CaretValueRule('');
-      nameRule.caretPath = 'title';
-      nameRule.value = 'Wow fancy';
-      mixin.rules.push(nameRule);
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-
-      expect(sd.title).toBe('Wow fancy');
-    });
-
-    it('should apply rules from multiple mixins in the correct order', () => {
-      const nameRule1 = new CaretValueRule('');
-      nameRule1.caretPath = 'title';
-      nameRule1.value = 'Wow fancy';
-      mixin.rules.push(nameRule1);
-
-      const mixin2 = new RuleSet('Baz');
-      doc.ruleSets.set(mixin2.name, mixin2);
-      const nameRule2 = new CaretValueRule('');
-      nameRule2.caretPath = 'title';
-      nameRule2.value = 'Wow fancier title';
-      mixin2.rules.push(nameRule2);
-      profile.mixins.push('Baz');
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-
-      expect(sd.title).toBe('Wow fancier title');
-    });
-
-    it('should emit an error when the path is not found on a mixin rule', () => {
-      const nameRule = new CaretValueRule('fakepath')
-        .withFile('Mixin.fsh')
-        .withLocation([1, 2, 3, 12]);
-      nameRule.caretPath = 'title';
-      nameRule.value = 'Wow fancy';
-      mixin.rules.push(nameRule);
-
-      exporter.exportStructDef(profile);
-
-      expect(loggerSpy.getLastMessage('error')).toMatch(/fakepath/);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Profile\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-
-    it('should emit an error when applying an invalid mixin rule', () => {
-      const cardRule = new CardRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      cardRule.max = '2';
-      cardRule.min = 0;
-      mixin.rules.push(cardRule);
-
-      exporter.exportStructDef(profile);
-
-      expect(loggerSpy.getLastMessage('error')).toMatch(/0\.\.2.* 0\.\.1/);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Profile\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-
-    it('should emit an error when a mixin cannot be found', () => {
-      profile.mixins.push('Barz');
-
-      exporter.exportStructDef(profile);
-
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
-    });
-
-    it('should emit a warning whenever a mixin is used', () => {
-      const nameRule = new CaretValueRule('');
-      nameRule.caretPath = 'title';
-      nameRule.value = 'Wow fancy';
-      mixin.rules.push(nameRule);
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-      // mixins are still applied
-      expect(sd.title).toBe('Wow fancy');
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of the "Mixins" keyword/);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/\* insert Bar/);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
-    });
-
-    it('should emit a warning whenever multiple mixins are used', () => {
-      const nameRule1 = new CaretValueRule('');
-      nameRule1.caretPath = 'title';
-      nameRule1.value = 'Wow fancy';
-      mixin.rules.push(nameRule1);
-
-      const mixin2 = new RuleSet('Baz');
-      doc.ruleSets.set(mixin2.name, mixin2);
-      const nameRule2 = new CaretValueRule('');
-      nameRule2.caretPath = 'title';
-      nameRule2.value = 'Wow fancier title';
-      mixin2.rules.push(nameRule2);
-      profile.mixins.push('Baz');
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-      // mixins are still applied
-      expect(sd.title).toBe('Wow fancier title');
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/Use of the "Mixins" keyword/);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/\* insert Bar.*insert Baz/s);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Profile\.fsh.*Line: 5 - 7\D*/s);
-    });
-  });
-
   describe('#insertRules', () => {
     let profile: Profile;
     let ruleSet: RuleSet;
@@ -6612,5 +6625,78 @@ describe('StructureDefinitionExporter', () => {
         /ConceptRule.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
+  });
+});
+
+describe('StructureDefinitionExporter R5', () => {
+  let defs: FHIRDefinitions;
+  let doc: FSHDocument;
+  let pkg: Package;
+  let exporter: StructureDefinitionExporter;
+
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
+    );
+  });
+
+  beforeEach(() => {
+    doc = new FSHDocument('fileName');
+    const input = new FSHTank([doc], minimalConfig);
+    pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#current', 'r5-definitions');
+    exporter = new StructureDefinitionExporter(input, pkg, fisher);
+    loggerSpy.reset();
+  });
+
+  it('should apply a Reference AssignmentRule and replace the Reference on a CodeableReference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Condition';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new AssignmentRule('addresses.reference');
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addressesReference = sd.findElement('CarePlan.addresses.reference');
+
+    expect(addressesReference.patternReference).toEqual({
+      reference: 'Condition/bar-id'
+    });
+  });
+
+  it('should not apply a Reference AssignmentRule with invalid type constraints on a parent CodeableReference', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new AssignmentRule('addresses.reference');
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addressesReference = sd.findElement('CarePlan.addresses.reference');
+
+    expect(addressesReference.patternReference).toEqual(undefined);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
+    );
   });
 });

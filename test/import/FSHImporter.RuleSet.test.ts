@@ -5,7 +5,8 @@ import {
   assertCardRule,
   assertInsertRule,
   assertValueSetConceptComponent,
-  assertAddElementRule
+  assertAddElementRule,
+  assertCodeCaretRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, ConceptRule } from '../../src/fshtypes/rules';
@@ -132,12 +133,13 @@ describe('FSHImporter', () => {
       });
     });
 
-    it('should parse a RuleSet with rules, ValueSetComponents, and ConceptRules', () => {
+    it('should parse a RuleSet with rules, ValueSetComponents, ConceptRules, and CodeCaretValueRules', () => {
       const input = `
         RuleSet: RuleRuleSet
         * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
         * #bear from system ZOO
         * #lion
+        * #lion ^designation.value = "Watch out for big cat!"
         `;
       const result = importSingleText(input, 'Rules.fsh');
       expect(result.ruleSets.size).toBe(1);
@@ -146,9 +148,10 @@ describe('FSHImporter', () => {
       expect(ruleSet.sourceInfo.location).toEqual({
         startLine: 2,
         startColumn: 9,
-        endLine: 5,
-        endColumn: 15
+        endLine: 6,
+        endColumn: 61
       });
+      expect(ruleSet.rules).toHaveLength(4);
       assertBindingRule(
         ruleSet.rules[0] as Rule,
         'gender',
@@ -162,6 +165,18 @@ describe('FSHImporter', () => {
       expect(concept).toEqual(
         new ConceptRule('lion').withFile('Rules.fsh').withLocation([5, 9, 5, 15])
       );
+      assertCodeCaretRule(
+        ruleSet.rules[3],
+        ['lion'],
+        'designation.value',
+        'Watch out for big cat!'
+      );
+      expect(ruleSet.rules[3].sourceInfo.location).toEqual({
+        startLine: 6,
+        startColumn: 9,
+        endLine: 6,
+        endColumn: 61
+      });
     });
 
     it('should log an error when parsing a mixin with no rules', () => {

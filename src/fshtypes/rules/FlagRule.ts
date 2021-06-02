@@ -1,12 +1,9 @@
 import { Rule } from './Rule';
+import { HasFlags } from '../common';
+import { applyMixins } from '../../utils/Mixin';
 
 export class FlagRule extends Rule {
-  mustSupport: boolean;
-  summary: boolean;
-  modifier: boolean;
-  trialUse: boolean;
-  normative: boolean;
-  draft: boolean;
+  // flags provided by HasFlags mixin
 
   constructor(path: string) {
     super(path);
@@ -15,4 +12,15 @@ export class FlagRule extends Rule {
   get constructorName() {
     return 'FlagRule';
   }
+
+  flagsToString(): string {
+    return this.flags.join(' ');
+  }
+
+  toFSH(): string {
+    return `* ${this.path} ${this.flagsToString()}`;
+  }
 }
+
+export interface FlagRule extends Rule, HasFlags {}
+applyMixins(FlagRule, [HasFlags]);

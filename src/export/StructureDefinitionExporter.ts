@@ -20,7 +20,8 @@ import {
   ParentDeclaredAsNameError,
   ParentDeclaredAsIdError,
   ParentNotDefinedError,
-  ParentNotProvidedError
+  ParentNotProvidedError,
+  MismatchedBindingTypeError
 } from '../errors';
 import {
   AddElementRule,
@@ -33,10 +34,9 @@ import {
   ObeysRule,
   OnlyRule
 } from '../fshtypes/rules';
-import { Fishable, logger, MasterFisher, Metadata, resolveSoftIndexing, Type } from '../utils';
+import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } from '../utils';
 import {
   applyInsertRules,
-  applyMixinRules,
   cleanResource,
   getTypeFromFshDefinitionOrParent,
   getUrlFromFshDefinition,
@@ -44,6 +44,7 @@ import {
   splitOnPathPeriods
 } from '../fhirtypes/common';
 import { Package } from './Package';
+import { isUri } from 'valid-url';
 
 // Extensions that should not be inherited by derived profiles
 // See: https://jira.hl7.org/browse/FHIR-27535
@@ -462,6 +463,10 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainType(rule, this, target);
           } else if (rule instanceof BindingRule) {
             const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
+            const csURI = this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url;
+            if (csURI && !isUri(vsURI)) {
+              throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
+            }
             element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
           } else if (rule instanceof ContainsRule) {
             const isExtension =
@@ -812,21 +817,16 @@ export class StructureDefinitionExporter implements Fishable {
       this.pkg.profiles.push(structDef);
     }
 
-    if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
-      // mixins are deprecated and are only supported in profiles and extensions
-      applyMixinRules(fshDefinition, this.tank);
-    }
     // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
 
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);
-
-    // The elements list does not need to be cleaned up.
+    // The recursive structDef fields on elements should be ignored to avoid infinite looping
     // And, the _sliceName and _primitive properties added by SUSHI should be skipped.
     cleanResource(structDef, (prop: string) =>
-      ['elements', '_sliceName', '_primitive'].includes(prop)
+      ['structDef', '_sliceName', '_primitive'].includes(prop)
     );
     structDef.inProgress = false;
 

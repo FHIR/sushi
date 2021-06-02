@@ -11,13 +11,13 @@ profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name sdMetadata* sdRule*;
 logical:            KW_LOGICAL name sdMetadata* lrRule*;
 resource:           KW_RESOURCE name sdMetadata* lrRule*;
-sdMetadata:         parent | id | title | description | mixins;
-sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule;
+sdMetadata:         parent | id | title | description;
+sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule | pathRule;
 lrRule:             sdRule | addElementRule;
 
 instance:           KW_INSTANCE name instanceMetadata* instanceRule*;
-instanceMetadata:   instanceOf | title | description | usage | mixins;
-instanceRule:       fixedValueRule | insertRule;
+instanceMetadata:   instanceOf | title | description | usage;
+instanceRule:       fixedValueRule | insertRule | pathRule;
 
 invariant:          KW_INVARIANT name invariantMetadata+;
 invariantMetadata:  description | expression | xpath | severity;
@@ -27,10 +27,10 @@ vsMetadata:         id | title | description;
 vsRule:             vsComponent | caretValueRule | insertRule;
 codeSystem:         KW_CODESYSTEM name csMetadata* csRule*;
 csMetadata:         id | title | description;
-csRule:             concept | caretValueRule | insertRule;
+csRule:             concept | codeCaretValueRule | insertRule;
 
 ruleSet:            KW_RULESET RULESET_REFERENCE ruleSetRule+;
-ruleSetRule:        sdRule | concept | vsComponent  | addElementRule;
+ruleSetRule:        sdRule | addElementRule | concept | codeCaretValueRule | vsComponent;
 
 paramRuleSet:       KW_RULESET PARAM_RULESET_REFERENCE paramRuleSetContent;
 paramRuleSetContent:   STAR
@@ -46,7 +46,7 @@ paramRuleSetContent:   STAR
 
 mapping:            KW_MAPPING name mappingMetadata* mappingEntityRule*;
 mappingMetadata:    id | source | target | description | title;
-mappingEntityRule:  mappingRule | insertRule;
+mappingEntityRule:  mappingRule | insertRule | pathRule;
 
 // METADATA FIELDS
 parent:             KW_PARENT name;
@@ -58,52 +58,51 @@ xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF name;
 usage:              KW_USAGE CODE;
-mixins:             KW_MIXINS ((name KW_AND)* name | COMMA_DELIMITED_SEQUENCES); // deprecated
 source:             KW_SOURCE name;
 target:             KW_TARGET STRING;
 
 
 // RULES
 cardRule:           STAR path CARD flag*;
-flagRule:           STAR ((path KW_AND)* path | paths) flag+;
-valueSetRule:       STAR path KW_UNITS? KW_FROM name strength?;
-fixedValueRule:     STAR path KW_UNITS? EQUAL value KW_EXACTLY?;
+flagRule:           STAR path (KW_AND path)* flag+;
+valueSetRule:       STAR path KW_FROM name strength?;
+fixedValueRule:     STAR path EQUAL value KW_EXACTLY?;
 containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS name (KW_AND name)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
+codeCaretValueRule: STAR CODE* caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 insertRule:         STAR KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
 addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING (STRING | MULTILINE_STRING)?;
+pathRule:           STAR path;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );
 vsConceptComponent: code vsComponentFrom?
-                    | (code KW_AND)+ code vsComponentFrom
-                    | COMMA_DELIMITED_CODES vsComponentFrom;
+                    | (code KW_AND)+ code vsComponentFrom;
 vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
 vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValueset (KW_AND vsFromSystem)?);
 vsFromSystem:       KW_SYSTEM name;
-vsFromValueset:     KW_VSREFERENCE ((name KW_AND)* name | COMMA_DELIMITED_SEQUENCES);
-vsFilterList:       (vsFilterDefinition KW_AND)* vsFilterDefinition;
+vsFromValueset:     KW_VSREFERENCE name (KW_AND name)*;
+vsFilterList:       vsFilterDefinition (KW_AND vsFilterDefinition);
 vsFilterDefinition: name vsFilterOperator vsFilterValue?;
 vsFilterOperator:   EQUAL | SEQUENCE;
 vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 
 // MISC
-name:               SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM | KW_UNITS;
+name:               SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM;
 path:               SEQUENCE | KW_SYSTEM;
-paths:              COMMA_DELIMITED_SEQUENCES;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
 value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | reference | canonical | code | quantity | ratio | bool | name;
 item:               name (KW_NAMED name)? CARD flag*;
 code:               CODE STRING?;
-concept:            STAR code (STRING | MULTILINE_STRING)?;
+concept:            STAR CODE+ STRING? (STRING | MULTILINE_STRING)?;
 quantity:           NUMBER (UNIT | CODE) STRING?;
 ratio:              ratioPart COLON ratioPart;
-reference:          (OR_REFERENCE | PIPE_REFERENCE) STRING?;
+reference:          REFERENCE STRING?;
 referenceType:      OR_REFERENCE | PIPE_REFERENCE;
 canonical:          CANONICAL;
 ratioPart:          NUMBER | quantity;

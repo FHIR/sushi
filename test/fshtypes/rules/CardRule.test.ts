@@ -10,4 +10,29 @@ describe('CardRule', () => {
       expect(c.max).toBeUndefined();
     });
   });
+
+  describe('#toFSH', () => {
+    it('should produce FSH for a CardRule with a min and a max', () => {
+      const rule = new CardRule('name');
+      rule.min = 2;
+      rule.max = '8';
+
+      expect(rule.toFSH()).toBe('* name 2..8');
+    });
+
+    it('should produce FSH for a CardRule with only a min', () => {
+      const rule = new CardRule('photo');
+      rule.min = 3;
+
+      expect(rule.toFSH()).toBe('* photo 3..');
+    });
+
+    it('should produce FSH for a CardRule with only a max', () => {
+      const rule = new CardRule('contact');
+      rule.min = NaN; // the importer sets min to a result from parseInt, which may be NaN
+      rule.max = '5';
+
+      expect(rule.toFSH()).toBe('* contact ..5');
+    });
+  });
 });

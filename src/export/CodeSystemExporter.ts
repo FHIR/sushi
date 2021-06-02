@@ -2,10 +2,11 @@ import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
-import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
+import { CaretValueRule, ConceptRule, CodeCaretValueRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
 import { Package } from '.';
+import { CannotResolvePathError } from '../errors';
 
 export class CodeSystemExporter {
   constructor(
@@ -26,24 +27,66 @@ export class CodeSystemExporter {
 
   private setConcepts(codeSystem: CodeSystem, concepts: ConceptRule[]): void {
     if (concepts.length > 0) {
-      codeSystem.concept = concepts.map(concept => {
-        const codeSystemConcept: CodeSystemConcept = { code: concept.code };
-        if (concept.display) codeSystemConcept.display = concept.display;
-        if (concept.definition) codeSystemConcept.definition = concept.definition;
-        return codeSystemConcept;
+      codeSystem.concept = [];
+      concepts.forEach(concept => {
+        let conceptContainer = codeSystem.concept;
+        const newConcept: CodeSystemConcept = { code: concept.code };
+        if (concept.display) {
+          newConcept.display = concept.display;
+        }
+        if (concept.definition) {
+          newConcept.definition = concept.definition;
+        }
+        for (const ancestorCode of concept.hierarchy) {
+          const ancestorConcept = conceptContainer.find(
+            ancestorConcept => ancestorConcept.code === ancestorCode
+          );
+          if (ancestorConcept) {
+            if (!ancestorConcept.concept) {
+              ancestorConcept.concept = [];
+            }
+            conceptContainer = ancestorConcept.concept;
+          } else {
+            logger.error(
+              `Could not find ${ancestorCode} in concept hierarchy to use as ancestor of ${concept.code}.`,
+              concept.sourceInfo
+            );
+            return;
+          }
+        }
+        conceptContainer.push(newConcept);
       });
     }
   }
 
-  private setCaretRules(codeSystem: CodeSystem, rules: CaretValueRule[]): void {
-    const csStructureDefinition = StructureDefinition.fromJSON(
-      this.fisher.fishForFHIR('CodeSystem', Type.Resource)
-    );
-    resolveSoftIndexing(rules);
-    for (const rule of rules) {
+  private setCaretPathRules(
+    codeSystem: CodeSystem,
+    csStructureDefinition: StructureDefinition,
+    rules: (CaretValueRule | CodeCaretValueRule)[]
+  ) {
+    // soft index resolution relies on the rule's path attribute.
+    // a CodeCaretValueRule is created with an empty path, so first
+    // transform its codePath into a path.
+    // Because this.findConceptPath can potentially throw an error,
+    // build a list of successful rules that will actually be applied.
+    const successfulRules: (CaretValueRule | CodeCaretValueRule)[] = [];
+    rules.forEach(rule => {
+      try {
+        if (rule instanceof CodeCaretValueRule) {
+          rule.path = this.findConceptPath(codeSystem, rule.codePath);
+          successfulRules.push(rule);
+        } else {
+          successfulRules.push(rule);
+        }
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
+      }
+    });
+    resolveSoftIndexing(successfulRules);
+    for (const rule of successfulRules) {
       try {
         const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-          rule.caretPath,
+          rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
           rule.value,
           this.fisher
         );
@@ -54,10 +97,37 @@ export class CodeSystemExporter {
     }
   }
 
+  private findConceptPath(codeSystem: CodeSystem, codePath: string[]): string {
+    const conceptIndices: number[] = [];
+    let conceptList = codeSystem.concept ?? [];
+    for (const codeStep of codePath) {
+      const stepIndex = conceptList.findIndex(concept => concept.code === codeStep);
+      if (stepIndex === -1) {
+        throw new CannotResolvePathError(codePath.map(code => `#${code}`).join(' '));
+      }
+      conceptIndices.push(stepIndex);
+      conceptList = conceptList[stepIndex].concept ?? [];
+    }
+    return conceptIndices.map(conceptIndex => `concept[${conceptIndex}]`).join('.');
+  }
+
+  private countConcepts(concepts: CodeSystemConcept[]): number {
+    if (concepts) {
+      return (
+        concepts.length +
+        concepts
+          .map(concept => this.countConcepts(concept.concept))
+          .reduce((sum, next) => sum + next, 0)
+      );
+    } else {
+      return 0;
+    }
+  }
+
   private updateCount(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
     // We can only derive a true count if the content is #complete
     if (codeSystem.content === 'complete') {
-      const actualCount = codeSystem.concept?.length;
+      const actualCount = this.countConcepts(codeSystem.concept) || undefined;
       if (codeSystem.count == null && actualCount != null) {
         codeSystem.count = actualCount;
       } else if (codeSystem.count !== actualCount) {
@@ -85,13 +155,19 @@ export class CodeSystemExporter {
     this.setMetadata(codeSystem, fshDefinition);
     // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
     applyInsertRules(fshDefinition, this.tank);
-    this.setCaretRules(
-      codeSystem,
-      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
+    const csStructureDefinition = StructureDefinition.fromJSON(
+      this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
     this.setConcepts(
       codeSystem,
       fshDefinition.rules.filter(rule => rule instanceof ConceptRule) as ConceptRule[]
+    );
+    this.setCaretPathRules(
+      codeSystem,
+      csStructureDefinition,
+      fshDefinition.rules.filter(
+        rule => rule instanceof CaretValueRule || rule instanceof CodeCaretValueRule
+      ) as (CaretValueRule | CodeCaretValueRule)[]
     );
 
     // check for another code system with the same id

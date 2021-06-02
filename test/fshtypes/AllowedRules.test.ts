@@ -213,7 +213,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(m, new MappingRule('foo'))).toBeTrue();
     });
 
-    it('should not allow invalid rules on a Maping', () => {
+    it('should not allow invalid rules on a Mapping', () => {
       expect(isAllowedRule(m, new CaretValueRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new AssignmentRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new ConceptRule('foo'))).toBeFalse();

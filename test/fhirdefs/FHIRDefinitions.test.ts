@@ -2,7 +2,7 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import path from 'path';
 import { Type } from '../../src/utils/Fishable';
-import { TestFisher } from '../testhelpers';
+import { TestFisher, loggerSpy } from '../testhelpers';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
@@ -13,6 +13,14 @@ describe('FHIRDefinitions', () => {
       'test#1.1.1',
       defs
     );
+    // Supplemental R3 defs needed to test fishing for implied extensions
+    const r3Defs = new FHIRDefinitions(true);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r3-definitions'),
+      'hl7.fhir.r3.core#3.0.2',
+      r3Defs
+    );
+    defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
     // Run the dependency resources through TestFisher to force them into the testhelpers cache
     const fisher = new TestFisher().withFHIR(defs);
     fisher.fishForFHIR('Condition');
@@ -28,6 +36,7 @@ describe('FHIRDefinitions', () => {
 
   beforeEach(() => {
     defs.resetPredefinedResources();
+    loggerSpy.reset();
   });
 
   describe('#fishForFHIR()', () => {
@@ -97,6 +106,38 @@ describe('FHIRDefinitions', () => {
           Type.Extension
         )
       ).toEqual(maidenNameExtensionByID);
+    });
+
+    it('should find implied extensions from other versions of FHIR', () => {
+      // See: http://hl7.org/fhir/versions.html#extensions
+      const patientAnimalExtensionSTU3 = defs.fishForFHIR(
+        'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal',
+        Type.Extension
+      );
+      // Just do a spot check as the detailed behavior is tested in the implied extension tests.
+      expect(patientAnimalExtensionSTU3).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-Patient.animal',
+        url: 'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal',
+        version: '3.0.2',
+        name: 'Extension_Patient_animal',
+        title: 'Implied extension for Patient.animal',
+        description: 'Implied extension for Patient.animal',
+        fhirVersion: '4.0.1'
+      });
+      const diffRoot = patientAnimalExtensionSTU3.differential?.element?.[0];
+      expect(diffRoot.short).toEqual('This patient is known to be an animal (non-human)');
+    });
+
+    it('should not find implied extensions for versions of FHIR that are not loaded', () => {
+      const patientAnimalExtensionDSTU2 = defs.fishForFHIR(
+        'http://hl7.org/fhir/1.0/StructureDefinition/extension-Patient.animal',
+        Type.Extension
+      );
+      expect(patientAnimalExtensionDSTU2).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Patient\.animal requires/
+      );
     });
 
     it('should find base FHIR value sets', () => {
@@ -816,6 +857,28 @@ describe('FHIRDefinitions', () => {
       });
       const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
       expect(predefinedCondition.id).toBe('Condition');
+    });
+  });
+
+  describe('#supplementalFHIRPackages', () => {
+    it('should list no supplemental FHIR packages when none have been loaded', () => {
+      const defs = new FHIRDefinitions();
+      expect(defs.supplementalFHIRPackages).toEqual([]);
+    });
+
+    it('should list loaded supplemental FHIR packages', () => {
+      const defs = new FHIRDefinitions();
+      // normally the loader would maintain the package array, but since we're not using the loader, we need to populate it here
+      const r3 = new FHIRDefinitions(true);
+      r3.packages.push('hl7.fhir.r3.core#3.0.2');
+      const r5 = new FHIRDefinitions(true);
+      r5.packages.push('hl7.fhir.r5.core#current');
+      defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
+      defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#current', r5);
+      expect(defs.supplementalFHIRPackages).toEqual([
+        'hl7.fhir.r3.core#3.0.2',
+        'hl7.fhir.r5.core#current'
+      ]);
     });
   });
 });

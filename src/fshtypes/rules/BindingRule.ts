@@ -11,4 +11,8 @@ export class BindingRule extends Rule {
   get constructorName() {
     return 'BindingRule';
   }
+
+  toFSH(): string {
+    return `* ${this.path} from ${this.valueSet} (${this.strength})`;
+  }
 }

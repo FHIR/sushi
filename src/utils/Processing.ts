@@ -2,12 +2,19 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
-import { logger } from './FSHLogger';
-import { loadDependency } from '../fhirdefs/load';
-import { FHIRDefinitions } from '../fhirdefs';
-import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
-import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
+import { isPlainObject, cloneDeep, padEnd, sortBy } from 'lodash';
+import { EOL } from 'os';
+import { logger } from './FSHLogger';
+import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
+import {
+  FSHTank,
+  RawFSH,
+  importText,
+  ensureConfiguration,
+  importConfiguration,
+  loadConfigurationFromIgResource
+} from '../import';
 import { Package } from '../export';
 import {
   filterInlineInstances,
@@ -20,8 +27,13 @@ import {
   filterProfileInstances
 } from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
-import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
-import { isPlainObject } from 'lodash';
+
+const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
+  'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
+  'hl7.fhir.extensions.r3': 'hl7.fhir.r3.core#3.0.2',
+  'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
+  'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#current'
+};
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -40,6 +52,7 @@ export function ensureInputDir(input: string): string {
 
 export function hasFshFiles(path: string): boolean {
   try {
+    fs.statSync(path);
     const files = getFilesRecursive(path).filter(file => file.endsWith('.fsh'));
     return files.length > 0;
   } catch (error) {
@@ -172,10 +185,10 @@ export function readConfig(input: string, isLegacyIgPubContext: boolean): Config
   return config;
 }
 
-export function loadExternalDependencies(
+export async function loadExternalDependencies(
   defs: FHIRDefinitions,
   config: Configuration
-): Promise<FHIRDefinitions | void>[] {
+): Promise<void> {
   // Add FHIR to the dependencies so it is loaded
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
   const fhirVersion = config.fhirVersion.find(v => isSupportedFHIRVersion(v));
@@ -188,8 +201,7 @@ export function loadExternalDependencies(
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
 
   // Load dependencies
-  const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
-  for (const dep of dependencies) {
+  const promises = dependencies.map(dep => {
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
@@ -202,24 +214,36 @@ export function loadExternalDependencies(
           `    uri: ${dep.uri ?? 'http://my-fhir-ig.org/ImplementationGuide/123'}\n` +
           '    version: current'
       );
-      continue;
+      return Promise.resolve();
+    } else if (EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]) {
+      // It is a special "virtual" FHIR extensions package indicating we need to load supplemental
+      // FHIR versions to support "implied extensions".
+      if (dep.version !== fhirVersion) {
+        logger.warn(
+          `Incorrect package version: ${dep.packageId}#${dep.version}. FHIR extensions packages ` +
+            "should use the same version as the implementation guide's fhirVersion. Version " +
+            `${fhirVersion} will be used instead. Update the dependency version in ` +
+            'sushi-config.yaml to eliminate this warning.'
+        );
+      }
+      logger.info(
+        `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
+      );
+      return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
+    } else {
+      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+        logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
+      });
     }
-    dependencyDefs.push(
-      loadDependency(dep.packageId, dep.version, defs)
-        .then(def => {
-          return def;
-        })
-        .catch(e => {
-          logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
-        })
-    );
-  }
-  return dependencyDefs;
+  });
+
+  return Promise.all(promises).then(() => {});
 }
 
 export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
   try {
+    fs.statSync(input);
     files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');
@@ -363,6 +387,48 @@ export function writeFHIRResources(
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 }
 
+export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTank) {
+  const preprocessedPath = path.join(outDir, '_preprocessed');
+  fs.ensureDirSync(preprocessedPath);
+  // Because this is the FSH that exists after processing, some entities from the original FSH are gone.
+  // Specifically, RuleSets have already been applied.
+  // Aliases have already been resolved for most cases, but since they may still
+  // be used in a slice name, they are included.
+  // TODO: Add Resources and Logicals once they are being imported and stored in docs
+  tank.docs.forEach(doc => {
+    let fileContent = '';
+    // First, get all Aliases. They don't have source information.
+    if (doc.aliases.size > 0) {
+      doc.aliases.forEach((url, alias) => {
+        fileContent += `Alias: ${alias} = ${url}${EOL}`;
+      });
+      fileContent += EOL;
+    }
+    // Then, get all other applicable entities. They will have source information.
+    const entities = [
+      ...doc.profiles.values(),
+      ...doc.extensions.values(),
+      ...doc.instances.values(),
+      ...doc.valueSets.values(),
+      ...doc.codeSystems.values(),
+      ...doc.invariants.values(),
+      ...doc.mappings.values()
+    ];
+    // Sort entities by original line number, then write them out.
+    sortBy(entities, 'sourceInfo.location.startLine').forEach(entity => {
+      fileContent += `// Originally defined on lines ${entity.sourceInfo.location.startLine} - ${entity.sourceInfo.location.endLine}${EOL}`;
+      fileContent += `${entity.toFSH()}${EOL}${EOL}`;
+    });
+    if (fileContent.length === 0) {
+      fileContent = '// This file has no content after preprocessing.';
+    }
+    const outPath = path.relative(inDir, doc.file);
+    fs.ensureFileSync(path.join(preprocessedPath, outPath));
+    fs.writeFileSync(path.join(preprocessedPath, outPath), fileContent);
+  });
+  logger.info(`Wrote preprocessed FSH to ${preprocessedPath}`);
+}
+
 /**
  * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
  */
@@ -464,10 +530,16 @@ export async function init(): Promise<void> {
 }
 
 function getFilesRecursive(dir: string): string[] {
-  if (fs.statSync(dir).isDirectory()) {
-    const ancestors = fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f)));
-    return [].concat(...ancestors);
-  } else {
-    return [dir];
+  try {
+    if (fs.statSync(dir).isDirectory()) {
+      const descendants = fs
+        .readdirSync(dir, 'utf8')
+        .map(f => getFilesRecursive(path.join(dir, f)));
+      return [].concat(...descendants);
+    } else {
+      return [dir];
+    }
+  } catch {
+    return [];
   }
 }

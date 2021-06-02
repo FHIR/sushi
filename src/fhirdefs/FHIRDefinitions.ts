@@ -1,5 +1,6 @@
-import { Type, Metadata, Fishable } from '../utils/Fishable';
-import cloneDeep from 'lodash/cloneDeep';
+import { Type, Metadata, Fishable } from '../utils';
+import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
+import { cloneDeep, flatten } from 'lodash';
 import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
 
 export class FHIRDefinitions implements Fishable {
@@ -12,9 +13,10 @@ export class FHIRDefinitions implements Fishable {
   private codeSystems: Map<string, any>;
   private implementationGuides: Map<string, any>;
   private predefinedResources: Map<string, any>;
+  private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
   packages: string[];
 
-  constructor() {
+  constructor(public readonly isSupplementalFHIRDefinitions = false) {
     this.packages = [];
     this.resources = new Map();
     this.logicals = new Map();
@@ -30,6 +32,13 @@ export class FHIRDefinitions implements Fishable {
     // We have defined a "placeholder" StructureDefinition for "Base" for R4.
     // Inject the R4 "Base" placeholder StructureDefinition
     this.add(STRUCTURE_DEFINITION_R4_BASE);
+  }
+
+  // This getter is only used in tests to verify what supplemental packages are loaded
+  get supplementalFHIRPackages(): string[] {
+    return flatten(
+      Array.from(this.supplementalFHIRDefinitions.values()).map(defs => defs.packages)
+    );
   }
 
   size(): number {
@@ -84,10 +93,13 @@ export class FHIRDefinitions implements Fishable {
   }
 
   add(definition: any): void {
+    // For supplemental FHIR versions, we only care about resources and types,
+    // but for normal packages, we care about everything.
     if (definition.resourceType === 'StructureDefinition') {
       if (
         definition.type === 'Extension' &&
-        definition.baseDefinition !== 'http://hl7.org/fhir/StructureDefinition/Element'
+        definition.baseDefinition !== 'http://hl7.org/fhir/StructureDefinition/Element' &&
+        !this.isSupplementalFHIRDefinitions
       ) {
         addDefinitionToMap(definition, this.extensions);
       } else if (
@@ -98,18 +110,23 @@ export class FHIRDefinitions implements Fishable {
         addDefinitionToMap(definition, this.types);
       } else if (definition.kind === 'resource') {
         if (definition.derivation === 'constraint') {
-          addDefinitionToMap(definition, this.profiles);
+          if (!this.isSupplementalFHIRDefinitions) {
+            addDefinitionToMap(definition, this.profiles);
+          }
         } else {
           addDefinitionToMap(definition, this.resources);
         }
       } else if (definition.kind === 'logical') {
         addDefinitionToMap(definition, this.logicals);
       }
-    } else if (definition.resourceType === 'ValueSet') {
+    } else if (definition.resourceType === 'ValueSet' && !this.isSupplementalFHIRDefinitions) {
       addDefinitionToMap(definition, this.valueSets);
-    } else if (definition.resourceType === 'CodeSystem') {
+    } else if (definition.resourceType === 'CodeSystem' && !this.isSupplementalFHIRDefinitions) {
       addDefinitionToMap(definition, this.codeSystems);
-    } else if (definition.resourceType === 'ImplementationGuide') {
+    } else if (
+      definition.resourceType === 'ImplementationGuide' &&
+      !this.isSupplementalFHIRDefinitions
+    ) {
       addDefinitionToMap(definition, this.implementationGuides);
     }
   }
@@ -124,6 +141,14 @@ export class FHIRDefinitions implements Fishable {
 
   resetPredefinedResources() {
     this.predefinedResources = new Map();
+  }
+
+  addSupplementalFHIRDefinitions(fhirPackage: string, definitions: FHIRDefinitions): void {
+    this.supplementalFHIRDefinitions.set(fhirPackage, definitions);
+  }
+
+  getSupplementalFHIRDefinitions(fhirPackage: string): FHIRDefinitions {
+    return this.supplementalFHIRDefinitions.get(fhirPackage);
   }
 
   fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
@@ -200,6 +225,10 @@ export class FHIRDefinitions implements Fishable {
       if (def) {
         return def;
       }
+    }
+    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
+    if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      return materializeImpliedExtension(item, this);
     }
   }
 

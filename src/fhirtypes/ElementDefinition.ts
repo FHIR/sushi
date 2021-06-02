@@ -9,11 +9,12 @@ import {
   uniqWith,
   upperFirst
 } from 'lodash';
+import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
-import { FshCanonical, FshCode, FshQuantity, FshRatio, FshReference, Invariant } from '../fshtypes';
+import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
 import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
   AssignmentToCodeableReferenceError,
@@ -43,13 +44,16 @@ import {
   ValueConflictsWithClosedSlicingError,
   WideningCardinalityError,
   InvalidChoiceTypeRulePathError,
-  CannotResolvePathError
+  CannotResolvePathError,
+  MismatchedBindingTypeError
 } from '../errors';
-import { isReferenceType, setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
-import { Fishable, logger, Metadata, Type } from '../utils';
+import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
+import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
 import sax = require('sax');
+const PROFILE_ELEMENT_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -115,6 +119,7 @@ export class ElementDefinitionType {
     elDefType.aggregation = json.aggregation;
     elDefType.versioning = json.versioning;
     elDefType.extension = json.extension;
+
     return elDefType;
   }
 }
@@ -968,11 +973,13 @@ export class ElementDefinition {
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
-        // Look for exact match on the code (w/ no profile) or a match on the same base type with
+        // Look for exact match on the code (w/ no profile) or a match on an allowed base type with
         // a matching profile
         matchedType = targetTypes.find(t2 => {
           const matchesUnprofiledResource = t2.code === md.id && isEmpty(t2.profile);
-          const matchesProfile = t2.code === md.sdType && t2.profile?.includes(md.url);
+          const matchesProfile =
+            this.getTypeLineage(md.sdType, fisher).some(ancestor => ancestor.sdType === t2.code) &&
+            t2.profile?.includes(md.url);
           let matchesLogicalType = false;
           if (this.structDef.kind === 'logical') {
             matchesLogicalType = t2.code && t2.code === md.sdType;
@@ -1782,8 +1789,14 @@ export class ElementDefinition {
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
   private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
-    if (code.system && !isUri(code.system.split('|')[0])) {
-      throw new InvalidUriError(code.system);
+    if (code.system) {
+      const csURI = code.system.split('|')[0];
+      const vsURI = fisher?.fishForMetadata(code.system, Type.ValueSet)?.url ?? '';
+      if (vsURI) {
+        throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
+      } else if (!isUri(csURI)) {
+        throw new InvalidUriError(code.system);
+      }
     }
 
     const type = this.type[0].code;
@@ -1951,24 +1964,29 @@ export class ElementDefinition {
     ) {
       let newElements: ElementDefinition[] = [];
       if (this.contentReference) {
-        // TODO: Implement recursive constraints once the approach is better clarified.
-        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Clarification.20on.20contentReference
-
         // Get the original resource JSON so we unfold unconstrained reference
         const type = this.structDef.type;
         const json = fisher.fishForFHIR(type, Type.Resource);
-        if (json) {
+        // contentReference elements will not contain a type field, so we must fish for the StructDef and
+        // check the differential
+        const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
+        if (profileJson && this.hasProfileElementExtension(profileJson)) {
+          const def = this.structDef;
+          // Content references start with #, slice that off to get the id of referenced element
+          const contentRefId = this.getContentReferenceId();
+          const referencedElement = def.findElement(contentRefId);
+          newElements = this.cloneChildren(referencedElement);
+          if (newElements.length > 0) {
+            // If we successfully unfolded, this element is no longer a content reference
+            this.type = referencedElement.type;
+            delete this.contentReference;
+          }
+        } else if (json) {
           const def = StructureDefinition.fromJSON(json);
           // Content references start with #, slice that off to id of referenced element
           const contentRefId = this.getContentReferenceId();
           const referencedElement = def.findElement(contentRefId);
-          newElements = referencedElement?.children().map(e => {
-            const eClone = e.clone();
-            eClone.id = eClone.id.replace(referencedElement.id, this.id);
-            eClone.structDef = this.structDef;
-            eClone.captureOriginal();
-            return eClone;
-          });
+          newElements = this.cloneChildren(referencedElement);
           if (newElements.length > 0) {
             // If we successfully unfolded, this element is no longer a content reference
             this.type = referencedElement.type;
@@ -1978,13 +1996,7 @@ export class ElementDefinition {
       } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
-        newElements = slicedElement.children().map(e => {
-          const eClone = e.clone();
-          eClone.id = eClone.id.replace(slicedElement.id, this.id);
-          eClone.structDef = this.structDef;
-          eClone.captureOriginal();
-          return eClone;
-        });
+        newElements = this.cloneChildren(slicedElement);
       }
       if (newElements.length === 0) {
         // If it has a profile, use that, otherwise use the code
@@ -2019,6 +2031,80 @@ export class ElementDefinition {
       }
     }
     return [];
+  }
+
+  /**
+   * Returns an array of an ElementDefinition's unfolded children.
+   * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
+   * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
+   * the original property re-captured.
+   */
+  private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
+    return targetElement?.children().map(e => {
+      const eClone = e.clone();
+      eClone.id = eClone.id.replace(targetElement.id, this.id);
+      eClone.structDef = this.structDef;
+      eClone.captureOriginal();
+      return eClone;
+    });
+  }
+
+  /**
+   * Checks a StructureDefinition's differential to determine if the profile element extension has been used on
+   * an element.
+   * @param {Object} profileJson - The json representation of this ElementDefinition's structDef
+   * @returns {boolean} True if the profile element extension is found on this elements profile property, false
+   * if the extension is not found
+   */
+  private hasProfileElementExtension(profileJson: any): boolean {
+    const elementName = this.getContentReferenceId();
+
+    const elementType = profileJson.differential.element.find(
+      (element: any) => element.id === elementName
+    )?.type?.[0];
+
+    // If the type property is not present in the differential, the profile-element extension is not present
+    if (!elementType) {
+      return false;
+    }
+
+    let profileCanonical, extensionUrl, targetElement: string;
+
+    // If the profile and _profile arrays are not present, the profile-element extension is not present
+    if (elementType.profile && elementType._profile) {
+      const profileIndex = elementType._profile.findIndex(
+        (profile: any) =>
+          profile &&
+          profile.extension.some(
+            (extension: any) =>
+              extension.hasOwnProperty('url') &&
+              extension.hasOwnProperty('valueString') &&
+              extension.url === PROFILE_ELEMENT_EXTENSION
+          )
+      );
+
+      if (profileIndex === -1) {
+        return false;
+      }
+
+      const extensionIndex = elementType._profile[profileIndex].extension?.findIndex(
+        (extensionObj: any) =>
+          extensionObj.hasOwnProperty('url') &&
+          extensionObj.hasOwnProperty('valueString') &&
+          extensionObj.url === PROFILE_ELEMENT_EXTENSION
+      );
+      extensionUrl = elementType._profile[profileIndex].extension[extensionIndex].url;
+      targetElement = elementType._profile[profileIndex].extension[extensionIndex].valueString;
+      profileCanonical = elementType.profile[profileIndex];
+    } else {
+      return false;
+    }
+
+    return (
+      profileCanonical === this.structDef.url &&
+      extensionUrl === PROFILE_ELEMENT_EXTENSION &&
+      targetElement === elementName
+    );
   }
 
   private getContentReferenceId(): string | undefined {
