@@ -2317,13 +2317,13 @@ describe('FSHImporter', () => {
     // These rules are shared across these StructureDefinition entities:
     //   Resource, Logical
     describe('#addElementRule', () => {
-      it('should parse basic addElement rules', () => {
+      it('should parse basic addElement rules with defaulted definition', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean 
-        * stuff 0..* string
-        * address 1..* Address
-        * person 0..1 Reference(Patient)
+        * isValid 1..1 boolean "short boolean" 
+        * stuff 0..* string "short string"
+        * address 1..* Address "short Address"
+        * person 0..1 Reference(Patient) "short Reference"
         `;
 
         const result = importSingleText(input);
@@ -2331,29 +2331,67 @@ describe('FSHImporter', () => {
         expect(resource.rules).toHaveLength(4);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
-          types: [{ type: 'boolean' }]
+          types: [{ type: 'boolean' }],
+          defs: { short: 'short boolean', definition: 'short boolean' }
         });
         assertAddElementRule(resource.rules[1], 'stuff', {
           card: { min: 0, max: '*' },
-          types: [{ type: 'string' }]
+          types: [{ type: 'string' }],
+          defs: { short: 'short string', definition: 'short string' }
         });
         assertAddElementRule(resource.rules[2], 'address', {
           card: { min: 1, max: '*' },
-          types: [{ type: 'Address' }]
+          types: [{ type: 'Address' }],
+          defs: { short: 'short Address', definition: 'short Address' }
         });
         assertAddElementRule(resource.rules[3], 'person', {
           card: { min: 0, max: '1' },
-          types: [{ type: 'Patient', isReference: true }]
+          types: [{ type: 'Patient', isReference: true }],
+          defs: { short: 'short Reference', definition: 'short Reference' }
+        });
+      });
+
+      it('should parse basic addElement rules with specified definition', () => {
+        const input = `
+        Resource: TestResource
+        * isValid 1..1 boolean "short boolean" "definition boolean" 
+        * stuff 0..* string "short string" "definition string"
+        * address 1..* Address "short Address" "definition Address"
+        * person 0..1 Reference(Patient) "short Reference" "definition Reference"
+        `;
+
+        const result = importSingleText(input);
+        const resource = result.resources.get('TestResource');
+        expect(resource.rules).toHaveLength(4);
+        assertAddElementRule(resource.rules[0], 'isValid', {
+          card: { min: 1, max: '1' },
+          types: [{ type: 'boolean' }],
+          defs: { short: 'short boolean', definition: 'definition boolean' }
+        });
+        assertAddElementRule(resource.rules[1], 'stuff', {
+          card: { min: 0, max: '*' },
+          types: [{ type: 'string' }],
+          defs: { short: 'short string', definition: 'definition string' }
+        });
+        assertAddElementRule(resource.rules[2], 'address', {
+          card: { min: 1, max: '*' },
+          types: [{ type: 'Address' }],
+          defs: { short: 'short Address', definition: 'definition Address' }
+        });
+        assertAddElementRule(resource.rules[3], 'person', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Patient', isReference: true }],
+          defs: { short: 'short Reference', definition: 'definition Reference' }
         });
       });
 
       it('should parse addElement rules with multiple targetTypes', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean or number
-        * stuff 0..* string or markdown
-        * address 1..* Address
-        * person 0..1 HumanName or Reference(Patient or RelatedPerson)
+        * isValid 1..1 boolean or number "short boolean"
+        * stuff 0..* string or markdown "short string"
+        * address 1..* Address "short Address"
+        * person 0..1 HumanName or Reference(Patient or RelatedPerson) "short multi-type"
         `;
 
         const result = importSingleText(input);
@@ -2361,15 +2399,18 @@ describe('FSHImporter', () => {
         expect(resource.rules).toHaveLength(4);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
-          types: [{ type: 'boolean' }, { type: 'number' }]
+          types: [{ type: 'boolean' }, { type: 'number' }],
+          defs: { short: 'short boolean', definition: 'short boolean' }
         });
         assertAddElementRule(resource.rules[1], 'stuff', {
           card: { min: 0, max: '*' },
-          types: [{ type: 'string' }, { type: 'markdown' }]
+          types: [{ type: 'string' }, { type: 'markdown' }],
+          defs: { short: 'short string', definition: 'short string' }
         });
         assertAddElementRule(resource.rules[2], 'address', {
           card: { min: 1, max: '*' },
-          types: [{ type: 'Address' }]
+          types: [{ type: 'Address' }],
+          defs: { short: 'short Address', definition: 'short Address' }
         });
         assertAddElementRule(resource.rules[3], 'person', {
           card: { min: 0, max: '1' },
@@ -2377,17 +2418,18 @@ describe('FSHImporter', () => {
             { type: 'HumanName', isReference: false },
             { type: 'Patient', isReference: true },
             { type: 'RelatedPerson', isReference: true }
-          ]
+          ],
+          defs: { short: 'short multi-type', definition: 'short multi-type' }
         });
       });
 
       it('should parse addElement rules with flags', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 MS ?! boolean 
-        * stuff 0..* MS SU string
-        * address 1..* N Address
-        * person 0..1 D TU Reference(Patient)
+        * isValid 1..1 MS ?! boolean "short boolean" 
+        * stuff 0..* MS SU string "short string"
+        * address 1..* N Address "short Address"
+        * person 0..1 D TU Reference(Patient) "short Reference"
         `;
 
         const result = importSingleText(input);
@@ -2396,22 +2438,26 @@ describe('FSHImporter', () => {
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           flags: { mustSupport: true, modifier: true },
-          types: [{ type: 'boolean' }]
+          types: [{ type: 'boolean' }],
+          defs: { short: 'short boolean', definition: 'short boolean' }
         });
         assertAddElementRule(resource.rules[1], 'stuff', {
           card: { min: 0, max: '*' },
           flags: { mustSupport: true, summary: true },
-          types: [{ type: 'string' }]
+          types: [{ type: 'string' }],
+          defs: { short: 'short string', definition: 'short string' }
         });
         assertAddElementRule(resource.rules[2], 'address', {
           card: { min: 1, max: '*' },
           flags: { normative: true },
-          types: [{ type: 'Address' }]
+          types: [{ type: 'Address' }],
+          defs: { short: 'short Address', definition: 'short Address' }
         });
         assertAddElementRule(resource.rules[3], 'person', {
           card: { min: 0, max: '1' },
           flags: { draft: true, trialUse: true },
-          types: [{ type: 'Patient', isReference: true }]
+          types: [{ type: 'Patient', isReference: true }],
+          defs: { short: 'short Reference', definition: 'short Reference' }
         });
       });
 
@@ -2431,7 +2477,7 @@ describe('FSHImporter', () => {
           card: { min: 1, max: '1' },
           flags: { mustSupport: true },
           types: [{ type: 'boolean' }],
-          defs: { short: 'is it valid?' }
+          defs: { short: 'is it valid?', definition: 'is it valid?' }
         });
         assertAddElementRule(resource.rules[1], 'stuff', {
           card: { min: 0, max: '*' },
@@ -2455,10 +2501,10 @@ describe('FSHImporter', () => {
       it('should log an error for missing path', () => {
         const input = `
         Resource: TestResource
-        * 1..1 boolean 
-        * stuff 0..* string
-        * address 1..* Address
-        * person 0..1 Reference(Patient)
+        * 1..1 boolean "short boolean" 
+        * stuff 0..* string "short string"
+        * address 1..* Address "short Address"
+        * person 0..1 Reference(Patient) "short Reference"
        `;
 
         const result = importSingleText(input, 'BadPath.fsh');
@@ -2473,10 +2519,10 @@ describe('FSHImporter', () => {
       it('should log an error for missing cardinality', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean 
-        * stuff string
-        * address 1..* Address
-        * person 0..1 Reference(Patient)
+        * isValid 1..1 boolean "short boolean"
+        * stuff string "short string"
+        * address 1..* Address "short Address"
+        * person 0..1 Reference(Patient) "short Reference"
        `;
 
         const result = importSingleText(input, 'BadCard.fsh');
@@ -2486,6 +2532,46 @@ describe('FSHImporter', () => {
         );
         // Error results in excluding the rule with the error, hence length of 3 rather than 4
         expect(resource.rules).toHaveLength(3);
+      });
+
+      it('should log an error when min cardinality is not specified', () => {
+        const input = `
+        Logical: LogicalModel
+        * isInValid ..* string "short string"
+        `;
+
+        const result = importSingleText(input, 'Invalid.fsh');
+        const logical = result.logicals.get('LogicalModel');
+
+        expect(logical.rules).toHaveLength(1);
+        assertAddElementRule(logical.rules[0], 'isInValid', {
+          card: { min: NaN, max: '*' },
+          types: [{ type: 'string' }],
+          defs: { short: 'short string', definition: 'short string' }
+        });
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'min' cardinality attribute in AddElementRule/s
+        );
+      });
+
+      it('should log an error when max cardinality is not specified', () => {
+        const input = `
+        Logical: LogicalModel
+        * isInValid 0.. string "short string"
+        `;
+
+        const result = importSingleText(input, 'Invalid.fsh');
+        const logical = result.logicals.get('LogicalModel');
+
+        expect(logical.rules).toHaveLength(1);
+        assertAddElementRule(logical.rules[0], 'isInValid', {
+          card: { min: 0, max: '' },
+          types: [{ type: 'string' }],
+          defs: { short: 'short string', definition: 'short string' }
+        });
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'max' cardinality attribute in AddElementRule/s
+        );
       });
 
       it('should log an error for extra docs/strings', () => {
@@ -2504,6 +2590,28 @@ describe('FSHImporter', () => {
         );
         // Error results in excluding the following rules, hence length of 2 rather than 4
         expect(resource.rules).toHaveLength(2);
+      });
+
+      it('should log an error for missing short', () => {
+        const input = `
+        Resource: TestResource
+        * isValid 1..1 boolean 
+        * stuff 0..* string "short string"
+        * address 1..* Address "short Address"
+        * person 0..1 Reference(Patient) "short Reference"
+       `;
+
+        const result = importSingleText(input, 'BadDefs.fsh');
+        const resource = result.resources.get('TestResource');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'short' attribute in AddElementRule for path 'isValid' must be specified.*File: BadDefs\.fsh.*Line: 3\D*/s
+        );
+        // Error results in element not having defs defined
+        expect(resource.rules).toHaveLength(4);
+        assertAddElementRule(resource.rules[0], 'isValid', {
+          card: { min: 1, max: '1' },
+          types: [{ type: 'boolean' }]
+        });
       });
 
       it('should log an error for missing targetType with docs', () => {
@@ -2587,15 +2695,19 @@ describe('FSHImporter', () => {
       it('should parse rules according to rule patterns for CardRule and AddElementRule', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean 
-        * stuff 0..* string
-        * address 1..*
-        * person 0..1 Reference(Patient)
+        * isValid 1..1 boolean "is it valid?" 
+        * stuff 0..* string "just stuff" "a list of some stuff"
+        * address 1..* "current addresses" "at least one address is required"
+        * person 0..1 Reference(Patient) "an associated patient"
        `;
 
-        const result = importSingleText(input);
+        const result = importSingleText(input, 'BadType.fsh');
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(4);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /extraneous input.*File: BadType\.fsh.*Line: 5\D*/s
+        );
+
+        expect(resource.rules).toHaveLength(3);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           types: [{ type: 'boolean' }]
@@ -2608,53 +2720,7 @@ describe('FSHImporter', () => {
         // and an invalid AddElementRule with a missing targetType,
         // so the CardRule wins.
         assertCardRule(resource.rules[2], 'address', 1, '*');
-        assertAddElementRule(resource.rules[3], 'person', {
-          card: { min: 0, max: '1' },
-          types: [{ type: 'Patient', isReference: true }]
-        });
-      });
-
-      it('should parse rules with flags according to rule patterns for CardRule/FlagRule and AddElementRule', () => {
-        const input = `
-        Resource: TestResource
-        * isValid 1..1 MS ?! boolean 
-        * stuff 0..* MS SU string
-        * address 1..* N
-        * person 0..1 D TU Reference(Patient)
-       `;
-
-        const result = importSingleText(input);
-        const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(5);
-        assertAddElementRule(resource.rules[0], 'isValid', {
-          card: { min: 1, max: '1' },
-          flags: { mustSupport: true, modifier: true },
-          types: [{ type: 'boolean' }]
-        });
-        assertAddElementRule(resource.rules[1], 'stuff', {
-          card: { min: 0, max: '*' },
-          flags: { mustSupport: true, summary: true },
-          types: [{ type: 'string' }]
-        });
-        // There is no way to distinguish between a valid CardRule with flags
-        // and an invalid AddElementRule with a missing targetType,
-        // so the CardRule/FlagRule wins.
-        assertCardRule(resource.rules[2], 'address', 1, '*');
-        assertFlagRule(
-          resource.rules[3],
-          'address',
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        assertAddElementRule(resource.rules[4], 'person', {
-          card: { min: 0, max: '1' },
-          flags: { draft: true, trialUse: true },
-          types: [{ type: 'Patient', isReference: true }]
-        });
+        // Due to the error, the 'person' rule is not processed.
       });
     });
   });

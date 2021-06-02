@@ -61,6 +61,7 @@ import {
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
 } from '../errors';
+import isEmpty from 'lodash/isEmpty';
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
@@ -670,6 +671,8 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitVsComponent(rule.vsComponent()));
       } else if (rule.concept()) {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
+      } else if (rule.addElementRule()) {
+        ruleSet.rules.push(this.visitAddElementRule(rule.addElementRule()));
       }
     });
   }
@@ -992,11 +995,30 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
-    const addElementRule = new AddElementRule(this.visitPath(ctx.path()))
+    const path = this.visitPath(ctx.path());
+    const addElementRule = new AddElementRule(path)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
 
     const card = this.parseCard(ctx.CARD().getText(), addElementRule);
+    if (card.min == null || Number.isNaN(card.min)) {
+      logger.error(
+        `The 'min' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    if (isEmpty(card.max)) {
+      logger.error(
+        `The 'max' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
     addElementRule.min = card.min;
     addElementRule.max = card.max;
 
@@ -1017,10 +1039,23 @@ export class FSHImporter extends FSHVisitor {
       }
     });
 
-    if (ctx.STRING() && ctx.STRING().length > 0) {
+    if (isEmpty(ctx.STRING())) {
+      logger.error(
+        `The 'short' attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
       addElementRule.short = this.extractString(ctx.STRING()[0]);
-      if (ctx.STRING().length > 1) {
+      if (isEmpty(ctx.STRING()[1]) && isEmpty(ctx.MULTILINE_STRING())) {
+        // Default definition to the value of short
+        addElementRule.definition = addElementRule.short;
+      } else if (!isEmpty(ctx.STRING()[1])) {
         addElementRule.definition = this.extractString(ctx.STRING()[1]);
+      } else {
+        addElementRule.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
       }
     }
 

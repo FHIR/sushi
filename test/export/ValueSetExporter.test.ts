@@ -32,6 +32,7 @@ describe('ValueSetExporter', () => {
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);

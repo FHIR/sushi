@@ -23,6 +23,7 @@ describe('ExtensionExporter', () => {
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
@@ -76,7 +77,7 @@ describe('ExtensionExporter', () => {
     doc.extensions.set(extension.name, extension);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Parent Patient is not of type Extension, so it is an invalid Parent for Extension Wrong.*File: Wrong\.fsh.*Line: 14 - 24\D*/s
+      /The parent of an extension must be the base Extension or another defined extension.*File: Wrong\.fsh.*Line: 14 - 24\D*/s
     );
   });
 

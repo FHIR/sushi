@@ -119,6 +119,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   sdRule(): SdRuleContext;
   vsComponent(): VsComponentContext;
   concept(): ConceptContext;
+  addElementRule(): AddElementRuleContext;
 }
 
 export interface ParamRuleSetContext extends ParserRuleContext {
@@ -405,6 +406,7 @@ export interface AddElementRuleContext extends ParserRuleContext {
   flag(): FlagContext[];
   targetType(): TargetTypeContext[];
   STRING(): ParserRuleContext[];
+  MULTILINE_STRING(): ParserRuleContext;
 }
 
 export interface VsComponentContext extends ParserRuleContext {

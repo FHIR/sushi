@@ -6,7 +6,7 @@ describe('Resource', () => {
       const r = new Resource('MyResource');
       expect(r.name).toBe('MyResource');
       expect(r.id).toBe('MyResource');
-      expect(r.parent).toBeUndefined();
+      expect(r.parent).toBe('DomainResource');
       expect(r.title).toBeUndefined();
       expect(r.description).toBeUndefined();
       expect(r.rules).toBeEmpty();

@@ -1,11 +1,18 @@
 import { FSHTank, FSHDocument } from '../../src/import';
-import { Profile, RuleSet, FshCode, FshValueSet } from '../../src/fshtypes';
-import { InsertRule, CardRule, ConceptRule, AssignmentRule } from '../../src/fshtypes/rules';
+import { Profile, Logical, RuleSet, FshCode, FshValueSet } from '../../src/fshtypes';
+import {
+  InsertRule,
+  CardRule,
+  ConceptRule,
+  AssignmentRule,
+  AddElementRule
+} from '../../src/fshtypes/rules';
 import {
   loggerSpy,
   assertCardRule,
   assertValueSetConceptComponent,
-  assertAssignmentRule
+  assertAssignmentRule,
+  assertAddElementRule
 } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
@@ -370,6 +377,68 @@ describe('applyInsertRules', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Unable to find definition for RuleSet Bam.*File: NoBam\.fsh.*Line: 1 - 3\D*/s
     );
+  });
+
+  it('should apply add element rules from a single level insert rule', () => {
+    // RuleSet: AddCoreElements
+    // primaryId 1..1 SU uri "Primary ID"
+    // primaryOrganization 1..1 SU Reference(Organization) "Primary Organization"
+    // sharedNotes 0..* Annotation "Shared notes"
+    //
+    // Logical: Foo
+    // * insert AddCoreElements
+    const ruleSet = new RuleSet('AddCoreElements');
+
+    const addElementRule1 = new AddElementRule('primaryId');
+    addElementRule1.min = 1;
+    addElementRule1.max = '1';
+    addElementRule1.summary = true;
+    addElementRule1.types = [{ type: 'uri' }];
+    addElementRule1.short = 'Primary ID';
+
+    const addElementRule2 = new AddElementRule('primaryOrganization');
+    addElementRule2.min = 1;
+    addElementRule2.max = '1';
+    addElementRule2.summary = true;
+    addElementRule2.types = [{ type: 'Organization', isReference: true }];
+    addElementRule2.short = 'Primary Organization';
+
+    const addElementRule3 = new AddElementRule('sharedNotes');
+    addElementRule3.min = 0;
+    addElementRule3.max = '*';
+    addElementRule3.types = [{ type: 'Annotation' }];
+    addElementRule3.short = 'Shared notes';
+
+    ruleSet.rules.push(addElementRule1, addElementRule2, addElementRule3);
+    doc.ruleSets.set(ruleSet.name, ruleSet);
+
+    const logical = new Logical('Foo').withFile('Logical.fsh').withLocation([5, 6, 7, 16]);
+    doc.logicals.set(logical.name, logical);
+
+    const insertRule = new InsertRule();
+    insertRule.ruleSet = 'AddCoreElements';
+    logical.rules.push(insertRule);
+
+    applyInsertRules(logical, tank);
+    expect(logical.rules).toHaveLength(3);
+
+    assertAddElementRule(logical.rules[0], 'primaryId', {
+      card: { min: 1, max: '1' },
+      flags: { summary: true },
+      types: [{ type: 'uri' }],
+      defs: { short: 'Primary ID' }
+    });
+    assertAddElementRule(logical.rules[1], 'primaryOrganization', {
+      card: { min: 1, max: '1' },
+      flags: { summary: true },
+      types: [{ type: 'Organization', isReference: true }],
+      defs: { short: 'Primary Organization' }
+    });
+    assertAddElementRule(logical.rules[2], 'sharedNotes', {
+      card: { min: 0, max: '*' },
+      types: [{ type: 'Annotation' }],
+      defs: { short: 'Shared notes' }
+    });
   });
 
   describe('#appliedRuleSet', () => {

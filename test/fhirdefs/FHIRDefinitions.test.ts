@@ -16,6 +16,7 @@ describe('FHIRDefinitions', () => {
     // Run the dependency resources through TestFisher to force them into the testhelpers cache
     const fisher = new TestFisher().withFHIR(defs);
     fisher.fishForFHIR('Condition');
+    fisher.fishForFHIR('eLTSSServiceModel');
     fisher.fishForFHIR('boolean');
     fisher.fishForFHIR('Address');
     fisher.fishForFHIR('vitalsigns');
@@ -37,6 +38,20 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForFHIR('http://hl7.org/fhir/StructureDefinition/Condition', Type.Resource)
       ).toEqual(conditionByID);
+    });
+
+    it('should find base FHIR logical models', () => {
+      const eLTSSServiceModelByID = defs.fishForFHIR('eLTSSServiceModel', Type.Logical);
+      expect(eLTSSServiceModelByID.url).toBe(
+        'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel'
+      );
+      expect(eLTSSServiceModelByID.version).toBe('0.1.0');
+      expect(
+        defs.fishForFHIR(
+          'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
+          Type.Logical
+        )
+      ).toEqual(eLTSSServiceModelByID);
     });
 
     it('should find base FHIR primitive types', () => {
@@ -147,6 +162,7 @@ describe('FHIRDefinitions', () => {
     it('should not find the definition when the type is not requested', () => {
       const conditionByID = defs.fishForFHIR(
         'Condition',
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -159,6 +175,7 @@ describe('FHIRDefinitions', () => {
       const booleanByID = defs.fishForFHIR(
         'boolean',
         Type.Resource,
+        Type.Logical,
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
@@ -170,6 +187,7 @@ describe('FHIRDefinitions', () => {
       const addressByID = defs.fishForFHIR(
         'Address',
         Type.Resource,
+        Type.Logical,
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
@@ -181,6 +199,7 @@ describe('FHIRDefinitions', () => {
       const vitalSignsProfileByID = defs.fishForFHIR(
         'vitalsigns',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Extension,
         Type.ValueSet,
@@ -192,6 +211,7 @@ describe('FHIRDefinitions', () => {
       const maidenNameExtensionByID = defs.fishForFHIR(
         'patient-mothersMaidenName',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.ValueSet,
@@ -204,6 +224,7 @@ describe('FHIRDefinitions', () => {
       const allergyStatusValueSetByID = defs.fishForFHIR(
         'allergyintolerance-clinical',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -214,6 +235,7 @@ describe('FHIRDefinitions', () => {
       const w3cProvenanceCodeSystemByID = defs.fishForFHIR(
         'w3c-provenance-activity-type',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -221,6 +243,17 @@ describe('FHIRDefinitions', () => {
         Type.Instance
       );
       expect(w3cProvenanceCodeSystemByID).toBeUndefined();
+
+      const eLTSSServiceModelByID = defs.fishForFHIR(
+        'eLTSSServiceModel',
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.Instance
+      );
+      expect(eLTSSServiceModelByID).toBeUndefined();
     });
 
     it('should globally find any definition', () => {
@@ -286,6 +319,13 @@ describe('FHIRDefinitions', () => {
       expect(defs.fishForFHIR('http://hl7.org/fhir/w3c-provenance-activity-type')).toEqual(
         w3cProvenanceCodeSystemByID
       );
+
+      const eLTSSServiceModelByID = defs.fishForFHIR('eLTSSServiceModel');
+      expect(eLTSSServiceModelByID.kind).toBe('logical');
+      expect(eLTSSServiceModelByID.derivation).toBe('specialization');
+      expect(
+        defs.fishForFHIR('http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel')
+      ).toEqual(eLTSSServiceModelByID);
     });
   });
 
@@ -303,6 +343,24 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Condition', Type.Resource)
       ).toEqual(conditionByID);
+    });
+
+    it('should find base FHIR logical models', () => {
+      const eLTSSServiceModelByID = defs.fishForMetadata('eLTSSServiceModel', Type.Logical);
+      expect(eLTSSServiceModelByID).toEqual({
+        abstract: false,
+        id: 'eLTSSServiceModel',
+        name: 'ELTSSServiceModel',
+        sdType: 'eLTSSServiceModel',
+        url: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element'
+      });
+      expect(
+        defs.fishForMetadata(
+          'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
+          Type.Logical
+        )
+      ).toEqual(eLTSSServiceModelByID);
     });
 
     it('should find base FHIR primitive types', () => {
@@ -441,6 +499,7 @@ describe('FHIRDefinitions', () => {
     it('should not find the definition when the type is not requested', () => {
       const conditionByID = defs.fishForMetadata(
         'Condition',
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -453,6 +512,7 @@ describe('FHIRDefinitions', () => {
       const booleanByID = defs.fishForMetadata(
         'boolean',
         Type.Resource,
+        Type.Logical,
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
@@ -464,6 +524,7 @@ describe('FHIRDefinitions', () => {
       const addressByID = defs.fishForMetadata(
         'Address',
         Type.Resource,
+        Type.Logical,
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
@@ -475,6 +536,7 @@ describe('FHIRDefinitions', () => {
       const vitalSignsProfileByID = defs.fishForMetadata(
         'vitalsigns',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Extension,
         Type.ValueSet,
@@ -486,6 +548,7 @@ describe('FHIRDefinitions', () => {
       const maidenNameExtensionByID = defs.fishForMetadata(
         'patient-mothersMaidenName',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.ValueSet,
@@ -498,6 +561,7 @@ describe('FHIRDefinitions', () => {
       const allergyStatusValueSetByID = defs.fishForMetadata(
         'allergyintolerance-clinical',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -508,6 +572,7 @@ describe('FHIRDefinitions', () => {
       const w3cProvenanceCodeSystemByID = defs.fishForMetadata(
         'w3c-provenance-activity-type',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -515,6 +580,17 @@ describe('FHIRDefinitions', () => {
         Type.Instance
       );
       expect(w3cProvenanceCodeSystemByID).toBeUndefined();
+
+      const eLTSSServiceModelByID = defs.fishForMetadata(
+        'eLTSSServiceModel',
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.Instance
+      );
+      expect(eLTSSServiceModelByID).toBeUndefined();
     });
 
     it('should globally find any definition', () => {
@@ -612,6 +688,20 @@ describe('FHIRDefinitions', () => {
       expect(defs.fishForMetadata('http://hl7.org/fhir/w3c-provenance-activity-type')).toEqual(
         w3cProvenanceCodeSystemByID
       );
+
+      const eLTSSServiceModelByID = defs.fishForMetadata('eLTSSServiceModel');
+      expect(eLTSSServiceModelByID).toEqual({
+        abstract: false,
+        id: 'eLTSSServiceModel',
+        name: 'ELTSSServiceModel',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element',
+        sdType: 'eLTSSServiceModel',
+        url: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel'
+      });
+      expect(defs.fishForMetadata('ELTSSServiceModel')).toEqual(eLTSSServiceModelByID);
+      expect(
+        defs.fishForMetadata('http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel')
+      ).toEqual(eLTSSServiceModelByID);
     });
   });
 

@@ -48,6 +48,7 @@ describe('InstanceExporter', () => {
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
@@ -144,7 +145,6 @@ describe('InstanceExporter', () => {
     let respRateInstance: Instance;
     let bundleInstance: Instance;
     beforeEach(() => {
-      loggerSpy.reset();
       questionnaire = new Profile('TestQuestionnaire');
       questionnaire.parent = 'Questionnaire';
       doc.profiles.set(questionnaire.name, questionnaire);

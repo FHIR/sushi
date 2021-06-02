@@ -550,6 +550,243 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#simple-ig-plus', () => {
+    // Same as '#simple-ig' with logical model and custom resource included in the package
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    const pkgProfiles: StructureDefinition[] = [];
+    const pkgExtensions: StructureDefinition[] = [];
+    const pkgLogicals: StructureDefinition[] = [];
+    const pkgResources: StructureDefinition[] = [];
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      fixtures = path.join(__dirname, 'fixtures', 'simple-ig-plus');
+
+      const profiles = path.join(fixtures, 'profiles');
+      fs.readdirSync(profiles).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(profiles, f)));
+          pkgProfiles.push(sd);
+        }
+      });
+      const extensions = path.join(fixtures, 'extensions');
+      fs.readdirSync(extensions).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(extensions, f)));
+          pkgExtensions.push(sd);
+        }
+      });
+      const logicals = path.join(fixtures, 'logicals');
+      fs.readdirSync(logicals).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(logicals, f)));
+          pkgLogicals.push(sd);
+        }
+      });
+      const resources = path.join(fixtures, 'resources');
+      fs.readdirSync(resources).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(resources, f)));
+          pkgResources.push(sd);
+        }
+      });
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = {
+        filePath: path.join(fixtures, 'sushi-config.yml'),
+        id: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
+        version: '0.1.0',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        dependencies: [
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' },
+          {
+            packageId: 'hl7.fhir.us.mcode',
+            uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+            id: 'mcode',
+            version: '1.0.0'
+          }
+        ],
+        status: 'active',
+        template: 'fhir.base.template',
+        fhirVersion: ['4.0.1'],
+        language: 'en',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        license: 'CC0-1.0',
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020+'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
+          }
+        ],
+        history: {} // to suppress warning for HL7 IGs
+      };
+      pkg = new Package(config);
+      pkg.profiles.push(...pkgProfiles);
+      pkg.extensions.push(...pkgExtensions);
+      pkg.logicals.push(...pkgLogicals);
+      pkg.resources.push(...pkgResources);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should generate an implementation guide for simple-ig with package containing logical model and custom resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      // Expectations:
+      // - resource array contains object for 'StructureDefinition/CustomLogicalModel'
+      // - resource array DOES NOT contain object for 'StructureDefinition/CustomResource'
+      //   = It is not possible to include custom resources in IGs
+      // - parameter array contains object for 'autoload-resources'
+      //   = Because custom resources are included in the package being exported,
+      //     this parameter is automatically injected and set to false
+      expect(content).toEqual({
+        resourceType: 'ImplementationGuide',
+        id: 'sushi-test',
+        language: 'en',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
+        version: '0.1.0',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        status: 'active',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              {
+                system: 'url',
+                value: 'https://capecodfishermen.org/'
+              },
+              {
+                system: 'email',
+                value: 'cod@reef.gov'
+              }
+            ]
+          }
+        ],
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        packageId: 'sushi-test',
+        license: 'CC0-1.0',
+        fhirVersion: ['4.0.1'],
+        dependsOn: [
+          // USCore tests that it works with a package dependency w/ a specific version
+          {
+            id: 'hl7_fhir_us_core',
+            uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+            packageId: 'hl7.fhir.us.core',
+            version: '3.1.0'
+          },
+          // VHDir tests that it works with a package dependency w/ "current"
+          {
+            id: 'hl7_fhir_uv_vhdir',
+            uri: 'http://hl7.org/fhir/uv/vhdir/ImplementationGuide/hl7.core.uv.vhdir',
+            packageId: 'hl7.fhir.uv.vhdir',
+            version: 'current'
+          },
+          // mCODE tests that it works with the url and id explicitly provided in the config
+          {
+            id: 'mcode',
+            uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+            packageId: 'hl7.fhir.us.mcode',
+            version: '1.0.0'
+          }
+        ],
+        definition: {
+          resource: [
+            {
+              reference: {
+                reference: 'StructureDefinition/sample-observation'
+              },
+              name: 'SampleObservation',
+              description:
+                'Measurements and simple assertions made about a patient, device or other subject.',
+              exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'StructureDefinition/sample-complex-extension'
+              },
+              name: 'SampleComplexExtension',
+              description:
+                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+              exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'StructureDefinition/CustomLogicalModel'
+              },
+              name: 'Custom Logical Model Defined with FSH',
+              description:
+                'This is an example of a custom logical model defined using FSH with parent of Element',
+              exampleBoolean: false
+            }
+          ],
+          page: {
+            nameUrl: 'toc.html',
+            title: 'Table of Contents',
+            generation: 'html',
+            page: [] // no index file specified for this ig
+          },
+          parameter: [
+            {
+              code: 'copyrightyear',
+              value: '2020+'
+            },
+            {
+              code: 'releaselabel',
+              value: 'CI Build'
+            },
+            {
+              code: 'path-history',
+              value: 'http://hl7.org/fhir/sushi-test/history.html'
+            },
+            {
+              code: 'autoload-resources',
+              value: 'false'
+            }
+          ]
+        }
+      });
+    });
+  });
+
   describe('#customized-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
