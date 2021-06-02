@@ -93,7 +93,6 @@ export interface CsMetadataContext extends ParserRuleContext {
 }
 export interface CsRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
-  caretValueRule(): CaretValueRuleContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
   insertRule(): InsertRuleContext;
 }
@@ -481,6 +480,18 @@ export interface StarContext extends ParserRuleContext {
 
 export function containsPathContext(ctx: ParserRuleContext) {
   return (ctx as any).path != null;
+}
+
+export function containsCodePathContext(ctx: ParserRuleContext) {
+  // A code path comes from a concept or a codeCaretValueRule.
+  // So, detect a concept (with a non-empty CODE() list)
+  // or a codeCaretValueRule (with a caretPath)
+  return (
+    ((ctx as any).CODE != null && // If we have CODE,
+      Array.isArray((ctx as any).CODE()) && // and it's a list,
+      (ctx as any).CODE().length > 0) || // and the list is not empty, or
+    ((ctx as any).caretPath != null && (ctx as any).caretPath() != null) // we have a non-null caretPath
+  );
 }
 
 export function hasPathRule(ctx: ParserRuleContext) {

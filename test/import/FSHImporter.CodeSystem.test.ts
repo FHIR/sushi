@@ -1,16 +1,14 @@
 import { importSingleText } from '../testhelpers/importSingleText';
-import { assertCaretValueRule, assertConceptRule, assertInsertRule } from '../testhelpers/asserts';
+import { assertConceptRule, assertInsertRule, assertCodeCaretRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import {
-  Rule,
-  CaretValueRule,
-  InsertRule,
-  ConceptRule,
-  CodeCaretValueRule
-} from '../../src/fshtypes/rules';
+import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
   describe('CodeSystem', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
     describe('#csMetadata', () => {
       it('should parse the simplest possible code system', () => {
         const input = `
@@ -185,6 +183,7 @@ describe('FSHImporter', () => {
           endColumn: 15
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with one concept with a display string', () => {
@@ -205,6 +204,7 @@ describe('FSHImporter', () => {
           endColumn: 24
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with one concept with display and definition strings', () => {
@@ -225,6 +225,7 @@ describe('FSHImporter', () => {
           endColumn: 52
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a concept with a multi-line definition string', () => {
@@ -252,6 +253,7 @@ describe('FSHImporter', () => {
           endColumn: 115
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with more than one concept', () => {
@@ -290,6 +292,7 @@ describe('FSHImporter', () => {
           endColumn: 52
         });
         expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with hierarchical codes', () => {
@@ -330,13 +333,14 @@ describe('FSHImporter', () => {
           endLine: 5,
           endColumn: 54
         });
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should log an error when encountering a duplicate code', () => {
         const input = `
         CodeSystem: ZOO
-        * #goat
-        * #goat
+        * #goat "A goat"
+        * #goat "Another goat?"
         `;
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
@@ -344,6 +348,20 @@ describe('FSHImporter', () => {
         expect(codeSystem.name).toBe('ZOO');
         expect(codeSystem.rules.length).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
+      });
+
+      it('should not log an error when encountering a duplicate code if the new code has no display or definition', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #goat "A goat"
+        * #goat
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.codeSystems.size).toBe(1);
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.name).toBe('ZOO');
+        expect(codeSystem.rules.length).toBe(1);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should log an error when encountering a code with an incorrectly defined hierarchy', () => {
@@ -384,35 +402,6 @@ describe('FSHImporter', () => {
     });
 
     describe('#CaretValueRule', () => {
-      it('should parse a code system that uses a CaretValueRule', () => {
-        const input = `
-          CodeSystem: ZOO
-          * ^publisher = "Matt"
-          `;
-        const result = importSingleText(input);
-        const codeSystem = result.codeSystems.get('ZOO');
-        assertCaretValueRule(codeSystem.rules[0] as Rule, '', 'publisher', 'Matt', false);
-      });
-
-      it('should parse a code system that uses CaretValueRules alongside rules', () => {
-        const input = `
-        CodeSystem: ZOO
-        * #lion
-        * ^publisher = "Damon"
-        `;
-        const result = importSingleText(input, 'Zoo.fsh');
-        const codeSystem = result.codeSystems.get('ZOO');
-        assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
-        expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
-        assertCaretValueRule(
-          codeSystem.rules[1] as CaretValueRule,
-          '',
-          'publisher',
-          'Damon',
-          false
-        );
-      });
-
       it('should log an error when a CaretValueRule contains a path before ^', () => {
         const input = `
         CodeSystem: ZOO
@@ -426,6 +415,31 @@ describe('FSHImporter', () => {
     });
 
     describe('#codeCaretValueRule', () => {
+      it('should parse a code system that uses a CodeCaretValueRule with no codes', () => {
+        const input = `
+          CodeSystem: ZOO
+          * ^publisher = "Matt"
+          `;
+        const result = importSingleText(input);
+        const codeSystem = result.codeSystems.get('ZOO');
+        assertCodeCaretRule(codeSystem.rules[0] as Rule, [], 'publisher', 'Matt', false);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should parse a code system that uses CodeCaretValueRules with no codes alongside rules', () => {
+        const input = `
+        CodeSystem: ZOO
+        * #lion
+        * ^publisher = "Damon"
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
+        expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+        assertCodeCaretRule(codeSystem.rules[1] as CaretValueRule, [], 'publisher', 'Damon', false);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
       it('should parse a code system that uses a CodeCaretValueRule on a top-level concept', () => {
         const input = `
         CodeSystem: ZOO
@@ -436,13 +450,14 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
-        expect(codeSystem.rules[1]).toBeInstanceOf(CodeCaretValueRule);
-        const codeCaret = codeSystem.rules[1] as CodeCaretValueRule;
-        expect(codeCaret.codePath).toEqual(['anteater']);
-        expect(codeCaret.path).toBe('');
-        expect(codeCaret.caretPath).toBe('property[0].valueString');
-        expect(codeCaret.value).toBe('Their threat pose is really cute.');
-        expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+        assertCodeCaretRule(
+          codeSystem.rules[1],
+          ['anteater'],
+          'property[0].valueString',
+          'Their threat pose is really cute.'
+        );
+        expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system that uses a CodeCaretValueRule on a nested concept', () => {
@@ -460,13 +475,14 @@ describe('FSHImporter', () => {
           'anteater'
         ]);
         expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
-        expect(codeSystem.rules[2]).toBeInstanceOf(CodeCaretValueRule);
-        const codeCaret = codeSystem.rules[2] as CodeCaretValueRule;
-        expect(codeCaret.codePath).toEqual(['anteater', 'northern']);
-        expect(codeCaret.path).toBe('');
-        expect(codeCaret.caretPath).toBe('property[0].valueString');
-        expect(codeCaret.value).toBe('They are strong climbers.');
-        expect(codeCaret.sourceInfo.file).toBe('Zoo.fsh');
+        assertCodeCaretRule(
+          codeSystem.rules[2],
+          ['anteater', 'northern'],
+          'property[0].valueString',
+          'They are strong climbers.'
+        );
+        expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
     });
 

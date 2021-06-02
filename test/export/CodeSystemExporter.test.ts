@@ -428,6 +428,70 @@ describe('CodeSystemExporter', () => {
     ]);
   });
 
+  it('should resolve soft indexing when applying CodeCaretValue rules', () => {
+    const codeSystem = new FshCodeSystem('CodeCaretCS');
+    const topCode = new ConceptRule('topCode', 'Top Code');
+    const bottomCode = new ConceptRule('bottomCode', 'Bottom Code');
+    bottomCode.hierarchy = ['topCode'];
+
+    const firstTop = new CodeCaretValueRule(['topCode']);
+    firstTop.caretPath = 'designation[+].value';
+    firstTop.value = 'First top designation';
+    const secondTop = new CodeCaretValueRule(['topCode']);
+    secondTop.caretPath = 'designation[+].value';
+    secondTop.value = 'Second top designation';
+
+    const firstBottom = new CodeCaretValueRule(['topCode', 'bottomCode']);
+    firstBottom.caretPath = 'designation[+].value';
+    firstBottom.value = 'First bottom designation';
+    const secondBottom = new CodeCaretValueRule(['topCode', 'bottomCode']);
+    secondBottom.caretPath = 'designation[+].value';
+    secondBottom.value = 'Second bottom designation';
+
+    codeSystem.rules.push(topCode, bottomCode, firstTop, secondTop, firstBottom, secondBottom);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CodeCaretCS',
+      name: 'CodeCaretCS',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CodeCaretCS',
+      version: '1.0.0',
+      count: 2,
+      status: 'active',
+      concept: [
+        {
+          code: 'topCode',
+          display: 'Top Code',
+          designation: [
+            {
+              value: 'First top designation'
+            },
+            {
+              value: 'Second top designation'
+            }
+          ],
+          concept: [
+            {
+              code: 'bottomCode',
+              display: 'Bottom Code',
+              designation: [
+                {
+                  value: 'First bottom designation'
+                },
+                {
+                  value: 'Second bottom designation'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+  });
+
   it('should not override count when ^count is provided by user', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     const rule = new CaretValueRule('');

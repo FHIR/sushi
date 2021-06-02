@@ -59,36 +59,34 @@ export class CodeSystemExporter {
     }
   }
 
-  private setCaretRules(
+  private setCaretPathRules(
     codeSystem: CodeSystem,
     csStructureDefinition: StructureDefinition,
-    rules: CaretValueRule[]
-  ): void {
-    resolveSoftIndexing(rules);
-    for (const rule of rules) {
+    rules: (CaretValueRule | CodeCaretValueRule)[]
+  ) {
+    // soft index resolution relies on the rule's path attribute.
+    // a CodeCaretValueRule is created with an empty path, so first
+    // transform its codePath into a path.
+    // Because this.findConceptPath can potentially throw an error,
+    // build a list of successful rules that will actually be applied.
+    const successfulRules: (CaretValueRule | CodeCaretValueRule)[] = [];
+    rules.forEach(rule => {
       try {
-        const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-          rule.caretPath,
-          rule.value,
-          this.fisher
-        );
-        setPropertyOnInstance(codeSystem, pathParts, assignedValue, this.fisher);
+        if (rule instanceof CodeCaretValueRule) {
+          rule.path = this.findConceptPath(codeSystem, rule.codePath);
+          successfulRules.push(rule);
+        } else {
+          successfulRules.push(rule);
+        }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
-    }
-  }
-
-  private setCodeCaretRules(
-    codeSystem: CodeSystem,
-    csStructureDefinition: StructureDefinition,
-    rules: CodeCaretValueRule[]
-  ) {
-    for (const rule of rules) {
+    });
+    resolveSoftIndexing(successfulRules);
+    for (const rule of successfulRules) {
       try {
-        const conceptPath = this.findConceptPath(codeSystem, rule.codePath);
         const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
-          `${conceptPath}.${rule.caretPath}`,
+          rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
           rule.value,
           this.fisher
         );
@@ -160,19 +158,16 @@ export class CodeSystemExporter {
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
-    this.setCaretRules(
-      codeSystem,
-      csStructureDefinition,
-      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
-    );
     this.setConcepts(
       codeSystem,
       fshDefinition.rules.filter(rule => rule instanceof ConceptRule) as ConceptRule[]
     );
-    this.setCodeCaretRules(
+    this.setCaretPathRules(
       codeSystem,
       csStructureDefinition,
-      fshDefinition.rules.filter(rule => rule instanceof CodeCaretValueRule) as CodeCaretValueRule[]
+      fshDefinition.rules.filter(
+        rule => rule instanceof CaretValueRule || rule instanceof CodeCaretValueRule
+      ) as (CaretValueRule | CodeCaretValueRule)[]
     );
 
     // check for another code system with the same id
