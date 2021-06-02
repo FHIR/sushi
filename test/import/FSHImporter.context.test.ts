@@ -309,46 +309,6 @@ describe('FSHImporter', () => {
       assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
     });
 
-    it('should apply the last path in a comma separated list when multiple paths are used to set context', () => {
-      const input = `
-      Profile: Foo
-      Parent: Patient
-      * name, birthDate MS
-        * ^short = "foo"
-    `;
-
-      const result = importSingleText(input, 'Context.fsh');
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      // One warning related to deprecated usage of commas
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-      expect(result.profiles.size).toBe(1);
-      const profile = result.profiles.get('Foo');
-      expect(profile.name).toBe('Foo');
-      expect(profile.parent).toBe('Patient');
-      expect(profile.rules.length).toBe(3);
-      assertFlagRule(
-        profile.rules[0],
-        'name',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined
-      );
-      assertFlagRule(
-        profile.rules[1],
-        'birthDate',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined
-      );
-      assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
-    });
-
     it('should log an error when a rule is indented below a rule without a path', () => {
       const input = `
       Profile: Foo

@@ -3,12 +3,10 @@ import { SdRule } from './rules';
 import { EOL } from 'os';
 
 export class Profile extends FshStructure {
-  mixins?: string[];
   rules: SdRule[];
 
   constructor(public name: string) {
     super(name);
-    this.mixins = [];
   }
 
   get constructorName() {

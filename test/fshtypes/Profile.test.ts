@@ -9,7 +9,6 @@ describe('Profile', () => {
       expect(p.name).toBe('MyProfile');
       expect(p.id).toBe('MyProfile');
       expect(p.parent).toBeUndefined();
-      expect(p.mixins).toBeEmpty();
       expect(p.rules).toBeEmpty();
     });
   });
