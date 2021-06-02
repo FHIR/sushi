@@ -1,5 +1,6 @@
 import { FSHDocument, FSHTank } from '../../src/import';
 import {
+  Configuration,
   Extension,
   FshCode,
   FshCodeSystem,
@@ -320,6 +321,7 @@ describe('FSHTank', () => {
       id: 'log1',
       name: 'Logical1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+      sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
       parent: 'Element'
     };
     const res1MD: Metadata = {
@@ -637,6 +639,43 @@ describe('FSHTank', () => {
       expect(tank.fishForFHIR('map1')).toBeUndefined();
       expect(tank.fishForFHIR('map1', Type.Mapping)).toBeUndefined();
       expect(tank.fishForFHIR('Mapping1')).toBeUndefined();
+    });
+  });
+});
+
+describe('FSHTank for HL7', () => {
+  const hl7Config: Configuration = {
+    filePath: 'sushi-config.yaml',
+    id: 'hl7.fhir',
+    canonical: 'http://hl7.org/fhir',
+    name: 'HL7',
+    status: 'draft',
+    version: '4.9.0',
+    fhirVersion: ['4.9.0'],
+    template: 'hl7.fhir.template#0.0.5'
+  };
+
+  let hl7Tank: FSHTank;
+  beforeEach(() => {
+    const hl7Doc = new FSHDocument('HL7Doc.fsh');
+    hl7Doc.logicals.set('HL7Logical', new Logical('HL7Logical'));
+    hl7Doc.logicals.get('HL7Logical').id = 'hl7-log';
+    hl7Doc.logicals.get('HL7Logical').parent = 'Element';
+
+    hl7Tank = new FSHTank([hl7Doc], hl7Config);
+  });
+
+  describe('#fishForMetadata', () => {
+    const hl7logMD: Metadata = {
+      id: 'hl7-log',
+      name: 'HL7Logical',
+      url: 'http://hl7.org/fhir/StructureDefinition/hl7-log',
+      sdType: 'hl7-log',
+      parent: 'Element'
+    };
+
+    it('should find valid HL7 fish metadata when fishing by id for logical models', () => {
+      expect(hl7Tank.fishForMetadata('hl7-log')).toEqual(hl7logMD);
     });
   });
 });

@@ -261,6 +261,14 @@ export class FSHTank implements Fishable {
       ) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
         meta.parent = result.parent;
+        if (result instanceof Logical) {
+          // Logical models should always use an absolute URL as their StructureDefinition.type
+          // unless HL7 published them. In that case, the URL is relative to
+          // http://hl7.org/fhir/StructureDefinition/.
+          // Ref: https://chat.fhir.org/#narrow/stream/179177-conformance/topic/StructureDefinition.2Etype.20for.20Logical.20Models.2FCustom.20Resources/near/240488388
+          const HL7_URL = 'http://hl7.org/fhir/StructureDefinition/';
+          meta.sdType = meta.url.startsWith(HL7_URL) ? meta.url.slice(HL7_URL.length) : meta.url;
+        }
       } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
       } else if (result instanceof Instance) {

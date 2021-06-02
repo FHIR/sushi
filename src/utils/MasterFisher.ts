@@ -79,12 +79,6 @@ export class MasterFisher implements Fishable {
     const history = [meta];
     let [sdType, parent] = [meta.sdType, meta.parent];
     while (sdType == null && parent != null) {
-      // A logical model with the Base parent will not have a sdType value. In this case, we know
-      // that the sdType should be the logical model's url and not be based on its parent.
-      if (parent === 'Base') {
-        [sdType, parent] = [meta.url, parent];
-        continue;
-      }
       // Resolve the alias if necessary
       parent = this.tank?.resolveAlias(parent) ?? parent;
 

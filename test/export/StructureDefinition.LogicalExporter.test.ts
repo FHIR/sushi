@@ -330,7 +330,6 @@ describe('LogicalExporter', () => {
 
   it('should include added element having logical model as datatype when parent is Element', () => {
     const logicalFoo = new Logical('Foo');
-    logicalFoo.parent = 'Element';
     const addElementRuleBars = new AddElementRule('bars');
     addElementRuleBars.min = 0;
     addElementRuleBars.max = '1';
@@ -340,6 +339,7 @@ describe('LogicalExporter', () => {
     doc.logicals.set(logicalFoo.name, logicalFoo);
 
     const logicalBar = new Logical('Bar');
+    logicalBar.parent = 'Element';
     const addElementRuleLength = new AddElementRule('length');
     addElementRuleLength.min = 0;
     addElementRuleLength.max = '1';
@@ -359,7 +359,7 @@ describe('LogicalExporter', () => {
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
 
-    expect(exported[0].elements).toHaveLength(4); // 1 Base element+ 2 from Element + 1 added "bars" element
+    expect(exported[0].elements).toHaveLength(2); // 1 Base element + 1 added "bars" element
     const barsElement = exported[0].findElement('Foo.bars');
     expect(barsElement.path).toBe('Foo.bars');
     expect(barsElement.base.path).toBe('Foo.bars');
@@ -368,7 +368,6 @@ describe('LogicalExporter', () => {
 
   it('should include added element having logical model as datatype when parent is another logical model', () => {
     const logicalFoo = new Logical('Foo');
-    logicalFoo.parent = 'AlternateIdentification';
     const addElementRuleBars = new AddElementRule('bars');
     addElementRuleBars.min = 0;
     addElementRuleBars.max = '1';
@@ -378,6 +377,7 @@ describe('LogicalExporter', () => {
     doc.logicals.set(logicalFoo.name, logicalFoo);
 
     const logicalBar = new Logical('Bar');
+    logicalBar.parent = 'AlternateIdentification';
     const addElementRuleLength = new AddElementRule('length');
     addElementRuleLength.min = 0;
     addElementRuleLength.max = '1';
@@ -397,11 +397,64 @@ describe('LogicalExporter', () => {
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
 
-    expect(exported[0].elements).toHaveLength(7); // 1 Base element+ 5 from Element + 1 added "bars" element
+    expect(exported[0].elements).toHaveLength(2); // 1 Base element + 1 added "bars" element
     const barsElement = exported[0].findElement('Foo.bars');
     expect(barsElement.path).toBe('Foo.bars');
     expect(barsElement.base.path).toBe('Foo.bars');
     expect(barsElement.type[0].code).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Bar');
+  });
+
+  it('should have correct base and types for each nested logical model', () => {
+    const logicalOther = new Logical('Other');
+    const addElementRuleThing = new AddElementRule('thing');
+    addElementRuleThing.min = 1;
+    addElementRuleThing.max = '1';
+    addElementRuleThing.types = [{ type: 'boolean' }];
+    addElementRuleThing.short = 'Is it a thing?';
+    logicalOther.rules.push(addElementRuleThing);
+    doc.logicals.set(logicalOther.name, logicalOther);
+
+    const logicalFoo = new Logical('FooFromOther');
+    logicalFoo.parent = 'Other';
+    const addElementRuleBars = new AddElementRule('bars');
+    addElementRuleBars.min = 0;
+    addElementRuleBars.max = '*';
+    addElementRuleBars.types = [{ type: 'BarFromOther' }];
+    addElementRuleBars.short = 'The bars of the foo';
+    logicalFoo.rules.push(addElementRuleBars);
+    doc.logicals.set(logicalFoo.name, logicalFoo);
+
+    const logicalBar = new Logical('BarFromOther');
+    logicalBar.parent = 'Other';
+    const addElementRuleHeight = new AddElementRule('height');
+    addElementRuleHeight.min = 1;
+    addElementRuleHeight.max = '1';
+    addElementRuleHeight.types = [{ type: 'Quantity' }];
+    addElementRuleHeight.short = 'The height of the bar';
+    logicalBar.rules.push(addElementRuleHeight);
+    doc.logicals.set(logicalBar.name, logicalBar);
+
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(3);
+    expect(exported[0].name).toBe('Other');
+    expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
+    expect(exported[1].name).toBe('FooFromOther');
+    expect(exported[1].baseDefinition).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/Other'
+    );
+    expect(exported[2].name).toBe('BarFromOther');
+    expect(exported[2].baseDefinition).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/Other'
+    );
+
+    const thingElement = exported[0].findElement('Other.thing');
+    expect(thingElement.type[0].code).toBe('boolean');
+    const barsElement = exported[1].findElement('FooFromOther.bars');
+    expect(barsElement.type[0].code).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/BarFromOther'
+    );
+    const heightElement = exported[2].findElement('BarFromOther.height');
+    expect(heightElement.type[0].code).toBe('Quantity');
   });
 
   it('should log an error when an inline extension is used', () => {
