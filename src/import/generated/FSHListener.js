@@ -344,15 +344,6 @@ FSHListener.prototype.exitUsage = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#mixins.
-FSHListener.prototype.enterMixins = function(ctx) {
-};
-
-// Exit a parse tree produced by FSHParser#mixins.
-FSHListener.prototype.exitMixins = function(ctx) {
-};
-
-
 // Enter a parse tree produced by FSHParser#source.
 FSHListener.prototype.enterSource = function(ctx) {
 };
@@ -596,15 +587,6 @@ FSHListener.prototype.exitPath = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#paths.
-FSHListener.prototype.enterPaths = function(ctx) {
-};
-
-// Exit a parse tree produced by FSHParser#paths.
-FSHListener.prototype.exitPaths = function(ctx) {
-};
-
-
 // Enter a parse tree produced by FSHParser#caretPath.
 FSHListener.prototype.enterCaretPath = function(ctx) {
 };
@@ -692,6 +674,15 @@ FSHListener.prototype.enterReference = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#reference.
 FSHListener.prototype.exitReference = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#referenceType.
+FSHListener.prototype.enterReferenceType = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#referenceType.
+FSHListener.prototype.exitReferenceType = function(ctx) {
 };
 
 

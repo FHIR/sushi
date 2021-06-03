@@ -675,6 +675,10 @@ describe('Processing', () => {
       myProfile.id = 'my-profile';
       const myExtension = new StructureDefinition();
       myExtension.id = 'my-extension';
+      const myLogical = new StructureDefinition();
+      myLogical.id = 'my-logical';
+      const myResource = new StructureDefinition();
+      myResource.id = 'my-resource';
       const myValueSet = new ValueSet();
       myValueSet.id = 'my-value-set';
       const myCodeSystem = new CodeSystem();
@@ -735,6 +739,8 @@ describe('Processing', () => {
 
       outPackage.profiles.push(myProfile, myFSHDefinedProfile);
       outPackage.extensions.push(myExtension);
+      outPackage.logicals.push(myLogical);
+      outPackage.resources.push(myResource);
       outPackage.valueSets.push(myValueSet);
       outPackage.codeSystems.push(myCodeSystem);
       outPackage.instances.push(
@@ -768,11 +774,13 @@ describe('Processing', () => {
         const generatedPath = path.join(tempIGPubRoot, 'fsh-generated', 'resources');
         expect(fs.existsSync(generatedPath)).toBeTruthy();
         const allGeneratedFiles = fs.readdirSync(generatedPath);
-        expect(allGeneratedFiles.length).toBe(12);
+        expect(allGeneratedFiles.length).toBe(14);
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile-instance.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-extension.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-extension-instance.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-logical.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-resource.json');
         expect(allGeneratedFiles).toContain('ValueSet-my-value-set.json');
         expect(allGeneratedFiles).toContain('CodeSystem-my-code-system.json');
         expect(allGeneratedFiles).toContain('ConceptMap-my-concept-map.json');
@@ -781,7 +789,7 @@ describe('Processing', () => {
         expect(allGeneratedFiles).toContain('StructureDefinition-my-model.json');
         expect(allGeneratedFiles).toContain('OperationDefinition-my-operation.json');
         expect(allGeneratedFiles).toContain('Observation-my-other-instance.json');
-        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 14 FHIR resources/s);
       });
 
       it('should not write a resource if that resource already exists in the "input" folder', () => {

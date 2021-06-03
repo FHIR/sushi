@@ -160,6 +160,24 @@ export class IGExporter {
         value: `${this.config.canonical}/history.html`
       });
     }
+    // Default 'autoload-resources' to false if it is not already defined
+    // and only if custom resources are defined. This is done to counter
+    // the IG Publisher behaving as if 'autoload-resources' is set to true
+    // and allowing the IG Publisher to attempt processing of custom resources.
+    if (
+      this.pkg.resources?.length > 0 &&
+      !this.ig.definition.parameter.some(param => {
+        return param.code === 'autoload-resources';
+      })
+    ) {
+      this.ig.definition.parameter.push({
+        code: 'autoload-resources',
+        value: 'false'
+      });
+      logger.info(
+        'The autoload-resources parameter has been set to false because this implementation guide contains custom resources.'
+      );
+    }
     // add dependencies, filtering out "virtual" extension packages
     const dependencies = this.config.dependencies?.filter(
       d => !/^hl7\.fhir\.extensions\.r[2345]$/.test(d.packageId)
@@ -684,9 +702,15 @@ export class IGExporter {
    * analyzed when making changes to either.
    */
   private addResources(): void {
+    // NOTE: Custom resources are not included in the implementation guide
+    //       because the IG Publisher will not except newly defined resources.
+    //       This only prevents adding custom resources into the IG. It does
+    //       NOT prevent custom resource StructureDefinitions from being
+    //       written to disk.
     const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
       ...sortBy(this.pkg.profiles, sd => sd.name),
       ...sortBy(this.pkg.extensions, sd => sd.name),
+      ...sortBy(this.pkg.logicals, sd => sd.name),
       ...sortBy(this.pkg.valueSets, valueSet => valueSet.name),
       ...sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name)
     ];

@@ -9,7 +9,9 @@ import {
   assertInsertRule,
   assertObeysRule,
   assertValueSetConceptComponent,
-  assertValueSetFilterComponent
+  assertValueSetFilterComponent,
+  assertCodeCaretRule,
+  assertAddElementRule
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 
@@ -308,44 +310,36 @@ describe('FSHImporter', () => {
       assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
     });
 
-    it('should apply the last path in a comma separated list when multiple paths are used to set context', () => {
+    it('should apply context to AddElement rules', () => {
       const input = `
-      Profile: Foo
-      Parent: Patient
-      * name, birthDate MS
-        * ^short = "foo"
+      Logical: Human
+      * family 0..1 BackboneElement "Family"
+        * mother 0..2 string "Mother"
+        * father 0..2 string "Father"
     `;
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      // One warning related to deprecated usage of commas
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-      expect(result.profiles.size).toBe(1);
-      const profile = result.profiles.get('Foo');
-      expect(profile.name).toBe('Foo');
-      expect(profile.parent).toBe('Patient');
-      expect(profile.rules.length).toBe(3);
-      assertFlagRule(
-        profile.rules[0],
-        'name',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined
-      );
-      assertFlagRule(
-        profile.rules[1],
-        'birthDate',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined
-      );
-      assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.logicals.size).toBe(1);
+      const logical = result.logicals.get('Human');
+      expect(logical.name).toBe('Human');
+      expect(logical.rules.length).toBe(3);
+      assertAddElementRule(logical.rules[0], 'family', {
+        card: { min: 0, max: '1' },
+        types: [{ type: 'BackboneElement' }],
+        defs: { short: 'Family' }
+      });
+      assertAddElementRule(logical.rules[1], 'family.mother', {
+        card: { min: 0, max: '2' },
+        types: [{ type: 'string' }],
+        defs: { short: 'Mother' }
+      });
+      assertAddElementRule(logical.rules[2], 'family.father', {
+        card: { min: 0, max: '2' },
+        types: [{ type: 'string' }],
+        defs: { short: 'Father' }
+      });
     });
 
     it('should log an error when a rule is indented below a rule without a path', () => {
@@ -490,28 +484,6 @@ describe('FSHImporter', () => {
       assertInsertRule(instance.rules[1], 'Bar');
     });
 
-    it('should log an error when a ConceptRule is indented', () => {
-      const input = `
-        CodeSystem: Foo
-        * #101
-          * #102
-      `;
-
-      const result = importSingleText(input, 'Context.fsh');
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /rule that does not use a path cannot be indented/
-      );
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      expect(result.codeSystems.size).toBe(1);
-      const cs = result.codeSystems.get('Foo');
-      expect(cs.name).toBe('Foo');
-      expect(cs.rules.length).toBe(2);
-      assertConceptRule(cs.rules[0], '101', undefined, undefined, []);
-      // rule is not assigned any context
-      assertConceptRule(cs.rules[1], '102', undefined, undefined, []);
-    });
-
     it('should log an error when a ValueSetFilterComponentRule is indented', () => {
       const input = `
         ValueSet: Foo
@@ -559,6 +531,161 @@ describe('FSHImporter', () => {
           .withLocation([4, 13, 4, 34])
           .withFile('Context.fsh')
       ]);
+    });
+  });
+
+  describe('code context', () => {
+    it('should parse a code system with indented hierarchical rules', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #bear "Bear" "A member of family Ursidae."
+        * #sunbear "Sun bear" "Helarctos malayanus"
+          * #ursula "Ursula the sun bear"
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.codeSystems.size).toBe(1);
+      const codeSystem = result.codeSystems.get('ZOO');
+      expect(codeSystem.name).toBe('ZOO');
+      expect(codeSystem.rules.length).toBe(3);
+      assertConceptRule(codeSystem.rules[0], 'bear', 'Bear', 'A member of family Ursidae.', []);
+      expect(codeSystem.rules[0].sourceInfo.location).toEqual({
+        startLine: 3,
+        startColumn: 7,
+        endLine: 3,
+        endColumn: 50
+      });
+      assertConceptRule(codeSystem.rules[1], 'sunbear', 'Sun bear', 'Helarctos malayanus', [
+        'bear'
+      ]);
+      expect(codeSystem.rules[1].sourceInfo.location).toEqual({
+        startLine: 4,
+        startColumn: 9,
+        endLine: 4,
+        endColumn: 51
+      });
+      assertConceptRule(codeSystem.rules[2], 'ursula', 'Ursula the sun bear', undefined, [
+        'bear',
+        'sunbear'
+      ]);
+      expect(codeSystem.rules[2].sourceInfo.location).toEqual({
+        startLine: 5,
+        startColumn: 11,
+        endLine: 5,
+        endColumn: 41
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a code system that uses an indented CodeCaretValueRule on a top-level concept', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * ^property[0].valueString = "Their threat pose is really cute."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[1],
+        ['anteater'],
+        'property[0].valueString',
+        'Their threat pose is really cute.'
+      );
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a code system that uses an indented CodeCaretValueRule on a nested concept', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * #northern "Northern tamandua"
+          * ^property[0].valueString = "They are strong climbers."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[2],
+        ['anteater', 'northern'],
+        'property[0].valueString',
+        'They are strong climbers.'
+      );
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should allow code path context to be set by referencing an existing top-level code', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * #northern "Northern tamandua"
+          * ^property[0].valueString = "They are strong climbers."
+      * #anteater
+        * ^property[0].valueString = "Their threat pose is really cute."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      expect(codeSystem.rules).toHaveLength(4);
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[2],
+        ['anteater', 'northern'],
+        'property[0].valueString',
+        'They are strong climbers.'
+      );
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[3],
+        ['anteater'],
+        'property[0].valueString',
+        'Their threat pose is really cute.'
+      );
+      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should allow code path context to be set by referencing an existing nested code', () => {
+      const input = `
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * #northern "Northern tamandua"
+        * #southern "Southern tamandua"
+      * #anteater #northern
+        * ^property[0].valueString = "They are strong climbers."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      expect(codeSystem.rules).toHaveLength(4);
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[2], 'southern', 'Southern tamandua', undefined, [
+        'anteater'
+      ]);
+      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      assertCodeCaretRule(
+        codeSystem.rules[3],
+        ['anteater', 'northern'],
+        'property[0].valueString',
+        'They are strong climbers.'
+      );
+      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 });

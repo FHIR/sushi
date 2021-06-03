@@ -4,7 +4,7 @@ import { SourceInfo } from '../fshtypes';
 export class InvalidExtensionParentError extends Error implements WithSource {
   constructor(public childName: string, public parentName: string, public sourceInfo: SourceInfo) {
     super(
-      `Parent ${parentName} is not of type Extension, so it is an invalid Parent for Extension ${childName}.`
+      `Invalid parent ${parentName} specified for extension ${childName}. The parent of an extension must be the base Extension or another defined extension.`
     );
   }
 }

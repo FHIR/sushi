@@ -10,6 +10,7 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { Rule } from '../../src/fshtypes/rules';
 
 describe('FSHImporter', () => {
+  afterEach(() => loggerSpy.reset());
   describe('ValueSet', () => {
     describe('#vsMetadata', () => {
       it('should parse a value set with additional metadata', () => {
@@ -363,24 +364,20 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
-      it('should log a warning when concepts are listed with commas', () => {
+      it('should log an error when concepts are listed with commas', () => {
         const input = `
         ValueSet: ZooVS
         * #hippo, #crocodile , #emu from system ZOO
         `;
 
-        const result = importSingleText(input, 'Zoo.fsh');
+        const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.rules.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
-          new FshCode('hippo', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
-          new FshCode('crocodile', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh'),
-          new FshCode('emu', 'ZOO').withLocation([3, 11, 3, 35]).withFile('Zoo.fsh')
-        ]);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "," to list concepts is deprecated/s
+        expect(valueSet).toBeDefined();
+        expect(loggerSpy.getFirstMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
         );
+        expect(loggerSpy.getFirstMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
     });
 
@@ -503,24 +500,20 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
-      it('should log a warning when valuesets are listed with commas', () => {
+      it('should log an error when valuesets are listed with commas', () => {
         const input = `
         ValueSet: ZooVS
         * codes from valueset FirstZooVS, SecondZooVS
         `;
 
-        const result = importSingleText(input, 'Zoo.fsh');
+        const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        assertValueSetFilterComponent(
-          valueSet.rules[0],
-          undefined,
-          ['FirstZooVS', 'SecondZooVS'],
-          []
+        expect(valueSet).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
         );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "," to list valuesets is deprecated/s
-        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator =', () => {
@@ -845,6 +838,37 @@ describe('FSHImporter', () => {
         assertValueSetFilterComponent(valueSet.rules[1], 'ZOO', undefined, [
           {
             property: 'version',
+            operator: VsOperator.EXISTS,
+            value: true
+          }
+        ]);
+      });
+
+      it('should parse a value set that chains filter operators', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where
+          display exists true and
+          variant exists false and
+          extension exists true
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
+          {
+            property: 'display',
+            operator: VsOperator.EXISTS,
+            value: true
+          },
+          {
+            property: 'variant',
+            operator: VsOperator.EXISTS,
+            value: false
+          },
+          {
+            property: 'extension',
             operator: VsOperator.EXISTS,
             value: true
           }

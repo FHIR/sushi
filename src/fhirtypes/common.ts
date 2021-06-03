@@ -13,7 +13,6 @@ import {
   InsertRule,
   ConceptRule,
   ValueSetConceptComponentRule,
-  SdRule,
   CaretValueRule,
   AssignmentValueType
 } from '../fshtypes/rules';
@@ -21,13 +20,15 @@ import {
   FshReference,
   Instance,
   FshCode,
+  Logical,
   Profile,
   Extension,
   RuleSet,
   FshValueSet,
   FshCodeSystem,
   Mapping,
-  isAllowedRule
+  isAllowedRule,
+  Resource
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -39,7 +40,7 @@ export function splitOnPathPeriods(path: string): string[] {
 
 /**
  * This function sets an instance property of an SD or ED if possible
- * @param {StructureDefinition | ElementDefinition} - The instance to assign a value on
+ * @param {StructureDefinition | ElementDefinition} instance - The instance to assign a value on
  * @param {string} path - The path to assign a value at
  * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -280,6 +281,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const instanceMeta = fisher.fishForMetadata(
       instance?.instanceOf,
       Type.Resource,
+      Type.Logical,
       Type.Type,
       Type.Profile,
       Type.Extension
@@ -400,59 +402,21 @@ export function cleanResource(
 }
 
 /**
- * Adds Mixin rules onto a Profile, Extension, or Instance
- * @param {Profile | Extension | Instance} fshDefinition - The definition to apply mixin rules on
- * @param {FSHTank} tank - The FSHTank containing the fshDefinition
- */
-export function applyMixinRules(
-  fshDefinition: Profile | Extension | Instance,
-  tank: FSHTank
-): void {
-  if (fshDefinition.mixins.length > 0) {
-    const insertString = fshDefinition.mixins.map(m => `* insert ${m}`).join('\n');
-    logger.warn(
-      'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
-        'Instead, use the "insert" keyword, which can be placed anywhere in a list of rules to indicate ' +
-        'the exact location rules should be inserted. The RuleSets added here with the "Mixin" keyword can ' +
-        `be added with the "insert" keyword by adding the following rule(s):\n${insertString}`,
-      fshDefinition.sourceInfo
-    );
-  }
-  // Rules are added to beginning of rules array, so add the last mixin rules first
-  const mixedInRules: SdRule[] = [];
-  fshDefinition.mixins.forEach(mixinName => {
-    const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
-    if (ruleSet) {
-      ruleSet.rules.forEach(r => {
-        // Record source information of Profile/Extension/Instance on which Mixin is applied
-        r.sourceInfo.appliedFile = fshDefinition.sourceInfo.file;
-        r.sourceInfo.appliedLocation = fshDefinition.sourceInfo.location;
-      });
-      const rules = ruleSet.rules.filter(r => {
-        if (fshDefinition instanceof Instance && !(r instanceof AssignmentRule)) {
-          logger.error(
-            'Rules applied by mixins to an instance must assign a value. Other rules are ignored.',
-            r.sourceInfo
-          );
-          return false;
-        }
-        return true;
-      });
-      mixedInRules.push(...(rules as SdRule[]));
-    } else {
-      logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
-    }
-  });
-  fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
-}
-
-/**
  * Adds insert rules onto a Profile, Extension, or Instance
  * @param fshDefinition - The definition to apply rules on
  * @param tank - The FSHTank containing the fshDefinition
  */
 export function applyInsertRules(
-  fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
+  fshDefinition:
+    | Profile
+    | Extension
+    | Logical
+    | Resource
+    | Instance
+    | FshValueSet
+    | FshCodeSystem
+    | Mapping
+    | RuleSet,
   tank: FSHTank,
   seenRuleSets: string[] = []
 ): void {
@@ -608,18 +572,24 @@ export function isInheritedResource(
  *
  * @param fshDefinition - The FSH definition that the returned URL refers to
  * @param canonical - The canonical URL for the FSH project
- * @returns {string} - The URL to use to refer to the FHIR entity
+ * @returns The URL to use to refer to the FHIR entity
  */
 export function getUrlFromFshDefinition(
-  fshDefinition: Profile | Extension | FshValueSet | FshCodeSystem,
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem,
   canonical: string
 ): string {
-  for (const rule of fshDefinition.rules) {
-    if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url') {
-      // this value should only be a string, but that might change at some point
-      return rule.value.toString();
-    }
+  const fshRules: Rule[] = fshDefinition.rules;
+  const caretValueRules = fshRules.filter(
+    rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
+  ) as CaretValueRule[];
+  if (caretValueRules.length > 0) {
+    // Select last CaretValueRule with caretPath === 'url' because rules processing
+    // ends up applying the last rule in the processing order
+    const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+    // this value should only be a string, but that might change at some point
+    return lastCaretValueRule.value.toString();
   }
+
   let fhirType: string;
   if (fshDefinition instanceof FshValueSet) {
     fhirType = 'ValueSet';
@@ -629,6 +599,42 @@ export function getUrlFromFshDefinition(
     fhirType = 'StructureDefinition';
   }
   return `${canonical}/${fhirType}/${fshDefinition.id}`;
+}
+
+/**
+ * Determines the formal FHIR type to use to define to this entity for logical models and
+ * resources. The type for profiles and extension should not be changed. If a caret value
+ * rule has been applied to the entity's type, use the value specified in that rule.
+ * Otherwise, use the appropriate default based on the fshDefinition.
+ *
+ * @param fshDefinition - The FSH definition (Logical or Resource) that the returned type refers to
+ * @param parentSD - The parent StructureDefinition for the fshDefinition
+ * @returns The type to specify in the StructureDefinition for this fshDefinition
+ */
+export function getTypeFromFshDefinitionOrParent(
+  fshDefinition: Profile | Extension | Logical | Resource,
+  parentSD: StructureDefinition
+): string {
+  if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
+    return parentSD.type;
+  }
+
+  const fshRules: Rule[] = fshDefinition.rules;
+  const caretValueRules = fshRules.filter(
+    rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'type'
+  ) as CaretValueRule[];
+  if (caretValueRules.length > 0) {
+    // Select last CaretValueRule with caretPath === 'type' because rules processing
+    // ends up applying the last rule in the processing order
+    const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+    // this value should only be a string, but that might change at some point
+    return lastCaretValueRule.value.toString();
+  }
+
+  // Default type for logical model to the StructureDefinition url;
+  // otherwise default to the id meta property.
+  // Ref: https://chat.fhir.org/#narrow/pm-with/191469,210024,211704,239822-group/near/240237602
+  return fshDefinition instanceof Logical ? parentSD.url : fshDefinition.id;
 }
 
 export function isExtension(path: string): boolean {

@@ -234,12 +234,6 @@ FSHVisitor.prototype.visitUsage = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#mixins.
-FSHVisitor.prototype.visitMixins = function(ctx) {
-  return this.visitChildren(ctx);
-};
-
-
 // Visit a parse tree produced by FSHParser#source.
 FSHVisitor.prototype.visitSource = function(ctx) {
   return this.visitChildren(ctx);
@@ -402,12 +396,6 @@ FSHVisitor.prototype.visitPath = function(ctx) {
 };
 
 
-// Visit a parse tree produced by FSHParser#paths.
-FSHVisitor.prototype.visitPaths = function(ctx) {
-  return this.visitChildren(ctx);
-};
-
-
 // Visit a parse tree produced by FSHParser#caretPath.
 FSHVisitor.prototype.visitCaretPath = function(ctx) {
   return this.visitChildren(ctx);
@@ -464,6 +452,12 @@ FSHVisitor.prototype.visitRatio = function(ctx) {
 
 // Visit a parse tree produced by FSHParser#reference.
 FSHVisitor.prototype.visitReference = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by FSHParser#referenceType.
+FSHVisitor.prototype.visitReferenceType = function(ctx) {
   return this.visitChildren(ctx);
 };
 

@@ -1,3 +1,4 @@
+export * from './BaseStructureDefinitionR4';
 export * from './dataTypes';
 export * from './metaDataTypes';
 export * from './primitiveTypes';

@@ -50,7 +50,7 @@ describe('FSHImporter', () => {
 
       it('should parse profile with name matching various possible tokens recognized as name', () => {
         // This basically exercises all the tokens we accept for name:
-        // SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM | KW_UNITS;
+        // SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM;
 
         // Since we'll do the same thing over and over (and over), create a function for it
         const testToken = (token: string) => {
@@ -78,7 +78,6 @@ describe('FSHImporter', () => {
         testToken('codes'); // KW_CODES
         testToken('valueset'); // KW_VSREFERENCE
         testToken('system'); // KW_SYSTEM
-        testToken('units'); // KW_UNITS
       });
 
       it('should parse profile with additional metadata properties', () => {
@@ -88,7 +87,6 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
         `;
 
         const result = importSingleText(input);
@@ -99,21 +97,19 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 7,
-          endColumn: 55
+          endLine: 6,
+          endColumn: 47
         });
       });
 
-      it('should parse profile with numeric name, parent, id, and mixins', () => {
+      it('should parse profile with numeric name, parent, and id', () => {
         const input = `
         Profile: 123
         Parent: 456
         Id: 789
-        Mixins: 24 and 68
         `;
 
         const result = importSingleText(input);
@@ -122,7 +118,6 @@ describe('FSHImporter', () => {
         expect(profile.name).toBe('123');
         expect(profile.parent).toBe('456');
         expect(profile.id).toBe('789');
-        expect(profile.mixins).toEqual(['24', '68']);
       });
 
       it('should properly parse a multi-string description', () => {
@@ -186,12 +181,10 @@ describe('FSHImporter', () => {
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1
         Parent: DuplicateObservation
         Id: duplicate-observation-profile
         Title: "Duplicate Observation Profile"
         Description: "A duplicated profile on Observation"
-        Mixins: DuplicateMixin1
         `;
 
         const result = importSingleText(input);
@@ -201,22 +194,6 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1']);
-      });
-
-      it('should deduplicate repeated mixins and log a warning', () => {
-        const input = `
-        Profile: ObservationProfile
-        Parent: Observation
-        Mixins: Mixin1 and Mixin2 and Mixin1
-        `;
-
-        const result = importSingleText(input, 'Dupe.fsh');
-        expect(result.profiles.size).toBe(1);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.name).toBe('ObservationProfile');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2']);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Mixin1.*File: Dupe.fsh.*Line: 4\D*/s);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -253,6 +230,23 @@ describe('FSHImporter', () => {
           /Profile named ObservationProfile already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
+      });
+
+      it('should log an error when the deprecated Mixins keyword is used', () => {
+        const input = `
+        Profile: SomeProfile
+        Parent: Observation
+        Mixins: RuleSet1 and RuleSet2
+        `;
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        expect(result.profiles.size).toBe(1);
+        const extension = result.profiles.get('SomeProfile');
+        expect(extension.name).toBe('SomeProfile');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'Mixins' keyword is no longer supported\./s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
       });
     });
 
@@ -707,47 +701,20 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when paths are listed with commas', () => {
+      it('should log an error when paths are listed with commas', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
         * category, value[x] , component MS SU N
         `;
 
-        const result = importSingleText(input);
+        const result = importSingleText(input, 'Deprecated.fsh');
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(3);
-        assertFlagRule(
-          profile.rules[0],
-          'category',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
         );
-        assertFlagRule(
-          profile.rules[1],
-          'value[x]',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        assertFlagRule(
-          profile.rules[2],
-          'component',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list paths is deprecated/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
       });
     });
 
@@ -889,11 +856,11 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should ignore the units keyword and log a warning when parsing value set rules on Quantity', () => {
+      it('should parse value set rules on Quantity', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * valueQuantity units from http://unitsofmeasure.org
+        * valueQuantity from http://unitsofmeasure.org
         `;
 
         const result = importSingleText(input, 'UselessQuant.fsh');
@@ -905,8 +872,20 @@ describe('FSHImporter', () => {
           'http://unitsofmeasure.org',
           'required'
         );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessQuant\.fsh.*Line: 4\D*/s
+      });
+
+      it('should log an error when parsing value set rules using the unit keyword', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units from http://unitsofmeasure.org
+        `;
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: Deprecated\.fsh.*Line: 4\D*/s
         );
       });
     });
@@ -1081,22 +1060,34 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueCodeableConcept', expectedCode, true);
       });
 
-      it('should ignore the units keyword and log a warning when parsing an assigned value FSHCode rule with units on Quantity', () => {
+      it('should parse an assigned value FSHCode rule with units on Quantity', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
-        * valueQuantity units = http://unitsofmeasure.org#cGy
+        * valueQuantity = http://unitsofmeasure.org#cGy
         `;
 
         const result = importSingleText(input, 'UselessUnits.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
-          .withLocation([4, 33, 4, 61])
+          .withLocation([4, 27, 4, 55])
           .withFile('UselessUnits.fsh');
         assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedCode);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessUnits\.fsh.*Line: 4\D*/s
+      });
+
+      it('should log an error when parsing an assigned value FSHCode rule using the unit keyword', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units = http://unitsofmeasure.org#cGy
+        `;
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: Deprecated\.fsh.*Line: 4\D*/s
         );
       });
 
@@ -1614,7 +1605,7 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when references are listed with pipes', () => {
+      it('should log an error when references are listed with pipes', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -1623,19 +1614,13 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '\|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
 
-      it('should log a warning when references are listed with pipes with whitespace', () => {
+      it('should log an error when references are listed with pipes with whitespace', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -1644,15 +1629,9 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '\|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
     });
@@ -2066,6 +2045,7 @@ describe('FSHImporter', () => {
         // RuleSet: WarningRuleSet(value)
         // * focus[0] only Reference(Patient | {value})
         // * focus[1] only Reference(Group | {value})
+        // NOTE: This now causes ERRORS (not warnings), so associated test is skipped!
         const warningRuleSet = new ParamRuleSet('WarningRuleSet')
           .withFile('RuleSet.fsh')
           .withLocation([30, 12, 32, 53]);
@@ -2517,7 +2497,10 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should log one warning when an insert rule with parameters results in warnings', () => {
+      // Skipping the following rule because SUSHI no longer has any warnings associated w/ parsing rules.
+      // All deprecated syntaxes are now errors (not warnings).  We can re-enable if/when the importer
+      // produces warnings on rules.
+      it.skip('should log one warning when an insert rule with parameters results in warnings', () => {
         const input = `
         Profile: MyObservation
         Parent: Observation
