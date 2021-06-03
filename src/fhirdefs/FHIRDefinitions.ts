@@ -27,7 +27,7 @@ export class FHIRDefinitions implements Fishable {
     this.codeSystems = new Map();
     this.implementationGuides = new Map();
     this.predefinedResources = new Map();
-
+    this.supplementalFHIRDefinitions = new Map();
     // FHIR R4 does not have a StructureDefinition that defines "Base" but FHIR R5 does.
     // We have defined a "placeholder" StructureDefinition for "Base" for R4.
     // Inject the R4 "Base" placeholder StructureDefinition

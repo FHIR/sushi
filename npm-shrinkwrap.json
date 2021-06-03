@@ -7992,12 +7992,6 @@
       "integrity": "sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==",
       "dev": true
     },
-    "y18n": {
-      "version": "4.0.0",
-      "resolved": "https://registry.npmjs.org/y18n/-/y18n-4.0.0.tgz",
-      "integrity": "sha512-r9S/ZyXu/Xu9q1tYlpsLIsa3EeLXXk0VwlxqTcFRfg9EhMW+17kbt9G0NrgCmhGb5vT2hyhJZLfDGx+7+5Uj/w==",
-      "dev": true
-    },
     "yallist": {
       "version": "4.0.0",
       "resolved": "https://registry.npmjs.org/yallist/-/yallist-4.0.0.tgz",
@@ -8023,6 +8017,12 @@
         "yargs-parser": "^20.2.2"
       },
       "dependencies": {
+        "y18n": {
+          "version": "5.0.8",
+          "resolved": "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz",
+          "integrity": "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==",
+          "dev": true
+        },
         "yargs-parser": {
           "version": "20.2.7",
           "resolved": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-20.2.7.tgz",

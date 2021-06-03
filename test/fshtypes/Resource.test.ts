@@ -2,6 +2,7 @@ import 'jest-extended';
 import { Resource } from '../../src/fshtypes/';
 import { EOL } from 'os';
 import { AddElementRule, BindingRule } from '../../src/fshtypes/rules';
+
 describe('Resource', () => {
   describe('#constructor', () => {
     it('should set the properties correctly', () => {
@@ -23,7 +24,11 @@ describe('Resource', () => {
   describe('#toFSH', () => {
     it('should produce FSH for the simplest Resource', () => {
       const input = new Resource('MyResource');
-      const expectedResult = ['Resource: MyResource', 'Id: MyResource'].join(EOL);
+      const expectedResult = [
+        'Resource: MyResource',
+        'Parent: DomainResource',
+        'Id: MyResource'
+      ].join(EOL);
       expect(input.toFSH()).toEqual(expectedResult);
     });
 
@@ -34,6 +39,7 @@ describe('Resource', () => {
       input.description = 'The new standard in resourcefulness.';
       const expectedResult = [
         'Resource: MyResource',
+        'Parent: DomainResource',
         'Id: my-resource',
         'Title: "My Resource"',
         'Description: "The new standard in resourcefulness."'
@@ -55,6 +61,7 @@ describe('Resource', () => {
 
       const expectedResult = [
         'Resource: Cookie',
+        'Parent: DomainResource',
         'Id: Cookie',
         '* ingredient 1..* SU CodeableConcept',
         '* ingredient from BakingVS (preferred)'

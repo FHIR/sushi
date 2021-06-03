@@ -285,4 +285,3 @@ export function assertCodeCaretRule(
   expect(codeCaretValueRule.value).toEqual(value);
   expect(codeCaretValueRule.isInstance).toBe(isInstance);
 }
-

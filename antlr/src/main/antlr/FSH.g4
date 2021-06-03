@@ -103,7 +103,7 @@ concept:            STAR CODE+ STRING? (STRING | MULTILINE_STRING)?;
 quantity:           NUMBER (UNIT | CODE) STRING?;
 ratio:              ratioPart COLON ratioPart;
 reference:          REFERENCE STRING?;
-referenceType:      OR_REFERENCE | PIPE_REFERENCE;
+referenceType:      REFERENCE;
 canonical:          CANONICAL;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;

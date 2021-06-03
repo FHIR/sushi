@@ -54,7 +54,7 @@ describe('AddElementRule', () => {
         type: 'Quantity'
       });
       rule.short = 'Fresh barley';
-      const expectedFSH = '* barley 0..* Quantity "Fresh barley"';
+      const expectedFSH = '* barley 0..* Quantity "Fresh barley" "Fresh barley"';
       expect(rule.toFSH()).toEqual(expectedFSH);
     });
 

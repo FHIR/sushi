@@ -128,7 +128,6 @@ enum Flag {
 }
 
 const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
-
 const INDENT_WIDTH = 2;
 
 /**
@@ -397,14 +396,6 @@ export class FSHImporter extends FSHVisitor {
           def.title = pair.value as string;
         } else if (pair.key === SdMetadataKey.Description) {
           def.description = pair.value as string;
-        } else if (pair.key === SdMetadataKey.Mixins) {
-          const msg =
-            'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
-            `The assigned "Mixins" for ${def.constructorName} have been ignored!`;
-          logger.error(msg, {
-            file: this.currentFile,
-            location: this.extractStartStop(pair.context)
-          });
         }
       });
     ruleCtx.forEach(lrRule => {
@@ -1496,11 +1487,8 @@ export class FSHImporter extends FSHVisitor {
     const orTypes: OnlyRuleType[] = [];
     ctx.targetType().forEach(t => {
       if (t.referenceType()) {
-        if (t.reference().OR_REFERENCE()) {
-          referenceToken = t.reference().OR_REFERENCE();
+        const referenceToken = t.referenceType().REFERENCE();
         const references = this.parseOrReference(referenceToken.getText());
-          referenceToken = t.reference().PIPE_REFERENCE();
-              location: this.extractStartStop(ctx)
         references.forEach(r =>
           orTypes.push({
             type: this.aliasAwareValue(referenceToken, r),

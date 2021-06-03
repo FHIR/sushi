@@ -24,7 +24,7 @@ export class AddElementRule extends Rule {
     const flagPart = this.flags.length ? ` ${this.flags.join(' ')}` : '';
     const typePart = typeString(this.types);
     const shortPart = this.short ? ` "${fshifyString(this.short)}"` : '';
-    const definitionPart = this.definition ? ` "${fshifyString(this.definition)}"` : '';
+    const definitionPart = this.definition ? ` "${fshifyString(this.definition)}"` : shortPart;
     return `* ${this.path} ${cardPart}${flagPart} ${typePart}${shortPart}${definitionPart}`;
   }
 }

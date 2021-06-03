@@ -332,8 +332,7 @@ export interface ReferenceContext extends ParserRuleContext {
 }
 
 export interface ReferenceTypeContext extends ParserRuleContext {
-  OR_REFERENCE(): ParserRuleContext;
-  PIPE_REFERENCE(): ParserRuleContext;
+  REFERENCE(): ParserRuleContext;
 }
 
 export interface CanonicalContext extends ParserRuleContext {

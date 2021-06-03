@@ -484,7 +484,7 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when paths are listed with commas', () => {
+      it('should log an error when paths are listed with commas', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -493,38 +493,11 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(3);
-        assertFlagRule(
-          profile.rules[0],
-          'category',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
+
+        expect(profile.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
         );
-        assertFlagRule(
-          profile.rules[1],
-          'value[x]',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        assertFlagRule(
-          profile.rules[2],
-          'component',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list paths is deprecated/s);
       });
     });
 
@@ -666,7 +639,7 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should ignore the units keyword and log a warning when parsing value set rules on Quantity', () => {
+      it('should ignore the units keyword and log an error when parsing value set rules on Quantity', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -675,15 +648,10 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'UselessQuant.fsh');
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        assertBindingRule(
-          profile.rules[0],
-          'valueQuantity',
-          'http://unitsofmeasure.org',
-          'required'
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessQuant\.fsh.*Line: 4\D*/s
+
+        expect(profile.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: UselessQuant\.fsh.*Line: 4\D*/s
         );
       });
     });
@@ -867,13 +835,10 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'UselessUnits.fsh');
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
-          .withLocation([4, 33, 4, 61])
-          .withFile('UselessUnits.fsh');
-        assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedCode);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessUnits\.fsh.*Line: 4\D*/s
+
+        expect(profile.rules).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: UselessUnits\.fsh.*Line: 4\D*/s
         );
       });
 
@@ -1391,7 +1356,7 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when references are listed with pipes', () => {
+      it('should log an error when references are listed with pipes', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -1401,18 +1366,14 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        // Following is correct expectation. Error prevents the proper resolution of multiple references
+        assertOnlyRule(profile.rules[0], 'performer', { type: 'Reference(Organization' });
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
 
-      it('should log a warning when references are listed with pipes with whitespace', () => {
+      it('should log an error when references are listed with pipes with whitespace', () => {
         const input = `
         Profile: ObservationProfile
         Parent: Observation
@@ -1422,14 +1383,10 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        // Following is correct expectation. Error prevents the proper resolution of multiple references
+        assertOnlyRule(profile.rules[0], 'performer', { type: 'Reference(' });
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
     });
@@ -2244,11 +2201,14 @@ describe('FSHImporter', () => {
         * insert FirstRiskyRuleSet("Observation.id")
         `;
         importer.import([new RawFSH(input, 'Insert.fsh')]);
+
         expect(stats.numError).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Errors parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
+          /Error parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
         );
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 5/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Assignment rules must include at least one space both before and after the '=' sign.*File: Insert\.fsh.*Line: 5/s
+        );
       });
 
       it('should not log an error when an insert rule with parameters results in rules that are syntactically correct but semantically invalid', () => {
@@ -2281,7 +2241,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should log one warning when an insert rule with parameters results in warnings', () => {
+      it('should log one error when an insert rule with parameters results in warnings', () => {
         const input = `
         Profile: MyObservation
         Parent: Observation
@@ -2289,11 +2249,13 @@ describe('FSHImporter', () => {
         `;
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
-        expect(stats.numWarn).toBe(1);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Warnings parsing insert rule with parameterized RuleSet WarningRuleSet/s
+        expect(stats.numError).toBe(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Error parsing insert rule with parameterized RuleSet WarningRuleSet/s
         );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Insert\.fsh.*Line: 4/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '|' to list references is no longer supported\. Use 'or' to list multiple references.*File: Insert\.fsh.*Line: 4/s
+        );
       });
 
       it('should log one error when an insert rule with parameters results in non-parser errors', () => {
@@ -2528,10 +2490,11 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'BadCard.fsh');
         const resource = result.resources.get('TestResource');
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /no viable alternative at input.*File: BadCard\.fsh.*Line: 4\D*/s
+          /extraneous input 'string' expecting {.*}.*File: BadCard\.fsh.*Line: 4\D*/s
         );
-        // Error results in excluding the rule with the error, hence length of 3 rather than 4
-        expect(resource.rules).toHaveLength(3);
+        // Error results in excluding the rule with the error and subsequent rules,
+        // hence length of 1 rather than 4
+        expect(resource.rules).toHaveLength(1);
       });
 
       it('should log an error when min cardinality is not specified', () => {

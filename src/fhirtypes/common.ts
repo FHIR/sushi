@@ -13,7 +13,6 @@ import {
   InsertRule,
   ConceptRule,
   ValueSetConceptComponentRule,
-  SdRule,
   CaretValueRule,
   AssignmentValueType
 } from '../fshtypes/rules';
@@ -29,8 +28,7 @@ import {
   FshCodeSystem,
   Mapping,
   isAllowedRule,
-  Resource,
-  SourceInfo
+  Resource
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';

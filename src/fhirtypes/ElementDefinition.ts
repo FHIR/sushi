@@ -9,7 +9,6 @@ import {
   uniqWith,
   upperFirst
 } from 'lodash';
-import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';

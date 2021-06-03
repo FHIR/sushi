@@ -36,7 +36,7 @@ import path from 'path';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
 
-describe('StructureDefinitionExporter', () => {
+describe('StructureDefinitionExporter R4', () => {
   let defs: FHIRDefinitions;
   let fisher: TestFisher;
   let doc: FSHDocument;
@@ -48,11 +48,6 @@ describe('StructureDefinitionExporter', () => {
     loadFromPath(
       path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
       'testPackage',
-      defs
-    );
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
       defs
     );
   });
@@ -704,162 +699,164 @@ describe('StructureDefinitionExporter', () => {
     });
   });
 
-  it('should apply constraints to all instances of contentReference elements when the profile-element extension is applied', () => {
-    const profile = new Profile('TestQuestionnaire');
-    profile.parent = 'Questionnaire';
-    profile.id = 'example-q';
+  describe('#Profile-Element', () => {
+    it('should apply constraints to all instances of contentReference elements when the profile-element extension is applied', () => {
+      const profile = new Profile('TestQuestionnaire');
+      profile.parent = 'Questionnaire';
+      profile.id = 'example-q';
 
-    const containsRule = new ContainsRule('item.extension');
-    containsRule.items = [
-      {
-        name: 'example-slice',
-        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
-      }
-    ];
+      const containsRule = new ContainsRule('item.extension');
+      containsRule.items = [
+        {
+          name: 'example-slice',
+          type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+        }
+      ];
 
-    const cardRule = new CardRule('item.extension[example-slice]');
-    cardRule.min = 1;
-    cardRule.max = '1';
+      const cardRule = new CardRule('item.extension[example-slice]');
+      cardRule.min = 1;
+      cardRule.max = '1';
 
-    const profileRule = new CaretValueRule('item');
-    profileRule.caretPath = 'type.profile';
-    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
-    const extensionRule = new CaretValueRule('item');
-    extensionRule.caretPath = 'type.profile.extension.url';
-    extensionRule.value =
-      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
-    const targetElementRule = new CaretValueRule('item');
-    targetElementRule.caretPath = 'type.profile.extension.valueString';
-    targetElementRule.value = 'Questionnaire.item';
+      const profileRule = new CaretValueRule('item');
+      profileRule.caretPath = 'type.profile';
+      profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
+      const extensionRule = new CaretValueRule('item');
+      extensionRule.caretPath = 'type.profile.extension.url';
+      extensionRule.value =
+        'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+      const targetElementRule = new CaretValueRule('item');
+      targetElementRule.caretPath = 'type.profile.extension.valueString';
+      targetElementRule.value = 'Questionnaire.item';
 
-    const assignmentRule = new AssignmentRule('item.item.linkId');
-    assignmentRule.value = 'item-2';
+      const assignmentRule = new AssignmentRule('item.item.linkId');
+      assignmentRule.value = 'item-2';
 
-    profile.rules.push(
-      containsRule,
-      cardRule,
-      profileRule,
-      extensionRule,
-      targetElementRule,
-      assignmentRule
-    );
-    doc.profiles.set(profile.name, profile);
+      profile.rules.push(
+        containsRule,
+        cardRule,
+        profileRule,
+        extensionRule,
+        targetElementRule,
+        assignmentRule
+      );
+      doc.profiles.set(profile.name, profile);
 
-    // The slice added to the parent element should be unfolded to the child
-    const exportedProfile = exporter.export().profiles[0];
-    expect(
-      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
-    ).toBeDefined();
-  });
+      // The slice added to the parent element should be unfolded to the child
+      const exportedProfile = exporter.export().profiles[0];
+      expect(
+        exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+      ).toBeDefined();
+    });
 
-  it('should apply the profile-element extension when there are several extensions in the type.profile array', () => {
-    const profile = new Profile('TestQuestionnaire');
-    profile.parent = 'Questionnaire';
-    profile.id = 'example-q';
+    it('should apply the profile-element extension when there are several extensions in the type.profile array', () => {
+      const profile = new Profile('TestQuestionnaire');
+      profile.parent = 'Questionnaire';
+      profile.id = 'example-q';
 
-    const containsRule = new ContainsRule('item.extension');
-    containsRule.items = [
-      {
-        name: 'example-slice',
-        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
-      }
-    ];
+      const containsRule = new ContainsRule('item.extension');
+      containsRule.items = [
+        {
+          name: 'example-slice',
+          type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+        }
+      ];
 
-    const cardRule = new CardRule('item.extension[example-slice]');
-    cardRule.min = 1;
-    cardRule.max = '1';
+      const cardRule = new CardRule('item.extension[example-slice]');
+      cardRule.min = 1;
+      cardRule.max = '1';
 
-    const fakeProfileRule = new CaretValueRule('item');
-    fakeProfileRule.caretPath = 'type.profile';
-    fakeProfileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
-    const fakeExtensionRule = new CaretValueRule('item');
-    fakeExtensionRule.caretPath = 'type.profile.extension.url';
-    fakeExtensionRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/FakeExtension';
-    const fakeTargetElementRule = new CaretValueRule('item');
-    fakeTargetElementRule.caretPath = 'type.profile.extension.valueString';
-    fakeTargetElementRule.value = 'Foo';
+      const fakeProfileRule = new CaretValueRule('item');
+      fakeProfileRule.caretPath = 'type.profile';
+      fakeProfileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
+      const fakeExtensionRule = new CaretValueRule('item');
+      fakeExtensionRule.caretPath = 'type.profile.extension.url';
+      fakeExtensionRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/FakeExtension';
+      const fakeTargetElementRule = new CaretValueRule('item');
+      fakeTargetElementRule.caretPath = 'type.profile.extension.valueString';
+      fakeTargetElementRule.value = 'Foo';
 
-    const profileRule = new CaretValueRule('item');
-    profileRule.caretPath = 'type.profile[1]';
-    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
-    const extensionRule = new CaretValueRule('item');
-    extensionRule.caretPath = 'type.profile[1].extension.url';
-    extensionRule.value =
-      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
-    const targetElementRule = new CaretValueRule('item');
-    targetElementRule.caretPath = 'type.profile[1].extension.valueString';
-    targetElementRule.value = 'Questionnaire.item';
+      const profileRule = new CaretValueRule('item');
+      profileRule.caretPath = 'type.profile[1]';
+      profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/example-q';
+      const extensionRule = new CaretValueRule('item');
+      extensionRule.caretPath = 'type.profile[1].extension.url';
+      extensionRule.value =
+        'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+      const targetElementRule = new CaretValueRule('item');
+      targetElementRule.caretPath = 'type.profile[1].extension.valueString';
+      targetElementRule.value = 'Questionnaire.item';
 
-    const assignmentRule = new AssignmentRule('item.item.linkId');
-    assignmentRule.value = 'item-2';
+      const assignmentRule = new AssignmentRule('item.item.linkId');
+      assignmentRule.value = 'item-2';
 
-    profile.rules.push(
-      containsRule,
-      cardRule,
-      fakeProfileRule,
-      fakeExtensionRule,
-      fakeTargetElementRule,
-      profileRule,
-      extensionRule,
-      targetElementRule,
-      assignmentRule
-    );
-    doc.profiles.set(profile.name, profile);
+      profile.rules.push(
+        containsRule,
+        cardRule,
+        fakeProfileRule,
+        fakeExtensionRule,
+        fakeTargetElementRule,
+        profileRule,
+        extensionRule,
+        targetElementRule,
+        assignmentRule
+      );
+      doc.profiles.set(profile.name, profile);
 
-    // The slice added to the parent element should be unfolded to the child
-    const exportedProfile = exporter.export().profiles[0];
-    expect(
-      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
-    ).toBeDefined();
-  });
+      // The slice added to the parent element should be unfolded to the child
+      const exportedProfile = exporter.export().profiles[0];
+      expect(
+        exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+      ).toBeDefined();
+    });
 
-  it('should not apply constraints to all instances of contentReference elements when the profile-element extension is misapplied', () => {
-    const profile = new Profile('TestQuestionnaire2');
-    profile.parent = 'Questionnaire';
-    profile.id = 'example-q';
+    it('should not apply constraints to all instances of contentReference elements when the profile-element extension is misapplied', () => {
+      const profile = new Profile('TestQuestionnaire2');
+      profile.parent = 'Questionnaire';
+      profile.id = 'example-q';
 
-    const containsRule = new ContainsRule('item.extension');
-    containsRule.items = [
-      {
-        name: 'example-slice',
-        type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
-      }
-    ];
+      const containsRule = new ContainsRule('item.extension');
+      containsRule.items = [
+        {
+          name: 'example-slice',
+          type: 'http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl'
+        }
+      ];
 
-    const cardRule = new CardRule('item.extension[example-slice]');
-    cardRule.min = 1;
-    cardRule.max = '1';
+      const cardRule = new CardRule('item.extension[example-slice]');
+      cardRule.min = 1;
+      cardRule.max = '1';
 
-    // The extension is targeting another profile
-    const profileRule = new CaretValueRule('item');
-    profileRule.caretPath = 'type.profile';
-    profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/wrong-id';
-    const extensionRule = new CaretValueRule('item');
-    extensionRule.caretPath = 'type.profile.extension.url';
-    extensionRule.value =
-      'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
-    const targetElementRule = new CaretValueRule('item');
-    targetElementRule.caretPath = 'type.profile.extension.valueString';
-    targetElementRule.value = 'Questionnaire.item';
+      // The extension is targeting another profile
+      const profileRule = new CaretValueRule('item');
+      profileRule.caretPath = 'type.profile';
+      profileRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/wrong-id';
+      const extensionRule = new CaretValueRule('item');
+      extensionRule.caretPath = 'type.profile.extension.url';
+      extensionRule.value =
+        'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
+      const targetElementRule = new CaretValueRule('item');
+      targetElementRule.caretPath = 'type.profile.extension.valueString';
+      targetElementRule.value = 'Questionnaire.item';
 
-    const assignmentRule = new AssignmentRule('item.item.linkId');
-    assignmentRule.value = 'item-2';
+      const assignmentRule = new AssignmentRule('item.item.linkId');
+      assignmentRule.value = 'item-2';
 
-    profile.rules.push(
-      containsRule,
-      cardRule,
-      profileRule,
-      extensionRule,
-      targetElementRule,
-      assignmentRule
-    );
-    doc.profiles.set(profile.name, profile);
+      profile.rules.push(
+        containsRule,
+        cardRule,
+        profileRule,
+        extensionRule,
+        targetElementRule,
+        assignmentRule
+      );
+      doc.profiles.set(profile.name, profile);
 
-    // The slice added to the parent element should be unfolded to the child
-    const exportedProfile = exporter.export().profiles[0];
-    expect(
-      exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
-    ).not.toBeDefined();
+      // The slice added to the parent element should be unfolded to the child
+      const exportedProfile = exporter.export().profiles[0];
+      expect(
+        exportedProfile.findElement('Questionnaire.item.item.extension:example-slice')
+      ).not.toBeDefined();
+    });
   });
 
   describe('#Extension', () => {
@@ -4700,34 +4697,34 @@ describe('StructureDefinitionExporter', () => {
       });
     });
 
-  it('should apply a CaretValueRule on an extension on ElementDefinition', () => {
-    // Extension: MyBooleanExtension
-    // * value[x] only boolean
-    const extension = new Extension('MyBooleanExtension');
-    const onlyBoolean = new OnlyRule('value[x]');
-    onlyBoolean.types.push({ type: 'boolean' });
-    extension.rules.push(onlyBoolean);
-    doc.extensions.set(extension.name, extension);
-    // Profile: ExtensionOnName
-    // Parent: Patient
-    // * name ^extension[MyBooleanExtension].valueBoolean = true
-    const profile = new Profile('ExtensionOnName');
-    profile.parent = 'Patient';
-    const rule = new CaretValueRule('name');
-    rule.caretPath = 'extension[MyBooleanExtension].valueBoolean';
-    rule.value = true;
-    profile.rules.push(rule);
+    it('should apply a CaretValueRule on an extension on ElementDefinition', () => {
+      // Extension: MyBooleanExtension
+      // * value[x] only boolean
+      const extension = new Extension('MyBooleanExtension');
+      const onlyBoolean = new OnlyRule('value[x]');
+      onlyBoolean.types.push({ type: 'boolean' });
+      extension.rules.push(onlyBoolean);
+      doc.extensions.set(extension.name, extension);
+      // Profile: ExtensionOnName
+      // Parent: Patient
+      // * name ^extension[MyBooleanExtension].valueBoolean = true
+      const profile = new Profile('ExtensionOnName');
+      profile.parent = 'Patient';
+      const rule = new CaretValueRule('name');
+      rule.caretPath = 'extension[MyBooleanExtension].valueBoolean';
+      rule.value = true;
+      profile.rules.push(rule);
 
-    exporter.exportStructDef(profile);
-    const sd = pkg.profiles[0];
-    const name = sd.findElement('Patient.name');
-    expect(name.extension).toEqual([
-      {
-        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
-        valueBoolean: true
-      }
-    ]);
-  });
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const name = sd.findElement('Patient.name');
+      expect(name.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
+          valueBoolean: true
+        }
+      ]);
+    });
 
     it('should not apply an invalid CaretValueRule on an element without a path', () => {
       const profile = new Profile('Foo');
