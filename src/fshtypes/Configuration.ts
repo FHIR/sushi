@@ -102,8 +102,8 @@ export type Configuration = {
 
   // NO LONGER SUPPORTED: Use of the template property is no longer supported.  Authors should manage the
   // ig.ini file themselves.
-  // The template property will be used to generate an ig.ini file.
-  // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file.
+  // NOTE: This property is kept in the type so we can log more useful error messages in IGExporter.
+  // If those errors are removed, the property should be removed entirely.
   template?: string;
 
   // The menu property will be used to generate the input/menu.xml file. The menu is represented as
@@ -114,19 +114,8 @@ export type Configuration = {
 
   // NO LONGER SUPPORTED: Use of the history property is no longer supported.  Authors should manage
   // the package-list.json file directly.
-  // The history property corresponds to package-list.json. SUSHI will use the existing top-level
-  // properties in its config to populate the top-level package-list.json properties: package-id,
-  // canonical, title, and introduction. Authors that wish to provide different values can supply
-  // them as properties under history. All other properties under history are assumed to be
-  // versions. To provide a custom package-list.json file, remove this property and include a
-  // package-list.json file.
-  //
-  // The current version is special. If the author provides only a single string value, it is
-  // assumed to be the URL path to the current build. The following default values will then be
-  // used:
-  // * desc: Continuous Integration Build (latest in version control)
-  // * status: ci-build
-  // * current: true
+  // NOTE: This property is kept in the type so we can log more useful error messages in IGExporter.
+  // If those errors are removed, the property should be removed entirely.
   history?: ConfigurationHistory;
 
   // The indexPageContent property is used to generate a basic index.md file. To provide a
