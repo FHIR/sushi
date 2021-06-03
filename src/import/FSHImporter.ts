@@ -968,7 +968,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
-    const path = this.visitPath(ctx.path());
+    const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
     const addElementRule = new AddElementRule(path)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);

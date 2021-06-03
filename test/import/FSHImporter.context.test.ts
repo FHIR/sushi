@@ -10,7 +10,8 @@ import {
   assertObeysRule,
   assertValueSetConceptComponent,
   assertValueSetFilterComponent,
-  assertCodeCaretRule
+  assertCodeCaretRule,
+  assertAddElementRule
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 
@@ -307,6 +308,38 @@ describe('FSHImporter', () => {
         undefined
       );
       assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
+    });
+
+    it('should apply context to AddElement rules', () => {
+      const input = `
+      Logical: Human
+      * family 0..1 BackboneElement "Family"
+        * mother 0..2 string "Mother"
+        * father 0..2 string "Father"
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.logicals.size).toBe(1);
+      const logical = result.logicals.get('Human');
+      expect(logical.name).toBe('Human');
+      expect(logical.rules.length).toBe(3);
+      assertAddElementRule(logical.rules[0], 'family', {
+        card: { min: 0, max: '1' },
+        types: [{ type: 'BackboneElement' }],
+        defs: { short: 'Family' }
+      });
+      assertAddElementRule(logical.rules[1], 'family.mother', {
+        card: { min: 0, max: '2' },
+        types: [{ type: 'string' }],
+        defs: { short: 'Mother' }
+      });
+      assertAddElementRule(logical.rules[2], 'family.father', {
+        card: { min: 0, max: '2' },
+        types: [{ type: 'string' }],
+        defs: { short: 'Father' }
+      });
     });
 
     it('should log an error when a rule is indented below a rule without a path', () => {
