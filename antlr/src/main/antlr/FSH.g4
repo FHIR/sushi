@@ -27,10 +27,10 @@ vsMetadata:         id | title | description;
 vsRule:             vsComponent | caretValueRule | insertRule;
 codeSystem:         KW_CODESYSTEM name csMetadata* csRule*;
 csMetadata:         id | title | description;
-csRule:             concept | caretValueRule | codeCaretValueRule | insertRule;
+csRule:             concept | codeCaretValueRule | insertRule;
 
 ruleSet:            KW_RULESET RULESET_REFERENCE ruleSetRule+;
-ruleSetRule:        sdRule | concept | codeCaretValueRule | vsComponent;
+ruleSetRule:        sdRule | addElementRule | concept | codeCaretValueRule | vsComponent;
 
 paramRuleSet:       KW_RULESET PARAM_RULESET_REFERENCE paramRuleSetContent;
 paramRuleSetContent:   STAR
@@ -71,10 +71,10 @@ containsRule:       STAR path KW_CONTAINS item (KW_AND item)*;
 onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS name (KW_AND name)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
-codeCaretValueRule: STAR (CODE)+ caretPath EQUAL value;
+codeCaretValueRule: STAR CODE* caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
 insertRule:         STAR KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
-addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING? STRING?;
+addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING (STRING | MULTILINE_STRING)?;
 pathRule:           STAR path;
 
 // VALUESET COMPONENTS
@@ -103,7 +103,8 @@ concept:            STAR CODE+ STRING? (STRING | MULTILINE_STRING)?;
 quantity:           NUMBER (UNIT | CODE) STRING?;
 ratio:              ratioPart COLON ratioPart;
 reference:          REFERENCE STRING?;
+referenceType:      REFERENCE;
 canonical:          CANONICAL;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
-targetType:         name | reference;
+targetType:         name | referenceType;

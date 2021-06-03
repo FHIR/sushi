@@ -111,6 +111,12 @@ export class StructureDefinition {
     return `StructureDefinition-${this.id}.json`;
   }
 
+  get pathType(): string {
+    return this.type.startsWith('http')
+      ? this.type.slice(this.type.lastIndexOf('/') + 1)
+      : this.type;
+  }
+
   /**
    * Get the Structure Definition for Structure Definition
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -179,7 +185,7 @@ export class StructureDefinition {
   findElementByPath(path: string, fisher: Fishable): ElementDefinition {
     // If the path already exists, get it and return the match
     // If !path just return the base parent element
-    const fullPath = path && path !== '.' ? `${this.type}.${path}` : this.type;
+    const fullPath = path && path !== '.' ? `${this.pathType}.${path}` : this.pathType;
     const match = this.elements.find(e => e.path === fullPath && !e.id.includes(':'));
     if (match != null) {
       return match;
@@ -188,7 +194,7 @@ export class StructureDefinition {
     // Parse the FSH Path into a form we can work with
     const parsedPath = parseFSHPath(path);
 
-    let fhirPathString = this.type;
+    let fhirPathString = this.pathType;
     let matchingElements = this.elements;
     let newMatchingElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
@@ -294,8 +300,7 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    const parentName = this.type;
-    if (path === 'type' && value !== parentName) {
+    if (path === 'type' && value !== this.pathType) {
       throw new InvalidTypeAccessError();
     }
     setPropertyOnDefinitionInstance(this, path, value, fisher);
@@ -357,8 +362,10 @@ export class StructureDefinition {
 
     // Populate the differential
     j.differential = { element: [] };
-    this.elements.forEach(e => {
-      if (e.hasDiff()) {
+    this.elements.forEach((e, idx) => {
+      // If this is a logical model or a resource (derivation = 'specialization'),
+      // we need to make sure the root element is included in the differential.
+      if (e.hasDiff() || (this.derivation === 'specialization' && idx === 0)) {
         const diff = e.calculateDiff().toJSON();
         const isTypeSlicingChoiceDiff =
           diff.id.endsWith('[x]') &&
@@ -401,8 +408,8 @@ export class StructureDefinition {
 
   /**
    * Constructs a new StructureDefinition representing the passed in JSON.  The JSON that is passed in must be a
-   * properly formatted FHIR 3.0.1 StructureDefinition JSON.
-   * @param {any} json - the FHIR 3.0.1 JSON representation of a StructureDefinition to construct
+   * properly formatted FHIR 4.0.1 StructureDefinition JSON.
+   * @param {any} json - the FHIR 4.0.1 JSON representation of a StructureDefinition to construct
    * @param {captureOriginalElements} - indicate if original elements should be captured for purposes of
    *   detecting differentials.  Defaults to true.
    * @returns {StructureDefinition} a new StructureDefinition instance representing the passed in JSON
@@ -440,7 +447,7 @@ export class StructureDefinition {
    * @param {string} path - The path to the ElementDefinition to assign
    * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @param {inlineResourceTypes} - Types that will be used to replace Resource elements
+   * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
    * @returns {any} - The object or value to assign
@@ -665,6 +672,7 @@ export class StructureDefinition {
    * Looks for a slice within the set of elements that matches the fhirPath
    * @param {PathPart} pathPart - The path to match sliceName against
    * @param {ElementDefinition[]} elements - The set of elements to search through
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition} - The sliceElement if found, else undefined
    */
   private findMatchingSlice(

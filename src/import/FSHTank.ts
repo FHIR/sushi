@@ -2,6 +2,8 @@ import { FSHDocument } from './FSHDocument';
 import {
   Profile,
   Extension,
+  Logical,
+  Resource,
   Instance,
   FshValueSet,
   FshCodeSystem,
@@ -35,6 +37,22 @@ export class FSHTank implements Fishable {
   }
 
   /**
+   * Gets all logical models in the tank
+   * @returns {Logical[]}
+   */
+  public getAllLogicals(): Logical[] {
+    return flatMap(this.docs, doc => Array.from(doc.logicals.values()));
+  }
+
+  /**
+   * Gets all resources in the tank
+   * @returns {Resource[]}
+   */
+  public getAllResources(): Resource[] {
+    return flatMap(this.docs, doc => Array.from(doc.resources.values()));
+  }
+
+  /**
    * Gets all instances in the tank
    * @returns {Instance[]}
    */
@@ -43,11 +61,17 @@ export class FSHTank implements Fishable {
   }
 
   /**
-   * Gets all structure definitions (profiles and extensions) in the tank
+   * Gets all structure definitions (i.e., FshStructures) (profiles, extensions,
+   * logical models, and resources) in the tank.
    * @returns {(Profile | Extension)[]}
    */
-  public getAllStructureDefinitions(): (Profile | Extension)[] {
-    return [...this.getAllProfiles(), ...this.getAllExtensions()];
+  public getAllStructureDefinitions(): (Profile | Extension | Logical | Resource)[] {
+    return [
+      ...this.getAllProfiles(),
+      ...this.getAllExtensions(),
+      ...this.getAllLogicals(),
+      ...this.getAllResources()
+    ];
   }
 
   /**
@@ -109,6 +133,8 @@ export class FSHTank implements Fishable {
   ):
     | Profile
     | Extension
+    | Logical
+    | Resource
     | FshValueSet
     | FshCodeSystem
     | Instance
@@ -124,6 +150,8 @@ export class FSHTank implements Fishable {
       types = [
         Type.Profile,
         Type.Extension,
+        Type.Logical,
+        Type.Resource,
         Type.ValueSet,
         Type.CodeSystem,
         Type.Instance,
@@ -150,6 +178,22 @@ export class FSHTank implements Fishable {
               e.name === item ||
               e.id === item ||
               getUrlFromFshDefinition(e, this.config.canonical) === item
+          );
+          break;
+        case Type.Logical:
+          result = this.getAllLogicals().find(
+            l =>
+              l.name === item ||
+              l.id === item ||
+              getUrlFromFshDefinition(l, this.config.canonical) === item
+          );
+          break;
+        case Type.Resource:
+          result = this.getAllResources().find(
+            r =>
+              r.name === item ||
+              r.id === item ||
+              getUrlFromFshDefinition(r, this.config.canonical) === item
           );
           break;
         case Type.ValueSet:
@@ -180,7 +224,6 @@ export class FSHTank implements Fishable {
         case Type.Mapping:
           result = this.getAllMappings().find(m => m.name === item);
           break;
-        case Type.Resource:
         case Type.Type:
         default:
           // Tank doesn't support these types
@@ -210,9 +253,22 @@ export class FSHTank implements Fishable {
         id: result.id,
         name: result.name
       };
-      if (result instanceof Profile || result instanceof Extension) {
+      if (
+        result instanceof Profile ||
+        result instanceof Extension ||
+        result instanceof Logical ||
+        result instanceof Resource
+      ) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
         meta.parent = result.parent;
+        if (result instanceof Logical) {
+          // Logical models should always use an absolute URL as their StructureDefinition.type
+          // unless HL7 published them. In that case, the URL is relative to
+          // http://hl7.org/fhir/StructureDefinition/.
+          // Ref: https://chat.fhir.org/#narrow/stream/179177-conformance/topic/StructureDefinition.2Etype.20for.20Logical.20Models.2FCustom.20Resources/near/240488388
+          const HL7_URL = 'http://hl7.org/fhir/StructureDefinition/';
+          meta.sdType = meta.url.startsWith(HL7_URL) ? meta.url.slice(HL7_URL.length) : meta.url;
+        }
       } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
       } else if (result instanceof Instance) {

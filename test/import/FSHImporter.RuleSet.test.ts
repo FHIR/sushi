@@ -4,14 +4,16 @@ import {
   assertAssignmentRule,
   assertCardRule,
   assertInsertRule,
-  assertValueSetConceptComponent
+  assertValueSetConceptComponent,
+  assertAddElementRule,
+  assertCodeCaretRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { Rule, ConceptRule, CodeCaretValueRule } from '../../src/fshtypes/rules';
+import { Rule, ConceptRule } from '../../src/fshtypes/rules';
 import { FshCode } from '../../src/fshtypes';
 
 describe('FSHImporter', () => {
-  beforeAll(() => {
+  beforeEach(() => {
     loggerSpy.reset();
   });
 
@@ -100,6 +102,37 @@ describe('FSHImporter', () => {
       assertCardRule(ruleSet.rules[2] as Rule, 'contact', 1, '1');
     });
 
+    it('should parse a RuleSet with an AddElementRule', () => {
+      const input = `
+        RuleSet: RuleRuleSet
+        * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
+        * contact 1..1
+        * newStuff 0..* string "short for newStuff property"
+        `;
+      const result = importSingleText(input, 'Rules.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('RuleRuleSet');
+      expect(ruleSet.name).toBe('RuleRuleSet');
+      expect(ruleSet.sourceInfo.location).toEqual({
+        startLine: 2,
+        startColumn: 9,
+        endLine: 5,
+        endColumn: 60
+      });
+      assertBindingRule(
+        ruleSet.rules[0] as Rule,
+        'gender',
+        'https://www.hl7.org/fhir/valueset-administrative-gender.html',
+        'required'
+      );
+      assertCardRule(ruleSet.rules[1] as Rule, 'contact', 1, '1');
+      assertAddElementRule(ruleSet.rules[2], 'newStuff', {
+        card: { min: 0, max: '*' },
+        types: [{ type: 'string' }],
+        defs: { short: 'short for newStuff property', definition: 'short for newStuff property' }
+      });
+    });
+
     it('should parse a RuleSet with rules, ValueSetComponents, ConceptRules, and CodeCaretValueRules', () => {
       const input = `
         RuleSet: RuleRuleSet
@@ -132,14 +165,13 @@ describe('FSHImporter', () => {
       expect(concept).toEqual(
         new ConceptRule('lion').withFile('Rules.fsh').withLocation([5, 9, 5, 15])
       );
-      expect(ruleSet.rules[3]).toBeInstanceOf(CodeCaretValueRule);
-      const codeCaret = ruleSet.rules[3] as CodeCaretValueRule;
-      expect(codeCaret.codePath).toEqual(['lion']);
-      expect(codeCaret.path).toBe('');
-      expect(codeCaret.caretPath).toBe('designation.value');
-      expect(codeCaret.value).toBe('Watch out for big cat!');
-      expect(codeCaret.sourceInfo.file).toBe('Rules.fsh');
-      expect(codeCaret.sourceInfo.location).toEqual({
+      assertCodeCaretRule(
+        ruleSet.rules[3],
+        ['lion'],
+        'designation.value',
+        'Watch out for big cat!'
+      );
+      expect(ruleSet.rules[3].sourceInfo.location).toEqual({
         startLine: 6,
         startColumn: 9,
         endLine: 6,

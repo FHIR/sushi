@@ -50,6 +50,7 @@ describe('FHIRExporter', () => {
 
     it('should allow a profile to contain a defined FHIR resource', () => {
       const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'allergyintolerance-clinical';
@@ -73,6 +74,7 @@ describe('FHIRExporter', () => {
       doc.instances.set(instance.name, instance);
 
       const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'myObservation';
@@ -115,6 +117,7 @@ describe('FHIRExporter', () => {
 
     it('should log an error when a profile tries to contain a resource that does not exist', () => {
       const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'oops-no-resource';

@@ -152,7 +152,8 @@ describe('FSHImporter', () => {
       });
     });
 
-    // Since Extensions use the same rule parsing code as Profiles, only do minimal tests of rules
+    // Tests for all supported rules are in FSHImporter.SD-Rules.test.ts
+    // Since Extensions use the same rule parsing code as other StructureDefinitions, only do minimal tests of rules
     describe('#cardRule', () => {
       it('should parse simple card rules', () => {
         const input = `
