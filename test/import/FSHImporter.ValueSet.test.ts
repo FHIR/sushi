@@ -844,6 +844,37 @@ describe('FSHImporter', () => {
         ]);
       });
 
+      it('should parse a value set that chains filter operators', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where
+          display exists true and
+          variant exists false and
+          extension exists true
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
+          {
+            property: 'display',
+            operator: VsOperator.EXISTS,
+            value: true
+          },
+          {
+            property: 'variant',
+            operator: VsOperator.EXISTS,
+            value: false
+          },
+          {
+            property: 'extension',
+            operator: VsOperator.EXISTS,
+            value: true
+          }
+        ]);
+      });
+
       it('should log an error when the exists filter has a non-boolean value', () => {
         const input = `
         ValueSet: ZooVS
