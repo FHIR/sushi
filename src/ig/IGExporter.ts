@@ -306,9 +306,9 @@ export class IGExporter {
         );
 
         if (
-          (!existsSync(inputIndexMarkdownPagesPath) && existsSync(inputIndexXMLPagesPath)) ||
-          (!existsSync(inputIndexMarkdownPageContentPath) &&
-            existsSync(inputIndexXMLPageContentPath))
+          !existsSync(inputIndexMarkdownPagesPath) &&
+          !existsSync(inputIndexMarkdownPageContentPath) &&
+          (existsSync(inputIndexXMLPagesPath) || existsSync(inputIndexXMLPageContentPath))
         ) {
           generation = 'html';
         }
@@ -332,11 +332,10 @@ export class IGExporter {
       outputFileSync(outputPath, `${warning}${this.config.indexPageContent}`);
       logger.info(`Generated index.md based on "indexPageContent" in ${this.configName}.`);
     } else if (
+      !existsSync(inputIndexMarkdownPagesPath) &&
       !existsSync(inputIndexMarkdownPageContentPath) &&
-      existsSync(inputIndexXMLPageContentPath)
+      (existsSync(inputIndexXMLPagesPath) || existsSync(inputIndexXMLPageContentPath))
     ) {
-      generation = 'html';
-    } else if (!existsSync(inputIndexMarkdownPagesPath) && existsSync(inputIndexXMLPagesPath)) {
       generation = 'html';
     } else {
       // do nothing -- no indexPageContent in config, do nothing with index file if provided
