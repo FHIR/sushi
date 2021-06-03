@@ -56,22 +56,6 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should throw ValueAlreadyAssignedError when assigning a value assigned via parent pattern to a conflicting array', () => {
-      const medicationForm = medication.elements.find(e => e.id === 'Medication.form');
-      medicationForm.patternCodeableConcept = { coding: [{ system: 'foo' }, { system: 'bar' }] };
-      const medicationFormCodingSystem = medication.findElementByPath('form.coding.system', fisher);
-      expect(() => {
-        medicationFormCodingSystem.assignValue('baz');
-      }).toThrow(
-        'Cannot assign "baz" to this element; a different uri is already assigned: ["foo","bar"].'
-      );
-      expect(() => {
-        medicationFormCodingSystem.assignValue('baz', true);
-      }).toThrow(
-        'Cannot assign "baz" to this element; a different uri is already assigned: ["foo","bar"].'
-      );
-    });
-
     it('should ensure that minimum cardinality is 1 when assigning a value mentioned in a parent slice discriminator', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };

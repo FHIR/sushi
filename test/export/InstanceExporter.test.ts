@@ -924,6 +924,30 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should assign an element to a value different than the pattern value on the Structure Definition on an array', () => {
+      const assignedValRule = new AssignmentRule('maritalStatus');
+      const assignedFshCode = new FshCode('foo', 'http://foo.com');
+      assignedValRule.value = assignedFshCode;
+      patient.rules.push(assignedValRule);
+      const cardRule = new CardRule('maritalStatus');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
+      const instanceAssignedValRule = new AssignmentRule('maritalStatus.coding[1]');
+      const instanceAssignedFshCode = new FshCode('bar', 'http://bar.com');
+      instanceAssignedValRule.value = instanceAssignedFshCode;
+      patientInstance.rules.push(instanceAssignedValRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus.coding[0]).toEqual({
+        code: 'foo',
+        system: 'http://foo.com'
+      });
+      expect(exported.maritalStatus.coding[1]).toEqual({
+        code: 'bar',
+        system: 'http://bar.com'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     // Nested elements
     it('should assign a nested element that has parents defined in the instance and is assigned on the Structure Definition', () => {
       const cardRule = new CardRule('communication.preferred');
