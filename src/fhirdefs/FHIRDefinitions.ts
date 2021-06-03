@@ -1,9 +1,11 @@
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { cloneDeep, flatten } from 'lodash';
+import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
 
 export class FHIRDefinitions implements Fishable {
   private resources: Map<string, any>;
+  private logicals: Map<string, any>;
   private profiles: Map<string, any>;
   private extensions: Map<string, any>;
   private types: Map<string, any>;
@@ -17,6 +19,7 @@ export class FHIRDefinitions implements Fishable {
   constructor(public readonly isSupplementalFHIRDefinitions = false) {
     this.packages = [];
     this.resources = new Map();
+    this.logicals = new Map();
     this.profiles = new Map();
     this.extensions = new Map();
     this.types = new Map();
@@ -25,6 +28,10 @@ export class FHIRDefinitions implements Fishable {
     this.implementationGuides = new Map();
     this.predefinedResources = new Map();
     this.supplementalFHIRDefinitions = new Map();
+    // FHIR R4 does not have a StructureDefinition that defines "Base" but FHIR R5 does.
+    // We have defined a "placeholder" StructureDefinition for "Base" for R4.
+    // Inject the R4 "Base" placeholder StructureDefinition
+    this.add(STRUCTURE_DEFINITION_R4_BASE);
   }
 
   // This getter is only used in tests to verify what supplemental packages are loaded
@@ -37,6 +44,7 @@ export class FHIRDefinitions implements Fishable {
   size(): number {
     return (
       this.resources.size +
+      this.logicals.size +
       this.profiles.size +
       this.extensions.size +
       this.types.size +
@@ -50,6 +58,10 @@ export class FHIRDefinitions implements Fishable {
 
   allResources(): any[] {
     return cloneJsonMapValues(this.resources);
+  }
+
+  allLogicals(): any[] {
+    return cloneJsonMapValues(this.logicals);
   }
 
   allProfiles(): any[] {
@@ -104,6 +116,8 @@ export class FHIRDefinitions implements Fishable {
         } else {
           addDefinitionToMap(definition, this.resources);
         }
+      } else if (definition.kind === 'logical') {
+        addDefinitionToMap(definition, this.logicals);
       }
     } else if (definition.resourceType === 'ValueSet' && !this.isSupplementalFHIRDefinitions) {
       addDefinitionToMap(definition, this.valueSets);
@@ -171,6 +185,7 @@ export class FHIRDefinitions implements Fishable {
     if (types.length === 0) {
       types = [
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -184,6 +199,9 @@ export class FHIRDefinitions implements Fishable {
       switch (type) {
         case Type.Resource:
           def = cloneDeep(this.resources.get(item));
+          break;
+        case Type.Logical:
+          def = cloneDeep(this.logicals.get(item));
           break;
         case Type.Type:
           def = cloneDeep(this.types.get(item));
@@ -200,7 +218,7 @@ export class FHIRDefinitions implements Fishable {
         case Type.CodeSystem:
           def = cloneDeep(this.codeSystems.get(item));
           break;
-        case Type.Instance: // don't support resolving to FHIR examples
+        case Type.Instance: // don't support resolving to FHIR instances
         default:
           break;
       }

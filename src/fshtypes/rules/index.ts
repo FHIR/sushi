@@ -14,3 +14,4 @@ export * from './ConceptRule';
 export * from './CodeCaretValueRule';
 export * from './AddElementRule';
 export * from './SdRule';
+export * from './LrRule';

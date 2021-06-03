@@ -91,6 +91,7 @@ export interface CsMetadataContext extends ParserRuleContext {
   title(): TitleContext;
   description(): DescriptionContext;
 }
+
 export interface CsRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
@@ -118,6 +119,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   sdRule(): SdRuleContext;
   vsComponent(): VsComponentContext;
   concept(): ConceptContext;
+  addElementRule(): AddElementRuleContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
 }
 
@@ -323,9 +325,14 @@ export interface RatioPartContext extends ParserRuleContext {
   NUMBER(): ParserRuleContext;
   quantity(): QuantityContext;
 }
+
 export interface ReferenceContext extends ParserRuleContext {
   REFERENCE(): ParserRuleContext;
   STRING(): ParserRuleContext;
+}
+
+export interface ReferenceTypeContext extends ParserRuleContext {
+  REFERENCE(): ParserRuleContext;
 }
 
 export interface CanonicalContext extends ParserRuleContext {
@@ -358,7 +365,7 @@ export interface OnlyRuleContext extends ParserRuleContext {
 
 export interface TargetTypeContext extends ParserRuleContext {
   name(): NameContext;
-  reference(): ReferenceContext;
+  referenceType(): ReferenceTypeContext;
 }
 
 export interface ObeysRuleContext extends ParserRuleContext {
@@ -411,6 +418,7 @@ export interface AddElementRuleContext extends ParserRuleContext {
   flag(): FlagContext[];
   targetType(): TargetTypeContext[];
   STRING(): ParserRuleContext[];
+  MULTILINE_STRING(): ParserRuleContext;
 }
 
 export interface VsComponentContext extends ParserRuleContext {

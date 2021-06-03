@@ -8,6 +8,8 @@ import { FSHParser } from './generated/FSHParser';
 import {
   Profile,
   Extension,
+  Resource,
+  Logical,
   FshCanonical,
   FshCode,
   FshQuantity,
@@ -46,6 +48,9 @@ import {
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
   SdRule,
+  LrRule,
+  AddElementRule,
+  OnlyRuleType,
   CodeCaretValueRule
 } from '../fshtypes/rules';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
@@ -57,6 +62,7 @@ import {
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
 } from '../errors';
+import isEmpty from 'lodash/isEmpty';
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
@@ -121,6 +127,7 @@ enum Flag {
   Unknown
 }
 
+const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 const INDENT_WIDTH = 2;
 
 /**
@@ -244,33 +251,23 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
-    }
-
-    if (ctx.extension()) {
+    } else if (ctx.extension()) {
       this.visitExtension(ctx.extension());
-    }
-
-    if (ctx.instance()) {
+    } else if (ctx.resource()) {
+      this.visitResource(ctx.resource());
+    } else if (ctx.logical()) {
+      this.visitLogical(ctx.logical());
+    } else if (ctx.instance()) {
       this.visitInstance(ctx.instance());
-    }
-
-    if (ctx.valueSet()) {
+    } else if (ctx.valueSet()) {
       this.visitValueSet(ctx.valueSet());
-    }
-
-    if (ctx.codeSystem()) {
+    } else if (ctx.codeSystem()) {
       this.visitCodeSystem(ctx.codeSystem());
-    }
-
-    if (ctx.invariant()) {
+    } else if (ctx.invariant()) {
       this.visitInvariant(ctx.invariant());
-    }
-
-    if (ctx.ruleSet()) {
+    } else if (ctx.ruleSet()) {
       this.visitRuleSet(ctx.ruleSet());
-    }
-
-    if (ctx.mapping()) {
+    } else if (ctx.mapping()) {
       this.visitMapping(ctx.mapping());
     }
   }
@@ -336,6 +333,73 @@ export class FSHImporter extends FSHVisitor {
       });
     ruleCtx.forEach(sdRule => {
       def.rules.push(...this.visitSdRule(sdRule));
+    });
+  }
+
+  visitResource(ctx: pc.ResourceContext) {
+    const resource = new Resource(ctx.name().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.currentDoc.resources.has(resource.name)) {
+      logger.error(`Skipping Resource: a Resource named ${resource.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseResourceOrLogical(resource, ctx.sdMetadata(), ctx.lrRule());
+      this.currentDoc.resources.set(resource.name, resource);
+    }
+  }
+
+  visitLogical(ctx: pc.LogicalContext) {
+    const logical = new Logical(ctx.name().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.currentDoc.logicals.has(logical.name)) {
+      logger.error(
+        `Skipping Logical Model: a Logical Model named ${logical.name} already exists.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
+      this.parseResourceOrLogical(logical, ctx.sdMetadata(), ctx.lrRule());
+      this.currentDoc.logicals.set(logical.name, logical);
+    }
+  }
+
+  private parseResourceOrLogical(
+    def: Resource | Logical,
+    metaCtx: pc.SdMetadataContext[] = [],
+    ruleCtx: pc.LrRuleContext[] = []
+  ): void {
+    const seenPairs: Map<SdMetadataKey, string | string[]> = new Map();
+    metaCtx
+      .map(sdMeta => ({ ...this.visitSdMetadata(sdMeta), context: sdMeta }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === SdMetadataKey.Id) {
+          def.id = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Parent) {
+          def.parent = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Title) {
+          def.title = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Description) {
+          def.description = pair.value as string;
+        }
+      });
+    ruleCtx.forEach(lrRule => {
+      def.rules.push(...this.visitLrRule(lrRule));
     });
   }
 
@@ -595,7 +659,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  parseRuleSet(ruleSet: RuleSet, rules: pc.RuleSetRuleContext[]) {
+  private parseRuleSet(ruleSet: RuleSet, rules: pc.RuleSetRuleContext[]) {
     rules.forEach(rule => {
       if (rule.sdRule()) {
         ruleSet.rules.push(...this.visitSdRule(rule.sdRule()));
@@ -603,6 +667,8 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitVsComponent(rule.vsComponent()));
       } else if (rule.concept()) {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
+      } else if (rule.addElementRule()) {
+        ruleSet.rules.push(this.visitAddElementRule(rule.addElementRule()));
       } else if (rule.codeCaretValueRule()) {
         ruleSet.rules.push(this.visitCodeCaretValueRule(rule.codeCaretValueRule()));
       }
@@ -659,7 +725,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  parseMapping(
+  private parseMapping(
     mapping: Mapping,
     metaCtx: pc.MappingMetadataContext[] = [],
     ruleCtx: pc.MappingEntityRuleContext[] = []
@@ -888,6 +954,87 @@ export class FSHImporter extends FSHVisitor {
     return concept;
   }
 
+  visitLrRule(ctx: pc.LrRuleContext): LrRule[] {
+    if (ctx.addElementRule()) {
+      return [this.visitAddElementRule(ctx.addElementRule())];
+    } else if (ctx.sdRule()) {
+      return this.visitSdRule(ctx.sdRule());
+    }
+    logger.warn(`Unsupported rule: ${ctx.getText()}`, {
+      file: this.currentFile,
+      location: this.extractStartStop(ctx)
+    });
+    return [];
+  }
+
+  visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
+    const path = this.visitPath(ctx.path());
+    const addElementRule = new AddElementRule(path)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+
+    const card = this.parseCard(ctx.CARD().getText(), addElementRule);
+    if (card.min == null || Number.isNaN(card.min)) {
+      logger.error(
+        `The 'min' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    if (isEmpty(card.max)) {
+      logger.error(
+        `The 'max' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    addElementRule.min = card.min;
+    addElementRule.max = card.max;
+
+    if (ctx.flag() && ctx.flag().length > 0) {
+      this.parseFlags(addElementRule, ctx.flag());
+    }
+
+    addElementRule.types = this.parseTargetType(ctx);
+    addElementRule.types.forEach(onlyRuleType => {
+      if (FLAGS.includes(onlyRuleType.type)) {
+        logger.warn(
+          `The targetType '${onlyRuleType.type}' appears to be a flag value rather than a valid target data type.`,
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    });
+
+    if (isEmpty(ctx.STRING())) {
+      logger.error(
+        `The 'short' attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
+      addElementRule.short = this.extractString(ctx.STRING()[0]);
+      if (isEmpty(ctx.STRING()[1]) && isEmpty(ctx.MULTILINE_STRING())) {
+        // Default definition to the value of short
+        addElementRule.definition = addElementRule.short;
+      } else if (!isEmpty(ctx.STRING()[1])) {
+        addElementRule.definition = this.extractString(ctx.STRING()[1]);
+      } else {
+        addElementRule.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
+      }
+    }
+
+    return addElementRule;
+  }
+
   visitSdRule(ctx: pc.SdRuleContext): SdRule[] {
     if (ctx.cardRule()) {
       return this.visitCardRule(ctx.cardRule());
@@ -1023,7 +1170,7 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  private parseCard(card: string, rule: CardRule): { min: number; max: string } {
+  private parseCard(card: string, rule: CardRule | AddElementRule): { min: number; max: string } {
     const parts = card.split('..', 2);
     if (parts[0] === '' && parts[1] === '') {
       logger.error(
@@ -1047,7 +1194,7 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
-  private parseFlags(flagRule: FlagRule, flagContext: pc.FlagContext[]): void {
+  private parseFlags(flagRule: FlagRule | AddElementRule, flagContext: pc.FlagContext[]): void {
     const flags = flagContext.map(f => this.visitFlag(f));
     if (flags.includes(Flag.MustSupport)) {
       flagRule.mustSupport = true;
@@ -1331,21 +1478,28 @@ export class FSHImporter extends FSHVisitor {
     const onlyRule = new OnlyRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+
+    onlyRule.types = this.parseTargetType(ctx);
+    return onlyRule;
+  }
+
+  private parseTargetType(ctx: pc.AddElementRuleContext | pc.OnlyRuleContext): OnlyRuleType[] {
+    const orTypes: OnlyRuleType[] = [];
     ctx.targetType().forEach(t => {
-      if (t.reference()) {
-        const referenceToken = t.reference().REFERENCE();
+      if (t.referenceType()) {
+        const referenceToken = t.referenceType().REFERENCE();
         const references = this.parseOrReference(referenceToken.getText());
         references.forEach(r =>
-          onlyRule.types.push({
+          orTypes.push({
             type: this.aliasAwareValue(referenceToken, r),
             isReference: true
           })
         );
       } else {
-        onlyRule.types.push({ type: this.aliasAwareValue(t.name()) });
+        orTypes.push({ type: this.aliasAwareValue(t.name()) });
       }
     });
-    return onlyRule;
+    return orTypes;
   }
 
   visitContainsRule(ctx: pc.ContainsRuleContext): (ContainsRule | CardRule | FlagRule)[] {

@@ -2,13 +2,14 @@ import 'jest-extended';
 import { Logical } from '../../src/fshtypes/';
 import { EOL } from 'os';
 import { AddElementRule, ObeysRule } from '../../src/fshtypes/rules';
+
 describe('Logical', () => {
   describe('#constructor', () => {
     it('should set the properties correctly', () => {
       const l = new Logical('MyLogical');
       expect(l.name).toBe('MyLogical');
       expect(l.id).toBe('MyLogical');
-      expect(l.parent).toBeUndefined();
+      expect(l.parent).toBe('Base');
       expect(l.title).toBeUndefined();
       expect(l.description).toBeUndefined();
       expect(l.rules).toBeEmpty();
@@ -23,7 +24,7 @@ describe('Logical', () => {
   describe('#toFSH', () => {
     it('should produce FSH for the simplest Logical model', () => {
       const input = new Logical('MyModel');
-      const expectedResult = ['Logical: MyModel', 'Id: MyModel'].join(EOL);
+      const expectedResult = ['Logical: MyModel', 'Parent: Base', 'Id: MyModel'].join(EOL);
       expect(input.toFSH()).toEqual(expectedResult);
     });
 
@@ -34,6 +35,7 @@ describe('Logical', () => {
       input.description = 'A new model for logical modeling.';
       const expectedResult = [
         'Logical: MyModel',
+        'Parent: Base',
         'Id: my-model',
         'Title: "My Model"',
         'Description: "A new model for logical modeling."'
@@ -53,6 +55,7 @@ describe('Logical', () => {
 
       const expectedResult = [
         'Logical: MyModel',
+        'Parent: Base',
         'Id: MyModel',
         '* feature 0..11 Reference(Procedure)',
         '* feature obeys mm-1'

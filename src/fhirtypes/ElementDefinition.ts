@@ -1,53 +1,56 @@
 import {
+  cloneDeep,
+  differenceWith,
+  flatten,
+  intersectionWith,
   isEmpty,
   isEqual,
   isMatch,
-  cloneDeep,
-  upperFirst,
-  intersectionWith,
-  flatten,
-  differenceWith
+  uniqWith,
+  upperFirst
 } from 'lodash';
-import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
-import { AssignmentValueType, OnlyRule } from '../fshtypes/rules';
+import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
+  AssignmentToCodeableReferenceError,
   BindingStrengthError,
   CodedTypeNotFoundError,
-  ValueAlreadyAssignedError,
-  NoSingleTypeError,
-  MismatchedTypeError,
+  DuplicateSliceError,
+  FixedToPatternError,
   InvalidCanonicalUrlError,
   InvalidCardinalityError,
+  InvalidFHIRIdError,
+  InvalidMappingError,
+  InvalidMaxOfSliceError,
+  InvalidMustSupportError,
+  InvalidSumOfSliceMinsError,
   InvalidTypeError,
+  InvalidUriError,
+  MismatchedTypeError,
+  MultipleStandardsStatusError,
+  NarrowingRootCardinalityError,
+  NonAbstractParentOfSpecializationError,
+  NoSingleTypeError,
+  SliceTypeRemovalError,
   SlicingDefinitionError,
   SlicingNotDefinedError,
   TypeNotFoundError,
-  WideningCardinalityError,
-  InvalidSumOfSliceMinsError,
-  InvalidMaxOfSliceError,
-  NarrowingRootCardinalityError,
-  SliceTypeRemovalError,
-  InvalidUriError,
-  FixedToPatternError,
-  MultipleStandardsStatusError,
-  InvalidMappingError,
-  InvalidFHIRIdError,
-  DuplicateSliceError,
-  NonAbstractParentOfSpecializationError,
+  ValueAlreadyAssignedError,
   ValueConflictsWithClosedSlicingError,
-  AssignmentToCodeableReferenceError,
+  WideningCardinalityError,
+  InvalidChoiceTypeRulePathError,
+  CannotResolvePathError,
   MismatchedBindingTypeError
 } from '../errors';
 import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
-
+import sax = require('sax');
 const PROFILE_ELEMENT_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
@@ -404,6 +407,7 @@ export class ElementDefinition {
     }
     return diff;
   }
+
   /**
    * Gets the id of an element on the differential using the shortcut syntax described here
    * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
@@ -417,6 +421,121 @@ export class ElementDefinition {
         return i > -1 ? p.slice(i + 4) : p;
       })
       .join('.');
+  }
+
+  /**
+   * Apply the AddElementRule to this new element using the appropriate methods
+   * for specific rules for the AddElementRule's implied rules (i.e., cardinality,
+   * type constraints, and flags).
+   * @param {AddElementRule} rule - specific instance of the rule
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   */
+  applyAddElementRule(rule: AddElementRule, fisher: Fishable): void {
+    // Verify the rule path. When adding a new element, a parent will always be defined,
+    // even it the parent element is the root element. If parent is not defined, there
+    // is something wrong with the rule.path value.
+    if (!this.parent()) {
+      throw new CannotResolvePathError(rule.path);
+    }
+
+    // Add the base attribute
+    this.base = {
+      path: `${this.structDef.pathType}.${rule.path}`,
+      min: rule.min,
+      max: rule.max
+    };
+
+    // Add the root element's constraints to this element
+    const elementSD = fisher.fishForFHIR('Element', Type.Type);
+    // The root element's constraint does not define the source property
+    // because it is the source. So, we need to add the missing source property.
+    elementSD.snapshot.element[0].constraint.forEach((c: ElementDefinitionConstraint) => {
+      c.source = elementSD.url;
+    });
+    this.constraint = elementSD.snapshot.element[0].constraint;
+
+    // Capture the current state as the original element definition.
+    // All changes after this will be a part of the differential.
+    this.captureOriginal();
+
+    // The constrainType() method applies a type constraint to an existing
+    // ElementDefinition.type. Since this is a new ElementDefinition, it
+    // does not yet have a 'type', so we need to assign an "initial" value
+    // that the constrainType() method can process.
+    this.type = this.initializeElementType(rule, fisher);
+    const target = this.structDef.getReferenceName(rule.path, this);
+    this.constrainType(rule, fisher, target);
+
+    this.constrainCardinality(rule.min, rule.max);
+
+    this.applyFlags(
+      rule.mustSupport,
+      rule.summary,
+      rule.modifier,
+      rule.trialUse,
+      rule.normative,
+      rule.draft
+    );
+
+    // Since 'short' and 'definition' are plain string values, directly assign the values.
+    if (!isEmpty(rule.short)) {
+      this.short = rule.short;
+    }
+    if (isEmpty(rule.definition)) {
+      if (!isEmpty(rule.short)) {
+        // According to sdf-3 in http://hl7.org/fhir/structuredefinition.html#invs,
+        // definition should be provided. Default it here.
+        this.definition = rule.short;
+      }
+    } else {
+      this.definition = rule.definition;
+    }
+  }
+
+  /**
+   * Define and return the initial base ElementDefinition.type from the AddElementRule.
+   * @ref https://github.com/FHIR/sushi/pull/802#discussion_r631300737
+   * @param {AddElementRule} rule - specific instance of the rule
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   * @returns {ElementDefinitionType[]} The element types as defined by the AddElementRule
+   * @private
+   */
+  private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
+    if (rule.types.length > 1 && !rule.path.endsWith('[x]')) {
+      // Reference data type with multiple targets is not considered a choice data type.
+      if (!rule.types.every(t => t.isReference)) {
+        throw new InvalidChoiceTypeRulePathError(rule);
+      }
+    }
+
+    let refTypeCnt = 0;
+
+    const initialTypes: ElementDefinitionType[] = [];
+    rule.types.forEach(t => {
+      if (t.isReference) {
+        refTypeCnt++;
+      } else {
+        const metadata = fisher.fishForMetadata(t.type);
+        initialTypes.push(new ElementDefinitionType(metadata.sdType));
+      }
+    });
+
+    const finalTypes: ElementDefinitionType[] = uniqWith(initialTypes, isEqual);
+    if (refTypeCnt > 0) {
+      // We only need to capture a single Reference type. The targetProfiles attribute
+      // will contain the URLs for each reference.
+      finalTypes.push(new ElementDefinitionType('Reference'));
+    }
+
+    const refCheckCnt = refTypeCnt > 0 ? refTypeCnt - 1 : 0;
+    if (rule.types.length !== finalTypes.length + refCheckCnt) {
+      logger.warn(
+        `${rule.path} includes duplicate types. Duplicates have been ignored.`,
+        rule.sourceInfo
+      );
+    }
+
+    return finalTypes;
   }
 
   /**
@@ -675,7 +794,7 @@ export class ElementDefinition {
    *   types
    * @throws {SliceTypeRemovalError} when a rule would eliminate all types on a slice
    */
-  constrainType(rule: OnlyRule, fisher: Fishable, target?: string): void {
+  constrainType(rule: OnlyRule | AddElementRule, fisher: Fishable, target?: string): void {
     const types = rule.types;
     // Establish the target types (if applicable)
     const targetType = this.getTargetType(target, fisher);
@@ -776,6 +895,7 @@ export class ElementDefinition {
       const targetSD = fisher.fishForMetadata(
         target,
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension
@@ -799,7 +919,7 @@ export class ElementDefinition {
         throw new InvalidTypeError(target, this.type);
       }
 
-      // Re-assign the targetProfiles/profiles as appopriate to remove non-targets
+      // Re-assign the targetProfiles/profiles as appropriate to remove non-targets
       if (targetType.profile?.includes(targetSD.url)) {
         targetType.profile = [targetSD.url];
       } else if (targetType.targetProfile?.includes(targetSD.url)) {
@@ -859,6 +979,10 @@ export class ElementDefinition {
           const matchesProfile =
             this.getTypeLineage(md.sdType, fisher).some(ancestor => ancestor.sdType === t2.code) &&
             t2.profile?.includes(md.url);
+          let matchesLogicalType = false;
+          if (this.structDef.kind === 'logical') {
+            matchesLogicalType = t2.code && t2.code === md.sdType;
+          }
           // True if we match an unprofiled type that is not abstract, is a parent, and that we are
           // specializing (the type does not match the sdType of the type to match)
           specializationOfNonAbstractType =
@@ -866,7 +990,7 @@ export class ElementDefinition {
             !md.abstract &&
             md.id !== lineage[0].id &&
             md.id !== lineage[0].sdType;
-          return matchesUnprofiledResource || matchesProfile;
+          return matchesUnprofiledResource || matchesProfile || matchesLogicalType;
         });
       }
 
@@ -937,10 +1061,19 @@ export class ElementDefinition {
         continue;
       } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);
+      } else if (
+        this.structDef.kind === 'logical' &&
+        newType.code === match.metadata.sdType &&
+        match.metadata.sdType === match.metadata.url
+      ) {
+        // The logical model's newType has a code that is a URL. This should NOT be
+        // included in newType.targetProfile or newType.profile.
+        continue;
       } else {
         matchedProfiles.push(match.metadata.url);
       }
     }
+
     if (targetType) {
       if (!isEmpty(matchedTargetProfiles)) {
         const targetIdx = newType.targetProfile?.indexOf(targetType.targetProfile[0]);
@@ -1085,6 +1218,11 @@ export class ElementDefinition {
 
     const connectedElements = this.findConnectedElements();
     if (mustSupport === true) {
+      if (this.structDef.derivation === 'specialization') {
+        // MustSupport is only allowed in profiles
+        throw new InvalidMustSupportError(this.structDef.name, this.id);
+      }
+
       this.mustSupport = mustSupport;
       // MS only gets applied to connected elements that are not themselves slices
       // For example, Observation.component.interpretation MS implies Observation.component:Lab.interpretation MS
@@ -1306,6 +1444,7 @@ export class ElementDefinition {
         const canonicalDefinition = fisher.fishForMetadata(
           value.entityName,
           Type.Resource,
+          Type.Logical,
           Type.Type,
           Type.Profile,
           Type.Extension,
@@ -1784,6 +1923,7 @@ export class ElementDefinition {
       );
     });
   }
+
   /**
    * Finds and returns all assignable descendents of the element. A assignable descendent is a direct child of the
    * element that has minimum cardinality greater than 0, and all assignable descendents of such children
@@ -1799,7 +1939,7 @@ export class ElementDefinition {
   }
 
   /**
-   * Finds and returns the elemnent being sliced
+   * Finds and returns the element being sliced
    * @returns {ElementDefinition | undefined} the sliced element or undefined if the element is not a slice
    */
   slicedElement(): ElementDefinition | undefined {
@@ -1898,7 +2038,6 @@ export class ElementDefinition {
    * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
    * the original property re-captured.
    */
-
   private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
     return targetElement?.children().map(e => {
       const eClone = e.clone();
