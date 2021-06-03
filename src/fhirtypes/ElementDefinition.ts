@@ -1525,7 +1525,11 @@ export class ElementDefinition {
     const currentElementValue = this[fixedX] ?? this[patternX] ?? this.assignedByAnyParent();
     // For complex types, use isMatch to check if they are a subset, otherwise use isEqual
     const compareFn = typeof fhirValue === 'object' ? isMatch : isEqual;
-    if (currentElementValue != null && !compareFn(fhirValue, currentElementValue)) {
+    if (
+      currentElementValue != null &&
+      !Array.isArray(currentElementValue) &&
+      !compareFn(fhirValue, currentElementValue)
+    ) {
       // It's a different value and not a compatible subset (e.g., the new value doesn't contain the old)
       throw new ValueAlreadyAssignedError(fshValue, type, JSON.stringify(currentElementValue));
     }
