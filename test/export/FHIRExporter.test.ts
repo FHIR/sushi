@@ -19,8 +19,7 @@ describe('FHIRExporter', () => {
         canonical: 'http://hl7.org/fhir/us/minimal',
         name: 'MinimalIG',
         status: 'draft',
-        fhirVersion: ['4.0.1'],
-        template: 'hl7.fhir.template#0.0.5'
+        fhirVersion: ['4.0.1']
       })
     );
   });

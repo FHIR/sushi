@@ -24,6 +24,7 @@ fhirVersion: 4.0.1
 # The template property will be used to generate an ig.ini file.
 # To provide a custom ig.ini file, do not include this property and
 # include an `ig.ini` file in ig-data.
+# NOTE: This property is UNSUPPORTED and only used for testing purposes
 template: hl7.fhir.template#0.0.5
 
 # The following two lines correspond to items that used to be in
@@ -191,6 +192,7 @@ parameters:
 # supply them as properties under history. All other properties under
 # history are assumed to be versions. To provide a custom package-list.json
 # file, remove this property and include a package-list.json file in ig-data.
+# NOTE: This property is UNSUPPORTED and only used for testing purposes
 history:
   # The current version is special. If the author provides only a
   # single value, it is assumed to be the URL path to the current

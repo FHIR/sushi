@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
-import { isPlainObject, cloneDeep, padEnd, sortBy } from 'lodash';
+import { isPlainObject, padEnd, sortBy } from 'lodash';
 import { EOL } from 'os';
 import { logger } from './FSHLogger';
 import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
@@ -16,16 +16,6 @@ import {
   loadConfigurationFromIgResource
 } from '../import';
 import { Package } from '../export';
-import {
-  filterInlineInstances,
-  filterExampleInstances,
-  filterCapabilitiesInstances,
-  filterVocabularyInstances,
-  filterModelInstances,
-  filterOperationInstances,
-  filterExtensionInstances,
-  filterProfileInstances
-} from './InstanceDefinitionUtils';
 import { Configuration } from '../fshtypes';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
@@ -78,26 +68,25 @@ export function findInputDir(input: string): string {
     input = path.join(originalInput, 'input', 'fsh');
   }
 
-  // TODO: Legacy support. Remove when no longer supported.
+  // TODO: Error about unsupported features. Remove when message no longer needed.
   // Use fsh/ subdirectory if not already specified and present
   if (!fs.existsSync(inputFshSubdirectoryPath) && !currentTankWithNoFsh) {
     let msg =
       '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n';
     if (fs.existsSync(fshSubdirectoryPath)) {
-      input = path.join(input, 'fsh');
       msg +=
         '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
-        'Use of this folder is DEPRECATED and will be REMOVED in a future release.\n' +
+        'Use of this folder is NO LONGER SUPPORTED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
-      if (fs.existsSync(path.join(input, 'ig-data'))) {
+      if (fs.existsSync(path.join(input, 'fsh', 'ig-data'))) {
         msg += `  - move fsh${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
       }
     } else {
       msg +=
         '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
-        'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
+        'Support for other folder structures is NO LONGER SUPPORTED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
@@ -114,32 +103,18 @@ export function findInputDir(input: string): string {
     msg +=
       '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
       '  - add /fsh-generated to your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
-      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n` +
+      `NOTE: After you make these changes, the default output folder for SUSHI will change to .${path.sep}fsh-generated.\n\n` +
       'For detailed migration instructions, see: https://fshschool.org/docs/sushi/migration/\n\n';
-    logger.warn(msg);
+    logger.error(msg);
   }
   return input;
 }
 
-export function ensureOutputDir(
-  input: string,
-  output: string,
-  isIgPubContext: boolean,
-  isLegacyIgPubContext: boolean
-): string {
+export function ensureOutputDir(input: string, output: string): string {
   let outDir = output;
-  if (isLegacyIgPubContext && !output) {
-    // TODO: Legacy support for top level "fsh" directory. Remove when no longer supported.
-    // When running in a legacy IG Publisher context, default output is the parent folder of the tank
-    outDir = path.join(input, '..');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  } else if (isIgPubContext && !output) {
-    // When running in an IG Publisher context, default output is the parent folder of the input/fsh folder
+  if (!output) {
+    // Default output is the parent folder of the input/fsh folder
     outDir = path.join(input, '..', '..');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  } else if (!output) {
-    // Any other time, default output is just to 'build'
-    outDir = path.join('.', 'build');
     logger.info(`No output path specified. Output to ${outDir}`);
   }
   fs.ensureDirSync(outDir);
@@ -157,11 +132,11 @@ export function ensureOutputDir(
   return outDir;
 }
 
-export function readConfig(input: string, isLegacyIgPubContext: boolean): Configuration {
+export function readConfig(input: string): Configuration {
   const configPath = ensureConfiguration(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
-    config = loadConfigurationFromIgResource(isLegacyIgPubContext ? path.dirname(input) : input);
+    config = loadConfigurationFromIgResource(input);
   } else {
     const configYaml = fs.readFileSync(configPath, 'utf8');
     config = importConfiguration(configYaml, configPath);
@@ -313,14 +288,12 @@ export function writeFHIRResources(
   outDir: string,
   outPackage: Package,
   defs: FHIRDefinitions,
-  snapshot: boolean,
-  isIgPubContext: boolean
+  snapshot: boolean
 ) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const predefinedResources = defs.allPredefinedResources();
   const writeResources = (
-    folder: string,
     resources: {
       getFileName: () => string;
       toJSON: (snapshot: boolean) => any;
@@ -329,9 +302,7 @@ export function writeFHIRResources(
       resourceType?: string;
     }[]
   ) => {
-    const exportDir = isIgPubContext
-      ? path.join(outDir, 'fsh-generated', 'resources')
-      : path.join(outDir, 'input', folder);
+    const exportDir = path.join(outDir, 'fsh-generated', 'resources');
     resources.forEach(resource => {
       if (
         !predefinedResources.find(
@@ -358,9 +329,9 @@ export function writeFHIRResources(
       }
     });
   };
-  writeResources('profiles', outPackage.profiles);
-  writeResources('extensions', outPackage.extensions);
-  writeResources('logicals', outPackage.logicals);
+  writeResources(outPackage.profiles);
+  writeResources(outPackage.extensions);
+  writeResources(outPackage.logicals);
   // WARNING: While custom resources are written to disk, the IG Publisher does not
   //          accept newly defined resources. However, it is configured to automatically
   //          search the fsh-generated directory for StructureDefinitions rather than using
@@ -369,20 +340,11 @@ export function writeFHIRResources(
   //          NOTE: To mitigate against this, the parameter 'autoload-resources = false' is
   //          injected automatically into the IG array pf parameters if the parameter was
   //          not already defined and only if the custom resources were generated by Sushi.
-  writeResources('resources', outPackage.resources);
-  writeResources('vocabulary', [...outPackage.valueSets, ...outPackage.codeSystems]);
+  writeResources(outPackage.resources);
+  writeResources([...outPackage.valueSets, ...outPackage.codeSystems]);
 
-  // Sort instances into appropriate directories
-  const instances = cloneDeep(outPackage.instances); // Filter functions below mutate the argument, so clone what is in the package
-  filterInlineInstances(instances);
-  writeResources('examples', filterExampleInstances(instances));
-  writeResources('capabilities', filterCapabilitiesInstances(instances));
-  writeResources('vocabulary', filterVocabularyInstances(instances));
-  writeResources('models', filterModelInstances(instances));
-  writeResources('operations', filterOperationInstances(instances));
-  writeResources('extensions', filterExtensionInstances(instances));
-  writeResources('profiles', filterProfileInstances(instances));
-  writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
+  // Filter out inline instances
+  writeResources(outPackage.instances.filter(i => i._instanceMeta.usage !== 'Inline'));
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
 }
