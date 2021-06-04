@@ -370,6 +370,8 @@ export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTan
     const entities = [
       ...doc.profiles.values(),
       ...doc.extensions.values(),
+      ...doc.logicals.values(),
+      ...doc.resources.values(),
       ...doc.instances.values(),
       ...doc.valueSets.values(),
       ...doc.codeSystems.values(),
