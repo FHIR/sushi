@@ -34,7 +34,9 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
-  Mapping
+  Mapping,
+  Logical,
+  Resource
 } from '../../src/fshtypes';
 import { EOL } from 'os';
 describe('Processing', () => {
@@ -842,6 +844,7 @@ describe('Processing', () => {
         'MyExtension',
         new Extension('MyExtension').withLocation([17, 0, 20, 8])
       );
+      firstDoc.logicals.set('MyLogical', new Logical('MyLogical').withLocation([31, 0, 39, 23]));
       const secondDoc = new FSHDocument(path.join(tempIn, 'second.fsh'));
       secondDoc.instances.set(
         'MyInstance',
@@ -859,6 +862,10 @@ describe('Processing', () => {
       thirdDoc.invariants.set('inv-1', new Invariant('inv-1').withLocation([222, 0, 224, 9]));
       thirdDoc.ruleSets.set('MyRuleSet', new RuleSet('MyRuleSet').withLocation([33, 0, 39, 15]));
       thirdDoc.mappings.set('MyMapping', new Mapping('MyMapping').withLocation([10, 0, 21, 18]));
+      thirdDoc.resources.set(
+        'MyResource',
+        new Resource('MyResource').withLocation([55, 0, 69, 31])
+      );
       const ruleSetDoc = new FSHDocument(path.join(tempIn, 'extra', 'rulesets.fsh'));
       ruleSetDoc.ruleSets.set('OneRuleSet', new RuleSet('OneRuleSet').withLocation([8, 0, 18, 35]));
       ruleSetDoc.ruleSets.set(
@@ -893,6 +900,9 @@ describe('Processing', () => {
       expect(firstContents).toMatch(
         `// Originally defined on lines 17 - 20${EOL}Extension: MyExtension`
       );
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 31 - 39${EOL}Logical: MyLogical`
+      );
       // second.fsh should contain MyCodeSystem, MyInstance, and MyValueSet
       const secondContents = fs.readFileSync(
         path.join(tempOut, '_preprocessed', 'second.fsh'),
@@ -917,6 +927,9 @@ describe('Processing', () => {
       );
       expect(thirdContents).toMatch(
         `// Originally defined on lines 222 - 224${EOL}Invariant: inv-1`
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 55 - 69${EOL}Resource: MyResource`
       );
       // RuleSets do not exist after preprocessing
       expect(thirdContents).not.toMatch('RuleSet: MyRuleSet');
