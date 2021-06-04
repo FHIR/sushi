@@ -40,7 +40,6 @@ hl7dk/kl-gateway#master
 costateixeira/devdays-covid19-vaccine#main
 IHE/ITI.MHD#master
 IHE/ITI_MHD_FHIR#master
-openhie/hiv-ig#master
 openhie/covid-ig#master
 DavidPyke/CEQSubscription#master
 HL7Sweden/basprofiler-r4#master
