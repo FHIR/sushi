@@ -42,7 +42,7 @@ async function app() {
 
   program
     .name('sushi')
-    .usage('[path-to-fsh-defs] [options]')
+    .usage('[path-to-fsh-project] [options]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
@@ -52,9 +52,8 @@ async function app() {
     .on('--help', () => {
       console.log('');
       console.log('Additional information:');
-      console.log('  [path-to-fsh-defs]');
+      console.log('  [path-to-fsh-project]');
       console.log('    Default: "."');
-      console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
       console.log('    Default: "fsh-generated"');
     })
