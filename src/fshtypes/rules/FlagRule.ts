@@ -1,8 +1,6 @@
-import { Rule } from './Rule';
-import { HasFlags } from '../common';
-import { applyMixins } from '../../utils/Mixin';
+import { FlagCarryingRule } from './FlagCarryingRule';
 
-export class FlagRule extends Rule {
+export class FlagRule extends FlagCarryingRule {
   // flags provided by HasFlags mixin
 
   constructor(path: string) {
@@ -21,6 +19,3 @@ export class FlagRule extends Rule {
     return `* ${this.path} ${this.flagsToString()}`;
   }
 }
-
-export interface FlagRule extends Rule, HasFlags {}
-applyMixins(FlagRule, [HasFlags]);

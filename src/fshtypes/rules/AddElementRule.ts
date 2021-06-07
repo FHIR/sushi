@@ -1,9 +1,8 @@
-import { Rule } from './Rule';
 import { OnlyRuleType } from './OnlyRule';
-import { typeString, fshifyString, HasFlags } from '../common';
-import { applyMixins } from '../../utils/Mixin';
+import { FlagCarryingRule } from './FlagCarryingRule';
+import { typeString, fshifyString } from '../common';
 
-export class AddElementRule extends Rule {
+export class AddElementRule extends FlagCarryingRule {
   min: number;
   max: string;
   types: OnlyRuleType[] = [];
@@ -28,6 +27,3 @@ export class AddElementRule extends Rule {
     return `* ${this.path} ${cardPart}${flagPart} ${typePart}${shortPart}${definitionPart}`;
   }
 }
-
-export interface AddElementRule extends Rule, HasFlags {}
-applyMixins(AddElementRule, [HasFlags]);
