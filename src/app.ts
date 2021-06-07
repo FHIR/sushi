@@ -87,13 +87,6 @@ async function app() {
   }
   logger.info(`  ${path.resolve(input)}`);
 
-  // IG Publisher HACK: the IG Publisher invokes SUSHI with `/fsh` appended (even if it doesn't
-  // exist).  If we detect a direct fsh path, we need to fix it by backing up a folder, else it
-  // won't correctly detect the IG Publisher mode.
-  if (path.basename(input) === 'fsh') {
-    input = path.dirname(input);
-  }
-
   const originalInput = input;
   input = findInputDir(input);
 
