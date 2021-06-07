@@ -19,24 +19,3 @@ export function fshifyString(input: string): string {
     .replace(/\r/g, '\\r')
     .replace(/\t/g, '\\t');
 }
-
-export class HasFlags {
-  mustSupport?: boolean;
-  summary?: boolean;
-  modifier?: boolean;
-  trialUse?: boolean;
-  normative?: boolean;
-  draft?: boolean;
-
-  get flags(): string[] {
-    const flags: string[] = [];
-    if (this.mustSupport) flags.push('MS');
-    if (this.modifier) flags.push('?!');
-    if (this.summary) flags.push('SU');
-    if (this.draft) flags.push('D');
-    else if (this.trialUse) flags.push('TU');
-    else if (this.normative) flags.push('N');
-
-    return flags;
-  }
-}
