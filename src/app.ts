@@ -42,7 +42,7 @@ async function app() {
 
   program
     .name('sushi')
-    .usage('[path-to-fsh-defs] [options]')
+    .usage('[path-to-fsh-project] [options]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
@@ -52,9 +52,8 @@ async function app() {
     .on('--help', () => {
       console.log('');
       console.log('Additional information:');
-      console.log('  [path-to-fsh-defs]');
+      console.log('  [path-to-fsh-project]');
       console.log('    Default: "."');
-      console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
       console.log('    Default: "fsh-generated"');
     })
@@ -87,13 +86,6 @@ async function app() {
     logger.info(`  --out ${path.resolve(program.out)}`);
   }
   logger.info(`  ${path.resolve(input)}`);
-
-  // IG Publisher HACK: the IG Publisher invokes SUSHI with `/fsh` appended (even if it doesn't
-  // exist).  If we detect a direct fsh path, we need to fix it by backing up a folder, else it
-  // won't correctly detect the IG Publisher mode.
-  if (path.basename(input) === 'fsh') {
-    input = path.dirname(input);
-  }
 
   const originalInput = input;
   input = findInputDir(input);
