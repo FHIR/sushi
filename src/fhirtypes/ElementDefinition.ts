@@ -1714,8 +1714,8 @@ export class ElementDefinition {
       (type === 'uri' && /^\S*$/.test(value)) ||
       (type === 'url' && /^\S*$/.test(value)) ||
       (type === 'canonical' && /^\S*$/.test(value)) ||
-      (type === 'base64Binary' && (/^(\s*([0-9a-zA-Z\+\/=]){4}\s*)+$/.test(value)) ||
-      value.startsWith('ig-loader-')) ||
+      (type === 'base64Binary' &&
+        (/^(\s*([0-9a-zA-Z\+\/=]){4}\s*)+$/.test(value) || value.startsWith('ig-loader-'))) ||
       (type === 'instant' &&
         /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
           value
