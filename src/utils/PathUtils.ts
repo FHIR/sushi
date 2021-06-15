@@ -1,6 +1,6 @@
 import { PathPart } from '../fhirtypes';
 import { splitOnPathPeriods } from '../fhirtypes/common';
-import { CaretValueRule, Rule, CodeCaretValueRule } from '../fshtypes/rules';
+import { CaretValueRule, Rule } from '../fshtypes/rules';
 import { logger } from './FSHLogger';
 
 /**
@@ -119,8 +119,8 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
     const parsedPath: { path: PathPart[]; caretPath?: PathPart[] } = {
       path: parseFSHPath(rule.path)
     };
-    // If we have a CaretValueRule or CodeCaretValueRule, we'll need a second round of parsing for the caret path
-    if (rule instanceof CaretValueRule || rule instanceof CodeCaretValueRule) {
+    // If we have a CaretValueRule, we'll need a second round of parsing for the caret path
+    if (rule instanceof CaretValueRule) {
       parsedPath.caretPath = parseFSHPath(rule.caretPath);
     }
     return parsedPath;
@@ -158,7 +158,7 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
     });
 
     // If a rule is a CaretValueRule, we assemble its caretPath as well
-    if (originalRule instanceof CaretValueRule || originalRule instanceof CodeCaretValueRule) {
+    if (originalRule instanceof CaretValueRule) {
       originalRule.caretPath = assembleFSHPath(parsedRule.caretPath);
     }
   });

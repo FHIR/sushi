@@ -1,5 +1,5 @@
 import { importSingleText } from '../testhelpers/importSingleText';
-import { assertConceptRule, assertInsertRule, assertCodeCaretRule } from '../testhelpers/asserts';
+import { assertConceptRule, assertInsertRule, assertCaretValueRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
 
@@ -412,21 +412,19 @@ describe('FSHImporter', () => {
         expect(codeSystem.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
       });
-    });
 
-    describe('#codeCaretValueRule', () => {
-      it('should parse a code system that uses a CodeCaretValueRule with no codes', () => {
+      it('should parse a code system that uses a CaretValueRule with no codes', () => {
         const input = `
           CodeSystem: ZOO
           * ^publisher = "Matt"
           `;
         const result = importSingleText(input);
         const codeSystem = result.codeSystems.get('ZOO');
-        assertCodeCaretRule(codeSystem.rules[0] as Rule, [], 'publisher', 'Matt', false);
+        assertCaretValueRule(codeSystem.rules[0] as Rule, '', 'publisher', 'Matt', false, []);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should parse a code system that uses CodeCaretValueRules with no codes alongside rules', () => {
+      it('should parse a code system that uses CaretValueRules with no codes alongside rules', () => {
         const input = `
         CodeSystem: ZOO
         * #lion
@@ -436,11 +434,18 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
-        assertCodeCaretRule(codeSystem.rules[1] as CaretValueRule, [], 'publisher', 'Damon', false);
+        assertCaretValueRule(
+          codeSystem.rules[1] as CaretValueRule,
+          '',
+          'publisher',
+          'Damon',
+          false,
+          []
+        );
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should parse a code system that uses a CodeCaretValueRule on a top-level concept', () => {
+      it('should parse a code system that uses a CaretValueRule on a top-level concept', () => {
         const input = `
         CodeSystem: ZOO
         * #anteater "Anteater"
@@ -450,17 +455,19 @@ describe('FSHImporter', () => {
         const codeSystem = result.codeSystems.get('ZOO');
         assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
-        assertCodeCaretRule(
+        assertCaretValueRule(
           codeSystem.rules[1],
-          ['anteater'],
+          '',
           'property[0].valueString',
-          'Their threat pose is really cute.'
+          'Their threat pose is really cute.',
+          false,
+          ['anteater']
         );
         expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should parse a code system that uses a CodeCaretValueRule on a nested concept', () => {
+      it('should parse a code system that uses a CaretValueRule on a nested concept', () => {
         const input = `
         CodeSystem: ZOO
         * #anteater "Anteater"
@@ -475,11 +482,13 @@ describe('FSHImporter', () => {
           'anteater'
         ]);
         expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
-        assertCodeCaretRule(
+        assertCaretValueRule(
           codeSystem.rules[2],
-          ['anteater', 'northern'],
+          '',
           'property[0].valueString',
-          'They are strong climbers.'
+          'They are strong climbers.',
+          false,
+          ['anteater', 'northern']
         );
         expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
