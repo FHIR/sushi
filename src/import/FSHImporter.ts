@@ -1933,8 +1933,8 @@ export class FSHImporter extends FSHVisitor {
       case VsOperator.EQUALS:
       case VsOperator.IN:
       case VsOperator.NOT_IN:
-        if (typeof value !== 'string') {
-          throw new ValueSetFilterValueTypeError(operator, 'string');
+        if (typeof value !== 'string' && !(value instanceof FshCode)) {
+          throw new ValueSetFilterValueTypeError(operator, ['string', 'code']);
         }
         break;
       case VsOperator.IS_A:
@@ -1942,17 +1942,17 @@ export class FSHImporter extends FSHVisitor {
       case VsOperator.IS_NOT_A:
       case VsOperator.GENERALIZES:
         if (!(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
+          throw new ValueSetFilterValueTypeError(operator, ['code']);
         }
         break;
       case VsOperator.REGEX:
         if (!(value instanceof RegExp)) {
-          throw new ValueSetFilterValueTypeError(operator, 'regex');
+          throw new ValueSetFilterValueTypeError(operator, ['regex']);
         }
         break;
       case VsOperator.EXISTS:
         if (typeof value !== 'boolean') {
-          throw new ValueSetFilterValueTypeError(operator, 'boolean');
+          throw new ValueSetFilterValueTypeError(operator, ['boolean']);
         }
         break;
       default:

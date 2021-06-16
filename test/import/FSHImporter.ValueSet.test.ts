@@ -720,7 +720,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: MostlyDogs\.fsh.*Line: 3\D*/s);
       });
 
-      it('should parse a value set that uses filter operator in', () => {
+      it('should parse a value set that uses filter operator in with a string value', () => {
         const input = `
         ValueSet: CatAndDogVS
         * codes from system ZOO where concept in "#cat, #dog"
@@ -738,10 +738,28 @@ describe('FSHImporter', () => {
         ]);
       });
 
-      it('should log an error when the in filter has a non-string value', () => {
+      it('should parse a value set that use filter operator in with a code value', () => {
         const input = `
         ValueSet: CatAndDogVS
         * codes from system ZOO where concept in ZOO#cat
+        `;
+        const result = importSingleText(input, 'CatDog.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('CatAndDogVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
+          {
+            property: 'concept',
+            operator: VsOperator.IN,
+            value: new FshCode('cat', 'ZOO').withLocation([3, 50, 3, 56]).withFile('CatDog.fsh')
+          }
+        ]);
+      });
+
+      it('should log an error when the in filter has a non-string or non-code value', () => {
+        const input = `
+        ValueSet: CatAndDogVS
+        * codes from system ZOO where concept in true
         `;
         const result = importSingleText(input, 'CatDog.fsh');
         expect(result.valueSets.size).toBe(1);
