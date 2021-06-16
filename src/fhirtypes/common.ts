@@ -299,12 +299,13 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       assignedReference.sdType = instanceMeta.sdType;
     }
   } else if (value instanceof FshCode) {
-    const codeSystem = tank.fish(value.system, Type.CodeSystem);
+    const [system, version] = value.system?.split('|') ?? [];
+    const codeSystem = tank.fish(system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
     if (codeSystem && codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
-      assignedCode.system = codeSystemMeta.url;
+      assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
     }
   }
   return clone ?? rule;
