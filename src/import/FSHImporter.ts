@@ -1933,6 +1933,10 @@ export class FSHImporter extends FSHVisitor {
       case VsOperator.EQUALS:
       case VsOperator.IN:
       case VsOperator.NOT_IN:
+        // NOTE: We believe that =, in, and not-in operators should ONLY support code values
+        // based on the filter value documentation:
+        // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
+        // Both string and code are supported for now in order to maintain backwards compatibility.
         if (typeof value !== 'string' && !(value instanceof FshCode)) {
           throw new ValueSetFilterValueTypeError(operator, ['string', 'code']);
         }
