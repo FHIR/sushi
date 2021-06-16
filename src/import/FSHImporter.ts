@@ -1937,6 +1937,12 @@ export class FSHImporter extends FSHVisitor {
         // based on the filter value documentation:
         // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
         // Both string and code are supported for now in order to maintain backwards compatibility.
+        if (typeof value === 'string') {
+          logger.warn(
+            `The match value of filter operator "${operator}" must be a code. ` +
+              'Support for string values has been deprecated and will be removed in a future release.'
+          );
+        }
         if (typeof value !== 'string' && !(value instanceof FshCode)) {
           throw new ValueSetFilterValueTypeError(operator, ['string', 'code']);
         }

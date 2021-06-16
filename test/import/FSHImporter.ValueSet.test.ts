@@ -532,6 +532,9 @@ describe('FSHImporter', () => {
             value: '2.0'
           }
         ]);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /match value of filter operator "=" must be a code/
+        );
       });
 
       it('should parse a value set that uses filter operator = with code value', () => {
@@ -754,6 +757,9 @@ describe('FSHImporter', () => {
             value: '#cat, #dog'
           }
         ]);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /match value of filter operator "in" must be a code/
+        );
       });
 
       it('should parse a value set that use filter operator in with a code value', () => {
@@ -804,6 +810,9 @@ describe('FSHImporter', () => {
             value: '#goose'
           }
         ]);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /match value of filter operator "not-in" must be a code/
+        );
       });
 
       it('should parse a value set that uses filter operator not-in with a code value', () => {
