@@ -299,7 +299,8 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       assignedReference.sdType = instanceMeta.sdType;
     }
   } else if (value instanceof FshCode) {
-    const [system, version] = value.system?.split('|') ?? [];
+    const [system, ...versionParts] = value.system?.split('|') ?? [];
+    const version = versionParts.join('|');
     const codeSystem = tank.fish(system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
     if (codeSystem && codeSystemMeta) {

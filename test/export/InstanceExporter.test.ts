@@ -1683,7 +1683,7 @@ describe('InstanceExporter', () => {
       const brightInstance = new Instance('BrightObservation');
       brightInstance.instanceOf = 'Observation';
       const assignedCodeRule = new AssignmentRule('code');
-      assignedCodeRule.value = new FshCode('bright', 'Visible|1.0.0');
+      assignedCodeRule.value = new FshCode('bright', 'Visible|1.0.0|a'); // Version should include anything that comes after the first |
       brightInstance.rules.push(assignedCodeRule);
       doc.instances.set(brightInstance.name, brightInstance);
 
@@ -1693,7 +1693,7 @@ describe('InstanceExporter', () => {
       expect(exported.code.coding).toEqual([
         {
           code: 'bright',
-          version: '1.0.0',
+          version: '1.0.0|a',
           system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
