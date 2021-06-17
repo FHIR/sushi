@@ -243,7 +243,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    // Reset the pathContext, and baseIndent level for each entity
+    // Reset the pathContext and baseIndent level for each entity
     this.pathContext = [];
     this.baseIndent = this.extractStartStop(ctx).startColumn;
 
