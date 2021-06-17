@@ -41,7 +41,7 @@ costateixeira/devdays-covid19-vaccine#main
 IHE/ITI.MHD#master
 IHE/ITI_MHD_FHIR#master
 openhie/covid-ig#master
-DavidPyke/CEQSubscription#master
+# DavidPyke/CEQSubscription#master (moved to Carequality/CEQSubscription#master)
 HL7Sweden/basprofiler-r4#master
 HL7NZ/northernregion#master
 HL7NZ/hpi#master
