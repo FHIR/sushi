@@ -696,5 +696,27 @@ describe('FSHImporter', () => {
       expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
+
+    it('should parse a rule set that uses an indented CaretValueRule on a top-level concept', () => {
+      const input = `
+      RuleSet: ZOO
+      * #anteater "Anteater"
+        * ^property[0].valueString = "Their threat pose is really cute."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.ruleSets.get('ZOO');
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertCaretValueRule(
+        codeSystem.rules[1],
+        'anteater',
+        'property[0].valueString',
+        'Their threat pose is really cute.',
+        false,
+        ['anteater']
+      );
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
   });
 });
