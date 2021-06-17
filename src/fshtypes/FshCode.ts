@@ -18,7 +18,9 @@ export class FshCode extends FshEntity {
     }
     if (this.system) {
       if (this.system.indexOf('|') > -1) {
-        [coding.system, coding.version] = this.system.split('|', 2);
+        let versionParts;
+        [coding.system, ...versionParts] = this.system.split('|');
+        coding.version = versionParts.join('|');
       } else {
         coding.system = this.system;
       }
