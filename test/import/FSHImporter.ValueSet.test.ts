@@ -583,7 +583,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.rules.length).toBe(1);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/"=".*string/);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/"=".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
@@ -790,7 +790,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('CatAndDogVS');
         expect(valueSet.rules.length).toBe(1);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/"in".*string/);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/"in".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: CatDog\.fsh.*Line: 3\D*/s);
       });
 
@@ -843,7 +843,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('NoGooseVS');
         expect(valueSet.rules.length).toBe(1);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/"not-in".*string/);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/"not-in".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoGoose\.fsh.*Line: 3\D*/s);
       });
 

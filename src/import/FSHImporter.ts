@@ -1940,11 +1940,12 @@ export class FSHImporter extends FSHVisitor {
         if (typeof value === 'string') {
           logger.warn(
             `The match value of filter operator "${operator}" must be a code. ` +
-              'Support for string values has been deprecated and will be removed in a future release.'
+              'For string valued properties, use the regex filter operator with a regular expression value. ' +
+              'Support for using strings as filter values has been deprecated and will be removed in a future release.'
           );
         }
         if (typeof value !== 'string' && !(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, ['string', 'code']);
+          throw new ValueSetFilterValueTypeError(operator, 'code');
         }
         break;
       case VsOperator.IS_A:
@@ -1952,17 +1953,17 @@ export class FSHImporter extends FSHVisitor {
       case VsOperator.IS_NOT_A:
       case VsOperator.GENERALIZES:
         if (!(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, ['code']);
+          throw new ValueSetFilterValueTypeError(operator, 'code');
         }
         break;
       case VsOperator.REGEX:
         if (!(value instanceof RegExp)) {
-          throw new ValueSetFilterValueTypeError(operator, ['regex']);
+          throw new ValueSetFilterValueTypeError(operator, 'regex');
         }
         break;
       case VsOperator.EXISTS:
         if (typeof value !== 'boolean') {
-          throw new ValueSetFilterValueTypeError(operator, ['boolean']);
+          throw new ValueSetFilterValueTypeError(operator, 'boolean');
         }
         break;
       default:
