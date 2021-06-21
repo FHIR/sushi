@@ -407,10 +407,8 @@ describe('FSHImporter', () => {
         CodeSystem: ZOO
         * somepath ^publisher = "Marky Mark"
         `;
-        const result = importSingleText(input, 'Simple.fsh');
-        const codeSystem = result.codeSystems.get('ZOO');
-        expect(codeSystem.rules).toHaveLength(0);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
+        importSingleText(input, 'Simple.fsh');
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3*/s);
       });
     });
 
@@ -495,7 +493,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const cs = result.codeSystems.get('MyCS');
         expect(cs.rules).toHaveLength(1);
-        assertInsertRule(cs.rules[0] as InsertRule, 'MyRuleSet');
+        assertInsertRule(cs.rules[0] as InsertRule, '', 'MyRuleSet');
       });
     });
   });

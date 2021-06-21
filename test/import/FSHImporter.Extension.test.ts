@@ -375,7 +375,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const extension = result.extensions.get('MyExtension');
         expect(extension.rules).toHaveLength(1);
-        assertInsertRule(extension.rules[0], 'MyRuleSet');
+        assertInsertRule(extension.rules[0], '', 'MyRuleSet');
       });
     });
   });

@@ -1594,7 +1594,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
-    const insertRule = new InsertRule()
+    const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     const [rulesetName, ruleParams] = this.parseRulesetReference(
