@@ -41,7 +41,7 @@ costateixeira/devdays-covid19-vaccine#main
 IHE/ITI.MHD#master
 IHE/ITI_MHD_FHIR#master
 openhie/covid-ig#master
-DavidPyke/CEQSubscription#master
+# DavidPyke/CEQSubscription#master (moved to Carequality/CEQSubscription#master)
 HL7Sweden/basprofiler-r4#master
 HL7NZ/northernregion#master
 HL7NZ/hpi#master
@@ -64,7 +64,6 @@ dvci/vaccine-credential-ig#main
 dvci/vaccine-yellow-card-ig#main
 # Added Mon Feb 08 2021 11:01:34 GMT-0500 (Eastern Standard Time)
 JohnMoehrke/BasicAudit#main
-medicalhome-aprn/smart-web-messaging#master
 # Added Mon Mar 08 2021 13:27:24 GMT-0500 (Eastern Standard Time)
 HL7/fhir-forfair#master
 standardhealth/fsh-ae#master
@@ -75,9 +74,7 @@ HL7NZ/nzf#main
 # Added Thu Apr 29 2021 09:31:21 GMT-0400 (Eastern Daylight Time)
 HL7/fhir-project-mhealth#master
 HL7/FHIR-us-pq-cmc#master
-hl7-it/dossier-pharma#master
 hl7-it/base#master
-hl7-it/terminology#master
 danka74/dgc#master
 ahdis/ch-ig#master
 hl7ch/ch-allergyintolerance#master
@@ -88,7 +85,6 @@ hl7-be/riziv-medication-record#master
 hl7-be/vitalink-ig#master
 hl7dk/kl-gateway-national-care-data#master
 hl7dk/kl-gateway-municipality-care-data#master
-hl7dk/kl-ffb-messaging#master
 hl7dk/kl-gateway-care-data#master
 hl7dk/dk-core-r4#master
 hl7dk/dk-core#master
@@ -96,10 +92,25 @@ jamlung-ri/PEPFAR-WHO-Simple-HIV#main
 IHE/PCC.PCS#master
 IHE/ITI.mCSD#main
 gatekeeper-project/gk-fhir-ig#master
-hl7-eu/dgc#master
 hl7-eu/base#master
 hl7-eu/pcsp#master
 hl7-eu/x-ehealth#master
 barbrov/wof-portal-fhir-ig#main
 ehealthsuisse/ch-orf#master
 DavidPyke/HotBeverage#master
+# Added Wed Jun 16 2021 16:00:22 GMT-0400 (Eastern Daylight Time)
+HL7/fhir-radiation-dose-summary-ig#main
+HL7/pacio-adi#main
+hl7-it/dossier-pharma#main
+hl7-it/terminology#master
+hitstdio/sample-ig#master
+JohnMoehrke/testBundle#main
+Carequality/CEQSubscription#master
+hl7dk/kl-ffb-messaging#main
+hl7dk/kl-ffb-reporting#master
+IHE/ITI.PDQm#main
+IHE/ITI.PIXm#master
+IHE/RO.XRTS#master
+hl7-eu/dgc#master
+daniel-thomson/CIRImmunization#master
+oridashi/item-715-data#main
