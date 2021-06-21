@@ -414,38 +414,14 @@ export class StructureDefinitionExporter implements Fishable {
         // The FHIR spec prohibits constraining any parent element in a 'specialization'
         // (i.e., logical model and resource), therefore log an error if that is attempted
         // and continue to the next rule.
-        const baseElementPath = element.path.replace(element.structDef.id, '').split('.')[1];
-        const parentResource = StructureDefinition.fromJSON(
-          this.fisher.fishForFHIR(fshDefinition.parent)
-        );
-        const inheritedElement = parentResource.findElement(
-          `${fshDefinition.parent}.${baseElementPath}`
-        );
-        if (inheritedElement) {
-          // If we're dealing with a Backbone Element, then we'll want to ensure that the sub-element being referenced
-          // was not added on the parent
-          if (
-            inheritedElement.type.some(typeObj => typeObj.getActualCode() === 'BackboneElement')
-          ) {
-            const parentElementPath = element.path.replace(
-              element.structDef.id,
-              fshDefinition.parent
-            );
-            const parentElement = parentResource.findElement(parentElementPath);
-            if (parentElement) {
-              logger.error(
-                `FHIR prohibits logical models and resources from constraining parent elements. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
-                rule.sourceInfo
-              );
-              continue;
-            }
-          } else {
-            logger.error(
-              `FHIR prohibits logical models and resources from constraining parent elements. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
-              rule.sourceInfo
-            );
-            continue;
-          }
+        const baseElementPath = element.path.replace(`${element.structDef.id}.`, '');
+        const addElementRules = fshDefinition.rules.filter(rule => rule instanceof AddElementRule);
+        if (rule.path && !addElementRules.some(rule => baseElementPath.includes(rule.path))) {
+          logger.error(
+            `FHIR prohibits logical models and resources from constraining parent elements. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
+            rule.sourceInfo
+          );
+          continue;
         }
       }
 
