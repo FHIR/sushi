@@ -17,6 +17,7 @@ describe('ElementDefinition', () => {
   let imagingStudy: StructureDefinition;
   let device: StructureDefinition;
   let task: StructureDefinition;
+  let binary: StructureDefinition;
   let fisher: TestFisher;
 
   beforeAll(() => {
@@ -38,6 +39,7 @@ describe('ElementDefinition', () => {
     imagingStudy = fisher.fishForStructureDefinition('ImagingStudy');
     device = fisher.fishForStructureDefinition('Device');
     task = fisher.fishForStructureDefinition('Task');
+    binary = fisher.fishForStructureDefinition('Binary');
   });
   describe('#assignString', () => {
     // Assigning a string
@@ -367,6 +369,20 @@ describe('ElementDefinition', () => {
       udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.patternBase64Binary).toBeUndefined();
+    });
+
+    it('should assign a string utilizing binary adjunct to a base64Binary', () => {
+      const dataElement = binary.elements.find(e => e.id === 'Binary.data');
+      dataElement.assignValue('ig-loader-ExampleFile.txt');
+      expect(dataElement.patternBase64Binary).toBe('ig-loader-ExampleFile.txt');
+      expect(dataElement.fixedBase64Binary).toBeUndefined();
+    });
+
+    it('should assign a string utilizing binary adjunct to a base64Binary (exactly)', () => {
+      const dataElement = binary.elements.find(e => e.id === 'Binary.data');
+      dataElement.assignValue('ig-loader-ExampleFile.txt', true);
+      expect(dataElement.fixedBase64Binary).toBe('ig-loader-ExampleFile.txt');
+      expect(dataElement.patternBase64Binary).toBeUndefined();
     });
 
     it('should throw ValueAlreadyAssignedError when assigning an already assigned base64Binary by pattern[x]', () => {
