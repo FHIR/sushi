@@ -1542,10 +1542,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCaretValueRule(ctx: pc.CaretValueRuleContext): CaretValueRule {
-    const pathArray = this.getArrayPathWithContext(
-      splitOnPathPeriods(this.visitPath(ctx.path())).filter(p => p),
-      ctx
-    );
+    const path = this.visitPath(ctx.path());
+    const splitPath =
+      path === '.' ? [path] : splitOnPathPeriods(this.visitPath(ctx.path())).filter(p => p);
+    const pathArray = this.getArrayPathWithContext(splitPath, ctx);
     const caretValueRule = new CaretValueRule(pathArray.join('.'))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
