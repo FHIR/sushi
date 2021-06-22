@@ -516,7 +516,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
 
-      it('should parse a value set that uses filter operator =', () => {
+      it('should parse a value set that uses filter operator = with string value', () => {
         const input = `
         ValueSet: ZooVS
         * codes from system ZOO where version = "2.0"
@@ -530,6 +530,27 @@ describe('FSHImporter', () => {
             property: 'version',
             operator: VsOperator.EQUALS,
             value: '2.0'
+          }
+        ]);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /match value of filter operator "=" must be a code/
+        );
+      });
+
+      it('should parse a value set that uses filter operator = with code value', () => {
+        const input = `
+        ValueSet: ZooVS
+        * codes from system ZOO where version = #two
+        `;
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
+          {
+            property: 'version',
+            operator: VsOperator.EQUALS,
+            value: new FshCode('two').withLocation([3, 49, 3, 52]).withFile('Zoo.fsh')
           }
         ]);
       });
@@ -552,7 +573,7 @@ describe('FSHImporter', () => {
         ]);
       });
 
-      it('should log an error when the = filter has a non-string value', () => {
+      it('should log an error when the = filter has a non-string and non-code value', () => {
         const input = `
         ValueSet: ZooVS
         * codes from system ZOO where version = /[1-9].*/
@@ -562,7 +583,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.rules.length).toBe(1);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/"=".*string/);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/"=".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
@@ -720,7 +741,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: MostlyDogs\.fsh.*Line: 3\D*/s);
       });
 
-      it('should parse a value set that uses filter operator in', () => {
+      it('should parse a value set that uses filter operator in with a string value', () => {
         const input = `
         ValueSet: CatAndDogVS
         * codes from system ZOO where concept in "#cat, #dog"
@@ -736,9 +757,12 @@ describe('FSHImporter', () => {
             value: '#cat, #dog'
           }
         ]);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /match value of filter operator "in" must be a code/
+        );
       });
 
-      it('should log an error when the in filter has a non-string value', () => {
+      it('should parse a value set that use filter operator in with a code value', () => {
         const input = `
         ValueSet: CatAndDogVS
         * codes from system ZOO where concept in ZOO#cat
@@ -747,12 +771,30 @@ describe('FSHImporter', () => {
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('CatAndDogVS');
         expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
+          {
+            property: 'concept',
+            operator: VsOperator.IN,
+            value: new FshCode('cat', 'ZOO').withLocation([3, 50, 3, 56]).withFile('CatDog.fsh')
+          }
+        ]);
+      });
+
+      it('should log an error when the in filter has a non-string or non-code value', () => {
+        const input = `
+        ValueSet: CatAndDogVS
+        * codes from system ZOO where concept in true
+        `;
+        const result = importSingleText(input, 'CatDog.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('CatAndDogVS');
+        expect(valueSet.rules.length).toBe(1);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/"in".*string/);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/"in".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: CatDog\.fsh.*Line: 3\D*/s);
       });
 
-      it('should parse a value set that uses filter operator not-in', () => {
+      it('should parse a value set that uses filter operator not-in with a string value', () => {
         const input = `
         ValueSet: NoGooseVS
         * codes from system ZOO where concept not-in "#goose"
@@ -768,9 +810,30 @@ describe('FSHImporter', () => {
             value: '#goose'
           }
         ]);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /match value of filter operator "not-in" must be a code/
+        );
       });
 
-      it('should log an error when the not-in filter has a non-string value', () => {
+      it('should parse a value set that uses filter operator not-in with a code value', () => {
+        const input = `
+        ValueSet: NoGooseVS
+        * codes from system ZOO where concept not-in #goose
+        `;
+        const result = importSingleText(input, 'NoGoose.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('NoGooseVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
+          {
+            property: 'concept',
+            operator: VsOperator.NOT_IN,
+            value: new FshCode('goose').withLocation([3, 54, 3, 59]).withFile('NoGoose.fsh')
+          }
+        ]);
+      });
+
+      it('should log an error when the not-in filter has a non-string and non-code value', () => {
         const input = `
         ValueSet: NoGooseVS
         * codes from system ZOO where concept not-in /duck|goose/
@@ -780,7 +843,7 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('NoGooseVS');
         expect(valueSet.rules.length).toBe(1);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/"not-in".*string/);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/"not-in".*code/);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoGoose\.fsh.*Line: 3\D*/s);
       });
 
