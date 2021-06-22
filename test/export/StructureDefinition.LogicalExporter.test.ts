@@ -476,6 +476,33 @@ describe('LogicalExporter', () => {
     );
   });
 
+  it('should allow constraints on newly added elements and sub-elements', () => {
+    const logical = new Logical('ExampleModel');
+    logical.id = 'ExampleModel';
+
+    const addElementRule = new AddElementRule('name');
+    addElementRule.min = 0;
+    addElementRule.max = '*';
+    addElementRule.types = [{ type: 'HumanName' }];
+    addElementRule.short = "A person's full name";
+    logical.rules.push(addElementRule);
+
+    const topLevelCardRule = new CardRule('name');
+    topLevelCardRule.min = 1;
+    topLevelCardRule.max = '1';
+    logical.rules.push(topLevelCardRule);
+
+    const subElementCardRule = new CardRule('name.given');
+    subElementCardRule.min = 1;
+    subElementCardRule.max = '1';
+    logical.rules.push(subElementCardRule);
+
+    doc.logicals.set(logical.name, logical);
+    exporter.export();
+    const logs = loggerSpy.getAllMessages('error');
+    expect(logs).toHaveLength(0);
+  });
+
   it('should log an error when constraining a parent element', () => {
     const logical = new Logical('MyTestModel');
     logical.parent = 'AlternateIdentification';

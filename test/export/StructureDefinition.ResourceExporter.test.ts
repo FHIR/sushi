@@ -164,6 +164,33 @@ describe('ResourceExporter', () => {
     );
   });
 
+  it('should allow constraints on newly added elements and sub-elements', () => {
+    const resource = new Resource('ExampleModel');
+    resource.id = 'ExampleModel';
+
+    const addElementRule = new AddElementRule('name');
+    addElementRule.min = 0;
+    addElementRule.max = '*';
+    addElementRule.types = [{ type: 'HumanName' }];
+    addElementRule.short = "A person's full name";
+    resource.rules.push(addElementRule);
+
+    const topLevelCardRule = new CardRule('name');
+    topLevelCardRule.min = 1;
+    topLevelCardRule.max = '1';
+    resource.rules.push(topLevelCardRule);
+
+    const subElementCardRule = new CardRule('name.given');
+    subElementCardRule.min = 1;
+    subElementCardRule.max = '1';
+    resource.rules.push(subElementCardRule);
+
+    doc.resources.set(resource.name, resource);
+    exporter.export();
+    const logs = loggerSpy.getAllMessages('error');
+    expect(logs).toHaveLength(0);
+  });
+
   it('should log an error when constraining a parent element', () => {
     const resource = new Resource('MyTestResource');
     // Parent defaults to DomainResource

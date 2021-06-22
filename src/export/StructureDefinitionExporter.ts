@@ -385,6 +385,7 @@ export class StructureDefinitionExporter implements Fishable {
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     resolveSoftIndexing(fshDefinition.rules);
+    const addElementRules = fshDefinition.rules.filter(rule => rule instanceof AddElementRule);
     for (const rule of fshDefinition.rules) {
       // Specific rules are permitted for each structure definition type
       // (i.e., Profile, Logical, etc.). Log an error for disallowed rules
@@ -414,9 +415,12 @@ export class StructureDefinitionExporter implements Fishable {
         // The FHIR spec prohibits constraining any parent element in a 'specialization'
         // (i.e., logical model and resource), therefore log an error if that is attempted
         // and continue to the next rule.
-        const baseElementPath = element.path.replace(`${element.structDef.id}.`, '');
-        const addElementRules = fshDefinition.rules.filter(rule => rule instanceof AddElementRule);
-        if (rule.path && !addElementRules.some(rule => baseElementPath.includes(rule.path))) {
+        if (
+          rule.path &&
+          !addElementRules.some(rule =>
+            element.path.startsWith(`${element.structDef.pathType}.${rule.path}`)
+          )
+        ) {
           logger.error(
             `FHIR prohibits logical models and resources from constraining parent elements. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
             rule.sourceInfo
