@@ -90,8 +90,8 @@ CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
               //  Reference       (        ITEM         |         ITEM         )
 REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
 
-                 // Canonical(Item)
-CANONICAL:         'Canonical' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)? ')';
+                 // Canonical       (              URL|VERSION               or              URL|VERSION             )
+CANONICAL     :    'Canonical' WS* '(' WS* SEQUENCE ('|' SEQUENCE)? WS* (WS 'or' WS+ SEQUENCE ('|' SEQUENCE)? WS*)* ')';
 
                  //  ^  NON-WHITESPACE
 CARET_SEQUENCE:     '^' NONWS+;

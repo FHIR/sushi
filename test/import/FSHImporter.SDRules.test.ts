@@ -1145,28 +1145,6 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse assigned value using Canonical with spaces around the version', () => {
-        const input = `
-        CodeSystem: Example
-        * #first
-        * #second
-
-        Profile: ObservationProfile
-        Parent: Observation
-        * code.coding.system = Canonical(  Example | 1.2.3  )
-        `;
-
-        const result = importSingleText(input);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-
-        const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 61])
-          .withFile('');
-        expectedCanonical.version = '1.2.3';
-        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
-      });
-
       it('should parse assigned value using Canonical with a version which contains a |', () => {
         const input = `
         CodeSystem: Example
@@ -1175,7 +1153,7 @@ describe('FSHImporter', () => {
 
         Profile: ObservationProfile
         Parent: Observation
-        * code.coding.system = Canonical(  Example | 1.2.3|aWeirdVersion  )
+        * code.coding.system = Canonical(  Example|1.2.3|aWeirdVersion  )
         `;
 
         const result = importSingleText(input);
@@ -1183,7 +1161,7 @@ describe('FSHImporter', () => {
         expect(profile.rules).toHaveLength(1);
 
         const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 75])
+          .withLocation([8, 32, 8, 73])
           .withFile('');
         expectedCanonical.version = '1.2.3|aWeirdVersion';
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
@@ -2282,15 +2260,16 @@ describe('FSHImporter', () => {
       it('should parse basic addElement rules with defaulted definition', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean "short boolean" 
+        * isValid 1..1 boolean "short boolean"
         * stuff 0..* string "short string"
         * address 1..* Address "short Address"
         * person 0..1 Reference(Patient) "short Reference"
+        * medication 0..1 Canonical(Medication) "short Canonical"
         `;
 
         const result = importSingleText(input);
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(4);
+        expect(resource.rules).toHaveLength(5);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           types: [{ type: 'boolean' }],
@@ -2311,20 +2290,26 @@ describe('FSHImporter', () => {
           types: [{ type: 'Patient', isReference: true }],
           defs: { short: 'short Reference', definition: 'short Reference' }
         });
+        assertAddElementRule(resource.rules[4], 'medication', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Medication', isCanonical: true }],
+          defs: { short: 'short Canonical', definition: 'short Canonical' }
+        });
       });
 
       it('should parse basic addElement rules with specified definition', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean "short boolean" "definition boolean" 
+        * isValid 1..1 boolean "short boolean" "definition boolean"
         * stuff 0..* string "short string" "definition string"
         * address 1..* Address "short Address" "definition Address"
         * person 0..1 Reference(Patient) "short Reference" "definition Reference"
+        * medication 0..1 Canonical(Medication|4.0.1) "short Canonical" "definition Canonical"
         `;
 
         const result = importSingleText(input);
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(4);
+        expect(resource.rules).toHaveLength(5);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           types: [{ type: 'boolean' }],
@@ -2345,6 +2330,11 @@ describe('FSHImporter', () => {
           types: [{ type: 'Patient', isReference: true }],
           defs: { short: 'short Reference', definition: 'definition Reference' }
         });
+        assertAddElementRule(resource.rules[4], 'medication', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Medication|4.0.1', isCanonical: true }],
+          defs: { short: 'short Canonical', definition: 'definition Canonical' }
+        });
       });
 
       it('should parse addElement rules with multiple targetTypes', () => {
@@ -2354,11 +2344,12 @@ describe('FSHImporter', () => {
         * stuff 0..* string or markdown "short string"
         * address 1..* Address "short Address"
         * person 0..1 HumanName or Reference(Patient or RelatedPerson) "short multi-type"
+        * medication 0..1 CodeableConcept or Canonical(Medication or Immunization) "short multi-type 2"
         `;
 
         const result = importSingleText(input);
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(4);
+        expect(resource.rules).toHaveLength(5);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           types: [{ type: 'boolean' }, { type: 'number' }],
@@ -2383,12 +2374,21 @@ describe('FSHImporter', () => {
           ],
           defs: { short: 'short multi-type', definition: 'short multi-type' }
         });
+        assertAddElementRule(resource.rules[4], 'medication', {
+          card: { min: 0, max: '1' },
+          types: [
+            { type: 'CodeableConcept', isCanonical: false },
+            { type: 'Medication', isCanonical: true },
+            { type: 'Immunization', isCanonical: true }
+          ],
+          defs: { short: 'short multi-type 2', definition: 'short multi-type 2' }
+        });
       });
 
       it('should parse addElement rules with flags', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 MS ?! boolean "short boolean" 
+        * isValid 1..1 MS ?! boolean "short boolean"
         * stuff 0..* MS SU string "short string"
         * address 1..* N Address "short Address"
         * person 0..1 D TU Reference(Patient) "short Reference"
@@ -2463,7 +2463,7 @@ describe('FSHImporter', () => {
       it('should log an error for missing path', () => {
         const input = `
         Resource: TestResource
-        * 1..1 boolean "short boolean" 
+        * 1..1 boolean "short boolean"
         * stuff 0..* string "short string"
         * address 1..* Address "short Address"
         * person 0..1 Reference(Patient) "short Reference"
@@ -2558,7 +2558,7 @@ describe('FSHImporter', () => {
       it('should log an error for missing short', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean 
+        * isValid 1..1 boolean
         * stuff 0..* string "short string"
         * address 1..* Address "short Address"
         * person 0..1 Reference(Patient) "short Reference"
@@ -2580,7 +2580,7 @@ describe('FSHImporter', () => {
       it('should log an error for missing targetType with docs', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean "is it valid?" 
+        * isValid 1..1 boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff"
         * address 1..* "current addresses" "at least one address is required"
         * person 0..1 Reference(Patient) "an associated patient" "added for TRIAL USE"
@@ -2598,7 +2598,7 @@ describe('FSHImporter', () => {
       it('should log a warning for missing targetType with flags and docs', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 MS ?! boolean "is it valid?" 
+        * isValid 1..1 MS ?! boolean "is it valid?"
         * stuff 0..* MS SU string "just stuff" "a list of some stuff"
         * address 1..* N TU "current addresses" "at least one address is required"
         * person 0..1 D TU Reference(Patient) "an associated patient" "added for TRIAL USE"
@@ -2639,7 +2639,7 @@ describe('FSHImporter', () => {
       it('should log a error for missing targetType with modifier flag and docs', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 MS ?! boolean "is it valid?" 
+        * isValid 1..1 MS ?! boolean "is it valid?"
         * stuff 0..* MS SU string "just stuff" "a list of some stuff"
         * address 1..* N ?! "current addresses" "at least one address is required"
         * person 0..1 D TU Reference(Patient) "an associated patient" "added for TRIAL USE"
@@ -2658,7 +2658,7 @@ describe('FSHImporter', () => {
       it('should parse rules according to rule patterns for CardRule and AddElementRule', () => {
         const input = `
         Resource: TestResource
-        * isValid 1..1 boolean "is it valid?" 
+        * isValid 1..1 boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff"
         * address 1..* "current addresses" "at least one address is required"
         * person 0..1 Reference(Patient) "an associated patient"

@@ -192,6 +192,7 @@ export interface AddElementFlags {
 export interface AddElementType {
   type: string;
   isReference?: boolean;
+  isCanonical?: boolean;
 }
 
 export interface AddElementDefs {
@@ -236,12 +237,16 @@ export function assertAddElementRule(rule: Rule, path: string, args: AddElementA
     }
   }
 
-  // The parser does not return the 'isReference' attribute if it is false.
-  // To compare with the test's expected values, we need to remove the
-  // args.type's 'isReference' attribute if it is false.
+  // The parser does not return the 'isReference' or 'isCanonical' attribute if they are false.
+  // To compare with the test's expected values, we need to remove the args.type's 'isReference'
+  // and/or 'isCanonical' attributes when they are false.
   const expectedTypes = args.types.map(t => {
-    const isRef = get(t, 'isReference', false);
-    return isRef ? t : { type: t.type };
+    if (get(t, 'isReference', false)) {
+      return { type: t.type, isReference: true };
+    } else if (get(t, 'isCanonical', false)) {
+      return { type: t.type, isCanonical: true };
+    }
+    return { type: t.type };
   });
   expect(addElementRule.types).toIncludeSameMembers(expectedTypes);
 

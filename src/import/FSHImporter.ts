@@ -1306,7 +1306,17 @@ export class FSHImporter extends FSHVisitor {
     }
 
     if (ctx.canonical()) {
-      return this.visitCanonical(ctx.canonical());
+      const canonicals = this.visitCanonical(ctx.canonical());
+      if (canonicals.length > 1) {
+        logger.error(
+          'Multiple choices of canonicals are not allowed when setting a value. Only the first choice will be used.',
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx.canonical())
+          }
+        );
+      }
+      return canonicals[0];
     }
 
     if (ctx.code()) {
@@ -1452,22 +1462,23 @@ export class FSHImporter extends FSHVisitor {
       .map(r => r.trim());
   }
 
-  visitCanonical(ctx: pc.CanonicalContext): FshCanonical {
-    const [canonicalText, versionText] = this.parseCanonical(ctx.CANONICAL().getText());
-    const fshCanonical = new FshCanonical(canonicalText)
-      .withLocation(this.extractStartStop(ctx))
-      .withFile(this.currentFile);
-    if (versionText) {
-      fshCanonical.version = versionText;
-    }
-    return fshCanonical;
-  }
+  visitCanonical(ctx: pc.CanonicalContext): FshCanonical[] {
+    const canonicalText = ctx.CANONICAL().getText();
+    const choices = canonicalText
+      .slice(canonicalText.indexOf('(') + 1, canonicalText.length - 1)
+      .split(/\s+or\s+/)
+      .map(r => r.trim());
 
-  private parseCanonical(canonical: string): string[] {
-    return canonical
-      .slice(canonical.indexOf('(') + 1, canonical.length - 1)
-      .split(/\s*\|\s*(.+)/)
-      .map(str => str.trim());
+    return choices.map(c => {
+      const [item, version] = c.split(/\s*\|\s*(.+)/).map(str => str.trim());
+      const fshCanonical = new FshCanonical(item)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      if (version) {
+        fshCanonical.version = version;
+      }
+      return fshCanonical;
+    });
   }
 
   visitBool(ctx: pc.BoolContext): boolean {
@@ -1493,6 +1504,16 @@ export class FSHImporter extends FSHVisitor {
           orTypes.push({
             type: this.aliasAwareValue(referenceToken, r),
             isReference: true
+          })
+        );
+      } else if (t.canonical()) {
+        const canonicals = this.visitCanonical(t.canonical());
+        canonicals.forEach(c =>
+          orTypes.push({
+            type: `${this.aliasAwareValue(t.canonical(), c.entityName)}${
+              c.version ? `|${c.version}` : ''
+            }`,
+            isCanonical: true
           })
         );
       } else {
