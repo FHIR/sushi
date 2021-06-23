@@ -1726,6 +1726,7 @@ export class FSHImporter extends FSHVisitor {
     const parentDocument = this.currentDoc;
     // save the baseIndent so it can be restored after parsing this RuleSet
     const parentIndent = this.baseIndent;
+    const parentContext = this.pathContext;
     this.currentDoc = tempDocument;
     // errors should be collected, not printed, when parsing generated documents
     // we should only retrieve errors if we are currently in the top-level parse
@@ -1742,6 +1743,7 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = parentDocument;
       // and to restore the parentIndent
       this.baseIndent = parentIndent;
+      this.pathContext = parentContext;
     }
     // if tempDocument has appliedRuleSets, merge them in
     tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>
