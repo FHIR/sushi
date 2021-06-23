@@ -469,7 +469,9 @@ export function applyInsertRules(
         ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
         ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
         if (isAllowedRule(fshDefinition, ruleSetRule)) {
-          expandedRules.push(cloneDeep(ruleSetRule));
+          const ruleSetRuleClone = cloneDeep(ruleSetRule);
+          ruleSetRuleClone.path = `${rule.path ? rule.path + '.' : ''}${ruleSetRuleClone.path}`;
+          expandedRules.push(ruleSetRuleClone);
         } else {
           logger.error(
             `Rule of type ${ruleSetRule.constructorName} cannot be applied to entity of type ${fshDefinition.constructorName}`,

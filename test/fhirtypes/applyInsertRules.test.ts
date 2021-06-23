@@ -62,6 +62,28 @@ describe('applyInsertRules', () => {
     assertCardRule(profile.rules[0], 'category', 1, '1');
   });
 
+  it('should apply rules from a single level insert rule with a path', () => {
+    // RuleSet: Bar
+    // * coding 1..*
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const cardRule = new CardRule('coding');
+    cardRule.min = 1;
+    cardRule.max = '*';
+    ruleSet1.rules.push(cardRule);
+
+    const insertRule = new InsertRule('category');
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCardRule(profile.rules[0], 'category.coding', 1, '*');
+  });
+
   it('should not apply rules from a single level insert rule that are not valid', () => {
     // RuleSet: Bar
     // * #bear
@@ -202,6 +224,43 @@ describe('applyInsertRules', () => {
     expect(profile.rules).toHaveLength(3);
     assertCardRule(profile.rules[0], 'category', 1, '1');
     assertCardRule(profile.rules[1], 'subject', 1, '1');
+    assertCardRule(profile.rules[2], 'focus', 1, '1');
+  });
+
+  it('should apply rules from a nested insert rule with paths', () => {
+    // RuleSet: Bar
+    // * coding 1..*
+    // * coding insert Baz
+    //
+    // RuleSet: Baz
+    // * system 1..1
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    // * focus ..1
+    const categoryRule = new CardRule('coding');
+    categoryRule.min = 1;
+    categoryRule.max = '*';
+    const subjectRule = new CardRule('system');
+    subjectRule.min = 1;
+    subjectRule.max = '1';
+    const focusRule = new CardRule('focus');
+    focusRule.min = 1;
+    focusRule.max = '1';
+    const insertBazRule = new InsertRule('coding');
+    insertBazRule.ruleSet = 'Baz';
+    const insertBarRule = new InsertRule('category');
+    insertBarRule.ruleSet = 'Bar';
+
+    ruleSet1.rules.push(categoryRule, insertBazRule);
+    ruleSet2.rules.push(subjectRule);
+    profile.rules.push(insertBarRule, focusRule);
+
+    applyInsertRules(profile, tank);
+    expect(profile.rules).toHaveLength(3);
+    assertCardRule(profile.rules[0], 'category.coding', 1, '*');
+    assertCardRule(profile.rules[1], 'category.coding.system', 1, '1');
     assertCardRule(profile.rules[2], 'focus', 1, '1');
   });
 
