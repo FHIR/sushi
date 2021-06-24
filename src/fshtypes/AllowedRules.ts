@@ -22,8 +22,7 @@ import {
   ConceptRule,
   ValueSetComponentRule,
   MappingRule,
-  Rule,
-  CodeCaretValueRule
+  Rule
 } from './rules';
 
 const allowedRulesMap = new Map<any, any[]>([
@@ -55,7 +54,7 @@ const allowedRulesMap = new Map<any, any[]>([
   ],
   ['Instance', [AssignmentRule]],
   ['FshValueSet', [ValueSetComponentRule, CaretValueRule]],
-  ['FshCodeSystem', [ConceptRule, CaretValueRule, CodeCaretValueRule]],
+  ['FshCodeSystem', [ConceptRule, CaretValueRule]],
   ['Mapping', [MappingRule]],
   [
     'RuleSet',
@@ -71,8 +70,7 @@ const allowedRulesMap = new Map<any, any[]>([
       ObeysRule,
       OnlyRule,
       ValueSetComponentRule,
-      BindingRule,
-      CodeCaretValueRule
+      BindingRule
     ]
   ],
   [

@@ -1,13 +1,7 @@
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem, FshCode, RuleSet } from '../../src/fshtypes';
-import {
-  CaretValueRule,
-  InsertRule,
-  AssignmentRule,
-  ConceptRule,
-  CodeCaretValueRule
-} from '../../src/fshtypes/rules';
+import { CaretValueRule, InsertRule, AssignmentRule, ConceptRule } from '../../src/fshtypes/rules';
 import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
@@ -323,10 +317,11 @@ describe('CodeSystemExporter', () => {
     });
   });
 
-  it('should apply a CodeCaretValueRule on a top-level concept', () => {
+  it('should apply a CaretValueRule on a top-level concept', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
-    const someCaret = new CodeCaretValueRule(['someCode']);
+    const someCaret = new CaretValueRule('');
+    someCaret.pathArray = ['someCode'];
     someCaret.caretPath = 'designation[0].value';
     someCaret.value = 'Designated value';
     codeSystem.rules.push(someCode, someCaret);
@@ -356,12 +351,13 @@ describe('CodeSystemExporter', () => {
     });
   });
 
-  it('should apply a CodeCaretValueRule on a concept within a hierarchy', () => {
+  it('should apply a CaretValueRule on a concept within a hierarchy', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const otherCode = new ConceptRule('otherCode', 'Other Code');
     otherCode.hierarchy = ['someCode'];
-    const someCaret = new CodeCaretValueRule(['someCode', 'otherCode']);
+    const someCaret = new CaretValueRule('');
+    someCaret.pathArray = ['someCode', 'otherCode'];
     someCaret.caretPath = 'designation[0].value';
     someCaret.value = 'Other designated value';
     codeSystem.rules.push(someCode, otherCode, someCaret);
@@ -397,7 +393,7 @@ describe('CodeSystemExporter', () => {
     });
   });
 
-  it('should resolve soft indexing when applying Caret Value rules', () => {
+  it('should resolve soft indexing when applying top level Caret Value rules', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const contactRule1 = new CaretValueRule('');
     contactRule1.caretPath = 'contact[+].name';
@@ -428,23 +424,27 @@ describe('CodeSystemExporter', () => {
     ]);
   });
 
-  it('should resolve soft indexing when applying CodeCaretValue rules', () => {
+  it('should resolve soft indexing when applying CaretValue rules with paths', () => {
     const codeSystem = new FshCodeSystem('CodeCaretCS');
     const topCode = new ConceptRule('topCode', 'Top Code');
     const bottomCode = new ConceptRule('bottomCode', 'Bottom Code');
     bottomCode.hierarchy = ['topCode'];
 
-    const firstTop = new CodeCaretValueRule(['topCode']);
+    const firstTop = new CaretValueRule('');
+    firstTop.pathArray = ['topCode'];
     firstTop.caretPath = 'designation[+].value';
     firstTop.value = 'First top designation';
-    const secondTop = new CodeCaretValueRule(['topCode']);
+    const secondTop = new CaretValueRule('');
+    secondTop.pathArray = ['topCode'];
     secondTop.caretPath = 'designation[+].value';
     secondTop.value = 'Second top designation';
 
-    const firstBottom = new CodeCaretValueRule(['topCode', 'bottomCode']);
+    const firstBottom = new CaretValueRule('');
+    firstBottom.pathArray = ['topCode', 'bottomCode'];
     firstBottom.caretPath = 'designation[+].value';
     firstBottom.value = 'First bottom designation';
-    const secondBottom = new CodeCaretValueRule(['topCode', 'bottomCode']);
+    const secondBottom = new CaretValueRule('');
+    secondBottom.pathArray = ['topCode', 'bottomCode'];
     secondBottom.caretPath = 'designation[+].value';
     secondBottom.value = 'Second bottom designation';
 
@@ -608,14 +608,15 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
 
-  it('should log a message when applying an invalid CodeCaretValueRule', () => {
+  it('should log a message when applying an invalid CaretValueRule', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const otherCode = new ConceptRule('otherCode', 'Other Code');
     otherCode.hierarchy = ['someCode'];
-    const someCaret = new CodeCaretValueRule(['someCode', 'wrongCode'])
+    const someCaret = new CaretValueRule('')
       .withFile('InvalidValue.fsh')
       .withLocation([8, 5, 8, 25]);
+    someCaret.pathArray = ['someCode', 'wrongCode'];
     someCaret.caretPath = 'designation[0].value';
     someCaret.value = 'Other designated value';
     codeSystem.rules.push(someCode, otherCode, someCaret);
