@@ -178,5 +178,34 @@ describe('CaretValueRule', () => {
 
       expect(rule.toFSH()).toBe('* ^contact = MyContact');
     });
+
+    it('should produce FSH for a CaretValueRule with isCodeCaretRule assigning a string', () => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = ['bear'];
+      rule.isCodeCaretRule = true;
+      rule.caretPath = 'display';
+      rule.value = 'Bear is "here"';
+
+      expect(rule.toFSH()).toBe('* #bear ^display = "Bear is \\"here\\""');
+    });
+
+    it('should produce FSH for a nested CaretValueRule with isCodeCaretRule assigning a FshCanonical', () => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = ['owl', 'barnowl'];
+      rule.isCodeCaretRule = true;
+      rule.caretPath = 'extension.url';
+      rule.value = new FshCanonical('OwlExtension');
+
+      expect(rule.toFSH()).toBe('* #owl #barnowl ^extension.url = Canonical(OwlExtension)');
+    });
+
+    it('should produce FSH for CaretValueRule with isCodeCaretRule and no path', () => {
+      const rule = new CaretValueRule('');
+      rule.isCodeCaretRule = true;
+      rule.caretPath = 'extension.url';
+      rule.value = new FshCanonical('OwlExtension');
+
+      expect(rule.toFSH()).toBe('* ^extension.url = Canonical(OwlExtension)');
+    });
   });
 });

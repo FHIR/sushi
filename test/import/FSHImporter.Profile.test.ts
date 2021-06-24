@@ -1827,6 +1827,17 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse caret value rules with a . path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * . ^definition = "foo"
+        `;
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        assertCaretValueRule(profile.rules[0], '.', 'definition', 'foo', false, ['.']);
+      });
+
       it('should parse caret value rules with a path', () => {
         const input = `
         Profile: ObservationProfile
