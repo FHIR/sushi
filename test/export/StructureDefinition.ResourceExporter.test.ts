@@ -165,8 +165,8 @@ describe('ResourceExporter', () => {
   });
 
   it('should allow constraints on newly added elements and sub-elements', () => {
-    const resource = new Resource('ExampleModel');
-    resource.id = 'ExampleModel';
+    const resource = new Resource('ExampleResource');
+    resource.id = 'ExampleResource';
 
     const addElementRule = new AddElementRule('name');
     addElementRule.min = 0;

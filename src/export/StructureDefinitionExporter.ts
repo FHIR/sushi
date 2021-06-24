@@ -417,8 +417,10 @@ export class StructureDefinitionExporter implements Fishable {
         // and continue to the next rule.
         if (
           rule.path &&
-          !addElementRules.some(rule =>
-            element.path.startsWith(`${element.structDef.pathType}.${rule.path}`)
+          !addElementRules.some(
+            rule =>
+              element.path === `${element.structDef.pathType}.${rule.path}` ||
+              element.path.startsWith(`${element.structDef.pathType}.${rule.path}.`)
           )
         ) {
           logger.error(
