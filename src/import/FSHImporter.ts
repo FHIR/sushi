@@ -50,9 +50,9 @@ import {
   SdRule,
   LrRule,
   AddElementRule,
-  OnlyRuleType,
-  CodeCaretValueRule
+  OnlyRuleType
 } from '../fshtypes/rules';
+import { splitOnPathPeriods } from '../fhirtypes/common';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
@@ -143,8 +143,7 @@ export class FSHImporter extends FSHVisitor {
   private allAliases: Map<string, string>;
   paramRuleSets: Map<string, ParamRuleSet>;
   private topLevelParse: boolean;
-  private pathContext: string[];
-  private codePathContext: string[][];
+  private pathContext: string[][];
   private baseIndent: number;
 
   constructor() {
@@ -244,9 +243,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    // Reset the pathContext, codePathContext, and baseIndent level for each entity
+    // Reset the pathContext and baseIndent level for each entity
     this.pathContext = [];
-    this.codePathContext = [];
     this.baseIndent = this.extractStartStop(ctx).startColumn;
 
     if (ctx.profile()) {
@@ -1097,9 +1095,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitCsRule(
-    ctx: pc.CsRuleContext
-  ): ConceptRule | CodeCaretValueRule | CaretValueRule | InsertRule {
+  visitCsRule(ctx: pc.CsRuleContext): ConceptRule | CaretValueRule | InsertRule {
     if (ctx.concept()) {
       return this.visitConcept(ctx.concept());
     } else if (ctx.codeCaretValueRule()) {
@@ -1130,12 +1126,15 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  getPathWithContext(path: string, parentCtx: ParserRuleContext) {
-    return this.prependPathContext(path, parentCtx);
+  getPathWithContext(path: string, parentCtx: ParserRuleContext): string {
+    return this.getArrayPathWithContext(
+      splitOnPathPeriods(path).filter(p => p),
+      parentCtx
+    ).join('.');
   }
 
-  getCodePathWithContext(codePath: string[], parentCtx: ParserRuleContext) {
-    return this.prependCodePathContext(codePath, parentCtx);
+  getArrayPathWithContext(pathArray: string[], parentCtx: ParserRuleContext): string[] {
+    return this.prependPathContext(pathArray, parentCtx);
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1343,7 +1342,7 @@ export class FSHImporter extends FSHVisitor {
     // the last code in allCodes is the one we are actually defining.
     // the rest are the hierarchy, which may be empty.
     // indentation may also be used to define the hierarchy, which is what the code path with context is for.
-    const fullCodePath = this.getCodePathWithContext(
+    const fullCodePath = this.getArrayPathWithContext(
       localCodePath.map(localCode => localCode.code),
       ctx
     );
@@ -1543,12 +1542,16 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCaretValueRule(ctx: pc.CaretValueRuleContext): CaretValueRule {
-    const caretValueRule = new CaretValueRule(
-      this.getPathWithContext(this.visitPath(ctx.path()), ctx)
-    )
+    const path = this.visitPath(ctx.path());
+    const splitPath =
+      path === '.' ? [path] : splitOnPathPeriods(this.visitPath(ctx.path())).filter(p => p);
+    const pathArray = this.getArrayPathWithContext(splitPath, ctx);
+    const caretValueRule = new CaretValueRule(pathArray.join('.'))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-
+    // We must save the path in array form, in case this rule is a part
+    // of a RuleSet which ends up applied on a CodeSystem
+    caretValueRule.pathArray = pathArray;
     // Get the caret path, but slice off the starting ^
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
@@ -1557,17 +1560,18 @@ export class FSHImporter extends FSHVisitor {
     return caretValueRule;
   }
 
-  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CodeCaretValueRule {
+  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CaretValueRule {
     const localCodePath = ctx.CODE()
       ? ctx.CODE().map(code => {
           return this.parseCodeLexeme(code.getText(), ctx).code;
         })
       : [];
-    const fullCodePath = this.getCodePathWithContext(localCodePath, ctx);
+    const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
     // It's fine to make a CodeCaretValueRule with an empty code path.
-    const caretRule = new CodeCaretValueRule(fullCodePath)
+    const caretRule = new CaretValueRule('')
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+    caretRule.pathArray = fullCodePath;
     // Get the caret path, but slice off the starting ^
     caretRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretRule.value = this.visitValue(ctx.value());
@@ -1933,8 +1937,19 @@ export class FSHImporter extends FSHVisitor {
       case VsOperator.EQUALS:
       case VsOperator.IN:
       case VsOperator.NOT_IN:
-        if (typeof value !== 'string') {
-          throw new ValueSetFilterValueTypeError(operator, 'string');
+        // NOTE: We believe that =, in, and not-in operators should ONLY support code values
+        // based on the filter value documentation:
+        // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
+        // Both string and code are supported for now in order to maintain backwards compatibility.
+        if (typeof value === 'string') {
+          logger.warn(
+            `The match value of filter operator "${operator}" must be a code. ` +
+              'For string valued properties, use the regex filter operator with a regular expression value. ' +
+              'Support for using strings as filter values has been deprecated and will be removed in a future release.'
+          );
+        }
+        if (typeof value !== 'string' && !(value instanceof FshCode)) {
+          throw new ValueSetFilterValueTypeError(operator, 'code');
         }
         break;
       case VsOperator.IS_A:
@@ -2003,9 +2018,9 @@ export class FSHImporter extends FSHVisitor {
    * Given a path and the context containing it, apply the path context indicated by the path's indent
    * @param path - The path to apply context to
    * @param parentCtx - The parent element containing the path
-   * @returns {string} - The path with context prepended
+   * @returns {string[]} - The path with context prepended
    */
-  private prependPathContext(path: string, parentCtx: any): string {
+  private prependPathContext(path: string[], parentCtx: ParserRuleContext): string[] {
     const location = this.extractStartStop(parentCtx);
     const currentIndent = location.startColumn - this.baseIndent;
     const contextIndex = currentIndent / INDENT_WIDTH;
@@ -2015,15 +2030,19 @@ export class FSHImporter extends FSHVisitor {
     }
 
     // Replace '[+]' with '[=]' in the version of the path to add to pathContext, unless the rule is only used to set a path
-    const newContext = pc.hasPathRule(parentCtx.parentCtx) ? path : path.replace(/\[\+\]/g, '[=]');
+    const newContext = pc.hasPathRule(parentCtx.parentCtx)
+      ? path
+      : path.map(c => c.replace(/\[\+\]/g, '[=]'));
+
     // If the element is not indented, just reset the context
     if (contextIndex === 0) {
       this.pathContext = [newContext];
       return path;
     }
 
+    // Otherwise, get the context based on the indent level.
     const currentContext = this.pathContext[contextIndex - 1];
-    if (currentContext === '') {
+    if (currentContext.length === 0) {
       logger.error(
         'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
         { location, file: this.currentFile }
@@ -2031,55 +2050,18 @@ export class FSHImporter extends FSHVisitor {
       return path;
     }
 
+    // Trim out-of-scope contexts
     this.pathContext.splice(contextIndex);
     // Once we have used the existing context, clear it of any [+] so that a rule that is only setting path only applies [+] once
     if (this.pathContext.length > 0) {
       this.pathContext[this.pathContext.length - 1] = this.pathContext[
         this.pathContext.length - 1
-      ].replace(/\[\+\]/g, '[=]');
+      ].map(c => c.replace(/\[\+\]/g, '[=]'));
     }
-    this.pathContext.push(newContext ? `${currentContext}.${newContext}` : currentContext);
-    return path ? `${currentContext}.${path}` : currentContext;
-  }
+    const fullPath = currentContext.concat(newContext);
+    this.pathContext.push(fullPath);
 
-  /**
-   * Given a code path and the context containing it, apply the code path context indicated by the code path's indent
-   * @param codePath - The code path to apply context to
-   * @param parentCtx - The parent element containing the code path
-   * @returns {string[]} - The code path with context prepended
-   */
-  private prependCodePathContext(codePath: string[], parentCtx: ParserRuleContext): string[] {
-    const location = this.extractStartStop(parentCtx);
-    const currentIndent = location.startColumn - this.baseIndent;
-    const contextIndex = currentIndent / INDENT_WIDTH;
-
-    if (!this.isValidContext(location, currentIndent, this.codePathContext)) {
-      return codePath;
-    }
-
-    // A PathRule can set a path, but there's no equivalent for a code path.
-    // And, there's no need to check for soft indexing either.
-    // If there's no indent, use the codePath as-is, and make it the only available context.
-    if (contextIndex === 0) {
-      this.codePathContext = [codePath];
-      return codePath;
-    }
-    // Otherwise, get the context based on the indent level.
-    const currentContext = this.codePathContext[contextIndex - 1];
-    if (currentContext.length === 0) {
-      logger.error(
-        'Rule cannot be indented below rule which has no code path. The rule will be processed as if it is not indented.',
-        { location, file: this.currentFile }
-      );
-      return codePath;
-    }
-
-    // Trim out-of-scope contexts
-    this.codePathContext.splice(contextIndex);
-    const fullCodePath = currentContext.concat(codePath);
-    this.codePathContext.push(fullCodePath);
-
-    return fullCodePath;
+    return fullPath;
   }
 
   private isValidContext(

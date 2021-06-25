@@ -1,7 +1,7 @@
 import { FshEntity } from './FshEntity';
 import { CodeSystemDuplicateCodeError } from '../errors/CodeSystemDuplicateCodeError';
 import { CodeSystemIncorrectHierarchyError } from '../errors/CodeSystemIncorrectHierarchyError';
-import { CaretValueRule, InsertRule, ConceptRule, CodeCaretValueRule } from './rules';
+import { CaretValueRule, InsertRule, ConceptRule } from './rules';
 import { EOL } from 'os';
 import { fshifyString } from './common';
 import isEqual from 'lodash/isEqual';
@@ -14,7 +14,7 @@ export class FshCodeSystem extends FshEntity {
   id: string;
   title?: string;
   description?: string;
-  rules: (ConceptRule | CaretValueRule | CodeCaretValueRule | InsertRule)[];
+  rules: (ConceptRule | CaretValueRule | InsertRule)[];
 
   constructor(public name: string) {
     super();

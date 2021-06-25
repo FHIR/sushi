@@ -55,7 +55,7 @@ IHE/pharm-vaccination#main
 IHE/pharm-supply#master
 openhie/hiv-ig#main
 openhie/case-reporting#master
-DavidPyke/SAFE-COVID-eCR#master
+# DavidPyke/SAFE-COVID-eCR#master
 # Added Wed Jan 27 2021 09:49:17 GMT-0500 (Eastern Standard Time)
 IHE/pharm-medicationrecord#master
 paulschneider/auto-ig-builder#master
