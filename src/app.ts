@@ -177,7 +177,7 @@ async function app() {
   }
 
   console.log();
-  printResults(outPackage, !config.FSHOnly);
+  printResults(outPackage);
 
   process.exit(stats.numError);
 }
@@ -191,39 +191,40 @@ function getVersion(): string {
   return 'unknown';
 }
 
-function printResults(pkg: Package, isIG: boolean) {
+function printResults(pkg: Package) {
   // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
-  const prNum = pad(pkg.profiles.length.toString(), 8);
-  const extnNum = pad(pkg.extensions.length.toString(), 10);
-  const lgNum = pad(pkg.logicals.length.toString(), 8);
-  const resNum = pad(pkg.resources.length.toString(), 9);
-  const vstNum = pad(pkg.valueSets.length.toString(), 9);
-  const cdsysNum = pad(pkg.codeSystems.length.toString(), 11);
-  const insNum = pad(pkg.instances.length.toString(), 9);
+  const profileNum = pad(pkg.profiles.length.toString(), 13);
+  const extentNum = pad(pkg.extensions.length.toString(), 12);
+  const logiclNum = pad(pkg.logicals.length.toString(), 12);
+  const resourcNum = pad(pkg.resources.length.toString(), 13);
+  const valueSetsNumber = pad(pkg.valueSets.length.toString(), 18);
+  const codeSystemsNum = pad(pkg.codeSystems.length.toString(), 17);
+  const instancesNumber = pad(pkg.instances.length.toString(), 18);
   const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''}`, 13);
   const wrNumMsg = padStart(`${stats.numWarn} Warning${stats.numWarn !== 1 ? 's' : ''}`, 12);
 
-  const aWittyMessageInvolvingABadFishPun = padEnd(getRandomPun(stats.numError, stats.numWarn), 59);
+  const aWittyMessageInvolvingABadFishPun = padEnd(getRandomPun(stats.numError, stats.numWarn), 36);
   const clr =
     stats.numError > 0 ? chalk.red : stats.numWarn > 0 ? chalk.rgb(179, 98, 0) : chalk.green;
 
-  // prettier-ignore
   // NOTE: Doing some funky things w/ strings on some lines to keep overall alignment in the code
   const results = [
-    clr('╔' + '═══════════════════════════════════ SUSHI RESULTS ══════════════════════════════════════' + '' + '╗'),
-    clr('║') + ' ╭──────────┬────────────┬──────────┬───────────┬───────────┬─────────────┬───────────╮ ' + clr('║'),
-    clr('║') + ' │ Profiles │ Extensions │ Logicals │ Resources │ ValueSets │ CodeSystems │ Instances │ ' + clr('║'),
-    clr('║') + ' ├──────────┼────────────┼──────────┼───────────┼───────────┼─────────────┼───────────┤ ' + clr('║'),
-    clr('║') + ` │ ${prNum} │ ${extnNum} │ ${lgNum} │ ${resNum} │ ${vstNum} │ ${cdsysNum} │ ${insNum} │ ` + clr('║'),
-    clr('║') + ' ╰──────────┴────────────┴──────────┴───────────┴───────────┴─────────────┴───────────╯ ' + clr('║'),
-    clr('║' + '                                                                                        ' + '' + '║'),
-    clr('╠' + '════════════════════════════════════════════════════════════════════════════════════════' + '' + '╣'),
-    clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} `                        + clr('║'),
-    clr('╚' + '════════════════════════════════════════════════════════════════════════════════════════' + '' + '╝')
+    clr('╔' + '════════════════════════ SUSHI RESULTS ══════════════════════════' + '' + '╗'),
+    clr('║') + ' ╭───────────────┬──────────────┬──────────────┬───────────────╮ ' + clr('║'),
+    clr('║') + ' │    Profiles   │  Extensions  │   Logicals   │   Resources   │ ' + clr('║'),
+    clr('║') + ' ├───────────────┼──────────────┼──────────────┼───────────────┤ ' + clr('║'),
+    clr('║') + ` │ ${profileNum} │ ${extentNum} │ ${logiclNum} │ ${resourcNum} │ ` + clr('║'),
+    clr('║') + ' ╰───────────────┴──────────────┴──────────────┴───────────────╯ ' + clr('║'),
+    clr('║') + ' ╭────────────────────┬───────────────────┬────────────────────╮ ' + clr('║'),
+    clr('║') + ' │      ValueSets     │    CodeSystems    │     Instances      │ ' + clr('║'),
+    clr('║') + ' ├────────────────────┼───────────────────┼────────────────────┤ ' + clr('║'),
+    clr('║') + ` │ ${valueSetsNumber} │ ${codeSystemsNum} │ ${instancesNumber} │ ` + clr('║'),
+    clr('║') + ' ╰────────────────────┴───────────────────┴────────────────────╯ ' + clr('║'),
+    clr('║' + '                                                                 ' + '' + '║'),
+    clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
+    clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
+    clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
   ];
-  if (!isIG) {
-    results.splice(7, 1);
-  }
 
   const convertChars = !supportsFancyCharacters();
   results.forEach(r => {
