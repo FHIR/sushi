@@ -27,7 +27,8 @@ import {
   writePreprocessedFSH,
   getRawFSHes,
   init,
-  getRandomPun
+  getRandomPun,
+  setSuppressedMessages
 } from './utils';
 
 const FSH_VERSION = '1.1.0';
@@ -123,6 +124,7 @@ async function app() {
       process.exit(0);
     }
     config = readConfig(originalInput);
+    setSuppressedMessages(config.suppressWarnings);
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();

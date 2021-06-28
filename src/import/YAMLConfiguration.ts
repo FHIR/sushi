@@ -174,6 +174,10 @@ export type YAMLConfiguration = {
   // When set to true, the "short" and "definition" field on the root element of an Extension will
   // be set to the "Title" and "Description" of that Extension. Default is true.
   applyExtensionMetadataToRoot?: boolean;
+
+  // The string values specify certain warnings that will be suppressed when added to this configuration
+  // property
+  suppressWarnings?: string[];
 };
 
 export type YAMLConfigurationMeta = {

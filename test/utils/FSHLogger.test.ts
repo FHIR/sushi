@@ -1,4 +1,4 @@
-import { logger, stats, errorsAndWarnings } from '../../src/utils/FSHLogger';
+import { logger, stats, errorsAndWarnings, setSuppressedMessages } from '../../src/utils/FSHLogger';
 
 // MUTE_LOGS controls whether or not logs get printed during testing.
 // Usually, we don't want logs actually printed, as they cause clutter.
@@ -114,5 +114,23 @@ describe('FSHLogger', () => {
     errorsAndWarnings.reset();
     expect(errorsAndWarnings.errors).toHaveLength(0);
     expect(errorsAndWarnings.warnings).toHaveLength(0);
+  });
+
+  it('should suppress messages that use a suppressed messageType', () => {
+    setSuppressedMessages(['foo']);
+    logger.warn('warn1', { messageType: 'foo' });
+    expect(logger.transports[0].silent).toBeTrue();
+  });
+
+  it('should suppress messages that use a suppressed messageType (case insensitive)', () => {
+    setSuppressedMessages(['FOo']);
+    logger.warn('warn1', { messageType: 'FoO' });
+    expect(logger.transports[0].silent).toBeTrue();
+  });
+
+  it('should not suppress messages that specify a messageType that is not suppressed', () => {
+    setSuppressedMessages(['foo']);
+    logger.warn('warn1', { messageType: 'bar' });
+    expect(logger.transports[0].silent).toBeFalse();
   });
 });
