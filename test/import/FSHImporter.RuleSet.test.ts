@@ -6,7 +6,7 @@ import {
   assertInsertRule,
   assertValueSetConceptComponent,
   assertAddElementRule,
-  assertCodeCaretRule
+  assertCaretValueRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, ConceptRule } from '../../src/fshtypes/rules';
@@ -133,7 +133,7 @@ describe('FSHImporter', () => {
       });
     });
 
-    it('should parse a RuleSet with rules, ValueSetComponents, ConceptRules, and CodeCaretValueRules', () => {
+    it('should parse a RuleSet with rules, ValueSetComponents, ConceptRules, and CaretValueRules', () => {
       const input = `
         RuleSet: RuleRuleSet
         * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
@@ -165,11 +165,13 @@ describe('FSHImporter', () => {
       expect(concept).toEqual(
         new ConceptRule('lion').withFile('Rules.fsh').withLocation([5, 9, 5, 15])
       );
-      assertCodeCaretRule(
+      assertCaretValueRule(
         ruleSet.rules[3],
-        ['lion'],
+        '',
         'designation.value',
-        'Watch out for big cat!'
+        'Watch out for big cat!',
+        false,
+        ['lion']
       );
       expect(ruleSet.rules[3].sourceInfo.location).toEqual({
         startLine: 6,

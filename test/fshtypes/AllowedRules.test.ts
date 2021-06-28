@@ -14,8 +14,7 @@ import {
   InsertRule,
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule,
-  CodeCaretValueRule
+  ValueSetFilterComponentRule
 } from '../../src/fshtypes/rules';
 import {
   isAllowedRule,
@@ -189,7 +188,6 @@ describe('isAllowedRule', () => {
     it('should allow valid rules on a FshCodeSystem', () => {
       expect(isAllowedRule(c, new CaretValueRule('foo'))).toBeTrue();
       expect(isAllowedRule(c, new ConceptRule('foo'))).toBeTrue();
-      expect(isAllowedRule(c, new CodeCaretValueRule(['foo']))).toBeTrue();
     });
 
     it('should not allow invalid rules on a FshCodeSystem', () => {
@@ -249,7 +247,6 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(r, new MappingRule('foo'))).toBeTrue();
       expect(isAllowedRule(r, new ValueSetComponentRule(true))).toBeTrue();
       expect(isAllowedRule(r, new ConceptRule('foo'))).toBeTrue();
-      expect(isAllowedRule(r, new CodeCaretValueRule(['foo']))).toBeTrue();
     });
 
     it('should not allow invalid rules on a RuleSet', () => {

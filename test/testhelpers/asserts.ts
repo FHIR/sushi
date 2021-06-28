@@ -18,10 +18,10 @@ import {
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
   AddElementRule,
-  ConceptRule,
-  CodeCaretValueRule
+  ConceptRule
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
+import { splitOnPathPeriods } from '../../src/fhirtypes/common';
 
 export function assertCardRule(rule: Rule, path: string, min: number, max: number | string): void {
   expect(rule).toBeInstanceOf(CardRule);
@@ -105,7 +105,8 @@ export function assertCaretValueRule(
   path: string,
   caretPath: string,
   value: AssignmentValueType,
-  isInstance: boolean
+  isInstance: boolean,
+  pathArray?: string[]
 ): void {
   expect(rule).toBeInstanceOf(CaretValueRule);
   const caretValueRule = rule as CaretValueRule;
@@ -113,6 +114,7 @@ export function assertCaretValueRule(
   expect(caretValueRule.caretPath).toBe(caretPath);
   expect(caretValueRule.value).toEqual(value);
   expect(caretValueRule.isInstance).toBe(isInstance);
+  expect(caretValueRule.pathArray).toEqual(pathArray ?? splitOnPathPeriods(path).filter(p => p));
 }
 
 export function assertObeysRule(rule: Rule, path: string, invariant: string) {
@@ -269,19 +271,4 @@ export function assertConceptRule(
   if (hierarchy !== undefined) {
     expect(conceptRule.hierarchy).toEqual(hierarchy);
   }
-}
-
-export function assertCodeCaretRule(
-  rule: Rule,
-  codePath: string[],
-  caretPath: string,
-  value: AssignmentValueType,
-  isInstance = false
-) {
-  expect(rule).toBeInstanceOf(CodeCaretValueRule);
-  const codeCaretValueRule = rule as CodeCaretValueRule;
-  expect(codeCaretValueRule.codePath).toEqual(codePath);
-  expect(codeCaretValueRule.caretPath).toBe(caretPath);
-  expect(codeCaretValueRule.value).toEqual(value);
-  expect(codeCaretValueRule.isInstance).toBe(isInstance);
 }

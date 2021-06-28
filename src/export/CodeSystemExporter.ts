@@ -2,7 +2,7 @@ import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
-import { CaretValueRule, ConceptRule, CodeCaretValueRule } from '../fshtypes/rules';
+import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
 import { Package } from '.';
@@ -62,22 +62,21 @@ export class CodeSystemExporter {
   private setCaretPathRules(
     codeSystem: CodeSystem,
     csStructureDefinition: StructureDefinition,
-    rules: (CaretValueRule | CodeCaretValueRule)[]
+    rules: CaretValueRule[]
   ) {
     // soft index resolution relies on the rule's path attribute.
-    // a CodeCaretValueRule is created with an empty path, so first
-    // transform its codePath into a path.
+    // a CaretValueRule is created with an empty path, so first
+    // transform its arrayPath into a path.
     // Because this.findConceptPath can potentially throw an error,
     // build a list of successful rules that will actually be applied.
-    const successfulRules: (CaretValueRule | CodeCaretValueRule)[] = [];
+    const successfulRules: CaretValueRule[] = [];
     rules.forEach(rule => {
       try {
-        if (rule instanceof CodeCaretValueRule) {
-          rule.path = this.findConceptPath(codeSystem, rule.codePath);
-          successfulRules.push(rule);
-        } else {
-          successfulRules.push(rule);
-        }
+        rule.path = this.findConceptPath(codeSystem, rule.pathArray);
+        successfulRules.push(rule);
+        // We can only know that a CaretRule is meant to represent codes
+        // after it has been applied on a CodeSystem, so set the flag here
+        rule.isCodeCaretRule = true;
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
@@ -165,9 +164,7 @@ export class CodeSystemExporter {
     this.setCaretPathRules(
       codeSystem,
       csStructureDefinition,
-      fshDefinition.rules.filter(
-        rule => rule instanceof CaretValueRule || rule instanceof CodeCaretValueRule
-      ) as (CaretValueRule | CodeCaretValueRule)[]
+      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
     );
 
     // check for another code system with the same id

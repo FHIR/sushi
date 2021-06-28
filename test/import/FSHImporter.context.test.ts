@@ -9,7 +9,6 @@ import {
   assertObeysRule,
   assertValueSetConceptComponent,
   assertValueSetFilterComponent,
-  assertCodeCaretRule,
   assertAddElementRule
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
@@ -228,7 +227,7 @@ describe('FSHImporter', () => {
       expect(profile.parent).toBe('Patient');
       expect(profile.rules.length).toBe(3);
       assertCardRule(profile.rules[0], 'name', 1, 1);
-      assertCaretValueRule(profile.rules[1], 'name', 'short', 'foo', false);
+      assertCaretValueRule(profile.rules[1], 'name', 'short', 'foo', false, ['name']);
       assertObeysRule(profile.rules[2], 'name', 'inv1');
     });
 
@@ -306,7 +305,7 @@ describe('FSHImporter', () => {
         undefined,
         undefined
       );
-      assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false);
+      assertCaretValueRule(profile.rules[2], 'birthDate', 'short', 'foo', false, ['birthDate']);
     });
 
     it('should apply context to AddElement rules', () => {
@@ -551,7 +550,7 @@ describe('FSHImporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
-    it('should parse a code system that uses an indented CodeCaretValueRule on a top-level concept', () => {
+    it('should parse a code system that uses an indented CaretValueRule on a top-level concept', () => {
       const input = `
       CodeSystem: ZOO
       * #anteater "Anteater"
@@ -561,17 +560,19 @@ describe('FSHImporter', () => {
       const codeSystem = result.codeSystems.get('ZOO');
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
       expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
-      assertCodeCaretRule(
+      assertCaretValueRule(
         codeSystem.rules[1],
-        ['anteater'],
+        '',
         'property[0].valueString',
-        'Their threat pose is really cute.'
+        'Their threat pose is really cute.',
+        false,
+        ['anteater']
       );
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
-    it('should parse a code system that uses an indented CodeCaretValueRule on a nested concept', () => {
+    it('should parse a code system that uses an indented CaretValueRule on a nested concept', () => {
       const input = `
       CodeSystem: ZOO
       * #anteater "Anteater"
@@ -586,11 +587,13 @@ describe('FSHImporter', () => {
         'anteater'
       ]);
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
-      assertCodeCaretRule(
+      assertCaretValueRule(
         codeSystem.rules[2],
-        ['anteater', 'northern'],
+        '',
         'property[0].valueString',
-        'They are strong climbers.'
+        'They are strong climbers.',
+        false,
+        ['anteater', 'northern']
       );
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -614,18 +617,22 @@ describe('FSHImporter', () => {
         'anteater'
       ]);
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
-      assertCodeCaretRule(
+      assertCaretValueRule(
         codeSystem.rules[2],
-        ['anteater', 'northern'],
+        '',
         'property[0].valueString',
-        'They are strong climbers.'
+        'They are strong climbers.',
+        false,
+        ['anteater', 'northern']
       );
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
-      assertCodeCaretRule(
+      assertCaretValueRule(
         codeSystem.rules[3],
-        ['anteater'],
+        '',
         'property[0].valueString',
-        'Their threat pose is really cute.'
+        'Their threat pose is really cute.',
+        false,
+        ['anteater']
       );
       expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -653,13 +660,37 @@ describe('FSHImporter', () => {
         'anteater'
       ]);
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
-      assertCodeCaretRule(
+      assertCaretValueRule(
         codeSystem.rules[3],
-        ['anteater', 'northern'],
+        '',
         'property[0].valueString',
-        'They are strong climbers.'
+        'They are strong climbers.',
+        false,
+        ['anteater', 'northern']
       );
       expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a rule set that uses an indented CaretValueRule on a top-level concept', () => {
+      const input = `
+      RuleSet: ZOO
+      * #anteater "Anteater"
+        * ^property[0].valueString = "Their threat pose is really cute."
+      `;
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.ruleSets.get('ZOO');
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+      assertCaretValueRule(
+        codeSystem.rules[1],
+        'anteater',
+        'property[0].valueString',
+        'Their threat pose is really cute.',
+        false,
+        ['anteater']
+      );
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
