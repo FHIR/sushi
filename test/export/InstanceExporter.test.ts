@@ -10,7 +10,8 @@ import {
   Extension,
   FshCodeSystem,
   RuleSet,
-  FshQuantity
+  FshQuantity,
+  Resource
 } from '../../src/fshtypes';
 import {
   AssignmentRule,
@@ -1604,6 +1605,22 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
         /The type "Reference\(Resource\)" does not match any of the allowed types\D*/s
       );
+    });
+
+    it('should log a warning when constraining a reference to a custom resource', () => {
+      const r = new Resource('Foo');
+      doc.resources.set(r.name, r);
+      sdExporter.export();
+
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      const assignedRefRule = new AssignmentRule('extension[0].valueReference');
+      assignedRefRule.value = new FshReference('Foo'); // * extension[0].valueReference = Reference(Foo)
+      observationInstance.rules.push(assignedRefRule);
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      exportInstance(observationInstance);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Referencing custom resource/);
     });
 
     // Assigning using Canonical

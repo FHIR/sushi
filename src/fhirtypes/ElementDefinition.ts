@@ -13,7 +13,15 @@ import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
-import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
+import {
+  FshCanonical,
+  FshCode,
+  FshRatio,
+  FshQuantity,
+  FshReference,
+  Invariant,
+  SourceInfo
+} from '../fshtypes';
 import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
   AssignmentToCodeableReferenceError,
@@ -796,6 +804,13 @@ export class ElementDefinition {
    */
   constrainType(rule: OnlyRule | AddElementRule, fisher: Fishable, target?: string): void {
     const types = rule.types;
+
+    this.warnOnNonConformantResourceReference(
+      types.map(t => t.type),
+      fisher,
+      rule.sourceInfo
+    );
+
     // Establish the target types (if applicable)
     const targetType = this.getTargetType(target, fisher);
     const targetTypes: ElementDefinitionType[] = targetType ? [targetType] : this.type;
@@ -1166,6 +1181,36 @@ export class ElementDefinition {
   }
 
   /**
+   * Emit a warning when an element which is on a definition derived from core FHIR
+   * references a resource which is not conformant to the FHIR spec
+   * @param references - The set of References on the element
+   * @param fisher - A Fishable implementation
+   * @param sourceInfo - The sourceInfo to use for logging a warning
+   */
+  private warnOnNonConformantResourceReference(
+    references: string[],
+    fisher: Fishable,
+    sourceInfo: SourceInfo
+  ): void {
+    const nonConformantReference = references.some(r => {
+      const resource = fisher?.fishForMetadata(r, Type.Resource);
+      return resource && !resource.url.startsWith('http://hl7.org/fhir/StructureDefinition/');
+    });
+    const isDerivedFromCoreFHIR = fisher
+      ?.fishForMetadata(this.structDef.type)
+      ?.url.startsWith('http://hl7.org/fhir/StructureDefinition/');
+    if (nonConformantReference && isDerivedFromCoreFHIR) {
+      logger.warn(
+        'Referencing custom resource from core FHIR is non-comformant to the FHIR specification.',
+        sourceInfo,
+        {
+          messageType: 'nonConformantResource'
+        }
+      );
+    }
+  }
+
+  /**
    * Sets flags on this element as specified in a profile or extension.
    * Don't change a flag when the incoming argument is undefined or false.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#mustsupport}
@@ -1436,6 +1481,7 @@ export class ElementDefinition {
             );
           }
         }
+        this.warnOnNonConformantResourceReference([value.reference], fisher, value.sourceInfo);
         this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
       case 'Canonical':
