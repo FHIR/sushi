@@ -1602,7 +1602,7 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE().getText()
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
     );
     insertRule.ruleSet = rulesetName;
     if (ruleParams) {
