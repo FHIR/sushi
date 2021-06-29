@@ -112,13 +112,17 @@ export async function loadDependency(
       throw new CurrentPackageLoadError(fullPackageName);
     }
   } else if (!loadedPackage) {
-    // If the package is not locally cached, and it is not a current or dev version, we attempt to get it
-    // from packages.fhir.org or packages2.fhir.org
-    if (packageName.startsWith('hl7.fhir.r5.')) {
-      // Temporary.  See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
-      packageUrl = `http://packages2.fhir.org/packages/${packageName}/${version}`;
-    } else {
-      packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
+    packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
+
+    // If this is an R4B or R5 package, then we may need to get it from packages2 if it is not in packages
+    if (/^hl7\.fhir\.r(4b|5)\./.test(packageName)) {
+      try {
+        await axios.head(packageUrl);
+      } catch {
+        // It didn't exist in the normal registry.  Fallback to packages2 registry. This should be TEMPORARY.
+        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
+        packageUrl = `http://packages2.fhir.org/packages/${packageName}/${version}`;
+      }
     }
   }
 
