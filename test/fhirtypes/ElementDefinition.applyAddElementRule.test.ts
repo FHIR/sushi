@@ -177,6 +177,73 @@ describe('ElementDefinition', () => {
       expect(newElement.type).toStrictEqual([expectedType]);
     });
 
+    it('should apply AddElementRule with multiple targetTypes including a canonical', () => {
+      const addElementRule = new AddElementRule('entity[x]');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'string' },
+        { type: 'uri' },
+        { type: 'Organization', isCanonical: true }
+      ];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+
+      expect(newElement.path).toBe('AlternateIdentification.entity[x]');
+      const expectedType1 = new ElementDefinitionType('string');
+      const expectedType2 = new ElementDefinitionType('uri');
+      const expectedType3 = new ElementDefinitionType('canonical').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization'
+      );
+      expect(newElement.type).toStrictEqual([expectedType1, expectedType2, expectedType3]);
+    });
+
+    it('should apply AddElementRule with single canonical targetType', () => {
+      const addElementRule = new AddElementRule('org');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [{ type: 'Organization', isCanonical: true }];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+
+      expect(newElement.path).toBe('AlternateIdentification.org');
+      const expectedType = new ElementDefinitionType('canonical').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization'
+      );
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
+    it('should apply AddElementRule with multiple canonical targetType', () => {
+      const addElementRule = new AddElementRule('org[x]');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'Organization', isCanonical: true },
+        { type: 'Practitioner', isCanonical: true }
+      ];
+      addElementRule.short = 'short definition';
+
+      const newElement: ElementDefinition = alternateIdentification.newElement(addElementRule.path);
+      newElement.applyAddElementRule(addElementRule, fisher);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+
+      expect(newElement.path).toBe('AlternateIdentification.org[x]');
+      const expectedType = new ElementDefinitionType('canonical').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization',
+        'http://hl7.org/fhir/StructureDefinition/Practitioner'
+      );
+      expect(newElement.type).toStrictEqual([expectedType]);
+    });
+
     it('should log a warning when adding duplicate targetTypes', () => {
       const addElementRule = new AddElementRule('created[x]');
       addElementRule.min = 0;
@@ -198,7 +265,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should not log a duplicate warning when adding multiple Reference targetTypes', () => {
+    it('should not log a duplicate warning when adding multiple Reference and canonical targetTypes', () => {
       const addElementRule = new AddElementRule('prop1[x]');
       addElementRule.min = 0;
       addElementRule.max = '1';
@@ -206,7 +273,9 @@ describe('ElementDefinition', () => {
         { type: 'string' },
         { type: 'uri' },
         { type: 'Organization', isReference: true },
-        { type: 'Practitioner', isReference: true }
+        { type: 'Practitioner', isReference: true },
+        { type: 'Organization', isCanonical: true },
+        { type: 'Practitioner', isCanonical: true }
       ];
       addElementRule.short = 'short definition';
 
@@ -222,7 +291,16 @@ describe('ElementDefinition', () => {
         'http://hl7.org/fhir/StructureDefinition/Organization',
         'http://hl7.org/fhir/StructureDefinition/Practitioner'
       );
-      expect(newElement.type).toStrictEqual([expectedType1, expectedType2, expectedType3]);
+      const expectedType4 = new ElementDefinitionType('canonical').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Organization',
+        'http://hl7.org/fhir/StructureDefinition/Practitioner'
+      );
+      expect(newElement.type).toStrictEqual([
+        expectedType1,
+        expectedType2,
+        expectedType3,
+        expectedType4
+      ]);
     });
 
     it('should throw an error when invalid path for multiple targetTypes', () => {

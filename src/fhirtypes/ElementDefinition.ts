@@ -463,7 +463,7 @@ export class ElementDefinition {
     // does not yet have a 'type', so we need to assign an "initial" value
     // that the constrainType() method can process.
     this.type = this.initializeElementType(rule, fisher);
-    const target = this.structDef.getReferenceName(rule.path, this);
+    const target = this.structDef.getReferenceOrCanonicalName(rule.path, this);
     this.constrainType(rule, fisher, target);
 
     this.constrainCardinality(rule.min, rule.max);
@@ -502,18 +502,21 @@ export class ElementDefinition {
    */
   private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
     if (rule.types.length > 1 && !rule.path.endsWith('[x]')) {
-      // Reference data type with multiple targets is not considered a choice data type.
-      if (!rule.types.every(t => t.isReference)) {
+      // Reference/Canonical data type with multiple targets is not considered a choice data type.
+      if (!rule.types.every(t => t.isReference) && !rule.types.every(t => t.isCanonical)) {
         throw new InvalidChoiceTypeRulePathError(rule);
       }
     }
 
     let refTypeCnt = 0;
+    let canTypeCnt = 0;
 
     const initialTypes: ElementDefinitionType[] = [];
     rule.types.forEach(t => {
       if (t.isReference) {
         refTypeCnt++;
+      } else if (t.isCanonical) {
+        canTypeCnt++;
       } else {
         const metadata = fisher.fishForMetadata(t.type);
         initialTypes.push(new ElementDefinitionType(metadata.sdType));
@@ -526,9 +529,15 @@ export class ElementDefinition {
       // will contain the URLs for each reference.
       finalTypes.push(new ElementDefinitionType('Reference'));
     }
+    if (canTypeCnt > 0) {
+      // We only need to capture a single canonical type. The targetProfiles attribute
+      // will contain the URLs for each canonical.
+      finalTypes.push(new ElementDefinitionType('canonical'));
+    }
 
     const refCheckCnt = refTypeCnt > 0 ? refTypeCnt - 1 : 0;
-    if (rule.types.length !== finalTypes.length + refCheckCnt) {
+    const canCheckCnt = canTypeCnt > 0 ? canTypeCnt - 1 : 0;
+    if (rule.types.length !== finalTypes.length + refCheckCnt + canCheckCnt) {
       logger.warn(
         `${rule.path} includes duplicate types. Duplicates have been ignored.`,
         rule.sourceInfo
@@ -932,8 +941,8 @@ export class ElementDefinition {
   /**
    * Given an input type (the constraint) and a set of target types (the things to potentially
    * constrain), find the match and return information about it.
-   * @param {{ type: string; isReference?: boolean }} type - the constrained types, identified by
-   *   id/type/url string and an optional reference flag (defaults false)
+   * @param {{ type: string; isReference?: boolean; isCanonical?: boolean }} type - the constrained
+   *   types, identified by id/type/url string and an optional reference/canonical flags (defaults false)
    * @param {ElementDefinitionType[]} targetTypes - the element types that the constrained type
    *   can be potentially applied to
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -944,7 +953,7 @@ export class ElementDefinition {
    * @throws {InvalidTypeError} when the type doesn't match any of the targetTypes
    */
   private findTypeMatch(
-    type: { type: string; isReference?: boolean },
+    type: { type: string; isReference?: boolean; isCanonical?: boolean },
     targetTypes: ElementDefinitionType[],
     fisher: Fishable
   ): ElementTypeMatchInfo {
@@ -969,6 +978,15 @@ export class ElementDefinition {
         matchedType = targetTypes.find(
           t2 =>
             isReferenceType(t2.code) &&
+            (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+        );
+      } else if (type.isCanonical) {
+        // Canonicals always have a code 'canonical' w/ the referenced type's defining URL set as
+        // one of the targetProfiles.  If the targetProfile property is null, that means any
+        // canonical is allowed.
+        matchedType = targetTypes.find(
+          t2 =>
+            t2.code === 'canonical' &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
@@ -1000,10 +1018,15 @@ export class ElementDefinition {
     }
 
     if (!matchedType) {
-      throw new InvalidTypeError(
-        type.isReference ? `Reference(${type.type})` : type.type,
-        targetTypes
-      );
+      let typeString: string;
+      if (type.isReference) {
+        typeString = `Reference(${type.type})`;
+      } else if (type.isCanonical) {
+        typeString = `Canonical(${type.type})`;
+      } else {
+        typeString = type.type;
+      }
+      throw new InvalidTypeError(typeString, targetTypes);
     } else if (specializationOfNonAbstractType) {
       throw new NonAbstractParentOfSpecializationError(type.type, matchedType.code);
     }
@@ -1060,6 +1083,8 @@ export class ElementDefinition {
       if (match.metadata.id === newType.code) {
         continue;
       } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
+        matchedTargetProfiles.push(match.metadata.url);
+      } else if (match.code === 'canonical' && match.metadata.sdType !== 'canonical') {
         matchedTargetProfiles.push(match.metadata.url);
       } else if (
         this.structDef.kind === 'logical' &&
@@ -1145,9 +1170,12 @@ export class ElementDefinition {
     const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
     const fhirPathPrimitive = /^http:\/\/hl7\.org\/fhirpath\/System\./;
     for (const match of matches) {
-      // If the original element type is a Reference, keep it a reference, otherwise take on the
+      // If the original element type is a Reference/canonical, keep it as is, otherwise take on the
       // input type's type code (as represented in its StructureDefinition.type).
-      const typeString = isReferenceType(match.code) ? match.code : match.metadata.sdType;
+      const typeString =
+        isReferenceType(match.code) || match.code === 'canonical'
+          ? match.code
+          : match.metadata.sdType;
       if (!currentTypeMatches.has(typeString)) {
         currentTypeMatches.set(typeString, []);
       }
