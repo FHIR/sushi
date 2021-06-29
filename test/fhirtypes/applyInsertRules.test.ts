@@ -1,5 +1,5 @@
 import { FSHTank, FSHDocument } from '../../src/import';
-import { Profile, Logical, RuleSet, FshCode, FshValueSet } from '../../src/fshtypes';
+import { Profile, Logical, RuleSet, FshCode, FshValueSet, Instance } from '../../src/fshtypes';
 import {
   InsertRule,
   CardRule,
@@ -21,6 +21,7 @@ describe('applyInsertRules', () => {
   let doc: FSHDocument;
   let tank: FSHTank;
   let profile: Profile;
+  let instance: Instance;
   let ruleSet1: RuleSet;
   let ruleSet2: RuleSet;
 
@@ -32,6 +33,10 @@ describe('applyInsertRules', () => {
     profile = new Profile('Foo').withFile('Profile.fsh').withLocation([5, 6, 7, 16]);
     profile.parent = 'Observation';
     doc.profiles.set(profile.name, profile);
+
+    instance = new Instance('Far');
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
 
     ruleSet1 = new RuleSet('Bar');
     doc.ruleSets.set(ruleSet1.name, ruleSet1);
@@ -82,6 +87,35 @@ describe('applyInsertRules', () => {
 
     expect(profile.rules).toHaveLength(1);
     assertCardRule(profile.rules[0], 'category.coding', 1, '*');
+  });
+
+  it('should only apply soft indexing once when applying rules from a rule with a path', () => {
+    // RuleSet: Bar
+    // * family = "foo"
+    // * given[0] = "bar"
+    //
+    // Instance: Foo
+    // InstanceOf: Patient
+    // * name[+] insert Bar
+    const rule1 = new AssignmentRule('family');
+    rule1.value = 'foo';
+    rule1.exactly = false;
+    rule1.isInstance = false;
+    const rule2 = new AssignmentRule('given[0]');
+    rule2.value = 'bar';
+    rule2.exactly = false;
+    rule2.isInstance = false;
+    ruleSet1.rules.push(rule1, rule2);
+
+    const insertRule1 = new InsertRule('name[+]');
+    insertRule1.ruleSet = 'Bar';
+    instance.rules.push(insertRule1);
+
+    applyInsertRules(instance, tank);
+
+    expect(instance.rules).toHaveLength(2);
+    assertAssignmentRule(instance.rules[0], 'name[+].family', 'foo', false, false);
+    assertAssignmentRule(instance.rules[1], 'name[=].given[0]', 'bar', false, false);
   });
 
   it('should not apply rules from a single level insert rule that are not valid', () => {

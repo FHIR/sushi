@@ -428,6 +428,7 @@ export function applyInsertRules(
       expandedRules.push(rule);
       return;
     }
+
     const ruleSetIdentifier = JSON.stringify([rule.ruleSet, ...rule.params]);
     let ruleSet: RuleSet;
     if (rule.params.length) {
@@ -447,6 +448,8 @@ export function applyInsertRules(
       // RuleSets may contain other RuleSets via insert rules on themselves, so before applying the rules
       // from a RuleSet, we must first recursively expand any insert rules on that RuleSet
       applyInsertRules(ruleSet, tank, [...seenRuleSets, ruleSetIdentifier]);
+      let context = rule.path;
+      let firstRule = true;
       ruleSet.rules.forEach(ruleSetRule => {
         // On the import side, a rule that is intended to be a ValueSetConceptComponent can
         // be imported as a ConceptRule because the syntax is identical. If this is the case,
@@ -470,8 +473,16 @@ export function applyInsertRules(
         ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
         if (isAllowedRule(fshDefinition, ruleSetRule)) {
           const ruleSetRuleClone = cloneDeep(ruleSetRule);
-          ruleSetRuleClone.path = `${rule.path ? rule.path + '.' : ''}${ruleSetRuleClone.path}`;
+          if (context) {
+            ruleSetRuleClone.path = `${context}.${ruleSetRuleClone.path}`;
+          }
           expandedRules.push(ruleSetRuleClone);
+          if (firstRule) {
+            // Once one rule has been applied, all future rules should inherit the index used on that rule
+            // rather than continuing to increment the index with the [+] operator
+            context = context.replace(/\[\+\]/g, '[=]');
+            firstRule = false;
+          }
         } else {
           logger.error(
             `Rule of type ${ruleSetRule.constructorName} cannot be applied to entity of type ${fshDefinition.constructorName}`,
