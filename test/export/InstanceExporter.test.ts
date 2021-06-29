@@ -1173,6 +1173,30 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should log a warning when assigning a value to an element nested within an element with multiple profiles', () => {
+      const regularIdentifier = new Profile('RegularIdentifier');
+      regularIdentifier.parent = 'Identifier';
+      doc.profiles.set(regularIdentifier.name, regularIdentifier);
+      const unusualIdentifier = new Profile('UnusualIdentifier');
+      unusualIdentifier.parent = 'Identifier';
+      doc.profiles.set(unusualIdentifier.name, unusualIdentifier);
+      // In TestPatient, give the generalPractitioner.identifier element multiple profiles
+      const gpOnly = new OnlyRule('generalPractitioner.identifier');
+      gpOnly.types.push({ type: 'RegularIdentifier' }, { type: 'UnusualIdentifier' });
+      patient.rules.push(gpOnly);
+      // Assign a value to generalPractitioner.identifier.value, which is nested within the profiled element
+      const gpValue = new AssignmentRule('generalPractitioner.identifier.value');
+      gpValue.value = '12345';
+      patientInstance.rules.push(gpValue);
+      const exported = exportInstance(patientInstance);
+      // The assigned value should be present
+      expect(exported.generalPractitioner[0].identifier.value).toBe('12345');
+      // We should receive a warning that the profiles are being ignored
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Multiple profiles present on element Patient.generalPractitioner.identifier. Base element type will be used instead of any profiles.'
+      );
+    });
+
     // Assigning with pattern[x]
     it('should assign a nested element that is assigned by pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus.coding');
