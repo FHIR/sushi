@@ -1969,7 +1969,7 @@ export class ElementDefinition {
       (this.type?.length === 1 && (!isChoiceElement || (this.type[0].profile ?? []).length <= 1)) ||
       this.contentReference;
     if (proceedToUnfold) {
-      let availableProfile: string;
+      let profileToUse: string;
       const availableProfiles = this.type?.length === 1 ? this.type[0].profile : [];
       // if more than one profile is available, none of them can be used, since there's no way to decide.
       if (availableProfiles?.length > 1) {
@@ -1977,7 +1977,7 @@ export class ElementDefinition {
           `Multiple profiles present on element ${this.id}. Base element type will be used instead of any profiles.`
         );
       } else if (availableProfiles?.length === 1) {
-        availableProfile = availableProfiles[0];
+        profileToUse = availableProfiles[0];
       }
       let newElements: ElementDefinition[] = [];
       if (this.contentReference) {
@@ -2016,8 +2016,8 @@ export class ElementDefinition {
         newElements = this.cloneChildren(slicedElement);
       }
       if (newElements.length === 0) {
-        // If we have exactly one available profile, use that, otherwise use the code
-        const type = availableProfile ?? this.type[0].code;
+        // If we have exactly profile to use, use that, otherwise use the code
+        const type = profileToUse ?? this.type[0].code;
         const json = fisher.fishForFHIR(
           type,
           Type.Resource,
