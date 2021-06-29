@@ -1202,9 +1202,9 @@ export class ElementDefinition {
     if (nonConformantReference && isDerivedFromCoreFHIR) {
       logger.warn(
         'Referencing custom resource from core FHIR is non-comformant to the FHIR specification.',
-        sourceInfo,
         {
-          messageType: 'nonConformantResource'
+          ...sourceInfo,
+          messageType: 'nonConformantResources'
         }
       );
     }
