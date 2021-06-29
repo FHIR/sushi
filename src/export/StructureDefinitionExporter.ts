@@ -417,6 +417,7 @@ export class StructureDefinitionExporter implements Fishable {
         // and continue to the next rule.
         if (
           rule.path &&
+          rule.path !== '.' &&
           !addElementRules.some(
             rule =>
               element.path === `${element.structDef.pathType}.${rule.path}` ||
