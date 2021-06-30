@@ -11,6 +11,8 @@ export class CaretValueRule extends Rule {
   caretPath: string;
   value: AssignmentValueType;
   isInstance: boolean;
+  isCodeCaretRule = false;
+  pathArray: string[] = [];
 
   constructor(path: string) {
     super(path);
@@ -41,6 +43,14 @@ export class CaretValueRule extends Rule {
     } else if (this.value) {
       value = this.value._instanceMeta.name;
     }
-    return `* ${this.path !== '' ? this.path + ' ' : ''}^${this.caretPath} = ${value}`;
+    let printablePath;
+    if (this.isCodeCaretRule) {
+      printablePath = this.pathArray.length
+        ? this.pathArray.map(code => `#${code}`).join(' ') + ' '
+        : '';
+    } else {
+      printablePath = this.path !== '' ? this.path + ' ' : '';
+    }
+    return `* ${printablePath}^${this.caretPath} = ${value}`;
   }
 }
