@@ -266,7 +266,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const instance = result.instances.get('MyPatient');
         expect(instance.rules).toHaveLength(1);
-        assertInsertRule(instance.rules[0], 'MyRuleSet');
+        assertInsertRule(instance.rules[0], '', 'MyRuleSet');
       });
 
       it('should parse an insert rule with an empty parameter value', () => {
@@ -285,7 +285,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const instance = result.instances.get('case-reporting-questionnaire');
         expect(instance.rules).toHaveLength(1);
-        assertInsertRule(instance.rules[0], 'Question', [
+        assertInsertRule(instance.rules[0], '', 'Question', [
           '',
           'title',
           'HIV Case Report',

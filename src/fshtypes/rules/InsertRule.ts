@@ -4,8 +4,8 @@ export class InsertRule extends Rule {
   ruleSet: string;
   params: string[];
 
-  constructor() {
-    super('');
+  constructor(path: string) {
+    super(path);
     this.params = [];
   }
 
@@ -23,6 +23,6 @@ export class InsertRule extends Rule {
 
   toFSH(): string {
     const paramPart = this.params.length > 0 ? `(${this.fshifyParameters()})` : '';
-    return `* insert ${this.ruleSet}${paramPart}`;
+    return `* ${this.path !== '' ? this.path + ' ' : ''}insert ${this.ruleSet}${paramPart}`;
   }
 }

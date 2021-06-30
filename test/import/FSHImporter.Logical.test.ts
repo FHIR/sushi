@@ -524,7 +524,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const logical = result.logicals.get('LogicalModel');
         expect(logical.rules).toHaveLength(1);
-        assertInsertRule(logical.rules[0], 'MyRuleSet');
+        assertInsertRule(logical.rules[0], '', 'MyRuleSet');
       });
     });
 

@@ -6871,7 +6871,7 @@ describe('StructureDefinitionExporter R4', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(nameRule);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       profile.rules.push(insertRule);
 
@@ -6893,7 +6893,7 @@ describe('StructureDefinitionExporter R4', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(concept, nameRule);
 
-      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
       insertRule.ruleSet = 'Bar';
       profile.rules.push(insertRule);
 

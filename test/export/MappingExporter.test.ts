@@ -442,7 +442,7 @@ describe('MappingExporter', () => {
       mapRule.map = 'Observation.otherStatus';
       ruleSet.rules.push(mapRule);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       mapping.rules.push(insertRule);
 
@@ -469,7 +469,7 @@ describe('MappingExporter', () => {
       ruleSet.rules.push(mapRule);
       ruleSet.rules.push(valueRule, mapRule);
 
-      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
       insertRule.ruleSet = 'Bar';
       mapping.rules.push(insertRule);
 

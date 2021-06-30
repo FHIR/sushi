@@ -1619,11 +1619,11 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
-    const insertRule = new InsertRule()
+    const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE().getText()
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
     );
     insertRule.ruleSet = rulesetName;
     if (ruleParams) {
@@ -1751,6 +1751,7 @@ export class FSHImporter extends FSHVisitor {
     const parentDocument = this.currentDoc;
     // save the baseIndent so it can be restored after parsing this RuleSet
     const parentIndent = this.baseIndent;
+    const parentContext = this.pathContext;
     this.currentDoc = tempDocument;
     // errors should be collected, not printed, when parsing generated documents
     // we should only retrieve errors if we are currently in the top-level parse
@@ -1767,6 +1768,7 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = parentDocument;
       // and to restore the parentIndent
       this.baseIndent = parentIndent;
+      this.pathContext = parentContext;
     }
     // if tempDocument has appliedRuleSets, merge them in
     tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>

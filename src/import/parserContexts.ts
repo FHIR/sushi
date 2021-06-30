@@ -390,6 +390,7 @@ export interface CodeCaretValueRuleContext extends ParserRuleContext {
 
 export interface InsertRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
+  path(): PathContext;
   RULESET_REFERENCE(): ParserRuleContext;
   PARAM_RULESET_REFERENCE(): ParserRuleContext;
 }
