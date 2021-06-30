@@ -2077,7 +2077,19 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MyRuleSet');
+        assertInsertRule(profile.rules[0], '', 'MyRuleSet');
+      });
+
+      it('should parse an insert rule with a single RuleSet and a path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * code insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'Insert.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'code', 'MyRuleSet');
       });
 
       it('should parse an insert rule with a RuleSet with one parameter', () => {
@@ -2092,7 +2104,44 @@ describe('FSHImporter', () => {
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final']);
+        assertInsertRule(profile.rules[0], '', 'OneParamRuleSet', ['#final']);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['OneParamRuleSet', '#final'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 1,
+            startColumn: 12,
+            endLine: 2,
+            endColumn: 27
+          }
+        });
+        expect(appliedRuleSet.rules[0].sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 2,
+            startColumn: 1,
+            endLine: 2,
+            endColumn: 17
+          }
+        });
+      });
+
+      it('should parse an insert rule with a RuleSet with one parameter and a path', () => {
+        const input = `
+        Profile: ObservationProfile
+        Parent: Observation
+        * code insert OneParamRuleSet (#final)
+        `;
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'code', 'OneParamRuleSet', ['#final']);
         const appliedRuleSet = doc.appliedRuleSets.get(
           JSON.stringify(['OneParamRuleSet', '#final'])
         );
@@ -2129,7 +2178,7 @@ describe('FSHImporter', () => {
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
           '#preliminary',
           '"this is a string value, right?"',
           '4'
@@ -2191,7 +2240,7 @@ describe('FSHImporter', () => {
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final "(Final)"']);
+        assertInsertRule(profile.rules[0], '', 'OneParamRuleSet', ['#final "(Final)"']);
         const appliedRuleSet = doc.appliedRuleSets.get(
           JSON.stringify(['OneParamRuleSet', '#final "(Final)"'])
         );
@@ -2229,7 +2278,7 @@ describe('FSHImporter', () => {
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
           '#final',
           '"very\\nstrange\\rvalue\\\\\\tindeed"',
           '1'
@@ -2286,7 +2335,11 @@ describe('FSHImporter', () => {
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', ['#final', '"string value"', '7']);
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
+          '#final',
+          '"string value"',
+          '7'
+        ]);
         const appliedRuleSet = doc.appliedRuleSets.get(
           JSON.stringify(['MultiParamRuleSet', '#final', '"string value"', '7'])
         );
@@ -2331,12 +2384,12 @@ describe('FSHImporter', () => {
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile).toBeDefined();
         expect(profile.rules).toHaveLength(2);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
           '#preliminary',
           '"something"',
           '3'
         ]);
-        assertInsertRule(profile.rules[1], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[1], '', 'MultiParamRuleSet', [
           '#preliminary',
           '"something"',
           '3'
@@ -2369,7 +2422,7 @@ describe('FSHImporter', () => {
           }
         });
         expect(firstEntryRules.rules).toHaveLength(1);
-        assertInsertRule(firstEntryRules.rules[0], 'RecursiveRules', ['5']);
+        assertInsertRule(firstEntryRules.rules[0], '', 'RecursiveRules', ['5']);
 
         const recursiveRules = doc.appliedRuleSets.get(JSON.stringify(['RecursiveRules', '5']));
         expect(recursiveRules).toBeDefined();
@@ -2384,7 +2437,7 @@ describe('FSHImporter', () => {
         });
         expect(recursiveRules.rules).toHaveLength(2);
         assertCardRule(recursiveRules.rules[0], 'interpretation', 0, '5');
-        assertInsertRule(recursiveRules.rules[1], 'EntryRules', ['BaseCase']);
+        assertInsertRule(recursiveRules.rules[1], '', 'EntryRules', ['BaseCase']);
 
         const secondEntryRules = doc.appliedRuleSets.get(
           JSON.stringify(['EntryRules', 'BaseCase'])
@@ -2399,7 +2452,7 @@ describe('FSHImporter', () => {
           }
         });
         expect(secondEntryRules.rules).toHaveLength(1);
-        assertInsertRule(secondEntryRules.rules[0], 'BaseCaseRules', ['5']);
+        assertInsertRule(secondEntryRules.rules[0], '', 'BaseCaseRules', ['5']);
 
         const baseCaseRules = doc.appliedRuleSets.get(JSON.stringify(['BaseCaseRules', '5']));
         expect(baseCaseRules).toBeDefined();
