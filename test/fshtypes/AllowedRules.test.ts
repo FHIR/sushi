@@ -48,7 +48,7 @@ describe('isAllowedRule', () => {
 
     it('should not allow invalid rules on a Profile', () => {
       expect(isAllowedRule(p, new MappingRule('foo'))).toBeFalse();
-      expect(isAllowedRule(p, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(p, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(p, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(p, new ConceptRule('foo'))).toBeFalse();
     });
@@ -72,7 +72,7 @@ describe('isAllowedRule', () => {
 
     it('should not allow invalid rules on an Extension', () => {
       expect(isAllowedRule(e, new MappingRule('foo'))).toBeFalse();
-      expect(isAllowedRule(e, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(e, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(e, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(e, new ConceptRule('foo'))).toBeFalse();
     });
@@ -96,7 +96,7 @@ describe('isAllowedRule', () => {
 
     it('should not allow invalid rules on an Logical', () => {
       expect(isAllowedRule(l, new MappingRule('foo'))).toBeFalse();
-      expect(isAllowedRule(l, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(l, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(l, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(l, new ConceptRule('foo'))).toBeFalse();
       expect(isAllowedRule(l, new ContainsRule('foo'))).toBeFalse();
@@ -122,7 +122,7 @@ describe('isAllowedRule', () => {
 
     it('should not allow invalid rules on an Resource', () => {
       expect(isAllowedRule(r, new MappingRule('foo'))).toBeFalse();
-      expect(isAllowedRule(r, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(r, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(r, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(r, new ConceptRule('foo'))).toBeFalse();
       expect(isAllowedRule(r, new ContainsRule('foo'))).toBeFalse();
@@ -141,7 +141,7 @@ describe('isAllowedRule', () => {
 
     it('should not allow invalid rules on Instance', () => {
       expect(isAllowedRule(i, new MappingRule('foo'))).toBeFalse();
-      expect(isAllowedRule(i, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(i, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(i, new ValueSetComponentRule(true))).toBeFalse();
       expect(isAllowedRule(i, new ConceptRule('foo'))).toBeFalse();
       expect(isAllowedRule(i, new CardRule('foo'))).toBeFalse();
@@ -169,7 +169,7 @@ describe('isAllowedRule', () => {
     it('should not allow invalid rules on a FshValueSet', () => {
       expect(isAllowedRule(v, new AssignmentRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new MappingRule('foo'))).toBeFalse();
-      expect(isAllowedRule(v, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(v, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(v, new ConceptRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new CardRule('foo'))).toBeFalse();
       expect(isAllowedRule(v, new ContainsRule('foo'))).toBeFalse();
@@ -193,7 +193,7 @@ describe('isAllowedRule', () => {
     it('should not allow invalid rules on a FshCodeSystem', () => {
       expect(isAllowedRule(c, new AssignmentRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new MappingRule('foo'))).toBeFalse();
-      expect(isAllowedRule(c, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(c, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(c, new CardRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new ContainsRule('foo'))).toBeFalse();
       expect(isAllowedRule(c, new FlagRule('foo'))).toBeFalse();
@@ -217,7 +217,7 @@ describe('isAllowedRule', () => {
       expect(isAllowedRule(m, new CaretValueRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new AssignmentRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new ConceptRule('foo'))).toBeFalse();
-      expect(isAllowedRule(m, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(m, new InsertRule(''))).toBeFalse();
       expect(isAllowedRule(m, new CardRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new ContainsRule('foo'))).toBeFalse();
       expect(isAllowedRule(m, new FlagRule('foo'))).toBeFalse();
@@ -250,7 +250,7 @@ describe('isAllowedRule', () => {
     });
 
     it('should not allow invalid rules on a RuleSet', () => {
-      expect(isAllowedRule(r, new InsertRule())).toBeFalse();
+      expect(isAllowedRule(r, new InsertRule(''))).toBeFalse();
     });
   });
 });

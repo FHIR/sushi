@@ -736,7 +736,7 @@ describe('ValueSetExporter', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(nameRule);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
@@ -758,7 +758,7 @@ describe('ValueSetExporter', () => {
       caretRule3.value = 'email.email@email.com';
       ruleSet.rules.push(caretRule3);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
@@ -792,7 +792,7 @@ describe('ValueSetExporter', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(valueRule, nameRule);
 
-      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 

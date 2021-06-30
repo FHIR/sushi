@@ -245,7 +245,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const mapping = result.mappings.get('MyMapping');
         expect(mapping.rules).toHaveLength(1);
-        assertInsertRule(mapping.rules[0], 'MyRuleSet');
+        assertInsertRule(mapping.rules[0], '', 'MyRuleSet');
       });
     });
 
