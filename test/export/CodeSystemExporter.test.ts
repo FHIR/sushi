@@ -671,7 +671,7 @@ describe('CodeSystemExporter', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(nameRule);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
@@ -702,7 +702,7 @@ describe('CodeSystemExporter', () => {
       contactRule3.value = 'example@email.com';
       ruleSet.rules.push(contactRule3);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
@@ -729,7 +729,7 @@ describe('CodeSystemExporter', () => {
       const concept = new ConceptRule('lion');
       ruleSet.rules.push(concept);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
@@ -754,7 +754,7 @@ describe('CodeSystemExporter', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(valueRule, nameRule);
 
-      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 

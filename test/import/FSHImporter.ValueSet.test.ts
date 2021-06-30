@@ -1081,7 +1081,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const vs = result.valueSets.get('MyVS');
         expect(vs.rules).toHaveLength(1);
-        assertInsertRule(vs.rules[0] as Rule, 'MyRuleSet');
+        assertInsertRule(vs.rules[0] as Rule, '', 'MyRuleSet');
       });
     });
   });
