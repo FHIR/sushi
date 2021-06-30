@@ -407,7 +407,9 @@ describe('FSHImporter', () => {
         CodeSystem: ZOO
         * somepath ^publisher = "Marky Mark"
         `;
-        importSingleText(input, 'Simple.fsh');
+        const result = importSingleText(input, 'Simple.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        expect(codeSystem.rules).toHaveLength(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3*/s);
       });
 
