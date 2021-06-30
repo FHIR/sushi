@@ -3240,7 +3240,7 @@ describe('InstanceExporter', () => {
       valueRule.value = 'my-id';
       ruleSet.rules.push(valueRule);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       instance.rules.push(insertRule);
 
@@ -3262,7 +3262,7 @@ describe('InstanceExporter', () => {
       assignedValRule4.value = 'Jackson';
       ruleSet.rules.push(assignedValRule4);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       patientInstance.rules.push(insertRule);
       const exported = exporter.exportInstance(patientInstance);
@@ -3293,7 +3293,7 @@ describe('InstanceExporter', () => {
       valueRule.value = 'my-id';
       ruleSet.rules.push(caretRule, valueRule);
 
-      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
       insertRule.ruleSet = 'Bar';
       instance.rules.push(insertRule);
 
