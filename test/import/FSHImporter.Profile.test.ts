@@ -1394,28 +1394,6 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
-      it('should parse assigned value using Canonical with spaces around the version', () => {
-        const input = `
-        CodeSystem: Example
-        * #first
-        * #second
-
-        Profile: ObservationProfile
-        Parent: Observation
-        * code.coding.system = Canonical(  Example | 1.2.3  )
-        `;
-
-        const result = importSingleText(input);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-
-        const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 61])
-          .withFile('');
-        expectedCanonical.version = '1.2.3';
-        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
-      });
-
       it('should parse assigned value using Canonical with a version which contains a |', () => {
         const input = `
         CodeSystem: Example
@@ -1424,7 +1402,7 @@ describe('FSHImporter', () => {
 
         Profile: ObservationProfile
         Parent: Observation
-        * code.coding.system = Canonical(  Example | 1.2.3|aWeirdVersion  )
+        * code.coding.system = Canonical(  Example|1.2.3|aWeirdVersion  )
         `;
 
         const result = importSingleText(input);
@@ -1432,10 +1410,34 @@ describe('FSHImporter', () => {
         expect(profile.rules).toHaveLength(1);
 
         const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 75])
+          .withLocation([8, 32, 8, 73])
           .withFile('');
         expectedCanonical.version = '1.2.3|aWeirdVersion';
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+      });
+
+      it('should log an error when an assigned value Canonical rule has a choice of canonicals', () => {
+        const input = `
+        CodeSystem: Example
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(Example or OtherExample)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('Example')
+          .withLocation([8, 32, 8, 65])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Multiple choices of canonicals are not allowed when setting a value.*Line: 8\D*/s
+        );
       });
 
       it('should parse assigned values that are an alias', () => {
@@ -1579,6 +1581,76 @@ describe('FSHImporter', () => {
           'performer',
           { type: 'Organization', isReference: true },
           { type: 'CareTeam', isReference: true }
+        );
+      });
+
+      it('should parse an only rule with a canonical to one type', () => {
+        const input = `
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(ActivityDefinition)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'action.definition[x]', {
+          type: 'ActivityDefinition',
+          isCanonical: true
+        });
+      });
+
+      it('should parse an only rule with a canonical to multiple types', () => {
+        const input = `
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(ActivityDefinition or PlanDefinition)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'action.definition[x]',
+          { type: 'ActivityDefinition', isCanonical: true },
+          { type: 'PlanDefinition', isCanonical: true }
+        );
+      });
+
+      it('should parse an only rule with a canonical to multiple types with whitespace', () => {
+        const input = `
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(     ActivityDefinition   or    PlanDefinition    )
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'action.definition[x]',
+          { type: 'ActivityDefinition', isCanonical: true },
+          { type: 'PlanDefinition', isCanonical: true }
+        );
+      });
+
+      it('should parse an only rule with a canonical to multiple types with versions', () => {
+        const input = `
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(ActivityDefinition|4.0.1 or PlanDefinition|4.0.1)
+        `;
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'action.definition[x]',
+          { type: 'ActivityDefinition|4.0.1', isCanonical: true },
+          { type: 'PlanDefinition|4.0.1', isCanonical: true }
         );
       });
 

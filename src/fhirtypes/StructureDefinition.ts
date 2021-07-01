@@ -259,7 +259,7 @@ export class StructureDefinition {
           matchingElements = [sliceElement, ...sliceElement.children()];
         } else {
           // If we didn't find a matching sliceElement, there must be a reference
-          const matchingRefElement = this.findMatchingRef(pathPart, matchingElements);
+          const matchingRefElement = this.findMatchingRefOrCanonical(pathPart, matchingElements);
           if (matchingRefElement) {
             matchingElements = [matchingRefElement, ...matchingRefElement.children()];
           } else {
@@ -738,13 +738,16 @@ export class StructureDefinition {
   }
 
   /**
-   * Looks for a Reference type element within the set of elements that matches the fhirPath
-   * @param {PathPart} pathPart - The path to match the Reference type elements against
+   * Looks for a Reference or canonical type element within the set of elements that matches the fhirPath
+   * @param {PathPart} pathPart - The path to match the Reference/canonical type elements against
    * @param {ElementDefinition[]} elements - The set of elements to search through
-   * @returns {ElementDefinition} - The Reference type element if found, else undefined
+   * @returns {ElementDefinition} - The Reference/canonical type element if found, else undefined
    */
-  private findMatchingRef(pathPart: PathPart, elements: ElementDefinition[]): ElementDefinition {
-    const matchingRefElement = elements.find(e => {
+  private findMatchingRefOrCanonical(
+    pathPart: PathPart,
+    elements: ElementDefinition[]
+  ): ElementDefinition {
+    return elements.find(e => {
       // If we have foo[a][b][c], and c is the ref, we need to find an element with sliceName = a/b
       if (
         pathPart.brackets.length === 1 ||
@@ -752,35 +755,34 @@ export class StructureDefinition {
       ) {
         for (const t of e.type ?? []) {
           return (
-            t.code === 'Reference' &&
+            ['Reference', 'canonical'].includes(t.code) &&
             t.targetProfile &&
             t.targetProfile.find(tp => {
-              const refName = pathPart.brackets.slice(-1)[0];
+              const name = pathPart.brackets.slice(-1)[0];
               // Slice to get last part of url
               // http://hl7.org/fhir/us/core/StructureDefinition/profile|3.0.0 -> profile|3.0.0
-              let tpRefName = tp.split('/').slice(-1)[0];
+              let tpName = tp.split('/').slice(-1)[0];
               // Slice to get rid of version, profile|3.0.0 -> profile
-              tpRefName = tpRefName.split('|')[0];
-              return tpRefName === refName;
+              tpName = tpName.split('|')[0];
+              return tpName === name;
             })
           );
         }
       }
     });
-    return matchingRefElement;
   }
 
   /**
-   * Gets the specific reference being referred to by a path with brackets
+   * Gets the specific reference or canonical being referred to by a path with brackets
    * @param {string} path - The path
-   * @param {ElementDefinition} element - The element that may contain the reference
-   * @returns {string} - The name of the reference if it exists, else undefined
+   * @param {ElementDefinition} element - The element that may contain the reference/canonical
+   * @returns {string} - The name of the reference/canonical if it exists, else undefined
    */
-  getReferenceName(path: string, element: ElementDefinition): string {
+  getReferenceOrCanonicalName(path: string, element: ElementDefinition): string {
     const parsedPath = parseFSHPath(path);
     const pathEnd = parsedPath.slice(-1)[0];
     if (pathEnd.brackets) {
-      const refElement = this.findMatchingRef(pathEnd, [element]);
+      const refElement = this.findMatchingRefOrCanonical(pathEnd, [element]);
       if (refElement) {
         return pathEnd.brackets.slice(-1)[0];
       }

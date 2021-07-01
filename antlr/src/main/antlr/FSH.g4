@@ -107,4 +107,4 @@ referenceType:      REFERENCE;
 canonical:          CANONICAL;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
-targetType:         name | referenceType;
+targetType:         name | referenceType | canonical;

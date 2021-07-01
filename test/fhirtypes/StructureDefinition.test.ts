@@ -17,6 +17,8 @@ describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let observation: StructureDefinition;
+  let jsonPlanDefinition: any;
+  let planDefinition: StructureDefinition;
   let resprate: StructureDefinition;
   let usCoreObservation: StructureDefinition;
   let jsonUsCoreObservation: StructureDefinition;
@@ -35,10 +37,13 @@ describe('StructureDefinition', () => {
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
     usCoreObservation = fisher.fishForStructureDefinition('us-core-observation-lab');
     jsonUsCoreObservation = defs.fishForFHIR('us-core-observation-lab', Type.Profile);
+    planDefinition = fisher.fishForStructureDefinition('PlanDefinition');
+    jsonPlanDefinition = defs.fishForFHIR('PlanDefinition', Type.Resource);
   });
 
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    planDefinition = StructureDefinition.fromJSON(jsonPlanDefinition);
     usCoreObservation = StructureDefinition.fromJSON(jsonUsCoreObservation);
     resprate = fisher.fishForStructureDefinition('resprate');
   });
@@ -2031,25 +2036,51 @@ describe('StructureDefinition', () => {
     });
   });
 
-  describe('#getReferenceName', () => {
+  describe('#getReferenceOrCanonicalName', () => {
     let basedOn: ElementDefinition;
+    let actDef: ElementDefinition;
     beforeEach(() => {
       basedOn = observation.findElement('Observation.basedOn');
+      actDef = planDefinition.findElement('PlanDefinition.action.definition[x]');
     });
 
-    it('should find the target when it exists', () => {
-      const refTarget = observation.getReferenceName('basedOn[MedicationRequest]', basedOn);
+    it('should find the reference target when it exists', () => {
+      const refTarget = observation.getReferenceOrCanonicalName(
+        'basedOn[MedicationRequest]',
+        basedOn
+      );
       expect(refTarget).toBe('MedicationRequest');
     });
 
-    it('should not find the target when it does not exist', () => {
-      const refTarget = observation.getReferenceName('basedOn[foo]', basedOn);
+    it('should not find the reference target when it does not exist', () => {
+      const refTarget = observation.getReferenceOrCanonicalName('basedOn[foo]', basedOn);
       expect(refTarget).toBeUndefined();
     });
 
-    it('should not find the target when there are no brackets', () => {
-      const refTarget = observation.getReferenceName('basedOn', basedOn);
+    it('should not find the reference target when there are no brackets', () => {
+      const refTarget = observation.getReferenceOrCanonicalName('basedOn', basedOn);
       expect(refTarget).toBeUndefined();
+    });
+
+    it('should find the canonical target when it exists', () => {
+      const canTarget = planDefinition.getReferenceOrCanonicalName(
+        'action.definition[x][ActivityDefinition]',
+        actDef
+      );
+      expect(canTarget).toBe('ActivityDefinition');
+    });
+
+    it('should not find the reference target when it does not exist', () => {
+      const canTarget = planDefinition.getReferenceOrCanonicalName(
+        'action.definition[x][foo]',
+        actDef
+      );
+      expect(canTarget).toBeUndefined();
+    });
+
+    it('should not find the reference target when there are no brackets', () => {
+      const canTarget = planDefinition.getReferenceOrCanonicalName('action.definition[x]', actDef);
+      expect(canTarget).toBeUndefined();
     });
   });
 });

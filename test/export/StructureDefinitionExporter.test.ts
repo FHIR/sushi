@@ -2148,6 +2148,29 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(loggerSpy.getLastMessage('error')).toBeUndefined();
     });
+
+    it('should not log an error when path does not have [x] for multiple canonical types in AddElementRule', () => {
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const addElementRule = new AddElementRule('prop1')
+        .withFile('GoodPath.fsh')
+        .withLocation([3, 1, 8, 12]);
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'Organization', isCanonical: true },
+        { type: 'Location', isCanonical: true }
+      ];
+      addElementRule.short = 'prop1 definition with multiple canonicals';
+      logical.rules.push(addElementRule);
+
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+
+      expect(loggerSpy.getLastMessage('error')).toBeUndefined();
+    });
   });
 
   describe('#CardRule', () => {
@@ -2668,7 +2691,71 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
-    it('should apply a correct OnlyRule with a specific target constrained', () => {
+    it('should apply a correct OnlyRule on a canonical', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'PlanDefinition';
+
+      const rule = new OnlyRule('action.definition[x]');
+      rule.types = [{ type: 'Questionnaire', isCanonical: true }];
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('PlanDefinition');
+
+      const baseActionDef = baseStructDef.findElement('PlanDefinition.action.definition[x]');
+      const constrainedActionDef = sd.findElement('PlanDefinition.action.definition[x]');
+
+      expect(baseActionDef.type).toHaveLength(2);
+      expect(baseActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/PlanDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(baseActionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+
+      expect(constrainedActionDef.type).toHaveLength(1);
+      expect(constrainedActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+    });
+
+    it('should apply a correct OnlyRule on a canonical to Any', () => {
+      const extension = new Extension('Foo');
+
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'Observation', isCanonical: true },
+        { type: 'Condition', isCanonical: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Extension');
+
+      const baseValueX = baseStructDef.findElement('Extension.value[x]');
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+
+      expect(baseValueX.type).toHaveLength(50);
+      expect(baseValueX.type.find(t => t.code === 'canonical')).toEqual(
+        new ElementDefinitionType('canonical')
+      );
+
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Observation',
+          'http://hl7.org/fhir/StructureDefinition/Condition'
+        )
+      );
+    });
+
+    it('should apply a correct OnlyRule with a specific reference target constrained', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
 
@@ -2702,6 +2789,53 @@ describe('StructureDefinitionExporter R4', () => {
           'http://hl7.org/fhir/StructureDefinition/bodyweight',
           'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
           'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+        )
+      );
+    });
+
+    it('should apply a correct OnlyRule with a specific canonical target constrained', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'PlanDefinition';
+
+      const rule = new OnlyRule('action.definitionCanonical[PlanDefinition]');
+      rule.types = [
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/shareableplandefinition',
+          isCanonical: true
+        },
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/computableplandefinition',
+          isCanonical: true
+        }
+      ];
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('PlanDefinition');
+
+      const baseActionDef = baseStructDef.findElement('PlanDefinition.action.definition[x]');
+      const constrainedActionDefCan = sd.findElement(
+        'PlanDefinition.action.definition[x]:definitionCanonical'
+      );
+
+      expect(baseActionDef.type).toHaveLength(2);
+      expect(baseActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/PlanDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(baseActionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+
+      expect(constrainedActionDefCan.type).toHaveLength(1);
+      expect(constrainedActionDefCan.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/shareableplandefinition',
+          'http://hl7.org/fhir/StructureDefinition/computableplandefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
         )
       );
     });
@@ -2778,6 +2912,45 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should apply a correct OnlyRule on a FSHy canonical', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'PlanDefinition';
+
+      const targetProfile = new Profile('MySpecialPlanDefinition');
+      targetProfile.parent = 'PlanDefinition';
+      doc.profiles.set(targetProfile.name, targetProfile);
+
+      const rule = new OnlyRule('action.definitionCanonical');
+      rule.types = [{ type: 'MySpecialPlanDefinition', isCanonical: true }];
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles.find(p => p.name === 'Foo');
+      const baseStructDef = fisher.fishForStructureDefinition('PlanDefinition');
+
+      const baseActionDef = baseStructDef.findElement('PlanDefinition.action.definition[x]');
+      const constrainedActionDefCan = sd.findElement(
+        'PlanDefinition.action.definition[x]:definitionCanonical'
+      );
+
+      expect(baseActionDef.type).toHaveLength(2);
+      expect(baseActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/PlanDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(baseActionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+
+      expect(constrainedActionDefCan.type).toHaveLength(1);
+      expect(constrainedActionDefCan.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/MySpecialPlanDefinition'
+        )
+      );
+    });
+
     it('should apply a correct OnlyRule with a specific target constrained to FSHy definition', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
@@ -2823,7 +2996,55 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
-    it('should apply correct OnlyRules on circular FSHy choices', () => {
+    it('should apply a correct OnlyRule with a specific canonical target constrained to FSHy definition', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'PlanDefinition';
+
+      const targetProfile1 = new Profile('MySpecialPlanDefinition1');
+      targetProfile1.parent = 'PlanDefinition';
+      const targetProfile2 = new Profile('MySpecialPlanDefinition2');
+      targetProfile2.parent = 'PlanDefinition';
+      doc.profiles.set(targetProfile1.name, targetProfile1);
+      doc.profiles.set(targetProfile2.name, targetProfile2);
+
+      const rule = new OnlyRule('action.definitionCanonical[PlanDefinition]');
+      rule.types = [
+        { type: 'MySpecialPlanDefinition1', isCanonical: true },
+        { type: 'MySpecialPlanDefinition2', isCanonical: true }
+      ];
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles.find(p => p.name === 'Foo');
+      const baseStructDef = fisher.fishForStructureDefinition('PlanDefinition');
+
+      const baseActionDef = baseStructDef.findElement('PlanDefinition.action.definition[x]');
+      const constrainedActionDefCan = sd.findElement(
+        'PlanDefinition.action.definition[x]:definitionCanonical'
+      );
+
+      expect(baseActionDef.type).toHaveLength(2);
+      expect(baseActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/PlanDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(baseActionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+
+      expect(constrainedActionDefCan.type).toHaveLength(1);
+      expect(constrainedActionDefCan.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/MySpecialPlanDefinition1',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/MySpecialPlanDefinition2',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+    });
+
+    it('should apply correct OnlyRules on circular FSHy reference choices', () => {
       const profile1 = new Profile('Foo');
       profile1.parent = 'Observation';
       doc.profiles.set(profile1.name, profile1);
@@ -2875,6 +3096,67 @@ describe('StructureDefinitionExporter R4', () => {
           'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
           'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
           'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+        )
+      );
+    });
+
+    it('should apply correct OnlyRules on circular FSHy canonical choices', () => {
+      const profile1 = new Profile('Foo');
+      profile1.parent = 'PlanDefinition';
+      doc.profiles.set(profile1.name, profile1);
+      const profile2 = new Profile('Bar');
+      profile2.parent = 'PlanDefinition';
+      doc.profiles.set(profile2.name, profile2);
+
+      const rule1 = new OnlyRule('action.definitionCanonical[PlanDefinition]');
+      rule1.types = [{ type: 'Bar', isCanonical: true }];
+      const rule2 = new OnlyRule('action.definitionCanonical[PlanDefinition]');
+      rule2.types = [{ type: 'Foo', isCanonical: true }];
+      profile1.rules.push(rule1);
+      profile2.rules.push(rule2);
+
+      withDebugLogging(() => exporter.export());
+      loggerSpy.getAllMessages().forEach(m => {
+        expect(m).not.toMatch(/circular/i);
+      });
+
+      const sdFoo = pkg.profiles.find(def => def.id === 'Foo');
+      const sdBar = pkg.profiles.find(def => def.id === 'Bar');
+      const baseStructDef = fisher.fishForStructureDefinition('PlanDefinition');
+
+      const baseActionDef = baseStructDef.findElement('PlanDefinition.action.definition[x]');
+      const constrainedActionDefCan = sdFoo.findElement(
+        'PlanDefinition.action.definition[x]:definitionCanonical'
+      );
+      const constrainedHasMemberBar = sdBar.findElement(
+        'PlanDefinition.action.definition[x]:definitionCanonical'
+      );
+
+      expect(baseActionDef.type).toHaveLength(2);
+      expect(baseActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/PlanDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(baseActionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+
+      expect(constrainedActionDefCan.type).toHaveLength(1);
+      expect(constrainedActionDefCan.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+
+      expect(constrainedHasMemberBar.type).toHaveLength(1);
+      expect(constrainedHasMemberBar.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
         )
       );
     });
