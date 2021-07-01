@@ -75,9 +75,9 @@ export class StructureDefinitionExporter implements Fishable {
   /**
    * Checks generated resources for any custom resources which are not in the
    * http://hl7.org/fhir/StructureDefinition namespace, and are therefore not
-   * comformant.
+   * conformant.
    */
-  private warnOnNonComformantResourceDefinitions(): void {
+  private warnOnNonConformantResourceDefinitions(): void {
     const nonConformantResources = this.pkg.resources.filter(
       r => !r.url.startsWith('http://hl7.org/fhir/StructureDefinition/')
     );
@@ -85,7 +85,7 @@ export class StructureDefinitionExporter implements Fishable {
       // logger.warn color
       const clr = chalk.rgb(179, 98, 0);
       const maxLength = 61;
-      const nonComformantResourceLogs = nonConformantResources.map(r => {
+      const nonConformantResourceLogs = nonConformantResources.map(r => {
         const printableName =
           r.name.length > maxLength ? r.name.slice(0, maxLength - 3) + '...' : r.name;
         return clr('│') + padEnd(` - ${printableName}`, 65) + clr('│');
@@ -95,10 +95,10 @@ export class StructureDefinitionExporter implements Fishable {
       const message = [
         clr('\n╭─────────────────────────────────────────────────────────────────') + '' + clr('╮'),
           clr('│') + ' Detected the following non-conformant Resource definitions:     ' + clr('│'),
-          ...nonComformantResourceLogs,
+          ...nonConformantResourceLogs,
           clr('│') + '                                                                 ' + clr('│'),
           clr('│') + ' Resources not in the "http://hl7.org/fhir/StructureDefinition"  ' + clr('│'),
-          clr('│') + ' namespace are not comformant to the FHIR specification.         ' + clr('│'),
+          clr('│') + ' namespace are not conformant to the FHIR specification.         ' + clr('│'),
           clr('│') + ' These resources are incompatible with standard XML/JSON         ' + clr('│'),
           clr('│') + ' schemas, public test servers, public registries, standard       ' + clr('│'),
           clr('│') + ' validation, and standard publication tooling. These resources   ' + clr('│'),
@@ -898,7 +898,7 @@ export class StructureDefinitionExporter implements Fishable {
         logger.error(e.message, e.sourceInfo || sd.sourceInfo);
       }
     });
-    this.warnOnNonComformantResourceDefinitions();
+    this.warnOnNonConformantResourceDefinitions();
     if (structureDefinitions.length > 0) {
       logger.info(`Converted ${structureDefinitions.length} FHIR StructureDefinitions.`);
     }
