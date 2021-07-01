@@ -6,7 +6,13 @@ import { Resource } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { AddElementRule, CardRule, ContainsRule, FlagRule } from '../../src/fshtypes/rules';
+import {
+  AddElementRule,
+  CardRule,
+  CaretValueRule,
+  ContainsRule,
+  FlagRule
+} from '../../src/fshtypes/rules';
 
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
@@ -230,6 +236,18 @@ describe('ResourceExporter', () => {
     expect(exported.type).toBe('MyResource');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
     expect(exported.elements).toHaveLength(12); // 9 AlternateIdentification elements + 3 added elements
+  });
+
+  it('should not log a warning when exporting a conformant resource', () => {
+    const resource = new Resource('Foo');
+    const caretRule = new CaretValueRule('');
+    caretRule.caretPath = 'url';
+    caretRule.value = 'http://hl7.org/fhir/StructureDefinition/Foo';
+    resource.rules.push(caretRule);
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
   });
 
   it('should log a warning when exporting a non-conformant resource', () => {
