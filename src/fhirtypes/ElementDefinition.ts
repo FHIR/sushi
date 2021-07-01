@@ -1962,10 +1962,23 @@ export class ElementDefinition {
    *   be resolved.
    */
   unfold(fisher: Fishable): ElementDefinition[] {
-    if (
-      (this.type?.length === 1 && (this.type[0].profile ?? []).length <= 1) ||
-      this.contentReference
-    ) {
+    // if we have a choice element where id ends with [x], proceed if there is at most one profile, since it expects to get [] back in that case
+    // if we don't have a choice element, proceed with any number of profiles
+    const isChoiceElement = this.id.endsWith('[x]');
+    const proceedToUnfold =
+      (this.type?.length === 1 && (!isChoiceElement || (this.type[0].profile ?? []).length <= 1)) ||
+      this.contentReference;
+    if (proceedToUnfold) {
+      let profileToUse: string;
+      const availableProfiles = this.type?.length === 1 ? this.type[0].profile : [];
+      // if more than one profile is available, none of them can be used, since there's no way to decide.
+      if (availableProfiles?.length > 1) {
+        logger.warn(
+          `Multiple profiles present on element ${this.id}. Base element type will be used instead of any profiles.`
+        );
+      } else if (availableProfiles?.length === 1) {
+        profileToUse = availableProfiles[0];
+      }
       let newElements: ElementDefinition[] = [];
       if (this.contentReference) {
         // Get the original resource JSON so we unfold unconstrained reference
@@ -2003,8 +2016,8 @@ export class ElementDefinition {
         newElements = this.cloneChildren(slicedElement);
       }
       if (newElements.length === 0) {
-        // If it has a profile, use that, otherwise use the code
-        const type = this.type[0].profile?.[0] ?? this.type[0].code;
+        // If we have exactly one profile to use, use that, otherwise use the code
+        const type = profileToUse ?? this.type[0].code;
         const json = fisher.fishForFHIR(
           type,
           Type.Resource,

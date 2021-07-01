@@ -167,8 +167,20 @@ export async function loadExternalDependencies(
   // Add FHIR to the dependencies so it is loaded
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
   const fhirVersion = config.fhirVersion.find(v => isSupportedFHIRVersion(v));
-  const fhirPackageId = fhirVersion.startsWith('4.0') ? 'hl7.fhir.r4.core' : 'hl7.fhir.r5.core';
-  if (fhirPackageId === 'hl7.fhir.r5.core') {
+  let fhirPackageId: string;
+  let prerelease = false;
+  if (fhirVersion.startsWith('4.0.')) {
+    fhirPackageId = 'hl7.fhir.r4.core';
+  } else if (fhirVersion.startsWith('4.1.')) {
+    fhirPackageId = 'hl7.fhir.r4b.core';
+    prerelease = true;
+  } else if (fhirVersion.startsWith('4.3.')) {
+    fhirPackageId = 'hl7.fhir.r4b.core';
+  } else {
+    fhirPackageId = 'hl7.fhir.r5.core';
+    prerelease = true;
+  }
+  if (prerelease) {
     logger.warn(
       'SUSHI support for pre-release versions of FHIR is experimental. Use at your own risk!'
     );

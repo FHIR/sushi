@@ -1173,6 +1173,43 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should log a warning when assigning a value to an element nested within an element with multiple profiles', () => {
+      // Consider two Identifier profiles with mutually incompatible assigned values
+      const regularIdentifier = new Profile('RegularIdentifier');
+      regularIdentifier.parent = 'Identifier';
+      const regularSystem = new AssignmentRule('system');
+      regularSystem.value = 'http://example.org/regular';
+      regularIdentifier.rules.push(regularSystem);
+      doc.profiles.set(regularIdentifier.name, regularIdentifier);
+      const unusualIdentifier = new Profile('UnusualIdentifier');
+      unusualIdentifier.parent = 'Identifier';
+      const unusualSystem = new AssignmentRule('system');
+      unusualSystem.value = 'http://example.org/unusual';
+      unusualIdentifier.rules.push(unusualSystem);
+      doc.profiles.set(unusualIdentifier.name, unusualIdentifier);
+      // In TestPatient, give the generalPractitioner.identifier element multiple profiles
+      const gpOnly = new OnlyRule('generalPractitioner.identifier');
+      gpOnly.types.push({ type: 'RegularIdentifier' }, { type: 'UnusualIdentifier' });
+      patient.rules.push(gpOnly);
+      // Assign a value to generalPractitioner.identifier.value, which is nested within the profiled element
+      const gpValue = new AssignmentRule('generalPractitioner.identifier.value');
+      gpValue.value = '12345';
+      // Assign a value to generalPractitioner.identifier.system. This value is invalid on both profiles, but those profiles are being ignored.
+      const gpSystem = new AssignmentRule('generalPractitioner.identifier.system');
+      gpSystem.value = 'http://example.org/something-else';
+      patientInstance.rules.push(gpValue, gpSystem);
+      const exported = exportInstance(patientInstance);
+      // The assigned values should be present
+      expect(exported.generalPractitioner[0].identifier.value).toBe('12345');
+      expect(exported.generalPractitioner[0].identifier.system).toBe(
+        'http://example.org/something-else'
+      );
+      // We should receive a warning that the profiles are being ignored
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Multiple profiles present on element Patient.generalPractitioner.identifier. Base element type will be used instead of any profiles.'
+      );
+    });
+
     // Assigning with pattern[x]
     it('should assign a nested element that is assigned by pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus.coding');
