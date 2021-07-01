@@ -2016,7 +2016,7 @@ export class ElementDefinition {
         newElements = this.cloneChildren(slicedElement);
       }
       if (newElements.length === 0) {
-        // If we have exactly profile to use, use that, otherwise use the code
+        // If we have exactly one profile to use, use that, otherwise use the code
         const type = profileToUse ?? this.type[0].code;
         const json = fisher.fishForFHIR(
           type,
