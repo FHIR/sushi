@@ -30,15 +30,6 @@ const withLocation = format(info => {
   return info;
 });
 
-const suppressMessages = format(info => {
-  if (suppressedMessages?.some(m => m.toLowerCase() === info.messageType?.toLowerCase())) {
-    suppressLogger = true;
-    info.level = '';
-    info.message = '';
-  }
-  return info;
-});
-
 const incrementCounts = format(info => {
   switch (info.level) {
     case 'info':
@@ -81,10 +72,6 @@ const trackErrorsAndWarnings = format(info => {
 });
 
 const printer = printf(info => {
-  if (loggerIsSuppressed) {
-    logger.transports[0].silent = false;
-    loggerIsSuppressed = false;
-  }
   let level;
   switch (info.level) {
     case 'info':
@@ -103,32 +90,13 @@ const printer = printf(info => {
     default:
       break;
   }
-  if (suppressLogger) {
-    logger.transports[0].silent = true;
-    loggerIsSuppressed = true;
-    suppressLogger = false;
-    return;
-  }
   return `${level} ${info.message}`;
 });
 
 export const logger = createLogger({
-  format: combine(
-    suppressMessages(),
-    incrementCounts(),
-    trackErrorsAndWarnings(),
-    withLocation(),
-    printer
-  ),
+  format: combine(incrementCounts(), trackErrorsAndWarnings(), withLocation(), printer),
   transports: [new transports.Console()]
 });
-
-let suppressLogger = false;
-let loggerIsSuppressed = false;
-let suppressedMessages: string[];
-export const setSuppressedMessages = (messages: string[]): void => {
-  suppressedMessages = messages;
-};
 
 class LoggerStats {
   public numInfo = 0;

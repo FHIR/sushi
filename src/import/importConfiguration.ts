@@ -163,8 +163,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     history: parseHistory(yaml, file),
     indexPageContent: yaml.indexPageContent,
     FSHOnly: yaml.FSHOnly ?? false,
-    applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true,
-    suppressWarnings: yaml.suppressWarnings
+    applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true
   };
 
   // Remove all undefined variables (mainly helpful for test assertions)

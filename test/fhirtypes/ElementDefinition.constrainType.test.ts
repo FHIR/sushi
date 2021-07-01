@@ -1,4 +1,4 @@
-import { loggerSpy, TestFisher } from '../testhelpers';
+import { TestFisher } from '../testhelpers';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
@@ -8,7 +8,7 @@ import { OnlyRule } from '../../src/fshtypes/rules';
 import { readFileSync } from 'fs-extra';
 import { Package, StructureDefinitionExporter } from '../../src/export';
 import { minimalConfig } from '../utils/minimalConfig';
-import { Profile, Resource } from '../../src/fshtypes';
+import { Profile } from '../../src/fshtypes';
 import { FSHTank } from '../../src/import';
 import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
@@ -36,7 +36,6 @@ describe('ElementDefinition', () => {
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');
     extension = fisher.fishForStructureDefinition('Extension');
-    loggerSpy.reset();
   });
 
   describe('#constrainType()', () => {
@@ -585,21 +584,6 @@ describe('ElementDefinition', () => {
         /The type Quantity is not abstract, so it cannot be constrained to the specialization Duration/
       );
       expect(clone).toEqual(valueX);
-    });
-
-    it('should log a warning when constraining a reference to a custom resource', () => {
-      const r = new Resource('Bar');
-      exporter.exportStructDef(r);
-
-      const valueX = extension.elements.find(e => e.id === 'Extension.value[x]');
-      const clone = cloneDeep(valueX);
-      const valueConstraint = new OnlyRule('valueReference');
-      valueConstraint.types = [{ type: 'Bar', isReference: true }];
-      clone.constrainType(valueConstraint, fisher);
-      expect(clone.type[0].targetProfile).toEqual([
-        'http://hl7.org/fhir/us/minimal/StructureDefinition/Bar'
-      ]);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/Referencing custom resource/);
     });
   });
 });

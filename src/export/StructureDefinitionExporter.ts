@@ -105,7 +105,7 @@ export class StructureDefinitionExporter implements Fishable {
           clr('│') + ' should not be used for inter-organizational data exchange.      ' + clr('│'),
           clr('╰─────────────────────────────────────────────────────────────────') + '' + clr('╯\n')
       ];
-      logger.warn(message.join('\n'), { messageType: 'nonConformantResources' });
+      logger.warn(message.join('\n'));
     }
   }
 
