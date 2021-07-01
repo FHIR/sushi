@@ -317,7 +317,7 @@ describe('Processing', () => {
         .mockImplementation(
           async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
             // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core
-            if (/^hl7.fhir.(r2|r3|r4|r5|us).core$/.test(packageName)) {
+            if (/^hl7.fhir.(r2|r3|r4|r4b|r5|us).core$/.test(packageName)) {
               FHIRDefs.packages.push(`${packageName}#${version}`);
               return Promise.resolve(FHIRDefs);
             } else {
@@ -342,7 +342,29 @@ describe('Processing', () => {
       });
     });
 
-    it('should support FHIR R5 dependencies', () => {
+    it('should support prerelease FHIR R4B dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['4.1.0'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r4b.core#4.1.0']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
+      });
+    });
+
+    it('should support official FHIR R4B dependency (will be 4.3.0)', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['4.3.0'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r4b.core#4.3.0']);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should support prerelease FHIR R5 dependencies', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.5.0'];
       const defs = new FHIRDefinitions();
