@@ -1,4 +1,4 @@
-import { isEmpty } from 'lodash';
+import { isEmpty, padEnd } from 'lodash';
 import {
   ElementDefinition,
   ElementDefinitionBindingStrength,
@@ -45,6 +45,7 @@ import {
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
+import chalk from 'chalk';
 
 // Extensions that should not be inherited by derived profiles
 // See: https://jira.hl7.org/browse/FHIR-27535
@@ -70,6 +71,43 @@ export class StructureDefinitionExporter implements Fishable {
     private readonly pkg: Package,
     private readonly fisher: MasterFisher
   ) {}
+
+  /**
+   * Checks generated resources for any custom resources which are not in the
+   * http://hl7.org/fhir/StructureDefinition namespace, and are therefore not
+   * conformant.
+   */
+  private warnOnNonConformantResourceDefinitions(): void {
+    const nonConformantResources = this.pkg.resources.filter(
+      r => !r.url.startsWith('http://hl7.org/fhir/StructureDefinition/')
+    );
+    if (nonConformantResources.length) {
+      // logger.warn color
+      const clr = chalk.rgb(179, 98, 0);
+      const maxLength = 61;
+      const nonConformantResourceLogs = nonConformantResources.map(r => {
+        const printableName =
+          r.name.length > maxLength ? r.name.slice(0, maxLength - 3) + '...' : r.name;
+        return clr('│') + padEnd(` - ${printableName}`, 65) + clr('│');
+      });
+
+      // prettier-ignore
+      const message = [
+        clr('\n╭─────────────────────────────────────────────────────────────────') + '' + clr('╮'),
+          clr('│') + ' Detected the following non-conformant Resource definitions:     ' + clr('│'),
+          ...nonConformantResourceLogs,
+          clr('│') + '                                                                 ' + clr('│'),
+          clr('│') + ' Resources not in the "http://hl7.org/fhir/StructureDefinition"  ' + clr('│'),
+          clr('│') + ' namespace are not conformant to the FHIR specification.         ' + clr('│'),
+          clr('│') + ' These resources are incompatible with standard XML/JSON         ' + clr('│'),
+          clr('│') + ' schemas, public test servers, public registries, standard       ' + clr('│'),
+          clr('│') + ' validation, and standard publication tooling. These resources   ' + clr('│'),
+          clr('│') + ' should not be used for inter-organizational data exchange.      ' + clr('│'),
+          clr('╰─────────────────────────────────────────────────────────────────') + '' + clr('╯\n')
+      ];
+      logger.warn(message.join('\n'));
+    }
+  }
 
   /**
    * Processes the fshDefinition's parent, validating it according to its type.
@@ -867,6 +905,7 @@ export class StructureDefinitionExporter implements Fishable {
         logger.error(e.message, e.sourceInfo || sd.sourceInfo);
       }
     });
+    this.warnOnNonConformantResourceDefinitions();
     if (structureDefinitions.length > 0) {
       logger.info(`Converted ${structureDefinitions.length} FHIR StructureDefinitions.`);
     }

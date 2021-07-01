@@ -17,6 +17,7 @@ import {
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
@@ -32,7 +33,7 @@ describe('ResourceExporter', () => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
+    pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
   });
@@ -278,5 +279,47 @@ describe('ResourceExporter', () => {
     expect(exported.type).toBe('MyResource');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
     expect(exported.elements).toHaveLength(12); // 9 AlternateIdentification elements + 3 added elements
+  });
+
+  it('should not log a warning when exporting a conformant resource', () => {
+    const resource = new Resource('Foo');
+    const caretRule = new CaretValueRule('');
+    caretRule.caretPath = 'url';
+    caretRule.value = 'http://hl7.org/fhir/StructureDefinition/Foo';
+    resource.rules.push(caretRule);
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+  });
+
+  it('should log a warning when exporting a non-conformant resource', () => {
+    const resource = new Resource('Foo');
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/non-conformant Resource.*- Foo/s);
+  });
+
+  it('should log a warning when exporting a multiple non-conformant resources', () => {
+    const resource1 = new Resource('Foo');
+    const resource2 = new Resource('Bar');
+    doc.resources.set(resource1.name, resource1);
+    doc.resources.set(resource2.name, resource2);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(2);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/non-conformant Resource.*- Foo.*- Bar/s);
+  });
+
+  it('should log a warning and truncate the name when exporting a non-conformant resource with a long name', () => {
+    const resource = new Resource(
+      'SupercalifragilisticexpialidociousIsSurprisinglyNotEvenLongEnoughOnItsOwn'
+    );
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /non-conformant Resource.*- SupercalifragilisticexpialidociousIsSurprisinglyNotEvenLon\.\.\./s
+    );
   });
 });
