@@ -423,6 +423,7 @@ export class StructureDefinitionExporter implements Fishable {
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     resolveSoftIndexing(fshDefinition.rules);
+    const addElementRules = fshDefinition.rules.filter(rule => rule instanceof AddElementRule);
     for (const rule of fshDefinition.rules) {
       // Specific rules are permitted for each structure definition type
       // (i.e., Profile, Logical, etc.). Log an error for disallowed rules
@@ -452,9 +453,15 @@ export class StructureDefinitionExporter implements Fishable {
         // The FHIR spec prohibits constraining any parent element in a 'specialization'
         // (i.e., logical model and resource), therefore log an error if that is attempted
         // and continue to the next rule.
-        if (element.path !== element.base.path) {
-          // The AddElementRule always sets the newElementBase.path to the value of element.path.
-          // All parent elements will have the element.base.path pointing to the parent.
+        if (
+          rule.path &&
+          rule.path !== '.' &&
+          !addElementRules.some(
+            rule =>
+              element.path === `${element.structDef.pathType}.${rule.path}` ||
+              element.path.startsWith(`${element.structDef.pathType}.${rule.path}.`)
+          )
+        ) {
           logger.error(
             `FHIR prohibits logical models and resources from constraining parent elements. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
             rule.sourceInfo
@@ -497,7 +504,7 @@ export class StructureDefinitionExporter implements Fishable {
               rule.draft
             );
           } else if (rule instanceof OnlyRule) {
-            const target = structDef.getReferenceName(rule.path, element);
+            const target = structDef.getReferenceOrCanonicalName(rule.path, element);
             element.constrainType(rule, this, target);
           } else if (rule instanceof BindingRule) {
             const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;

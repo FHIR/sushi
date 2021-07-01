@@ -20,4 +20,5 @@ export class OnlyRule extends Rule {
 export type OnlyRuleType = {
   type: string;
   isReference?: boolean;
+  isCanonical?: boolean;
 };

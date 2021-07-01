@@ -40,16 +40,35 @@ describe('OnlyRule', () => {
       );
     });
 
+    it('should produce FSH for an OnlyRule with one canonical type', () => {
+      const rule = new OnlyRule('library');
+      rule.types = [{ type: 'FooCanonicalProfile', isCanonical: true }];
+      expect(rule.toFSH()).toBe('* library only Canonical(FooCanonicalProfile)');
+    });
+
+    it('should produce FSH for an OnlyRule with multiple canonical types', () => {
+      const rule = new OnlyRule('library');
+      rule.types = [
+        { type: 'FooCanonicalProfile', isCanonical: true },
+        { type: 'BarCanonicalProfile', isCanonical: true }
+      ];
+      expect(rule.toFSH()).toBe(
+        '* library only Canonical(FooCanonicalProfile or BarCanonicalProfile)'
+      );
+    });
+
     it('should produce FSH for an OnlyRule with Reference and non-Reference types', () => {
       const rule = new OnlyRule('value[x]');
       rule.types = [
         { type: 'FooReferenceProfile', isReference: true },
         { type: 'BarReferenceProfile', isReference: true },
+        { type: 'FooCanonicalProfile', isCanonical: true },
+        { type: 'BarCanonicalProfile', isCanonical: true },
         { type: 'Quantity' },
         { type: 'string' }
       ];
       expect(rule.toFSH()).toBe(
-        '* value[x] only Quantity or string or Reference(FooReferenceProfile or BarReferenceProfile)'
+        '* value[x] only Quantity or string or Reference(FooReferenceProfile or BarReferenceProfile) or Canonical(FooCanonicalProfile or BarCanonicalProfile)'
       );
     });
   });

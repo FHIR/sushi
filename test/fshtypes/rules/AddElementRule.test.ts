@@ -83,9 +83,13 @@ describe('AddElementRule', () => {
         {
           type: 'Specimen',
           isReference: true
+        },
+        {
+          type: 'Medication',
+          isCanonical: true
         }
       );
-      const expectedFSH = '* barley 0..* Quantity or Reference(Specimen)';
+      const expectedFSH = '* barley 0..* Quantity or Reference(Specimen) or Canonical(Medication)';
       expect(rule.toFSH()).toEqual(expectedFSH);
     });
 

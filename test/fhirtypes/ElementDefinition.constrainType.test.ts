@@ -16,6 +16,7 @@ import path from 'path';
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
+  let planDefinition: StructureDefinition;
   let extension: StructureDefinition;
   let fisher: TestFisher;
   let exporter: StructureDefinitionExporter;
@@ -35,6 +36,7 @@ describe('ElementDefinition', () => {
 
   beforeEach(() => {
     observation = fisher.fishForStructureDefinition('Observation');
+    planDefinition = fisher.fishForStructureDefinition('PlanDefinition');
     extension = fisher.fishForStructureDefinition('Extension');
   });
 
@@ -442,6 +444,187 @@ describe('ElementDefinition', () => {
         )
       );
     });
+
+    // start canonicals
+
+    it('should allow a canonical to multiple resource types to be constrained to a canonical to a subset', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        { type: 'ActivityDefinition', isCanonical: true },
+        { type: 'Questionnaire', isCanonical: true }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+    });
+
+    it('should allow a canonical to multiple resource types to be constrained to a canonical to a single type', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [{ type: 'Questionnaire', isCanonical: true }];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+    });
+
+    it('should allow a resource type in a canonical to multiple types to be constrained to a single profile', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/shareableplandefinition',
+          isCanonical: true
+        }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/shareableplandefinition'
+        )
+      );
+    });
+
+    it('should allow a resource type in a canonical to multiple types to be constrained to multiple profiles', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/shareableplandefinition',
+          isCanonical: true
+        },
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/computableplandefinition',
+          isCanonical: true
+        }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/shareableplandefinition',
+          'http://hl7.org/fhir/StructureDefinition/computableplandefinition'
+        )
+      );
+    });
+
+    it('should allow a resource type in a canonical to multiple types to be constrained to a resource and a single profile', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          isCanonical: true
+        },
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/computableplandefinition',
+          isCanonical: true
+        }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/computableplandefinition'
+        )
+      );
+    });
+
+    it('should allow a canonical to Any to be constrained to a canonical to a resource', () => {
+      const value = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [{ type: 'Practitioner', isCanonical: true }];
+      value.constrainType(valueConstraint, fisher);
+      expect(value.type).toHaveLength(1);
+      expect(value.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Practitioner'
+        )
+      );
+    });
+
+    it('should allow a canonical to Any to be constrained to a canonical to a profile', () => {
+      const value = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/bp', isCanonical: true }
+      ];
+      value.constrainType(valueConstraint, fisher);
+      expect(value.type).toHaveLength(1);
+      expect(value.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/bp'
+        )
+      );
+    });
+
+    it('should allow a canonical to Any to be constrained to multiple canonicals', () => {
+      const value = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/Practitioner', isCanonical: true },
+        { type: 'http://hl7.org/fhir/StructureDefinition/bp', isCanonical: true }
+      ];
+      value.constrainType(valueConstraint, fisher);
+      expect(value.type).toHaveLength(1);
+      expect(value.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Practitioner',
+          'http://hl7.org/fhir/StructureDefinition/bp'
+        )
+      );
+    });
+
+    it('should allow a canonical to multiple resource types to be constrained such that only the target reference is constrained and others remain as-is', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/shareableplandefinition',
+          isCanonical: true
+        },
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/computableplandefinition',
+          isCanonical: true
+        }
+      ];
+      actionDef.constrainType(performerConstraint, fisher, 'PlanDefinition');
+      expect(actionDef.type).toHaveLength(2);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/shareableplandefinition',
+          'http://hl7.org/fhir/StructureDefinition/computableplandefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(actionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+    });
+
+    // end canonicals
 
     it('should throw InvalidTypeError when a passed in type cannot constrain any existing types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');

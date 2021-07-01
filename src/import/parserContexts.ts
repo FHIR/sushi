@@ -366,6 +366,7 @@ export interface OnlyRuleContext extends ParserRuleContext {
 export interface TargetTypeContext extends ParserRuleContext {
   name(): NameContext;
   referenceType(): ReferenceTypeContext;
+  canonical(): CanonicalContext;
 }
 
 export interface ObeysRuleContext extends ParserRuleContext {
