@@ -5,14 +5,16 @@ import {
   CardRule,
   ConceptRule,
   AssignmentRule,
-  AddElementRule
+  AddElementRule,
+  CaretValueRule
 } from '../../src/fshtypes/rules';
 import {
   loggerSpy,
   assertCardRule,
   assertValueSetConceptComponent,
   assertAssignmentRule,
-  assertAddElementRule
+  assertAddElementRule,
+  assertCaretValueRule
 } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
@@ -87,6 +89,28 @@ describe('applyInsertRules', () => {
 
     expect(profile.rules).toHaveLength(1);
     assertCardRule(profile.rules[0], 'category.coding', 1, '*');
+  });
+
+  it('should apply a rule without a path from a single level insert rule with a path', () => {
+    // RuleSet: Bar
+    // * ^short = "foo"
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const caretRule = new CaretValueRule('');
+    caretRule.caretPath = 'short';
+    caretRule.value = 'foo';
+    ruleSet1.rules.push(caretRule);
+
+    const insertRule = new InsertRule('category');
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCaretValueRule(profile.rules[0], 'category', 'short', 'foo', undefined, []);
   });
 
   it('should only apply soft indexing once when applying rules from a rule with a path', () => {
