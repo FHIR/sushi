@@ -3170,9 +3170,9 @@
       "integrity": "sha512-MMMQ0ludy/nBs1/o0zVOiKTpG7qMbonKUzjJgQFEuvq6INZ1OraKPRAWkBq5vlKLOUMpmNYG1JoN3oDPUQ9m3Q=="
     },
     "fhir": {
-      "version": "4.8.2",
-      "resolved": "https://registry.npmjs.org/fhir/-/fhir-4.8.2.tgz",
-      "integrity": "sha512-4F29bMxILAxrFaSYMsmCaJ8NcUYfzqMhzCnYJCSYVWctNbf5I7KSXhRBsCkrHUoz7rcFMfuL4gSAziF1Qcz2hQ==",
+      "version": "4.9.0",
+      "resolved": "https://registry.npmjs.org/fhir/-/fhir-4.9.0.tgz",
+      "integrity": "sha512-x+4LzzcNURfgzTbhDdaLxYNj8L84akM+jVvpuEQNxXggchqH5cPCC1cEWl2PUfJTT/tN8WkhM1tY2xOQI/t/rA==",
       "requires": {
         "lodash": "^4.17.19",
         "path": "^0.12.7",
@@ -3186,7 +3186,7 @@
           "bundled": true
         },
         "lodash": {
-          "version": "4.17.19",
+          "version": "4.17.21",
           "bundled": true
         },
         "path": {
@@ -7483,9 +7483,9 @@
       }
     },
     "trim-newlines": {
-      "version": "3.0.0",
-      "resolved": "https://registry.npmjs.org/trim-newlines/-/trim-newlines-3.0.0.tgz",
-      "integrity": "sha512-C4+gOpvmxaSMKuEf9Qc134F1ZuOHVXKRbtEflf4NTtuuJDEIJ9p5PXsalL8SkeRw+qit1Mo+yuvMPAKwWg/1hA==",
+      "version": "3.0.1",
+      "resolved": "https://registry.npmjs.org/trim-newlines/-/trim-newlines-3.0.1.tgz",
+      "integrity": "sha512-c1PTsA3tYrIsLGkJkzHF+w9F2EyxfXGo4UyJc4pFL++FMjnq0HJS69T3M7d//gKrFKwy429bouPescbjecU+Zw==",
       "dev": true
     },
     "triple-beam": {
@@ -7943,9 +7943,9 @@
       }
     },
     "ws": {
-      "version": "7.4.5",
-      "resolved": "https://registry.npmjs.org/ws/-/ws-7.4.5.tgz",
-      "integrity": "sha512-xzyu3hFvomRfXKH8vOFMU3OguG6oOvhXMo3xsGy3xWExqaM2dxBbVxuD99O7m3ZUFMvvscsZDqxfgMaRr/Nr1g==",
+      "version": "7.5.2",
+      "resolved": "https://registry.npmjs.org/ws/-/ws-7.5.2.tgz",
+      "integrity": "sha512-lkF7AWRicoB9mAgjeKbGqVUekLnSNO4VjKVnuPHpQeOxZOErX6BPXwJk70nFslRCEEA8EVW7ZjKwXaP9N+1sKQ==",
       "dev": true
     },
     "xml-name-validator": {
