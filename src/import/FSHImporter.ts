@@ -2048,6 +2048,17 @@ export class FSHImporter extends FSHVisitor {
     const currentIndent = location.startColumn - this.baseIndent;
     const contextIndex = currentIndent / INDENT_WIDTH;
 
+    if (this.pathContext.length && path.length === 1 && path[0] === '.') {
+      logger.error(
+        "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
+        {
+          location,
+          file: this.currentFile
+        }
+      );
+      return path;
+    }
+
     if (!this.isValidContext(location, currentIndent, this.pathContext)) {
       return path;
     }

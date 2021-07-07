@@ -496,6 +496,32 @@ describe('applyInsertRules', () => {
     );
   });
 
+  it('should log an error when applying context to a . path', () => {
+    // RuleSet: Bar
+    // * . ^short = "foo"
+
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const caretValueRule = new CaretValueRule('.');
+    caretValueRule.caretPath = 'short';
+    caretValueRule.path = '.';
+    caretValueRule.value = 'foo';
+    ruleSet1.rules.push(caretValueRule);
+
+    const insertRule = new InsertRule('category').withFile('Bar.fsh').withLocation([1, 2, 3, 4]);
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCaretValueRule(profile.rules[0], '.', 'short', 'foo', undefined, []);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The special '\.' path.*File: Bar\.fsh.*Line: 1 - 3\D*/s
+    );
+  });
+
   it('should apply add element rules from a single level insert rule', () => {
     // RuleSet: AddCoreElements
     // primaryId 1..1 SU uri "Primary ID"

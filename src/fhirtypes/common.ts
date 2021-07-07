@@ -475,7 +475,13 @@ export function applyInsertRules(
           const ruleSetRuleClone = cloneDeep(ruleSetRule);
           if (context) {
             let newPath = context;
-            if (ruleSetRuleClone.path) {
+            if (ruleSetRuleClone?.path === '.') {
+              logger.error(
+                "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
+                ruleSetRule.sourceInfo
+              );
+              newPath = ruleSetRuleClone.path;
+            } else if (ruleSetRuleClone.path) {
               newPath += `.${ruleSetRuleClone.path}`;
             }
             ruleSetRuleClone.path = newPath;
