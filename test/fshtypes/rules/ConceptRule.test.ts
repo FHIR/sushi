@@ -80,5 +80,28 @@ describe('ConceptRule', () => {
       const result = rule.toFSH();
       expect(result).toBe(expectedResult);
     });
+
+    it('should produce FSH for a ConceptRule with one code in its hierarchy', () => {
+      const rule = new ConceptRule('platinum');
+      rule.display = 'platinum';
+      rule.definition = 'element with atomic number 78';
+      rule.hierarchy = ['metal'];
+
+      const expectedResult = '* #metal #platinum "platinum" "element with atomic number 78"';
+      const result = rule.toFSH();
+      expect(result).toBe(expectedResult);
+    });
+
+    it('should produce FSH for a ConceptRule with multiple codes in its hierarchy', () => {
+      const rule = new ConceptRule('platinum');
+      rule.display = 'platinum';
+      rule.definition = 'element with atomic number 78';
+      rule.hierarchy = ['physical', 'solid phase', 'metal'];
+
+      const expectedResult =
+        '* #physical #"solid phase" #metal #platinum "platinum" "element with atomic number 78"';
+      const result = rule.toFSH();
+      expect(result).toBe(expectedResult);
+    });
   });
 });
