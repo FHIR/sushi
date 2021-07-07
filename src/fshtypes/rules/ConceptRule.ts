@@ -17,7 +17,10 @@ export class ConceptRule extends Rule {
   }
 
   toFSH(): string {
-    let line = `* #${/\s/.test(this.code) ? `"${this.code}"` : this.code}`;
+    const quotedCodes = [...this.hierarchy, this.code].map(code =>
+      /\s/.test(code) ? `#"${code}"` : `#${code}`
+    );
+    let line = `* ${quotedCodes.join(' ')}`;
     if (this.display) {
       line += ` "${fshifyString(this.display)}"`;
     }
