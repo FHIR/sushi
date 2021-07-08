@@ -139,6 +139,7 @@ describe('InstanceExporter', () => {
     let valueSetInstance: Instance;
     let respRateInstance: Instance;
     let bundleInstance: Instance;
+    let carePlanInstance: Instance;
     beforeEach(() => {
       questionnaire = new Profile('TestQuestionnaire');
       questionnaire.parent = 'Questionnaire';
@@ -163,6 +164,9 @@ describe('InstanceExporter', () => {
       patientProfInstance = new Instance('Baz');
       patientProfInstance.instanceOf = 'TestPatientProf';
       doc.instances.set(patientProfInstance.name, patientProfInstance);
+      carePlanInstance = new Instance('C');
+      carePlanInstance.instanceOf = 'CarePlan';
+      doc.instances.set(carePlanInstance.name, carePlanInstance);
       lipidInstance = new Instance('Bam')
         .withFile('LipidInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -1693,6 +1697,19 @@ describe('InstanceExporter', () => {
       expect(exported.code).toEqual(undefined);
       expect(loggerSpy.getFirstMessage('error')).toMatch(
         /Cannot use canonical URL of FakeCodeSystem because it does not exist.\D*/s
+      );
+    });
+
+    it('should log an error when an invalid canonical is assigned', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      assignedRefRule.value = new FshCanonical('Observation');
+      // * instantiatesCanonical = Canonical(TestObservation)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
+      expect(loggerSpy.getFirstMessage('error')).toMatch(
+        /The type "Canonical\(Observation\)" does not match any of the allowed types\D*/s
       );
     });
 

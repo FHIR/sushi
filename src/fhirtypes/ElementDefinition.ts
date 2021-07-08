@@ -1446,23 +1446,11 @@ export class ElementDefinition {
           this.parent()?.type?.[0]?.code === 'CodeableReference'
             ? this.parent()
             : this;
-        // If no targetProfile is present, there is nothing to check the value against, so just assign it
-        if (value.sdType && referenceConstrainingElement.type[0].targetProfile) {
-          const validTypes: string[] = [];
-          referenceConstrainingElement.type[0].targetProfile.forEach(tp => {
-            const tpType = fisher.fishForMetadata(tp)?.sdType;
-            if (tpType) {
-              validTypes.push(tpType);
-            }
-          });
-
-          const referenceLineage = this.getTypeLineage(value.sdType, fisher);
-          if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {
-            throw new InvalidTypeError(
-              `Reference(${value.sdType})`,
-              referenceConstrainingElement.type
-            );
-          }
+        if (!referenceConstrainingElement.typeSatisfiesTargetProfile(value.sdType, fisher)) {
+          throw new InvalidTypeError(
+            `Reference(${value.sdType})`,
+            referenceConstrainingElement.type
+          );
         }
         this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
@@ -1481,6 +1469,9 @@ export class ElementDefinition {
           Type.Instance
         );
         let canonicalUrl: string;
+        if (!this.typeSatisfiesTargetProfile(canonicalDefinition?.sdType, fisher)) {
+          throw new InvalidTypeError(`Canonical(${canonicalDefinition.sdType})`, this.type);
+        }
         if (canonicalDefinition?.url) {
           canonicalUrl = canonicalDefinition.url;
         } else if (canonicalDefinition?.id && canonicalDefinition.instanceUsage === 'Inline') {
@@ -1646,6 +1637,30 @@ export class ElementDefinition {
         }
       });
     }
+  }
+
+  /**
+   * @param sdType - The type to check
+   * @param fisher - A fishable implementation for finding definitions and metadata
+   * @returns - False if the type does not satisfy the targetProfile, true otherwise (or if it can't be determined)
+   */
+  private typeSatisfiesTargetProfile(sdType: string, fisher: Fishable): boolean {
+    // If no targetProfile is present, there is nothing to check the value against, so just allow it
+    if (sdType && this.type[0].targetProfile) {
+      const validTypes: string[] = [];
+      this.type[0].targetProfile.forEach(tp => {
+        const tpType = fisher.fishForMetadata(tp)?.sdType;
+        if (tpType) {
+          validTypes.push(tpType);
+        }
+      });
+
+      const typeLineage = this.getTypeLineage(sdType, fisher);
+      if (!typeLineage.some(md => validTypes.includes(md.sdType))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
