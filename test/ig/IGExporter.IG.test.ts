@@ -1579,8 +1579,8 @@ describe('IGExporter', () => {
       expect(warning).toInclude(
         'The following files were not added to the ImplementationGuide JSON'
       );
-      expect(warning).toInclude('nested1/StructureDefinition-MyTitlePatient.json');
-      expect(warning).toInclude('nested2/ValueSet-MyVS.json');
+      expect(warning).toInclude(path.join('nested1', 'StructureDefinition-MyTitlePatient.json'));
+      expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
       expect(warning).not.toInclude('Patient-BarPatient.json');
       expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
     });
