@@ -18,7 +18,7 @@ describe('IGExporter', () => {
       const configYaml = fs.readFileSync(configPath, 'utf8');
       const config = importConfiguration(configYaml, configPath);
       const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, path.join(__dirname, 'ig-data'));
+      const exporter = new IGExporter(pkg, null, __dirname);
       exporter.export(tempOut);
     });
 
@@ -77,7 +77,7 @@ describe('IGExporter', () => {
         'testPackage',
         defs
       );
-      const exporter = new IGExporter(pkg, defs, path.join(__dirname, 'ig-data'));
+      const exporter = new IGExporter(pkg, defs, __dirname);
       exporter.export(tempOut);
     });
 

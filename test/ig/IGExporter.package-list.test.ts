@@ -52,7 +52,7 @@ describe('IGExporter', () => {
         ]
       };
       const pkg = new Package(config);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.checkPackageList();
       const pkgListPath = path.join(tempOut, 'package-list.json');

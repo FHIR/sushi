@@ -139,7 +139,7 @@ describe('IGExporter', () => {
       pkg.extensions.push(...pkgExtensions);
       pkg.instances.push(...pkgInstances);
       pkg.codeSystems.push(...pkgCodeSystems);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterAll(() => {
@@ -730,7 +730,7 @@ describe('IGExporter', () => {
       pkg.extensions.push(...pkgExtensions);
       pkg.logicals.push(...pkgLogicals);
       pkg.resources.push(...pkgResources);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterAll(() => {
@@ -888,7 +888,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterAll(() => {
@@ -1159,7 +1159,7 @@ describe('IGExporter', () => {
         defs
       );
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(path.join(fixtures, 'ig-data', 'input'), defs);
+      loadCustomResources(path.join(fixtures, 'input'), defs);
     });
 
     beforeEach(() => {
@@ -1183,7 +1183,7 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterAll(() => {
@@ -1540,7 +1540,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterEach(() => {
@@ -1640,7 +1640,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       config = minimalConfig;
       pkg = new Package(config);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterEach(() => {
@@ -1666,7 +1666,7 @@ describe('IGExporter', () => {
       ]);
       // Check for log messages indicating invalid input
       expect(loggerSpy.getFirstMessage('warn')).toMatch(
-        /Files not in the supported file types \(\.md and \.xml\) were detected\..*File: .*[\/\\]invalid-pages-folder-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
+        /Files not in the supported file types \(\.md and \.xml\) were detected\..*File: .*[\/\\]invalid-pages-folder-ig[\/\\]input[\/\\]pagecontent/s
       );
     });
   });
@@ -1699,7 +1699,7 @@ describe('IGExporter', () => {
 
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+        const exporter = new IGExporter(pkg, defs, fixtures);
         // No need to regenerate the IG on every test -- generate it once and inspect what you
         // need to in the tests
         exporter.export(tempOut);
@@ -1792,7 +1792,7 @@ describe('IGExporter', () => {
         defs
       );
       const pkg = new Package(minimalConfig);
-      const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'));
+      const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you
       // need to in the tests
       exporter.export(tempOut);
