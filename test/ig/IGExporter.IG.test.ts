@@ -1517,6 +1517,75 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-nested-resources', () => {
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
+      loadCustomResources(path.join(fixtures, 'input'), defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      const config = cloneDeep(minimalConfig);
+      const pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should add only non-nested resource references to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toHaveLength(2);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BarPatient'
+        },
+        name: 'BarPatient',
+        exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyPatient'
+        },
+        name: 'MyPatient',
+        exampleBoolean: false
+      });
+    });
+
+    it('should warn on deeply nested resources', () => {
+      exporter.export(tempOut);
+      const warning = loggerSpy.getFirstMessage('warn');
+      expect(warning).toInclude(
+        'The following files were not added to the ImplementationGuide JSON'
+      );
+      expect(warning).toInclude('nested1/StructureDefinition-MyTitlePatient.json');
+      expect(warning).toInclude('nested2/ValueSet-MyVS.json');
+      expect(warning).not.toInclude('Patient-BarPatient.json');
+      expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
+    });
+  });
+
   describe('#pages-folder-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
