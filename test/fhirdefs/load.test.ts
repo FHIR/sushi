@@ -395,13 +395,7 @@ describe('#loadCustomResources', () => {
   beforeAll(() => {
     loggerSpy.reset();
     defs = new FHIRDefinitions();
-    const fixtures = path.join(
-      __dirname,
-      'fixtures',
-      'customized-ig-with-resources',
-      'ig-data',
-      'input'
-    );
+    const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources', 'input');
     loadCustomResources(fixtures, defs);
   });
 
