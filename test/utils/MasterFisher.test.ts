@@ -71,7 +71,7 @@ describe('MasterFisher', () => {
       sdType: 'Procedure',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
       parent: 'Procedure',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
   });
 
@@ -86,7 +86,7 @@ describe('MasterFisher', () => {
       sdType: 'Observation',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Profile2',
       parent: 'bp',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
   });
 
@@ -107,7 +107,7 @@ describe('MasterFisher', () => {
       sdType: undefined,
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-dr',
       parent: 'Practitioner',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
   });
 
@@ -123,7 +123,7 @@ describe('MasterFisher', () => {
       sdType: 'Condition',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/profile3',
       parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
   });
 
@@ -140,7 +140,7 @@ describe('MasterFisher', () => {
       sdType: 'Patient',
       url: 'http://hl7.org/fhir/StructureDefinition/Patient',
       parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
   });
 
@@ -156,7 +156,7 @@ describe('MasterFisher', () => {
       sdType: 'Observation',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/vitalsigns',
       parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
   });
 
@@ -177,7 +177,7 @@ describe('MasterFisher', () => {
       sdType: fhirDefinedVitalSigns.type,
       url: fhirDefinedVitalSigns.url,
       parent: fhirDefinedVitalSigns.baseDefinition,
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
     defs.resetPredefinedResources();
   });
@@ -193,7 +193,7 @@ describe('MasterFisher', () => {
       sdType: 'Organization',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-org',
       parent: 'http://hl7.org/fhir/StructureDefinition/Organization',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     });
   });
 

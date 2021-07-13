@@ -1469,8 +1469,8 @@ export class ElementDefinition {
           Type.Instance
         );
         let canonicalUrl: string;
-        if (!this.typeSatisfiesTargetProfile(canonicalDefinition?.ancestor, fisher)) {
-          throw new InvalidTypeError(`Canonical(${canonicalDefinition.ancestor})`, this.type);
+        if (!this.typeSatisfiesTargetProfile(canonicalDefinition?.resourceType, fisher)) {
+          throw new InvalidTypeError(`Canonical(${canonicalDefinition.resourceType})`, this.type);
         }
         if (canonicalDefinition?.url) {
           canonicalUrl = canonicalDefinition.url;

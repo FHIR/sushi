@@ -310,14 +310,14 @@ describe('FSHTank', () => {
       name: 'Profile1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
       parent: 'Observation',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     };
     const ext1MD: Metadata = {
       id: 'ext1',
       name: 'Extension1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ext1',
       parent: 'Extension2',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     };
     const log1MD: Metadata = {
       id: 'log1',
@@ -325,32 +325,31 @@ describe('FSHTank', () => {
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
       sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
       parent: 'Element',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     };
     const res1MD: Metadata = {
       id: 'res1',
       name: 'Resource1',
       parent: 'DomainResource',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/res1',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     };
     const vs1MD: Metadata = {
       id: 'vs1',
       name: 'ValueSet1',
       url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1',
-      ancestor: 'ValueSet'
+      resourceType: 'ValueSet'
     };
     const cs1MD: Metadata = {
       id: 'cs1',
       name: 'CodeSystem1',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1',
-      ancestor: 'CodeSystem'
+      resourceType: 'CodeSystem'
     };
     const inst1MD: Metadata = {
       id: 'inst1',
       name: 'Instance1',
-      instanceUsage: 'Example',
-      ancestor: 'Condition'
+      instanceUsage: 'Example'
     };
     const inv1MD: Metadata = {
       id: 'Invariant1', // id will always be name on Invariants
@@ -679,7 +678,7 @@ describe('FSHTank for HL7', () => {
       url: 'http://hl7.org/fhir/StructureDefinition/hl7-log',
       sdType: 'hl7-log',
       parent: 'Element',
-      ancestor: 'StructureDefinition'
+      resourceType: 'StructureDefinition'
     };
 
     it('should find valid HL7 fish metadata when fishing by id for logical models', () => {

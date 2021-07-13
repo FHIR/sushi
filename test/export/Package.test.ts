@@ -362,7 +362,7 @@ describe('Package', () => {
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
         parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('Funny', Type.Profile)).toEqual(funnyProfile);
       expect(
@@ -381,7 +381,7 @@ describe('Package', () => {
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('PoorTaste', Type.Extension)).toEqual(poorTasteExtensionByID);
       expect(
@@ -400,7 +400,7 @@ describe('Package', () => {
         sdType: 'wheat-beer',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('WheatBeer', Type.Logical)).toEqual(wheatBeerLogicalByID);
       expect(
@@ -419,7 +419,7 @@ describe('Package', () => {
         sdType: 'Destination',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('Destination', Type.Resource)).toEqual(destinationResourceByID);
       expect(
@@ -436,7 +436,7 @@ describe('Package', () => {
         id: 'soup-flavors',
         name: 'Soups',
         url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
-        ancestor: 'ValueSet'
+        resourceType: 'ValueSet'
       });
       expect(pkg.fishForMetadata('Soups', Type.ValueSet)).toEqual(soupsValueSetByID);
       expect(
@@ -450,7 +450,7 @@ describe('Package', () => {
         id: 'numerics',
         name: 'Numbers',
         url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
-        ancestor: 'CodeSystem'
+        resourceType: 'CodeSystem'
       });
       expect(pkg.fishForMetadata('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
       expect(
@@ -463,7 +463,7 @@ describe('Package', () => {
       expect(drSueInstanceById).toEqual({
         id: 'dr-sue',
         name: 'DrSue',
-        ancestor: 'Practitioner'
+        resourceType: 'Practitioner'
       });
       expect(pkg.fishForMetadata('DrSue', Type.Instance)).toEqual(drSueInstanceById);
     });
@@ -562,7 +562,7 @@ describe('Package', () => {
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
         parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('Funny')).toEqual(funnyProfileByID);
       expect(
@@ -576,7 +576,7 @@ describe('Package', () => {
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('PoorTaste')).toEqual(poorTasteExtensionByID);
       expect(
@@ -590,7 +590,7 @@ describe('Package', () => {
         sdType: 'wheat-beer',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('WheatBeer')).toEqual(wheatBeerLogicalByID);
       expect(
@@ -604,7 +604,7 @@ describe('Package', () => {
         sdType: 'Destination',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-        ancestor: 'StructureDefinition'
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('Destination')).toEqual(destinationResourceByID);
       expect(
@@ -616,7 +616,7 @@ describe('Package', () => {
         id: 'soup-flavors',
         name: 'Soups',
         url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
-        ancestor: 'ValueSet'
+        resourceType: 'ValueSet'
       });
       expect(pkg.fishForMetadata('Soups')).toEqual(soupsValueSetByID);
       expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors')).toEqual(
@@ -628,7 +628,7 @@ describe('Package', () => {
         id: 'numerics',
         name: 'Numbers',
         url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
-        ancestor: 'CodeSystem'
+        resourceType: 'CodeSystem'
       });
       expect(pkg.fishForMetadata('Numbers')).toEqual(numericsCodeSystemByID);
       expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/CodeSystem/numerics')).toEqual(
@@ -639,7 +639,7 @@ describe('Package', () => {
       expect(drSueInstanceByID).toEqual({
         id: 'dr-sue',
         name: 'DrSue',
-        ancestor: 'Practitioner'
+        resourceType: 'Practitioner'
       });
 
       expect(pkg.fishForMetadata('DrSue')).toEqual(drSueInstanceByID);

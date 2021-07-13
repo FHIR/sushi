@@ -261,7 +261,7 @@ export class FSHTank implements Fishable {
       ) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
         meta.parent = result.parent;
-        meta.ancestor = 'StructureDefinition';
+        meta.resourceType = 'StructureDefinition';
         if (result instanceof Logical) {
           // Logical models should always use an absolute URL as their StructureDefinition.type
           // unless HL7 published them. In that case, the URL is relative to
@@ -273,9 +273,9 @@ export class FSHTank implements Fishable {
       } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
         if (result instanceof FshValueSet) {
-          meta.ancestor = 'ValueSet';
+          meta.resourceType = 'ValueSet';
         } else {
-          meta.ancestor = 'CodeSystem';
+          meta.resourceType = 'CodeSystem';
         }
       } else if (result instanceof Instance) {
         result.rules?.forEach(r => {
@@ -285,7 +285,6 @@ export class FSHTank implements Fishable {
           }
         });
         meta.instanceUsage = result.usage;
-        meta.ancestor = result.instanceOf;
       }
       return meta;
     }
