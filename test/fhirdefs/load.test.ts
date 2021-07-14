@@ -392,11 +392,12 @@ describe('#loadDependency()', () => {
 
 describe('#loadCustomResources', () => {
   let defs: FHIRDefinitions;
+  let pathToInput: string;
   beforeAll(() => {
     loggerSpy.reset();
     defs = new FHIRDefinitions();
-    const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources', 'input');
-    loadCustomResources(fixtures, defs);
+    pathToInput = path.join(__dirname, 'fixtures', 'customized-ig-with-resources', 'input');
+    loadCustomResources(pathToInput, defs);
   });
 
   it('should load custom JSON and XML resources', () => {
@@ -404,7 +405,7 @@ describe('#loadCustomResources', () => {
     const profiles = defs.allProfiles();
     const valueSets = defs.allValueSets();
     const extensions = defs.allExtensions();
-    expect(profiles).toHaveLength(1);
+    expect(profiles).toHaveLength(2);
     expect(profiles[0].id).toBe('MyPatient');
     expect(valueSets).toHaveLength(1);
     expect(valueSets[0].id).toBe('MyVS');
@@ -424,19 +425,51 @@ describe('#loadCustomResources', () => {
   });
 
   it('should add all predefined resources to the FHIRDefs with file information', () => {
-    expect(defs.getPredefinedResource('CapabilityStatement-MyCS.json').id).toBe('MyCS');
-    expect(defs.getPredefinedResource('Patient-MyPatient.json').id).toBe('MyPatient');
-    expect(defs.getPredefinedResource('StructureDefinition-patient-birthPlace.json').id).toBe(
-      'patient-birthPlace'
-    );
-    expect(defs.getPredefinedResource('StructureDefinition-patient-birthPlaceXML.xml').id).toBe(
-      'patient-birthPlaceXML'
-    );
-    expect(defs.getPredefinedResource('StructureDefinition-MyLM.json').id).toBe('MyLM');
-    expect(defs.getPredefinedResource('OperationDefinition-MyOD.json').id).toBe('MyOD');
-    expect(defs.getPredefinedResource('StructureDefinition-MyPatient.json').id).toBe('MyPatient');
-    expect(defs.getPredefinedResource('Patient-BazPatient.json').id).toBe('BazPatient');
-    expect(defs.getPredefinedResource('ValueSet-MyVS.json').id).toBe('MyVS');
+    expect(
+      defs.getPredefinedResource(
+        path.join(pathToInput, 'capabilities', 'CapabilityStatement-MyCS.json')
+      ).id
+    ).toBe('MyCS');
+    expect(
+      defs.getPredefinedResource(path.join(pathToInput, 'examples', 'Patient-MyPatient.json')).id
+    ).toBe('MyPatient');
+    expect(
+      defs.getPredefinedResource(
+        path.join(pathToInput, 'extensions', 'StructureDefinition-patient-birthPlace.json')
+      ).id
+    ).toBe('patient-birthPlace');
+    expect(
+      defs.getPredefinedResource(
+        path.join(pathToInput, 'extensions', 'StructureDefinition-patient-birthPlaceXML.xml')
+      ).id
+    ).toBe('patient-birthPlaceXML');
+    expect(
+      defs.getPredefinedResource(path.join(pathToInput, 'models', 'StructureDefinition-MyLM.json'))
+        .id
+    ).toBe('MyLM');
+    expect(
+      defs.getPredefinedResource(
+        path.join(pathToInput, 'operations', 'OperationDefinition-MyOD.json')
+      ).id
+    ).toBe('MyOD');
+    expect(
+      defs.getPredefinedResource(
+        path.join(pathToInput, 'profiles', 'StructureDefinition-MyPatient.json')
+      ).id
+    ).toBe('MyPatient');
+    expect(
+      defs.getPredefinedResource(path.join(pathToInput, 'resources', 'Patient-BazPatient.json')).id
+    ).toBe('BazPatient');
+    // NOTE: It loads nested predefined resources even thought the IG Publisher doesn't handle them well
+    expect(
+      defs.getPredefinedResource(
+        path.join(pathToInput, 'resources', 'nested', 'StructureDefinition-MyNestedPatient.json')
+      ).id
+    ).toBe('MyNestedPatient');
+
+    expect(
+      defs.getPredefinedResource(path.join(pathToInput, 'vocabulary', 'ValueSet-MyVS.json')).id
+    ).toBe('MyVS');
   });
 
   it('should log an info message for non JSON or XML input files', () => {
@@ -447,7 +480,7 @@ describe('#loadCustomResources', () => {
 
   it('should log an error for invalid XML files', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Loading InvalidFile.xml failed with the following error:/
+      /Loading .*InvalidFile.xml failed with the following error:/
     );
   });
 
@@ -471,7 +504,7 @@ describe('#loadCustomResources', () => {
 
   it('should log an error for invalid JSON files', () => {
     expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(
-      /Loading InvalidFile.json failed with the following error:/
+      /Loading .*InvalidFile.json failed with the following error:/
     );
   });
 });

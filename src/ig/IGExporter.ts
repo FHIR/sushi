@@ -25,7 +25,7 @@ import {
   ImplementationGuideDependsOn
 } from '../fhirtypes';
 import { ConfigurationMenuItem } from '../fshtypes';
-import { logger, Type } from '../utils';
+import { logger, Type, getFilesRecursive } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 
@@ -801,6 +801,9 @@ export class IGExporter {
    * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
    * Based on: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input
    *
+   * NOTE: This does not include files nested in subfolders in supported paths since the
+   * IG Exporter does not handle those well.
+   *
    * This function has similar operation to addResources, and both should be
    * analyzed when making changes to either.
    */
@@ -816,17 +819,20 @@ export class IGExporter {
       'vocabulary',
       'examples'
     ];
+    const deeplyNestedFiles: string[] = [];
     for (const pathEnd of pathEnds) {
-      const dirPath = path.join(this.inputPath, 'input', pathEnd);
+      const dirPath = path.resolve(this.inputPath, 'input', pathEnd);
       if (existsSync(dirPath)) {
-        const files = readdirSync(dirPath);
+        const files = getFilesRecursive(dirPath);
         for (const file of files) {
+          if (path.dirname(file) !== dirPath) {
+            deeplyNestedFiles.push(file);
+            continue;
+          }
           const resourceJSON: InstanceDefinition = this.fhirDefs.getPredefinedResource(file);
           if (resourceJSON) {
             if (resourceJSON.resourceType == null || resourceJSON.id == null) {
-              logger.error(
-                `Resource at ${path.join(dirPath, file)} must define resourceType and id.`
-              );
+              logger.error(`Resource at ${file} must define resourceType and id.`);
               continue;
             }
 
@@ -919,6 +925,15 @@ export class IGExporter {
           }
         }
       }
+    }
+    if (deeplyNestedFiles.length) {
+      logger.warn(
+        'The following files were not added to the ImplementationGuide JSON because they are nested too deep. While ' +
+          'SUSHI supports these paths, the IG Publisher does not. To fix this, move these files so they are directly ' +
+          `under a supported input folder (e.g., input/resources, input/profiles, etc.):\n  - ${deeplyNestedFiles.join(
+            '\n  - '
+          )}`
+      );
     }
   }
 
