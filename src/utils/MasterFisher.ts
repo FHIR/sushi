@@ -71,6 +71,9 @@ export class MasterFisher implements Fishable {
         if (fishable instanceof FSHTank) {
           result.sdType = this.findSdType(result, types, fishables);
         }
+        // When an Instance comes from the FSHTank, the FSHTank doesn't know its resourceType,
+        // only its InstanceOf. But here we have access to the other fishers, so we can try
+        // to figure that resourceType out here
         if (fishable instanceof FSHTank && !result.resourceType) {
           result.resourceType = this.fishForMetadata(
             (fishable.fish(item, Type.Instance) as Instance)?.instanceOf
