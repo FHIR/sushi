@@ -340,6 +340,27 @@ describe('FSHImporter', () => {
       });
     });
 
+    it('should log an error when a . rule is indented', () => {
+      const input = `
+      Profile: Foo
+      Parent: Patient
+      * name 1..1
+        * . ^short = "foo"
+    `;
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/The special '\.' path/);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Patient');
+      expect(profile.rules.length).toBe(2);
+      assertCardRule(profile.rules[0], 'name', 1, 1);
+      assertCaretValueRule(profile.rules[1], '.', 'short', 'foo', false, ['.']);
+    });
+
     it('should log an error when a rule is indented below a rule without a path', () => {
       const input = `
       Profile: Foo

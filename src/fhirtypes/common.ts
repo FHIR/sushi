@@ -474,7 +474,17 @@ export function applyInsertRules(
         if (isAllowedRule(fshDefinition, ruleSetRule)) {
           const ruleSetRuleClone = cloneDeep(ruleSetRule);
           if (context) {
-            ruleSetRuleClone.path = `${context}.${ruleSetRuleClone.path}`;
+            let newPath = context;
+            if (ruleSetRuleClone?.path === '.') {
+              logger.error(
+                "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
+                ruleSetRule.sourceInfo
+              );
+              newPath = ruleSetRuleClone.path;
+            } else if (ruleSetRuleClone.path) {
+              newPath += `.${ruleSetRuleClone.path}`;
+            }
+            ruleSetRuleClone.path = newPath;
           }
           expandedRules.push(ruleSetRuleClone);
           if (firstRule) {
