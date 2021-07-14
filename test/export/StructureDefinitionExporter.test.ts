@@ -3963,6 +3963,51 @@ describe('StructureDefinitionExporter R4', () => {
       expect(addressLineElement.slicing.discriminator[0].path).toEqual('code');
     });
 
+    it('should not change slice cardinality when an AssignmentRule is applied directly on the slice', () => {
+      // See: https://github.com/FHIR/sushi/issues/810
+      //
+      // Profile: RespRateFragment
+      // Parent: Observation
+      // * code.coding ^slicing.discriminator[0].type = #pattern
+      // * code.coding ^slicing.discriminator[0].path = "$this"
+      // * code.coding ^slicing.rules = #open
+      // * code.coding contains snomed 0..*
+      // * code.coding[snomed] = http://snomed.info/sct#86290005
+      const profile = new Profile('RespRateFragment');
+      profile.parent = 'Observation';
+      const slicingTypeLine = new CaretValueRule('code.coding');
+      slicingTypeLine.caretPath = 'slicing.discriminator[0].type';
+      slicingTypeLine.value = new FshCode('pattern');
+      const slicingPathLine = new CaretValueRule('code.coding');
+      slicingPathLine.caretPath = 'slicing.discriminator[0].path';
+      slicingPathLine.value = '$this';
+      const slicingRulesLine = new CaretValueRule('code.coding');
+      slicingRulesLine.caretPath = 'slicing.rules';
+      slicingRulesLine.value = new FshCode('open');
+      const containsSnomed = new ContainsRule('code.coding');
+      containsSnomed.items.push({ name: 'snomed' });
+      const snomedCard = new CardRule('code.coding[snomed]');
+      snomedCard.min = 0;
+      snomedCard.max = '*';
+      const snomedAssignment = new AssignmentRule('code.coding[snomed]');
+      snomedAssignment.value = new FshCode('86290005', 'http://snomed.info/sct');
+
+      profile.rules.push(
+        slicingTypeLine,
+        slicingPathLine,
+        slicingRulesLine,
+        containsSnomed,
+        snomedCard,
+        snomedAssignment
+      );
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const snomedElement = sd.findElement('Observation.code.coding:snomed');
+      expect(snomedElement.min).toBe(0);
+      expect(snomedElement.max).toBe('*');
+    });
+
     it('should not apply a AssignmentRule to a slice when it would conflict with a child slice of the list element', () => {
       // Instance: CustomPostalAddress
       // InstanceOf: Address
@@ -6197,6 +6242,33 @@ describe('StructureDefinitionExporter R4', () => {
         /Cannot override required binding with extensible/s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 9\D*/s);
+    });
+
+    it('should apply an Assignment rule on a slice without affecting the cardinality of the slice', () => {
+      // * category[Procedure] from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
+      const rootValueSet = new BindingRule('category');
+      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
+      rootValueSet.strength = 'required';
+      const procedureValueSet = new BindingRule('category[Procedure]')
+        .withFile('Weaker.fsh')
+        .withLocation([4, 8, 4, 23]);
+      procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
+      procedureValueSet.strength = 'extensible';
+
+      observationWithSlice.rules.push(rootValueSet, procedureValueSet);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootCategory = sd.findElement('Observation.category');
+      const regularBinding = {
+        valueSet: 'http://hl7.org/fhir/us/minimal/RegularObservationCodes',
+        strength: 'required'
+      };
+      expect(rootCategory.binding).toEqual(regularBinding);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot override required binding with extensible/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 4\D*/s);
     });
 
     it.todo(

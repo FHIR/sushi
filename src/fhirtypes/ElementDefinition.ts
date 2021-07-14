@@ -1509,14 +1509,17 @@ export class ElementDefinition {
     }
 
     // If the element is found in a discriminator.path, then we enforce that it has minimum cardinality 1
-    // since its value is assigned
+    // since its value is assigned. It has to be there, otherwise it's not that slice. The one exception
+    // is if you are fixing the value of the sliced element itself (e.g., discriminator path is $this),
+    // in which case we don't want to force the whole slice to be required.
     const parentSlices = [this, ...this.getAllParents().reverse()].filter(el => el.sliceName);
     parentSlices.forEach(parentSlice => {
       const slicedElement = parentSlice.slicedElement();
       if (
         slicedElement.slicing.discriminator?.some(
           d =>
-            `${slicedElement.path}${d.path === '$this' ? '' : `.${d.path}`}` === this.path &&
+            d.path !== '$this' &&
+            `${slicedElement.path}.${d.path}` === this.path &&
             ['value', 'pattern'].includes(d.type)
         ) &&
         this.min === 0
