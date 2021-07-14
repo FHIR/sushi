@@ -505,15 +505,17 @@ export async function init(): Promise<void> {
   );
 }
 
-function getFilesRecursive(dir: string): string[] {
+export function getFilesRecursive(dir: string): string[] {
+  // always return absolute paths
+  const absPath = path.resolve(dir);
   try {
-    if (fs.statSync(dir).isDirectory()) {
+    if (fs.statSync(absPath).isDirectory()) {
       const descendants = fs
-        .readdirSync(dir, 'utf8')
-        .map(f => getFilesRecursive(path.join(dir, f)));
+        .readdirSync(absPath, 'utf8')
+        .map(f => getFilesRecursive(path.join(absPath, f)));
       return [].concat(...descendants);
     } else {
-      return [dir];
+      return [absPath];
     }
   } catch {
     return [];
