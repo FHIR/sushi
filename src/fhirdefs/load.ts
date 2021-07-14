@@ -7,7 +7,7 @@ import tar from 'tar';
 import axios from 'axios';
 import junk from 'junk';
 import temp from 'temp';
-import { logger } from '../utils';
+import { logger, getFilesRecursive } from '../utils';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
 
 /**
@@ -210,7 +210,7 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
     let foundSpreadsheets = false;
     const dirPath = path.join(resourceDir, pathEnd);
     if (fs.existsSync(dirPath)) {
-      const files = fs.readdirSync(dirPath);
+      const files = getFilesRecursive(dirPath);
       for (const file of files) {
         let resourceJSON: any;
         try {
@@ -218,12 +218,12 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
             // Ignore "junk" files created by the OS, like .DS_Store on macOS and Thumbs.db on Windows
             continue;
           } else if (file.endsWith('.json')) {
-            resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+            resourceJSON = fs.readJSONSync(file);
           } else if (file.endsWith('-spreadsheet.xml')) {
             foundSpreadsheets = true;
             continue;
           } else if (file.endsWith('xml')) {
-            const xml = fs.readFileSync(path.join(dirPath, file)).toString();
+            const xml = fs.readFileSync(file).toString();
             if (/<\?mso-application progid="Excel\.Sheet"\?>/m.test(xml)) {
               foundSpreadsheets = true;
               continue;
