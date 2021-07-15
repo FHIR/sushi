@@ -5,7 +5,7 @@ options { tokenVocab = FSHLexer; }
 doc:                entity* EOF;
 entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | paramRuleSet | mapping | logical | resource;
 
-alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
+alias:              KW_ALIAS SEQUENCE EQUAL (SEQUENCE | CODE);
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name sdMetadata* sdRule*;
