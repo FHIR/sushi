@@ -166,7 +166,7 @@ export class FHIRDefinitions implements Fishable {
     }
   }
 
-  fishForPredefinedResourceMetadata(item: string, ...types: Type[]): any | undefined {
+  fishForPredefinedResourceMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const resource = this.fishForPredefinedResource(item, ...types);
     if (resource) {
       return {
@@ -175,7 +175,8 @@ export class FHIRDefinitions implements Fishable {
         sdType: resource.type as string,
         url: resource.url as string,
         parent: resource.baseDefinition as string,
-        abstract: resource.abstract as boolean
+        abstract: resource.abstract as boolean,
+        resourceType: resource.resourceType as string
       };
     }
   }
@@ -241,7 +242,8 @@ export class FHIRDefinitions implements Fishable {
         sdType: result.type as string,
         url: result.url as string,
         parent: result.baseDefinition as string,
-        abstract: result.abstract as boolean
+        abstract: result.abstract as boolean,
+        resourceType: result.resourceType as string
       };
     }
   }

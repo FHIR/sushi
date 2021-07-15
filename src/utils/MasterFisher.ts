@@ -3,6 +3,7 @@ import { FSHTank } from '../import';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Package } from '../export';
 import { logger } from './FSHLogger';
+import { Instance } from '../fshtypes';
 
 /**
  * The MasterFisher can fish from the tank, the FHIR definitions, and the package that is currently
@@ -69,6 +70,14 @@ export class MasterFisher implements Fishable {
         // If it came from the tank, we need to get the sdType because the tank doesn't know.
         if (fishable instanceof FSHTank) {
           result.sdType = this.findSdType(result, types, fishables);
+        }
+        // When an Instance comes from the FSHTank, the FSHTank doesn't know its resourceType,
+        // only its InstanceOf. But here we have access to the other fishers, so we can try
+        // to figure that resourceType out here
+        if (fishable instanceof FSHTank && !result.resourceType) {
+          result.resourceType = this.fishForMetadata(
+            (fishable.fish(item, Type.Instance) as Instance)?.instanceOf
+          )?.sdType;
         }
         return result;
       }

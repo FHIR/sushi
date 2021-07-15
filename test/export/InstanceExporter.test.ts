@@ -139,6 +139,7 @@ describe('InstanceExporter', () => {
     let valueSetInstance: Instance;
     let respRateInstance: Instance;
     let bundleInstance: Instance;
+    let carePlanInstance: Instance;
     beforeEach(() => {
       questionnaire = new Profile('TestQuestionnaire');
       questionnaire.parent = 'Questionnaire';
@@ -163,6 +164,9 @@ describe('InstanceExporter', () => {
       patientProfInstance = new Instance('Baz');
       patientProfInstance.instanceOf = 'TestPatientProf';
       doc.instances.set(patientProfInstance.name, patientProfInstance);
+      carePlanInstance = new Instance('C');
+      carePlanInstance.instanceOf = 'CarePlan';
+      doc.instances.set(carePlanInstance.name, carePlanInstance);
       lipidInstance = new Instance('Bam')
         .withFile('LipidInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -1693,6 +1697,75 @@ describe('InstanceExporter', () => {
       expect(exported.code).toEqual(undefined);
       expect(loggerSpy.getFirstMessage('error')).toMatch(
         /Cannot use canonical URL of FakeCodeSystem because it does not exist.\D*/s
+      );
+    });
+
+    it('should assign a Canonical that is one of the valid types', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const pdInstance = new Instance('TestPD');
+      pdInstance.instanceOf = 'PlanDefinition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://example.org/PlanDefition/1';
+      pdInstance.rules.push(urlRule);
+      doc.instances.set(pdInstance.name, pdInstance);
+      assignedRefRule.value = new FshCanonical('TestPD');
+      // * instantiatesCanonical = Canonical(TestPD)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(['http://example.org/PlanDefition/1']); // instantiatesCanonical is set
+    });
+
+    it('should assign a Canonical that is a child of the valid types', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const pdProfile = new Profile('PlanDefProfile');
+      pdProfile.parent = 'PlanDefinition';
+      doc.profiles.set(pdProfile.name, pdProfile);
+      const pdInstance = new Instance('PlanDefInstance');
+      pdInstance.instanceOf = 'PlanDefProfile';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://example.org/PlanDefition/1';
+      pdInstance.rules.push(urlRule);
+      doc.instances.set(pdInstance.name, pdInstance);
+      assignedRefRule.value = new FshCanonical('PlanDefInstance');
+      // * instantiatesCanonical = Canonical(PlanDefInstance)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(['http://example.org/PlanDefition/1']); // instantiatesCanonical is set
+    });
+
+    it('should log an error when an invalid canonical is assigned', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const vsInstance = new Instance('TestVS');
+      vsInstance.instanceOf = 'ValueSet';
+      doc.instances.set(vsInstance.name, vsInstance);
+      assignedRefRule.value = new FshCanonical('TestVS');
+      // * instantiatesCanonical = Canonical(TestVS)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
+      expect(loggerSpy.getFirstMessage('error')).toMatch(
+        /The type "Canonical\(ValueSet\)" does not match any of the allowed types\D*/s
+      );
+    });
+
+    it('should log an error when an already exported invalid canonical is assigned', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const vsInstance = new Instance('TestVS');
+      vsInstance.instanceOf = 'ValueSet';
+      doc.instances.set(vsInstance.name, vsInstance);
+      // First export the VS so that it is fished from  the package instead of FSHTank
+      exportInstance(vsInstance);
+      assignedRefRule.value = new FshCanonical('TestVS');
+      // * instantiatesCanonical = Canonical(TestVS)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
+      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+        /The type "Canonical\(ValueSet\)" does not match any of the allowed types\D*/s
       );
     });
 
