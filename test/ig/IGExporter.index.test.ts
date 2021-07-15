@@ -63,7 +63,7 @@ describe('IGExporter', () => {
 
     it('should use user-provided input/pagecontent/index.md when config.indexPageContent is not defined', () => {
       const pkg = new Package(minimalConfig);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
       exporter.addIndex(tempOut);
@@ -86,12 +86,7 @@ describe('IGExporter', () => {
 
     it('should use user-provided input/pagecontent/index.xml when config.indexPageContent is not defined', () => {
       const pkg = new Package(minimalConfig);
-      const igDataPath = path.resolve(
-        __dirname,
-        'fixtures',
-        'customized-ig-with-index-xml',
-        'ig-data'
-      );
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig-with-index-xml');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
       exporter.addIndex(tempOut);
@@ -115,17 +110,13 @@ describe('IGExporter', () => {
     });
 
     it('should use user-provided input/pages/index.md when config.indexPageContent is not defined', () => {
-      // Create temp ig fixture for ig-data/input/pages/index.md set up
+      // Create temp ig fixture for input/pages/index.md set up
       const igDir = temp.mkdirSync('custom-ig-pages-index');
       fs.copySync(path.resolve(__dirname, 'fixtures', 'customized-ig'), igDir);
-      fs.renameSync(
-        path.join(igDir, 'ig-data', 'input', 'pagecontent'),
-        path.join(igDir, 'ig-data', 'input', 'pages')
-      );
+      fs.renameSync(path.join(igDir, 'input', 'pagecontent'), path.join(igDir, 'input', 'pages'));
 
       const pkg = new Package(minimalConfig);
-      const igDataPath = path.resolve(igDir, 'ig-data');
-      const exporter = new IGExporter(pkg, null, igDataPath);
+      const exporter = new IGExporter(pkg, null, igDir);
       exporter.initIG();
       exporter.addIndex(tempOut);
       exporter.addImplementationGuide(tempOut);
@@ -148,17 +139,13 @@ describe('IGExporter', () => {
     });
 
     it('should use user-provided input/pages/index.xml when config.indexPageContent is not defined', () => {
-      // Create temp ig fixture for ig-data/input/pages/index.xml set up
+      // Create temp ig fixture for input/pages/index.xml set up
       const igDir = temp.mkdirSync('custom-ig-pages-index');
       fs.copySync(path.resolve(__dirname, 'fixtures', 'customized-ig-with-index-xml'), igDir);
-      fs.renameSync(
-        path.join(igDir, 'ig-data', 'input', 'pagecontent'),
-        path.join(igDir, 'ig-data', 'input', 'pages')
-      );
+      fs.renameSync(path.join(igDir, 'input', 'pagecontent'), path.join(igDir, 'input', 'pages'));
 
       const pkg = new Package(minimalConfig);
-      const igDataPath = path.resolve(igDir, 'ig-data');
-      const exporter = new IGExporter(pkg, null, igDataPath);
+      const exporter = new IGExporter(pkg, null, igDir);
       exporter.initIG();
       exporter.addIndex(tempOut);
       exporter.addImplementationGuide(tempOut);
@@ -183,7 +170,7 @@ describe('IGExporter', () => {
     it('should use config.indexPageContent to generate an index.md file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
       const pkg = new Package(config);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
       exporter.addIndex(tempOut);
@@ -222,7 +209,7 @@ describe('IGExporter', () => {
     it('should log a warning if config.indexPageContent defined and use user provided file but not copy file', () => {
       const config = { ...minimalConfig, indexPageContent: 'An index file defined in config' };
       const pkg = new Package(config);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.initIG();
       exporter.addIndex(tempOut);
