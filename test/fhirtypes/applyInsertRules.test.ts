@@ -5,14 +5,16 @@ import {
   CardRule,
   ConceptRule,
   AssignmentRule,
-  AddElementRule
+  AddElementRule,
+  CaretValueRule
 } from '../../src/fshtypes/rules';
 import {
   loggerSpy,
   assertCardRule,
   assertValueSetConceptComponent,
   assertAssignmentRule,
-  assertAddElementRule
+  assertAddElementRule,
+  assertCaretValueRule
 } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
@@ -87,6 +89,28 @@ describe('applyInsertRules', () => {
 
     expect(profile.rules).toHaveLength(1);
     assertCardRule(profile.rules[0], 'category.coding', 1, '*');
+  });
+
+  it('should apply a rule without a path from a single level insert rule with a path', () => {
+    // RuleSet: Bar
+    // * ^short = "foo"
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const caretRule = new CaretValueRule('');
+    caretRule.caretPath = 'short';
+    caretRule.value = 'foo';
+    ruleSet1.rules.push(caretRule);
+
+    const insertRule = new InsertRule('category');
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCaretValueRule(profile.rules[0], 'category', 'short', 'foo', undefined, []);
   });
 
   it('should only apply soft indexing once when applying rules from a rule with a path', () => {
@@ -469,6 +493,32 @@ describe('applyInsertRules', () => {
     expect(profile.rules).toHaveLength(0);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Unable to find definition for RuleSet Bam.*File: NoBam\.fsh.*Line: 1 - 3\D*/s
+    );
+  });
+
+  it('should log an error when applying context to a . path', () => {
+    // RuleSet: Bar
+    // * . ^short = "foo"
+
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const caretValueRule = new CaretValueRule('.');
+    caretValueRule.caretPath = 'short';
+    caretValueRule.path = '.';
+    caretValueRule.value = 'foo';
+    ruleSet1.rules.push(caretValueRule);
+
+    const insertRule = new InsertRule('category').withFile('Bar.fsh').withLocation([1, 2, 3, 4]);
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCaretValueRule(profile.rules[0], '.', 'short', 'foo', undefined, []);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The special '\.' path.*File: Bar\.fsh.*Line: 1 - 3\D*/s
     );
   });
 
