@@ -309,36 +309,42 @@ describe('FSHTank', () => {
       id: 'prf1',
       name: 'Profile1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
-      parent: 'Observation'
+      parent: 'Observation',
+      resourceType: 'StructureDefinition'
     };
     const ext1MD: Metadata = {
       id: 'ext1',
       name: 'Extension1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ext1',
-      parent: 'Extension2'
+      parent: 'Extension2',
+      resourceType: 'StructureDefinition'
     };
     const log1MD: Metadata = {
       id: 'log1',
       name: 'Logical1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
       sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
-      parent: 'Element'
+      parent: 'Element',
+      resourceType: 'StructureDefinition'
     };
     const res1MD: Metadata = {
       id: 'res1',
       name: 'Resource1',
       parent: 'DomainResource',
-      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/res1'
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/res1',
+      resourceType: 'StructureDefinition'
     };
     const vs1MD: Metadata = {
       id: 'vs1',
       name: 'ValueSet1',
-      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1'
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1',
+      resourceType: 'ValueSet'
     };
     const cs1MD: Metadata = {
       id: 'cs1',
       name: 'CodeSystem1',
-      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1'
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1',
+      resourceType: 'CodeSystem'
     };
     const inst1MD: Metadata = {
       id: 'inst1',
@@ -671,7 +677,8 @@ describe('FSHTank for HL7', () => {
       name: 'HL7Logical',
       url: 'http://hl7.org/fhir/StructureDefinition/hl7-log',
       sdType: 'hl7-log',
-      parent: 'Element'
+      parent: 'Element',
+      resourceType: 'StructureDefinition'
     };
 
     it('should find valid HL7 fish metadata when fishing by id for logical models', () => {

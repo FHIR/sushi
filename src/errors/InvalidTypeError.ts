@@ -31,6 +31,8 @@ function allowedTypesToString(types: ElementDefinitionType[]): string {
   types.forEach(t => {
     if (isReferenceType(t.code)) {
       strings.push(`Reference(${(t.targetProfile ?? []).join(' | ')})`);
+    } else if (t.code === 'canonical') {
+      strings.push(`Canonical(${(t.targetProfile ?? []).join(' | ')})`);
     } else if (t.profile?.length > 0) {
       strings.push(...t.profile);
     } else {
