@@ -1371,15 +1371,21 @@ export class FSHImporter extends FSHVisitor {
       concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
     if (localCodePath.some(listedConcept => listedConcept.system)) {
-      logger.error(
-        'Do not include the system when listing concepts for a code system.',
-        concept.sourceInfo
-      );
-      // If this is on a ruleset, and if this rule is then used on a ValueSet, this could actually
-      // be a ValueSetConceptComponent, and not a ConceptRule, in which case we should carry through
-      // the system
-      if (codePart.system) {
+      // If this concept is part of a RuleSet and has a system, no definition, and no hierarchy,
+      // it might actually represent a ValueSetConceptComponent. We can't know for sure until the RuleSet
+      // is inserted somewhere. For now, assume it will be okay, so keep the system for later.
+      if (
+        ctx.parentCtx instanceof FSHParser.RuleSetRuleContext &&
+        codePart.system &&
+        !concept.definition &&
+        concept.hierarchy.length === 0
+      ) {
         concept.system = codePart.system;
+      } else {
+        logger.error(
+          'Do not include the system when listing concepts for a code system.',
+          concept.sourceInfo
+        );
       }
     }
     return concept;
