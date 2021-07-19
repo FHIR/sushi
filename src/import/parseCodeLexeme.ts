@@ -9,10 +9,15 @@ import { FshCode } from '../fshtypes';
  * @returns {FshCode} the parse FshCode
  */
 export function parseCodeLexeme(conceptText: string): FshCode {
-  const allSplitPoints = [...conceptText.matchAll(/(^|[^\\])(\\\\)*#/g)];
-  const allSplitPointsArray = allSplitPoints.map(p => p);
+  const codeRegex = new RegExp(/(^|[^\\])(\\\\)*#/g);
+  const allSplitPointsArray = [];
+  let currentMatch = codeRegex.exec(conceptText);
+  while (currentMatch !== null) {
+    allSplitPointsArray.push(currentMatch);
+    currentMatch = codeRegex.exec(conceptText);
+  }
   let splitIndex = allSplitPointsArray.length - 1;
-  let splitPoint = allSplitPointsArray[splitIndex];
+  let splitPoint: any = allSplitPointsArray[splitIndex];
   let system: string, code: string;
   if (splitPoint == null) {
     system = '';
