@@ -76,7 +76,8 @@ export class Package implements Fishable {
         name: result instanceof InstanceDefinition ? result._instanceMeta.name : result.name,
         instanceUsage:
           result instanceof InstanceDefinition ? result._instanceMeta.usage : undefined,
-        url: result.url
+        url: result.url,
+        resourceType: result.resourceType
       };
       if (result instanceof StructureDefinition) {
         metadata.sdType = result.type;

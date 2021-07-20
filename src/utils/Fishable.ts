@@ -18,6 +18,7 @@ export interface Metadata {
   id: string;
   name: string;
   sdType?: string;
+  resourceType?: string;
   url?: string;
   parent?: string;
   abstract?: boolean;

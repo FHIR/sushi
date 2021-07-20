@@ -31,7 +31,7 @@ describe('IGExporter', () => {
 
     it('should do nothing when config.menu is undefined and none provided', () => {
       const pkg = new Package(minimalConfig);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
@@ -41,7 +41,7 @@ describe('IGExporter', () => {
 
     it('should use but not copy user-provided menu.xml when config.menu is not defined', () => {
       const pkg = new Package(minimalConfig);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
@@ -54,7 +54,7 @@ describe('IGExporter', () => {
       const config = { ...minimalConfig };
       config.menu = [{ name: 'Animals', url: 'animals.html' }];
       const pkg = new Package(config);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'fsh-generated', 'includes', 'menu.xml');
@@ -77,7 +77,7 @@ describe('IGExporter', () => {
         { name: 'Other' }
       ];
       const pkg = new Package(config);
-      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig', 'ig-data');
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig');
       const exporter = new IGExporter(pkg, null, igDataPath); //, true);
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'fsh-generated', 'includes', 'menu.xml');

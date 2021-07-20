@@ -40,12 +40,7 @@ describe('IGExporter', () => {
 
     it('should not copy configured page content files', () => {
       const pkg = new Package(config);
-      const igDataPath = path.resolve(
-        __dirname,
-        'fixtures',
-        'customized-ig-with-pagecontent',
-        'ig-data'
-      );
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig-with-pagecontent');
       const exporter = new IGExporter(pkg, defs, igDataPath); // Current tank configuration
       exporter.initIG();
       exporter.addConfiguredPageContent();
