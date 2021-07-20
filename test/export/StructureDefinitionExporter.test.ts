@@ -6244,33 +6244,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 9\D*/s);
     });
 
-    it('should apply an Assignment rule on a slice without affecting the cardinality of the slice', () => {
-      // * category[Procedure] from http://hl7.org/fhir/us/minimal/RegularObservationCodes (extensible)
-      const rootValueSet = new BindingRule('category');
-      rootValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
-      rootValueSet.strength = 'required';
-      const procedureValueSet = new BindingRule('category[Procedure]')
-        .withFile('Weaker.fsh')
-        .withLocation([4, 8, 4, 23]);
-      procedureValueSet.valueSet = 'http://hl7.org/fhir/us/minimal/RegularObservationCodes';
-      procedureValueSet.strength = 'extensible';
-
-      observationWithSlice.rules.push(rootValueSet, procedureValueSet);
-      doc.profiles.set(observationWithSlice.name, observationWithSlice);
-      exporter.export();
-      const sd = pkg.profiles[0];
-      const rootCategory = sd.findElement('Observation.category');
-      const regularBinding = {
-        valueSet: 'http://hl7.org/fhir/us/minimal/RegularObservationCodes',
-        strength: 'required'
-      };
-      expect(rootCategory.binding).toEqual(regularBinding);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot override required binding with extensible/s
-      );
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Weaker\.fsh.*Line: 4\D*/s);
-    });
-
     it.todo(
       'should apply a AssignmentRule on a sliced element that updates the assigned value on its slices'
     );
