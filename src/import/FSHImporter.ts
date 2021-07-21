@@ -178,10 +178,13 @@ export class FSHImporter extends FSHVisitor {
       // Collect the aliases and store in global map
       ctx.entity().forEach(e => {
         if (e.alias()) {
-          const [name, value] = e
-            .alias()
-            .SEQUENCE()
-            .map(s => s.getText());
+          const name = e.alias().SEQUENCE()[0].getText();
+          let value = e.alias().SEQUENCE()[1]?.getText();
+          // When the url contains a fragment (http://example.org#fragment), the grammar will read it as a
+          // CODE, so we also accept that for the value here
+          if (!value && e.alias().CODE()) {
+            value = e.alias().CODE().getText();
+          }
           if (name.includes('|')) {
             logger.error(
               `Alias ${name} cannot include "|" since the "|" character is reserved for indicating a version`,

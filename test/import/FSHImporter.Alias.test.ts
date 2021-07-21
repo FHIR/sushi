@@ -35,6 +35,16 @@ describe('FSHImporter', () => {
       expect(result.aliases.get('UCUM')).toBe('http://unitsofmeasure.org');
     });
 
+    it('should parse aliases that replicate the syntax of a code', () => {
+      const input = `
+      Alias: LOINC = http://loinc.org#1234
+      `;
+
+      const result = importSingleText(input);
+      expect(result.aliases.size).toBe(1);
+      expect(result.aliases.get('LOINC')).toBe('http://loinc.org#1234');
+    });
+
     it('should report when the same alias is defined twice w/ different values in the same file', () => {
       const input = `
       Alias: USCoreRace = http://hl7.org/fhir/us/core/ValueSet/omb-race-category

@@ -5,7 +5,8 @@ options { tokenVocab = FSHLexer; }
 doc:                entity* EOF;
 entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | paramRuleSet | mapping | logical | resource;
 
-alias:              KW_ALIAS SEQUENCE EQUAL SEQUENCE;
+// The CODE token is accepted because the lexer parses URLs with fragments (ex: https://example.org#fragment) as CODEs
+alias:              KW_ALIAS SEQUENCE EQUAL (SEQUENCE | CODE);
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name sdMetadata* sdRule*;
