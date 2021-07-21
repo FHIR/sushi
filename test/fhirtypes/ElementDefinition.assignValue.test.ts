@@ -70,19 +70,6 @@ describe('ElementDefinition', () => {
       expect(catMouseCodingCode.min).toBe(1);
     });
 
-    it('should ensure that minimum cardinality is 1 when assigning a value mentioned in a slice discriminator', () => {
-      const inUri = medicationRequest.elements.find(
-        e => e.id === 'MedicationRequest.instantiatesUri'
-      );
-      inUri.slicing = { discriminator: [{ type: 'value', path: '$this' }], rules: 'open' };
-      inUri.addSlice('mouse');
-      const inUriMouse = medicationRequest.findElementByPath('instantiatesUri[mouse]', fisher);
-      expect(inUriMouse.min).toBe(0);
-      inUriMouse.assignValue('http://mice.cheese');
-      expect(inUriMouse.patternUri).toBe('http://mice.cheese');
-      expect(inUriMouse.min).toBe(1);
-    });
-
     it('should ensure that minimum cardinality is 1 when assigning a value mentioned in the discriminator of a grandparent slice', () => {
       const cat = medicationRequest.elements.find(e => e.id === 'MedicationRequest.category');
       cat.slicing = { discriminator: [{ type: 'value', path: 'coding.code' }], rules: 'open' };
@@ -98,6 +85,19 @@ describe('ElementDefinition', () => {
       catMouseCodingRatCode.assignValue(new FshCode('cheese'));
       expect(catMouseCodingRatCode.patternCode).toBe('cheese');
       expect(catMouseCodingRatCode.min).toBe(1);
+    });
+
+    it('should not ensure that minimum cardinality is 1 when assigning a value mentioned in a slice discriminator via $this', () => {
+      const inUri = medicationRequest.elements.find(
+        e => e.id === 'MedicationRequest.instantiatesUri'
+      );
+      inUri.slicing = { discriminator: [{ type: 'value', path: '$this' }], rules: 'open' };
+      inUri.addSlice('mouse');
+      const inUriMouse = medicationRequest.findElementByPath('instantiatesUri[mouse]', fisher);
+      expect(inUriMouse.min).toBe(0);
+      inUriMouse.assignValue('http://mice.cheese');
+      expect(inUriMouse.patternUri).toBe('http://mice.cheese');
+      expect(inUriMouse.min).toBe(0);
     });
 
     it('should not ensure that minimum cardinality is 1 when assigning a value not mentioned in a slice discriminator', () => {
