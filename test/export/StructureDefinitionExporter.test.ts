@@ -497,18 +497,6 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
-    it('should throw InvalidProfileParentError when a profile has a logical model for a parent', () => {
-      const profile = new Profile('MyPatientProfile');
-      profile.parent = 'AlternateIdentification';
-      profile.id = 'my-patient';
-      doc.profiles.set(profile.name, profile);
-      expect(() => {
-        exporter.exportStructDef(profile);
-      }).toThrow(
-        'Invalid parent AlternateIdentification specified for profile MyPatientProfile. The parent of a profile must be a resource, a type, or another profile.'
-      );
-    });
-
     it('should throw InvalidExtensionParentError when an extension has a non-extension for a parent', () => {
       const extension = new Extension('MyPatientExtension');
       extension.parent = 'Patient';
