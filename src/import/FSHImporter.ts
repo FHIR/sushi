@@ -2064,7 +2064,6 @@ export class FSHImporter extends FSHVisitor {
       return path;
     }
 
-    // Otherwise, get the context based on the indent level.
     if (path.length === 1 && path[0] === '.') {
       logger.error(
         "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
@@ -2076,6 +2075,7 @@ export class FSHImporter extends FSHVisitor {
       return path;
     }
 
+    // Otherwise, get the context based on the indent level.
     const currentContext = this.pathContext[contextIndex - 1];
     if (currentContext.length === 0) {
       logger.error(
