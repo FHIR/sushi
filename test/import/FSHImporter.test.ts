@@ -68,7 +68,7 @@ describe('FSHImporter', () => {
     `;
     const result = importSingleText(input, 'HashBrowns.fsh');
     const profile = result.profiles.get('HashBrowns');
-    const expectedCode = new FshCode('hash#browns', 'https://breakfast.com/good\\food#potatoes')
+    const expectedCode = new FshCode('browns', 'https://breakfast.com/good\\food#potatoes#hash')
       .withLocation([4, 14, 4, 67])
       .withFile('HashBrowns.fsh');
     const expectedExtraCode = new FshCode('last', 'https://lastly.com/backslash\\')
@@ -81,6 +81,36 @@ describe('FSHImporter', () => {
     assertAssignmentRule(profile.rules[0], 'code', expectedCode);
     assertAssignmentRule(profile.rules[1], 'extraCode', expectedExtraCode);
     assertAssignmentRule(profile.rules[2], 'bonusCode', expectedBonusCode);
+  });
+
+  it('should parse a code with a system that has a fragment', () => {
+    const input = `
+    Profile: PotatoFragment
+    Parent: Observation
+    * code = https://breakfast.com/goodfood#potatoes#hashbrowns
+    `;
+    const result = importSingleText(input, 'PotatoFragment.fsh');
+    const profile = result.profiles.get('PotatoFragment');
+    const expectedCode = new FshCode('hashbrowns', 'https://breakfast.com/goodfood#potatoes')
+      .withLocation([4, 14, 4, 63])
+      .withFile('PotatoFragment.fsh');
+    expect(profile.rules).toHaveLength(1);
+    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
+  });
+
+  it('should parse a code with a system that has a fragment and not use a # within a quoted code', () => {
+    const input = `
+    Profile: PotatoFragment
+    Parent: Observation
+    * code = https://breakfast.com/goodfood#potatoes#"hash#browns"
+    `;
+    const result = importSingleText(input, 'PotatoFragment.fsh');
+    const profile = result.profiles.get('PotatoFragment');
+    const expectedCode = new FshCode('hash#browns', 'https://breakfast.com/goodfood#potatoes')
+      .withLocation([4, 14, 4, 66])
+      .withFile('PotatoFragment.fsh');
+    expect(profile.rules).toHaveLength(1);
+    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
   });
 
   it('should parse a rule that uses non-breaking spaces in a concept string', () => {
