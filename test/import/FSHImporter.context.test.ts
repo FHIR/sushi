@@ -20,12 +20,14 @@ describe('FSHImporter', () => {
 
   describe('context', () => {
     it('should parse non-indented rules', () => {
-      const input = `
-        Instance: Foo
-        InstanceOf: Patient
-        * name.family = "foo"
-        * name.given = "bar"
-      `;
+      /*
+      Instance: Foo
+      InstanceOf: Patient
+      * name.family = "foo"
+      * name.given = "bar"
+      */
+      const input =
+        '\nInstance: Foo\nInstanceOf: Patient\n* name.family = "foo"\n* name.given = "bar"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -40,13 +42,15 @@ describe('FSHImporter', () => {
     });
 
     it('should parse a rule that has context while ignoring whitespace lines', () => {
-      const input = `
+      /*
       Instance: Foo
       InstanceOf: Patient
       * name.family = "foo"
 
         * id = "foo-id"
-    `;
+      */
+      const input =
+        '\nInstance: Foo\nInstanceOf: Patient\n* name.family = "foo"\n\n  * id = "foo-id"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -61,12 +65,14 @@ describe('FSHImporter', () => {
     });
 
     it('should parse a rule that has context', () => {
-      const input = `
+      /*
       Instance: Foo
       InstanceOf: Patient
       * name.family = "foo"
         * id = "foo-id"
-    `;
+      */
+      const input =
+        '\nInstance: Foo\nInstanceOf: Patient\n* name.family = "foo"\n  * id = "foo-id"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -81,13 +87,14 @@ describe('FSHImporter', () => {
     });
 
     it('should parse multiple rules at the same level of context', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name 1..1
         * family 1..1
         * given 1..1
-    `;
+      */
+      const input = '\nProfile: Foo\nParent: Patient\n* name 1..1\n  * family 1..1\n  * given 1..1';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -103,7 +110,7 @@ describe('FSHImporter', () => {
     });
 
     it('should preserve higher level context when decreasing indent', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name 1..1
@@ -111,7 +118,9 @@ describe('FSHImporter', () => {
           * id 1..1
             * id 1..1
         * given 1..1
-    `;
+      */
+      const input =
+        '\nProfile: Foo\nParent: Patient\n* name 1..1\n  * family 1..1\n    * id 1..1\n      * id 1..1\n  * given 1..1';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -129,11 +138,13 @@ describe('FSHImporter', () => {
     });
 
     it('should parse a rule that only sets a path context', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name
-    `;
+      */
+
+      const input = '\nProfile: Foo\nParent: Patient\n* name';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -147,12 +158,13 @@ describe('FSHImporter', () => {
     });
 
     it('should use context from rules that only set context', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name
         * family 1..1
-    `;
+      */
+      const input = '\nProfile: Foo\nParent: Patient\n* name\n  * family 1..1';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -166,14 +178,17 @@ describe('FSHImporter', () => {
     });
 
     it('should change + to = when setting context on children of soft indexed rules', () => {
-      const input = `
+      /*
       Instance: Foo
       InstanceOf: Questionnaire
       * item[+]
         * linkId = "foo"
         * item[+]
           * linkId = "bar"
-    `;
+      */
+
+      const input =
+        '\nInstance: Foo\nInstanceOf: Questionnaire\n* item[+]\n  * linkId = "foo"\n  * item[+]\n    * linkId = "bar"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -188,14 +203,16 @@ describe('FSHImporter', () => {
     });
 
     it('should change nested + to = when setting context on children of soft indexed rules', () => {
-      const input = `
+      /*
       Instance: Foo
       InstanceOf: Questionnaire
       * item[+].item[+]
         * linkId = "foo"
         * item[+]
           * linkId = "bar"
-    `;
+       */
+      const input =
+        '\nInstance: Foo\nInstanceOf: Questionnaire\n* item[+].item[+]\n  * linkId = "foo"\n  * item[+]\n    * linkId = "bar"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -210,13 +227,15 @@ describe('FSHImporter', () => {
     });
 
     it('should parse child rules that have a blank path', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name 1..1
         * ^short = "foo"
         * obeys inv1
-    `;
+       */
+      const input =
+        '\nProfile: Foo\nParent: Patient\n* name 1..1\n  * ^short = "foo"\n  * obeys inv1';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -232,12 +251,13 @@ describe('FSHImporter', () => {
     });
 
     it('should apply context to multiple paths', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name
         * family and given MS
-    `;
+      */
+      const input = '\nProfile: Foo\nParent: Patient\n* name\n  * family and given MS';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -270,12 +290,13 @@ describe('FSHImporter', () => {
     });
 
     it('should apply the last path in a list when multiple paths are used to set context', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name and birthDate MS
         * ^short = "foo"
-    `;
+       */
+      const input = '\nProfile: Foo\nParent: Patient\n* name and birthDate MS\n  * ^short = "foo"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -309,12 +330,14 @@ describe('FSHImporter', () => {
     });
 
     it('should apply context to AddElement rules', () => {
-      const input = `
+      /*
       Logical: Human
       * family 0..1 BackboneElement "Family"
         * mother 0..2 string "Mother"
         * father 0..2 string "Father"
-    `;
+      */
+      const input =
+        '\nLogical: Human\n* family 0..1 BackboneElement "Family"\n  * mother 0..2 string "Mother"\n  * father 0..2 string "Father"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -341,12 +364,13 @@ describe('FSHImporter', () => {
     });
 
     it('should log an error when a . rule is indented', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * name 1..1
         * . ^short = "foo"
-    `;
+      */
+      const input = '\nProfile: Foo\nParent: Patient\n* name 1..1\n  * . ^short = "foo"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
@@ -362,12 +386,13 @@ describe('FSHImporter', () => {
     });
 
     it('should log an error when a rule is indented below a rule without a path', () => {
-      const input = `
+      /*
       Profile: Foo
       Parent: Patient
       * ^url = "http://example.org"
         * name 1..1
-    `;
+      */
+      const input = '\nProfile: Foo\nParent: Patient\n* ^url = "http://example.org"\n  * name 1..1';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
@@ -383,13 +408,14 @@ describe('FSHImporter', () => {
     });
 
     it('should log an error when a rule is indented an invalid amount of spaces', () => {
+      /*
+      Instance: Foo
+      InstanceOf: Patient
+      * name.family = "foo"
+        * id = "bar"
+      */
       // only 1 space of indent
-      const input = `
-        Instance: Foo
-        InstanceOf: Patient
-        * name.family = "foo"
-         * id = "bar"
-      `;
+      const input = '\nInstance: Foo\nInstanceOf: Patient\n* name.family = "foo"\n * id = "bar"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
@@ -407,43 +433,19 @@ describe('FSHImporter', () => {
       assertAssignmentRule(instance.rules[1], 'id', 'bar');
     });
 
-    it('should log an error when a rule is indented a negative amount of spaces', () => {
-      // -2 space of indent
-      const input = `
-        Instance: Foo
-        InstanceOf: Patient
-      * name.family = "foo"
-        * id = "bar"
-      `;
+    it('should log an error when the first rule of a definition is not left-aligned', () => {
+      /*
+      Instance: Foo
+      InstanceOf: Patient
+        * name.family = "foo"
+      * id = "bar"
+      */
+      const input = '\nInstance: Foo\nInstanceOf: Patient\n  * name.family = "foo"\n* id = "bar"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Unable to determine path context.*-2 space/
-      );
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      expect(result.instances.size).toBe(1);
-      const instance = result.instances.get('Foo');
-      expect(instance.name).toBe('Foo');
-      expect(instance.instanceOf).toBe('Patient');
-      expect(instance.rules.length).toBe(2);
-      assertAssignmentRule(instance.rules[0], 'name.family', 'foo');
-      // rule is not assigned any context
-      assertAssignmentRule(instance.rules[1], 'id', 'bar');
-    });
-
-    it('should log an error when the first rule of a definition is indented', () => {
-      const input = `
-        Instance: Foo
-        InstanceOf: Patient
-          * name.family = "foo"
-        * id = "bar"
-      `;
-
-      const result = importSingleText(input, 'Context.fsh');
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /first rule of a definition cannot be indented/
+        /first rule of a definition must be left-aligned/
       );
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.instances.size).toBe(1);
@@ -458,12 +460,13 @@ describe('FSHImporter', () => {
 
     it('should log an error when a rule is indented too deeply', () => {
       // 4 spaces of indent
-      const input = `
-        Instance: Foo
-        InstanceOf: Patient
-        * name.family = "foo"
-            * id = "bar"
-      `;
+      /*
+      Instance: Foo
+      InstanceOf: Patient
+      * name.family = "foo"
+          * id = "bar"
+      */
+      const input = '\nInstance: Foo\nInstanceOf: Patient\n* name.family = "foo"\n    * id = "bar"';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
@@ -480,11 +483,13 @@ describe('FSHImporter', () => {
     });
 
     it('should log an error when a ValueSetFilterComponentRule is indented', () => {
-      const input = `
-        ValueSet: Foo
-        * include codes from system http://example.org
-          * include codes from system http://indent.org
-      `;
+      /*
+      ValueSet: Foo
+      * include codes from system http://example.org
+        * include codes from system http://indent.org
+      */
+      const input =
+        '\nValueSet: Foo\n* include codes from system http://example.org\n  * include codes from system http://indent.org';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
@@ -502,11 +507,12 @@ describe('FSHImporter', () => {
     });
 
     it('should log an error when a ValueSetConceptComponentRule is indented', () => {
-      const input = `
-        ValueSet: Foo
-        * http://example.org#foo
-          * http://example.org#bar
-      `;
+      /*
+      ValueSet: Foo
+      * http://example.org#foo
+        * http://example.org#bar
+      */
+      const input = '\nValueSet: Foo\n* http://example.org#foo\n  * http://example.org#bar';
 
       const result = importSingleText(input, 'Context.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
@@ -520,23 +526,23 @@ describe('FSHImporter', () => {
       expect(vs.rules.length).toBe(1);
       assertValueSetConceptComponent(vs.rules[0], 'http://example.org', undefined, [
         new FshCode('foo', 'http://example.org')
-          .withLocation([3, 11, 3, 32])
+          .withLocation([3, 3, 3, 24])
           .withFile('Context.fsh'),
-        new FshCode('bar', 'http://example.org')
-          .withLocation([4, 13, 4, 34])
-          .withFile('Context.fsh')
+        new FshCode('bar', 'http://example.org').withLocation([4, 5, 4, 26]).withFile('Context.fsh')
       ]);
     });
   });
 
   describe('code context', () => {
     it('should parse a code system with indented hierarchical rules', () => {
-      const input = `
+      /*
       CodeSystem: ZOO
       * #bear "Bear" "A member of family Ursidae."
         * #sunbear "Sun bear" "Helarctos malayanus"
           * #ursula "Ursula the sun bear"
-      `;
+      */
+      const input =
+        '\nCodeSystem: ZOO\n* #bear "Bear" "A member of family Ursidae."\n  * #sunbear "Sun bear" "Helarctos malayanus"\n    * #ursula "Ursula the sun bear"';
       const result = importSingleText(input, 'Zoo.fsh');
       expect(result.codeSystems.size).toBe(1);
       const codeSystem = result.codeSystems.get('ZOO');
@@ -545,18 +551,18 @@ describe('FSHImporter', () => {
       assertConceptRule(codeSystem.rules[0], 'bear', 'Bear', 'A member of family Ursidae.', []);
       expect(codeSystem.rules[0].sourceInfo.location).toEqual({
         startLine: 3,
-        startColumn: 7,
+        startColumn: 1,
         endLine: 3,
-        endColumn: 50
+        endColumn: 44
       });
       assertConceptRule(codeSystem.rules[1], 'sunbear', 'Sun bear', 'Helarctos malayanus', [
         'bear'
       ]);
       expect(codeSystem.rules[1].sourceInfo.location).toEqual({
         startLine: 4,
-        startColumn: 9,
+        startColumn: 3,
         endLine: 4,
-        endColumn: 51
+        endColumn: 45
       });
       assertConceptRule(codeSystem.rules[2], 'ursula', 'Ursula the sun bear', undefined, [
         'bear',
@@ -564,19 +570,21 @@ describe('FSHImporter', () => {
       ]);
       expect(codeSystem.rules[2].sourceInfo.location).toEqual({
         startLine: 5,
-        startColumn: 11,
+        startColumn: 5,
         endLine: 5,
-        endColumn: 41
+        endColumn: 35
       });
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should parse a code system that uses an indented CaretValueRule on a top-level concept', () => {
-      const input = `
+      /*
       CodeSystem: ZOO
       * #anteater "Anteater"
         * ^property[0].valueString = "Their threat pose is really cute."
-      `;
+      */
+      const input =
+        '\nCodeSystem: ZOO\n* #anteater "Anteater"\n  * ^property[0].valueString = "Their threat pose is really cute."';
       const result = importSingleText(input, 'Zoo.fsh');
       const codeSystem = result.codeSystems.get('ZOO');
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
@@ -594,12 +602,14 @@ describe('FSHImporter', () => {
     });
 
     it('should parse a code system that uses an indented CaretValueRule on a nested concept', () => {
-      const input = `
+      /*
       CodeSystem: ZOO
       * #anteater "Anteater"
         * #northern "Northern tamandua"
           * ^property[0].valueString = "They are strong climbers."
-      `;
+      */
+      const input =
+        '\nCodeSystem: ZOO\n* #anteater "Anteater"\n  * #northern "Northern tamandua"\n    * ^property[0].valueString = "They are strong climbers."';
       const result = importSingleText(input, 'Zoo.fsh');
       const codeSystem = result.codeSystems.get('ZOO');
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
@@ -621,14 +631,16 @@ describe('FSHImporter', () => {
     });
 
     it('should allow code path context to be set by referencing an existing top-level code', () => {
-      const input = `
+      /*
       CodeSystem: ZOO
       * #anteater "Anteater"
         * #northern "Northern tamandua"
           * ^property[0].valueString = "They are strong climbers."
       * #anteater
         * ^property[0].valueString = "Their threat pose is really cute."
-      `;
+      */
+      const input =
+        '\nCodeSystem: ZOO\n* #anteater "Anteater"\n  * #northern "Northern tamandua"\n    * ^property[0].valueString = "They are strong climbers."\n* #anteater\n  * ^property[0].valueString = "Their threat pose is really cute."';
       const result = importSingleText(input, 'Zoo.fsh');
       const codeSystem = result.codeSystems.get('ZOO');
       expect(codeSystem.rules).toHaveLength(4);
@@ -660,14 +672,16 @@ describe('FSHImporter', () => {
     });
 
     it('should allow code path context to be set by referencing an existing nested code', () => {
-      const input = `
+      /*
       CodeSystem: ZOO
       * #anteater "Anteater"
         * #northern "Northern tamandua"
         * #southern "Southern tamandua"
       * #anteater #northern
         * ^property[0].valueString = "They are strong climbers."
-      `;
+      */
+      const input =
+        '\nCodeSystem: ZOO\n* #anteater "Anteater"\n  * #northern "Northern tamandua"\n  * #southern "Southern tamandua"\n* #anteater #northern\n  * ^property[0].valueString = "They are strong climbers."';
       const result = importSingleText(input, 'Zoo.fsh');
       const codeSystem = result.codeSystems.get('ZOO');
       expect(codeSystem.rules).toHaveLength(4);
@@ -694,11 +708,13 @@ describe('FSHImporter', () => {
     });
 
     it('should parse a rule set that uses an indented CaretValueRule on a top-level concept', () => {
-      const input = `
+      /*
       RuleSet: ZOO
       * #anteater "Anteater"
         * ^property[0].valueString = "Their threat pose is really cute."
-      `;
+      */
+      const input =
+        '\nRuleSet: ZOO\n* #anteater "Anteater"\n  * ^property[0].valueString = "Their threat pose is really cute."';
       const result = importSingleText(input, 'Zoo.fsh');
       const codeSystem = result.ruleSets.get('ZOO');
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);

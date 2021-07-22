@@ -46,11 +46,7 @@ describe('FSHImporter', () => {
 
         // Since we'll do the same thing over and over (and over), create a function for it
         const testToken = (token: string) => {
-          const input = `
-          Logical: ${token}
-          Parent: BaseObservationModel
-          * value[x] only boolean
-          `;
+          const input = `\nLogical: ${token}\nParent: BaseObservationModel\n* value[x] only boolean`;
           const result = importSingleText(input);
           expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
           expect(result).toBeDefined();

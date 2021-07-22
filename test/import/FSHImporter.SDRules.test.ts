@@ -485,11 +485,14 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when paths are listed with commas', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * category, value[x] , component MS SU N
-        `;
+        */
+
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* category, value[x] , component MS SU N';
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -640,11 +643,14 @@ describe('FSHImporter', () => {
       });
 
       it('should ignore the units keyword and log an error when parsing value set rules on Quantity', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity units from http://unitsofmeasure.org
-        `;
+        */
+
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* valueQuantity units from http://unitsofmeasure.org';
 
         const result = importSingleText(input, 'UselessQuant.fsh');
         const profile = result.profiles.get('ObservationProfile');
@@ -827,11 +833,13 @@ describe('FSHImporter', () => {
       });
 
       it('should ignore the units keyword and log a warning when parsing an assigned value FSHCode rule with units on Quantity', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity units = http://unitsofmeasure.org#cGy
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* valueQuantity units = http://unitsofmeasure.org#cGy';
 
         const result = importSingleText(input, 'UselessUnits.fsh');
         const profile = result.profiles.get('ObservationProfile');
@@ -1335,11 +1343,14 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when references are listed with pipes', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(Organization | CareTeam)
-        `;
+        */
+
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* performer only Reference(Organization | CareTeam)';
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1352,11 +1363,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when references are listed with pipes with whitespace', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(   Organization  |   CareTeam)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* performer only Reference(   Organization  |   CareTeam)';
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1789,11 +1802,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a RuleSet with one parameter', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert OneParamRuleSet (#final)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -1826,11 +1841,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a RuleSet with multiple parameters', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#preliminary, "this is a string value\\, right?", 4)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (#preliminary, "this is a string value\\, right?", 4)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -1888,11 +1905,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a parameter that contains right parenthesis', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final "(Final\\)")
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert OneParamRuleSet (#final "(Final\\)")';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -1926,11 +1945,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with parameters that contain newline, tab, or backslash characters', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#final, "very\\nstrange\\rvalue\\\\\\tindeed", 1)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (#final, "very\\nstrange\\rvalue\\\\\\tindeed", 1)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -1979,7 +2000,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule that separates its parameters onto multiple lines', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (
@@ -1987,7 +2008,9 @@ describe('FSHImporter', () => {
           "string value",
           7
         )
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (\n  #final,\n  "string value",\n  7\n)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2025,12 +2048,14 @@ describe('FSHImporter', () => {
       });
 
       it('should generate a RuleSet only once when inserted with the same parameters multiple times in the same document', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#preliminary, "something", 3)
         * insert MultiParamRuleSet (#preliminary, "something", 3)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (#preliminary, "something", 3)\n* insert MultiParamRuleSet (#preliminary, "something", 3)';
         const visitDocSpy = jest.spyOn(importer, 'visitDoc');
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -2056,11 +2081,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert EntryRules (Recursive)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert EntryRules (Recursive)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2145,11 +2172,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error and not add a rule when an insert rule with parameters refers to an undefined parameterized RuleSet', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MysteriousRuleSet ("mystery")
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MysteriousRuleSet ("mystery")';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
@@ -2161,11 +2190,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when an insert rule with parameters results in a parser error in the generated RuleSet', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(path with spaces, 1, *)
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert CardRuleSet(path with spaces, 1, *)';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);
@@ -2176,12 +2207,14 @@ describe('FSHImporter', () => {
       });
 
       it('should log one error when nested insert rules with parameters result in multiple parser errors in the generated RuleSets', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * note 0..1
         * insert FirstRiskyRuleSet("Observation.id")
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* note 0..1\n* insert FirstRiskyRuleSet("Observation.id")';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);
@@ -2194,11 +2227,13 @@ describe('FSHImporter', () => {
       });
 
       it('should not log an error when an insert rule with parameters results in rules that are syntactically correct but semantically invalid', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(nonExistentPath, 7, 4)
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert CardRuleSet(nonExistentPath, 7, 4)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
@@ -2224,11 +2259,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log one error when an insert rule with parameters results in warnings', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert WarningRuleSet(Device)
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert WarningRuleSet(Device)';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);
@@ -2241,11 +2278,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log one error when an insert rule with parameters results in non-parser errors', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(nonExistentPath, , )
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert CardRuleSet(nonExistentPath, , )';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);
@@ -2465,13 +2504,15 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error for missing path', () => {
-        const input = `
+        /*
         Resource: TestResource
         * 1..1 boolean "short boolean"
         * stuff 0..* string "short string"
         * address 1..* Address "short Address"
         * person 0..1 Reference(Patient) "short Reference"
-       `;
+        */
+        const input =
+          '\nResource: TestResource\n* 1..1 boolean "short boolean"\n* stuff 0..* string "short string"\n* address 1..* Address "short Address"\n* person 0..1 Reference(Patient) "short Reference"';
 
         const result = importSingleText(input, 'BadPath.fsh');
         const resource = result.resources.get('TestResource');
@@ -2483,13 +2524,15 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error for missing cardinality', () => {
-        const input = `
+        /*
         Resource: TestResource
         * isValid 1..1 boolean "short boolean"
         * stuff string "short string"
         * address 1..* Address "short Address"
         * person 0..1 Reference(Patient) "short Reference"
-       `;
+        */
+        const input =
+          '\nResource: TestResource\n* isValid 1..1 boolean "short boolean"\n* stuff string "short string"\n* address 1..* Address "short Address"\n* person 0..1 Reference(Patient) "short Reference"';
 
         const result = importSingleText(input, 'BadCard.fsh');
         const resource = result.resources.get('TestResource');
@@ -2542,13 +2585,15 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error for extra docs/strings', () => {
-        const input = `
+        /*
         Resource: TestResource
         * isValid 1..1 MS boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff" "invalid additional string"
         * address 1..* N Address "current addresses" "at least one address is required"
         * person 0..1 D TU Reference(Patient) "an associated patient" "added for TRIAL USE"
-        `;
+        */
+        const input =
+          '\nResource: TestResource\n* isValid 1..1 MS boolean "is it valid?"\n* stuff 0..* string "just stuff" "a list of some stuff" "invalid additional string"\n* address 1..* N Address "current addresses" "at least one address is required"\n* person 0..1 D TU Reference(Patient) "an associated patient" "added for TRIAL USE"';
 
         const result = importSingleText(input, 'BadDocs.fsh)');
         const resource = result.resources.get('TestResource');
@@ -2560,13 +2605,15 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error for missing short', () => {
-        const input = `
+        /*
         Resource: TestResource
         * isValid 1..1 boolean
         * stuff 0..* string "short string"
         * address 1..* Address "short Address"
         * person 0..1 Reference(Patient) "short Reference"
-       `;
+        */
+        const input =
+          '\nResource: TestResource\n* isValid 1..1 boolean\n* stuff 0..* string "short string"\n* address 1..* Address "short Address"\n* person 0..1 Reference(Patient) "short Reference"';
 
         const result = importSingleText(input, 'BadDefs.fsh');
         const resource = result.resources.get('TestResource');
@@ -2582,13 +2629,15 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error for missing targetType with docs', () => {
-        const input = `
+        /*
         Resource: TestResource
         * isValid 1..1 boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff"
         * address 1..* "current addresses" "at least one address is required"
         * person 0..1 Reference(Patient) "an associated patient" "added for TRIAL USE"
-       `;
+        */
+        const input =
+          '\nResource: TestResource\n* isValid 1..1 boolean "is it valid?"\n* stuff 0..* string "just stuff" "a list of some stuff"\n* address 1..* "current addresses" "at least one address is required"\n* person 0..1 Reference(Patient) "an associated patient" "added for TRIAL USE"';
 
         const result = importSingleText(input, 'BadType.fsh');
         const resource = result.resources.get('TestResource');
@@ -2641,13 +2690,15 @@ describe('FSHImporter', () => {
       });
 
       it('should log a error for missing targetType with modifier flag and docs', () => {
-        const input = `
+        /*
         Resource: TestResource
         * isValid 1..1 MS ?! boolean "is it valid?"
         * stuff 0..* MS SU string "just stuff" "a list of some stuff"
         * address 1..* N ?! "current addresses" "at least one address is required"
         * person 0..1 D TU Reference(Patient) "an associated patient" "added for TRIAL USE"
-       `;
+        */
+        const input =
+          '\nResource: TestResource\n* isValid 1..1 MS ?! boolean "is it valid?"\n* stuff 0..* MS SU string "just stuff" "a list of some stuff"\n* address 1..* N ?! "current addresses" "at least one address is required"\n* person 0..1 D TU Reference(Patient) "an associated patient" "added for TRIAL USE"';
 
         const result = importSingleText(input, 'BadType.fsh');
         const resource = result.resources.get('TestResource');
@@ -2660,13 +2711,15 @@ describe('FSHImporter', () => {
       });
 
       it('should parse rules according to rule patterns for CardRule and AddElementRule', () => {
-        const input = `
+        /*
         Resource: TestResource
         * isValid 1..1 boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff"
         * address 1..* "current addresses" "at least one address is required"
         * person 0..1 Reference(Patient) "an associated patient"
-       `;
+        */
+        const input =
+          '\nResource: TestResource\n* isValid 1..1 boolean "is it valid?"\n* stuff 0..* string "just stuff" "a list of some stuff"\n* address 1..* "current addresses" "at least one address is required"\n* person 0..1 Reference(Patient) "an associated patient"';
 
         const result = importSingleText(input, 'BadType.fsh');
         const resource = result.resources.get('TestResource');
