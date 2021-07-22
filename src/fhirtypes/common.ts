@@ -451,26 +451,30 @@ export function applyInsertRules(
       let context = rule.path;
       let firstRule = true;
       ruleSet.rules.forEach(ruleSetRule => {
-        // On the import side, a rule that is intended to be a ValueSetConceptComponent can
-        // be imported as a ConceptRule because the syntax is identical. If this is the case,
-        // create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that
-        if (fshDefinition instanceof FshValueSet && ruleSetRule instanceof ConceptRule) {
-          if (ruleSetRule.definition != null) {
-            logger.warn(
-              'ValueSet concepts should not include a definition, only system, code, and display are supported. The definition will be ignored.',
+        ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
+        ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
+        // On the import side, there are some rules that syntactically match both ConceptRule and
+        // ValueSetConceptComponentRule. When this happens, a ConceptRule is created with a value
+        // set on its system. If we are applying rules to a ValueSet, and the ConceptRule has a
+        // system, create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that.
+        // BUT! If we have a ConceptRule with a system, and we are applying rules to a CodeSystem,
+        // log an error to let the author know to not do that.
+        if (ruleSetRule instanceof ConceptRule && ruleSetRule.system) {
+          if (fshDefinition instanceof FshValueSet) {
+            const relatedCode = new FshCode(
+              ruleSetRule.code,
+              ruleSetRule.system,
+              ruleSetRule.display
+            );
+            ruleSetRule = new ValueSetConceptComponentRule(true);
+            (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
+          } else if (fshDefinition instanceof FshCodeSystem) {
+            logger.error(
+              'Do not include the system when listing concepts for a code system.',
               ruleSetRule.sourceInfo
             );
           }
-          const relatedCode = new FshCode(
-            ruleSetRule.code,
-            ruleSetRule.system,
-            ruleSetRule.display
-          );
-          ruleSetRule = new ValueSetConceptComponentRule(true);
-          (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
         }
-        ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
-        ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
         if (isAllowedRule(fshDefinition, ruleSetRule)) {
           const ruleSetRuleClone = cloneDeep(ruleSetRule);
           if (context) {
