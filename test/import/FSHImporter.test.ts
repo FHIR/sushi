@@ -99,11 +99,13 @@ describe('FSHImporter', () => {
   });
 
   it('should log an error when a concept string starts with whitespace', () => {
-    const input = `
+    /*
     Profile: NonBreakingObservation
     Parent: Observation
     * code = #"\u0020Leading whitespace prohibited."
-    `;
+    */
+    const input =
+      '\nProfile: NonBreakingObservation\nParent: Observation\n* code = #"\u0020Leading whitespace prohibited."';
     const result = importSingleText(input, 'NonBreaking.fsh');
     result.profiles.get('NonBreakingObservation');
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);

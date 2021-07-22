@@ -144,7 +144,7 @@ export class FSHImporter extends FSHVisitor {
   paramRuleSets: Map<string, ParamRuleSet>;
   private topLevelParse: boolean;
   private pathContext: string[][];
-  private baseIndent: number;
+  private baseIndent = 1;
 
   constructor() {
     super();
@@ -246,9 +246,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    // Reset the pathContext and baseIndent level for each entity
+    // Reset the pathContext for each entity
     this.pathContext = [];
-    this.baseIndent = this.extractStartStop(ctx).startColumn;
 
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
@@ -2108,7 +2107,7 @@ export class FSHImporter extends FSHVisitor {
   ): boolean {
     if (currentIndent > 0 && existingContext.length === 0) {
       logger.error(
-        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
+        'The first rule of a definition must be left-aligned. The rule will be processed as if it is not indented.',
         { location, file: this.currentFile }
       );
       return false;

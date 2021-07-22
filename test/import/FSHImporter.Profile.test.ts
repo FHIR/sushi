@@ -54,11 +54,7 @@ describe('FSHImporter', () => {
 
         // Since we'll do the same thing over and over (and over), create a function for it
         const testToken = (token: string) => {
-          const input = `
-          Profile: ${token}
-          Parent: Observation
-          * value[x] only boolean
-          `;
+          const input = `\nProfile: ${token}\nParent: Observation\n* value[x] only boolean`;
           const result = importSingleText(input);
           expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
           expect(result).toBeDefined();
@@ -702,11 +698,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when paths are listed with commas', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * category, value[x] , component MS SU N
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* category, value[x] , component MS SU N';
 
         const result = importSingleText(input, 'Deprecated.fsh');
         const profile = result.profiles.get('ObservationProfile');
@@ -875,11 +873,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when parsing value set rules using the unit keyword', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity units from http://unitsofmeasure.org
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* valueQuantity units from http://unitsofmeasure.org';
 
         const result = importSingleText(input, 'Deprecated.fsh');
         const profile = result.profiles.get('ObservationProfile');
@@ -1077,11 +1077,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when parsing an assigned value FSHCode rule using the unit keyword', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity units = http://unitsofmeasure.org#cGy
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* valueQuantity units = http://unitsofmeasure.org#cGy';
 
         const result = importSingleText(input, 'Deprecated.fsh');
         const profile = result.profiles.get('ObservationProfile');
@@ -1678,26 +1680,30 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when references are listed with pipes', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(Organization | CareTeam)
-        `;
+        */
+        const input =
+          'Profile: ObservationProfile\nParent: Observation\n* performer only Reference(Organization | CareTeam)';
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile).toBeDefined();
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Using '\|' to list references is no longer supported\..*Line: 4\D*/s
+          /Using '|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
 
       it('should log an error when references are listed with pipes with whitespace', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(   Organization  |   CareTeam)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* performer only Reference(   Organization  |   CareTeam)';
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -2165,11 +2171,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a RuleSet with one parameter', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert OneParamRuleSet (#final)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2202,11 +2210,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a RuleSet with one parameter and a path', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * code insert OneParamRuleSet (#final)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* code insert OneParamRuleSet (#final)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2239,11 +2249,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a RuleSet with multiple parameters', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#preliminary, "this is a string value\\, right?", 4)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (#preliminary, "this is a string value\\, right?", 4)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2301,11 +2313,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a parameter that contains right parenthesis', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final "(Final\\)")
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert OneParamRuleSet (#final "(Final\\)")';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2339,11 +2353,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with parameters that contain newline, tab, or backslash characters', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#final, "very\\nstrange\\rvalue\\\\\\tindeed", 1)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (#final, "very\\nstrange\\rvalue\\\\\\tindeed", 1)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2392,7 +2408,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule that separates its parameters onto multiple lines', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (
@@ -2400,7 +2416,9 @@ describe('FSHImporter', () => {
           "string value",
           7
         )
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (\n  #final,\n  "string value",\n  7\n)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2438,12 +2456,14 @@ describe('FSHImporter', () => {
       });
 
       it('should generate a RuleSet only once when inserted with the same parameters multiple times in the same document', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#preliminary, "something", 3)
         * insert MultiParamRuleSet (#preliminary, "something", 3)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert MultiParamRuleSet (#preliminary, "something", 3)\n* insert MultiParamRuleSet (#preliminary, "something", 3)';
         const visitDocSpy = jest.spyOn(importer, 'visitDoc');
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -2469,11 +2489,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {
-        const input = `
+        /*
         Profile: ObservationProfile
         Parent: Observation
         * insert EntryRules (Recursive)
-        `;
+        */
+        const input =
+          '\nProfile: ObservationProfile\nParent: Observation\n* insert EntryRules (Recursive)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2574,11 +2596,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when an insert rule with parameters results in a parser error in the generated RuleSet', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(path with spaces, 1, *)
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert CardRuleSet(path with spaces, 1, *)';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);
@@ -2589,12 +2613,14 @@ describe('FSHImporter', () => {
       });
 
       it('should log one error when nested insert rules with parameters result in multiple parser errors in the generated RuleSets', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * note 0..1
         * insert FirstRiskyRuleSet("Observation.id")
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* note 0..1\n* insert FirstRiskyRuleSet("Observation.id")';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(stats.numError).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -2604,11 +2630,13 @@ describe('FSHImporter', () => {
       });
 
       it('should not log an error when an insert rule with parameters results in rules that are syntactically correct but semantically invalid', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(nonExistentPath, 7, 4)
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert CardRuleSet(nonExistentPath, 7, 4)';
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
@@ -2637,11 +2665,13 @@ describe('FSHImporter', () => {
       // All deprecated syntaxes are now errors (not warnings).  We can re-enable if/when the importer
       // produces warnings on rules.
       it.skip('should log one warning when an insert rule with parameters results in warnings', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert WarningRuleSet(Device)
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert WarningRuleSet(Device)';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numWarn).toBe(1);
@@ -2652,11 +2682,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log one error when an insert rule with parameters results in non-parser errors', () => {
-        const input = `
+        /*
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(nonExistentPath, , )
-        `;
+        */
+        const input =
+          '\nProfile: MyObservation\nParent: Observation\n* insert CardRuleSet(nonExistentPath, , )';
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);

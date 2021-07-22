@@ -44,10 +44,7 @@ describe('FSHImporter', () => {
 
         // Since we'll do the same thing over and over (and over), create a function for it
         const testToken = (token: string) => {
-          const input = `
-          Resource: ${token}
-          * value[x] only boolean
-          `;
+          const input = `\nResource: ${token}\n* value[x] only boolean`;
           const result = importSingleText(input);
           expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
           expect(result).toBeDefined();

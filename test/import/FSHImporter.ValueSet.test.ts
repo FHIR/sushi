@@ -355,20 +355,22 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when both include and exclude are used on the same line', () => {
-        const input = `
+        /*
         ValueSet: ZooVS
         * include exclude ZOO#bear
-        `;
+        */
+        const input = '\nValueSet: ZooVS\n* include exclude ZOO#bear';
         importSingleText(input, 'Zoo.fsh');
         expect(loggerSpy.getLastMessage('error')).toMatch(/extraneous input/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should log an error when concepts are listed with commas', () => {
-        const input = `
+        /*
         ValueSet: ZooVS
         * #hippo, #crocodile , #emu from system ZOO
-        `;
+        */
+        const input = '\nValueSet: ZooVS\n* #hippo, #crocodile , #emu from system ZOO';
 
         const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.valueSets.size).toBe(1);
@@ -501,10 +503,11 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when valuesets are listed with commas', () => {
-        const input = `
+        /*
         ValueSet: ZooVS
         * codes from valueset FirstZooVS, SecondZooVS
-        `;
+        */
+        const input = '\nValueSet: ZooVS\n* codes from valueset FirstZooVS, SecondZooVS';
 
         const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.valueSets.size).toBe(1);

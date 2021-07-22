@@ -146,13 +146,13 @@ describe('#FshToFhir', () => {
     });
 
     it('should convert valid FSH into FHIR with a single input', async () => {
-      const results = await fshToFhir(
-        `
+      /*
       Profile: MyPatient
       Parent: Patient
       * name MS
-      `
-      );
+      */
+      const input = '\nProfile: MyPatient\nParent: Patient\n* name MS';
+      const results = await fshToFhir(input);
       expect(results.errors).toHaveLength(0);
       expect(results.warnings).toHaveLength(0);
 
@@ -163,18 +163,18 @@ describe('#FshToFhir', () => {
     });
 
     it('should convert valid FSH into FHIR with several inputs', async () => {
-      const results = await fshToFhir([
-        `
+      /*
       Profile: MyPatient1
       Parent: Patient
       * name MS
-      `,
-        `
+
       Profile: MyPatient2
       Parent: Patient
       * gender MS
-      `
-      ]);
+      */
+      const input1 = '\nProfile: MyPatient1\nParent: Patient\n* name MS';
+      const input2 = '\nProfile: MyPatient2\nParent: Patient\n* gender MS';
+      const results = await fshToFhir([input1, input2]);
       expect(results.errors).toHaveLength(0);
       expect(results.warnings).toHaveLength(0);
       expect(results.fhir).toHaveLength(2);
@@ -189,18 +189,19 @@ describe('#FshToFhir', () => {
     });
 
     it('should trace errors back to the originating input when multiple inputs are given', async () => {
-      const results = await fshToFhir([
-        `
+      /*
       Profile: MyPatient1
       Parent: FakeProfile
       * name MS
-      `,
-        `
+
       Profile: MyPatient2
       Parent: AlsoFakeProfile
       * gender MS
-      `
-      ]);
+      */
+
+      const input1 = '\nProfile: MyPatient1\nParent: FakeProfile\n* name MS';
+      const input2 = '\nProfile: MyPatient2\nParent: AlsoFakeProfile\n* gender MS';
+      const results = await fshToFhir([input1, input2]);
       expect(results.errors).toHaveLength(2);
       expect(results.errors[0].message).toMatch(/Parent FakeProfile not found/);
       expect(results.errors[0].input).toBe('Input_0');
