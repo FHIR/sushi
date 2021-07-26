@@ -3,6 +3,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
 import { assertAssignmentRule, assertFlagRule } from '../testhelpers/asserts';
 import { importSingleText } from '../testhelpers/importSingleText';
+import { leftAlign } from '../utils/leftAlign';
 
 describe('FSHImporter', () => {
   beforeEach(() => loggerSpy.reset());
@@ -28,12 +29,12 @@ describe('FSHImporter', () => {
   });
 
   it('should recover from extraneous input errors from antlr', () => {
-    const input = `
+    const input = leftAlign(`
     OOPS!
 
     Profile: Foo
     Parent: FooDad
-    `;
+    `);
     const result = importSingleText(input, 'Extra.fsh');
     const profile = result.profiles.get('Foo');
     expect(profile.name).toBe('Foo');
@@ -42,40 +43,40 @@ describe('FSHImporter', () => {
   });
 
   it('should parse escaped double-quote and backslash characters in strings', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: Escape
     Parent: Observation
     Title: "Can \\"you\\" escape \\\\ this \\\\ string?"
     * code = #"This \\\\ code \\"is quite\\" challenging \\\\to escape"
-    `;
+    `);
     const result = importSingleText(input, 'Escape.fsh');
     const profile = result.profiles.get('Escape');
     expect(profile.title).toBe('Can "you" escape \\ this \\ string?');
     const expectedCode = new FshCode('This \\ code "is quite" challenging \\to escape')
-      .withLocation([5, 14, 5, 65])
+      .withLocation([5, 10, 5, 61])
       .withFile('Escape.fsh');
     expect(profile.rules).toHaveLength(1);
     assertAssignmentRule(profile.rules[0], 'code', expectedCode);
   });
 
   it('should parse escaped hash and backslash characters in system identifiers in codings', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: HashBrowns
     Parent: Observation
     * code = https://breakfast.com/good\\\\food\\#potatoes#hash#browns
     * extraCode = https://lastly.com/backslash\\\\#last
     * bonusCode = \\\\\\\\#just_backslash "Just Backslash"
-    `;
+    `);
     const result = importSingleText(input, 'HashBrowns.fsh');
     const profile = result.profiles.get('HashBrowns');
     const expectedCode = new FshCode('hash#browns', 'https://breakfast.com/good\\food#potatoes')
-      .withLocation([4, 14, 4, 67])
+      .withLocation([4, 10, 4, 63])
       .withFile('HashBrowns.fsh');
     const expectedExtraCode = new FshCode('last', 'https://lastly.com/backslash\\')
-      .withLocation([5, 19, 5, 53])
+      .withLocation([5, 15, 5, 49])
       .withFile('HashBrowns.fsh');
     const expectedBonusCode = new FshCode('just_backslash', '\\\\', 'Just Backslash')
-      .withLocation([6, 19, 6, 54])
+      .withLocation([6, 15, 6, 50])
       .withFile('HashBrowns.fsh');
     expect(profile.rules).toHaveLength(3);
     assertAssignmentRule(profile.rules[0], 'code', expectedCode);
@@ -84,26 +85,26 @@ describe('FSHImporter', () => {
   });
 
   it('should parse a rule that uses non-breaking spaces in a concept string', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: NonBreakingObservation
     Parent: Observation
     * code = #"These\u0020are\u0020non-breaking."
-    `;
+    `);
     const result = importSingleText(input, 'NonBreaking.fsh');
     const profile = result.profiles.get('NonBreakingObservation');
     const expectedCode = new FshCode('These\u0020are\u0020non-breaking.')
-      .withLocation([4, 14, 4, 39])
+      .withLocation([4, 10, 4, 35])
       .withFile('NonBreaking.fsh');
     expect(profile.rules).toHaveLength(1);
     assertAssignmentRule(profile.rules[0], 'code', expectedCode);
   });
 
   it('should log an error when a concept string starts with whitespace', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: NonBreakingObservation
     Parent: Observation
     * code = #"\u0020Leading whitespace prohibited."
-    `;
+    `);
     const result = importSingleText(input, 'NonBreaking.fsh');
     result.profiles.get('NonBreakingObservation');
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
@@ -113,11 +114,11 @@ describe('FSHImporter', () => {
   });
 
   it('should parse a rule on an element named system', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: MyOperation
     Parent: OperationDefinition
     * system = true
-    `;
+    `);
     const result = importSingleText(input, 'MyOperation.fsh');
     const profile = result.profiles.get('MyOperation');
     expect(profile.rules).toHaveLength(1);
@@ -125,13 +126,13 @@ describe('FSHImporter', () => {
   });
 
   it('should parse rules on a list of paths that includes system', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: TrialOperationDefinition
     Parent: OperationDefinition
     * system and type TU
     * instance and system and type SU
     * instance and system MS
-    `;
+    `);
     const result = importSingleText(input, 'TrialOperationDefinition.fsh');
     const profile = result.profiles.get('TrialOperationDefinition');
     expect(profile.rules).toHaveLength(7);
@@ -234,54 +235,54 @@ describe('FSHImporter', () => {
   });
 
   it('should allow a FSH document with a line comment at EOF without newline', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
-    //Comment`;
+    //Comment`);
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
     expect(loggerSpy.getAllLogs('error').length).toBe(0);
   });
 
   it('should allow a FSH document with a block comment at EOF without newline', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     /*
     Comment
     Comment
-    */`;
+    */`);
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
     expect(loggerSpy.getAllLogs('error').length).toBe(0);
   });
 
   it('should allow a FSH document with a single-line block comment', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     /* This comment is just one line */
     Title: "Single line comment test"
-    `;
+    `);
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
     expect(loggerSpy.getAllLogs('error').length).toBe(0);
   });
 
   it('should allow a FSH document with a block comment containing no whitespace', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     /******comment*****/
     Title: "Single line comment test"
-    `;
+    `);
     const result = importSingleText(input);
     expect(loggerSpy.getAllLogs('error').length).toBe(0);
     expect(result.profiles.size).toBe(1);
   });
 
   it('should adjust indentation of multi-line strings that include blank lines', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     Description: """
@@ -293,7 +294,7 @@ describe('FSHImporter', () => {
       Inputs
 
     Recursive acronyms are very popular these days.
-    """`;
+    """`);
     const expectedDescription = [
       'SUSHI stands for:',
       '  SUSHI',
@@ -332,7 +333,7 @@ Long statement:
   });
 
   it('should truncate whitespace lines in multi-line strings', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: StaircaseObservation
     Parent: Observation
     Description: """
@@ -344,7 +345,7 @@ Long statement:
 
             A
               Staircase
-                """`;
+                """`);
     const expectedDescription = [
       'This',
       '  Description',
@@ -377,32 +378,32 @@ Long statement:
   });
 
   it('should parse multi-line strings that only occupy one line', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     Description: """Descriptions come in only one size."""
-    `;
+    `);
     const result = importSingleText(input);
     const profile = result.profiles.get('ObservationProfile');
     expect(profile.description).toBe('Descriptions come in only one size.');
   });
 
   it('should parse non-breaking space characters as whitespace', () => {
-    const input = `
+    const input = leftAlign(`
     Profile:\u00A0NonBreakingObservation
     Parent: Observation\u00A0
-    `; // \u00A0 is the non-breaking space character
+    `); // \u00A0 is the non-breaking space character
     const result = importSingleText(input);
     const profile = result.profiles.get('NonBreakingObservation');
     expect(profile.parent).toBe('Observation');
   });
 
   it('should properly parse a string with newline, return, and tab characters', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     Description: "Here is a \\n new line with some \\t tabbed information. \\r The end."
-    `;
+    `);
 
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
@@ -413,11 +414,11 @@ Long statement:
   });
 
   it('should properly parse a string with an escaped newline', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     Description: "Here is an escaped \\\\n newline character."
-    `;
+    `);
 
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
@@ -426,7 +427,7 @@ Long statement:
   });
 
   it('should properly parse a multiline string with newline, return, and tab characters', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: ObservationProfile
     Parent: Observation
     Description:
@@ -436,7 +437,7 @@ Long statement:
 
       This special paragraph has info on a \\n new line. And it has some \\t tabbed information. \\r The end.
       """
-    `;
+    `);
 
     const result = importSingleText(input);
     expect(result.profiles.size).toBe(1);
@@ -462,13 +463,13 @@ Long statement:
   });
 
   it('should avoid crashing and log error messages because of mismatched input', () => {
-    const input = `
+    const input = leftAlign(`
     Profile: "BadProfile"
 
     Profile: BetterProfile
     Id: "BadId"
     Description: BadDescription
-    `;
+    `);
     const result = importSingleText(input, 'Mismatch.fsh');
     const messages = loggerSpy.getAllMessages('error');
     expect(messages).toHaveLength(3);
