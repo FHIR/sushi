@@ -16,12 +16,10 @@ describe('FSHErrorListener', () => {
   });
 
   it('should report mismatched input errors from antlr', () => {
-    const input = leftAlign(
-      leftAlign(`
+    const input = leftAlign(`
     Profile: MismatchedPizza
     Pizza: Large
-    `)
-    );
+    `);
     importSingleText(input, 'Pizza.fsh');
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Pizza\.fsh.*Line: 3\D*/s);
   });
@@ -118,13 +116,11 @@ describe('FSHErrorListener', () => {
   });
 
   it('should make sense of errors due to no space around = in an assignment rule', () => {
-    const input = leftAlign(
-      leftAlign(`
+    const input = leftAlign(`
     Profile: SampleObservation
     Parent: Observation
     * component=FOO#bar
-    `)
-    );
+    `);
     importSingleText(input, 'Invalid.fsh');
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Assignment rules must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 4\D*/s
