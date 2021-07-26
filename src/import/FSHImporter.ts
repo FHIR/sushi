@@ -1130,10 +1130,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   getPathWithContext(path: string, parentCtx: ParserRuleContext): string {
-    return this.getArrayPathWithContext(
-      splitOnPathPeriods(path).filter(p => p),
-      parentCtx
-    ).join('.');
+    const splitPath = path === '.' ? [path] : splitOnPathPeriods(path).filter(p => p);
+    return this.getArrayPathWithContext(splitPath, parentCtx).join('.');
   }
 
   getArrayPathWithContext(pathArray: string[], parentCtx: ParserRuleContext): string[] {
@@ -2051,17 +2049,6 @@ export class FSHImporter extends FSHVisitor {
     const currentIndent = location.startColumn - this.baseIndent;
     const contextIndex = currentIndent / INDENT_WIDTH;
 
-    if (this.pathContext.length && path.length === 1 && path[0] === '.') {
-      logger.error(
-        "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
-        {
-          location,
-          file: this.currentFile
-        }
-      );
-      return path;
-    }
-
     if (!this.isValidContext(location, currentIndent, this.pathContext)) {
       return path;
     }
@@ -2074,6 +2061,17 @@ export class FSHImporter extends FSHVisitor {
     // If the element is not indented, just reset the context
     if (contextIndex === 0) {
       this.pathContext = [newContext];
+      return path;
+    }
+
+    if (path.length === 1 && path[0] === '.') {
+      logger.error(
+        "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
+        {
+          location,
+          file: this.currentFile
+        }
+      );
       return path;
     }
 
