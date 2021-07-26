@@ -263,6 +263,63 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should set meta.profile without the unversioned InstanceOf profile if a versioned InstanceOf profile is present', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedPatientProfile 1..1
+       * meta.profile[supportedProfile] = Canonical(TestPatient|0.1.0)
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '1';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('item');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = 'type';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedProfile' }];
+      const cardRule = new CardRule('meta.profile[supportedProfile]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const supportedProfileCanonical = new AssignmentRule('meta.profile[supportedProfile]');
+      supportedProfileCanonical.value = new FshCanonical('TestPatient');
+      supportedProfileCanonical.value.version = '0.1.0';
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        cardRule,
+        supportedProfileCanonical
+      );
+
+      // * name[0].family = "LastName"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      patientInstance.rules.push(patientAssignmentRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(1);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|0.1.0'
+      ]);
+    });
+
     // Setting instance id
     it('should set id to instance name by default', () => {
       const myExamplePatient = new Instance('MyExample');

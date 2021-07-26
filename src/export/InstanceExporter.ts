@@ -314,6 +314,17 @@ export class InstanceExporter implements Fishable {
     // Once all rules are set, we should ensure that we did not add a duplicate profile URL anywhere
     if (instanceDef.meta?.profile) instanceDef.meta.profile = uniq(instanceDef.meta.profile);
 
+    // If we added a versioned profile that's the same as the InstanceOf profile, remove the InstanceOf profile
+    const versionedInstanceOf =
+      instanceDef.meta?.profile?.filter(profile =>
+        profile.startsWith(`${instanceOfStructureDefinition.url}|`)
+      ) ?? [];
+    if (versionedInstanceOf.length > 0) {
+      instanceDef.meta.profile = instanceDef.meta.profile.filter(
+        profile => profile !== instanceOfStructureDefinition.url
+      );
+    }
+
     // check for another instance of the same type with the same id
     // see https://www.hl7.org/fhir/resource.html#id
     // instanceDef has already been added to the package, so it's fine if it matches itself
