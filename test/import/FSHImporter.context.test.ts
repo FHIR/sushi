@@ -9,7 +9,8 @@ import {
   assertObeysRule,
   assertValueSetConceptComponent,
   assertValueSetFilterComponent,
-  assertAddElementRule
+  assertAddElementRule,
+  assertOnlyRule
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { leftAlign } from '../utils/leftAlign';
@@ -339,6 +340,35 @@ describe('FSHImporter', () => {
         types: [{ type: 'string' }],
         defs: { short: 'Father' }
       });
+    });
+
+    it('should set the context correctly when a rule with . path is followed by a caret rule with no path', () => {
+      const input = leftAlign(`
+      Extension: TestExtension
+      * value[x] only boolean
+      * . 0..1
+        * ^short = "A test extension."
+        * ^definition = "Yep.  It is a test extension."
+      * ^context.expression = "Patient"
+      `);
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.extensions.size).toBe(1);
+      const extension = result.extensions.get('TestExtension');
+      expect(extension.rules).toHaveLength(5);
+      assertOnlyRule(extension.rules[0], 'value[x]', { type: 'boolean' });
+      assertCardRule(extension.rules[1], '.', 0, '1');
+      assertCaretValueRule(extension.rules[2], '.', 'short', 'A test extension.', false, ['.']);
+      assertCaretValueRule(
+        extension.rules[3],
+        '.',
+        'definition',
+        'Yep.  It is a test extension.',
+        false,
+        ['.']
+      );
+      assertCaretValueRule(extension.rules[4], '', 'context.expression', 'Patient', false, []);
     });
 
     it('should log an error when a . rule is indented', () => {
