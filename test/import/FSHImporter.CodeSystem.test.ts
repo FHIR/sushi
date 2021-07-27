@@ -2,6 +2,7 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { assertConceptRule, assertInsertRule, assertCaretValueRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
+import { leftAlign } from '../utils/leftAlign';
 
 describe('FSHImporter', () => {
   describe('CodeSystem', () => {
@@ -11,9 +12,9 @@ describe('FSHImporter', () => {
 
     describe('#csMetadata', () => {
       it('should parse the simplest possible code system', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -22,20 +23,20 @@ describe('FSHImporter', () => {
         expect(codeSystem.rules).toEqual([]);
         expect(codeSystem.sourceInfo.location).toEqual({
           startLine: 2,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 2,
-          endColumn: 23
+          endColumn: 15
         });
         expect(codeSystem.sourceInfo.file).toBe('Zoo.fsh');
       });
 
       it('should parse a code system with additional metadata', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         Id: zoo-codes
         Title: "Zoo Animals"
         Description: "Animals and cryptids that may be at a zoo."
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -46,18 +47,18 @@ describe('FSHImporter', () => {
         expect(codeSystem.rules).toEqual([]);
         expect(codeSystem.sourceInfo.location).toEqual({
           startLine: 2,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 5,
-          endColumn: 65
+          endColumn: 57
         });
       });
 
       it('should parse numeric code system name and id', () => {
         // NOT recommended, but possible
-        const input = `
+        const input = leftAlign(`
         CodeSystem: 123
         Id: 456
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('123');
@@ -66,7 +67,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse a code system with a multi-line description', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         Id: zoo-codes
         Title: "Zoo Animals"
@@ -81,7 +82,7 @@ describe('FSHImporter', () => {
           * swamp ape
           * hopkinsville goblin
         """
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -104,7 +105,7 @@ describe('FSHImporter', () => {
       });
 
       it('should only apply each metadata attribute the first time it is declared', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         Id: zoo-codes
         Title: "Zoo Animals"
@@ -112,7 +113,7 @@ describe('FSHImporter', () => {
         Title: "Duplicate Animals"
         Id: zoo-codes-again
         Description: "Lions and tigers and bears!"
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -123,14 +124,14 @@ describe('FSHImporter', () => {
         expect(codeSystem.rules).toEqual([]);
         expect(codeSystem.sourceInfo.location).toEqual({
           startLine: 2,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 8,
-          endColumn: 50
+          endColumn: 42
         });
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         Id: zoo-codes
         Title: "Zoo Animals"
@@ -138,7 +139,7 @@ describe('FSHImporter', () => {
         Title: "Duplicate Animals"
         Id: zoo-codes-again
         Description: "Lions and tigers and bears!"
-        `;
+        `);
         importSingleText(input, 'Zoo.fsh');
         expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Zoo\.fsh.*Line: 6\D*/s);
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 7\D*/s);
@@ -146,13 +147,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error and skip the code system when encountering a code system with a name used by another code system', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: BREAD
         Title: "Known Bread"
 
         CodeSystem: BREAD
         Title: "Unknown Bread"
-        `;
+        `);
         const result = importSingleText(input, 'Bread.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('BREAD');
@@ -166,10 +167,10 @@ describe('FSHImporter', () => {
 
     describe('#concept', () => {
       it('should parse a code system with one concept', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #lion
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -178,19 +179,19 @@ describe('FSHImporter', () => {
         assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
         expect(codeSystem.rules[0].sourceInfo.location).toEqual({
           startLine: 3,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 3,
-          endColumn: 15
+          endColumn: 7
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with one concept with a display string', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #tiger "Tiger"
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -199,19 +200,19 @@ describe('FSHImporter', () => {
         assertConceptRule(codeSystem.rules[0], 'tiger', 'Tiger', undefined, []);
         expect(codeSystem.rules[0].sourceInfo.location).toEqual({
           startLine: 3,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 3,
-          endColumn: 24
+          endColumn: 16
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with one concept with display and definition strings', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #bear "Bear" "A member of family Ursidae."
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -220,22 +221,22 @@ describe('FSHImporter', () => {
         assertConceptRule(codeSystem.rules[0], 'bear', 'Bear', 'A member of family Ursidae.', []);
         expect(codeSystem.rules[0].sourceInfo.location).toEqual({
           startLine: 3,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 3,
-          endColumn: 52
+          endColumn: 44
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a concept with a multi-line definition string', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #gorilla "Gorilla" """
         Let there be no mistake
         about the greatest ape of all.
         """
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -248,21 +249,21 @@ describe('FSHImporter', () => {
         assertConceptRule(codeSystem.rules[0], 'gorilla', 'Gorilla', expectedDefinition, []);
         expect(codeSystem.rules[0].sourceInfo.location).toEqual({
           startLine: 3,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 3,
-          endColumn: 115
+          endColumn: 83
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with more than one concept', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #lion
         * #tiger "Tiger"
         * #bear "Bear" "A member of family Ursidae."
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -271,37 +272,37 @@ describe('FSHImporter', () => {
         assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
         expect(codeSystem.rules[0].sourceInfo.location).toEqual({
           startLine: 3,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 3,
-          endColumn: 15
+          endColumn: 7
         });
         expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
         assertConceptRule(codeSystem.rules[1], 'tiger', 'Tiger', undefined, []);
         expect(codeSystem.rules[1].sourceInfo.location).toEqual({
           startLine: 4,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 4,
-          endColumn: 24
+          endColumn: 16
         });
         expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
         assertConceptRule(codeSystem.rules[2], 'bear', 'Bear', 'A member of family Ursidae.', []);
         expect(codeSystem.rules[2].sourceInfo.location).toEqual({
           startLine: 5,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 5,
-          endColumn: 52
+          endColumn: 44
         });
         expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should parse a code system with hierarchical codes', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #bear "Bear" "A member of family Ursidae."
         * #bear #sunbear "Sun bear" "Helarctos malayanus"
         * #bear #sunbear #ursula "Ursula the sun bear"
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -310,18 +311,18 @@ describe('FSHImporter', () => {
         assertConceptRule(codeSystem.rules[0], 'bear', 'Bear', 'A member of family Ursidae.', []);
         expect(codeSystem.rules[0].sourceInfo.location).toEqual({
           startLine: 3,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 3,
-          endColumn: 52
+          endColumn: 44
         });
         assertConceptRule(codeSystem.rules[1], 'sunbear', 'Sun bear', 'Helarctos malayanus', [
           'bear'
         ]);
         expect(codeSystem.rules[1].sourceInfo.location).toEqual({
           startLine: 4,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 4,
-          endColumn: 57
+          endColumn: 49
         });
         assertConceptRule(codeSystem.rules[2], 'ursula', 'Ursula the sun bear', undefined, [
           'bear',
@@ -329,19 +330,19 @@ describe('FSHImporter', () => {
         ]);
         expect(codeSystem.rules[2].sourceInfo.location).toEqual({
           startLine: 5,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 5,
-          endColumn: 54
+          endColumn: 46
         });
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should log an error when encountering a duplicate code', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #goat "A goat"
         * #goat "Another goat?"
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -351,11 +352,11 @@ describe('FSHImporter', () => {
       });
 
       it('should not log an error when encountering a duplicate code if the new code has no display or definition', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #goat "A goat"
         * #goat
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -365,11 +366,11 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when encountering a code with an incorrectly defined hierarchy', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #bear "Bear" "A member of family Ursidae."
         * #bear #sunbear #ursula "Ursula the sun bear"
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -379,13 +380,13 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when a concept includes a system declaration', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #goat
         * ZOO#bat
         * CRYPTID#jackalope
         * ZOO#goat #mountaingoat
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.codeSystems.size).toBe(1);
         const codeSystem = result.codeSystems.get('ZOO');
@@ -403,10 +404,10 @@ describe('FSHImporter', () => {
 
     describe('#CaretValueRule', () => {
       it('should log an error when a CaretValueRule contains a path before ^', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * somepath ^publisher = "Marky Mark"
-        `;
+        `);
         const result = importSingleText(input, 'Simple.fsh');
         const codeSystem = result.codeSystems.get('ZOO');
         expect(codeSystem.rules).toHaveLength(1);
@@ -414,10 +415,10 @@ describe('FSHImporter', () => {
       });
 
       it('should parse a code system that uses a CaretValueRule with no codes', () => {
-        const input = `
+        const input = leftAlign(`
           CodeSystem: ZOO
           * ^publisher = "Matt"
-          `;
+          `);
         const result = importSingleText(input);
         const codeSystem = result.codeSystems.get('ZOO');
         assertCaretValueRule(codeSystem.rules[0] as Rule, '', 'publisher', 'Matt', false, []);
@@ -425,11 +426,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse a code system that uses CaretValueRules with no codes alongside rules', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #lion
         * ^publisher = "Damon"
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         const codeSystem = result.codeSystems.get('ZOO');
         assertConceptRule(codeSystem.rules[0], 'lion', undefined, undefined, []);
@@ -446,11 +447,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse a code system that uses a CaretValueRule on a top-level concept', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #anteater "Anteater"
         * #anteater ^property[0].valueString = "Their threat pose is really cute."
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         const codeSystem = result.codeSystems.get('ZOO');
         assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
@@ -468,12 +469,12 @@ describe('FSHImporter', () => {
       });
 
       it('should parse a code system that uses a CaretValueRule on a nested concept', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: ZOO
         * #anteater "Anteater"
         * #anteater #northern "Northern tamandua"
         * #anteater #northern ^property[0].valueString = "They are strong climbers."
-        `;
+        `);
         const result = importSingleText(input, 'Zoo.fsh');
         const codeSystem = result.codeSystems.get('ZOO');
         assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
@@ -497,10 +498,10 @@ describe('FSHImporter', () => {
 
     describe('#insertRule', () => {
       it('should parse an insert rule with a single RuleSet', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: MyCS
         * insert MyRuleSet
-        `;
+        `);
         const result = importSingleText(input, 'Insert.fsh');
         const cs = result.codeSystems.get('MyCS');
         expect(cs.rules).toHaveLength(1);
