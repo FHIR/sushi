@@ -6,11 +6,13 @@ import {
   assertInsertRule,
   assertValueSetConceptComponent,
   assertAddElementRule,
-  assertCaretValueRule
+  assertCaretValueRule,
+  assertConceptRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, ConceptRule } from '../../src/fshtypes/rules';
 import { FshCode } from '../../src/fshtypes';
+import { leftAlign } from '../utils/leftAlign';
 
 describe('FSHImporter', () => {
   beforeEach(() => {
@@ -215,6 +217,21 @@ describe('FSHImporter', () => {
         /RuleSet named SameRuleSet already exists/s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+    });
+
+    it('should not log an error when the ConceptRule has one code with a system, no definition, and no hierarchy', () => {
+      const input = leftAlign(`
+      RuleSet: VSRuleSet
+      * ZOO#bear
+      * ZOO#gator "Alligator"
+      `);
+      const result = importSingleText(input, 'VSRules.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('VSRuleSet');
+      expect(ruleSet.rules.length).toBe(2);
+      assertConceptRule(ruleSet.rules[0], 'bear', undefined, undefined, []);
+      assertConceptRule(ruleSet.rules[1], 'gator', 'Alligator', undefined, []);
+      expect(loggerSpy.getAllMessages('error')).toBeEmpty();
     });
   });
 });

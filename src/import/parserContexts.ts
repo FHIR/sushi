@@ -22,6 +22,7 @@ export interface EntityContext extends ParserRuleContext {
 
 export interface AliasContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext[];
+  CODE(): ParserRuleContext;
 }
 
 export interface ProfileContext extends ParserRuleContext {
