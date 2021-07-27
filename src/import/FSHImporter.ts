@@ -129,6 +129,7 @@ enum Flag {
 
 const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 const INDENT_WIDTH = 2;
+const DEFAULT_START_COLUMN = 1;
 
 /**
  * FSHImporter handles the parsing of FSH documents, constructing the data into FSH types.
@@ -144,7 +145,6 @@ export class FSHImporter extends FSHVisitor {
   paramRuleSets: Map<string, ParamRuleSet>;
   private topLevelParse: boolean;
   private pathContext: string[][];
-  private baseIndent: number;
 
   constructor() {
     super();
@@ -246,9 +246,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    // Reset the pathContext and baseIndent level for each entity
+    // Reset the pathContext for each entity
     this.pathContext = [];
-    this.baseIndent = this.extractStartStop(ctx).startColumn;
 
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
@@ -1372,15 +1371,21 @@ export class FSHImporter extends FSHVisitor {
       concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
     if (localCodePath.some(listedConcept => listedConcept.system)) {
-      logger.error(
-        'Do not include the system when listing concepts for a code system.',
-        concept.sourceInfo
-      );
-      // If this is on a ruleset, and if this rule is then used on a ValueSet, this could actually
-      // be a ValueSetConceptComponent, and not a ConceptRule, in which case we should carry through
-      // the system
-      if (codePart.system) {
+      // If this concept is part of a RuleSet and has a system, no definition, and no hierarchy,
+      // it might actually represent a ValueSetConceptComponent. We can't know for sure until the RuleSet
+      // is inserted somewhere. For now, assume it will be okay, so keep the system for later.
+      if (
+        ctx.parentCtx instanceof FSHParser.RuleSetRuleContext &&
+        codePart.system &&
+        !concept.definition &&
+        concept.hierarchy.length === 0
+      ) {
         concept.system = codePart.system;
+      } else {
+        logger.error(
+          'Do not include the system when listing concepts for a code system.',
+          concept.sourceInfo
+        );
       }
     }
     return concept;
@@ -1750,8 +1755,6 @@ export class FSHImporter extends FSHVisitor {
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet
     const parentDocument = this.currentDoc;
-    // save the baseIndent so it can be restored after parsing this RuleSet
-    const parentIndent = this.baseIndent;
     const parentContext = this.pathContext;
     this.currentDoc = tempDocument;
     // errors should be collected, not printed, when parsing generated documents
@@ -1767,8 +1770,6 @@ export class FSHImporter extends FSHVisitor {
     } finally {
       // be sure to restore parentDocument
       this.currentDoc = parentDocument;
-      // and to restore the parentIndent
-      this.baseIndent = parentIndent;
       this.pathContext = parentContext;
     }
     // if tempDocument has appliedRuleSets, merge them in
@@ -2046,7 +2047,7 @@ export class FSHImporter extends FSHVisitor {
    */
   private prependPathContext(path: string[], parentCtx: ParserRuleContext): string[] {
     const location = this.extractStartStop(parentCtx);
-    const currentIndent = location.startColumn - this.baseIndent;
+    const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
     const contextIndex = currentIndent / INDENT_WIDTH;
 
     if (!this.isValidContext(location, currentIndent, this.pathContext)) {
@@ -2106,7 +2107,7 @@ export class FSHImporter extends FSHVisitor {
   ): boolean {
     if (currentIndent > 0 && existingContext.length === 0) {
       logger.error(
-        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
+        'The first rule of a definition must be left-aligned. The rule will be processed as if it is not indented.',
         { location, file: this.currentFile }
       );
       return false;
@@ -2209,7 +2210,7 @@ export class FSHImporter extends FSHVisitor {
       };
       if (
         !(pc.containsPathContext(ctx) || pc.containsCodePathContext(ctx)) &&
-        location.startColumn - this.baseIndent > 0
+        location.startColumn - DEFAULT_START_COLUMN > 0
       ) {
         logger.error(
           'A rule that does not use a path cannot be indented to indicate context. The rule will be processed as if it is not indented.',
