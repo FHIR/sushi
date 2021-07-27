@@ -84,6 +84,21 @@ describe('FSHImporter', () => {
     assertAssignmentRule(profile.rules[2], 'bonusCode', expectedBonusCode);
   });
 
+  it('should parse a code that has an unmatched quote (") at the start of the code', () => {
+    const input = `
+    Profile: MismatchedQuote
+    Parent: Observation
+    * code = https://breakfast.com/goodfood#"potatoes
+    `;
+    const result = importSingleText(input, 'MismatchedQuote.fsh');
+    const profile = result.profiles.get('MismatchedQuote');
+    const expectedCode = new FshCode('"potatoes', 'https://breakfast.com/goodfood')
+      .withLocation([4, 14, 4, 53])
+      .withFile('MismatchedQuote.fsh');
+    expect(profile.rules).toHaveLength(1);
+    assertAssignmentRule(profile.rules[0], 'code', expectedCode);
+  });
+
   it('should parse a rule that uses non-breaking spaces in a concept string', () => {
     const input = leftAlign(`
     Profile: NonBreakingObservation
