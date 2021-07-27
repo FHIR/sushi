@@ -1,5 +1,13 @@
 import { FSHTank, FSHDocument } from '../../src/import';
-import { Profile, Logical, RuleSet, FshCode, FshValueSet, Instance } from '../../src/fshtypes';
+import {
+  Profile,
+  Logical,
+  RuleSet,
+  FshCode,
+  FshValueSet,
+  Instance,
+  FshCodeSystem
+} from '../../src/fshtypes';
 import {
   InsertRule,
   CardRule,
@@ -14,7 +22,8 @@ import {
   assertValueSetConceptComponent,
   assertAssignmentRule,
   assertAddElementRule,
-  assertCaretValueRule
+  assertCaretValueRule,
+  assertConceptRule
 } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
@@ -359,7 +368,7 @@ describe('applyInsertRules', () => {
     assertCardRule(profile.rules[3], 'focus', 1, '1');
   });
 
-  it('should convert a ConceptRule to a ValueSetConceptComponent when applying to a FshValueSet', () => {
+  it('should convert a ConceptRule with a system to a ValueSetConceptComponent when applying to a FshValueSet', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear"
     //
@@ -388,37 +397,57 @@ describe('applyInsertRules', () => {
     );
   });
 
-  it('should convert a ConceptRule with a definition to a ValueSetConceptComponent and log a warning when applying to a FshValueSet', () => {
+  it('should not convert a ConceptRule without a system to a ValueSetConceptComponent when applying to a FshValueSet', () => {
     // RuleSet: Bar
-    // * ZOO#bear "brown bear" "brown bears are kind of scary"
+    // * #bear "brown bear"
     //
     // ValueSet: Foo
     // * insert Bar
-    const vs = new FshValueSet('Foo').withFile('VS.fsh').withLocation([5, 6, 7, 16]);
+    const vs = new FshValueSet('Foo');
     doc.valueSets.set(vs.name, vs);
 
-    const concept = new ConceptRule('bear', 'brown bear', 'brown bears are kind of scary')
-      .withFile('Concept.fsh')
-      .withLocation([1, 2, 3, 4]);
-    concept.system = 'ZOO';
+    const concept = new ConceptRule('bear', 'brown bear')
+      .withFile('RuleSets.fsh')
+      .withLocation([8, 5, 8, 16]);
     ruleSet1.rules.push(concept);
 
-    const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
+    const insertRule = new InsertRule('').withFile('VS.fsh').withLocation([7, 6, 7, 16]);
     insertRule.ruleSet = 'Bar';
     vs.rules.push(insertRule);
 
     applyInsertRules(vs, tank);
 
-    expect(vs.rules).toHaveLength(1);
-    assertValueSetConceptComponent(
-      vs.rules[0],
-      undefined,
-      undefined,
-      [new FshCode('bear', 'ZOO', 'brown bear')],
-      true
+    expect(vs.rules).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /ConceptRule.*ValueSet.*File: RuleSets\.fsh.*Line: 8.*Applied in File: VS\.fsh.*Line: 7\D*/s
     );
-    expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /ValueSet concepts should not include a definition, only system, code, and display are supported.*File: Concept\.fsh.*Line: 1 - 3\D*/s
+  });
+
+  it('should log an error when a ConceptRule with a system is applied to a FshCodeSystem', () => {
+    // RuleSet: Bar
+    // * ZOO#bear "brown bear"
+    //
+    // CodeSystem: Foo
+    // * insert Bar
+    const cs = new FshCodeSystem('Foo');
+    doc.codeSystems.set(cs.name, cs);
+
+    const concept = new ConceptRule('bear', 'brown bear')
+      .withFile('RuleSets.fsh')
+      .withLocation([7, 5, 7, 12]);
+    concept.system = 'ZOO';
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule('').withFile('CodeSystems.fsh').withLocation([3, 5, 3, 19]);
+    insertRule.ruleSet = 'Bar';
+    cs.rules.push(insertRule);
+
+    applyInsertRules(cs, tank);
+
+    expect(cs.rules).toHaveLength(1);
+    assertConceptRule(cs.rules[0], 'bear', 'brown bear', undefined, []);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Do not include the system when listing concepts for a code system\..*File: RuleSets\.fsh.*Line: 7.*Applied in File: CodeSystems\.fsh.*Line: 3\D*/s
     );
   });
 
