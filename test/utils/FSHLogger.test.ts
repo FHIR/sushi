@@ -1,5 +1,5 @@
-import { logger, stats, errorsAndWarnings } from '../../src/utils/FSHLogger';
-
+import { logger, stats, errorsAndWarnings, setIgnoredWarnings } from '../../src/utils/FSHLogger';
+import { leftAlign } from './leftAlign';
 // MUTE_LOGS controls whether or not logs get printed during testing.
 // Usually, we don't want logs actually printed, as they cause clutter.
 const MUTE_LOGS = true;
@@ -114,5 +114,120 @@ describe('FSHLogger', () => {
     errorsAndWarnings.reset();
     expect(errorsAndWarnings.errors).toHaveLength(0);
     expect(errorsAndWarnings.warnings).toHaveLength(0);
+  });
+
+  describe('#ignoreWarnings', () => {
+    let messages: string[] = [];
+    let logMock: any;
+    beforeAll(() => {
+      const m = Symbol.for('message');
+      logMock = jest.fn();
+      logMock.mockImplementation((log: any) => {
+        if (log[m]) {
+          messages.push(log[m]);
+        }
+      });
+    });
+
+    afterEach(() => {
+      messages = [];
+    });
+
+    it('should ignore warnings which are listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        warn1
+        `)
+      );
+      logger.warn('warn1');
+      logger.error('error1');
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatch(/error.*error1/);
+    });
+
+    it('should ignore multiple warnings which are listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        warn1
+        warn2
+        `)
+      );
+      logger.warn('warn1');
+      logger.warn('warn2');
+      logger.error('error1');
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatch(/error.*error1/);
+    });
+
+    it('should not ignore warnings which are unlisted', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        warn1
+        `)
+      );
+      logger.warn('warn1');
+      logger.warn('warn2');
+      logger.error('error1');
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatch(/warn.*warn2/);
+      expect(messages[1]).toMatch(/error.*error1/);
+    });
+
+    it('should not ignore messages which are not warnings, even when listed', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        foo
+        `)
+      );
+      logger.error('foo');
+      logger.info('foo');
+      logger.debug('foo');
+      expect(messages).toHaveLength(3);
+      expect(messages[0]).toMatch(/error.*foo/);
+      expect(messages[1]).toMatch(/info.*foo/);
+      expect(messages[2]).toMatch(/debug.*foo/);
+    });
+
+    it('should ignore warnings which are matched via regex', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        /ignore.*/
+        `)
+      );
+      logger.warn('ignore this message');
+      logger.warn(`ignore this message even though
+      it goes over
+      multiple lines`);
+      expect(messages).toHaveLength(0);
+    });
+
+    it('should ignore warnings which are matched via regex and listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        /ignore.*/
+        this too
+        `)
+      );
+      logger.warn('ignore this message');
+      logger.warn('this too');
+      expect(messages).toHaveLength(0);
+    });
+
+    it('should not ignore warnings which do not match the regex', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        /ignore.*/
+        `)
+      );
+      logger.warn('please log this');
+      expect(messages).toHaveLength(1);
+    });
   });
 });

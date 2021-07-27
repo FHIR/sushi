@@ -27,7 +27,8 @@ import {
   writePreprocessedFSH,
   getRawFSHes,
   init,
-  getRandomPun
+  getRandomPun,
+  setIgnoredWarnings
 } from './utils';
 
 const FSH_VERSION = '1.1.0';
@@ -69,6 +70,11 @@ async function app() {
   }
   if (program.debug) logger.level = 'debug';
   input = ensureInputDir(input);
+
+  const ignoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
+  if (fs.existsSync(ignoreWarningsPath)) {
+    setIgnoredWarnings(fs.readFileSync(ignoreWarningsPath, 'utf-8'));
+  }
 
   logger.info(`Running ${getVersion()}`);
 

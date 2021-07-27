@@ -1,6 +1,7 @@
 import { createLogger, format, transports } from 'winston';
 import chalk from 'chalk';
 import cloneDeep from 'lodash/cloneDeep';
+import { EOL } from 'os';
 
 const { combine, printf } = format;
 
@@ -26,6 +27,28 @@ const withLocation = format(info => {
       info.message += ` - ${info.appliedLocation.endLine}`;
     }
     delete info.appliedLocation;
+  }
+  return info;
+});
+
+const ignoreWarnings = format(info => {
+  // Only warnings can be ignored
+  if (info.level !== 'warn') {
+    return info;
+  }
+
+  const shouldIgnore = ignoredWarnings?.some(m => {
+    if (m.startsWith('/') && m.endsWith('/')) {
+      const regex = new RegExp(m.slice(1, -1));
+      return regex.test(info.message);
+    } else {
+      return m === info.message;
+    }
+  });
+  if (shouldIgnore) {
+    suppressLogger = true;
+    info.level = '';
+    info.message = '';
   }
   return info;
 });
@@ -72,6 +95,10 @@ const trackErrorsAndWarnings = format(info => {
 });
 
 const printer = printf(info => {
+  if (loggerIsSuppressed) {
+    logger.transports[0].silent = false;
+    loggerIsSuppressed = false;
+  }
   let level;
   switch (info.level) {
     case 'info':
@@ -90,13 +117,32 @@ const printer = printf(info => {
     default:
       break;
   }
+  if (suppressLogger) {
+    logger.transports[0].silent = true;
+    loggerIsSuppressed = true;
+    suppressLogger = false;
+    return;
+  }
   return `${level} ${info.message}`;
 });
 
 export const logger = createLogger({
-  format: combine(incrementCounts(), trackErrorsAndWarnings(), withLocation(), printer),
+  format: combine(
+    ignoreWarnings(),
+    incrementCounts(),
+    trackErrorsAndWarnings(),
+    withLocation(),
+    printer
+  ),
   transports: [new transports.Console()]
 });
+
+let suppressLogger = false;
+let loggerIsSuppressed = false;
+let ignoredWarnings: string[];
+export const setIgnoredWarnings = (messages: string): void => {
+  ignoredWarnings = messages.split(/\r?\n/);
+};
 
 class LoggerStats {
   public numInfo = 0;
