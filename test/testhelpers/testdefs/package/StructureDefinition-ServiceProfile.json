@@ -26,5 +26,24 @@
         "path": "ELTSSServiceModel"
       }
     ]
+  },
+  "snapshot": {
+    "element": [
+      {
+        "id": "ELTSSServiceModel",
+        "path": "ELTSSServiceModel",
+        "definition": "eLTSS Dataset Service data.",
+        "min": 0,
+        "max": "*",
+        "base": {
+          "path": "ELTSSServiceModel",
+          "min": 0,
+          "max": "*"
+        },
+        "mustSupport": false,
+        "isModifier": false,
+        "isSummary": false
+      }
+    ]
   }
 }
