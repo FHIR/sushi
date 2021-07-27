@@ -129,6 +129,7 @@ enum Flag {
 
 const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 const INDENT_WIDTH = 2;
+const DEFAULT_START_COLUMN = 1;
 
 /**
  * FSHImporter handles the parsing of FSH documents, constructing the data into FSH types.
@@ -144,7 +145,6 @@ export class FSHImporter extends FSHVisitor {
   paramRuleSets: Map<string, ParamRuleSet>;
   private topLevelParse: boolean;
   private pathContext: string[][];
-  private baseIndent: number;
 
   constructor() {
     super();
@@ -246,9 +246,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
-    // Reset the pathContext and baseIndent level for each entity
+    // Reset the pathContext for each entity
     this.pathContext = [];
-    this.baseIndent = this.extractStartStop(ctx).startColumn;
 
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
@@ -1756,8 +1755,6 @@ export class FSHImporter extends FSHVisitor {
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet
     const parentDocument = this.currentDoc;
-    // save the baseIndent so it can be restored after parsing this RuleSet
-    const parentIndent = this.baseIndent;
     const parentContext = this.pathContext;
     this.currentDoc = tempDocument;
     // errors should be collected, not printed, when parsing generated documents
@@ -1773,8 +1770,6 @@ export class FSHImporter extends FSHVisitor {
     } finally {
       // be sure to restore parentDocument
       this.currentDoc = parentDocument;
-      // and to restore the parentIndent
-      this.baseIndent = parentIndent;
       this.pathContext = parentContext;
     }
     // if tempDocument has appliedRuleSets, merge them in
@@ -2052,7 +2047,7 @@ export class FSHImporter extends FSHVisitor {
    */
   private prependPathContext(path: string[], parentCtx: ParserRuleContext): string[] {
     const location = this.extractStartStop(parentCtx);
-    const currentIndent = location.startColumn - this.baseIndent;
+    const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
     const contextIndex = currentIndent / INDENT_WIDTH;
 
     if (!this.isValidContext(location, currentIndent, this.pathContext)) {
@@ -2112,7 +2107,7 @@ export class FSHImporter extends FSHVisitor {
   ): boolean {
     if (currentIndent > 0 && existingContext.length === 0) {
       logger.error(
-        'The first rule of a definition cannot be indented. The rule will be processed as if it is not indented.',
+        'The first rule of a definition must be left-aligned. The rule will be processed as if it is not indented.',
         { location, file: this.currentFile }
       );
       return false;
@@ -2215,7 +2210,7 @@ export class FSHImporter extends FSHVisitor {
       };
       if (
         !(pc.containsPathContext(ctx) || pc.containsCodePathContext(ctx)) &&
-        location.startColumn - this.baseIndent > 0
+        location.startColumn - DEFAULT_START_COLUMN > 0
       ) {
         logger.error(
           'A rule that does not use a path cannot be indented to indicate context. The rule will be processed as if it is not indented.',

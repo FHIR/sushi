@@ -13,6 +13,7 @@ import {
   assertOnlyRule
 } from '../testhelpers';
 import { FshCode } from '../../src/fshtypes';
+import { leftAlign } from '../utils/leftAlign';
 
 describe('FSHImporter', () => {
   describe('Resource', () => {
@@ -44,10 +45,10 @@ describe('FSHImporter', () => {
 
         // Since we'll do the same thing over and over (and over), create a function for it
         const testToken = (token: string) => {
-          const input = `
+          const input = leftAlign(`
           Resource: ${token}
           * value[x] only boolean
-          `;
+          `);
           const result = importSingleText(input);
           expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
           expect(result).toBeDefined();
