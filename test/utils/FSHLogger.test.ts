@@ -161,6 +161,15 @@ describe('FSHLogger', () => {
       expect(messages[0]).toMatch(/error.*error1/);
     });
 
+    it('should ignore leading and trailing whitespace for warnings which are listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(' warn1  ');
+      logger.warn('warn1');
+      logger.error('error1');
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatch(/error.*error1/);
+    });
+
     it('should not ignore warnings which are unlisted', () => {
       logger.transports[0]['write'] = logMock;
       setIgnoredWarnings(
@@ -199,6 +208,16 @@ describe('FSHLogger', () => {
         /ignore.*/
         `)
       );
+      logger.warn('ignore this message');
+      logger.warn(`ignore this message even though
+      it goes over
+      multiple lines`);
+      expect(messages).toHaveLength(0);
+    });
+
+    it('should ignore warnings which are matched via regex with leading or trailing whitespace', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(' /ignore.*/ ');
       logger.warn('ignore this message');
       logger.warn(`ignore this message even though
       it goes over

@@ -117,13 +117,16 @@ export const logger = createLogger({
 
 let ignoredWarnings: (string | RegExp)[];
 export const setIgnoredWarnings = (messages: string): void => {
-  ignoredWarnings = messages.split(/\r?\n/).map(m => {
-    if (m.startsWith('/') && m.endsWith('/')) {
-      return new RegExp(m.slice(1, -1));
-    } else {
-      return m;
-    }
-  });
+  ignoredWarnings = messages
+    .split(/\r?\n/)
+    .map(m => m.trim())
+    .map(m => {
+      if (m.startsWith('/') && m.endsWith('/')) {
+        return new RegExp(m.slice(1, -1));
+      } else {
+        return m;
+      }
+    });
 };
 
 class LoggerStats {
