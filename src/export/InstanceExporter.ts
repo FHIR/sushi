@@ -307,25 +307,22 @@ export class InstanceExporter implements Fishable {
 
     // Set Assigned values based on the FSH rules and the Structure Definition
     instanceDef = this.setAssignedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
-    instanceDef.validateId(fshDefinition.sourceInfo);
-    this.validateRequiredElements(
-      instanceDef,
-      instanceOfStructureDefinition.elements,
-      fshDefinition
-    );
-    cleanResource(instanceDef);
-    this.pkg.instances.push(instanceDef);
-
     // should we add the instanceOf to meta.profile?
     // if the exact url is not in there, and a versioned url is also not in there, add it to the front.
     // otherwise, add it at the front.
     if (isResource && instanceOfStructureDefinition.derivation === 'constraint') {
+      // elements of instanceDef.meta.profile may be objects if they are provided by slices,
+      // since they have to keep track of the _sliceName property.
+      // this is technically not a match for the defined type of instanceDef.meta.profile,
+      // so give the parameter a union type to handle both cases.
       if (
-        !instanceDef.meta?.profile?.some(
-          profile =>
-            profile === instanceOfStructureDefinition.url ||
-            profile.startsWith(`${instanceOfStructureDefinition.url}|`)
-        )
+        !instanceDef.meta?.profile?.some((profile: string | { assignedValue: string }) => {
+          const profileUrl = typeof profile === 'object' ? profile.assignedValue : profile;
+          return (
+            profileUrl === instanceOfStructureDefinition.url ||
+            profileUrl.startsWith(`${instanceOfStructureDefinition.url}|`)
+          );
+        })
       ) {
         // we might have to create meta or meta.profile first, if no rules already created those
         if (instanceDef.meta == null) {
@@ -337,6 +334,14 @@ export class InstanceExporter implements Fishable {
         }
       }
     }
+    instanceDef.validateId(fshDefinition.sourceInfo);
+    this.validateRequiredElements(
+      instanceDef,
+      instanceOfStructureDefinition.elements,
+      fshDefinition
+    );
+    cleanResource(instanceDef);
+    this.pkg.instances.push(instanceDef);
 
     // Once all rules are set, we should ensure that we did not add a duplicate profile URL anywhere
     if (instanceDef.meta?.profile) instanceDef.meta.profile = uniq(instanceDef.meta.profile);

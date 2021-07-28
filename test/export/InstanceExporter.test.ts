@@ -209,6 +209,28 @@ describe('InstanceExporter', () => {
       expect(exported.meta).toBeUndefined();
     });
 
+    it('should set meta.profile with the InstanceOf profile before checking for required elements', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      patient.rules.push(metaMS, metaCard, metaProfileMS, metaProfileCard);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should only set meta.profile with one profile when profile is set on the InstanceOf profile', () => {
       const patientAbstractProfile = new Profile('MyPatientAbstract');
       patientAbstractProfile.parent = 'Patient';
