@@ -1,7 +1,6 @@
 import { createLogger, format, transports } from 'winston';
 import chalk from 'chalk';
 import cloneDeep from 'lodash/cloneDeep';
-import { EOL } from 'os';
 
 const { combine, printf } = format;
 
@@ -36,21 +35,10 @@ const ignoreWarnings = format(info => {
   if (info.level !== 'warn') {
     return info;
   }
-
   const shouldIgnore = ignoredWarnings?.some(m => {
-    if (m.startsWith('/') && m.endsWith('/')) {
-      const regex = new RegExp(m.slice(1, -1));
-      return regex.test(info.message);
-    } else {
-      return m === info.message;
-    }
+    return typeof m === 'string' ? m === info.message : m.test(info.message);
   });
-  if (shouldIgnore) {
-    suppressLogger = true;
-    info.level = '';
-    info.message = '';
-  }
-  return info;
+  return shouldIgnore ? false : info;
 });
 
 const incrementCounts = format(info => {
@@ -95,10 +83,6 @@ const trackErrorsAndWarnings = format(info => {
 });
 
 const printer = printf(info => {
-  if (loggerIsSuppressed) {
-    logger.transports[0].silent = false;
-    loggerIsSuppressed = false;
-  }
   let level;
   switch (info.level) {
     case 'info':
@@ -117,12 +101,6 @@ const printer = printf(info => {
     default:
       break;
   }
-  if (suppressLogger) {
-    logger.transports[0].silent = true;
-    loggerIsSuppressed = true;
-    suppressLogger = false;
-    return;
-  }
   return `${level} ${info.message}`;
 });
 
@@ -137,11 +115,15 @@ export const logger = createLogger({
   transports: [new transports.Console()]
 });
 
-let suppressLogger = false;
-let loggerIsSuppressed = false;
-let ignoredWarnings: string[];
+let ignoredWarnings: (string | RegExp)[];
 export const setIgnoredWarnings = (messages: string): void => {
-  ignoredWarnings = messages.split(/\r?\n/);
+  ignoredWarnings = messages.split(/\r?\n/).map(m => {
+    if (m.startsWith('/') && m.endsWith('/')) {
+      return new RegExp(m.slice(1, -1));
+    } else {
+      return m;
+    }
+  });
 };
 
 class LoggerStats {
