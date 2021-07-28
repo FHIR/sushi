@@ -294,12 +294,6 @@ export class InstanceExporter implements Fishable {
       instanceDef._instanceMeta.sdType = instanceOfStructureDefinition.type;
     }
 
-    // Add the SD we are making an instance of to meta.profile, as long as SD is not a base FHIR resource
-    // If we end up adding more metadata, we should wrap this in a setMetadata function
-    if (isResource && instanceOfStructureDefinition.derivation === 'constraint') {
-      instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
-    }
-
     // Set Assigned values based on the FSH rules and the Structure Definition
     instanceDef = this.setAssignedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     instanceDef.validateId(fshDefinition.sourceInfo);
@@ -311,19 +305,30 @@ export class InstanceExporter implements Fishable {
     cleanResource(instanceDef);
     this.pkg.instances.push(instanceDef);
 
+    // should we add the instanceOf to meta.profile?
+    // if the exact url is not in there, and a versioned url is also not in there, add it to the front.
+    // otherwise, add it at the front.
+    if (isResource && instanceOfStructureDefinition.derivation === 'constraint') {
+      if (
+        !instanceDef.meta?.profile?.some(
+          profile =>
+            profile === instanceOfStructureDefinition.url ||
+            profile.startsWith(`${instanceOfStructureDefinition.url}|`)
+        )
+      ) {
+        // we might have to create meta or meta.profile first, if no rules already created those
+        if (instanceDef.meta == null) {
+          instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
+        } else if (instanceDef.meta.profile == null) {
+          instanceDef.meta.profile = [instanceOfStructureDefinition.url];
+        } else {
+          instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+        }
+      }
+    }
+
     // Once all rules are set, we should ensure that we did not add a duplicate profile URL anywhere
     if (instanceDef.meta?.profile) instanceDef.meta.profile = uniq(instanceDef.meta.profile);
-
-    // If we added a versioned profile that's the same as the InstanceOf profile, remove the InstanceOf profile
-    const versionedInstanceOf =
-      instanceDef.meta?.profile?.filter(profile =>
-        profile.startsWith(`${instanceOfStructureDefinition.url}|`)
-      ) ?? [];
-    if (versionedInstanceOf.length > 0) {
-      instanceDef.meta.profile = instanceDef.meta.profile.filter(
-        profile => profile !== instanceOfStructureDefinition.url
-      );
-    }
 
     // check for another instance of the same type with the same id
     // see https://www.hl7.org/fhir/resource.html#id
