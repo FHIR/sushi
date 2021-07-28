@@ -117,7 +117,11 @@ export class FHIRDefinitions implements Fishable {
           addDefinitionToMap(definition, this.resources);
         }
       } else if (definition.kind === 'logical') {
-        addDefinitionToMap(definition, this.logicals);
+        if (definition.derivation === 'specialization') {
+          addDefinitionToMap(definition, this.logicals);
+        } else if (!this.isSupplementalFHIRDefinitions) {
+          addDefinitionToMap(definition, this.profiles);
+        }
       }
     } else if (definition.resourceType === 'ValueSet' && !this.isSupplementalFHIRDefinitions) {
       addDefinitionToMap(definition, this.valueSets);
