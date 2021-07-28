@@ -91,6 +91,21 @@ describe('FHIRDefinitions', () => {
       ).toEqual(vitalSignsByID);
     });
 
+    it('should find base FHIR profiles of logical models', () => {
+      const serviceProfileByID = defs.fishForFHIR('service-profile', Type.Profile);
+      expect(serviceProfileByID.url).toBe(
+        'http://hl7.org/fhir/some/example/StructureDefinition/ServiceProfile'
+      );
+      expect(serviceProfileByID.fhirVersion).toBe('4.0.1');
+      expect(defs.fishForFHIR('ServiceProfile', Type.Profile)).toEqual(serviceProfileByID);
+      expect(
+        defs.fishForFHIR(
+          'http://hl7.org/fhir/some/example/StructureDefinition/ServiceProfile',
+          Type.Profile
+        )
+      ).toEqual(serviceProfileByID);
+    });
+
     it('should find base FHIR extensions', () => {
       const maidenNameExtensionByID = defs.fishForFHIR('patient-mothersMaidenName', Type.Extension);
       expect(maidenNameExtensionByID.url).toBe(

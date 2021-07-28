@@ -157,6 +157,33 @@ describe('ProfileExporter', () => {
     expect(exported[2].baseDefinition === exported[1].url);
   });
 
+  it('should export a profile with a logical parent', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'ELTSSServiceModel';
+    doc.profiles.set(profile.name, profile);
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].kind).toBe('logical');
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
+  it('should export profiles with deep logical parents', () => {
+    const fooProfile = new Profile('Foo');
+    fooProfile.parent = 'ELTSSServiceModel';
+    const barProfile = new Profile('Bar');
+    barProfile.parent = 'Foo';
+    doc.profiles.set(fooProfile.name, fooProfile);
+    doc.profiles.set(barProfile.name, barProfile);
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(2);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].kind).toBe('logical');
+    expect(exported[1].name).toBe('Bar');
+    expect(exported[1].kind).toBe('logical');
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
   it('should defer adding an instance to a profile as a contained resource', () => {
     const instance = new Instance('myResource');
     instance.instanceOf = 'Observation';

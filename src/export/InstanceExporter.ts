@@ -11,6 +11,7 @@ import {
   applyInsertRules
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
+import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { Package } from '.';
 import { cloneDeep, merge, uniq } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
@@ -256,6 +257,16 @@ export class InstanceExporter implements Fishable {
 
     if (!json) {
       throw new InstanceOfNotDefinedError(
+        fshDefinition.name,
+        fshDefinition.instanceOf,
+        fshDefinition.sourceInfo
+      );
+    }
+
+    // Since creating an instance of a Logical is not allowed,
+    // creating an instance of a Profile of a logical model is also not allowed
+    if (json.kind === 'logical' && json.derivation === 'constraint') {
+      throw new InstanceOfLogicalProfileError(
         fshDefinition.name,
         fshDefinition.instanceOf,
         fshDefinition.sourceInfo

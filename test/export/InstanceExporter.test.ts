@@ -100,6 +100,17 @@ describe('InstanceExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
   });
 
+  it('should log a message with source information when the parent is a profile of a logical model', () => {
+    const instance = new Instance('MyServiceInstance')
+      .withFile('Incorrect.fsh')
+      .withLocation([15, 1, 18, 27]);
+    instance.instanceOf = 'ServiceProfile';
+    doc.instances.set(instance.name, instance);
+    const exported = exporter.export().instances;
+    expect(exported.length).toBe(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Incorrect\.fsh.*Line: 15 - 18\D*/s);
+  });
+
   it('should export instances with InstanceOf FSHy profile', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Patient';

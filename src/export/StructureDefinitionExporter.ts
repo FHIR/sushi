@@ -14,7 +14,6 @@ import {
   DuplicateSliceError,
   InvalidExtensionParentError,
   InvalidLogicalParentError,
-  InvalidProfileParentError,
   InvalidResourceParentError,
   InvalidFHIRIdError,
   ParentDeclaredAsNameError,
@@ -191,14 +190,7 @@ export class StructureDefinitionExporter implements Fishable {
       );
     }
 
-    if (fshDefinition instanceof Profile && parentJson.kind === 'logical') {
-      // A profile cannot have a logical model as a parent
-      throw new InvalidProfileParentError(
-        fshDefinition.name,
-        parentJson.name,
-        fshDefinition.sourceInfo
-      );
-    } else if (fshDefinition instanceof Extension && parentJson.type !== 'Extension') {
+    if (fshDefinition instanceof Extension && parentJson.type !== 'Extension') {
       // An extension can only have an Extension as a parent
       throw new InvalidExtensionParentError(
         fshDefinition.name,
@@ -852,7 +844,7 @@ export class StructureDefinitionExporter implements Fishable {
     // incomplete definitions to be used to resolve circular reference issues.
     if (structDef.type === 'Extension') {
       this.pkg.extensions.push(structDef);
-    } else if (structDef.kind === 'logical') {
+    } else if (structDef.kind === 'logical' && structDef.derivation === 'specialization') {
       this.pkg.logicals.push(structDef);
     } else if (structDef.kind === 'resource' && structDef.derivation === 'specialization') {
       this.pkg.resources.push(structDef);

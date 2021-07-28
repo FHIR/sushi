@@ -1,1 +1,737 @@
-{"resourceType":"StructureDefinition","id":"eLTSSServiceModel","text":{"status":"generated","div":"<div xmlns=\"http://www.w3.org/1999/xhtml\">\n  <p><b>eLTSS Service Logical Model</b></p>\n\n</div>"},"url":"http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel","identifier":[{"system":"http://hl7.org/fhir/us/eltss","value":"eLTSS.Service"}],"version":"0.1.0","name":"ELTSSServiceModel","title":"eLTSS Service Logical Model","status":"draft","date":"2019-02-09T00:00:00+11:00","publisher":"The HL7 Community Based Care and Privacy Workgroup","description":"Service data included in the eLTSS Dataset.","kind":"logical","abstract":false,"type":"eLTSSServiceModel","baseDefinition":"http://hl7.org/fhir/StructureDefinition/Element","derivation":"specialization","snapshot":{"element":[{"id":"eLTSSServiceModel","path":"eLTSSServiceModel","definition":"eLTSS Dataset Service data.","min":0,"max":"*","base":{"path":"eLTSSServiceModel","min":0,"max":"*"},"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.name","path":"eLTSSServiceModel.name","short":"Identifies the paid and/or non-paid service provided to a person.","definition":"Identifies the paid and/or non-paid service provided to a person. Include the code and display name plus any modifiers when a coding system (e.g., Healthcare Common Procedure Coding System (HCPCS), Home Health Revenue Codes) is used.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.name","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":true,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.startDate","path":"eLTSSServiceModel.startDate","short":"The start date of the service being provided.","definition":"The start date of the service being provided.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.startDate","min":0,"max":"1"},"type":[{"code":"date"}],"mustSupport":true,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.endDate","path":"eLTSSServiceModel.endDate","short":"The end date of the service being provided.","definition":"The end date of the service being provided.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.endDate","min":0,"max":"1"},"type":[{"code":"date"}],"mustSupport":true,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.provider","path":"eLTSSServiceModel.provider","short":"The entity or individual providing the service.","definition":"The entity or individual providing the service.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.provider","min":0,"max":"1"},"type":[{"code":"BackboneElement"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.provider.name","path":"eLTSSServiceModel.provider.name","short":"The name of the entity or individual providing the service.","definition":"The name of the entity or individual providing the service. For paid services use the organization/agency name, for non-paid services use the first and last name of the individual providing the service.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.provider.name","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.provider.phoneNumber","path":"eLTSSServiceModel.provider.phoneNumber","short":"The primary phone number (and extension when applicable) of the service provider.","definition":"The primary phone number (and extension when applicable) of the service provider.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.provider.phoneNumber","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.provider.nonPaidRelationship","path":"eLTSSServiceModel.provider.nonPaidRelationship","short":"The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.","definition":"The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.provider.nonPaidRelationship","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.deliveryAddress","path":"eLTSSServiceModel.deliveryAddress","short":"The address where service delivery will take place if service will not be provided at the person’s address.","definition":"The address where service delivery will take place if service will not be provided at the person’s address.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.deliveryAddress","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.fundingSource","path":"eLTSSServiceModel.fundingSource","short":"The source of payment for the service.","definition":"The source of payment for the service.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.fundingSource","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.unitQuantity","path":"eLTSSServiceModel.unitQuantity","short":"The numerical amount of the service unit being provided for a frequency.","definition":"The numerical amount of the service unit being provided for a frequency. This element is slated to be used in conjunction with Service Quantity Interval and Unit of Service Type elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity = 7. For a service being provided 8 hours a day, the Service Unit Value = 8.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitQuantity","min":0,"max":"1"},"type":[{"code":"integer"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.unitType","path":"eLTSSServiceModel.unitType","short":"A named quantity in terms of which services are measured or specified, used as a standard measurement of like services.","definition":"A named quantity in terms of which services are measured or specified, used as a standard measurement of like services. Values include: minute(s), 8 hour(s), quarter hour(s), hour(s), half day(s), full day(s), day(s), week(s), month(s), dollar(s), meal(s), mile(s), visit(s)/session(s), installation(s), none, other (free text). This element is slated to be used in conjunction with Service Unit Quantity interval and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Unit of Service Type = units. For a service being provided 8 hours a day, the Unit of Service Type = hours.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitType","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.unitQuantityInterval","path":"eLTSSServiceModel.unitQuantityInterval","short":"A period of time corresponding to the quantity of service(s) indicated.","definition":"A period of time corresponding to the quantity of service(s) indicated. Values include: per day, per week, per month, per year, one time only, other (free text). This element is slated to be used in conjunction with Unit of Service Type and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity Interval = per week. For a service being provided 8 hours a day, the Service Unit Quantity Interval = per day.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitQuantityInterval","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.unitRate","path":"eLTSSServiceModel.unitRate","short":"The rate of one unit for a service.","definition":"The rate of one unit for a service.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitRate","min":0,"max":"1"},"type":[{"code":"decimal"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.totalCost","path":"eLTSSServiceModel.totalCost","short":"The total cost of a service for the plan.","definition":"The total cost of a service for the plan.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.totalCost","min":0,"max":"1"},"type":[{"code":"decimal"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.stepOrAction","path":"eLTSSServiceModel.stepOrAction","short":"A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.","definition":"A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.stepOrAction","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.comment","path":"eLTSSServiceModel.comment","short":"Additional information related to the service being provided.","definition":"Additional information related to the service being provided. This field could capture additional information of the frequency of the service, how the person wants the service delivered and only used when the comment provides additional detail of the service not already handled by another element.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.comment","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false}]},"differential":{"element":[{"id":"eLTSSServiceModel","path":"eLTSSServiceModel","definition":"eLTSS Dataset Service data.","min":0,"max":"*","base":{"path":"eLTSSServiceModel","min":0,"max":"*"},"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.name","path":"eLTSSServiceModel.name","short":"Identifies the paid and/or non-paid service provided to a person.","definition":"Identifies the paid and/or non-paid service provided to a person. Include the code and display name plus any modifiers when a coding system (e.g., Healthcare Common Procedure Coding System (HCPCS), Home Health Revenue Codes) is used.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.name","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":true,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.startDate","path":"eLTSSServiceModel.startDate","short":"The start date of the service being provided.","definition":"The start date of the service being provided.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.startDate","min":0,"max":"1"},"type":[{"code":"date"}],"mustSupport":true,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.endDate","path":"eLTSSServiceModel.endDate","short":"The end date of the service being provided.","definition":"The end date of the service being provided.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.endDate","min":0,"max":"1"},"type":[{"code":"date"}],"mustSupport":true,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.provider","path":"eLTSSServiceModel.provider","short":"The entity or individual providing the service.","definition":"The entity or individual providing the service.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.provider","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.provider.name","path":"eLTSSServiceModel.provider.name","short":"The name of the entity or individual providing the service.","definition":"The name of the entity or individual providing the service. For paid services use the organization/agency name, for non-paid services use the first and last name of the individual providing the service.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.provider.name","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.provider.phoneNumber","path":"eLTSSServiceModel.provider.phoneNumber","short":"The primary phone number (and extension when applicable) of the service provider.","definition":"The primary phone number (and extension when applicable) of the service provider.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.provider.phoneNumber","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.provider.nonPaidRelationship","path":"eLTSSServiceModel.provider.nonPaidRelationship","short":"The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.","definition":"The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.provider.nonPaidRelationship","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.deliveryAddress","path":"eLTSSServiceModel.deliveryAddress","short":"The address where service delivery will take place if service will not be provided at the person’s address.","definition":"The address where service delivery will take place if service will not be provided at the person’s address.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.deliveryAddress","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.fundingSource","path":"eLTSSServiceModel.fundingSource","short":"The source of payment for the service.","definition":"The source of payment for the service.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.fundingSource","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.unitQuantity","path":"eLTSSServiceModel.unitQuantity","short":"The numerical amount of the service unit being provided for a frequency.","definition":"The numerical amount of the service unit being provided for a frequency. This element is slated to be used in conjunction with Service Quantity Interval and Unit of Service Type elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity = 7. For a service being provided 8 hours a day, the Service Unit Value = 8.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitQuantity","min":0,"max":"1"},"type":[{"code":"integer"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.unitType","path":"eLTSSServiceModel.unitType","short":"A named quantity in terms of which services are measured or specified, used as a standard measurement of like services.","definition":"A named quantity in terms of which services are measured or specified, used as a standard measurement of like services. Values include: minute(s), 8 hour(s), quarter hour(s), hour(s), half day(s), full day(s), day(s), week(s), month(s), dollar(s), meal(s), mile(s), visit(s)/session(s), installation(s), none, other (free text). This element is slated to be used in conjunction with Service Unit Quantity interval and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Unit of Service Type = units. For a service being provided 8 hours a day, the Unit of Service Type = hours.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitType","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.unitQuantityInterval","path":"eLTSSServiceModel.unitQuantityInterval","short":"A period of time corresponding to the quantity of service(s) indicated.","definition":"A period of time corresponding to the quantity of service(s) indicated. Values include: per day, per week, per month, per year, one time only, other (free text). This element is slated to be used in conjunction with Unit of Service Type and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity Interval = per week. For a service being provided 8 hours a day, the Service Unit Quantity Interval = per day.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitQuantityInterval","min":0,"max":"1"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":true},{"id":"eLTSSServiceModel.unitRate","path":"eLTSSServiceModel.unitRate","short":"The rate of one unit for a service.","definition":"The rate of one unit for a service.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.unitRate","min":0,"max":"1"},"type":[{"code":"decimal"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.totalCost","path":"eLTSSServiceModel.totalCost","short":"The total cost of a service for the plan.","definition":"The total cost of a service for the plan.","min":0,"max":"1","base":{"path":"eLTSSServiceModel.totalCost","min":0,"max":"1"},"type":[{"code":"decimal"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.stepOrAction","path":"eLTSSServiceModel.stepOrAction","short":"A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.","definition":"A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.stepOrAction","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false},{"id":"eLTSSServiceModel.comment","path":"eLTSSServiceModel.comment","short":"Additional information related to the service being provided.","definition":"Additional information related to the service being provided. This field could capture additional information of the frequency of the service, how the person wants the service delivered and only used when the comment provides additional detail of the service not already handled by another element.","min":0,"max":"*","base":{"path":"eLTSSServiceModel.comment","min":0,"max":"*"},"type":[{"code":"string"}],"mustSupport":false,"isModifier":false,"isSummary":false}]}}
+{
+    "resourceType": "StructureDefinition",
+    "id": "eLTSSServiceModel",
+    "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n  <p><b>eLTSS Service Logical Model</b></p>\n\n</div>"
+    },
+    "url": "http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel",
+    "identifier": [
+        {
+            "system": "http://hl7.org/fhir/us/eltss",
+            "value": "eLTSS.Service"
+        }
+    ],
+    "version": "0.1.0",
+    "name": "ELTSSServiceModel",
+    "title": "eLTSS Service Logical Model",
+    "status": "draft",
+    "date": "2019-02-09T00:00:00+11:00",
+    "publisher": "The HL7 Community Based Care and Privacy Workgroup",
+    "description": "Service data included in the eLTSS Dataset.",
+    "kind": "logical",
+    "abstract": false,
+    "type": "eLTSSServiceModel",
+    "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Element",
+    "derivation": "specialization",
+    "snapshot": {
+        "element": [
+            {
+                "id": "eLTSSServiceModel",
+                "path": "eLTSSServiceModel",
+                "definition": "eLTSS Dataset Service data.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel",
+                    "min": 0,
+                    "max": "*"
+                },
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.name",
+                "path": "eLTSSServiceModel.name",
+                "short": "Identifies the paid and/or non-paid service provided to a person.",
+                "definition": "Identifies the paid and/or non-paid service provided to a person. Include the code and display name plus any modifiers when a coding system (e.g., Healthcare Common Procedure Coding System (HCPCS), Home Health Revenue Codes) is used.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.name",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": true,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.startDate",
+                "path": "eLTSSServiceModel.startDate",
+                "short": "The start date of the service being provided.",
+                "definition": "The start date of the service being provided.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.startDate",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "date"
+                    }
+                ],
+                "mustSupport": true,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.endDate",
+                "path": "eLTSSServiceModel.endDate",
+                "short": "The end date of the service being provided.",
+                "definition": "The end date of the service being provided.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.endDate",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "date"
+                    }
+                ],
+                "mustSupport": true,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.provider",
+                "path": "eLTSSServiceModel.provider",
+                "short": "The entity or individual providing the service.",
+                "definition": "The entity or individual providing the service.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.provider",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "BackboneElement"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.provider.name",
+                "path": "eLTSSServiceModel.provider.name",
+                "short": "The name of the entity or individual providing the service.",
+                "definition": "The name of the entity or individual providing the service. For paid services use the organization/agency name, for non-paid services use the first and last name of the individual providing the service.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.provider.name",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.provider.phoneNumber",
+                "path": "eLTSSServiceModel.provider.phoneNumber",
+                "short": "The primary phone number (and extension when applicable) of the service provider.",
+                "definition": "The primary phone number (and extension when applicable) of the service provider.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.provider.phoneNumber",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.provider.nonPaidRelationship",
+                "path": "eLTSSServiceModel.provider.nonPaidRelationship",
+                "short": "The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.",
+                "definition": "The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.provider.nonPaidRelationship",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.deliveryAddress",
+                "path": "eLTSSServiceModel.deliveryAddress",
+                "short": "The address where service delivery will take place if service will not be provided at the person’s address.",
+                "definition": "The address where service delivery will take place if service will not be provided at the person’s address.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.deliveryAddress",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.fundingSource",
+                "path": "eLTSSServiceModel.fundingSource",
+                "short": "The source of payment for the service.",
+                "definition": "The source of payment for the service.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.fundingSource",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.unitQuantity",
+                "path": "eLTSSServiceModel.unitQuantity",
+                "short": "The numerical amount of the service unit being provided for a frequency.",
+                "definition": "The numerical amount of the service unit being provided for a frequency. This element is slated to be used in conjunction with Service Quantity Interval and Unit of Service Type elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity = 7. For a service being provided 8 hours a day, the Service Unit Value = 8.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitQuantity",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "integer"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.unitType",
+                "path": "eLTSSServiceModel.unitType",
+                "short": "A named quantity in terms of which services are measured or specified, used as a standard measurement of like services.",
+                "definition": "A named quantity in terms of which services are measured or specified, used as a standard measurement of like services. Values include: minute(s), 8 hour(s), quarter hour(s), hour(s), half day(s), full day(s), day(s), week(s), month(s), dollar(s), meal(s), mile(s), visit(s)/session(s), installation(s), none, other (free text). This element is slated to be used in conjunction with Service Unit Quantity interval and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Unit of Service Type = units. For a service being provided 8 hours a day, the Unit of Service Type = hours.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitType",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.unitQuantityInterval",
+                "path": "eLTSSServiceModel.unitQuantityInterval",
+                "short": "A period of time corresponding to the quantity of service(s) indicated.",
+                "definition": "A period of time corresponding to the quantity of service(s) indicated. Values include: per day, per week, per month, per year, one time only, other (free text). This element is slated to be used in conjunction with Unit of Service Type and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity Interval = per week. For a service being provided 8 hours a day, the Service Unit Quantity Interval = per day.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitQuantityInterval",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.unitRate",
+                "path": "eLTSSServiceModel.unitRate",
+                "short": "The rate of one unit for a service.",
+                "definition": "The rate of one unit for a service.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitRate",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "decimal"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.totalCost",
+                "path": "eLTSSServiceModel.totalCost",
+                "short": "The total cost of a service for the plan.",
+                "definition": "The total cost of a service for the plan.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.totalCost",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "decimal"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.stepOrAction",
+                "path": "eLTSSServiceModel.stepOrAction",
+                "short": "A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.",
+                "definition": "A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.stepOrAction",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.comment",
+                "path": "eLTSSServiceModel.comment",
+                "short": "Additional information related to the service being provided.",
+                "definition": "Additional information related to the service being provided. This field could capture additional information of the frequency of the service, how the person wants the service delivered and only used when the comment provides additional detail of the service not already handled by another element.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.comment",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            }
+        ]
+    },
+    "differential": {
+        "element": [
+            {
+                "id": "eLTSSServiceModel",
+                "path": "eLTSSServiceModel",
+                "definition": "eLTSS Dataset Service data.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel",
+                    "min": 0,
+                    "max": "*"
+                },
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.name",
+                "path": "eLTSSServiceModel.name",
+                "short": "Identifies the paid and/or non-paid service provided to a person.",
+                "definition": "Identifies the paid and/or non-paid service provided to a person. Include the code and display name plus any modifiers when a coding system (e.g., Healthcare Common Procedure Coding System (HCPCS), Home Health Revenue Codes) is used.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.name",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": true,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.startDate",
+                "path": "eLTSSServiceModel.startDate",
+                "short": "The start date of the service being provided.",
+                "definition": "The start date of the service being provided.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.startDate",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "date"
+                    }
+                ],
+                "mustSupport": true,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.endDate",
+                "path": "eLTSSServiceModel.endDate",
+                "short": "The end date of the service being provided.",
+                "definition": "The end date of the service being provided.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.endDate",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "date"
+                    }
+                ],
+                "mustSupport": true,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.provider",
+                "path": "eLTSSServiceModel.provider",
+                "short": "The entity or individual providing the service.",
+                "definition": "The entity or individual providing the service.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.provider",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.provider.name",
+                "path": "eLTSSServiceModel.provider.name",
+                "short": "The name of the entity or individual providing the service.",
+                "definition": "The name of the entity or individual providing the service. For paid services use the organization/agency name, for non-paid services use the first and last name of the individual providing the service.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.provider.name",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.provider.phoneNumber",
+                "path": "eLTSSServiceModel.provider.phoneNumber",
+                "short": "The primary phone number (and extension when applicable) of the service provider.",
+                "definition": "The primary phone number (and extension when applicable) of the service provider.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.provider.phoneNumber",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.provider.nonPaidRelationship",
+                "path": "eLTSSServiceModel.provider.nonPaidRelationship",
+                "short": "The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.",
+                "definition": "The relationship (e.g., spouse, neighbor, guardian, daughter) of the individual providing a non-paid service or support to the person.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.provider.nonPaidRelationship",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.deliveryAddress",
+                "path": "eLTSSServiceModel.deliveryAddress",
+                "short": "The address where service delivery will take place if service will not be provided at the person’s address.",
+                "definition": "The address where service delivery will take place if service will not be provided at the person’s address.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.deliveryAddress",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.fundingSource",
+                "path": "eLTSSServiceModel.fundingSource",
+                "short": "The source of payment for the service.",
+                "definition": "The source of payment for the service.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.fundingSource",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.unitQuantity",
+                "path": "eLTSSServiceModel.unitQuantity",
+                "short": "The numerical amount of the service unit being provided for a frequency.",
+                "definition": "The numerical amount of the service unit being provided for a frequency. This element is slated to be used in conjunction with Service Quantity Interval and Unit of Service Type elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity = 7. For a service being provided 8 hours a day, the Service Unit Value = 8.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitQuantity",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "integer"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.unitType",
+                "path": "eLTSSServiceModel.unitType",
+                "short": "A named quantity in terms of which services are measured or specified, used as a standard measurement of like services.",
+                "definition": "A named quantity in terms of which services are measured or specified, used as a standard measurement of like services. Values include: minute(s), 8 hour(s), quarter hour(s), hour(s), half day(s), full day(s), day(s), week(s), month(s), dollar(s), meal(s), mile(s), visit(s)/session(s), installation(s), none, other (free text). This element is slated to be used in conjunction with Service Unit Quantity interval and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Unit of Service Type = units. For a service being provided 8 hours a day, the Unit of Service Type = hours.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitType",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.unitQuantityInterval",
+                "path": "eLTSSServiceModel.unitQuantityInterval",
+                "short": "A period of time corresponding to the quantity of service(s) indicated.",
+                "definition": "A period of time corresponding to the quantity of service(s) indicated. Values include: per day, per week, per month, per year, one time only, other (free text). This element is slated to be used in conjunction with Unit of Service Type and Service Unit Quantity elements to form a full description of how often a service is provided. For example, a service being provided 7 units per week, the Service Unit Quantity Interval = per week. For a service being provided 8 hours a day, the Service Unit Quantity Interval = per day.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitQuantityInterval",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": true
+            },
+            {
+                "id": "eLTSSServiceModel.unitRate",
+                "path": "eLTSSServiceModel.unitRate",
+                "short": "The rate of one unit for a service.",
+                "definition": "The rate of one unit for a service.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.unitRate",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "decimal"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.totalCost",
+                "path": "eLTSSServiceModel.totalCost",
+                "short": "The total cost of a service for the plan.",
+                "definition": "The total cost of a service for the plan.",
+                "min": 0,
+                "max": "1",
+                "base": {
+                    "path": "eLTSSServiceModel.totalCost",
+                    "min": 0,
+                    "max": "1"
+                },
+                "type": [
+                    {
+                        "code": "decimal"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.stepOrAction",
+                "path": "eLTSSServiceModel.stepOrAction",
+                "short": "A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.",
+                "definition": "A planned measurable step or action that needs to be taken to accomplish a goal identified by the person.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.stepOrAction",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            },
+            {
+                "id": "eLTSSServiceModel.comment",
+                "path": "eLTSSServiceModel.comment",
+                "short": "Additional information related to the service being provided.",
+                "definition": "Additional information related to the service being provided. This field could capture additional information of the frequency of the service, how the person wants the service delivered and only used when the comment provides additional detail of the service not already handled by another element.",
+                "min": 0,
+                "max": "*",
+                "base": {
+                    "path": "eLTSSServiceModel.comment",
+                    "min": 0,
+                    "max": "*"
+                },
+                "type": [
+                    {
+                        "code": "string"
+                    }
+                ],
+                "mustSupport": false,
+                "isModifier": false,
+                "isSummary": false
+            }
+        ]
+    }
+}
