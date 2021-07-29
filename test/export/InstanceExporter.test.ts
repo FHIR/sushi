@@ -209,6 +209,28 @@ describe('InstanceExporter', () => {
       expect(exported.meta).toBeUndefined();
     });
 
+    it('should set meta.profile with the InstanceOf profile before checking for required elements', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      patient.rules.push(metaMS, metaCard, metaProfileMS, metaProfileCard);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should only set meta.profile with one profile when profile is set on the InstanceOf profile', () => {
       const patientAbstractProfile = new Profile('MyPatientAbstract');
       patientAbstractProfile.parent = 'Patient';
@@ -228,13 +250,13 @@ describe('InstanceExporter', () => {
       metaProfileMS.mustSupport = true;
       const metaProfileCard = new CardRule('meta.profile');
       metaProfileCard.min = 1;
-      metaProfileCard.max = '1';
+      metaProfileCard.max = '*';
       const typeCaretRule = new CaretValueRule('meta.profile');
       typeCaretRule.caretPath = 'slicing.discriminator.type';
       typeCaretRule.value = new FshCode('pattern');
-      const pathCaretRule = new CaretValueRule('item');
+      const pathCaretRule = new CaretValueRule('meta.profile');
       pathCaretRule.caretPath = 'slicing.discriminator.path';
-      pathCaretRule.value = 'type';
+      pathCaretRule.value = '$this';
       const containsRule = new ContainsRule('meta.profile');
       containsRule.items = [{ name: 'supportedPatientProfile' }];
       const cardRule = new CardRule('meta.profile[supportedPatientProfile]');
@@ -271,6 +293,247 @@ describe('InstanceExporter', () => {
       expect(exported.meta.profile).toHaveLength(1);
       expect(exported.meta.profile).toEqual([
         'http://hl7.org/fhir/us/minimal/StructureDefinition/MyPatient'
+      ]);
+    });
+
+    it('should add the InstanceOf profile as the first meta.profile if it is not added by any rules', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule
+      );
+
+      // * name[0].family = "LastName"
+      // * meta.profile[+] = "http://example.org/fhir/StructureDefinition/OtherPatient"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      const otherProfileRule = new AssignmentRule('meta.profile[+]');
+      otherProfileRule.value = 'http://example.org/fhir/StructureDefinition/OtherPatient';
+      patientInstance.rules.push(patientAssignmentRule, otherProfileRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(2);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient',
+        'http://example.org/fhir/StructureDefinition/OtherPatient'
+      ]);
+    });
+
+    it('should set meta.profile without the unversioned InstanceOf profile if a versioned InstanceOf profile is present', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedProfile 1..1
+       * meta.profile[supportedProfile] = Canonical(TestPatient|0.1.0)
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedProfile' }];
+      const cardRule = new CardRule('meta.profile[supportedProfile]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const supportedProfileCanonical = new AssignmentRule('meta.profile[supportedProfile]');
+      supportedProfileCanonical.value = new FshCanonical('TestPatient');
+      supportedProfileCanonical.value.version = '0.1.0';
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        cardRule,
+        supportedProfileCanonical
+      );
+
+      // * name[0].family = "LastName"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      patientInstance.rules.push(patientAssignmentRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(1);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|0.1.0'
+      ]);
+    });
+
+    it('should keep the unversioned InstanceOf in meta.profile if it is also added by a rule on the profile', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 2..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedProfile 1..1 and unversionedProfile 1..1
+       * meta.profile[supportedProfile] = Canonical(TestPatient|0.1.0)
+       * meta.profile[unversionedProfile] = Canonical(TestPatient)
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 2;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedProfile' }, { name: 'unversionedProfile' }];
+      const supportedCardRule = new CardRule('meta.profile[supportedProfile]');
+      supportedCardRule.min = 1;
+      supportedCardRule.max = '1';
+      const supportedProfileCanonical = new AssignmentRule('meta.profile[supportedProfile]');
+      supportedProfileCanonical.value = new FshCanonical('TestPatient');
+      supportedProfileCanonical.value.version = '0.1.0';
+      const unversionedCardRule = new CardRule('meta.profile[unversionedProfile]');
+      unversionedCardRule.min = 1;
+      unversionedCardRule.max = '1';
+      const unversionedProfileCanonical = new AssignmentRule('meta.profile[unversionedProfile]');
+      unversionedProfileCanonical.value = new FshCanonical('TestPatient');
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        supportedCardRule,
+        supportedProfileCanonical,
+        unversionedCardRule,
+        unversionedProfileCanonical
+      );
+
+      // * name[0].family = "LastName"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      patientInstance.rules.push(patientAssignmentRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(2);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|0.1.0',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient'
+      ]);
+    });
+
+    it('should keep the unversioned InstanceOf in meta.profile if it is also added by a rule on the instance', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedProfile 1..1
+       * meta.profile[supportedProfile] = Canonical(TestPatient|0.1.0)
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedProfile' }];
+      const cardRule = new CardRule('meta.profile[supportedProfile]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const supportedProfileCanonical = new AssignmentRule('meta.profile[supportedProfile]');
+      supportedProfileCanonical.value = new FshCanonical('TestPatient');
+      supportedProfileCanonical.value.version = '0.1.0';
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        cardRule,
+        supportedProfileCanonical
+      );
+
+      // * name[0].family = "LastName"
+      // * meta.profile[+] = Canonical(TestPatient|0.1.0)
+      // * meta.profile[+] = Canonical(TestPatient)
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      const versionedProfileRule = new AssignmentRule('meta.profile[+]');
+      versionedProfileRule.value = new FshCanonical('TestPatient');
+      versionedProfileRule.value.version = '0.1.0';
+      const unversionedProfileRule = new AssignmentRule('meta.profile[+]');
+      unversionedProfileRule.value = new FshCanonical('TestPatient');
+
+      patientInstance.rules.push(
+        patientAssignmentRule,
+        versionedProfileRule,
+        unversionedProfileRule
+      );
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(2);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|0.1.0',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient'
       ]);
     });
 
