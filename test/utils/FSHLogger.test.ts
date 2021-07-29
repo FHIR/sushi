@@ -161,6 +161,22 @@ describe('FSHLogger', () => {
       expect(messages[0]).toMatch(/error.*error1/);
     });
 
+    it('should ignore lines beginning with # when listing warnings', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredWarnings(
+        leftAlign(`
+        warn1
+        # warn2
+        `)
+      );
+      logger.warn('warn1');
+      logger.warn('warn2');
+      logger.error('error1');
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatch(/warn.*warn2/);
+      expect(messages[1]).toMatch(/error.*error1/);
+    });
+
     it('should ignore leading and trailing whitespace for warnings which are listed directly', () => {
       logger.transports[0]['write'] = logMock;
       setIgnoredWarnings(' warn1  ');

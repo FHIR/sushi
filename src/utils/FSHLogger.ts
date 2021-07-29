@@ -120,6 +120,7 @@ export const setIgnoredWarnings = (messages: string): void => {
   ignoredWarnings = messages
     .split(/\r?\n/)
     .map(m => m.trim())
+    .filter(m => !m.startsWith('#'))
     .map(m => {
       if (m.startsWith('/') && m.endsWith('/')) {
         return new RegExp(m.slice(1, -1));
