@@ -671,6 +671,8 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitAddElementRule(rule.addElementRule()));
       } else if (rule.codeCaretValueRule()) {
         ruleSet.rules.push(this.visitCodeCaretValueRule(rule.codeCaretValueRule()));
+      } else if (rule.mappingRule()) {
+        ruleSet.rules.push(this.visitMappingRule(rule.mappingRule()));
       }
     });
   }

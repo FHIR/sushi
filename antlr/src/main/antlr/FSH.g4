@@ -31,7 +31,7 @@ csMetadata:         id | title | description;
 csRule:             concept | codeCaretValueRule | insertRule;
 
 ruleSet:            KW_RULESET RULESET_REFERENCE ruleSetRule+;
-ruleSetRule:        sdRule | addElementRule | concept | codeCaretValueRule | vsComponent;
+ruleSetRule:        sdRule | addElementRule | concept | codeCaretValueRule | vsComponent | mappingRule;
 
 paramRuleSet:       KW_RULESET PARAM_RULESET_REFERENCE paramRuleSetContent;
 paramRuleSetContent:   STAR
