@@ -71,9 +71,21 @@ async function app() {
   if (program.debug) logger.level = 'debug';
   input = ensureInputDir(input);
 
-  const ignoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
-  if (fs.existsSync(ignoreWarningsPath)) {
-    setIgnoredWarnings(fs.readFileSync(ignoreWarningsPath, 'utf-8'));
+  const rootIgnoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
+  const nestedIgnoreWarningsPath = path.join(input, 'input', 'sushi-ignoreWarnings.txt');
+  if (fs.existsSync(rootIgnoreWarningsPath)) {
+    setIgnoredWarnings(fs.readFileSync(rootIgnoreWarningsPath, 'utf-8'));
+    if (fs.existsSync(nestedIgnoreWarningsPath)) {
+      logger.warn(
+        'Found sushi-ignoreWarnings.txt files in the following locations:\n\n' +
+          ` - ${rootIgnoreWarningsPath}\n` +
+          ` - ${nestedIgnoreWarningsPath}\n\n` +
+          `Only the file at ${rootIgnoreWarningsPath} will be processed. ` +
+          'Remove one of these files to avoid this warning.'
+      );
+    }
+  } else if (fs.existsSync(nestedIgnoreWarningsPath)) {
+    setIgnoredWarnings(fs.readFileSync(nestedIgnoreWarningsPath, 'utf-8'));
   }
 
   logger.info(`Running ${getVersion()}`);
