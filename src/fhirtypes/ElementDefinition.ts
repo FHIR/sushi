@@ -1657,7 +1657,9 @@ export class ElementDefinition {
     if (sdType && this.type[0].targetProfile) {
       const validTypes: string[] = [];
       this.type[0].targetProfile.forEach(tp => {
-        const tpType = fisher.fishForMetadata(tp)?.sdType;
+        // target profile may have a version after a | character. don't include it when fishing.
+        const unversionedProfile = tp.split('|', 2)[0];
+        const tpType = fisher.fishForMetadata(unversionedProfile)?.sdType;
         if (tpType) {
           validTypes.push(tpType);
         }

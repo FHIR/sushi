@@ -1990,6 +1990,39 @@ describe('InstanceExporter', () => {
       expect(exported.instantiatesCanonical).toEqual(['http://example.org/PlanDefition/1']); // instantiatesCanonical is set
     });
 
+    it('should assign a Canonical that is one of the valid types (without checking the version) when the type is versioned', () => {
+      // Profile: SpecialQuestionnaire
+      // Parent: Questionnaire
+      // derivedFrom only Canonical(TestQuestionnaire|3.1)
+      const specialQuestionnaire = new Profile('SpecialQuestionnaire');
+      specialQuestionnaire.parent = 'Questionnaire';
+      const onlyRule = new OnlyRule('derivedFrom');
+      onlyRule.types = [{ type: 'TestQuestionnaire|3.1', isCanonical: true }];
+      specialQuestionnaire.rules.push(onlyRule);
+      doc.profiles.set(specialQuestionnaire.name, specialQuestionnaire);
+      // Instance: TQInstance
+      // InstanceOf: TestQuestionnaire
+      // url = "http://example.org/TQ/1"
+      const tqInstance = new Instance('TQInstance');
+      tqInstance.instanceOf = 'TestQuestionnaire';
+      const tqUrl = new AssignmentRule('url');
+      tqUrl.value = 'http://example.org/TQ/1';
+      tqInstance.rules.push(tqUrl);
+      doc.instances.set(tqInstance.name, tqInstance);
+      // Instance: SQInstance
+      // InstanceOf: SpecialQuestionnaire
+      // derivedFrom = Canonical(TQInstance)
+      const sqInstance = new Instance('SQInstance');
+      sqInstance.instanceOf = 'SpecialQuestionnaire';
+      const sqDerivedFrom = new AssignmentRule('derivedFrom');
+      sqDerivedFrom.value = new FshCanonical('TQInstance');
+      sqInstance.rules.push(sqDerivedFrom);
+
+      const exported = exportInstance(sqInstance);
+      expect(exported.derivedFrom).toBeDefined();
+      expect(exported.derivedFrom).toEqual(['http://example.org/TQ/1']);
+    });
+
     it('should assign a Canonical that is a child of the valid types', () => {
       const assignedRefRule = new AssignmentRule('instantiatesCanonical');
       const pdProfile = new Profile('PlanDefProfile');
