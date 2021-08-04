@@ -429,6 +429,19 @@ export async function init(): Promise<void> {
       configDoc.set(field, userValue);
     }
   });
+
+  // And for nested publisher fields
+  ['name', 'url'].forEach(field => {
+    const userValue = readlineSync.question(
+      `Publisher ${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${configDoc
+        .get('publisher')
+        .get(field)}): `
+    );
+    if (userValue) {
+      configDoc.get('publisher').set(field, userValue);
+    }
+  });
+
   // Ensure copyrightYear is accurate
   configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
   const projectName = configDoc.get('name');

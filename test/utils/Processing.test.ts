@@ -1017,7 +1017,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
@@ -1075,6 +1077,10 @@ describe('Processing', () => {
           return 'active';
         } else if (question.startsWith('Version')) {
           return '2.0.0';
+        } else if (question.startsWith('Publisher Name')) {
+          return 'SUSHI Chefs';
+        } else if (question.startsWith('Publisher Url')) {
+          return 'http://custom-publisher.org';
         }
       });
       await init();
@@ -1083,7 +1089,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
@@ -1139,7 +1147,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
