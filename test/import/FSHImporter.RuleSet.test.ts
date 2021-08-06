@@ -14,6 +14,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, ConceptRule } from '../../src/fshtypes/rules';
 import { FshCode } from '../../src/fshtypes';
 import { leftAlign } from '../utils/leftAlign';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   beforeEach(() => {
@@ -251,6 +252,27 @@ describe('FSHImporter', () => {
         /RuleSet named SameRuleSet already exists/s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+    });
+
+    it('should log an error and skip the ruleset when encountering an ruleset with a name used by another ruleset in another file', () => {
+      const input1 = `
+        RuleSet: SameRuleSet
+        * gender 0..0
+      `;
+
+      const input2 = `
+        RuleSet: SameRuleSet
+        * active = true
+      `;
+
+      const result = importText([new RawFSH(input1, 'File1.fsh'), new RawFSH(input2, 'File2.fsh')]);
+      expect(result.reduce((sum, d2) => sum + d2.ruleSets.size, 0)).toBe(1);
+      const r = result[0].ruleSets.get('SameRuleSet');
+      assertCardRule(r.rules[0] as Rule, 'gender', 0, '0');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /RuleSet named SameRuleSet already exists/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
     });
 
     it('should not log an error when the ConceptRule has one code with a system, no definition, and no hierarchy', () => {

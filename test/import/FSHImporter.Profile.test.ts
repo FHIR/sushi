@@ -20,7 +20,7 @@ import {
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { stats } from '../../src/utils/FSHLogger';
 import { importSingleText } from '../testhelpers/importSingleText';
-import { FSHImporter, RawFSH } from '../../src/import';
+import { FSHImporter, importText, RawFSH } from '../../src/import';
 import { EOL } from 'os';
 import { leftAlign } from '../utils/leftAlign';
 
@@ -231,6 +231,32 @@ describe('FSHImporter', () => {
           /Profile named ObservationProfile already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
+      });
+
+      it('should log an error and skip the profile when encountering an profile with a name used by another profile in another file', () => {
+        const input1 = `
+        Profile: SameProfile
+        Title: "First Profile"
+        Parent: Observation
+      `;
+
+        const input2 = `
+        Profile: SameProfile
+        Title: "Second Profile"
+        Parent: Observation
+      `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.profiles.size, 0)).toBe(1);
+        const p = result[0].profiles.get('SameProfile');
+        expect(p.title).toBe('First Profile');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Profile named SameProfile already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 4\D*/s);
       });
 
       it('should log an error when the deprecated Mixins keyword is used', () => {
