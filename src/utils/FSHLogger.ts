@@ -30,6 +30,17 @@ const withLocation = format(info => {
   return info;
 });
 
+const ignoreWarnings = format(info => {
+  // Only warnings can be ignored
+  if (info.level !== 'warn') {
+    return info;
+  }
+  const shouldIgnore = ignoredWarnings?.some(m => {
+    return typeof m === 'string' ? m === info.message : m.test(info.message);
+  });
+  return shouldIgnore ? false : info;
+});
+
 const incrementCounts = format(info => {
   switch (info.level) {
     case 'info':
@@ -94,9 +105,30 @@ const printer = printf(info => {
 });
 
 export const logger = createLogger({
-  format: combine(incrementCounts(), trackErrorsAndWarnings(), withLocation(), printer),
+  format: combine(
+    ignoreWarnings(),
+    incrementCounts(),
+    trackErrorsAndWarnings(),
+    withLocation(),
+    printer
+  ),
   transports: [new transports.Console()]
 });
+
+let ignoredWarnings: (string | RegExp)[];
+export const setIgnoredWarnings = (messages: string): void => {
+  ignoredWarnings = messages
+    .split(/\r?\n/)
+    .map(m => m.trim())
+    .filter(m => !m.startsWith('#'))
+    .map(m => {
+      if (m.startsWith('/') && m.endsWith('/')) {
+        return new RegExp(m.slice(1, -1));
+      } else {
+        return m;
+      }
+    });
+};
 
 class LoggerStats {
   public numInfo = 0;
