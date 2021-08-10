@@ -31,7 +31,7 @@ import {
   setIgnoredWarnings
 } from './utils';
 
-const FSH_VERSION = '1.1.0';
+const FSH_VERSION = '1.2.0';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
