@@ -52,7 +52,7 @@ describe('AssignmentRule', () => {
       const rule = new AssignmentRule('code');
       rule.value = new FshCode('573', 'http://example.com/codes', 'speed setting \\"high\\"');
       expect(rule.toFSH()).toEqual(
-        '* code = http://example.com/codes#573 "speed setting \\"high\\""'
+        '* code = http://example.com/codes#573 "speed setting \\\\\\"high\\\\\\""'
       );
     });
 

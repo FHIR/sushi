@@ -69,5 +69,12 @@ describe('FshQuantity', () => {
       const result = quantity.toString();
       expect(result).toEqual('100 #"milli meters"');
     });
+
+    it('should return a string for a unit code with UCUM system and a display containing characters that must be escaped', () => {
+      const code = new FshCode('mm', 'http://unitsofmeasure.org', 'strange" display\\');
+      const quantity = new FshQuantity(100, code);
+      const result = quantity.toString();
+      expect(result).toEqual('100 \'mm\' "strange\\" display\\\\"');
+    });
   });
 });

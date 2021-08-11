@@ -122,6 +122,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   addElementRule(): AddElementRuleContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
+  mappingRule(): MappingRuleContext;
 }
 
 export interface ParamRuleSetContext extends ParserRuleContext {

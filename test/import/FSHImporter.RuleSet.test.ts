@@ -7,7 +7,8 @@ import {
   assertValueSetConceptComponent,
   assertAddElementRule,
   assertCaretValueRule,
-  assertConceptRule
+  assertConceptRule,
+  assertMappingRule
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, ConceptRule } from '../../src/fshtypes/rules';
@@ -133,6 +134,39 @@ describe('FSHImporter', () => {
         types: [{ type: 'string' }],
         defs: { short: 'short for newStuff property', definition: 'short for newStuff property' }
       });
+    });
+
+    it('should parse a RuleSet with a MappingRule', () => {
+      const input = `
+        RuleSet: OneRuleSet
+        * identifier.system -> "Patient.identifier.system"
+        * identifier.value -> "Patient.identifier.value" "This is a comment" #code
+        `;
+      const result = importSingleText(input, 'OneRule.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('OneRuleSet');
+      expect(ruleSet.name).toBe('OneRuleSet');
+      expect(ruleSet.sourceInfo.location).toEqual({
+        startLine: 2,
+        startColumn: 9,
+        endLine: 4,
+        endColumn: 82
+      });
+      expect(ruleSet.sourceInfo.file).toBe('OneRule.fsh');
+      assertMappingRule(
+        ruleSet.rules[0] as Rule,
+        'identifier.system',
+        'Patient.identifier.system',
+        undefined,
+        undefined
+      );
+      assertMappingRule(
+        ruleSet.rules[1] as Rule,
+        'identifier.value',
+        'Patient.identifier.value',
+        'This is a comment',
+        new FshCode('code').withFile('OneRule.fsh').withLocation([4, 78, 4, 82])
+      );
     });
 
     it('should parse a RuleSet with rules, ValueSetComponents, ConceptRules, and CaretValueRules', () => {
