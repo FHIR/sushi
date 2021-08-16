@@ -1,5 +1,6 @@
 import { FshEntity } from './FshEntity';
 import { Coding, CodeableConcept, Quantity } from '../fhirtypes';
+import { fshifyString } from './common';
 
 export class FshCode extends FshEntity {
   constructor(public code: string, public system?: string, public display?: string) {
@@ -7,8 +8,12 @@ export class FshCode extends FshEntity {
   }
 
   toString(): string {
-    const str = `${this.system ?? ''}#${/\s/.test(this.code) ? `"${this.code}"` : this.code}`;
-    return this.display ? `${str} "${this.display}"` : str;
+    let codeToShow = this.code;
+    if (/\s/.test(this.code)) {
+      codeToShow = `"${fshifyString(this.code)}"`;
+    }
+    const str = `${this.system ?? ''}#${codeToShow}`;
+    return this.display ? `${str} "${fshifyString(this.display)}"` : str;
   }
 
   toFHIRCoding(): Coding {

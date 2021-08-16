@@ -816,6 +816,10 @@ export class ElementDefinition {
     // Loop through the input types and associate them to the element types in the map
     for (const type of types) {
       const typeMatch = this.findTypeMatch(type, targetTypes, fisher);
+      // if the type is Canonical, it may have a version. preserve it in the match's metadata.
+      if (type.isCanonical && type.type.indexOf('|') > -1) {
+        typeMatch.metadata.url = `${typeMatch.metadata.url}|${type.type.split('|', 2)[1]}`;
+      }
       typeMatches.get(typeMatch.code).push(typeMatch);
     }
 
@@ -958,9 +962,10 @@ export class ElementDefinition {
     fisher: Fishable
   ): ElementTypeMatchInfo {
     let matchedType: ElementDefinitionType;
+    const typeName = type.isCanonical ? type.type.split('|', 2)[0] : type.type;
 
     // Get the lineage (type hierarchy) so we can walk up it when attempting to match
-    const lineage = this.getTypeLineage(type.type, fisher);
+    const lineage = this.getTypeLineage(typeName, fisher);
     if (isEmpty(lineage)) {
       throw new TypeNotFoundError(type.type);
     }
@@ -1652,7 +1657,9 @@ export class ElementDefinition {
     if (sdType && this.type[0].targetProfile) {
       const validTypes: string[] = [];
       this.type[0].targetProfile.forEach(tp => {
-        const tpType = fisher.fishForMetadata(tp)?.sdType;
+        // target profile may have a version after a | character. don't include it when fishing.
+        const unversionedProfile = tp.split('|', 2)[0];
+        const tpType = fisher.fishForMetadata(unversionedProfile)?.sdType;
         if (tpType) {
           validTypes.push(tpType);
         }

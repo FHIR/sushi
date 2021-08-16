@@ -466,6 +466,25 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should allow a canonical to multiple resource types to be constrained with a versioned canonical', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        { type: 'ActivityDefinition', isCanonical: true },
+        { type: 'Questionnaire|4.0.1', isCanonical: true }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire|4.0.1'
+        )
+      );
+    });
+
     it('should allow a canonical to multiple resource types to be constrained to a canonical to a single type', () => {
       const actionDef = planDefinition.elements.find(
         e => e.id === 'PlanDefinition.action.definition[x]'
@@ -595,6 +614,38 @@ describe('ElementDefinition', () => {
         )
       );
     });
+
+    it('should allow a canonical to Any to be constrained to a canonical with a version', () => {
+      const value = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/Practitioner|4.0.1', isCanonical: true }
+      ];
+      value.constrainType(valueConstraint, fisher);
+      expect(value.type).toHaveLength(1);
+      expect(value.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Practitioner|4.0.1'
+        )
+      );
+    });
+
+    it('should allow a canonical to Any to be constrained to a profile with a version', () => {
+      const value = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/bp|4.0.1', isCanonical: true }
+      ];
+      value.constrainType(valueConstraint, fisher);
+      expect(value.type).toHaveLength(1);
+      expect(value.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/bp|4.0.1'
+        )
+      );
+    });
+
+    it('should output the canonical with the version preceding the fragment when the url has both a version and a fragment', () => {});
 
     it('should allow a canonical to multiple resource types to be constrained such that only the target reference is constrained and others remain as-is', () => {
       const actionDef = planDefinition.elements.find(
