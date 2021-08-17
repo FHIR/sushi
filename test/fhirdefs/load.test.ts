@@ -74,7 +74,7 @@ describe('#loadDependency()', () => {
   let cachePath: string;
   beforeAll(() => {
     axiosSpy = jest.spyOn(axios, 'get').mockImplementation((uri: string): any => {
-      if (uri === 'http://build.fhir.org/ig/qas.json') {
+      if (uri === 'https://build.fhir.org/ig/qas.json') {
         return {
           data: [
             {
@@ -127,8 +127,8 @@ describe('#loadDependency()', () => {
           ]
         };
       } else if (
-        uri === 'http://build.fhir.org/ig/HL7/US-Core-R4/package.manifest.json' ||
-        (uri.startsWith('http://build.fhir.org/ig/sushi/sushi-test') && uri.endsWith('json'))
+        uri === 'https://build.fhir.org/ig/HL7/US-Core-R4/package.manifest.json' ||
+        (uri.startsWith('https://build.fhir.org/ig/sushi/sushi-test') && uri.endsWith('json'))
       ) {
         return {
           data: {
@@ -136,14 +136,14 @@ describe('#loadDependency()', () => {
           }
         };
       } else if (
-        uri === 'http://packages.fhir.org/sushi-test/0.2.0' ||
-        uri === 'http://build.fhir.org/ig/sushi/sushi-test-old/package.tgz' ||
-        uri === 'http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz' ||
-        uri === 'http://build.fhir.org/hl7.fhir.r5.core.tgz' ||
-        uri === 'http://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0' ||
-        uri === 'http://packages.fhir.org/hl7.fhir.r4b.core/4.3.0' ||
-        uri === 'http://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0' ||
-        uri === 'http://packages.fhir.org/hl7.fhir.r4.core/4.0.1'
+        uri === 'https://packages.fhir.org/sushi-test/0.2.0' ||
+        uri === 'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz' ||
+        uri === 'https://build.fhir.org/ig/HL7/US-Core-R4/package.tgz' ||
+        uri === 'https://build.fhir.org/hl7.fhir.r5.core.tgz' ||
+        uri === 'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0' ||
+        uri === 'https://packages.fhir.org/hl7.fhir.r4b.core/4.3.0' ||
+        uri === 'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0' ||
+        uri === 'https://packages.fhir.org/hl7.fhir.r4.core/4.0.1'
       ) {
         return {
           data: {
@@ -156,8 +156,8 @@ describe('#loadDependency()', () => {
     });
     axiosHeadSpy = jest.spyOn(axios, 'head').mockImplementation((uri: string): any => {
       if (
-        uri === 'http://packages.fhir.org/hl7.fhir.r4b.core/4.1.0' ||
-        uri === 'http://packages.fhir.org/hl7.fhir.r5.core/4.5.0'
+        uri === 'https://packages.fhir.org/hl7.fhir.r4b.core/4.1.0' ||
+        uri === 'https://packages.fhir.org/hl7.fhir.r5.core/4.5.0'
       ) {
         throw 'Not Found';
       } else {
@@ -199,7 +199,7 @@ describe('#loadDependency()', () => {
       'The package sushi-test#0.2.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://packages.fhir.org/sushi-test/0.2.0', { responseType: 'arraybuffer' }]
+      ['https://packages.fhir.org/sushi-test/0.2.0', { responseType: 'arraybuffer' }]
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'sushi-test#0.2.0')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'sushi-test#0.2.0'));
@@ -210,7 +210,7 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.r4.core#4.0.1 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://packages.fhir.org/hl7.fhir.r4.core/4.0.1', { responseType: 'arraybuffer' }]
+      ['https://packages.fhir.org/hl7.fhir.r4.core/4.0.1', { responseType: 'arraybuffer' }]
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r4.core#4.0.1')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r4.core#4.0.1'));
@@ -222,7 +222,7 @@ describe('#loadDependency()', () => {
     ); // the package is never actually added to the cache, since tar is mocked
     expect(axiosSpy.mock.calls).toEqual([
       [
-        'http://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0',
+        'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0',
         { responseType: 'arraybuffer' }
       ]
     ]);
@@ -235,7 +235,7 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.r4b.core#4.3.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://packages.fhir.org/hl7.fhir.r4b.core/4.3.0', { responseType: 'arraybuffer' }]
+      ['https://packages.fhir.org/hl7.fhir.r4b.core/4.3.0', { responseType: 'arraybuffer' }]
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r4b.core#4.3.0')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r4b.core#4.3.0'));
@@ -246,7 +246,10 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.r5.core#4.5.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0', { responseType: 'arraybuffer' }]
+      [
+        'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0',
+        { responseType: 'arraybuffer' }
+      ]
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r5.core#4.5.0')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r5.core#4.5.0'));
@@ -260,7 +263,7 @@ describe('#loadDependency()', () => {
       /Unable to download most current version of sushi-test#0.3.0/
     );
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://packages.fhir.org/sushi-test/0.3.0', { responseType: 'arraybuffer' }]
+      ['https://packages.fhir.org/sushi-test/0.3.0', { responseType: 'arraybuffer' }]
     ]);
     expect(ensureDirSpy.mock.calls).toHaveLength(0);
     expect(tarSpy.mock.calls).toHaveLength(0);
@@ -278,8 +281,8 @@ describe('#loadDependency()', () => {
       expectedDefs
     );
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://build.fhir.org/ig/qas.json'],
-      ['http://build.fhir.org/ig/sushi/sushi-test/package.manifest.json']
+      ['https://build.fhir.org/ig/qas.json'],
+      ['https://build.fhir.org/ig/sushi/sushi-test/package.manifest.json']
     ]);
   });
 
@@ -288,9 +291,9 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.us.core.r4#current could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://build.fhir.org/ig/qas.json'],
-      ['http://build.fhir.org/ig/HL7/US-Core-R4/package.manifest.json'],
-      ['http://build.fhir.org/ig/HL7/US-Core-R4/package.tgz', { responseType: 'arraybuffer' }]
+      ['https://build.fhir.org/ig/qas.json'],
+      ['https://build.fhir.org/ig/HL7/US-Core-R4/package.manifest.json'],
+      ['https://build.fhir.org/ig/HL7/US-Core-R4/package.tgz', { responseType: 'arraybuffer' }]
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.us.core.r4#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.us.core.r4#current'));
@@ -301,9 +304,12 @@ describe('#loadDependency()', () => {
       loadDependency('sushi-test-old', 'current', defs, cachePath)
     ).resolves.toBeTruthy(); // Since tar is mocked, the actual cache is not updated
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://build.fhir.org/ig/qas.json'],
-      ['http://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
-      ['http://build.fhir.org/ig/sushi/sushi-test-old/package.tgz', { responseType: 'arraybuffer' }]
+      ['https://build.fhir.org/ig/qas.json'],
+      ['https://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
+      [
+        'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
+        { responseType: 'arraybuffer' }
+      ]
     ]);
     expect(ensureDirSpy.mock.calls[0][0]).toEqual(path.join(cachePath, 'sushi-test-old#current'));
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join(cachePath, 'sushi-test-old#current'));
@@ -314,7 +320,7 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.r5.core#current could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://build.fhir.org/hl7.fhir.r5.core.tgz', { responseType: 'arraybuffer' }]
+      ['https://build.fhir.org/hl7.fhir.r5.core.tgz', { responseType: 'arraybuffer' }]
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r5.core#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r5.core#current'));
@@ -331,10 +337,10 @@ describe('#loadDependency()', () => {
       loadDependency('sushi-test-no-download', 'current', defs, cachePath)
     ).resolves.toEqual(expectedDefs);
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://build.fhir.org/ig/qas.json'],
-      ['http://build.fhir.org/ig/sushi/sushi-test-no-download/package.manifest.json'],
+      ['https://build.fhir.org/ig/qas.json'],
+      ['https://build.fhir.org/ig/sushi/sushi-test-no-download/package.manifest.json'],
       [
-        'http://build.fhir.org/ig/sushi/sushi-test-no-download/package.tgz',
+        'https://build.fhir.org/ig/sushi/sushi-test-no-download/package.tgz',
         { responseType: 'arraybuffer' }
       ]
     ]);
@@ -364,9 +370,12 @@ describe('#loadDependency()', () => {
         )
     ).toBeTruthy();
     expect(axiosSpy.mock.calls).toEqual([
-      ['http://build.fhir.org/ig/qas.json'],
-      ['http://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
-      ['http://build.fhir.org/ig/sushi/sushi-test-old/package.tgz', { responseType: 'arraybuffer' }]
+      ['https://build.fhir.org/ig/qas.json'],
+      ['https://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
+      [
+        'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
+        { responseType: 'arraybuffer' }
+      ]
     ]);
     expect(ensureDirSpy.mock.calls[0]).toEqual([path.join(cachePath, 'sushi-test-old#current')]);
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join(cachePath, 'sushi-test-old#current'));
@@ -374,19 +383,19 @@ describe('#loadDependency()', () => {
 
   it('should throw CurrentPackageLoadError when a current package is not listed', async () => {
     await expect(loadDependency('hl7.fhir.us.core', 'current', defs, 'foo')).rejects.toThrow(
-      'The package hl7.fhir.us.core#current is not available on http://build.fhir.org/ig/qas.json, so no current version can be loaded'
+      'The package hl7.fhir.us.core#current is not available on https://build.fhir.org/ig/qas.json, so no current version can be loaded'
     );
     expect(axiosSpy.mock.calls.length).toBe(1);
-    expect(axiosSpy.mock.calls[0][0]).toBe('http://build.fhir.org/ig/qas.json');
+    expect(axiosSpy.mock.calls[0][0]).toBe('https://build.fhir.org/ig/qas.json');
   });
 
-  it('should throw CurrentPackageLoadError when http://build.fhir.org/ig/qas.json gives a bad response', async () => {
+  it('should throw CurrentPackageLoadError when https://build.fhir.org/ig/qas.json gives a bad response', async () => {
     axiosSpy.mockImplementationOnce(() => {});
     await expect(loadDependency('bad.response', 'current', defs, 'foo')).rejects.toThrow(
-      'The package bad.response#current is not available on http://build.fhir.org/ig/qas.json, so no current version can be loaded'
+      'The package bad.response#current is not available on https://build.fhir.org/ig/qas.json, so no current version can be loaded'
     );
     expect(axiosSpy.mock.calls.length).toBe(1);
-    expect(axiosSpy.mock.calls[0][0]).toBe('http://build.fhir.org/ig/qas.json');
+    expect(axiosSpy.mock.calls[0][0]).toBe('https://build.fhir.org/ig/qas.json');
   });
 });
 

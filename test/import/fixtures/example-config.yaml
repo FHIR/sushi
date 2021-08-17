@@ -200,7 +200,7 @@ history:
   #   desc: Continuous Integration Build (latest in version control)
   #   status: ci-build
   #   current: true
-  current: http://build.fhir.org/ig/HL7/example-ig/
+  current: https://build.fhir.org/ig/HL7/example-ig/
   # All other versions need each of their values fully specified.
   # See: https://confluence.hl7.org/pages/viewpage.action?pageId=66928420#FHIRIGPackageListdoco-PublicationObject
   1.0.0:

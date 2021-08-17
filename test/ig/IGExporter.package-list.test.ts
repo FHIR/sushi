@@ -36,7 +36,7 @@ describe('IGExporter', () => {
           {
             version: 'current',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: 'http://build.fhir.org/ig/HL7/example-ig/',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
             status: 'ci-build',
             current: true
           },
