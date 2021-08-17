@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
-import { isPlainObject, padEnd, sortBy } from 'lodash';
+import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { EOL } from 'os';
 import { logger } from './FSHLogger';
 import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
@@ -423,7 +423,7 @@ export async function init(): Promise<void> {
   // Accept user input for certain fields
   ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
     const userValue = readlineSync.question(
-      `${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${configDoc.get(field)}): `
+      `${upperFirst(field)} (Default: ${configDoc.get(field)}): `
     );
     if (userValue) {
       configDoc.set(field, userValue);
@@ -433,9 +433,7 @@ export async function init(): Promise<void> {
   // And for nested publisher fields
   ['name', 'url'].forEach(field => {
     const userValue = readlineSync.question(
-      `Publisher ${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${configDoc
-        .get('publisher')
-        .get(field)}): `
+      `Publisher ${upperFirst(field)} (Default: ${configDoc.get('publisher').get(field)}): `
     );
     if (userValue) {
       configDoc.get('publisher').set(field, userValue);
