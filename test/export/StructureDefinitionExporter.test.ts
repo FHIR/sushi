@@ -2712,6 +2712,39 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should apply a correct OnlyRule with a version on a canonical', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'PlanDefinition';
+
+      const rule = new OnlyRule('action.definition[x]');
+      rule.types = [{ type: 'Questionnaire|4.0.1', isCanonical: true }];
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('PlanDefinition');
+
+      const baseActionDef = baseStructDef.findElement('PlanDefinition.action.definition[x]');
+      const constrainedActionDef = sd.findElement('PlanDefinition.action.definition[x]');
+
+      expect(baseActionDef.type).toHaveLength(2);
+      expect(baseActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/PlanDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(baseActionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+
+      expect(constrainedActionDef.type).toHaveLength(1);
+      expect(constrainedActionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire|4.0.1'
+        )
+      );
+    });
+
     it('should apply a correct OnlyRule on a canonical to Any', () => {
       const extension = new Extension('Foo');
 
