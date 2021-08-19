@@ -11,6 +11,7 @@ import {
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   describe('Extension', () => {
@@ -133,6 +134,30 @@ describe('FSHImporter', () => {
           /Extension named SomeExtension already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+      });
+
+      it('should log an error and skip the extension when encountering an extension with a name used by another extension in another file', () => {
+        const input1 = `
+          Extension: SomeExtension
+          Title: "This Extension"
+        `;
+
+        const input2 = `
+          Extension: SomeExtension
+          Title: "That Extension"
+        `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.extensions.size, 0)).toBe(1);
+        const extension = result[0].extensions.get('SomeExtension');
+        expect(extension.title).toBe('This Extension');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Extension named SomeExtension already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
       });
 
       it('should log an error when the deprecated Mixins keyword is used', () => {

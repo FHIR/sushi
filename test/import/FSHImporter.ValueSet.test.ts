@@ -9,6 +9,7 @@ import { FshCode, VsOperator } from '../../src/fshtypes';
 import { importSingleText } from '../testhelpers/importSingleText';
 import { Rule } from '../../src/fshtypes/rules';
 import { leftAlign } from '../utils/leftAlign';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   afterEach(() => loggerSpy.reset());
@@ -107,6 +108,30 @@ describe('FSHImporter', () => {
           /ValueSet named SimpleVS already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+      });
+
+      it('should log an error and skip the value set when encountering an value set with a name used by another value set in another file', () => {
+        const input1 = `
+          ValueSet: SimpleVS
+          Title: "First Value Set"
+        `;
+
+        const input2 = `
+          ValueSet: SimpleVS
+          Title: "Second Value Set"
+        `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.valueSets.size, 0)).toBe(1);
+        const v = result[0].valueSets.get('SimpleVS');
+        expect(v.title).toBe('First Value Set');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /ValueSet named SimpleVS already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
       });
     });
 

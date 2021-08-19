@@ -1,6 +1,7 @@
 import { importSingleText } from '../testhelpers/importSingleText';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   describe('Invariant', () => {
@@ -176,6 +177,30 @@ describe('FSHImporter', () => {
         expect(invariant.description).toBe('First description.');
         expect(loggerSpy.getLastMessage('error')).toMatch(/Invariant named same-1 already exists/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
+      });
+
+      it('should log an error and skip the invariant when encountering an invariant with a name used by another invariant in another file', () => {
+        const input1 = `
+          Invariant: same-1
+          Severity: #error
+          Description: "First description."
+        `;
+
+        const input2 = `
+          Invariant: same-1
+          Severity: #error
+          Description: "Second description."
+        `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.invariants.size, 0)).toBe(1);
+        const invariant = result[0].invariants.get('same-1');
+        expect(invariant.description).toBe('First description.');
+        expect(loggerSpy.getLastMessage('error')).toMatch(/Invariant named same-1 already exists/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 4\D*/s);
       });
     });
   });

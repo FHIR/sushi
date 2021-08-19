@@ -14,6 +14,7 @@ import {
 } from '../testhelpers';
 import { FshCode } from '../../src/fshtypes';
 import { leftAlign } from '../utils/leftAlign';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   describe('Resource', () => {
@@ -209,6 +210,30 @@ describe('FSHImporter', () => {
           /Resource named TestResource already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+      });
+
+      it('should log an error and skip the resource when encountering an resource with a name used by another resource in another file', () => {
+        const input1 = `
+        Resource: SameResource
+        Title: "First Resource"
+      `;
+
+        const input2 = `
+        Resource: SameResource
+        Title: "Second Resource"
+      `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.resources.size, 0)).toBe(1);
+        const r = result[0].resources.get('SameResource');
+        expect(r.title).toBe('First Resource');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Resource named SameResource already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
       });
     });
 
