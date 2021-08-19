@@ -495,4 +495,23 @@ Long statement:
     );
     expect(result).toBeDefined();
   });
+
+  it('should log no error when two entities of different types have the same name', () => {
+    const input = `
+      CodeSystem: Foo
+      Title: "This"
+
+      ValueSet: Foo
+      Title: "That"
+    `;
+
+    const result = importSingleText(input, 'RepeatedName.fsh');
+    expect(result.codeSystems.size).toBe(1);
+    expect(result.valueSets.size).toBe(1);
+    const codesystem = result.codeSystems.get('Foo');
+    expect(codesystem.title).toBe('This');
+    const valueSet = result.valueSets.get('Foo');
+    expect(valueSet.title).toBe('That');
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
 });

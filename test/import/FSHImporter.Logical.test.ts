@@ -14,6 +14,7 @@ import {
 } from '../testhelpers';
 import { FshCode } from '../../src/fshtypes';
 import { leftAlign } from '../utils/leftAlign';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   beforeEach(() => loggerSpy.reset());
@@ -240,6 +241,32 @@ describe('FSHImporter', () => {
           /Logical Model named MyObservationModel already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
+      });
+
+      it('should log an error and skip the logical when encountering an logical with a name used by another logical in another file', () => {
+        const input1 = `
+          Logical: MyObservationModel
+          Parent: BaseObservationModel
+          Title: "An Observation-based Logical Model"
+        `;
+
+        const input2 = `
+          Logical: MyObservationModel
+          Parent: BaseObservationModel
+          Title: "Second Observation-based Logical Model"
+        `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.logicals.size, 0)).toBe(1);
+        const l = result[0].logicals.get('MyObservationModel');
+        expect(l.title).toBe('An Observation-based Logical Model');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Logical Model named MyObservationModel already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 4\D*/s);
       });
     });
 

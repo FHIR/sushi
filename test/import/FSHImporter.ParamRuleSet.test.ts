@@ -120,6 +120,36 @@ describe('FSHImporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Params\.fsh.*Line: 6 - 7/s);
     });
 
+    it('should log an error and skip the ParamRuleSet when encountering an ParamRuleSet with a name used by another ParamRuleSet in another file', () => {
+      const importer = new FSHImporter();
+      const input1 = `
+        RuleSet: MyRuleSet (system, strength)
+        * code from http://example.org/{system}/info.html {strength}
+        * pig from egg
+      `;
+
+      const input2 = `
+        RuleSet: MyRuleSet (someName)
+        * name = "Dr. {someName}"
+      `;
+
+      importer.import([new RawFSH(input1, 'File1.fsh'), new RawFSH(input2, 'File2.fsh')]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(importer.paramRuleSets.size).toBe(1);
+      expect(importer.paramRuleSets.size).toBe(1);
+      expect(importer.paramRuleSets.has('MyRuleSet')).toBe(true);
+      const result = importer.paramRuleSets.get('MyRuleSet');
+      expect(result.name).toBe('MyRuleSet');
+      expect(result.parameters).toEqual(['system', 'strength']);
+      const expectedContents = `
+        * code from http://example.org/{system}/info.html {strength}
+        * pig from egg`;
+      expect(result.contents).toBe(expectedContents);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/RuleSet named MyRuleSet already exists/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3/s);
+    });
+
     it('should log a warning when a ParamRuleSet has parameters that are not used in the contents', () => {
       const importer = new FSHImporter();
       const input = `

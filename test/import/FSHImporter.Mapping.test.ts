@@ -2,6 +2,7 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { assertMappingRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   beforeAll(() => {
@@ -133,6 +134,27 @@ describe('FSHImporter', () => {
         /Mapping named SameMapping already exists/s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+    });
+
+    it('should log an error and skip the mapping when encountering an mapping with a name used by another mapping in another file', () => {
+      const input1 = `
+        Mapping: SameMapping
+        Title: "First Mapping"
+      `;
+
+      const input2 = `
+        Mapping: SameMapping
+        Title: "Second Mapping"
+      `;
+
+      const result = importText([new RawFSH(input1, 'File1.fsh'), new RawFSH(input2, 'File2.fsh')]);
+      expect(result.reduce((sum, d2) => sum + d2.mappings.size, 0)).toBe(1);
+      const m = result[0].mappings.get('SameMapping');
+      expect(m.title).toBe('First Mapping');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Mapping named SameMapping already exists/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
     });
 
     describe('#mappingRule', () => {
