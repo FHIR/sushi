@@ -3,6 +3,7 @@ import { assertConceptRule, assertInsertRule, assertCaretValueRule } from '../te
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { Rule, CaretValueRule, InsertRule, ConceptRule } from '../../src/fshtypes/rules';
 import { leftAlign } from '../utils/leftAlign';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   describe('CodeSystem', () => {
@@ -162,6 +163,30 @@ describe('FSHImporter', () => {
           /code system named BREAD already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bread\.fsh.*Line: 5 - 6\D*/s);
+      });
+
+      it('should log an error and skip the code system when encountering an code system with a name used by another code system in another file', () => {
+        const input1 = `
+          CodeSystem: SomeCodeSystem
+          Title: "This CodeSystem"
+        `;
+
+        const input2 = `
+          CodeSystem: SomeCodeSystem
+          Title: "That CodeSystem"
+        `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.codeSystems.size, 0)).toBe(1);
+        const codesystem = result[0].codeSystems.get('SomeCodeSystem');
+        expect(codesystem.title).toBe('This CodeSystem');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /code system named SomeCodeSystem already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
       });
     });
 

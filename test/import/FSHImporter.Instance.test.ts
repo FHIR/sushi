@@ -2,6 +2,7 @@ import { assertAssignmentRule, assertInsertRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   describe('Instance', () => {
@@ -356,6 +357,32 @@ describe('FSHImporter', () => {
           /Instance named MyInstance already exists/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+      });
+
+      it('should log an error and skip the instance when encountering an instance with a name used by another instance in another file', () => {
+        const input1 = `
+          Instance: SomeInstance
+          InstanceOf: Patient
+          Title: "Instance 1"
+        `;
+
+        const input2 = `
+          Instance: SomeInstance
+          InstanceOf: Patient
+          Title: "Instance 2"
+        `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.instances.size, 0)).toBe(1);
+        const instance = result[0].instances.get('SomeInstance');
+        expect(instance.title).toBe('Instance 1');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Instance named SomeInstance already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 4\D*/s);
       });
     });
   });

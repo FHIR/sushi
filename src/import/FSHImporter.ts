@@ -139,6 +139,7 @@ const DEFAULT_START_COLUMN = 1;
  * we must call the explicit visitX functions.
  */
 export class FSHImporter extends FSHVisitor {
+  private docs: FSHDocument[] = [];
   private currentFile: string;
   private currentDoc: FSHDocument;
   private allAliases: Map<string, string>;
@@ -154,14 +155,13 @@ export class FSHImporter extends FSHVisitor {
 
   import(rawFSHes: RawFSH[]): FSHDocument[] {
     this.allAliases = new Map();
-    const docs: FSHDocument[] = [];
     const contexts: pc.DocContext[] = [];
 
     // Preprocess the FSH files
     rawFSHes.forEach(rawFSH => {
       // Create and store doc for main import process
       const doc = new FSHDocument(rawFSH.path);
-      docs.push(doc);
+      this.docs.push(doc);
       this.currentDoc = doc;
       this.currentFile = this.currentDoc.file ?? '';
 
@@ -212,11 +212,11 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = null;
       this.currentFile = null;
     });
-    logger.info(`Preprocessed ${docs.length} documents with ${this.allAliases.size} aliases.`);
+    logger.info(`Preprocessed ${this.docs.length} documents with ${this.allAliases.size} aliases.`);
 
     // Now do the main import
     contexts.forEach((context, index) => {
-      this.currentDoc = docs[index];
+      this.currentDoc = this.docs[index];
       this.currentFile = this.currentDoc.file ?? '';
       this.visitDoc(context);
       this.currentDoc = null;
@@ -224,14 +224,14 @@ export class FSHImporter extends FSHVisitor {
     });
 
     let [definitions, instances] = [0, 0];
-    docs.forEach(doc => {
+    this.docs.forEach(doc => {
       definitions +=
         doc.codeSystems.size + doc.extensions.size + doc.profiles.size + doc.valueSets.size;
       instances += doc.instances.size;
     });
     logger.info(`Imported ${definitions} definitions and ${instances} instances.`);
 
-    return docs;
+    return this.docs;
   }
 
   visitDoc(ctx: pc.DocContext): void {
@@ -276,7 +276,7 @@ export class FSHImporter extends FSHVisitor {
     const profile = new Profile(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.profiles.has(profile.name)) {
+    if (this.docs.some(doc => doc.profiles.has(profile.name))) {
       logger.error(`Skipping Profile: a Profile named ${profile.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -291,7 +291,7 @@ export class FSHImporter extends FSHVisitor {
     const extension = new Extension(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.extensions.has(extension.name)) {
+    if (this.docs.some(doc => doc.extensions.has(extension.name))) {
       logger.error(`Skipping Extension: an Extension named ${extension.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -340,7 +340,7 @@ export class FSHImporter extends FSHVisitor {
     const resource = new Resource(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.resources.has(resource.name)) {
+    if (this.docs.some(doc => doc.resources.has(resource.name))) {
       logger.error(`Skipping Resource: a Resource named ${resource.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -355,7 +355,7 @@ export class FSHImporter extends FSHVisitor {
     const logical = new Logical(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.logicals.has(logical.name)) {
+    if (this.docs.some(doc => doc.logicals.has(logical.name))) {
       logger.error(
         `Skipping Logical Model: a Logical Model named ${logical.name} already exists.`,
         {
@@ -407,7 +407,7 @@ export class FSHImporter extends FSHVisitor {
     const instance = new Instance(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.instances.has(instance.name)) {
+    if (this.docs.some(doc => doc.instances.has(instance.name))) {
       logger.error(`Skipping Instance: an Instance named ${instance.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -469,7 +469,7 @@ export class FSHImporter extends FSHVisitor {
     const valueSet = new FshValueSet(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.valueSets.has(valueSet.name)) {
+    if (this.docs.some(doc => doc.valueSets.has(valueSet.name))) {
       logger.error(`Skipping ValueSet: a ValueSet named ${valueSet.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -538,7 +538,7 @@ export class FSHImporter extends FSHVisitor {
     const codeSystem = new FshCodeSystem(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.codeSystems.has(codeSystem.name)) {
+    if (this.docs.some(doc => doc.codeSystems.has(codeSystem.name))) {
       logger.error(`Skipping code system: a code system named ${codeSystem.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -597,7 +597,7 @@ export class FSHImporter extends FSHVisitor {
     const invariant = new Invariant(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.invariants.has(invariant.name)) {
+    if (this.docs.some(doc => doc.invariants.has(invariant.name))) {
       logger.error(`Skipping Invariant: an Invariant named ${invariant.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -648,7 +648,7 @@ export class FSHImporter extends FSHVisitor {
     const ruleSet = new RuleSet(ctx.RULESET_REFERENCE().getText().trim())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.ruleSets.has(ruleSet.name)) {
+    if (this.docs.some(doc => doc.ruleSets.has(ruleSet.name))) {
       logger.error(`Skipping RuleSet: a RuleSet named ${ruleSet.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -716,7 +716,7 @@ export class FSHImporter extends FSHVisitor {
     const mapping = new Mapping(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.mappings.has(mapping.name)) {
+    if (this.docs.some(doc => doc.mappings.has(mapping.name))) {
       logger.error(`Skipping Mapping: a Mapping named ${mapping.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
