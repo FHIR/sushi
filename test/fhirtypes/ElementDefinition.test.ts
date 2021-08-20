@@ -88,6 +88,65 @@ describe('ElementDefinition', () => {
         new ElementDefinitionType('Period')
       ]);
     });
+
+    it('should include the type property within the differential array of extension slices', () => {
+      const baseElement = {
+        id: 'Profile.element.extension:extensionSlice',
+        sliceName: 'extensionSlice',
+        type: [
+          {
+            code: 'Extension',
+            profile: ['http://example.org/StructureDefinition/extensionSlice']
+          }
+        ]
+      };
+
+      const sliceElement = {
+        id: 'Profile.element:elementSlice.extension:extensionSlice',
+        sliceName: 'extensionSlice',
+        type: [
+          {
+            code: 'Extension',
+            profile: ['http://example.org/StructureDefinition/extensionSlice']
+          }
+        ],
+        _original: baseElement
+      };
+
+      const slicedElementDef = ElementDefinition.fromJSON(sliceElement);
+      const elementDiff = slicedElementDef.calculateDiff();
+      expect(elementDiff.type).toBeDefined();
+      expect(elementDiff.type[0].profile).toBeDefined();
+      expect(elementDiff.type[0].profile[0]).toEqual(
+        'http://example.org/StructureDefinition/extensionSlice'
+      );
+    });
+
+    it('should not include the type property within the differential array of non-extension slices', () => {
+      const baseElement = {
+        id: 'Profile.element',
+        type: [
+          {
+            code: 'code'
+          }
+        ]
+      };
+
+      const sliceElement = {
+        id: 'Profile.element:elementSlice',
+        sliceName: 'elementSlice',
+        type: [
+          {
+            code: 'code'
+          }
+        ],
+        _original: baseElement
+      };
+
+      const slicedElementDef = ElementDefinition.fromJSON(sliceElement);
+      const elementDiff = slicedElementDef.calculateDiff();
+      expect(elementDiff.type).not.toBeDefined();
+    });
   });
 
   describe('#toJSON', () => {

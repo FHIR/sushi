@@ -392,6 +392,14 @@ export class ElementDefinition {
           // @ts-ignore
           diff[prop] = cloneDeep(this[prop]);
         }
+      } else if (
+        prop &&
+        prop === 'type' &&
+        this.sliceName &&
+        this.id.slice(0, this.id.lastIndexOf(':')).endsWith('.extension')
+      ) {
+        // Due to a quirk in the IG Publisher, we'll want to include the type within the diff on extension slices
+        diff[prop] = cloneDeep(this[prop]);
       }
     }
     // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
