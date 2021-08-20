@@ -347,6 +347,21 @@ describe('StructureDefinitionExporter R4', () => {
       }).toThrow('Parent Bar not found for Foo');
     });
 
+    it('should throw ParentNotDefinedError with a helpful suggestion when the parent name is shared by a valid-type FHIR resource and an invalid-type tank resource', () => {
+      // This happens if a resource in the tank has the same name as a resource in the package
+      const valueSet = new FshValueSet('PractitionerRole');
+      doc.valueSets.set(valueSet.name, valueSet);
+      const profile = new Profile('Foo');
+      profile.parent = 'PractitionerRole';
+      doc.profiles.set(profile.name, profile);
+
+      expect(() => {
+        exporter.exportStructDef(profile);
+      }).toThrow(
+        'Parent PractitionerRole not found for Foo - Do you have conflicting names in your definitions?'
+      );
+    });
+
     it('should throw ParentDeclaredAsNameError when the extension declares itself as the parent', () => {
       const extension = new Extension('Foo');
       extension.parent = 'Foo';

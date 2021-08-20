@@ -182,11 +182,14 @@ export class StructureDefinitionExporter implements Fishable {
       parentJson = STRUCTURE_DEFINITION_R4_BASE;
     }
     if (!parentJson) {
+      // see if the parent is in the FHIR defs, as it may have been what they meant to reference.
+      const conflictingDef = this.fisher.fhir.fishForFHIR(fshDefinition.parent);
       // If parentJson is not defined, then the provided parent's StructureDefinition is not defined
       throw new ParentNotDefinedError(
         fshDefinition.name,
         fshDefinition.parent,
-        fshDefinition.sourceInfo
+        fshDefinition.sourceInfo,
+        conflictingDef != null
       );
     }
 
