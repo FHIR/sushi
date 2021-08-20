@@ -490,7 +490,17 @@ export function applyInsertRules(
             }
             ruleSetRuleClone.path = newPath;
           }
-          expandedRules.push(ruleSetRuleClone);
+          if (ruleSetRuleClone instanceof ConceptRule && fshDefinition instanceof FshCodeSystem) {
+            try {
+              if (fshDefinition.checkConcept(ruleSetRuleClone)) {
+                expandedRules.push(ruleSetRuleClone);
+              }
+            } catch (e) {
+              logger.error(e.message, ruleSetRuleClone.sourceInfo);
+            }
+          } else {
+            expandedRules.push(ruleSetRuleClone);
+          }
           if (firstRule) {
             // Once one rule has been applied, all future rules should inherit the index used on that rule
             // rather than continuing to increment the index with the [+] operator

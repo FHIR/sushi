@@ -27,6 +27,12 @@ export class FshCodeSystem extends FshEntity {
   }
 
   addConcept(newConcept: ConceptRule) {
+    if (this.checkConcept(newConcept)) {
+      this.rules.push(newConcept);
+    }
+  }
+
+  checkConcept(newConcept: ConceptRule): boolean {
     const existingConcept = this.rules.find(
       rule => rule instanceof ConceptRule && rule.code == newConcept.code
     ) as ConceptRule;
@@ -39,7 +45,7 @@ export class FshCodeSystem extends FshEntity {
         newConcept.definition == null &&
         isEqual(existingConcept.hierarchy, newConcept.hierarchy)
       ) {
-        return;
+        return false;
       } else {
         throw new CodeSystemDuplicateCodeError(this.id, newConcept.code);
       }
@@ -62,7 +68,7 @@ export class FshCodeSystem extends FshEntity {
         throw new CodeSystemIncorrectHierarchyError(this.id, newConcept.code);
       }
     });
-    this.rules.push(newConcept);
+    return true;
   }
 
   metadataToFSH(): string {
