@@ -7,7 +7,7 @@
     {
       "version": "current",
       "desc": "Continuous Integration Build (latest in version control)",
-      "path": "http://build.fhir.org/ig/fhir/sushi-test",
+      "path": "https://build.fhir.org/ig/fhir/sushi-test",
       "status": "ci-build",
       "current": true
     },

@@ -171,7 +171,7 @@ describe('importConfiguration', () => {
           {
             version: 'current',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: 'http://build.fhir.org/ig/HL7/example-ig/',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
             status: 'ci-build',
             current: true
           },
@@ -1894,7 +1894,7 @@ describe('importConfiguration', () => {
       minYAML.title = 'HL7 FHIR Implementation Guide: Minimal IG Release 1 - US Realm | STU1';
       minYAML.description = 'Minimal IG exercises only required fields in a SUSHI configuration.';
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/'
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/'
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.history).toEqual({
@@ -1906,7 +1906,7 @@ describe('importConfiguration', () => {
           {
             version: 'current',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+            path: 'https://build.fhir.org/ig/HL7/minimal-ig/',
             status: 'ci-build',
             current: true
           }
@@ -1920,7 +1920,7 @@ describe('importConfiguration', () => {
         current: {
           fhirversion: '4.0.1',
           date: '2020-04-01',
-          path: 'http://build.fhir.org/ig/HL7/example-ig/',
+          path: 'https://build.fhir.org/ig/HL7/example-ig/',
           sequence: 'STU 2'
         }
       };
@@ -1936,7 +1936,7 @@ describe('importConfiguration', () => {
             fhirversion: '4.0.1',
             date: '2020-04-01',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: 'http://build.fhir.org/ig/HL7/example-ig/',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
             status: 'ci-build',
             sequence: 'STU 2',
             current: true
@@ -1956,7 +1956,7 @@ describe('importConfiguration', () => {
           fhirversion: '4.0.1',
           date: '2020-04-01',
           desc: 'CI Build Release',
-          path: 'http://build.fhir.org/ig/HL7/example-ig/',
+          path: 'https://build.fhir.org/ig/HL7/example-ig/',
           status: 'ci-build',
           sequence: 'STU 2',
           current: true
@@ -1991,7 +1991,7 @@ describe('importConfiguration', () => {
             fhirversion: '4.0.1',
             date: '2020-04-01',
             desc: 'CI Build Release',
-            path: 'http://build.fhir.org/ig/HL7/example-ig/',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
             status: 'ci-build',
             sequence: 'STU 2',
             current: true
@@ -2058,7 +2058,7 @@ describe('importConfiguration', () => {
     });
     it('should report invalid history.[version].status code', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2086,7 +2086,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].date is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           desc: 'STU 1 Release',
@@ -2112,7 +2112,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].desc is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2138,7 +2138,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].path is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         // @ts-ignore Type '...' is not assignable to type ...
         '1.0.0': {
           fhirversion: '4.0.1',
@@ -2165,7 +2165,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].status is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2191,7 +2191,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].sequence is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2217,7 +2217,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].fhirVersion is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           date: '2020-03-06',
           desc: 'STU 1 Release',

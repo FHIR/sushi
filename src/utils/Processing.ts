@@ -219,7 +219,16 @@ export async function loadExternalDependencies(
       return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
       return loadDependency(dep.packageId, dep.version, defs).catch(e => {
-        logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
+        let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
+        if (/certificate/.test(e.message)) {
+          message +=
+            '\n\nSometimes this error occurs in corporate or educational environments that use proxies and/or SSL ' +
+            'inspection.\nTroubleshooting tips:\n' +
+            '  1. If a non-proxied network is available, consider connecting to that network instead.\n' +
+            '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
+            '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
+        }
+        logger.error(message);
       });
     }
   });

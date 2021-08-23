@@ -767,5 +767,62 @@ describe('CodeSystemExporter', () => {
         /AssignmentRule.*FshCodeSystem.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
     });
+
+    it('should maintain concept order when adding concepts from an insert rule', () => {
+      // RuleSet: Bar
+      // * #lion
+      //
+      // CodeSystem: Foo
+      // * #bear
+      // * insert Bar
+      // * #alligator
+      const lionRule = new ConceptRule('lion');
+      ruleSet.rules.push(lionRule);
+
+      const bearRule = new ConceptRule('bear');
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'Bar';
+      const alligatorRule = new ConceptRule('alligator');
+      cs.rules.push(bearRule, insertRule, alligatorRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('bear');
+      expect(exported.concept[1].code).toBe('lion');
+      expect(exported.concept[2].code).toBe('alligator');
+      expect(exported.count).toBe(3);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not add concepts from an insert rule that are duplicates of existing concepts', () => {
+      // RuleSet: Bar
+      // * #lion "Lion"
+      // * #bear "Extra Bear"
+      //
+      // CodeSystem: Foo
+      // * #bear "Regular Bear"
+      // * insert Bar
+      // * #alligator "Alligator"
+      const lionRule = new ConceptRule('lion', 'Lion');
+      const duplicateBear = new ConceptRule('bear', 'Extra Bear')
+        .withFile('RuleSet.fsh')
+        .withLocation([3, 0, 3, 20]);
+      ruleSet.rules.push(lionRule, duplicateBear);
+
+      const bearRule = new ConceptRule('bear', 'Regular Bear');
+      const insertRule = new InsertRule('').withFile('CodeSystem.fsh').withLocation([4, 0, 4, 12]);
+      insertRule.ruleSet = 'Bar';
+      const alligatorRule = new ConceptRule('alligator', 'Alligator');
+      cs.rules.push(bearRule, insertRule, alligatorRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('bear');
+      expect(exported.concept[0].display).toBe('Regular Bear');
+      expect(exported.concept[1].code).toBe('lion');
+      expect(exported.concept[2].code).toBe('alligator');
+      expect(exported.count).toBe(3);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /CodeSystem Foo already contains code bear.*File: RuleSet\.fsh.*Line: 3\D.*Applied in File: CodeSystem\.fsh.*Applied on Line: 4\D*/s
+      );
+    });
   });
 });
