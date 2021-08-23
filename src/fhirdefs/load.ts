@@ -52,7 +52,7 @@ export async function loadDependency(
 
   let packageUrl;
   if (packageName.startsWith('hl7.fhir.r5.') && version === 'current') {
-    packageUrl = `http://build.fhir.org/${packageName}.tgz`;
+    packageUrl = `https://build.fhir.org/${packageName}.tgz`;
     // TODO: Figure out how to determine if the cached package is current
     // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
     if (loadedPackage) {
@@ -63,7 +63,7 @@ export async function loadDependency(
   } else if (version === 'current') {
     // Even if a local current package is loaded, we must still check that the local package date matches
     // the date on the most recent version on build.fhir.org. If the date does not match, we re-download to the cache
-    const baseUrl = 'http://build.fhir.org/ig';
+    const baseUrl = 'https://build.fhir.org/ig';
     const res = await axios.get(`${baseUrl}/qas.json`);
     const qaData: { 'package-id': string; date: string; repo: string }[] = res?.data;
     // Find matching packages and sort by date to get the most recent
@@ -112,7 +112,7 @@ export async function loadDependency(
       throw new CurrentPackageLoadError(fullPackageName);
     }
   } else if (!loadedPackage) {
-    packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
+    packageUrl = `https://packages.fhir.org/${packageName}/${version}`;
 
     // If this is an R4B or R5 package, then we may need to get it from packages2 if it is not in packages
     if (/^hl7\.fhir\.r(4b|5)\./.test(packageName)) {
@@ -121,7 +121,7 @@ export async function loadDependency(
       } catch {
         // It didn't exist in the normal registry.  Fallback to packages2 registry. This should be TEMPORARY.
         // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
-        packageUrl = `http://packages2.fhir.org/packages/${packageName}/${version}`;
+        packageUrl = `https://packages2.fhir.org/packages/${packageName}/${version}`;
       }
     }
   }
