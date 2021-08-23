@@ -173,8 +173,7 @@ describe('FSHImporter', () => {
       InstanceOf: Questionnaire
       * item[+]
         * linkId = "foo"
-        * item[+]
-          * linkId = "bar"
+        * item[+].linkId = "bar"
     `);
 
       const result = importSingleText(input, 'Context.fsh');
