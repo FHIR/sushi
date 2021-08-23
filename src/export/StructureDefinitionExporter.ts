@@ -18,6 +18,7 @@ import {
   InvalidFHIRIdError,
   ParentDeclaredAsNameError,
   ParentDeclaredAsIdError,
+  ParentNameConflictError,
   ParentNotDefinedError,
   ParentNotProvidedError,
   MismatchedBindingTypeError
@@ -182,15 +183,26 @@ export class StructureDefinitionExporter implements Fishable {
       parentJson = STRUCTURE_DEFINITION_R4_BASE;
     }
     if (!parentJson) {
-      // see if the parent is in the FHIR defs, as it may have been what they meant to reference.
-      const conflictingDef = this.fisher.fhir.fishForFHIR(fshDefinition.parent);
-      // If parentJson is not defined, then the provided parent's StructureDefinition is not defined
-      throw new ParentNotDefinedError(
-        fshDefinition.name,
-        fshDefinition.parent,
-        fshDefinition.sourceInfo,
-        conflictingDef != null
-      );
+      // If parentJson is not defined, then either:
+      // 1. the provided parent's StructureDefinition is not defined, or
+      // 2. the parent's StructureDefinition is defined, but it has the same name as a FSH definition of a type that can't be the parent
+      const parentFhir = this.fisher.fhir.fishForFHIR(fshDefinition.parent);
+      const parentFsh = this.fisher.tank.fish(fshDefinition.parent);
+
+      if (parentFhir && parentFsh) {
+        throw new ParentNameConflictError(
+          fshDefinition.name,
+          fshDefinition.parent,
+          parentFsh.constructorName.replace('Fsh', ''),
+          fshDefinition.sourceInfo
+        );
+      } else {
+        throw new ParentNotDefinedError(
+          fshDefinition.name,
+          fshDefinition.parent,
+          fshDefinition.sourceInfo
+        );
+      }
     }
 
     if (fshDefinition instanceof Extension && parentJson.type !== 'Extension') {
