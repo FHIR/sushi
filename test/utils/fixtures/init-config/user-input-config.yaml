@@ -10,6 +10,9 @@ version: 2.0.0
 fhirVersion: 4.0.1
 copyrightYear: 2021+
 releaseLabel: ci-build
+publisher:
+  name: SUSHI Chefs
+  url: http://custom-publisher.org
 
 # ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
 # │  To use a provided input/includes/menu.xml file, delete the "menu" property below.             │

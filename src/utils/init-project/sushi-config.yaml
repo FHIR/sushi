@@ -10,6 +10,9 @@ version: 0.1.0
 fhirVersion: 4.0.1
 copyrightYear: 2020+
 releaseLabel: ci-build
+publisher:
+  name: Example Publisher
+  url: http://example.org/example-publisher
 
 # ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
 # │  To use a provided input/includes/menu.xml file, delete the "menu" property below.             │

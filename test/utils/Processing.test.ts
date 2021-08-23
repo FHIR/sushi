@@ -320,6 +320,8 @@ describe('Processing', () => {
             if (/^hl7.fhir.(r2|r3|r4|r4b|r5|us).core$/.test(packageName)) {
               FHIRDefs.packages.push(`${packageName}#${version}`);
               return Promise.resolve(FHIRDefs);
+            } else if (/^self-signed.package$/.test(packageName)) {
+              throw new Error('self signed certificate in certificate chain');
             } else {
               throw new PackageLoadError(`${packageName}#${version}`);
             }
@@ -468,6 +470,27 @@ describe('Processing', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.does\.not\.exist#current/s
         );
+        // But don't log the error w/ details about proxies
+        expect(loggerSpy.getLastMessage('error')).not.toMatch(/SSL/s);
+      });
+    });
+
+    it('should log a more detailed error when it fails to load a dependency due to certificate issue', () => {
+      const selfSignedDependencyConfig = cloneDeep(minimalConfig);
+      selfSignedDependencyConfig.dependencies = [
+        { packageId: 'self-signed.package', version: '1.0.0' }
+      ];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, selfSignedDependencyConfig).then(() => {
+        expect(defs.packages.length).toBe(1);
+        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Failed to load self-signed\.package#1\.0\.0/s
+        );
+        // AND it should log the detailed message about SSL
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Sometimes this error occurs in corporate or educational environments that use proxies and\/or SSL inspection/s
+        );
       });
     });
 
@@ -481,6 +504,8 @@ describe('Processing', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.fhir\.r4\.core: No version specified\./s
         );
+        // But don't log the error w/ details about proxies
+        expect(loggerSpy.getLastMessage('error')).not.toMatch(/SSL/s);
       });
     });
   });
@@ -1017,7 +1042,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
@@ -1075,6 +1102,10 @@ describe('Processing', () => {
           return 'active';
         } else if (question.startsWith('Version')) {
           return '2.0.0';
+        } else if (question.startsWith('Publisher Name')) {
+          return 'SUSHI Chefs';
+        } else if (question.startsWith('Publisher Url')) {
+          return 'http://custom-publisher.org';
         }
       });
       await init();
@@ -1083,7 +1114,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
@@ -1139,7 +1172,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
