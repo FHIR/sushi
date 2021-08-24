@@ -396,7 +396,8 @@ export class ElementDefinition {
         prop &&
         prop === 'type' &&
         this.sliceName &&
-        this.id.slice(0, this.id.lastIndexOf(':')).endsWith('.extension')
+        this.id.slice(0, this.id.lastIndexOf(':')).endsWith('.extension') &&
+        this.type.some(elementType => elementType.profile)
       ) {
         // Due to a quirk in the IG Publisher, we'll want to include the type within the diff on extension slices
         diff[prop] = cloneDeep(this[prop]);
