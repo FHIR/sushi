@@ -2056,14 +2056,9 @@ export class FSHImporter extends FSHVisitor {
       return path;
     }
 
-    // Replace '[+]' with '[=]' in the version of the path to add to pathContext, unless the rule is only used to set a path
-    const newContext = pc.hasPathRule(parentCtx.parentCtx)
-      ? path
-      : path.map(c => c.replace(/\[\+\]/g, '[=]'));
-
     // If the element is not indented, just reset the context
     if (contextIndex === 0) {
-      this.pathContext = [newContext];
+      this.pathContext = [path];
       return path;
     }
 
@@ -2096,7 +2091,7 @@ export class FSHImporter extends FSHVisitor {
         this.pathContext.length - 1
       ].map(c => c.replace(/\[\+\]/g, '[=]'));
     }
-    const fullPath = currentContext.concat(newContext);
+    const fullPath = currentContext.concat(path);
     this.pathContext.push(fullPath);
 
     return fullPath;
