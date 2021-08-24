@@ -2056,8 +2056,6 @@ export class FSHImporter extends FSHVisitor {
       return path;
     }
 
-    // Replace '[+]' with '[=]' in the version of the path to add to pathContext, unless the rule is only used to set a path
-
     // If the element is not indented, just reset the context
     if (contextIndex === 0) {
       this.pathContext = [path];
