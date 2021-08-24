@@ -297,7 +297,12 @@ export class InstanceExporter implements Fishable {
     }
     if (fshDefinition.usage) {
       instanceDef._instanceMeta.usage = fshDefinition.usage;
-      if (fshDefinition.usage === 'Definition') {
+      if (
+        fshDefinition.usage === 'Definition' &&
+        instanceOfStructureDefinition.elements.some(
+          element => element.id === `${instanceOfStructureDefinition.type}.url`
+        )
+      ) {
         instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
       }
     }
