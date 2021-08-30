@@ -389,6 +389,31 @@ describe('#loadDependency()', () => {
     expect(axiosSpy.mock.calls[0][0]).toBe('https://build.fhir.org/ig/qas.json');
   });
 
+  it('should always load lower case packages when upper case package Ids are used', async () => {
+    await expect(
+      loadDependency('sUsHI-tEsT-Old', 'current', defs, cachePath)
+    ).resolves.toBeTruthy(); // Since tar is mocked, the actual cache is not updated
+    expect(
+      loggerSpy
+        .getAllMessages('warn')
+        .some(message =>
+          message.match(
+            /sUsHI-tEsT-Old contains upper-case characters, which is discouraged. SUSHI will load sushi-test-old#current instead./
+          )
+        )
+    ).toBeTruthy();
+    expect(axiosSpy.mock.calls).toEqual([
+      ['https://build.fhir.org/ig/qas.json'],
+      ['https://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
+      [
+        'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
+        { responseType: 'arraybuffer' }
+      ]
+    ]);
+    expect(ensureDirSpy.mock.calls[0][0]).toEqual(path.join(cachePath, 'sushi-test-old#current'));
+    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join(cachePath, 'sushi-test-old#current'));
+  });
+
   it('should throw CurrentPackageLoadError when https://build.fhir.org/ig/qas.json gives a bad response', async () => {
     axiosSpy.mockImplementationOnce(() => {});
     await expect(loadDependency('bad.response', 'current', defs, 'foo')).rejects.toThrow(
