@@ -18,6 +18,7 @@ import {
 } from '../fshtypes/rules';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
+import { flatMap } from 'lodash';
 
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
@@ -78,6 +79,31 @@ export class ValueSetExporter {
             }
             return composeConcept;
           });
+          if (component.inclusion) {
+            // warn the user if they have already included a concept in this component
+            // concept, system, and version must all match to be considered equal
+            const matchingComposeElements = valueSet.compose.include.filter(compose => {
+              return (
+                compose.system === composeElement.system &&
+                compose.version === composeElement.version &&
+                compose.concept?.length > 0
+              );
+            });
+            const potentialMatches = flatMap(
+              matchingComposeElements,
+              compose => compose.concept
+            ).map(concept => concept.code);
+            composeElement.concept.forEach(concept => {
+              if (potentialMatches.includes(concept.code)) {
+                logger.warn(
+                  `ValueSet ${valueSet.name} already includes ${composeElement.system}${
+                    composeElement.version ? `|${composeElement.version}` : ''
+                  }#${concept.code}`,
+                  component.sourceInfo
+                );
+              }
+            });
+          }
         } else if (
           component instanceof ValueSetFilterComponentRule &&
           component.filters.length > 0
