@@ -324,7 +324,7 @@ describe('#loadDependency()', () => {
         .getAllMessages('warn')
         .some(message =>
           message.match(
-            /sUsHI-tEsT-OlD contains upper-case characters, which is discouraged. SUSHI will download sushi-test-old#current if the package is not found in local cache./
+            /sUsHI-tEsT-OlD contains uppercase characters, which is discouraged. SUSHI will use sushi-test-old as the package name./
           )
         )
     ).toBeTruthy();

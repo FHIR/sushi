@@ -25,9 +25,9 @@ export async function loadDependency(
   FHIRDefs: FHIRDefinitions,
   cachePath: string = path.join(os.homedir(), '.fhir', 'packages')
 ): Promise<FHIRDefinitions> {
-  if (/(?=.*[A-Z])/.test(packageName)) {
+  if (/[A-Z]/.test(packageName)) {
     logger.warn(
-      `${packageName} contains upper-case characters, which is discouraged. SUSHI will download ${packageName.toLowerCase()}#${version} if the package is not found in local cache.`
+      `${packageName} contains uppercase characters, which is discouraged. SUSHI will use ${packageName.toLowerCase()} as the package name.`
     );
     packageName = packageName.toLowerCase();
   }
@@ -38,7 +38,6 @@ export async function loadDependency(
   // First, try to load the package from the local cache
   logger.info(`Checking local cache for ${fullPackageName}...`);
   loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
-
   if (loadedPackage) {
     logger.info(`Found ${fullPackageName} in local cache.`);
   } else {
