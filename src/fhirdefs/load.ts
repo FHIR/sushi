@@ -25,12 +25,6 @@ export async function loadDependency(
   FHIRDefs: FHIRDefinitions,
   cachePath: string = path.join(os.homedir(), '.fhir', 'packages')
 ): Promise<FHIRDefinitions> {
-  if (/[A-Z]/.test(packageName)) {
-    logger.warn(
-      `${packageName} contains uppercase characters, which is discouraged. SUSHI will use ${packageName.toLowerCase()} as the package name.`
-    );
-    packageName = packageName.toLowerCase();
-  }
   let fullPackageName = `${packageName}#${version}`;
   let loadPath = path.join(cachePath, fullPackageName, 'package');
   let loadedPackage: string;

@@ -315,30 +315,6 @@ describe('#loadDependency()', () => {
     expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join(cachePath, 'sushi-test-old#current'));
   });
 
-  it('should attempt to load lower case packages when upper case package Ids are used and not found in local cache', async () => {
-    await expect(
-      loadDependency('sUsHI-tEsT-OlD', 'current', defs, cachePath)
-    ).resolves.toBeTruthy();
-    expect(
-      loggerSpy
-        .getAllMessages('warn')
-        .some(message =>
-          message.match(
-            /sUsHI-tEsT-OlD contains uppercase characters, which is discouraged. SUSHI will use sushi-test-old as the package name./
-          )
-        )
-    ).toBeTruthy();
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://build.fhir.org/ig/qas.json'],
-      ['https://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
-      [
-        'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
-        { responseType: 'arraybuffer' }
-      ]
-    ]);
-    expect(ensureDirSpy.mock.calls[0][0]).toEqual(path.join(cachePath, 'sushi-test-old#current'));
-  });
-
   it('should try to load the latest FHIR R5 package from build.fhir.org when it is not locally cached', async () => {
     await expect(loadDependency('hl7.fhir.r5.core', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.r5.core#current could not be loaded locally or from the FHIR package registry'
