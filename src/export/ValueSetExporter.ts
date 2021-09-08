@@ -18,6 +18,7 @@ import {
 } from '../fshtypes/rules';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
+import { flatMap } from 'lodash';
 
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
@@ -91,7 +92,45 @@ export class ValueSetExporter {
           });
         }
         if (component.inclusion) {
-          valueSet.compose.include.push(composeElement);
+          if (composeElement.concept?.length > 0) {
+            // warn the user if they have already included a concept in this component
+            // concept, system, and version must all match to be considered equal
+            const matchingComposeElements = valueSet.compose.include.filter(compose => {
+              return (
+                compose.system === composeElement.system &&
+                compose.version === composeElement.version &&
+                compose.concept?.length > 0
+              );
+            });
+            const potentialMatches = flatMap(
+              matchingComposeElements,
+              compose => compose.concept
+            ).map(concept => concept.code);
+            composeElement.concept = composeElement.concept.filter(
+              (concept, idx, currentConcepts) => {
+                if (
+                  potentialMatches.includes(concept.code) ||
+                  currentConcepts
+                    .slice(0, idx)
+                    .some(duplicateConcept => duplicateConcept.code === concept.code)
+                ) {
+                  logger.warn(
+                    `ValueSet ${valueSet.name} already includes ${composeElement.system}${
+                      composeElement.version ? `|${composeElement.version}` : ''
+                    }#${concept.code}`,
+                    component.sourceInfo
+                  );
+                  return false;
+                }
+                return true;
+              }
+            );
+            if (composeElement.concept.length > 0) {
+              valueSet.compose.include.push(composeElement);
+            }
+          } else {
+            valueSet.compose.include.push(composeElement);
+          }
         } else {
           valueSet.compose.exclude.push(composeElement);
         }
