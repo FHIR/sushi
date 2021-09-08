@@ -537,6 +537,35 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should automatically set the URL property on definition instances', () => {
+      const codeSystemInstance = new Instance('TestInstance');
+      codeSystemInstance.instanceOf = 'CodeSystem';
+      codeSystemInstance.usage = 'Definition';
+      const exported = exportInstance(codeSystemInstance);
+      expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/CodeSystem/TestInstance');
+    });
+
+    it('should not automatically set the URL property on definition instances if the URL is set explicitly', () => {
+      const codeSystemInstance = new Instance('TestInstance');
+      codeSystemInstance.instanceOf = 'CodeSystem';
+      codeSystemInstance.usage = 'Definition';
+
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://someDifferentCanonical.org/testInstance';
+      codeSystemInstance.rules.push(urlRule);
+      const exported = exportInstance(codeSystemInstance);
+      expect(exported.url).toBe('http://someDifferentCanonical.org/testInstance');
+    });
+
+    it('should not automatically set the URL property on definition instances if the profile does not support URL setting', () => {
+      const patientInstance = new Instance('TestInstance');
+      patientInstance.instanceOf = 'Patient';
+      patientInstance.usage = 'Definition';
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.url).toBeUndefined;
+    });
+
     // Setting instance id
     it('should set id to instance name by default', () => {
       const myExamplePatient = new Instance('MyExample');
