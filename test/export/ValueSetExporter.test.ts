@@ -588,6 +588,109 @@ describe('ValueSetExporter', () => {
       /notAUri.*File: Breakfast\.fsh.*Line: 2 - 4\D*/s
     );
   });
+
+  it('should log a message and not add the concept again when a specific concept is included more than once', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const pizzaComponent = new ValueSetConceptComponentRule(true)
+      .withFile('Dinner.fsh')
+      .withLocation([2, 0, 2, 15]);
+    pizzaComponent.from = { system: 'http://food.org/food' };
+    pizzaComponent.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
+    );
+    const multiComponent = new ValueSetConceptComponentRule(true)
+      .withFile('Dinner.fsh')
+      .withLocation([3, 0, 4, 16]);
+    multiComponent.from = { system: 'http://food.org/food' };
+    multiComponent.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.'),
+      new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.'),
+      new FshCode('Toast', 'http://food.org/food')
+    );
+    const toastComponent = new ValueSetConceptComponentRule(true)
+      .withFile('Dinner.fsh')
+      .withLocation([5, 0, 5, 17]);
+    toastComponent.from = { system: 'http://food.org/food|2.0.1' };
+    toastComponent.concepts.push(new FshCode('Toast', 'http://food.org/food|2.0.1'));
+    const saladComponent = new ValueSetConceptComponentRule(true)
+      .withFile('Dinner.fsh')
+      .withLocation([6, 0, 6, 18]);
+    saladComponent.from = { system: 'http://food.org/food' };
+    saladComponent.concepts.push(
+      new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.')
+    );
+    const versionMultiComponent = new ValueSetConceptComponentRule(true)
+      .withFile('Dinner.fsh')
+      .withLocation([7, 0, 9, 19]);
+    versionMultiComponent.from = { system: 'http://food.org/food|2.0.1' };
+    versionMultiComponent.concepts.push(
+      new FshCode('Toast', 'http://food.org/food|2.0.1'),
+      new FshCode('Waffles', 'http://food.org/food|2.0.1')
+    );
+    valueSet.rules.push(
+      pizzaComponent,
+      multiComponent,
+      toastComponent,
+      saladComponent,
+      versionMultiComponent
+    );
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    const inclusions = exported[0].compose.include;
+    expect(inclusions.length).toBe(4);
+    expect(inclusions[0]).toEqual({
+      system: 'http://food.org/food',
+      concept: [
+        {
+          code: 'Pizza',
+          display: 'Delicious pizza to share.'
+        }
+      ]
+    });
+    expect(inclusions[1]).toEqual({
+      system: 'http://food.org/food',
+      concept: [
+        {
+          code: 'Salad',
+          display: 'Plenty of fresh vegetables.'
+        },
+        {
+          code: 'Toast'
+        }
+      ]
+    });
+    expect(inclusions[2]).toEqual({
+      system: 'http://food.org/food',
+      version: '2.0.1',
+      concept: [
+        {
+          code: 'Toast'
+        }
+      ]
+    });
+    expect(inclusions[3]).toEqual({
+      system: 'http://food.org/food',
+      version: '2.0.1',
+      concept: [
+        {
+          code: 'Waffles'
+        }
+      ]
+    });
+    const warnings = loggerSpy.getAllMessages('warn');
+    expect(warnings.length).toBe(3);
+    expect(warnings[0]).toMatch(
+      /ValueSet DinnerVS already includes http:\/\/food\.org\/food#Pizza.*File: Dinner\.fsh.*Line: 3 - 4\D*/s
+    );
+    expect(warnings[1]).toMatch(
+      /ValueSet DinnerVS already includes http:\/\/food\.org\/food#Salad.*File: Dinner\.fsh.*Line: 6\D*/s
+    );
+    expect(warnings[2]).toMatch(
+      /ValueSet DinnerVS already includes http:\/\/food\.org\/food\|2\.0\.1#Toast.*File: Dinner\.fsh.*Line: 7 - 9\D*/s
+    );
+  });
+
   // CaretValueRules
   it('should apply a CaretValueRule', () => {
     const valueSet = new FshValueSet('DinnerVS');
