@@ -144,7 +144,8 @@ export class InstanceExporter implements Fishable {
   ): void {
     // Get only direct children of the element
     const children = element.children(true);
-    children.forEach(child => {
+    children.forEach(c => {
+      let child = c;
       // Get the last part of the path, A.B.C => C
       const childPathEnd = child.path.split('.').slice(-1)[0];
       // Note that in most cases the _ prefixed element will not exist. But if it does exist, we validate
@@ -160,6 +161,8 @@ export class InstanceExporter implements Fishable {
         for (const choiceSlice of choiceSlices) {
           instanceChild = instance[choiceSlice.sliceName];
           if (instanceChild != null) {
+            // Once we find the the choiceSlice that matches, use it as the child
+            child = choiceSlice;
             break;
           }
         }

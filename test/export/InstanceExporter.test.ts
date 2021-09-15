@@ -1050,6 +1050,91 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should assign fixed value[x] correctly and log no errors when multiple choice slices are assigned', () => {
+      // Example from SUSHI 911: https://github.com/FHIR/sushi/issues/911
+
+      // Instance: MyQuestionnaire
+      // InstanceOf: Questionnaire
+      const questionnaireInstance = new Instance('MyQuestionnaire');
+      questionnaireInstance.instanceOf = 'Questionnaire';
+
+      // Add required properties
+      // status = #draft
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      questionnaireInstance.rules.push(statusDraft);
+      // * item[+].linkId = "findrisc-score"
+      // * item[=].type = #decimal
+      const itemLinkId = new AssignmentRule('item[+].linkId');
+      itemLinkId.value = 'findrisc-score';
+      questionnaireInstance.rules.push(itemLinkId);
+      const itemType = new AssignmentRule('item[=].type');
+      itemType.value = new FshCode('decimal');
+      questionnaireInstance.rules.push(itemType);
+
+      // Add choiceSlices and ensure values are set and no warnings are logged
+      // * item[=].extension[0].url = "http://example.org"
+      // * item[=].extension[=].valueExpression.name = "scoreExt"
+      // * item[=].extension[=].valueExpression.language = #text/fhirpath
+      // * item[=].extension[=].valueExpression.expression = "'http://hl7.org/fhir/StructureDefinition/ordinalValue'"
+      // * item[=].extension[+].url = "http://example.org"
+      // * item[=].extension[=].valueCoding.display = "{score}"
+      const firstExtensionUrl = new AssignmentRule('item[=].extension[0].url');
+      firstExtensionUrl.value = 'http://example.org';
+      questionnaireInstance.rules.push(firstExtensionUrl);
+      const valueExpressionName = new AssignmentRule('item[=].extension[=].valueExpression.name');
+      valueExpressionName.value = 'scoreExt';
+      questionnaireInstance.rules.push(valueExpressionName);
+      const valueExpressionLanguage = new AssignmentRule(
+        'item[=].extension[=].valueExpression.language'
+      );
+      valueExpressionLanguage.value = new FshCode('#text/fhirpath');
+      questionnaireInstance.rules.push(valueExpressionLanguage);
+      const valueExpressionExpression = new AssignmentRule(
+        'item[=].extension[=].valueExpression.expression'
+      );
+      valueExpressionExpression.value = "'http://hl7.org/fhir/StructureDefinition/ordinalValue'";
+      questionnaireInstance.rules.push(valueExpressionExpression);
+      const secondExtensionUrl = new AssignmentRule('item[=].extension[+].url');
+      secondExtensionUrl.value = 'http://example.org';
+      questionnaireInstance.rules.push(secondExtensionUrl);
+      const valueCodingDisplay = new AssignmentRule('item[=].extension[=].valueCoding.display');
+      valueCodingDisplay.value = '{score}';
+      questionnaireInstance.rules.push(valueCodingDisplay);
+      doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+      const exported = exportInstance(questionnaireInstance);
+      // There should be no errors saying that valueExpression.language has min cardinality 1 but occurs 0 times
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Questionnaire',
+        id: 'MyQuestionnaire',
+        status: 'draft',
+        item: [
+          {
+            linkId: 'findrisc-score',
+            type: 'decimal',
+            extension: [
+              {
+                url: 'http://example.org',
+                valueExpression: {
+                  name: 'scoreExt',
+                  language: '#text/fhirpath',
+                  expression: "'http://hl7.org/fhir/StructureDefinition/ordinalValue'"
+                }
+              },
+              {
+                url: 'http://example.org',
+                valueCoding: {
+                  display: '{score}'
+                }
+              }
+            ]
+          }
+        ]
+      });
+    });
+
     it('should assign fixed value[x] correctly even in weird situations (SUSHI #760)', () => {
       // See https://github.com/FHIR/sushi/issues/760
 
