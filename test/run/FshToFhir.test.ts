@@ -114,6 +114,7 @@ describe('#FshToFhir', () => {
             '..',
             'testhelpers',
             'testdefs',
+            'r4-definitions',
             'package',
             'StructureDefinition-StructureDefinition.json'
           ),
@@ -127,6 +128,7 @@ describe('#FshToFhir', () => {
             '..',
             'testhelpers',
             'testdefs',
+            'r4-definitions',
             'package',
             'StructureDefinition-Patient.json'
           ),
