@@ -2226,6 +2226,33 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign a code to a top level element if the code system was defined as an instance of type definition', () => {
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const nameRule = new AssignmentRule('name');
+      nameRule.value = 'Visible';
+      visibleSystem.rules.push(urlRule, nameRule);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+      exportInstance(visibleSystem);
+
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'Visible');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const exported = exportInstance(brightInstance);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+    });
+
     it('should assign a code to a nested element while replacing the local code system name with its url', () => {
       const brightInstance = new Instance('BrightObservation');
       brightInstance.instanceOf = 'Observation';
