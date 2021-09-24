@@ -451,6 +451,35 @@ describe('applyInsertRules', () => {
     );
   });
 
+  it('should log an error when a ConceptRule is inserted at a path', () => {
+    // RuleSet: Bar
+    // * #bear "Bear"
+    //
+    // CodeSystem: MyCodeSystem
+    // * somePath insert Bar
+    const cs = new FshCodeSystem('MyCodeSystem');
+    doc.codeSystems.set(cs.name, cs);
+
+    const concept = new ConceptRule('bear', 'Bear')
+      .withFile('RuleSets.fsh')
+      .withLocation([7, 5, 7, 12]);
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule('somePath')
+      .withFile('CodeSystems.fsh')
+      .withLocation([3, 5, 3, 19]);
+    insertRule.ruleSet = 'Bar';
+    cs.rules.push(insertRule);
+
+    applyInsertRules(cs, tank);
+
+    expect(cs.rules).toHaveLength(1);
+    assertConceptRule(cs.rules[0], 'bear', 'Bear', undefined, []);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Do not insert a RuleSet at a path when the RuleSet adds a concept\..*File: RuleSets\.fsh.*Line: 7.*Applied in File: CodeSystems\.fsh.*Line: 3\D*/s
+    );
+  });
+
   it('should not convert a ConceptRule to a ValueSetConceptComponent when applying to a Profile', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear"
