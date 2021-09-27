@@ -26,12 +26,12 @@ export async function loadDependency(
   cachePath: string = path.join(os.homedir(), '.fhir', 'packages')
 ): Promise<FHIRDefinitions> {
   let fullPackageName = `${packageName}#${version}`;
-  let loadPath = path.join(cachePath, fullPackageName, 'package');
+  const loadPath = path.join(cachePath, fullPackageName, 'package');
   let loadedPackage: string;
 
   // First, try to load the package from the local cache
   logger.info(`Checking local cache for ${fullPackageName}...`);
-  loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
+  loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
   if (loadedPackage) {
     logger.info(`Found ${fullPackageName} in local cache.`);
   } else {
@@ -46,8 +46,7 @@ export async function loadDependency(
     );
     version = 'current';
     fullPackageName = `${packageName}#${version}`;
-    loadPath = path.join(cachePath, fullPackageName, 'package');
-    loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
+    loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
   }
 
   let packageUrl;
@@ -263,24 +262,28 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
 }
 
 /**
- * Loads a set of JSON files at targetPath into FHIRDefs
- * @param {string} targetPath - The path to the directory containing the JSON definitions
+ * Locates the targetPackage within the cachePath and loads the set of JSON files into FHIRDefs
+ * @param {string} cachePath - The path to the directory containing cached packages
  * @param {string} targetPackage - The name of the package we are trying to load
  * @param {FHIRDefinitions} FHIRDefs - The FHIRDefinitions object to load defs into
  * @returns {string} the name of the loaded package if successful
  */
 export function loadFromPath(
-  targetPath: string,
+  cachePath: string,
   targetPackage: string,
   FHIRDefs: FHIRDefinitions
 ): string {
   if (FHIRDefs.packages.indexOf(targetPackage) < 0) {
     const originalSize = FHIRDefs.size();
-    if (fs.existsSync(targetPath)) {
-      const files = fs.readdirSync(targetPath);
+    const packages = fs.existsSync(cachePath) ? fs.readdirSync(cachePath) : [];
+    const cachedPackage = packages.find(packageName => packageName.toLowerCase() === targetPackage);
+    if (cachedPackage) {
+      const files = fs.readdirSync(path.join(cachePath, cachedPackage, 'package'));
       for (const file of files) {
         if (file.endsWith('.json')) {
-          const def = JSON.parse(fs.readFileSync(path.join(targetPath, file), 'utf-8').trim());
+          const def = JSON.parse(
+            fs.readFileSync(path.join(cachePath, cachedPackage, 'package', file), 'utf-8').trim()
+          );
           FHIRDefs.add(def);
         }
       }
