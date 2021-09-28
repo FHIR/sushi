@@ -603,20 +603,31 @@ export class StructureDefinition {
 
       previousElement = currentElement;
     }
-    const clone = currentElement.clone();
+    const originalKey = Object.keys(currentElement).find(
+      k => k.startsWith('pattern') || k.startsWith('fixed')
+    ) as keyof ElementDefinition;
+    const originalValue = currentElement[originalKey];
+
     let assignedValue;
     // Assigned resources cannot be assigned by pattern[x]/fixed[x], so we must set assignedValue directly
     if (value instanceof InstanceDefinition) {
-      assignedValue = clone.checkAssignInlineInstance(value, fisher).toJSON();
+      assignedValue = currentElement.checkAssignInlineInstance(value, fisher).toJSON();
     } else {
       // assignValue will throw if it fails, but skip the check if value is null
       if (value != null) {
         // exactly must be true so that we always test assigning with the more strict fixed[x] approach
-        clone.assignValue(value, true, fisher);
+        currentElement.assignValue(value, true, fisher);
       }
       // If there is a fixedValue or patternValue, find it and return it
-      const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
-      if (key != null) assignedValue = clone[key as keyof ElementDefinition];
+      const key = Object.keys(currentElement).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      if (key != null) {
+        assignedValue = currentElement[key];
+        delete currentElement[key];
+        // @ts-ignore
+        currentElement[originalKey] = originalValue;
+      }
     }
 
     return { assignedValue, pathParts };
