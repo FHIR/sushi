@@ -65,7 +65,6 @@ dvci/vaccine-yellow-card-ig#main
 # Added Mon Feb 08 2021 11:01:34 GMT-0500 (Eastern Standard Time)
 JohnMoehrke/BasicAudit#main
 # Added Mon Mar 08 2021 13:27:24 GMT-0500 (Eastern Standard Time)
-HL7/fhir-forfair#master
 standardhealth/fsh-ae#master
 hl7ch/ch-etoc#main
 hl7ch/ch-rad-order#master
@@ -103,9 +102,7 @@ HL7/fhir-radiation-dose-summary-ig#main
 HL7/pacio-adi#main
 hl7-it/dossier-pharma#main
 hl7-it/terminology#master
-hitstdio/sample-ig#master
 JohnMoehrke/testBundle#main
-Carequality/CEQSubscription#master
 hl7dk/kl-ffb-messaging#main
 hl7dk/kl-ffb-reporting#master
 IHE/ITI.PDQm#main
@@ -114,3 +111,27 @@ IHE/RO.XRTS#master
 hl7-eu/dgc#master
 daniel-thomson/CIRImmunization#master
 oridashi/item-715-data#main
+# Added Mon Sep 20 2021 21:56:07 GMT-0400 (Eastern Daylight Time)
+HL7/cimi-labs#master
+HL7/codex-radiation-therapy#master
+HL7/davinci-dtr#master
+HL7/davinci-pct#master
+HL7/dicom-sr#main
+HL7/fhir-COVID19Library-ig#master
+HL7/fhir-for-fair#master
+HL7/fhir-pacio-cognitive-status#master
+HL7/fhir-pacio-functional-status#master
+HL7/fhir-registry-protocols-ig#master
+HL7/fhir-shc-vaccination-ig#master
+HL7/fhir-udap-security-ig#main
+HL7/ihe-sdc-ecc-on-fhir#main
+aehrc/item-715-data#main
+ahdis/WorkshopIG#main
+hl7-be/hl7-be-fhir-referral-prescription#master
+saulakravitz/fhir-mCODE-ig#master
+IHE-SDC-WG/IHESDCWGsdcOnFHIR#main
+hl7-eu/dcc#master
+hl7-eu/gravitate-health#master
+servicewell/wof-portal-fhir-ig#master
+oridashi/pc-au-logical#main
+HL7NZ/sysmex#main
