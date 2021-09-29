@@ -28,11 +28,31 @@ import {
   FshCodeSystem,
   Mapping,
   isAllowedRule,
-  Resource
+  Resource,
+  Invariant
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import { logger } from '../utils';
+
+// Type guard needed to ensure that the return object from a fisher is an Instance
+// Reference: https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates
+function isInstance(
+  resource:
+    | Profile
+    | Extension
+    | Logical
+    | Resource
+    | FshValueSet
+    | FshCodeSystem
+    | Instance
+    | Invariant
+    | RuleSet
+    | Mapping
+    | undefined
+): resource is Instance {
+  return (resource as Instance).instanceOf !== undefined;
+}
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -301,7 +321,14 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
   } else if (value instanceof FshCode) {
     const [system, ...versionParts] = value.system?.split('|') ?? [];
     const version = versionParts.join('|');
-    const codeSystem = tank.fish(system, Type.CodeSystem) ?? tank.fish(system, Type.Instance);
+    let codeSystem = tank.fish(system, Type.CodeSystem);
+    if (!codeSystem) {
+      const csInstance = tank.fish(system, Type.Instance);
+      if (csInstance && isInstance(csInstance) && csInstance.instanceOf === 'CodeSystem') {
+        codeSystem = csInstance;
+      }
+    }
+
     const codeSystemMeta =
       codeSystem instanceof FshCodeSystem
         ? fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem)
