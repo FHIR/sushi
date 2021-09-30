@@ -32,7 +32,7 @@ import {
   Invariant
 } from '../fshtypes';
 import { FSHTank } from '../import';
-import { Type, Fishable } from '../utils/Fishable';
+import { Type, Fishable, Metadata } from '../utils/Fishable';
 import { logger } from '../utils';
 
 // Type guard needed to ensure that the return object from a fisher is an Instance
@@ -322,17 +322,16 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const [system, ...versionParts] = value.system?.split('|') ?? [];
     const version = versionParts.join('|');
     let codeSystem = tank.fish(system, Type.CodeSystem);
-    if (!codeSystem) {
+    let codeSystemMeta: Metadata;
+    if (codeSystem) {
+      codeSystemMeta = fisher.fishForMetadata(codeSystem.name, Type.CodeSystem);
+    } else {
       const csInstance = tank.fish(system, Type.Instance);
       if (csInstance && isInstance(csInstance) && csInstance.instanceOf === 'CodeSystem') {
         codeSystem = csInstance;
+        codeSystemMeta = fisher.fishForMetadata(codeSystem.name, Type.Instance);
       }
     }
-
-    const codeSystemMeta =
-      codeSystem instanceof FshCodeSystem
-        ? fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem)
-        : fisher.fishForMetadata(codeSystem?.name, Type.Instance);
     if (codeSystem && codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
