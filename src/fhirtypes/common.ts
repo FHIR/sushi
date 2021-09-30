@@ -520,6 +520,14 @@ export function applyInsertRules(
             ruleSetRuleClone.path = newPath;
           }
           if (ruleSetRuleClone instanceof ConceptRule && fshDefinition instanceof FshCodeSystem) {
+            // ConceptRules should not have a path context, so if one exists, show an error.
+            // The concept is still added to the CodeSystem.
+            if (context) {
+              logger.error(
+                'Do not insert a RuleSet at a path when the RuleSet adds a concept.',
+                ruleSetRuleClone.sourceInfo
+              );
+            }
             try {
               if (fshDefinition.checkConcept(ruleSetRuleClone)) {
                 expandedRules.push(ruleSetRuleClone);
