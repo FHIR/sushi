@@ -1972,7 +1972,8 @@ export class FSHImporter extends FSHVisitor {
           logger.warn(
             `The match value of filter operator "${operator}" must be a code. ` +
               'For string valued properties, use the regex filter operator with a regular expression value. ' +
-              'Support for using strings as filter values has been deprecated and will be removed in a future release.'
+              'Support for using strings as filter values has been deprecated and will be removed in a future release.',
+            { location: this.extractStartStop(ctx), file: this.currentFile }
           );
         }
         if (typeof value !== 'string' && !(value instanceof FshCode)) {

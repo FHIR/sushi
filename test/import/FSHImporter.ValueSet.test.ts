@@ -561,6 +561,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /match value of filter operator "=" must be a code/
         );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator = with code value', () => {
@@ -786,6 +787,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /match value of filter operator "in" must be a code/
         );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: CatDog\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that use filter operator in with a code value', () => {
@@ -839,6 +841,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /match value of filter operator "not-in" must be a code/
         );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: NoGoose\.fsh.*Line: 3\D*/s);
       });
 
       it('should parse a value set that uses filter operator not-in with a code value', () => {
