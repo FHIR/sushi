@@ -2226,36 +2226,10 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it('should assign a code to a top level element if the code system was defined as an instance of type definition', () => {
+    it('should assign a code to a top level element if the code system was defined as an instance of usage definition', () => {
       const visibleSystem = new Instance('Visible');
       visibleSystem.instanceOf = 'CodeSystem';
-      const urlRule = new AssignmentRule('url');
-      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
-      const nameRule = new AssignmentRule('name');
-      nameRule.value = 'Visible';
-      visibleSystem.rules.push(urlRule, nameRule);
-      doc.instances.set(visibleSystem.name, visibleSystem);
-      exportInstance(visibleSystem);
-
-      const brightInstance = new Instance('BrightObservation');
-      brightInstance.instanceOf = 'Observation';
-      const assignedCodeRule = new AssignmentRule('code');
-      assignedCodeRule.value = new FshCode('bright', 'Visible');
-      brightInstance.rules.push(assignedCodeRule);
-      doc.instances.set(brightInstance.name, brightInstance);
-
-      const exported = exportInstance(brightInstance);
-      expect(exported.code.coding).toEqual([
-        {
-          code: 'bright',
-          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
-        }
-      ]);
-    });
-
-    it('should assign a code to a top level element if the code system was defined as an instance of type definition', () => {
-      const visibleSystem = new Instance('Visible');
-      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
       const urlRule = new AssignmentRule('url');
       urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
       const nameRule = new AssignmentRule('name');
@@ -2299,6 +2273,31 @@ describe('InstanceExporter', () => {
       const exported = exportInstance(brightInstance);
       expect(loggerSpy.getAllMessages('error')).toContain(
         'Resolved value "NonSystem" is not a valid URI.'
+      );
+      expect(exported.code).not.toBeDefined();
+    });
+
+    it('should not assign a code to a top level element if the code system was defined as an instance of a non-definition usage', () => {
+      const invalidSystem = new Instance('NonDefinition');
+      invalidSystem.instanceOf = 'CodeSystem';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/NonDefinition';
+      const nameRule = new AssignmentRule('name');
+      nameRule.value = 'Visible';
+      invalidSystem.rules.push(urlRule, nameRule);
+      doc.instances.set(invalidSystem.name, invalidSystem);
+      exportInstance(invalidSystem);
+
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'NonDefinition');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const exported = exportInstance(brightInstance);
+      expect(loggerSpy.getAllMessages('error')).toContain(
+        'Resolved value "NonDefinition" is not a valid URI.'
       );
       expect(exported.code).not.toBeDefined();
     });

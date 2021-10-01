@@ -38,6 +38,9 @@ describe('FSHTank', () => {
     doc2.valueSets.get('ValueSet1').id = 'vs1';
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
+    doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
+    doc2.instances.get('CodeSystemInstance').instanceOf = 'CodeSystem';
+    doc2.instances.get('CodeSystemInstance').usage = 'Definition';
     doc2.logicals.set('Logical1', new Logical('Logical1'));
     doc2.logicals.get('Logical1').id = 'log1';
     doc2.logicals.get('Logical1').parent = 'Element';
@@ -217,6 +220,24 @@ describe('FSHTank', () => {
           Type.Extension,
           Type.ValueSet,
           Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find codesystems defined as instance definitions when codesystems are requested', () => {
+      expect(tank.fish('CodeSystemInstance', Type.CodeSystem).name).toBe('CodeSystemInstance');
+      expect(
+        tank.fish(
+          'CodeSystemInstance',
+          Type.Profile,
+          Type.Extension,
+          Type.ValueSet,
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
