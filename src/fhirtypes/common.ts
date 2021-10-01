@@ -307,6 +307,19 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
       assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
+      // if a local system was used, check to make sure the code is actually in that system
+      if (codeSystem instanceof FshCodeSystem) {
+        if (
+          !codeSystem.rules.some(
+            rule => rule instanceof ConceptRule && rule.code === assignedCode.code
+          )
+        ) {
+          logger.error(
+            `Code "${assignedCode.code}" is not defined for system ${codeSystem.name}.`,
+            rule.sourceInfo
+          );
+        }
+      }
     }
   }
   return clone ?? rule;

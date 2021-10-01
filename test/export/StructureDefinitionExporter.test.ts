@@ -3550,6 +3550,7 @@ describe('StructureDefinitionExporter R4', () => {
       profile.rules.push(rule);
 
       const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('bright'));
       doc.codeSystems.set(visibleSystem.name, visibleSystem);
 
       exporter.exportStructDef(profile);
@@ -3561,6 +3562,63 @@ describe('StructureDefinitionExporter R4', () => {
           system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when applying a Code AssignmentRule with a local code system name when the code does not exist', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept')
+        .withFile('Light.fsh')
+        .withLocation([8, 1, 8, 25]);
+      rule.value = new FshCode('disco', 'Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('bright'));
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'disco',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Code "disco" is not defined for system Visible.*File: Light\.fsh.*Line: 8\D*/s
+      );
+    });
+
+    it('should log an error when applying a Code AssignmentRule with a local code system url when the code does not exist', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept')
+        .withFile('Light.fsh')
+        .withLocation([8, 1, 8, 25]);
+      rule.value = new FshCode('disco', 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('bright'));
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'disco',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Code "disco" is not defined for system Visible.*File: Light\.fsh.*Line: 8\D*/s
+      );
     });
 
     it('should apply an AssignmentRule with a valid Canonical entity defined in FSH', () => {
