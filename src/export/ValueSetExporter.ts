@@ -5,7 +5,7 @@ import {
   StructureDefinition
 } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
-import { FshValueSet, FshCode, ValueSetFilterValue } from '../fshtypes';
+import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError, InvalidUriError } from '../errors';
 import { Package } from '.';
@@ -14,7 +14,8 @@ import {
   CaretValueRule,
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule
+  ValueSetFilterComponentRule,
+  ConceptRule
 } from '../fshtypes/rules';
 import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
@@ -79,6 +80,25 @@ export class ValueSetExporter {
             }
             return composeConcept;
           });
+          // if we can fish up the system in the tank, it's local, and we should check the listed concepts
+          const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
+          if (codeSystem && codeSystem instanceof FshCodeSystem) {
+            const strangeConcepts = composeElement.concept.filter(composeConcept => {
+              return !codeSystem.rules.some(
+                rule => rule instanceof ConceptRule && rule.code === composeConcept.code
+              );
+            });
+            if (strangeConcepts.length > 0) {
+              logger.error(
+                `Code${strangeConcepts.length > 1 ? 's' : ''} ${strangeConcepts
+                  .map(sc => `"${sc.code}"`)
+                  .join(', ')} ${
+                  strangeConcepts.length > 1 ? 'are' : 'is'
+                } not defined for system ${codeSystem.name}.`,
+                component.sourceInfo
+              );
+            }
+          }
         } else if (
           component instanceof ValueSetFilterComponentRule &&
           component.filters.length > 0
