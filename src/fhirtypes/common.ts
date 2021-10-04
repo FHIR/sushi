@@ -302,10 +302,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const [system, ...versionParts] = value.system?.split('|') ?? [];
     const version = versionParts.join('|');
     const codeSystem = tank.fish(system, Type.CodeSystem);
-    const codeSystemMeta =
-      codeSystem instanceof FshCodeSystem
-        ? fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem)
-        : fisher.fishForMetadata(codeSystem?.name, Type.Instance);
+    const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
     if (codeSystem && codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
