@@ -25,7 +25,6 @@ import {
   InvalidCardinalityError,
   InvalidFHIRIdError,
   InvalidMappingError,
-  InvalidMaxOfSliceError,
   InvalidMustSupportError,
   InvalidSumOfSliceMinsError,
   InvalidTypeError,
@@ -598,7 +597,6 @@ export class ElementDefinition {
    * @throws {InvalidCardinalityError} when min > max
    * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
    * @throws {InvalidSumOfSliceMinsError} when the mins of slice elements > max of sliced element
-   * @throws {InvalidMaxOfSliceError} when a sliced element's max is < an individual slice's max
    * @throws {NarrowingRootCardinalityError} when the new cardinality on an element is narrower than
    *   the cardinality on a connected element
    */
@@ -633,9 +631,15 @@ export class ElementDefinition {
       this.checkSumOfSliceMins(max);
       // Check that new max >= every individual child max
       const slices = this.getSlices();
-      const overMaxChild = slices.find(child => child.max === '*' || parseInt(child.max) > maxInt);
-      if (!isUnbounded && overMaxChild) {
-        throw new InvalidMaxOfSliceError(overMaxChild.max, overMaxChild.sliceName, max);
+      const overMaxChildren = slices.filter(
+        child => child.max === '*' || parseInt(child.max) > maxInt
+      );
+      if (!isUnbounded && overMaxChildren.length > 0) {
+        logger.warn(
+          `Max of element ${this.id} is > max of slice${
+            overMaxChildren.length > 1 ? 's' : ''
+          } ${overMaxChildren.map(child => child.sliceName).join(', ')}`
+        );
       }
     }
 
@@ -659,12 +663,6 @@ export class ElementDefinition {
             );
           }
         });
-      connectedElements.forEach(ce => {
-        // if the connected element's max is not null and is not *, we can't make the max smaller than its max
-        if (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max)) {
-          throw new NarrowingRootCardinalityError(this.path, ce.id, min, max, ce.min ?? 0, ce.max);
-        }
-      });
     }
 
     // If element is a slice

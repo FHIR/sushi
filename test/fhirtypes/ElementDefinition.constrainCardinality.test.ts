@@ -1,7 +1,7 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { TestFisher } from '../testhelpers';
+import { TestFisher, loggerSpy } from '../testhelpers';
 import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
 
@@ -16,6 +16,7 @@ describe('ElementDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
+    loggerSpy.reset();
     observation = fisher.fishForStructureDefinition('Observation');
     respRate = fisher.fishForStructureDefinition('resprate');
   });
@@ -226,15 +227,17 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(category);
     });
 
-    it('should throw InvalidMaxOfSliceError when sliced element max is constrained less than any individual slice max', () => {
+    it('should log a warning when sliced element max is constrained less than any individual slice max', () => {
       const category = respRate.elements.find(e => e.id === 'Observation.category');
+      console.log(category);
       const fooSlice = category.addSlice('FooSlice');
       fooSlice.max = '2';
-      const clone = cloneDeep(category);
-      expect(() => {
-        category.constrainCardinality(1, '1');
-      }).toThrow(/max of slice FooSlice \(2\) > max of sliced element \(1\)\./);
-      expect(clone).toEqual(category);
+      category.constrainCardinality(1, '1');
+      expect(loggerSpy.getAllMessages('warn')).toContain(
+        'Max of element Observation.category is > max of slice FooSlice'
+      );
+      expect(category.max).toEqual('1');
+      expect(category.min).toEqual(1);
     });
 
     it('should throw InvalidSumOfSliceMinsError when sum of slice mins is constrained greater than sliced element max', () => {
