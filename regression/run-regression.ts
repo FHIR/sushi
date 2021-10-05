@@ -10,6 +10,7 @@ import extract from 'extract-zip';
 import opener from 'opener';
 import { isEqual, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
+import chalk from 'chalk';
 
 // Track temporary files so they are deleted when the process exits
 temp.track();
@@ -104,6 +105,7 @@ class Config {
 
 class Repo {
   public changed: boolean;
+  public error: boolean;
   public elapsed: number;
   public sushiErrorNum1: number;
   public sushiErrorNum2: number;
@@ -130,7 +132,15 @@ async function main() {
     const repoStart = new Date();
     console.log();
     console.log(`Processing ${repo.name}#${repo.branch} (${i++} of ${repos.length})`);
-    await downloadAndExtractRepo(repo, config);
+    try {
+      await downloadAndExtractRepo(repo, config);
+    } catch (e) {
+      console.log(
+        chalk.redBright(`Regression aborted for ${repo.name}#${repo.branch}: ${e.message}`)
+      );
+      repo.error = true;
+      continue;
+    }
     // We can only run SUSHI one at a time due to its asynch management of the .fhir cache
     repo.sushiErrorNum1 = await runSUSHI(1, repo, config);
     repo.sushiErrorNum2 = await runSUSHI(2, repo, config);
@@ -403,7 +413,7 @@ async function createReport(repos: Repo[], config: Config) {
 `,
     { encoding: 'utf8' }
   );
-  for (const repo of repos) {
+  for (const repo of repos.filter(r => !r.error)) {
     const sushiLog1 = config.getRepoSUSHILogFile(repo, 1);
     const sushiLog2 = config.getRepoSUSHILogFile(repo, 2);
     const diffReport = config.getRepoDiffReport(repo);
@@ -440,7 +450,17 @@ async function createReport(repos: Repo[], config: Config) {
 `,
     { encoding: 'utf8' }
   );
-
+  const numError = repos.reduce((sum, repo) => sum + (repo.error ? 1 : 0), 0);
+  if (numError > 0) {
+    console.log();
+    console.log(
+      chalk.redBright(
+        `Processing errors detected. Unable to run regression on ${numError} of ${
+          repos.length
+        } repo${repos.length > 1 ? 's' : ''}.`
+      )
+    );
+  }
   console.log();
   const numChanged = repos.reduce((sum, repo) => sum + (repo.changed ? 1 : 0), 0);
   if (numChanged > 0) {
