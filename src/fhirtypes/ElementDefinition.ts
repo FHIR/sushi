@@ -631,14 +631,18 @@ export class ElementDefinition {
       this.checkSumOfSliceMins(max);
       // Check that new max >= every individual child max
       const slices = this.getSlices();
-      const overMaxChildren = slices.filter(
-        child => child.max === '*' || parseInt(child.max) > maxInt
-      );
+      const overMaxChildren: string[] = [];
+      slices.forEach(child => {
+        if (child.max === '*' || parseInt(child.max) > maxInt) {
+          child.max = max;
+          overMaxChildren.push(child.sliceName);
+        }
+      });
       if (!isUnbounded && overMaxChildren.length > 0) {
         logger.warn(
-          `Max of element ${this.id} is > max of slice${
-            overMaxChildren.length > 1 ? 's' : ''
-          } ${overMaxChildren.map(child => child.sliceName).join(', ')}`
+          `Max of element ${this.id} is < max of its slices. The max of slice${
+            overMaxChildren.length > 1 ? 's:' : ':'
+          } ${overMaxChildren.join(', ')} has been reduced to ${max}`
         );
       }
     }

@@ -227,17 +227,17 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(category);
     });
 
-    it('should log a warning when sliced element max is constrained less than any individual slice max', () => {
+    it('should log a warning and reduce slice cardinality when sliced element max is constrained less than any individual slice max', () => {
       const category = respRate.elements.find(e => e.id === 'Observation.category');
-      console.log(category);
       const fooSlice = category.addSlice('FooSlice');
       fooSlice.max = '2';
       category.constrainCardinality(1, '1');
       expect(loggerSpy.getAllMessages('warn')).toContain(
-        'Max of element Observation.category is > max of slice FooSlice'
+        'Max of element Observation.category is < max of its slices. The max of slice: FooSlice has been reduced to 1'
       );
       expect(category.max).toEqual('1');
       expect(category.min).toEqual(1);
+      expect(fooSlice.max).toEqual('1');
     });
 
     it('should throw InvalidSumOfSliceMinsError when sum of slice mins is constrained greater than sliced element max', () => {

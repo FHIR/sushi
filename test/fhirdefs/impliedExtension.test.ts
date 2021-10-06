@@ -1632,7 +1632,7 @@ describe('impliedExtensions', () => {
           '[http://www.iana.org/assignments/link-relations/link-relations.xhtml#link-relations-1]' +
           '(http://www.iana.org/assignments/link-relations/link-relations.xhtml#link-relations-1).',
         min: 1,
-        max: '1',
+        max: '*',
         type: [{ code: 'Extension' }]
       });
       const snapRelation = ext.snapshot?.element?.find(
