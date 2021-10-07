@@ -626,7 +626,7 @@ export class ElementDefinition {
     // Sliced elements and slices have special card rules described here:
     // http://www.hl7.org/fhiR/profiling.html#slice-cardinality
     // If element is slice definition
-    if (this.slicing) {
+    if (this.slicing && !isUnbounded) {
       // Check that new max >= sum of mins of children
       this.checkSumOfSliceMins(max);
       // Check that new max >= every individual child max
@@ -638,11 +638,13 @@ export class ElementDefinition {
           overMaxChildren.push(child.sliceName);
         }
       });
-      if (!isUnbounded && overMaxChildren.length > 0) {
+      if (overMaxChildren.length > 0) {
         logger.warn(
-          `Max of element ${this.id} is < max of its slices. The max of slice${
-            overMaxChildren.length > 1 ? 's:' : ':'
-          } ${overMaxChildren.join(', ')} has been reduced to ${max}`
+          `At least one slice of ${
+            this.id
+          } has a max greater than the overall element max. The max of the following slice(s) has been reduced to match the max of ${
+            this.id
+          }: ${overMaxChildren.join(',')}`
         );
       }
     }

@@ -233,7 +233,7 @@ describe('ElementDefinition', () => {
       fooSlice.max = '2';
       category.constrainCardinality(1, '1');
       expect(loggerSpy.getAllMessages('warn')).toContain(
-        'Max of element Observation.category is < max of its slices. The max of slice: FooSlice has been reduced to 1'
+        'At least one slice of Observation.category has a max greater than the overall element max. The max of the following slice(s) has been reduced to match the max of Observation.category: FooSlice'
       );
       expect(category.max).toEqual('1');
       expect(category.min).toEqual(1);
