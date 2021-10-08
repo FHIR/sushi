@@ -309,9 +309,28 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
       // if a local system was used, check to make sure the code is actually in that system
       if (codeSystem instanceof FshCodeSystem) {
+        // checking a FshCodeSystem just means checking the ConceptRules
         if (
           !codeSystem.rules.some(
             rule => rule instanceof ConceptRule && rule.code === assignedCode.code
+          )
+        ) {
+          logger.error(
+            `Code "${assignedCode.code}" is not defined for system ${codeSystem.name}.`,
+            rule.sourceInfo
+          );
+        }
+      } else if (codeSystem instanceof Instance) {
+        const conceptRulePath = /^(concept(\[\d+\])?\.)+code$/;
+        // checking an Instance is a little more thrilling. check the concept hierarchy built by AssignmentRules
+        // although there could be AssignmentRules added by InsertRules, those are outside the scope of this check.
+        if (
+          !codeSystem.rules.some(
+            rule =>
+              rule instanceof AssignmentRule &&
+              conceptRulePath.test(rule.path) &&
+              rule.value instanceof FshCode &&
+              rule.value.code === assignedCode.code
           )
         ) {
           logger.error(
@@ -635,19 +654,30 @@ export function isInheritedResource(
  * @returns The URL to use to refer to the FHIR entity
  */
 export function getUrlFromFshDefinition(
-  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem,
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
   canonical: string
 ): string {
   const fshRules: Rule[] = fshDefinition.rules;
-  const caretValueRules = fshRules.filter(
-    rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
-  ) as CaretValueRule[];
-  if (caretValueRules.length > 0) {
-    // Select last CaretValueRule with caretPath === 'url' because rules processing
-    // ends up applying the last rule in the processing order
-    const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
-    // this value should only be a string, but that might change at some point
-    return lastCaretValueRule.value.toString();
+  if (fshDefinition instanceof Instance) {
+    const assignmentRules = fshRules.filter(
+      rule =>
+        rule instanceof AssignmentRule && rule.path === 'url' && typeof rule.value === 'string'
+    ) as AssignmentRule[];
+    if (assignmentRules.length > 0) {
+      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
+      return lastAssignmentRule.value.toString();
+    }
+  } else {
+    const caretValueRules = fshRules.filter(
+      rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
+    ) as CaretValueRule[];
+    if (caretValueRules.length > 0) {
+      // Select last CaretValueRule with caretPath === 'url' because rules processing
+      // ends up applying the last rule in the processing order
+      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+      // this value should only be a string, but that might change at some point
+      return lastCaretValueRule.value.toString();
+    }
   }
 
   let fhirType: string;
