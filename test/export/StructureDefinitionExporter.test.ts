@@ -5995,26 +5995,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
     });
 
-    it('should not apply a CardRule that would make the cardinality of the child of a slice too large', () => {
-      // * component[Lab].interpretation 0..9
-      // * component.interpretation 0..5 // this rule is invalid!
-      const labCard = new CardRule('component[Lab].interpretation');
-      labCard.max = '9';
-      const rootCard = new CardRule('component.interpretation')
-        .withFile('Narrower.fsh')
-        .withLocation([7, 9, 7, 23]);
-      rootCard.max = '5';
-
-      observationWithSlice.rules.push(labCard, rootCard);
-      doc.profiles.set(observationWithSlice.name, observationWithSlice);
-      exporter.export();
-      const sd = pkg.profiles[0];
-      expect(sd.findElement('Observation.component.interpretation').max).toBe('*');
-      expect(sd.findElement('Observation.component:Lab.interpretation').max).toBe('9');
-      expect(loggerSpy.getLastMessage('error')).toMatch(/cannot be narrowed/s);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
-    });
-
     it('should apply a FlagRule on a sliced element that updates the flags on its slices', () => {
       // * component MS ?!
       // modifier should be applied to the slices, but must support is not applied to slices.

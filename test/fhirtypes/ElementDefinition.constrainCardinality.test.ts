@@ -1,7 +1,7 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { TestFisher } from '../testhelpers';
+import { TestFisher, loggerSpy } from '../testhelpers';
 import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
 
@@ -16,6 +16,7 @@ describe('ElementDefinition', () => {
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
+    loggerSpy.reset();
     observation = fisher.fishForStructureDefinition('Observation');
     respRate = fisher.fishForStructureDefinition('resprate');
   });
@@ -226,15 +227,17 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(category);
     });
 
-    it('should throw InvalidMaxOfSliceError when sliced element max is constrained less than any individual slice max', () => {
+    it('should log a warning and reduce slice cardinality when sliced element max is constrained less than any individual slice max', () => {
       const category = respRate.elements.find(e => e.id === 'Observation.category');
       const fooSlice = category.addSlice('FooSlice');
       fooSlice.max = '2';
-      const clone = cloneDeep(category);
-      expect(() => {
-        category.constrainCardinality(1, '1');
-      }).toThrow(/max of slice FooSlice \(2\) > max of sliced element \(1\)\./);
-      expect(clone).toEqual(category);
+      category.constrainCardinality(1, '1');
+      expect(loggerSpy.getAllMessages('warn')).toContain(
+        'At least one slice of Observation.category has a max greater than the overall element max. The max of the following slice(s) has been reduced to match the max of Observation.category: FooSlice'
+      );
+      expect(category.max).toEqual('1');
+      expect(category.min).toEqual(1);
+      expect(fooSlice.max).toEqual('1');
     });
 
     it('should throw InvalidSumOfSliceMinsError when sum of slice mins is constrained greater than sliced element max', () => {

@@ -25,7 +25,6 @@ import {
   InvalidCardinalityError,
   InvalidFHIRIdError,
   InvalidMappingError,
-  InvalidMaxOfSliceError,
   InvalidMustSupportError,
   InvalidSumOfSliceMinsError,
   InvalidTypeError,
@@ -598,7 +597,6 @@ export class ElementDefinition {
    * @throws {InvalidCardinalityError} when min > max
    * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
    * @throws {InvalidSumOfSliceMinsError} when the mins of slice elements > max of sliced element
-   * @throws {InvalidMaxOfSliceError} when a sliced element's max is < an individual slice's max
    * @throws {NarrowingRootCardinalityError} when the new cardinality on an element is narrower than
    *   the cardinality on a connected element
    */
@@ -628,14 +626,26 @@ export class ElementDefinition {
     // Sliced elements and slices have special card rules described here:
     // http://www.hl7.org/fhiR/profiling.html#slice-cardinality
     // If element is slice definition
-    if (this.slicing) {
+    if (this.slicing && !isUnbounded) {
       // Check that new max >= sum of mins of children
       this.checkSumOfSliceMins(max);
       // Check that new max >= every individual child max
       const slices = this.getSlices();
-      const overMaxChild = slices.find(child => child.max === '*' || parseInt(child.max) > maxInt);
-      if (!isUnbounded && overMaxChild) {
-        throw new InvalidMaxOfSliceError(overMaxChild.max, overMaxChild.sliceName, max);
+      const overMaxChildren: string[] = [];
+      slices.forEach(child => {
+        if (child.max === '*' || parseInt(child.max) > maxInt) {
+          child.max = max;
+          overMaxChildren.push(child.sliceName);
+        }
+      });
+      if (overMaxChildren.length > 0) {
+        logger.warn(
+          `At least one slice of ${
+            this.id
+          } has a max greater than the overall element max. The max of the following slice(s) has been reduced to match the max of ${
+            this.id
+          }: ${overMaxChildren.join(',')}`
+        );
       }
     }
 
@@ -659,12 +669,6 @@ export class ElementDefinition {
             );
           }
         });
-      connectedElements.forEach(ce => {
-        // if the connected element's max is not null and is not *, we can't make the max smaller than its max
-        if (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max)) {
-          throw new NarrowingRootCardinalityError(this.path, ce.id, min, max, ce.min ?? 0, ce.max);
-        }
-      });
     }
 
     // If element is a slice
