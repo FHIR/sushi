@@ -18,7 +18,11 @@ describe('ElementDefinition', () => {
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {

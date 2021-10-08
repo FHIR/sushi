@@ -8,10 +8,18 @@ describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'test#1.1.1',
+      defs
+    );
     // Supplemental R3 defs needed to test fishing for implied extensions
     const r3Defs = new FHIRDefinitions(true);
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r3-definitions', r3Defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r3-definitions'),
+      'hl7.fhir.r3.core#3.0.2',
+      r3Defs
+    );
     defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
     // Run the dependency resources through TestFisher to force them into the testhelpers cache
     const fisher = new TestFisher().withFHIR(defs);

@@ -24,7 +24,11 @@ describe('ElementDefinition', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
     pkg = new Package(minimalConfig);
     fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
     exporter = new StructureDefinitionExporter(new FSHTank([], minimalConfig), pkg, fisher);
@@ -826,7 +830,11 @@ describe('ElementDefinition R5', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
+    );
     pkg = new Package(minimalConfig);
     fisher = new TestFisher()
       .withFHIR(defs)

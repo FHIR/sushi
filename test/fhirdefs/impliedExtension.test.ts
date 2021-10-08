@@ -43,15 +43,31 @@ describe('impliedExtensions', () => {
     let defs: FHIRDefinitions;
     beforeEach(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testdefs',
+        defs
+      );
       const r2Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r2-definitions', r2Defs);
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r2-definitions'),
+        'hl7.fhir.r2.core#1.0.2',
+        r2Defs
+      );
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r2.core#1.0.2', r2Defs);
       const r3Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r3-definitions', r3Defs);
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r3-definitions'),
+        'hl7.fhir.r3.core#3.0.2',
+        r3Defs
+      );
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
       const r5Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+        'hl7.fhir.r5.core#4.6.0',
+        r5Defs
+      );
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#current', r5Defs);
       loggerSpy.reset();
     });
@@ -1314,9 +1330,17 @@ describe('impliedExtensions', () => {
     let defs: FHIRDefinitions;
     beforeEach(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+        'hl7.fhir.r5.core#4.6.0',
+        defs
+      );
       const r4Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', r4Defs);
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'hl7.fhir.r4.core#4.0.1',
+        r4Defs
+      );
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r4.core#4.0.1', r4Defs);
       loggerSpy.reset();
     });

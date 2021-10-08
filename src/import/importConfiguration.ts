@@ -555,12 +555,6 @@ function parseDependencies(
     return;
   }
   return Object.entries(yamlDependencies).map(([packageId, versionOrDetails]) => {
-    if (/[A-Z]/.test(packageId)) {
-      logger.warn(
-        `${packageId} contains uppercase characters, which is discouraged. SUSHI will use ${packageId.toLowerCase()} as the package name.`
-      );
-      packageId = packageId.toLowerCase();
-    }
     if (typeof versionOrDetails === 'string' || typeof versionOrDetails === 'number') {
       return { packageId, version: `${versionOrDetails}` };
     } else if (versionOrDetails == null) {
