@@ -394,6 +394,52 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should export a value set that includes a concept component from a local code system name with at least one concept added by a RuleSet', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.concepts.push(new FshCode('Pizza', 'FoodCS', 'Delicious pizza to share.'));
+    component.concepts.push(new FshCode('Salad', 'FoodCS', 'Plenty of fresh vegetables.'));
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const ruleSet = new RuleSet('ExtraFoodRules');
+    ruleSet.rules.push(new ConceptRule('Salad', 'Plenty of fresh vegetables.'));
+    doc.ruleSets.set(ruleSet.name, ruleSet);
+
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.addConcept(new ConceptRule('Fruit', 'Get that good fruit.'));
+    const insertRule = new InsertRule('');
+    insertRule.ruleSet = 'ExtraFoodRules';
+    foodCS.rules.push(insertRule);
+    doc.codeSystems.set(foodCS.name, foodCS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'active',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+            concept: [
+              { code: 'Pizza', display: 'Delicious pizza to share.' },
+              { code: 'Salad', display: 'Plenty of fresh vegetables.' }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should export a value set that includes a concept component from a local CodeSystem instance name with at least one concept', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponentRule(true);
@@ -412,6 +458,59 @@ describe('ValueSetExporter', () => {
     const saladCode = new AssignmentRule('concept[1].code');
     saladCode.value = new FshCode('Salad');
     foodCS.rules.push(urlRule, pizzaCode, saladCode);
+    doc.instances.set(foodCS.name, foodCS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'active',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/Instance/food',
+            concept: [
+              { code: 'Pizza', display: 'Delicious pizza to share.' },
+              { code: 'Salad', display: 'Plenty of fresh vegetables.' }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should export a value set that includes a concept component from a local CodeSystem instance name with at least one concept added by a RuleSet', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.concepts.push(new FshCode('Pizza', 'FoodCS', 'Delicious pizza to share.'));
+    component.concepts.push(new FshCode('Salad', 'FoodCS', 'Plenty of fresh vegetables.'));
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const ruleSet = new RuleSet('ExtraFoodRules');
+    const saladCode = new AssignmentRule('concept[+].code');
+    saladCode.value = new FshCode('Salad');
+    ruleSet.rules.push(saladCode);
+    doc.ruleSets.set(ruleSet.name, ruleSet);
+
+    const foodCS = new Instance('FoodCS');
+    foodCS.instanceOf = 'CodeSystem';
+    foodCS.usage = 'Definition';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/food';
+    const pizzaCode = new AssignmentRule('concept[0].code');
+    pizzaCode.value = new FshCode('Pizza');
+    const fruitCode = new AssignmentRule('concept[1].code');
+    fruitCode.value = new FshCode('Fruit');
+    const insertRule = new InsertRule('');
+    insertRule.ruleSet = 'ExtraFoodRules';
+    foodCS.rules.push(urlRule, pizzaCode, fruitCode, insertRule);
     doc.instances.set(foodCS.name, foodCS);
 
     const exported = exporter.export().valueSets;

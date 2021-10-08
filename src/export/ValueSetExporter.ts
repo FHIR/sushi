@@ -85,13 +85,15 @@ export class ValueSetExporter {
           const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
           let strangeConcepts: ValueSetComposeConcept[] = [];
           if (codeSystem instanceof FshCodeSystem) {
+            applyInsertRules(codeSystem, this.tank);
             strangeConcepts = composeElement.concept.filter(composeConcept => {
               return !codeSystem.rules.some(
                 rule => rule instanceof ConceptRule && rule.code === composeConcept.code
               );
             });
           } else if (codeSystem instanceof Instance) {
-            const conceptRulePath = /^(concept(\[\d+\])?\.)+code$/;
+            applyInsertRules(codeSystem, this.tank);
+            const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
             strangeConcepts = composeElement.concept.filter(composeConcept => {
               return !codeSystem.rules.some(
                 rule =>

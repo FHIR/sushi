@@ -3594,6 +3594,73 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should apply a Code AssignmentRule and replace the local code system name with its url when the code is added by a RuleSet', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'Visible');
+      profile.rules.push(rule);
+
+      const ruleSet = new RuleSet('ExtraLightRules');
+      ruleSet.rules.push(new ConceptRule('bright'));
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('dim'));
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'ExtraLightRules';
+      visibleSystem.rules.push(insertRule);
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the local instance of CodeSystem name with its url when the code is added by a RuleSet', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'Visible');
+      profile.rules.push(rule);
+
+      const ruleSet = new RuleSet('ExtraLightRules');
+      const brightCode = new AssignmentRule('concept[+].code');
+      brightCode.value = new FshCode('bright');
+      ruleSet.rules.push(brightCode);
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const dimCode = new AssignmentRule('concept[0].code');
+      dimCode.value = new FshCode('dim');
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'ExtraLightRules';
+      visibleSystem.rules.push(urlRule, dimCode, insertRule);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should log an error when applying a Code AssignmentRule with a local code system name when the code does not exist', () => {
       const profile = new Profile('LightObservation');
       profile.parent = 'Observation';

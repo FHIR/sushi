@@ -303,11 +303,17 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const version = versionParts.join('|');
     const codeSystem = tank.fish(system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
-    if (codeSystem && codeSystemMeta) {
+    if (
+      codeSystem &&
+      (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) &&
+      codeSystemMeta
+    ) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
       assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
       // if a local system was used, check to make sure the code is actually in that system
+      // because AssignmentRules/ConceptRules could be added by InsertRules, apply the InsertRules
+      applyInsertRules(codeSystem, tank);
       if (codeSystem instanceof FshCodeSystem) {
         // checking a FshCodeSystem just means checking the ConceptRules
         if (
@@ -321,9 +327,8 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
           );
         }
       } else if (codeSystem instanceof Instance) {
-        const conceptRulePath = /^(concept(\[\d+\])?\.)+code$/;
+        const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
         // checking an Instance is a little more thrilling. check the concept hierarchy built by AssignmentRules
-        // although there could be AssignmentRules added by InsertRules, those are outside the scope of this check.
         if (
           !codeSystem.rules.some(
             rule =>
