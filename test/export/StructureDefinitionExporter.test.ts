@@ -45,7 +45,11 @@ describe('StructureDefinitionExporter R4', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'testPackage',
+      defs
+    );
   });
 
   beforeEach(() => {
@@ -6972,7 +6976,11 @@ describe('StructureDefinitionExporter R5', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
+      'r5',
+      defs
+    );
   });
 
   beforeEach(() => {

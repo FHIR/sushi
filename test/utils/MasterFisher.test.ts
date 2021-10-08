@@ -51,7 +51,11 @@ describe('MasterFisher', () => {
     pkg.profiles.push(profile3, profile4);
 
     defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    loadFromPath(
+      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+      'test#1.1.1',
+      defs
+    );
 
     fisher = new MasterFisher(tank, defs, pkg);
   });
