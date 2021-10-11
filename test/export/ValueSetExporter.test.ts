@@ -791,6 +791,206 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should export a value set that includes a filter component with a code filter where the value is from a local system', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    const component = new ValueSetFilterComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.filters.push({
+      property: 'concept',
+      operator: VsOperator.GENERALIZES,
+      value: new FshCode('Pizza', 'FoodCS')
+    });
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    doc.codeSystems.set(foodCS.name, foodCS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+            filter: [
+              {
+                property: 'concept',
+                op: 'generalizes',
+                value: 'Pizza'
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should export a value set that includes a filter component with a code filter where the value is from a local Instance of CodeSystem', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    const component = new ValueSetFilterComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.filters.push({
+      property: 'concept',
+      operator: VsOperator.GENERALIZES,
+      value: new FshCode('Pizza', 'FoodCS')
+    });
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const foodCS = new Instance('FoodCS');
+    foodCS.instanceOf = 'CodeSystem';
+    foodCS.usage = 'Definition';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/food';
+    const pizzaCode = new AssignmentRule('concept[0].code');
+    pizzaCode.value = new FshCode('Pizza');
+    const fruitCode = new AssignmentRule('concept[1].code');
+    fruitCode.value = new FshCode('Fruit');
+    foodCS.rules.push(urlRule, pizzaCode, fruitCode);
+    doc.instances.set(foodCS.name, foodCS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/Instance/food',
+            filter: [
+              {
+                property: 'concept',
+                op: 'generalizes',
+                value: 'Pizza'
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should log an error when exporting a value set that includes a filter component with a code filter where the value is from a local system, but is not present in the system', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    const component = new ValueSetFilterComponentRule(true)
+      .withFile('Breakfast.fsh')
+      .withLocation([8, 0, 10, 22]);
+    component.from = { system: 'FoodCS' };
+    component.filters.push({
+      property: 'concept',
+      operator: VsOperator.GENERALIZES,
+      value: new FshCode('Potato', 'FoodCS')
+    });
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    doc.codeSystems.set(foodCS.name, foodCS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+            filter: [
+              {
+                property: 'concept',
+                op: 'generalizes',
+                value: 'Potato'
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Code "Potato" is not defined for system FoodCS.*File: Breakfast\.fsh.*Line: 8 - 10\D*/s
+    );
+  });
+
+  it('should log an error when exporting a value set that includes a filter component with a code filter where the value is from a local Instance of CodeSystem, but is not present in the system', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    const component = new ValueSetFilterComponentRule(true)
+      .withFile('Breakfast.fsh')
+      .withLocation([9, 0, 12, 22]);
+    component.from = { system: 'FoodCS' };
+    component.filters.push({
+      property: 'concept',
+      operator: VsOperator.GENERALIZES,
+      value: new FshCode('Potato', 'FoodCS')
+    });
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const foodCS = new Instance('FoodCS');
+    foodCS.instanceOf = 'CodeSystem';
+    foodCS.usage = 'Definition';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/food';
+    const pizzaCode = new AssignmentRule('concept[0].code');
+    pizzaCode.value = new FshCode('Pizza');
+    const fruitCode = new AssignmentRule('concept[1].code');
+    fruitCode.value = new FshCode('Fruit');
+    foodCS.rules.push(urlRule, pizzaCode, fruitCode);
+    doc.instances.set(foodCS.name, foodCS);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'BreakfastVS',
+      name: 'BreakfastVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS',
+      version: '1.0.0',
+      status: 'active',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/Instance/food',
+            filter: [
+              {
+                property: 'concept',
+                op: 'generalizes',
+                value: 'Potato'
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Code "Potato" is not defined for system FoodCS.*File: Breakfast\.fsh.*Line: 9 - 12\D*/s
+    );
+  });
+
   it('should export a value set that includes a filter component with a string filter', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     const component = new ValueSetFilterComponentRule(true);

@@ -119,6 +119,35 @@ export class ValueSetExporter {
           component.filters.length > 0
         ) {
           composeElement.filter = component.filters.map(filter => {
+            // if filter.value is a FshCode, perform the local code system check here as well
+            if (filter.value instanceof FshCode) {
+              const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
+              let strangeCode = false;
+              if (codeSystem instanceof FshCodeSystem) {
+                applyInsertRules(codeSystem, this.tank);
+                strangeCode = !codeSystem.rules.some(
+                  rule =>
+                    rule instanceof ConceptRule && rule.code === (filter.value as FshCode).code
+                );
+              } else if (codeSystem instanceof Instance) {
+                applyInsertRules(codeSystem, this.tank);
+                const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
+                strangeCode = !codeSystem.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    conceptRulePath.test(rule.path) &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === (filter.value as FshCode).code
+                );
+              }
+              if (strangeCode) {
+                logger.error(
+                  `Code "${filter.value.code}" is not defined for system ${codeSystem.name}`,
+                  component.sourceInfo
+                );
+              }
+            }
+
             return {
               property: filter.property.toString(),
               op: filter.operator.toString(),
