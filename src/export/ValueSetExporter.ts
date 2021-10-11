@@ -14,11 +14,13 @@ import {
   CaretValueRule,
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule,
-  ConceptRule,
-  AssignmentRule
+  ValueSetFilterComponentRule
 } from '../fshtypes/rules';
-import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
+import {
+  setPropertyOnInstance,
+  applyInsertRules,
+  listUndefinedLocalCodes
+} from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap } from 'lodash';
 
@@ -83,35 +85,12 @@ export class ValueSetExporter {
           });
           // if we can fish up the system in the tank, it's local, and we should check the listed concepts
           const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
-          let strangeConcepts: ValueSetComposeConcept[] = [];
-          if (codeSystem instanceof FshCodeSystem) {
-            applyInsertRules(codeSystem, this.tank);
-            strangeConcepts = composeElement.concept.filter(composeConcept => {
-              return !codeSystem.rules.some(
-                rule => rule instanceof ConceptRule && rule.code === composeConcept.code
-              );
-            });
-          } else if (codeSystem instanceof Instance) {
-            applyInsertRules(codeSystem, this.tank);
-            const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
-            strangeConcepts = composeElement.concept.filter(composeConcept => {
-              return !codeSystem.rules.some(
-                rule =>
-                  rule instanceof AssignmentRule &&
-                  conceptRulePath.test(rule.path) &&
-                  rule.value instanceof FshCode &&
-                  rule.value.code === composeConcept.code
-              );
-            });
-          }
-          if (strangeConcepts.length > 0) {
-            logger.error(
-              `Code${strangeConcepts.length > 1 ? 's' : ''} ${strangeConcepts
-                .map(sc => `"${sc.code}"`)
-                .join(', ')} ${strangeConcepts.length > 1 ? 'are' : 'is'} not defined for system ${
-                codeSystem.name
-              }.`,
-              component.sourceInfo
+          if (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) {
+            listUndefinedLocalCodes(
+              codeSystem,
+              composeElement.concept.map(concept => concept.code),
+              this.tank,
+              component
             );
           }
         } else if (
@@ -122,28 +101,12 @@ export class ValueSetExporter {
             // if filter.value is a FshCode, perform the local code system check here as well
             if (filter.value instanceof FshCode) {
               const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
-              let strangeCode = false;
-              if (codeSystem instanceof FshCodeSystem) {
-                applyInsertRules(codeSystem, this.tank);
-                strangeCode = !codeSystem.rules.some(
-                  rule =>
-                    rule instanceof ConceptRule && rule.code === (filter.value as FshCode).code
-                );
-              } else if (codeSystem instanceof Instance) {
-                applyInsertRules(codeSystem, this.tank);
-                const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
-                strangeCode = !codeSystem.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    conceptRulePath.test(rule.path) &&
-                    rule.value instanceof FshCode &&
-                    rule.value.code === (filter.value as FshCode).code
-                );
-              }
-              if (strangeCode) {
-                logger.error(
-                  `Code "${filter.value.code}" is not defined for system ${codeSystem.name}`,
-                  component.sourceInfo
+              if (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) {
+                listUndefinedLocalCodes(
+                  codeSystem,
+                  [(filter.value as FshCode).code],
+                  this.tank,
+                  component
                 );
               }
             }

@@ -28,7 +28,8 @@ import {
   FshCodeSystem,
   Mapping,
   isAllowedRule,
-  Resource
+  Resource,
+  FshEntity
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -312,38 +313,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       const assignedCode = getRuleValue(clone) as FshCode;
       assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
       // if a local system was used, check to make sure the code is actually in that system
-      // because AssignmentRules/ConceptRules could be added by InsertRules, apply the InsertRules
-      applyInsertRules(codeSystem, tank);
-      if (codeSystem instanceof FshCodeSystem) {
-        // checking a FshCodeSystem just means checking the ConceptRules
-        if (
-          !codeSystem.rules.some(
-            rule => rule instanceof ConceptRule && rule.code === assignedCode.code
-          )
-        ) {
-          logger.error(
-            `Code "${assignedCode.code}" is not defined for system ${codeSystem.name}.`,
-            rule.sourceInfo
-          );
-        }
-      } else if (codeSystem instanceof Instance) {
-        const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
-        // checking an Instance is a little more thrilling. check the concept hierarchy built by AssignmentRules
-        if (
-          !codeSystem.rules.some(
-            rule =>
-              rule instanceof AssignmentRule &&
-              conceptRulePath.test(rule.path) &&
-              rule.value instanceof FshCode &&
-              rule.value.code === assignedCode.code
-          )
-        ) {
-          logger.error(
-            `Code "${assignedCode.code}" is not defined for system ${codeSystem.name}.`,
-            rule.sourceInfo
-          );
-        }
-      }
+      listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
     }
   }
   return clone ?? rule;
@@ -359,6 +329,42 @@ function getRuleValue(rule: AssignmentRule | CaretValueRule): AssignmentValueTyp
     return rule.value;
   } else if (rule instanceof CaretValueRule) {
     return rule.value;
+  }
+}
+
+export function listUndefinedLocalCodes(
+  codeSystem: FshCodeSystem | Instance,
+  codes: string[],
+  tank: FSHTank,
+  sourceEntity: FshEntity
+): void {
+  let undefinedCodes: string[] = [];
+  applyInsertRules(codeSystem, tank);
+  if (codeSystem instanceof FshCodeSystem) {
+    undefinedCodes = codes.filter(code => {
+      return !codeSystem.rules.some(rule => rule instanceof ConceptRule && rule.code === code);
+    });
+  } else if (codeSystem instanceof Instance) {
+    const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
+    undefinedCodes = codes.filter(code => {
+      return !codeSystem.rules.some(
+        rule =>
+          rule instanceof AssignmentRule &&
+          conceptRulePath.test(rule.path) &&
+          rule.value instanceof FshCode &&
+          rule.value.code === code
+      );
+    });
+  }
+  if (undefinedCodes.length > 0) {
+    logger.error(
+      `Code${undefinedCodes.length > 1 ? 's' : ''} ${undefinedCodes
+        .map(code => `"${code}"`)
+        .join(', ')} ${undefinedCodes.length > 1 ? 'are' : 'is'} not defined for system ${
+        codeSystem.name
+      }.`,
+      sourceEntity.sourceInfo
+    );
   }
 }
 
