@@ -417,7 +417,9 @@ export class ElementDefinition {
       .split('.')
       .map(p => {
         const i = p.indexOf('[x]:');
-        return i > -1 ? p.slice(i + 4) : p;
+        const isChoiceSlice =
+          i > -1 ? this.type?.some(type => p.slice(i + 4).endsWith(upperFirst(type.code))) : false;
+        return i > -1 && isChoiceSlice ? p.slice(i + 4) : p;
       })
       .join('.');
   }

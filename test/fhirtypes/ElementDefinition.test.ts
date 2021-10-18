@@ -401,6 +401,21 @@ describe('ElementDefinition', () => {
       expect(diff.sliceName).toBeUndefined();
     });
 
+    it('should not calculate diff id using shortcut syntax for a non-choice slices on value[x] elements', () => {
+      valueX.sliceIt('type', '$this', false, 'open');
+      const testSlice = valueX.addSlice('testSlice', new ElementDefinitionType('reference'));
+      const diff = testSlice.calculateDiff();
+      // snapshot should retain formal syntax and slicename
+      expect(testSlice.id).toBe('Observation.value[x]:testSlice');
+      expect(testSlice.path).toBe('Observation.value[x]');
+      expect(testSlice.sliceName).toBe('testSlice');
+
+      // differential not should use shortcut syntax
+      expect(diff.id).toBe('Observation.value[x]:testSlice');
+      expect(diff.path).toBe('Observation.value[x]');
+      expect(diff.sliceName).toBe('testSlice');
+    });
+
     it('should include only new constraints in a diff when constraints are added', () => {
       const myInvariant = new Invariant('inv-1');
       myInvariant.severity = new FshCode('warning');
