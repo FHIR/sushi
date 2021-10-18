@@ -5,8 +5,11 @@ module.exports = {
     }
   },
   moduleFileExtensions: ['ts', 'js'],
+  moduleNameMapper: {
+    '^antlr4(.*)$': '<rootDir>/node_modules/antlr4/src/antlr4$1'
+  },
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest'
+    '^.+\\.(js|jsx|ts|tsx)$': 'ts-jest'
   },
   testMatch: ['**/test/**/*.test.(ts|js)'],
   testEnvironment: 'node',
