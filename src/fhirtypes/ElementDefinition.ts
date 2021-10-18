@@ -43,7 +43,8 @@ import {
   WideningCardinalityError,
   InvalidChoiceTypeRulePathError,
   CannotResolvePathError,
-  MismatchedBindingTypeError
+  MismatchedBindingTypeError,
+  ValidationError
 } from '../errors';
 import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
@@ -273,6 +274,58 @@ export class ElementDefinition {
         return name;
       })
       .join('.');
+  }
+
+  private _validationErrors: ValidationError[];
+
+  get validationErrors(): ValidationError[] {
+    return this._validationErrors;
+  }
+
+  valid(): boolean {
+    this._validationErrors = [];
+    if (this.slicing) {
+      this.validateSlicing(this.slicing);
+    }
+    return !this._validationErrors.length;
+  }
+
+  private validateRequired(value: AssignmentValueType, fhirPath: string): void {
+    if (!value) {
+      this._validationErrors.push(new ValidationError('Missing required element', fhirPath));
+    }
+  }
+
+  private validateIncludes(value: string, allowedValues: string[], fhirPath: string): void {
+    if (value && !allowedValues.includes(value)) {
+      this._validationErrors.push(
+        new ValidationError(`Value ${value} must be from ${allowedValues.join(', ')}`, fhirPath)
+      );
+    }
+  }
+
+  private validateSlicing(slicing: ElementDefinitionSlicing): void {
+    if (
+      this.max !== '*' &&
+      parseInt(this.max) <= 1 &&
+      this.base.max !== '*' &&
+      parseInt(this.base.max) <= 1 &&
+      !this.id.endsWith('[x]')
+    ) {
+      this._validationErrors.push(
+        new ValidationError('Cannot slice element which is not an array or choice', 'slicing')
+      );
+    }
+
+    this.validateRequired(slicing.rules, 'slicing.rules');
+    this.validateIncludes(slicing.rules, ALLOWED_SLICING_RULES, 'slicing.rules');
+
+    slicing.discriminator?.forEach((d, i) => {
+      const discriminatorPath = `slicing.discriminator[${i}]`;
+      this.validateRequired(d.type, `${discriminatorPath}.type`);
+      this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_PATHS, `${discriminatorPath}.type`);
+      this.validateRequired(d.path, `${discriminatorPath}.path`);
+    });
   }
 
   getPathWithoutBase(): string {
@@ -2433,10 +2486,18 @@ export type ElementDefinitionSlicing = {
   rules: string;
 };
 
+// Cannot constrain ElementDefinitionSlicing.rules to have these values as a type
+// since we want to process other string values, but log an error
+const ALLOWED_SLICING_RULES = ['closed', 'open', 'openAtEnd'];
+
 export type ElementDefinitionSlicingDiscriminator = {
   type: string;
   path: string;
 };
+
+// Cannot constrain ElementDefinitionSlicingDiscriminator to have these values as a type
+// since we want to process other string values, but log an error
+const ALLOWED_DISCRIMINATOR_PATHS = ['value', 'exists', 'pattern', 'type', 'profile'];
 
 export type ElementDefinitionBase = {
   path: string;

@@ -881,6 +881,12 @@ export class StructureDefinitionExporter implements Fishable {
     );
     structDef.inProgress = false;
 
+    if (!structDef.valid()) {
+      structDef.validationErrors?.forEach(err => {
+        logger.error(err.message, fshDefinition.sourceInfo);
+      });
+    }
+
     // check for another structure definition with the same id
     // see https://www.hl7.org/fhir/resource.html#id
     // the structure definition has already been added to the package, so it's fine if it matches itself

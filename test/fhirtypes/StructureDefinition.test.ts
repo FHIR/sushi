@@ -12,6 +12,7 @@ import { InstanceDefinition } from '../../src/fhirtypes';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { minimalConfig } from '../utils/minimalConfig';
 import { Package, StructureDefinitionExporter } from '../../src/export';
+import { ValidationError } from '../../src/errors';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
@@ -2081,6 +2082,24 @@ describe('StructureDefinition', () => {
     it('should not find the reference target when there are no brackets', () => {
       const canTarget = planDefinition.getReferenceOrCanonicalName('action.definition[x]', actDef);
       expect(canTarget).toBeUndefined();
+    });
+  });
+
+  describe('#valid', () => {
+    it('should log an error when at least one element is invalid', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const errorSpy = jest
+        .spyOn(valueX, 'validationErrors', 'get')
+        .mockReturnValue([new ValidationError('issue', 'path')]);
+      const validSpy = jest.spyOn(valueX, 'valid').mockReturnValue(false);
+
+      expect(observation.valid()).toBe(false);
+      expect(observation.validationErrors).toHaveLength(1);
+      expect(observation.validationErrors[0].message).toMatch(
+        /StructureDefinition\.snapshot\.where\(id = 'Observation\.value\[x\]'\)\.first\(\)\.path: issue/
+      );
+      errorSpy.mockRestore();
+      validSpy.mockRestore();
     });
   });
 });

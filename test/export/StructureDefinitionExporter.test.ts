@@ -31,10 +31,15 @@ import {
   AddElementRule
 } from '../../src/fshtypes/rules';
 import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
-import { ElementDefinitionType, StructureDefinitionMapping } from '../../src/fhirtypes';
+import {
+  ElementDefinitionType,
+  StructureDefinition,
+  StructureDefinitionMapping
+} from '../../src/fhirtypes';
 import path from 'path';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
+import { ValidationError } from '../../src/errors';
 
 describe('StructureDefinitionExporter R4', () => {
   let defs: FHIRDefinitions;
@@ -137,6 +142,33 @@ describe('StructureDefinitionExporter R4', () => {
       );
       expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
       expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+    });
+
+    it('should log error messages for validation errros on the StructureDefinition', () => {
+      const profile = new Profile('MyPatientProfile');
+      profile.parent = 'Patient';
+      profile.id = 'my-patient';
+      doc.profiles.set(profile.name, profile);
+
+      const errorsSpy = jest
+        .spyOn(StructureDefinition.prototype, 'validationErrors', 'get')
+        .mockReturnValue([
+          new ValidationError('issue1', 'fhirPath1'),
+          new ValidationError('issue2', 'fhirPath2')
+        ]);
+      const validSpy = jest.spyOn(StructureDefinition.prototype, 'valid').mockReturnValue(false);
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(/fhirPath2: issue2/);
+      expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/fhirPath1: issue1/);
+
+      const exported = pkg.profiles[0];
+      expect(exported.name).toBe('MyPatientProfile');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Patient');
+
+      errorsSpy.mockRestore();
+      validSpy.mockRestore();
     });
   });
 
@@ -4143,7 +4175,16 @@ describe('StructureDefinitionExporter R4', () => {
 
       const rule = new ContainsRule('code.coding');
       rule.items = [{ name: 'barSlice' }];
-      profile.rules.push(rule);
+      const rulesRule = new CaretValueRule('code.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const typeRule = new CaretValueRule('code.coding');
+      typeRule.caretPath = 'slicing.discriminator.type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('code.coding');
+      pathRule.caretPath = 'slicing.discriminator.path';
+      pathRule.value = 'foo';
+      profile.rules.push(rule, rulesRule, typeRule, pathRule);
 
       exporter.exportStructDef(profile);
       const sd = pkg.profiles[0];
@@ -4203,9 +4244,15 @@ describe('StructureDefinitionExporter R4', () => {
       const caretRule = new CaretValueRule('extension[bar]');
       caretRule.caretPath = 'slicing.discriminator.type';
       caretRule.value = new FshCode('pattern');
+      const rulesRule = new CaretValueRule('extension[bar]');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const pathRule = new CaretValueRule('extension[bar]');
+      pathRule.caretPath = 'slicing.discriminator.path';
+      pathRule.value = 'foo';
       const resliceRule = new ContainsRule('extension[bar]');
       resliceRule.items = [{ name: 'barReslice' }];
-      extension.rules.push(sliceRule, caretRule, resliceRule);
+      extension.rules.push(sliceRule, caretRule, rulesRule, pathRule, resliceRule);
 
       exporter.exportStructDef(extension);
       const sd = pkg.extensions[0];
