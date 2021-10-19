@@ -340,11 +340,35 @@ export function listUndefinedLocalCodes(
 ): void {
   let undefinedCodes: string[] = [];
   applyInsertRules(codeSystem, tank);
-  if (codeSystem instanceof FshCodeSystem) {
+  // if the CodeSystem content is complete, a code not present in this system should be listed as undefined.
+  // if the CodeSystem content is not complete, then do not list any code as undefined.
+  // in a FshCodeSystem, content is complete by default, so make sure it isn't set to something else.
+  // in an Instance, content does not have a default value, so make sure there is a rule that sets it to complete.
+  if (
+    codeSystem instanceof FshCodeSystem &&
+    !codeSystem.rules.some(
+      rule =>
+        rule instanceof CaretValueRule &&
+        rule.path === '' &&
+        rule.caretPath === 'content' &&
+        rule.value instanceof FshCode &&
+        rule.value.code !== 'complete'
+    )
+  ) {
     undefinedCodes = codes.filter(code => {
       return !codeSystem.rules.some(rule => rule instanceof ConceptRule && rule.code === code);
     });
-  } else if (codeSystem instanceof Instance) {
+  } else if (
+    codeSystem instanceof Instance &&
+    codeSystem.usage == 'Definition' &&
+    codeSystem.rules.some(
+      rule =>
+        rule instanceof AssignmentRule &&
+        rule.path === 'content' &&
+        rule.value instanceof FshCode &&
+        rule.value.code === 'complete'
+    )
+  ) {
     const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
     undefinedCodes = codes.filter(code => {
       return !codeSystem.rules.some(
