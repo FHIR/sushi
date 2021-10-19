@@ -83,27 +83,19 @@ export class StructureDefinition {
    */
   private _sdStructureDefinition: StructureDefinition;
 
-  private _validationErrors: ValidationError[];
-
-  get validationErrors(): ValidationError[] {
-    return this._validationErrors;
-  }
-
-  valid(): boolean {
-    this._validationErrors = [];
-    this.elements
-      ?.filter(e => !e.valid())
-      .forEach(e => {
-        e.validationErrors?.forEach(err => {
-          this._validationErrors.push(
-            new ValidationError(
-              err.issue,
-              [`StructureDefinition.snapshot.where(id = '${e.id}').first()`, err.fhirPath].join('.')
-            )
-          );
-        });
+  validate(): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
+    this.elements.forEach(e => {
+      e.validate().forEach(err => {
+        validationErrors.push(
+          new ValidationError(
+            err.issue,
+            `${e.diffId().replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
+          )
+        );
       });
-    return !this._validationErrors.length;
+    });
+    return validationErrors;
   }
 
   /**

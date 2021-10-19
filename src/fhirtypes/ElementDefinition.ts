@@ -276,35 +276,38 @@ export class ElementDefinition {
       .join('.');
   }
 
-  private _validationErrors: ValidationError[];
-
-  get validationErrors(): ValidationError[] {
-    return this._validationErrors;
-  }
-
-  valid(): boolean {
-    this._validationErrors = [];
+  validate(): ValidationError[] {
     if (this.slicing) {
-      this.validateSlicing(this.slicing);
+      return this.validateSlicing(this.slicing);
     }
-    return !this._validationErrors.length;
+    return [];
   }
 
-  private validateRequired(value: AssignmentValueType, fhirPath: string): void {
+  private validateRequired(value: AssignmentValueType, fshPath: string): ValidationError {
     if (!value) {
-      this._validationErrors.push(new ValidationError('Missing required element', fhirPath));
+      return new ValidationError('Missing required value', fshPath);
     }
+    return null;
   }
 
-  private validateIncludes(value: string, allowedValues: string[], fhirPath: string): void {
+  private validateIncludes(
+    value: string,
+    allowedValues: string[],
+    fshPath: string
+  ): ValidationError {
     if (value && !allowedValues.includes(value)) {
-      this._validationErrors.push(
-        new ValidationError(`Value ${value} must be from ${allowedValues.join(', ')}`, fhirPath)
+      return new ValidationError(
+        `Invalid value: #${value}. Value must be selected from one of the following: ${allowedValues
+          .map(v => `#${v}`)
+          .join(', ')}`,
+        fshPath
       );
     }
+    return null;
   }
 
-  private validateSlicing(slicing: ElementDefinitionSlicing): void {
+  private validateSlicing(slicing: ElementDefinitionSlicing): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
     if (
       this.max !== '*' &&
       parseInt(this.max) <= 1 &&
@@ -312,20 +315,25 @@ export class ElementDefinition {
       parseInt(this.base.max) <= 1 &&
       !this.id.endsWith('[x]')
     ) {
-      this._validationErrors.push(
+      validationErrors.push(
         new ValidationError('Cannot slice element which is not an array or choice', 'slicing')
       );
     }
 
-    this.validateRequired(slicing.rules, 'slicing.rules');
-    this.validateIncludes(slicing.rules, ALLOWED_SLICING_RULES, 'slicing.rules');
+    validationErrors.push(this.validateRequired(slicing.rules, 'slicing.rules'));
+    validationErrors.push(
+      this.validateIncludes(slicing.rules, ALLOWED_SLICING_RULES, 'slicing.rules')
+    );
 
     slicing.discriminator?.forEach((d, i) => {
       const discriminatorPath = `slicing.discriminator[${i}]`;
-      this.validateRequired(d.type, `${discriminatorPath}.type`);
-      this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_PATHS, `${discriminatorPath}.type`);
-      this.validateRequired(d.path, `${discriminatorPath}.path`);
+      validationErrors.push(this.validateRequired(d.type, `${discriminatorPath}.type`));
+      validationErrors.push(
+        this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_TYPES, `${discriminatorPath}.type`)
+      );
+      validationErrors.push(this.validateRequired(d.path, `${discriminatorPath}.path`));
     });
+    return validationErrors.filter(e => e);
   }
 
   getPathWithoutBase(): string {
@@ -2497,7 +2505,7 @@ export type ElementDefinitionSlicingDiscriminator = {
 
 // Cannot constrain ElementDefinitionSlicingDiscriminator to have these values as a type
 // since we want to process other string values, but log an error
-const ALLOWED_DISCRIMINATOR_PATHS = ['value', 'exists', 'pattern', 'type', 'profile'];
+const ALLOWED_DISCRIMINATOR_TYPES = ['value', 'exists', 'pattern', 'type', 'profile'];
 
 export type ElementDefinitionBase = {
   path: string;

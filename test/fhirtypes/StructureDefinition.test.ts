@@ -2089,17 +2089,13 @@ describe('StructureDefinition', () => {
     it('should log an error when at least one element is invalid', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
       const errorSpy = jest
-        .spyOn(valueX, 'validationErrors', 'get')
+        .spyOn(valueX, 'validate')
         .mockReturnValue([new ValidationError('issue', 'path')]);
-      const validSpy = jest.spyOn(valueX, 'valid').mockReturnValue(false);
 
-      expect(observation.valid()).toBe(false);
-      expect(observation.validationErrors).toHaveLength(1);
-      expect(observation.validationErrors[0].message).toMatch(
-        /StructureDefinition\.snapshot\.where\(id = 'Observation\.value\[x\]'\)\.first\(\)\.path: issue/
-      );
+      const validationErrors = observation.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(/Observation\.value\[x\] \^path: issue/);
       errorSpy.mockRestore();
-      validSpy.mockRestore();
     });
   });
 });

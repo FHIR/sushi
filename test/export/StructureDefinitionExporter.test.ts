@@ -151,12 +151,11 @@ describe('StructureDefinitionExporter R4', () => {
       doc.profiles.set(profile.name, profile);
 
       const errorsSpy = jest
-        .spyOn(StructureDefinition.prototype, 'validationErrors', 'get')
+        .spyOn(StructureDefinition.prototype, 'validate')
         .mockReturnValue([
           new ValidationError('issue1', 'fhirPath1'),
           new ValidationError('issue2', 'fhirPath2')
         ]);
-      const validSpy = jest.spyOn(StructureDefinition.prototype, 'valid').mockReturnValue(false);
 
       exporter.exportStructDef(profile);
 
@@ -168,7 +167,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Patient');
 
       errorsSpy.mockRestore();
-      validSpy.mockRestore();
     });
   });
 

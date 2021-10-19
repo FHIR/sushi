@@ -737,91 +737,90 @@ describe('ElementDefinition', () => {
     });
   });
 
-  describe('#valid', () => {
+  describe('#validate', () => {
     it('should be valid when an element has a slicing.rules set to a valid value', () => {
       const clone = valueX.clone(false);
       clone.slicing = { rules: 'open' };
-      expect(clone.valid()).toBeTrue();
-      expect(clone.validationErrors).toHaveLength(0);
+      expect(clone.validate()).toHaveLength(0);
     });
 
     it('should be invalid when an element has no slicing.rules', () => {
       const clone = valueX.clone(false);
       clone.slicing = { rules: null };
-      expect(clone.valid()).toBeFalse();
-      expect(clone.validationErrors).toHaveLength(1);
-      expect(clone.validationErrors[0].message).toMatch(/slicing.rules: Missing required element/);
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(/slicing.rules: Missing required value/);
     });
 
     it('should be invalid when an element has slicing.rules set to an invalid value', () => {
       const clone = valueX.clone(false);
       clone.slicing = { rules: 'foo' };
-      expect(clone.valid()).toBeFalse();
-      expect(clone.validationErrors).toHaveLength(1);
-      expect(clone.validationErrors[0].message).toMatch(
-        /slicing.rules: Value foo must be from closed, open, openAtEnd/
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.rules: Invalid value: #foo. Value must be selected from one of the following: #closed, #open, #openAtEnd/
       );
     });
 
     it('should be valid when an element has a valid slicing.discriminator', () => {
       const clone = valueX.clone(false);
       clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: 'value' }] };
-      expect(clone.valid()).toBeTrue();
-      expect(clone.validationErrors).toHaveLength(0);
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(0);
     });
 
     it('should be invalid when an element is missing slicing.discriminator.type', () => {
       const clone = valueX.clone(false);
       clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: undefined }] };
-      expect(clone.valid()).toBeFalse();
-      expect(clone.validationErrors).toHaveLength(1);
-      expect(clone.validationErrors[0].message).toMatch(
-        /slicing.discriminator\[0\].type: Missing required element/
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].type: Missing required value/
       );
     });
 
     it('should be invalid when an element is missing slicing.discriminator.path', () => {
       const clone = valueX.clone(false);
       clone.slicing = { rules: 'open', discriminator: [{ path: undefined, type: 'value' }] };
-      expect(clone.valid()).toBeFalse();
-      expect(clone.validationErrors).toHaveLength(1);
-      expect(clone.validationErrors[0].message).toMatch(
-        /slicing.discriminator\[0\].path: Missing required element/
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].path: Missing required value/
       );
     });
 
     it('should be invalid when an element has slicing.discriminator.type set to an invalid value', () => {
       const clone = valueX.clone(false);
       clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: 'foo' }] };
-      expect(clone.valid()).toBeFalse();
-      expect(clone.validationErrors).toHaveLength(1);
-      expect(clone.validationErrors[0].message).toMatch(
-        /slicing.discriminator\[0\].type: Value foo must be from value, exists, pattern, type, profile/
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].type: Invalid value: #foo. Value must be selected from one of the following: #value, #exists, #pattern, #type, #profile/
       );
     });
 
     it('should be valid to slice array element', () => {
       const clone = valueComponent.clone(false);
       clone.slicing = { rules: 'open' };
-      expect(clone.valid()).toBeTrue();
-      expect(clone.validationErrors).toHaveLength(0);
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(0);
     });
 
     it('should be valid to slice constrained array element', () => {
       const clone = valueComponent.clone(false);
       clone.max = '2';
       clone.slicing = { rules: 'open' };
-      expect(clone.valid()).toBeTrue();
-      expect(clone.validationErrors).toHaveLength(0);
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(0);
     });
 
     it('should be invalid to slice single element', () => {
       const clone = subject.clone(false);
       clone.max = '1';
       clone.slicing = { rules: 'open' };
-      expect(clone.valid()).toBeFalse();
-      expect(clone.validationErrors).toHaveLength(1);
-      expect(clone.validationErrors[0].message).toMatch(
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
         /slicing: Cannot slice element which is not an array or choice/
       );
     });
