@@ -29,6 +29,7 @@ import { minimalConfig } from '../utils/minimalConfig';
 describe('InstanceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let tank: FSHTank;
   let sdExporter: StructureDefinitionExporter;
   let exporter: InstanceExporter;
   let exportInstance: (instance: Instance) => InstanceDefinition;
@@ -45,11 +46,11 @@ describe('InstanceExporter', () => {
   beforeEach(() => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
-    sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
-    exporter = new InstanceExporter(input, pkg, fisher);
+    tank = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(tank.config);
+    const fisher = new TestFisher(tank, defs, pkg);
+    sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
+    exporter = new InstanceExporter(tank, pkg, fisher);
     exportInstance = (instance: Instance) => {
       sdExporter.export();
       return exporter.exportInstance(instance);
@@ -537,6 +538,73 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should set meta.profile on all instances when setMetaProfile is always', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'always' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on all instances when setMetaProfile is not set', () => {
+      tank.config.instanceOptions = {};
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on no instances when setMetaProfile is never', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'never' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toBeUndefined();
+      expect(exportInstance(spooky).meta).toBeUndefined();
+    });
+
+    it('should set meta.profile on inline instances when setMetaProfile is inline-only', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'inline-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toBeUndefined();
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on non-inline instances when setMetaProfile is standalone-only', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'standalone-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toBeUndefined();
+    });
+
     it('should automatically set the URL property on definition instances', () => {
       const codeSystemInstance = new Instance('TestInstance');
       codeSystemInstance.instanceOf = 'CodeSystem';
@@ -740,6 +808,39 @@ describe('InstanceExporter', () => {
       const exampleInstance = exporter.exportInstance(exampleQuantity);
       expect(inlineInstance.id).toBe(exampleInstance.id);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should set id on all instances when setId is always', () => {
+      tank.config.instanceOptions = { setId: 'always' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBe('Skeleton');
+    });
+
+    it('should set id on all instances when setId is not set', () => {
+      tank.config.instanceOptions = {};
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBe('Skeleton');
+    });
+
+    it('should set id on only non-inline instances when setId is standalone-only', () => {
+      tank.config.instanceOptions = { setId: 'standalone-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBeUndefined();
     });
 
     // Assigning top level elements
