@@ -846,7 +846,24 @@ export class IGExporter {
               resource => resource.reference?.reference == referenceKey
             );
 
-            if (configResource?.omit !== true) {
+            // For predefined examples of Logical Models, the user must provide an entry in config
+            // that specifies the reference as Binary/[id], the extension that specifies the resource format,
+            // and the exampleCanonical that references the LogicalModel the resource is an example of.
+            // In that case, we do not want to add our own entry for the predefined resource - we just
+            // want to use the resource entry from the sushi-config.yaml
+            const hasBinaryExampleReference = (this.config.resources ?? []).find(
+              resource =>
+                resource.reference?.reference === `Binary/${resourceJSON.id}` &&
+                resource.exampleCanonical ===
+                  `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` &&
+                resource.extension?.some(
+                  e =>
+                    e.url ===
+                    'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format'
+                )
+            );
+
+            if (configResource?.omit !== true && !hasBinaryExampleReference) {
               const existingIndex = this.ig.definition.resource.findIndex(
                 r => r.reference.reference === referenceKey
               );
