@@ -490,6 +490,13 @@ export function applyInsertRules(
             }
             ruleSetRuleClone.path = newPath;
           }
+          if (rule.pathArray.length > 0) {
+            if (ruleSetRuleClone instanceof ConceptRule) {
+              ruleSetRuleClone.hierarchy.unshift(...rule.pathArray);
+            } else if (ruleSetRuleClone instanceof CaretValueRule) {
+              ruleSetRuleClone.pathArray.unshift(...rule.pathArray);
+            }
+          }
           if (ruleSetRuleClone instanceof ConceptRule && fshDefinition instanceof FshCodeSystem) {
             // ConceptRules should not have a path context, so if one exists, show an error.
             // The concept is still added to the CodeSystem.

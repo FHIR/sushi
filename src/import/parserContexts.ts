@@ -96,7 +96,7 @@ export interface CsMetadataContext extends ParserRuleContext {
 export interface CsRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
-  insertRule(): InsertRuleContext;
+  codeInsertRule(): CodeInsertRuleContext;
 }
 
 export interface InvariantContext extends ParserRuleContext {
@@ -122,6 +122,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   addElementRule(): AddElementRuleContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
+  codeInsertRule(): CodeInsertRuleContext;
   mappingRule(): MappingRuleContext;
 }
 
@@ -393,6 +394,13 @@ export interface CodeCaretValueRuleContext extends ParserRuleContext {
 export interface InsertRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext;
+  RULESET_REFERENCE(): ParserRuleContext;
+  PARAM_RULESET_REFERENCE(): ParserRuleContext;
+}
+
+export interface CodeInsertRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
+  CODE(): ParserRuleContext[];
   RULESET_REFERENCE(): ParserRuleContext;
   PARAM_RULESET_REFERENCE(): ParserRuleContext;
 }
