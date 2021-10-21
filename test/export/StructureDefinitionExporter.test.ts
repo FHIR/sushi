@@ -144,7 +144,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
     });
 
-    it('should log error messages for validation errros on the StructureDefinition', () => {
+    it('should log error messages for validation errors on the StructureDefinition', () => {
       const profile = new Profile('MyPatientProfile');
       profile.parent = 'Patient';
       profile.id = 'my-patient';

@@ -2957,7 +2957,7 @@ describe('InstanceExporter', () => {
       // * identifier contains ParentSlice 1..1
       // * identifier[ParentSlice] ^slicing.discriminator.type = #value
       // * identifier[ParentSlice] ^slicing.discriminator.path = "value"
-      // * identifier ^slicing.rules = #open
+      // * identifier[ParentSlice] ^slicing.rules = #open
       // * identifier[ParentSlice] contains ChildSlice 1..1
       const identifierSlicing = new CaretValueRule('identifier');
       identifierSlicing.caretPath = 'slicing.discriminator.path';
