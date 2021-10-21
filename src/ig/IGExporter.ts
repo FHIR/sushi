@@ -851,7 +851,7 @@ export class IGExporter {
             // and the exampleCanonical that references the LogicalModel the resource is an example of.
             // In that case, we do not want to add our own entry for the predefined resource - we just
             // want to use the resource entry from the sushi-config.yaml
-            const hasBinaryExampleReference = (this.config.resources ?? []).find(
+            const hasBinaryExampleReference = (this.config.resources ?? []).some(
               resource =>
                 resource.reference?.reference === `Binary/${resourceJSON.id}` &&
                 resource.exampleCanonical ===
