@@ -5,7 +5,7 @@ import {
   StructureDefinition
 } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
-import { FshValueSet, FshCode, ValueSetFilterValue } from '../fshtypes';
+import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError, InvalidUriError } from '../errors';
 import { Package } from '.';
@@ -16,7 +16,11 @@ import {
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule
 } from '../fshtypes/rules';
-import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
+import {
+  setPropertyOnInstance,
+  applyInsertRules,
+  listUndefinedLocalCodes
+} from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap } from 'lodash';
 
@@ -79,11 +83,34 @@ export class ValueSetExporter {
             }
             return composeConcept;
           });
+          // if we can fish up the system in the tank, it's local, and we should check the listed concepts
+          const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
+          if (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) {
+            listUndefinedLocalCodes(
+              codeSystem,
+              composeElement.concept.map(concept => concept.code),
+              this.tank,
+              component
+            );
+          }
         } else if (
           component instanceof ValueSetFilterComponentRule &&
           component.filters.length > 0
         ) {
           composeElement.filter = component.filters.map(filter => {
+            // if filter.value is a FshCode, perform the local code system check here as well
+            if (filter.value instanceof FshCode) {
+              const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
+              if (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) {
+                listUndefinedLocalCodes(
+                  codeSystem,
+                  [(filter.value as FshCode).code],
+                  this.tank,
+                  component
+                );
+              }
+            }
+
             return {
               property: filter.property.toString(),
               op: filter.operator.toString(),
