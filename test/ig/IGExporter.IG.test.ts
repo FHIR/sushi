@@ -1586,6 +1586,112 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-logical-model-example', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
+        'testPackage',
+        defs
+      );
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-logical-model-example');
+      loadCustomResources(path.join(fixtures, 'input'), defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      config.resources = [
+        {
+          reference: {
+            reference: 'Binary/example-logical-model-json'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/json'
+            }
+          ],
+          name: 'Example of LM JSON',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        },
+        {
+          reference: {
+            reference: 'Binary/example-logical-model-xml'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/xml'
+            }
+          ],
+          name: 'Example of LM XML',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        }
+      ];
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, fixtures);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should add logical model and example resource references to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toHaveLength(3);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyLM'
+        },
+        name: 'MyLM',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/example-logical-model-json'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/json'
+          }
+        ],
+        name: 'Example of LM JSON',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/example-logical-model-xml'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/xml'
+          }
+        ],
+        name: 'Example of LM XML',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+    });
+  });
+
   describe('#pages-folder-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
