@@ -125,7 +125,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         // constrain 1..1 to 0..1
         clone.constrainCardinality(0, '1');
-      }).toThrow(/0..1 is wider than 1..1\./);
+      }).toThrow(/0..1, as it does not fit within the original 1..1/);
       expect(clone).toEqual(status);
     });
 
@@ -135,7 +135,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         // constrain 1..1 to 1..2
         clone.constrainCardinality(1, '2');
-      }).toThrow(/1..2 is wider than 1..1\./);
+      }).toThrow(/1..2, as it does not fit within the original 1..1/);
       expect(clone).toEqual(status);
     });
 
@@ -145,7 +145,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         // constrain 1..1 to 0..2
         clone.constrainCardinality(0, '2');
-      }).toThrow(/0..2 is wider than 1..1\./);
+      }).toThrow(/0..2, as it does not fit within the original 1..1/);
       expect(clone).toEqual(status);
     });
 
@@ -155,7 +155,7 @@ describe('ElementDefinition', () => {
       expect(() => {
         // constrain 1..1 to 1..*
         clone.constrainCardinality(1, '*');
-      }).toThrow(/1..\* is wider than 1..1\./);
+      }).toThrow(/1..\*, as it does not fit within the original 1..1/);
       expect(clone).toEqual(status);
     });
 

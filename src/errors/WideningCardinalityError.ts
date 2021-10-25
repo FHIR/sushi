@@ -9,7 +9,7 @@ export class WideningCardinalityError extends Error implements Annotated {
     public newMax: string
   ) {
     super(
-      `Cardinality constraints cannot widen the cardinality.  ${newMin}..${newMax} is wider than ${originalMin}..${originalMax}.`
+      `Cannot constrain cardinality to ${newMin}..${newMax}, as it does not fit within the original ${originalMin}..${originalMax} cardinality.`
     );
   }
 }
