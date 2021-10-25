@@ -1045,15 +1045,16 @@ describe('FSHImporter', () => {
         ]);
       });
 
-      it('should parse a value set that uses filter operator exists with a string value', () => {
+      it('should parse a value set that uses filter operator exists with a string value that looks like a boolean', () => {
         const input = leftAlign(`
         ValueSet: ZooVS
         * codes from system ZOO where display exists "true"
+        * codes from system ZOO where version exists "false"
         `);
         const result = importSingleText(input, 'Zoo.fsh');
         expect(result.valueSets.size).toBe(1);
         const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.rules.length).toBe(1);
+        expect(valueSet.rules.length).toBe(2);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, [
           {
             property: 'display',
@@ -1061,6 +1062,41 @@ describe('FSHImporter', () => {
             value: 'true'
           }
         ]);
+        assertValueSetFilterComponent(valueSet.rules[1], 'ZOO', undefined, [
+          {
+            property: 'version',
+            operator: VsOperator.EXISTS,
+            value: 'false'
+          }
+        ]);
+      });
+
+      it('should log an error when the exists filter has a string value that does not look like a boolean', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * codes from system ZOO where display exists "display"
+        * codes from system ZOO where version exists "True"
+        * codes from system ZOO where variant exists "FALSE"
+        `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        // All three of these string values cause errors
+        expect(valueSet.rules.length).toBe(3);
+        assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(3);
+        expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+          /"exists".*boolean value or a string value of "true" or "false"/
+        );
+        expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
+        expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+          /"exists".*boolean value or a string value of "true" or "false"/
+        );
+        expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
+        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+          /"exists".*boolean value or a string value of "true" or "false"/
+        );
+        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(/File: Zoo\.fsh.*Line: 5\D*/s);
       });
 
       it('should log an error when the exists filter has a non-boolean and non-string value', () => {
@@ -1073,7 +1109,9 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('ZooVS');
         expect(valueSet.rules.length).toBe(1);
         assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/"exists".*boolean or string/);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /"exists".*boolean value or a string value of "true" or "false"/
+        );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 

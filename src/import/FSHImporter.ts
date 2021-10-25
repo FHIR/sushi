@@ -1983,8 +1983,12 @@ export class FSHImporter extends FSHVisitor {
         }
         break;
       case VsOperator.EXISTS:
-        if (typeof value !== 'boolean' && typeof value !== 'string') {
-          throw new ValueSetFilterValueTypeError(operator, ['boolean', 'string']);
+        const allowedStrings = ['true', 'false'];
+        if (
+          typeof value !== 'boolean' &&
+          !(typeof value === 'string' && allowedStrings.includes(value))
+        ) {
+          throw new ValueSetFilterValueTypeError(operator, ['boolean'], allowedStrings);
         }
         break;
       default:
