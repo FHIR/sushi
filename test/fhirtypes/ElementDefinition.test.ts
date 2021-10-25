@@ -401,6 +401,18 @@ describe('ElementDefinition', () => {
       expect(diff.sliceName).toBeUndefined();
     });
 
+    it('should calculate diff id using shortcut syntax when "value[x]" is in the middle of the path', () => {
+      const valueStringElement = new ElementDefinition('Observation.value[x]:valueString.id');
+      const diff = valueStringElement.calculateDiff();
+      // snapshot should retain formal syntax
+      expect(valueStringElement.id).toBe('Observation.value[x]:valueString.id');
+      expect(valueStringElement.path).toBe('Observation.value[x].id');
+
+      // differential should use shortcut syntax
+      expect(diff.id).toBe('Observation.valueString.id');
+      expect(diff.path).toBe('Observation.valueString.id');
+    });
+
     it('should not calculate diff id using shortcut syntax for a non-choice slices on value[x] elements', () => {
       valueX.sliceIt('type', '$this', false, 'open');
       const testSlice = valueX.addSlice('testSlice', new ElementDefinitionType('reference'));
