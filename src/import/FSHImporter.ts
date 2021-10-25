@@ -1960,42 +1960,31 @@ export class FSHImporter extends FSHVisitor {
       throw new ValueSetFilterMissingValueError(operator);
     }
     const value = ctx.vsFilterValue() ? this.visitVsFilterValue(ctx.vsFilterValue()) : true;
+
+    // NOTE: We support string value for every operator, in addition to the specific typed values
+    // for some operators based on the filter value documentation:
+    // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
+    // and the discussion on https://github.com/FHIR/sushi/issues/936
     switch (operator) {
       case VsOperator.EQUALS:
       case VsOperator.IN:
       case VsOperator.NOT_IN:
-        // NOTE: We believe that =, in, and not-in operators should ONLY support code values
-        // based on the filter value documentation:
-        // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
-        // Both string and code are supported for now in order to maintain backwards compatibility.
-        if (typeof value === 'string') {
-          logger.warn(
-            `The match value of filter operator "${operator}" must be a code. ` +
-              'For string valued properties, use the regex filter operator with a regular expression value. ' +
-              'Support for using strings as filter values has been deprecated and will be removed in a future release.',
-            { location: this.extractStartStop(ctx), file: this.currentFile }
-          );
-        }
-        if (typeof value !== 'string' && !(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
-        }
-        break;
       case VsOperator.IS_A:
       case VsOperator.DESCENDENT_OF:
       case VsOperator.IS_NOT_A:
       case VsOperator.GENERALIZES:
-        if (!(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
+        if (!(value instanceof FshCode) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['code', 'string']);
         }
         break;
       case VsOperator.REGEX:
-        if (!(value instanceof RegExp)) {
-          throw new ValueSetFilterValueTypeError(operator, 'regex');
+        if (!(value instanceof RegExp) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['regex', 'string']);
         }
         break;
       case VsOperator.EXISTS:
-        if (typeof value !== 'boolean') {
-          throw new ValueSetFilterValueTypeError(operator, 'boolean');
+        if (typeof value !== 'boolean' && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['boolean', 'string']);
         }
         break;
       default:
