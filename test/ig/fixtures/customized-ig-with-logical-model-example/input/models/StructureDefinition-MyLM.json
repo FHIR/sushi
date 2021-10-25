@@ -1,0 +1,25 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "MyLM",
+  "url": "http://hl7.org/fhir/us/mcode/StructureDefinition/MyLM",
+  "name": "MyLM",
+  "status": "active",
+  "fhirVersion": "4.0.1",
+  "type": "MyLM",
+  "baseDefinition" : "http://hl7.org/fhir/StructureDefinition/Element",
+  "kind": "logical",
+  "derivation": "specialization",
+  "snapshot": {
+    "element": [
+      {
+        "id": "modeling-woo",
+        "path": "modeling-woo",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}
