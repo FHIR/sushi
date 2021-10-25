@@ -234,6 +234,11 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
             continue;
           }
         } catch (e) {
+          if (e.message.startsWith('Unknown resource type:')) {
+            // Skip unknown FHIR resource types. When we have instances of Logical Models,
+            // the resourceType will not be recognized as a known FHIR resourceType, but that's okay.
+            continue;
+          }
           logger.error(`Loading ${file} failed with the following error:\n${e.message}`);
           continue;
         }
