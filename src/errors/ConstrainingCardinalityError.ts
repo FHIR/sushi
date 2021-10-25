@@ -1,6 +1,6 @@
 import { Annotated } from './Annotated';
 
-export class WideningCardinalityError extends Error implements Annotated {
+export class ConstrainingCardinalityError extends Error implements Annotated {
   specReferences = ['http://hl7.org/fhir/R4/profiling.html#cardinality'];
   constructor(
     public originalMin: number,
