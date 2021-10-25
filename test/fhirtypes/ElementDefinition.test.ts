@@ -13,10 +13,14 @@ describe('ElementDefinition', () => {
   let jsonObservation: any;
   let jsonValueX: any;
   let jsonValueId: any;
+  let jsonValueComponent: any;
+  let jsonSubject: any;
   let observation: StructureDefinition;
   let resprate: StructureDefinition;
   let valueX: ElementDefinition;
   let valueId: ElementDefinition;
+  let valueComponent: ElementDefinition;
+  let subject: ElementDefinition;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -32,12 +36,16 @@ describe('ElementDefinition', () => {
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
     jsonValueX = jsonObservation.snapshot.element[21];
     jsonValueId = jsonObservation.snapshot.element[1];
+    jsonValueComponent = jsonObservation.snapshot.element[41];
+    jsonSubject = jsonObservation.snapshot.element[15];
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
     resprate = fisher.fishForStructureDefinition('resprate');
     valueX = ElementDefinition.fromJSON(jsonValueX);
     valueId = ElementDefinition.fromJSON(jsonValueId);
+    valueComponent = ElementDefinition.fromJSON(jsonValueComponent);
+    subject = ElementDefinition.fromJSON(jsonSubject);
     valueX.structDef = observation;
     valueId.structDef = observation;
   });
@@ -753,6 +761,95 @@ describe('ElementDefinition', () => {
     it('should return code value when extension is not of fhir-type', () => {
       const code = valueX.type[0].code;
       expect(code).toEqual('Quantity');
+    });
+  });
+
+  describe('#validate', () => {
+    it('should be valid when an element has a slicing.rules set to a valid value', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open' };
+      expect(clone.validate()).toHaveLength(0);
+    });
+
+    it('should be invalid when an element has no slicing.rules', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: null };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(/slicing.rules: Missing required value/);
+    });
+
+    it('should be invalid when an element has slicing.rules set to an invalid value', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'foo' };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.rules: Invalid value: #foo. Value must be selected from one of the following: #closed, #open, #openAtEnd/
+      );
+    });
+
+    it('should be valid when an element has a valid slicing.discriminator', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: 'value' }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(0);
+    });
+
+    it('should be invalid when an element is missing slicing.discriminator.type', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: undefined }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].type: Missing required value/
+      );
+    });
+
+    it('should be invalid when an element is missing slicing.discriminator.path', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: undefined, type: 'value' }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].path: Missing required value/
+      );
+    });
+
+    it('should be invalid when an element has slicing.discriminator.type set to an invalid value', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: 'foo' }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].type: Invalid value: #foo. Value must be selected from one of the following: #value, #exists, #pattern, #type, #profile/
+      );
+    });
+
+    it('should be valid to slice array element', () => {
+      const clone = valueComponent.clone(false);
+      clone.slicing = { rules: 'open' };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(0);
+    });
+
+    it('should be valid to slice constrained array element', () => {
+      const clone = valueComponent.clone(false);
+      clone.max = '2';
+      clone.slicing = { rules: 'open' };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(0);
+    });
+
+    it('should be invalid to slice single element', () => {
+      const clone = subject.clone(false);
+      clone.max = '1';
+      clone.slicing = { rules: 'open' };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing: Cannot slice element which is not an array or choice/
+      );
     });
   });
 });
