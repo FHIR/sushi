@@ -24,7 +24,7 @@ export * from './SlicingNotDefinedError';
 export * from './DuplicateSliceError';
 export * from './TypeNotFoundError';
 export * from './UnitMismatchError';
-export * from './WideningCardinalityError';
+export * from './ConstrainingCardinalityError';
 export * from './NarrowingRootCardinalityError';
 export * from './CannotResolvePathError';
 export * from './InvalidElementAccessError';

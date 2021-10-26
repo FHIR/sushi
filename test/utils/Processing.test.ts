@@ -238,6 +238,7 @@ describe('Processing', () => {
         ],
         FSHOnly: false,
         applyExtensionMetadataToRoot: true,
+        instanceOptions: { setMetaProfile: 'always', setId: 'always' },
         parameters: [
           {
             code: 'copyrightyear',
