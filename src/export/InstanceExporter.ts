@@ -226,6 +226,30 @@ export class InstanceExporter implements Fishable {
     this.validateRequiredChildElements(instanceDef, elements[0], fshDefinition);
   }
 
+  private shouldSetMetaProfile(instanceDef: InstanceDefinition): boolean {
+    switch (this.tank.config.instanceOptions?.setMetaProfile) {
+      case 'never':
+        return false;
+      case 'inline-only':
+        return instanceDef._instanceMeta.usage === 'Inline';
+      case 'standalone-only':
+        return instanceDef._instanceMeta.usage !== 'Inline';
+      case 'always':
+      default:
+        return true;
+    }
+  }
+
+  private shouldSetId(instanceDef: InstanceDefinition): boolean {
+    switch (this.tank.config.instanceOptions?.setId) {
+      case 'standalone-only':
+        return instanceDef._instanceMeta.usage !== 'Inline';
+      case 'always':
+      default:
+        return true;
+    }
+  }
+
   fishForFHIR(item: string): InstanceDefinition {
     let result = this.pkg.fish(item, Type.Instance) as InstanceDefinition;
     if (result == null) {
@@ -311,7 +335,9 @@ export class InstanceExporter implements Fishable {
     }
     if (isResource) {
       instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
-      instanceDef.id = fshDefinition.id;
+      if (this.shouldSetId(instanceDef)) {
+        instanceDef.id = fshDefinition.id;
+      }
     } else {
       instanceDef._instanceMeta.sdType = instanceOfStructureDefinition.type;
     }
@@ -321,7 +347,11 @@ export class InstanceExporter implements Fishable {
     // should we add the instanceOf to meta.profile?
     // if the exact url is not in there, and a versioned url is also not in there, add it to the front.
     // otherwise, add it at the front.
-    if (isResource && instanceOfStructureDefinition.derivation === 'constraint') {
+    if (
+      this.shouldSetMetaProfile(instanceDef) &&
+      isResource &&
+      instanceOfStructureDefinition.derivation === 'constraint'
+    ) {
       // elements of instanceDef.meta.profile may be objects if they are provided by slices,
       // since they have to keep track of the _sliceName property.
       // this is technically not a match for the defined type of instanceDef.meta.profile,

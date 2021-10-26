@@ -444,6 +444,11 @@ describe('#loadCustomResources', () => {
     ).toBe('MyPatient');
     expect(
       defs.getPredefinedResource(
+        path.join(pathToInput, 'examples', 'Binary-LogicalModelExample.json')
+      ).id
+    ).toBe('example-logical-model');
+    expect(
+      defs.getPredefinedResource(
         path.join(pathToInput, 'extensions', 'StructureDefinition-patient-birthPlace.json')
       ).id
     ).toBe('patient-birthPlace');
@@ -504,6 +509,12 @@ describe('#loadCustomResources', () => {
       expect(m).not.toMatch(
         /Loading sneaky-spread-like-bread-sheet.xml failed with the following error:/
       );
+    });
+  });
+
+  it('should not log an error for invalid FHIR types parsed from XML', () => {
+    loggerSpy.getAllMessages('error').forEach(m => {
+      expect(m).not.toMatch(/Unknown resource type:/);
     });
   });
 

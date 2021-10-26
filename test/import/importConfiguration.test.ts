@@ -40,7 +40,8 @@ describe('importConfiguration', () => {
       ],
       packageId: 'fhir.us.minimal',
       FSHOnly: false,
-      applyExtensionMetadataToRoot: true
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -198,7 +199,8 @@ describe('importConfiguration', () => {
       },
       indexPageContent: 'Example Index Page Content',
       FSHOnly: false,
-      applyExtensionMetadataToRoot: true
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -2272,6 +2274,49 @@ describe('importConfiguration', () => {
         /The following properties are unused and only relevant for IG creation: copyrightYear, releaseLabel, template, menu, contained.*File: test-config.yaml/s
       );
       expect(config.FSHOnly).toBe(true);
+    });
+  });
+
+  describe('#instanceOptions', () => {
+    it('should use default values for instanceOptions where applicable', () => {
+      minYAML.instanceOptions = undefined;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'always',
+        setId: 'always'
+      });
+    });
+    it('should use provided values for instanceOptions where applicable', () => {
+      minYAML.instanceOptions = { setMetaProfile: 'never', setId: 'standalone-only' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'never',
+        setId: 'standalone-only'
+      });
+    });
+    it('should report invalid instanceOptions.setMetaProfile code', () => {
+      // @ts-ignore
+      minYAML.instanceOptions = { setMetaProfile: 'foo', setId: 'standalone-only' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'always',
+        setId: 'standalone-only'
+      });
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invalid instanceOptions\.setMetaProfile value: 'foo'\. Must be one of: 'always','never','inline-only','standalone-only'\.\s*File: test-config\.yaml/
+      );
+    });
+    it('should report invalid instanceOptions.setId code', () => {
+      // @ts-ignore
+      minYAML.instanceOptions = { setMetaProfile: 'never', setId: 'foo' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'never',
+        setId: 'always'
+      });
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invalid instanceOptions\.setId value: 'foo'\. Must be one of: 'always','standalone-only'\.\s*File: test-config\.yaml/
+      );
     });
   });
 });
