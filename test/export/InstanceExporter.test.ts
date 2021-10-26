@@ -3014,14 +3014,22 @@ describe('InstanceExporter', () => {
       const caretRule = new CaretValueRule('item');
       caretRule.caretPath = 'slicing.discriminator.path';
       caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('item');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('item');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
       const containsRule = new ContainsRule('item');
       containsRule.items.push({ name: 'boo' });
       const cardRule = new CardRule('item[boo]');
       cardRule.min = 0;
       cardRule.max = '1';
       // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #open
       // * item contains boo 0..1
-      questionnaire.rules.push(caretRule, containsRule, cardRule);
+      questionnaire.rules.push(caretRule, dTypeRule, rulesRule, containsRule, cardRule);
       const answerRule = new AssignmentRule('item[boo].answerOption[0].valueString');
       answerRule.value = 'foo';
       const linkIdRule = new AssignmentRule('item[boo].linkId');
@@ -3046,13 +3054,21 @@ describe('InstanceExporter', () => {
       // Parent: Patient
       // * identifier ^slicing.discriminator.type = #value
       // * identifier ^slicing.discriminator.path = "value"
+      // * identifier ^slicing.rules = #open
       // * identifier contains ParentSlice 1..1
       // * identifier[ParentSlice] ^slicing.discriminator.type = #value
       // * identifier[ParentSlice] ^slicing.discriminator.path = "value"
+      // * identifier[ParentSlice] ^slicing.rules = #open
       // * identifier[ParentSlice] contains ChildSlice 1..1
       const identifierSlicing = new CaretValueRule('identifier');
       identifierSlicing.caretPath = 'slicing.discriminator.path';
       identifierSlicing.value = 'value';
+      const slicingType = new CaretValueRule('identifier');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const slicingRules = new CaretValueRule('identifier');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
       const identifierContains = new ContainsRule('identifier');
       identifierContains.items.push({ name: 'ParentSlice' });
       const parentCard = new CardRule('identifier[ParentSlice]');
@@ -3061,6 +3077,12 @@ describe('InstanceExporter', () => {
       const parentSlicing = new CaretValueRule('identifier[ParentSlice]');
       parentSlicing.caretPath = 'slicing.discriminator.path';
       parentSlicing.value = 'value';
+      const parentSlicingType = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicingType.caretPath = 'slicing.discriminator.type';
+      parentSlicingType.value = new FshCode('value');
+      const parentSlicingRules = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicingRules.caretPath = 'slicing.rules';
+      parentSlicingRules.value = new FshCode('open');
       const parentContains = new ContainsRule('identifier[ParentSlice]');
       parentContains.items.push({ name: 'ChildSlice' });
       const childCard = new CardRule('identifier[ParentSlice][ChildSlice]');
@@ -3068,9 +3090,13 @@ describe('InstanceExporter', () => {
       childCard.max = '1';
       patient.rules.push(
         identifierSlicing,
+        slicingRules,
+        slicingType,
         identifierContains,
         parentCard,
         parentSlicing,
+        parentSlicingType,
+        parentSlicingRules,
         parentContains,
         childCard
       );

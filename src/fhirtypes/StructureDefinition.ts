@@ -10,7 +10,8 @@ import {
   InvalidElementAccessError,
   MissingSnapshotError,
   InvalidResourceTypeError,
-  InvalidTypeAccessError
+  InvalidTypeAccessError,
+  ValidationError
 } from '../errors';
 import {
   getArrayIndex,
@@ -81,6 +82,21 @@ export class StructureDefinition {
    * A StructureDefinition instance of StructureDefinition itself.  Needed for supporting escape syntax.
    */
   private _sdStructureDefinition: StructureDefinition;
+
+  validate(): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
+    this.elements.forEach(e => {
+      e.validate().forEach(err => {
+        validationErrors.push(
+          new ValidationError(
+            err.issue,
+            `${e.diffId().replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
+          )
+        );
+      });
+    });
+    return validationErrors;
+  }
 
   /**
    * A flag indicating if the StructureDefinition is currently being processed.

@@ -1,5 +1,11 @@
 import { ContactDetail, UsageContext } from './metaDataTypes';
-import { CodeableConcept, Reference, BackboneElement, DomainResource } from './dataTypes';
+import {
+  BackboneElement,
+  CodeableConcept,
+  DomainResource,
+  Extension,
+  Reference
+} from './dataTypes';
 
 export type ImplementationGuide = DomainResource & {
   resourceType: 'ImplementationGuide';
@@ -60,6 +66,7 @@ export type ImplementationGuideDefinitionResource = {
   exampleBoolean?: boolean;
   exampleCanonical?: string;
   groupingId?: string;
+  extension?: Extension[];
 };
 
 export type ImplementationGuideDefinitionPage = {
