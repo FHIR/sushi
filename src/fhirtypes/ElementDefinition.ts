@@ -482,7 +482,7 @@ export class ElementDefinition {
         const choiceType = p.slice(i + baseElementId.length + 4);
         const isChoiceSlice =
           i > -1
-            ? R4_TYPES.includes(choiceType) &&
+            ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
               p === `${baseElementId}[x]:${baseElementId}${choiceType}`
             : false;
         return isChoiceSlice ? p.slice(i + 4) : p;
@@ -2627,7 +2627,7 @@ const PROPS = [
   'mapping'
 ];
 
-const R4_TYPES = [
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
   'Base64Binary',
   'Boolean',
   'Canonical',
@@ -2677,7 +2677,9 @@ const R4_TYPES = [
   'TriggerDefinition',
   'UsageContext',
   'Dosage',
-  'Meta'
+  'Meta',
+  'CodeableReference',
+  'Integer64'
 ];
 
 /**
