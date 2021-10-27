@@ -1,23 +1,67 @@
-# ╭──────────────────────Minimal Recommended ImplementationGuide Properties────────────────────────╮
-# │  The properties below are used to create the ImplementationGuide resource. The minimal set of  |
-# |  recommended properties is included. For a list of all supported properties and their          |
-# |  functions, see: https://fshschool.org/docs/sushi/configuration/.                              │
+# ╭─────────────────────────Commonly Used ImplementationGuide Properties───────────────────────────╮
+# │  The properties below are used to create the ImplementationGuide resource. The most commonly   │
+# │  used properties are included. For a list of all supported properties and their functions,     │
+# │  see: https://fshschool.org/docs/sushi/configuration/.                                         │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 id: fhir.example
 canonical: http://example.org
 name: ExampleIG
-# status from: draft | active | retired | unknown
-status: draft
+# title: Example Title
+# description: Example Implementation Guide for getting started with SUSHI
+status: draft # draft | active | retired | unknown
 version: 0.1.0
-# fhirVersion from: https://www.hl7.org/fhir/valueset-FHIR-version.html
-fhirVersion: 4.0.1
+fhirVersion: 4.0.1 # https://www.hl7.org/fhir/valueset-FHIR-version.html
 copyrightYear: 2020+
-# releaseLabel from: ci-build | draft | qa-preview | ballot | trial-use | release | update | normative+trial-use
-releaseLabel: ci-build
+releaseLabel: ci-build # ci-build | draft | qa-preview | ballot | trial-use | release | update | normative+trial-use
+# license: CC0-1.0 # https://www.hl7.org/fhir/valueset-spdx-license.html
+# jurisdiction: urn:iso:std:iso:3166#US "United States of America" # https://www.hl7.org/fhir/valueset-jurisdiction.html
 publisher:
   name: Example Publisher
   url: http://example.org/example-publisher
 
+# The dependencies property corresponds to IG.dependsOn. The key is the
+# package id and the value is the version (or dev/current). For advanced
+# use cases, the value can be an object with keys for `uri` and `version`.
+#
+# dependencies:
+#   hl7.fhir.us.core: 3.1.0
+#   hl7.fhir.us.mcode:
+#     id: mcode
+#     uri: http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode
+#     version: 1.0.0
+#
+#
+# The pages property corresponds to IG.definition.page. SUSHI can
+# auto-generate the page list, but if the author includes pages in
+# this file, it is assumed that the author will fully manage the
+# pages section and SUSHI will not generate any page entries.
+# The page file name is used as the key. If title is not provided,
+# then the title will be generated from the file name.  If a
+# generation value is not provided, it will be inferred from the
+# file name extension.  Any subproperties that are valid filenames
+# with supported extensions (e.g., .md/.xml) will be treated as
+# sub-pages.
+#
+# pages:
+#   index.md:
+#     title: Example Home
+#   implementation.xml:
+#   examples.xml:
+#     title: Examples Overview
+#     simpleExamples.xml:
+#     complexExamples.xml:
+#
+#
+# The parameters property represents IG.definition.parameter. Rather
+# than a list of code/value pairs (as in the ImplementationGuide
+# resource), the code is the YAML key. If a parameter allows repeating
+# values, the value in the YAML should be a sequence/array. For a
+# partial list of allowed parameters see:
+# https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
+#
+# parameters:
+#   excludettl: true
+#   validation: [allow-any-extensions, no-broken-links]
 
 # ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
 # │  To use a provided input/includes/menu.xml file, delete the "menu" property below.             │
@@ -26,17 +70,10 @@ menu:
   Home: index.html
   Artifacts: artifacts.html
 
-
-# ╭────────────────────────────Additional Implementation Guide Properties──────────────────────────╮
+# ╭───────────────────────────Less Common Implementation Guide Properties──────────────────────────╮
 # │  Uncomment the properties below to configure additional properties on the ImplementationGuide  │
-# │  resource.                                                                                     │
+# │  resource. These properties are less commonly needed than those above.                         │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
-# title: Example Title
-# description: Example Implementation Guide for getting started with SUSHI
-# # license from: https://www.hl7.org/fhir/valueset-spdx-license.html
-# license: CC0-1.0
-# date: 2021-10-31
-#
 #
 # Those who need more control or want to add additional details to the contact values can use
 # contact directly and follow the format outlined in the ImplementationGuide resource and
@@ -50,24 +87,6 @@ menu:
 #         value: bobsmith@example.org
 #         use: work
 #
-#
-# The jurisdiction can be a single item or a list. The FHIR Shorthand
-# code syntax can be used here.
-#
-# # jurisdiction from: https://www.hl7.org/fhir/valueset-jurisdiction.html
-# jurisdiction: urn:iso:std:iso:3166#US "United States of America"
-#
-#
-# The dependencies property corresponds to IG.dependsOn. The key is the
-# package id and the value is the version (or dev/current). For advanced
-# use cases, the value can be an object with keys for `uri` and `version`.
-#
-# dependencies:
-#   hl7.fhir.us.core: 3.1.0
-#   hl7.fhir.us.mcode:
-#     id: mcode
-#     uri: http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode
-#     version: 1.0.0
 #
 # The global property corresponds to the IG.global property, but it
 # uses the type as the YAML key and the profile as its value. Since
@@ -127,30 +146,10 @@ menu:
 #     - StructureDefinition/bee-sting
 #
 #
-# The pages property corresponds to IG.definition.page. SUSHI can
-# auto-generate the page list, but if the author includes pages in
-# this file, it is assumed that the author will fully manage the
-# pages section and SUSHI will not generate any page entries.
-# The page file name is used as the key. If title is not provided,
-# then the title will be generated from the file name.  If a
-# generation value is not provided, it will be inferred from the
-# file name extension.  Any subproperties that are valid filenames
-# with supported extensions (e.g., .md/.xml) will be treated as
-# sub-pages.
-#
-# pages:
-#   index.md:
-#     title: Example Home
-#   implementation.xml:
-#   examples.xml:
-#     title: Examples Overview
-#     simpleExamples.xml:
-#     complexExamples.xml:
-#
-#
 # The ImplementationGuide resource defines several other properties
 # not represented above. These properties can be used as-is and
 # should follow the format defined in ImplementationGuide:
+# * date
 # * meta
 # * implicitRules
 # * language
@@ -162,18 +161,6 @@ menu:
 # * useContext
 # * copyright
 # * packageId
-#
-#
-# The parameters property represents IG.definition.parameter. Rather
-# than a list of code/value pairs (as in the ImplementationGuide
-# resource), the code is the YAML key. If a parameter allows repeating
-# values, the value in the YAML should be a sequence/array. For a
-# partial list of allowed parameters see:
-# https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
-#
-# parameters:
-#   excludettl: true
-#   validation: [allow-any-extensions, no-broken-links]
 #
 # 
 # ╭──────────────────────────────────────────SUSHI flags───────────────────────────────────────────╮
@@ -190,3 +177,19 @@ menu:
 # be set to the "Title" and "Description" of that Extension. Default is true.
 # 
 # applyExtensionMetadataToRoot: true
+#
+#
+# The instanceOptions property is used to configure certain aspects of how SUSHI processes instances.
+# See the individual option definitions below for more detail.
+#
+# instanceOptions:
+#   Determines for which types of Instances SUSHI will automatically set meta.profile
+#   if InstanceOf references a profile:
+#
+#   setMetaProfile: always # always | never | inline-only | standalone-only
+#
+#
+#   Determines for which types of Instances SUSHI will automatically set id
+#   if InstanceOf references a profile:
+#
+#   setId: always # always | standalone-only

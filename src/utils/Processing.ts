@@ -435,7 +435,13 @@ export async function init(): Promise<void> {
       `${upperFirst(field)} (Default: ${configDoc.get(field)}): `
     );
     if (userValue) {
-      configDoc.set(field, userValue);
+      if (field === 'status') {
+        const node = YAML.createNode(userValue);
+        node.comment = ' draft | active | retired | unknown';
+        configDoc.set(field, node);
+      } else {
+        configDoc.set(field, userValue);
+      }
     }
   });
 
