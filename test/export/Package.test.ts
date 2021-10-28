@@ -121,6 +121,18 @@ describe('Package', () => {
     instance1.resourceType = 'Practitioner';
     instance1.gender = 'male';
     pkg.instances.push(instance1);
+    // Instance[2]: Thrilling / thrill-ing / Condition
+    const instance2 = new InstanceDefinition();
+    instance2._instanceMeta.name = 'Thrilling';
+    instance2._instanceMeta.usage = 'Definition';
+    instance2.id = 'thrill-ing';
+    instance2.resourceType = 'StructureDefinition';
+    instance2.derivation = 'constraint';
+    instance2.type = 'Condition';
+    instance2.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/thrill-ing';
+    instance2.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
+    instance2.fhirVersion = '4.0.1';
+    pkg.instances.push(instance2);
   });
 
   describe('#fishForFHIR()', () => {
@@ -132,6 +144,21 @@ describe('Package', () => {
       expect(
         pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny', Type.Profile)
       ).toEqual(funnyProfile);
+    });
+
+    it('should find instances of profiles', () => {
+      const thrillingProfile = pkg.fishForFHIR('thrill-ing', Type.Profile);
+      expect(thrillingProfile.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/thrill-ing'
+      );
+      expect(thrillingProfile.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Thrilling', Type.Profile)).toEqual(thrillingProfile);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/thrill-ing',
+          Type.Profile
+        )
+      ).toEqual(thrillingProfile);
     });
 
     it('should find extensions', () => {
@@ -220,6 +247,17 @@ describe('Package', () => {
         Type.Instance
       );
       expect(funnyProfileByID).toBeUndefined();
+
+      const thrillingProfileByID = pkg.fishForFHIR(
+        'thrill-ing',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(thrillingProfileByID).toBeUndefined();
 
       const poorTasteExtensionByID = pkg.fishForFHIR(
         'poor-taste',

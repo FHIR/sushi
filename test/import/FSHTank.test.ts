@@ -15,6 +15,7 @@ import {
 } from '../../src/fshtypes';
 import { Metadata, Type } from '../../src/utils/Fishable';
 import { minimalConfig } from '../utils/minimalConfig';
+import { AssignmentRule } from '../../src/fshtypes/rules';
 
 describe('FSHTank', () => {
   let tank: FSHTank;
@@ -27,6 +28,12 @@ describe('FSHTank', () => {
     doc1.profiles.set('Profile2', new Profile('Profile2'));
     doc1.profiles.get('Profile2').id = 'prf2';
     doc1.profiles.get('Profile2').parent = 'Observation';
+    doc1.instances.set('ProfileInstance', new Instance('ProfileInstance'));
+    doc1.instances.get('ProfileInstance').instanceOf = 'StructureDefinition';
+    doc1.instances.get('ProfileInstance').usage = 'Definition';
+    const profileInstanceDerivation = new AssignmentRule('derivation');
+    profileInstanceDerivation.value = new FshCode('constraint');
+    doc1.instances.get('ProfileInstance').rules.push(profileInstanceDerivation);
     doc1.extensions.set('Extension1', new Extension('Extension1'));
     doc1.extensions.get('Extension1').id = 'ext1';
     doc1.extensions.get('Extension1').parent = 'Extension2';
@@ -133,6 +140,34 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find profiles defined as instance definitions when profiles are requested', () => {
+      expect(tank.fish('ProfileInstance', Type.Profile).name).toBe('ProfileInstance');
+      expect(
+        tank.fish(
+          'ProfileInstance',
+          Type.Extension,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should not find instances where the derivation is not constraint when profiles are requested', () => {
+      const instance = tank.docs[0].instances.get('ProfileInstance');
+      const profileInstanceDerivation = new AssignmentRule('derivation');
+      profileInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [profileInstanceDerivation];
+      expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
     });
 
     it('should only find extensions when extensions are requested', () => {

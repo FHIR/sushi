@@ -10,7 +10,8 @@ import {
   Invariant,
   RuleSet,
   Mapping,
-  Configuration
+  Configuration,
+  FshCode
 } from '../fshtypes';
 import { AssignmentRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
@@ -171,6 +172,23 @@ export class FSHTank implements Fishable {
               p.id === item ||
               getUrlFromFshDefinition(p, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              profileInstance =>
+                profileInstance.instanceOf === 'StructureDefinition' &&
+                profileInstance.usage === 'Definition' &&
+                (profileInstance.name === item ||
+                  profileInstance.id === item ||
+                  getUrlFromFshDefinition(profileInstance, this.config.canonical) === item) &&
+                profileInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'constraint'
+                )
+            );
+          }
           break;
         case Type.Extension:
           result = this.getAllExtensions().find(
