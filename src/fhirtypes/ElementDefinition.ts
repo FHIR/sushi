@@ -40,7 +40,7 @@ import {
   TypeNotFoundError,
   ValueAlreadyAssignedError,
   ValueConflictsWithClosedSlicingError,
-  WideningCardinalityError,
+  ConstrainingCardinalityError,
   InvalidChoiceTypeRulePathError,
   CannotResolvePathError,
   MismatchedBindingTypeError,
@@ -478,7 +478,14 @@ export class ElementDefinition {
       .split('.')
       .map(p => {
         const i = p.indexOf('[x]:');
-        return i > -1 ? p.slice(i + 4) : p;
+        const baseElementId = p.slice(0, i);
+        const choiceType = p.slice(i + baseElementId.length + 4);
+        const isChoiceSlice =
+          i > -1
+            ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
+              p === `${baseElementId}[x]:${baseElementId}${choiceType}`
+            : false;
+        return isChoiceSlice ? p.slice(i + 4) : p;
       })
       .join('.');
   }
@@ -656,7 +663,7 @@ export class ElementDefinition {
    * @param {number} min - the minimum cardinality
    * @param {number|string} max - the maximum cardinality
    * @throws {InvalidCardinalityError} when min > max
-   * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
+   * @throws {ConstrainingCardinalityError} when new cardinality is wider than existing cardinality
    * @throws {InvalidSumOfSliceMinsError} when the mins of slice elements > max of sliced element
    * @throws {NarrowingRootCardinalityError} when the new cardinality on an element is narrower than
    *   the cardinality on a connected element
@@ -676,12 +683,12 @@ export class ElementDefinition {
 
     // Check to ensure min >= existing min
     if (this.min != null && min < this.min) {
-      throw new WideningCardinalityError(this.min, this.max, min, max);
+      throw new ConstrainingCardinalityError(this.min, this.max, min, max);
     }
 
     // Check to ensure max <= existing max
     if (this.max != null && this.max !== '*' && (maxInt > parseInt(this.max) || isUnbounded)) {
-      throw new WideningCardinalityError(this.min, this.max, min, max);
+      throw new ConstrainingCardinalityError(this.min, this.max, min, max);
     }
 
     // Sliced elements and slices have special card rules described here:
@@ -2618,6 +2625,61 @@ const PROPS = [
   'isSummary',
   'binding',
   'mapping'
+];
+
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+  'Base64Binary',
+  'Boolean',
+  'Canonical',
+  'Code',
+  'Date',
+  'DateTime',
+  'Decimal',
+  'Id',
+  'Instant',
+  'Integer',
+  'Markdown',
+  'Oid',
+  'PositiveInt',
+  'String',
+  'Time',
+  'UnsignedInt',
+  'Uri',
+  'Url',
+  'Uuid',
+  'Address',
+  'Age',
+  'Annotation',
+  'Attachment',
+  'CodeableConcept',
+  'Coding',
+  'ContactPoint',
+  'Count',
+  'Distance',
+  'Duration',
+  'HumanName',
+  'Identifier',
+  'Money',
+  'Period',
+  'Quantity',
+  'Range',
+  'Ratio',
+  'Reference',
+  'SampledData',
+  'Signature',
+  'Timing',
+  'ContactDetail',
+  'Contributor',
+  'DataRequirement',
+  'Expression',
+  'ParameterDefinition',
+  'RelatedArtifact',
+  'TriggerDefinition',
+  'UsageContext',
+  'Dosage',
+  'Meta',
+  'CodeableReference',
+  'Integer64'
 ];
 
 /**

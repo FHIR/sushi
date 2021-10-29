@@ -1104,8 +1104,8 @@ export class FSHImporter extends FSHVisitor {
       return this.visitConcept(ctx.concept());
     } else if (ctx.codeCaretValueRule()) {
       return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
-    } else if (ctx.insertRule()) {
-      return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.codeInsertRule()) {
+      return this.visitCodeInsertRule(ctx.codeInsertRule());
     }
   }
 
@@ -1626,70 +1626,23 @@ export class FSHImporter extends FSHVisitor {
     this.getPathWithContext(this.visitPath(ctx.path()), ctx);
   }
 
+  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {
+    const insertRule = new InsertRule('')
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    const localCodePath = ctx.CODE().map(code => {
+      return this.parseCodeLexeme(code.getText(), ctx).code;
+    });
+    const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
+    insertRule.pathArray = fullCodePath;
+    return this.applyRuleSetParams(ctx, insertRule);
+  }
+
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
     const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
-    );
-    insertRule.ruleSet = rulesetName;
-    if (ruleParams) {
-      insertRule.params = this.parseInsertRuleParams(ruleParams);
-      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
-      if (ruleSet) {
-        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
-        if (ruleSet.parameters.length === insertRule.params.length) {
-          // no need to create the appliedRuleSet again if we already have it
-          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
-            // create a new document with the substituted parameters
-            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
-              insertRule.params
-            )}${EOL}`;
-            const appliedRuleSet = this.parseGeneratedRuleSet(
-              appliedFsh,
-              ruleSet.name,
-              ctx,
-              insertRule
-            );
-            if (appliedRuleSet) {
-              // set the source info based on the original source info
-              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
-              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
-              appliedRuleSet.rules.forEach(rule => {
-                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
-                rule.sourceInfo.location.startLine +=
-                  appliedRuleSet.sourceInfo.location.startLine - 1;
-                rule.sourceInfo.location.endLine +=
-                  appliedRuleSet.sourceInfo.location.startLine - 1;
-              });
-              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
-            } else {
-              logger.error(
-                `Failed to parse RuleSet ${
-                  insertRule.ruleSet
-                } with provided parameters (${insertRule.params.join(', ')})`,
-                insertRule.sourceInfo
-              );
-              return;
-            }
-          }
-        } else {
-          logger.error(
-            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
-            insertRule.sourceInfo
-          );
-          return;
-        }
-      } else {
-        logger.error(
-          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
-          insertRule.sourceInfo
-        );
-        return;
-      }
-    }
-    return insertRule;
+    return this.applyRuleSetParams(ctx, insertRule);
   }
 
   private parseRulesetReference(reference: string): [string, string] {
@@ -1747,12 +1700,68 @@ export class FSHImporter extends FSHVisitor {
     return paramList.map(param => param.trim());
   }
 
-  private parseGeneratedRuleSet(
-    input: string,
-    name: string,
-    ctx: pc.InsertRuleContext,
+  private applyRuleSetParams(
+    ctx: pc.InsertRuleContext | pc.CodeInsertRuleContext,
     insertRule: InsertRule
-  ) {
+  ): InsertRule {
+    const [rulesetName, ruleParams] = this.parseRulesetReference(
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
+    );
+    insertRule.ruleSet = rulesetName;
+    if (ruleParams) {
+      insertRule.params = this.parseInsertRuleParams(ruleParams);
+      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
+      if (ruleSet) {
+        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
+        if (ruleSet.parameters.length === insertRule.params.length) {
+          // no need to create the appliedRuleSet again if we already have it
+          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
+            // create a new document with the substituted parameters
+            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
+              insertRule.params
+            )}${EOL}`;
+            const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name, insertRule);
+            if (appliedRuleSet) {
+              // set the source info based on the original source info
+              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
+              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
+              appliedRuleSet.rules.forEach(rule => {
+                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
+                rule.sourceInfo.location.startLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+                rule.sourceInfo.location.endLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+              });
+              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
+            } else {
+              logger.error(
+                `Failed to parse RuleSet ${
+                  insertRule.ruleSet
+                } with provided parameters (${insertRule.params.join(', ')})`,
+                insertRule.sourceInfo
+              );
+              return;
+            }
+          }
+        } else {
+          logger.error(
+            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
+            insertRule.sourceInfo
+          );
+          return;
+        }
+      } else {
+        logger.error(
+          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
+          insertRule.sourceInfo
+        );
+        return;
+      }
+    }
+    return insertRule;
+  }
+
+  private parseGeneratedRuleSet(input: string, name: string, insertRule: InsertRule) {
     // define a temporary document that will contain this RuleSet
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet

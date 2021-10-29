@@ -312,6 +312,12 @@ FSHVisitor.prototype.visitInsertRule = function(ctx) {
 };
 
 
+// Visit a parse tree produced by FSHParser#codeInsertRule.
+FSHVisitor.prototype.visitCodeInsertRule = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 // Visit a parse tree produced by FSHParser#addElementRule.
 FSHVisitor.prototype.visitAddElementRule = function(ctx) {
   return this.visitChildren(ctx);
