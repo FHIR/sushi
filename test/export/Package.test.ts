@@ -133,6 +133,18 @@ describe('Package', () => {
     instance2.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     instance2.fhirVersion = '4.0.1';
     pkg.instances.push(instance2);
+    // Instance[3]: TwoWolves / two-wolves / Extension
+    const instance3 = new InstanceDefinition();
+    instance3._instanceMeta.name = 'TwoWolves';
+    instance3._instanceMeta.usage = 'Definition';
+    instance3.id = 'two-wolves';
+    instance3.resourceType = 'StructureDefinition';
+    instance3.derivation = 'constraint';
+    instance3.type = 'Extension';
+    instance3.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/two-wolves';
+    instance3.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
+    instance3.fhirVersion = '4.0.1';
+    pkg.instances.push(instance3);
   });
 
   describe('#fishForFHIR()', () => {
@@ -174,6 +186,21 @@ describe('Package', () => {
           Type.Extension
         )
       ).toEqual(poorTasteExtensionByID);
+    });
+
+    it('should find instances of extensions', () => {
+      const twoWolvesExtension = pkg.fishForFHIR('two-wolves', Type.Extension);
+      expect(twoWolvesExtension.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/two-wolves'
+      );
+      expect(twoWolvesExtension.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('TwoWolves', Type.Extension)).toEqual(twoWolvesExtension);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/two-wolves',
+          Type.Extension
+        )
+      ).toEqual(twoWolvesExtension);
     });
 
     it('should find logicals', () => {
@@ -270,6 +297,17 @@ describe('Package', () => {
         Type.Instance
       );
       expect(poorTasteExtensionByID).toBeUndefined();
+
+      const twoWolvesExtensionByID = pkg.fishForFHIR(
+        'two-wolves',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(twoWolvesExtensionByID).toBeUndefined();
 
       const wheatBeerLogicalByID = pkg.fishForFHIR(
         'wheat-beer',

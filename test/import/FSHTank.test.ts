@@ -41,6 +41,16 @@ describe('FSHTank', () => {
     doc2.aliases.set('BAR', 'http://bar.com');
     doc2.extensions.set('Extension2', new Extension('Extension2'));
     doc2.extensions.get('Extension2').id = 'ext2';
+    doc2.instances.set('ExtensionInstance', new Instance('ExtensionInstance'));
+    doc2.instances.get('ExtensionInstance').instanceOf = 'StructureDefinition';
+    doc2.instances.get('ExtensionInstance').usage = 'Definition';
+    const extensionInstanceDerivation = new AssignmentRule('derivation');
+    extensionInstanceDerivation.value = new FshCode('constraint');
+    const extensionInstanceType = new AssignmentRule('type');
+    extensionInstanceType.value = 'Extension';
+    doc2.instances
+      .get('ExtensionInstance')
+      .rules.push(extensionInstanceDerivation, extensionInstanceType);
     doc2.valueSets.set('ValueSet1', new FshValueSet('ValueSet1'));
     doc2.valueSets.get('ValueSet1').id = 'vs1';
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
@@ -187,6 +197,48 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find extensions defined as instance definitions when extensions are requested', () => {
+      expect(tank.fish('ExtensionInstance', Type.Extension).name).toBe('ExtensionInstance');
+      expect(
+        tank.fish(
+          'ExtensionInstance',
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should not find instances where the type is not Extension when extensions are requested', () => {
+      const instance = tank.docs[1].instances.get('ExtensionInstance');
+      const extensionInstanceType = new AssignmentRule('type');
+      extensionInstanceType.value = 'Observation';
+      const extensionInstanceDerivation = new AssignmentRule('derivation');
+      extensionInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [extensionInstanceType, extensionInstanceDerivation];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+    });
+
+    it('should not find instances where the derivation is not constraint when extensions are requested', () => {
+      const instance = tank.docs[1].instances.get('ExtensionInstance');
+      const extensionInstanceType = new AssignmentRule('type');
+      extensionInstanceType.value = 'Extension';
+      const extensionInstanceDerivation = new AssignmentRule('derivation');
+      extensionInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [extensionInstanceType, extensionInstanceDerivation];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
     });
 
     it('should only find logical models when logical models are requested', () => {

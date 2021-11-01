@@ -186,6 +186,12 @@ export class FSHTank implements Fishable {
                     rule.path === 'derivation' &&
                     rule.value instanceof FshCode &&
                     rule.value.code === 'constraint'
+                ) &&
+                !profileInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'type' &&
+                    rule.value === 'Extension'
                 )
             );
           }
@@ -197,6 +203,29 @@ export class FSHTank implements Fishable {
               e.id === item ||
               getUrlFromFshDefinition(e, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              extensionInstance =>
+                extensionInstance.instanceOf === 'StructureDefinition' &&
+                extensionInstance.usage === 'Definition' &&
+                (extensionInstance.name === item ||
+                  extensionInstance.id === item ||
+                  getUrlFromFshDefinition(extensionInstance, this.config.canonical) === item) &&
+                extensionInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'constraint'
+                ) &&
+                extensionInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'type' &&
+                    rule.value === 'Extension'
+                )
+            );
+          }
           break;
         case Type.Logical:
           result = this.getAllLogicals().find(

@@ -41,12 +41,23 @@ export class Package implements Fishable {
                 (i.id === item || i._instanceMeta.name === item || i.url === item) &&
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'StructureDefinition' &&
-                i.derivation === 'constraint'
+                i.derivation === 'constraint' &&
+                i.type !== 'Extension'
             );
           }
           break;
         case Type.Extension:
           def = this.extensions.find(e => e.id === item || e.name === item || e.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'StructureDefinition' &&
+                i.derivation === 'constraint' &&
+                i.type === 'Extension'
+            );
+          }
           break;
         case Type.Logical:
           def = this.logicals.find(e => e.id === item || e.name === item || e.url === item);
