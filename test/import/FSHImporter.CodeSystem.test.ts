@@ -428,17 +428,6 @@ describe('FSHImporter', () => {
     });
 
     describe('#CaretValueRule', () => {
-      it('should log an error when a CaretValueRule contains a path before ^', () => {
-        const input = leftAlign(`
-        CodeSystem: ZOO
-        * somepath ^publisher = "Marky Mark"
-        `);
-        const result = importSingleText(input, 'Simple.fsh');
-        const codeSystem = result.codeSystems.get('ZOO');
-        expect(codeSystem.rules).toHaveLength(1);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3*/s);
-      });
-
       it('should parse a code system that uses a CaretValueRule with no codes', () => {
         const input = leftAlign(`
           CodeSystem: ZOO
@@ -531,6 +520,18 @@ describe('FSHImporter', () => {
         const cs = result.codeSystems.get('MyCS');
         expect(cs.rules).toHaveLength(1);
         assertInsertRule(cs.rules[0] as InsertRule, '', 'MyRuleSet');
+      });
+
+      it('should parse an insert rule with a single RuleSet and a code path', () => {
+        const input = leftAlign(`
+        CodeSystem: MyCS
+        * #cookie "Cookie"
+        * #cookie insert MyRuleSet
+        `);
+        const result = importSingleText(input, 'Insert.fsh');
+        const cs = result.codeSystems.get('MyCS');
+        expect(cs.rules).toHaveLength(2);
+        assertInsertRule(cs.rules[1] as InsertRule, '', 'MyRuleSet', [], ['cookie']);
       });
     });
   });

@@ -10,7 +10,8 @@ import {
   assertValueSetConceptComponent,
   assertValueSetFilterComponent,
   assertAddElementRule,
-  assertOnlyRule
+  assertOnlyRule,
+  assertInsertRule
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { leftAlign } from '../utils/leftAlign';
@@ -642,6 +643,20 @@ describe('FSHImporter', () => {
         ['anteater', 'northern']
       );
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a code system that uses an indented InsertRule on a top-level concept', () => {
+      const input = leftAlign(`
+      CodeSystem: ZOO
+      * #anteater "Anteater"
+        * insert MyRuleSet
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      const codeSystem = result.codeSystems.get('ZOO');
+      expect(codeSystem.rules).toHaveLength(2);
+      assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+      assertInsertRule(codeSystem.rules[1], '', 'MyRuleSet', [], ['anteater']);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 

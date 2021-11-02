@@ -31,6 +31,13 @@ describe('InsertRule', () => {
       expect(rule.toFSH()).toEqual('* name.family insert MyRuleSet');
     });
 
+    it('should produce FSH for an InsertRule with a code path and no parameters', () => {
+      const rule = new InsertRule('');
+      rule.ruleSet = 'MyRuleSet';
+      rule.pathArray = ['pizza', 'bagelpizza'];
+      expect(rule.toFSH()).toEqual('* #pizza #bagelpizza insert MyRuleSet');
+    });
+
     it('should produce FSH for an InsertRule with a path and parameters', () => {
       const rule = new InsertRule('name.family');
       rule.ruleSet = 'MyRuleSet';
