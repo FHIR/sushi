@@ -204,13 +204,14 @@ export class FSHTank implements Fishable {
               getUrlFromFshDefinition(e, this.config.canonical) === item
           );
           if (!result) {
+            // There may be a matching definitional Instance of StructureDefinition with type Extension
             result = this.getAllInstances().find(
               extensionInstance =>
-                extensionInstance.instanceOf === 'StructureDefinition' &&
-                extensionInstance.usage === 'Definition' &&
                 (extensionInstance.name === item ||
                   extensionInstance.id === item ||
                   getUrlFromFshDefinition(extensionInstance, this.config.canonical) === item) &&
+                extensionInstance.instanceOf === 'StructureDefinition' &&
+                extensionInstance.usage === 'Definition' &&
                 extensionInstance.rules.some(
                   rule =>
                     rule instanceof AssignmentRule &&
@@ -224,6 +225,17 @@ export class FSHTank implements Fishable {
                     rule.path === 'type' &&
                     rule.value === 'Extension'
                 )
+            );
+          }
+          if (!result) {
+            // There may be a matching inline Instance of Extension
+            result = this.getAllInstances().find(
+              extensionInstance =>
+                (extensionInstance.name === item ||
+                  extensionInstance.id === item ||
+                  getUrlFromFshDefinition(extensionInstance, this.config.canonical) === item) &&
+                extensionInstance.instanceOf === 'Extension' &&
+                extensionInstance.usage === 'Inline'
             );
           }
           break;
