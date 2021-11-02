@@ -145,6 +145,16 @@ describe('Package', () => {
     instance3.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     instance3.fhirVersion = '4.0.1';
     pkg.instances.push(instance3);
+    // Instance[4]: Spices / spices / CodeSystem
+    const instance4 = new InstanceDefinition();
+    instance4._instanceMeta.name = 'Spices';
+    instance4._instanceMeta.usage = 'Definition';
+    instance4.id = 'spices';
+    instance4.resourceType = 'CodeSystem';
+    instance4.url = 'http://hl7.org/fhir/us/minimal/CodeSystem/spices';
+    instance4.content = 'complete';
+    instance4.version = '4.0.1';
+    pkg.instances.push(instance4);
   });
 
   describe('#fishForFHIR()', () => {
@@ -253,6 +263,16 @@ describe('Package', () => {
       expect(
         pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/CodeSystem/numerics', Type.CodeSystem)
       ).toEqual(numericsCodeSystemByID);
+    });
+
+    it('should find instances of code systems', () => {
+      const spicesCodeSystemByID = pkg.fishForFHIR('spices', Type.CodeSystem);
+      expect(spicesCodeSystemByID.url).toBe('http://hl7.org/fhir/us/minimal/CodeSystem/spices');
+      expect(spicesCodeSystemByID.version).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Spices', Type.CodeSystem)).toEqual(spicesCodeSystemByID);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/CodeSystem/spices', Type.CodeSystem)
+      ).toEqual(spicesCodeSystemByID);
     });
 
     it('should find instances', () => {

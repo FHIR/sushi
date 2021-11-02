@@ -70,6 +70,14 @@ export class Package implements Fishable {
           break;
         case Type.CodeSystem:
           def = this.codeSystems.find(cs => cs.id === item || cs.name === item || cs.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'CodeSystem'
+            );
+          }
           break;
         case Type.Instance:
           def = this.instances.find(i => i.id === item || i._instanceMeta.name === item);
