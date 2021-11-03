@@ -155,6 +155,15 @@ describe('Package', () => {
     instance4.content = 'complete';
     instance4.version = '4.0.1';
     pkg.instances.push(instance4);
+    // Instance[5]: Cookies / cookie-varieties / ValueSet
+    const instance5 = new InstanceDefinition();
+    instance5._instanceMeta.name = 'Cookies';
+    instance5._instanceMeta.usage = 'Definition';
+    instance5.id = 'cookie-varieties';
+    instance5.resourceType = 'ValueSet';
+    instance5.url = 'http://hl7.org/fhir/us/minimal/ValueSet/cookie-varieties';
+    instance5.version = '4.0.1';
+    pkg.instances.push(instance5);
   });
 
   describe('#fishForFHIR()', () => {
@@ -251,6 +260,18 @@ describe('Package', () => {
       expect(
         pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors', Type.ValueSet)
       ).toEqual(soupsValueSetByID);
+    });
+
+    it('should find instances of value sets', () => {
+      const cookiesValueSetByID = pkg.fishForFHIR('cookie-varieties', Type.ValueSet);
+      expect(cookiesValueSetByID.url).toBe(
+        'http://hl7.org/fhir/us/minimal/ValueSet/cookie-varieties'
+      );
+      expect(cookiesValueSetByID.version).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Cookies', Type.ValueSet)).toEqual(cookiesValueSetByID);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/cookie-varieties', Type.ValueSet)
+      ).toEqual(cookiesValueSetByID);
     });
 
     it('should find code systems', () => {

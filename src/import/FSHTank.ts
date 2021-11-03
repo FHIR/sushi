@@ -262,6 +262,16 @@ export class FSHTank implements Fishable {
               vs.id === item ||
               getUrlFromFshDefinition(vs, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              vsInstance =>
+                vsInstance?.instanceOf === 'ValueSet' &&
+                vsInstance?.usage === 'Definition' &&
+                (vsInstance?.name === item ||
+                  vsInstance.id === item ||
+                  getUrlFromFshDefinition(vsInstance, this.config.canonical) === item)
+            );
+          }
           break;
         case Type.CodeSystem:
           result = this.getAllCodeSystems().find(

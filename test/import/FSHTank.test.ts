@@ -56,6 +56,9 @@ describe('FSHTank', () => {
     doc2.instances.get('ExtensionInline').usage = 'Inline';
     doc2.valueSets.set('ValueSet1', new FshValueSet('ValueSet1'));
     doc2.valueSets.get('ValueSet1').id = 'vs1';
+    doc2.instances.set('ValueSetInstance', new Instance('ValueSetInstance'));
+    doc2.instances.get('ValueSetInstance').instanceOf = 'ValueSet';
+    doc2.instances.get('ValueSetInstance').usage = 'Definition';
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
     doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
@@ -315,6 +318,24 @@ describe('FSHTank', () => {
           Type.Extension,
           Type.CodeSystem,
           Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find valuesets defined as instance definitions when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance', Type.ValueSet).name).toBe('ValueSetInstance');
+      expect(
+        tank.fish(
+          'ValueSetInstance',
+          Type.Profile,
+          Type.Extension,
+          Type.CodeSystem,
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
