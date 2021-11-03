@@ -18,10 +18,11 @@ releaseLabel: ci-build # ci-build | draft | qa-preview | ballot | trial-use | re
 publisher:
   name: Example Publisher
   url: http://example.org/example-publisher
+  # email: test@example.org
 
 # The dependencies property corresponds to IG.dependsOn. The key is the
 # package id and the value is the version (or dev/current). For advanced
-# use cases, the value can be an object with keys for `uri` and `version`.
+# use cases, the value can be an object with keys for id, uri, and version.
 #
 # dependencies:
 #   hl7.fhir.us.core: 3.1.0
@@ -62,9 +63,14 @@ publisher:
 # parameters:
 #   excludettl: true
 #   validation: [allow-any-extensions, no-broken-links]
-
+#
 # ╭────────────────────────────────────────────menu.xml────────────────────────────────────────────╮
-# │  To use a provided input/includes/menu.xml file, delete the "menu" property below.             │
+# │ The menu property will be used to generate the input/menu.xml file. The menu is represented    │
+# │ as a simple structure where the YAML key is the menu item name and the value is the URL.       │
+# │ The IG publisher currently only supports one level deep on sub-menus. To provide a             │
+# │ custom menu.xml file, do not include this property and include a `menu.xml` file in            │
+# │ input/includes. To use a provided input/includes/menu.xml file, delete the "menu"              │
+# │ property below.                                                                                │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 menu:
   Home: index.html
@@ -82,8 +88,7 @@ menu:
 # contact:
 #   - name: Bob Smith
 #     telecom:
-#         # system from: phone | fax | email | pager | url | sms | other
-#       - system: email
+#       - system: email # phone | fax | email | pager | url | sms | other
 #         value: bobsmith@example.org
 #         use: work
 #
