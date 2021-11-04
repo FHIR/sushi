@@ -16,6 +16,8 @@ describe('MappingExporter', () => {
   let exporter: MappingExporter;
   let observation: StructureDefinition;
   let practitioner: StructureDefinition;
+  let logical: StructureDefinition;
+  let resource: StructureDefinition;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -39,6 +41,12 @@ describe('MappingExporter', () => {
     practitioner = fisher.fishForStructureDefinition('Practitioner');
     practitioner.id = 'MyPractitioner';
     pkg.profiles.push(practitioner);
+    logical = fisher.fishForStructureDefinition('eLTSSServiceModel');
+    logical.id = 'MyLogical';
+    pkg.logicals.push(logical);
+    resource = fisher.fishForStructureDefinition('Duration');
+    resource.id = 'MyResource';
+    pkg.resources.push(resource);
   });
 
   it('should log an error when the mapping source does not exist', () => {
@@ -349,18 +357,55 @@ describe('MappingExporter', () => {
       /**
        * Mapping: MyMapping
        * Source: MyObservation
-       * * status -> "Observation.otherStatus"
+       * * -> "OtherObservation"
        */
       const mapRule = new MappingRule('');
       mapRule.map = 'OtherObservation';
       mapping.rules.push(mapRule);
-      const status = observation.elements.find(e => e.id === 'Observation');
-      const originalLength = status.mapping.length;
+      const baseElement = observation.elements.find(e => e.id === 'Observation');
+      const originalLength = baseElement.mapping.length;
       exporter.export();
-      expect(status.mapping.length).toBe(originalLength + 1);
-      const exported = status.mapping.slice(-1)[0];
+      expect(baseElement.mapping.length).toBe(originalLength + 1);
+      const exported = baseElement.mapping.slice(-1)[0];
       expect(exported.map).toBe('OtherObservation');
       expect(exported.identity).toBe('MyMapping');
+    });
+
+    it('should apply a valid mapping rule with a Logical source', () => {
+      /**
+       * Mapping: MyMapping
+       * Source: MyLogical
+       * * name -> "Something.provider.name"
+       */
+      mapping.source = 'MyLogical';
+      const mapRule = new MappingRule('name');
+      mapRule.map = 'Something.provider.name';
+      mapping.rules.push(mapRule);
+      const baseName = logical.elements.find(e => e.id === 'eLTSSServiceModel.name');
+      expect(baseName.mapping).toBeUndefined();
+      exporter.export();
+      expect(baseName.mapping).toHaveLength(1);
+      expect(baseName.mapping[0].identity).toBe('MyMapping');
+      expect(baseName.mapping[0].map).toBe('Something.provider.name');
+    });
+
+    it('should apply a valid mapping rule with a Resource source', () => {
+      /**
+       * Mapping: MyMapping
+       * Source: MyResource
+       * * comparator -> "Something.operator"
+       */
+      mapping.source = 'MyResource';
+      const mapRule = new MappingRule('comparator');
+      mapRule.map = 'Something.operator';
+      mapping.rules.push(mapRule);
+      const baseComparator = resource.elements.find(e => e.id === 'Duration.comparator');
+      const originalMappingLength = baseComparator.mapping.length;
+      exporter.export();
+      expect(baseComparator.mapping).toHaveLength(originalMappingLength + 1);
+      const exported = baseComparator.mapping.slice(-1)[0];
+      expect(exported.identity).toBe('MyMapping');
+      expect(exported.map).toBe('Something.operator');
     });
 
     it('should log an error and skip rules with paths that cannot be found', () => {

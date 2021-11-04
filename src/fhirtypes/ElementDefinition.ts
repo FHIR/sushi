@@ -478,7 +478,14 @@ export class ElementDefinition {
       .split('.')
       .map(p => {
         const i = p.indexOf('[x]:');
-        return i > -1 ? p.slice(i + 4) : p;
+        const baseElementId = p.slice(0, i);
+        const choiceType = p.slice(i + baseElementId.length + 4);
+        const isChoiceSlice =
+          i > -1
+            ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
+              p === `${baseElementId}[x]:${baseElementId}${choiceType}`
+            : false;
+        return isChoiceSlice ? p.slice(i + 4) : p;
       })
       .join('.');
   }
@@ -2618,6 +2625,61 @@ const PROPS = [
   'isSummary',
   'binding',
   'mapping'
+];
+
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+  'Base64Binary',
+  'Boolean',
+  'Canonical',
+  'Code',
+  'Date',
+  'DateTime',
+  'Decimal',
+  'Id',
+  'Instant',
+  'Integer',
+  'Markdown',
+  'Oid',
+  'PositiveInt',
+  'String',
+  'Time',
+  'UnsignedInt',
+  'Uri',
+  'Url',
+  'Uuid',
+  'Address',
+  'Age',
+  'Annotation',
+  'Attachment',
+  'CodeableConcept',
+  'Coding',
+  'ContactPoint',
+  'Count',
+  'Distance',
+  'Duration',
+  'HumanName',
+  'Identifier',
+  'Money',
+  'Period',
+  'Quantity',
+  'Range',
+  'Ratio',
+  'Reference',
+  'SampledData',
+  'Signature',
+  'Timing',
+  'ContactDetail',
+  'Contributor',
+  'DataRequirement',
+  'Expression',
+  'ParameterDefinition',
+  'RelatedArtifact',
+  'TriggerDefinition',
+  'UsageContext',
+  'Dosage',
+  'Meta',
+  'CodeableReference',
+  'Integer64'
 ];
 
 /**
