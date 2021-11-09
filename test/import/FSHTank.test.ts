@@ -51,9 +51,6 @@ describe('FSHTank', () => {
     doc2.instances
       .get('ExtensionInstance')
       .rules.push(extensionInstanceDerivation, extensionInstanceType);
-    doc2.instances.set('ExtensionInline', new Instance('ExtensionInline'));
-    doc2.instances.get('ExtensionInline').instanceOf = 'Extension';
-    doc2.instances.get('ExtensionInline').usage = 'Inline';
     doc2.valueSets.set('ValueSet1', new FshValueSet('ValueSet1'));
     doc2.valueSets.get('ValueSet1').id = 'vs1';
     doc2.instances.set('ValueSetInstance', new Instance('ValueSetInstance'));
@@ -223,24 +220,6 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
-    it('should find extensions defined as inline instances when extensions are requested', () => {
-      expect(tank.fish('ExtensionInline', Type.Extension).name).toBe('ExtensionInline');
-      expect(
-        tank.fish(
-          'ExtensionInline',
-          Type.Profile,
-          Type.ValueSet,
-          Type.CodeSystem,
-          Type.Invariant,
-          Type.RuleSet,
-          Type.Mapping,
-          Type.Logical,
-          Type.Resource,
-          Type.Type
-        )
-      ).toBeUndefined();
-    });
-
     it('should not find instances where the type is not Extension when extensions are requested', () => {
       const instance = tank.docs[1].instances.get('ExtensionInstance');
       const extensionInstanceType = new AssignmentRule('type');
@@ -263,12 +242,6 @@ describe('FSHTank', () => {
       expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
       instance.rules = [];
       expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
-    });
-
-    it('should not find inline instances that are not instances of Extension when extensions are requested', () => {
-      const instance = tank.docs[1].instances.get('ExtensionInline');
-      instance.instanceOf = 'Observation';
-      expect(tank.fish('ExtensionInline', Type.Extension)).toBeUndefined();
     });
 
     it('should only find logical models when logical models are requested', () => {

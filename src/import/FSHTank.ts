@@ -227,17 +227,6 @@ export class FSHTank implements Fishable {
                 )
             );
           }
-          if (!result) {
-            // There may be a matching inline Instance of Extension
-            result = this.getAllInstances().find(
-              extensionInstance =>
-                (extensionInstance.name === item ||
-                  extensionInstance.id === item ||
-                  getUrlFromFshDefinition(extensionInstance, this.config.canonical) === item) &&
-                extensionInstance.instanceOf === 'Extension' &&
-                extensionInstance.usage === 'Inline'
-            );
-          }
           break;
         case Type.Logical:
           result = this.getAllLogicals().find(
