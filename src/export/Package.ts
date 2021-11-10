@@ -38,11 +38,11 @@ export class Package implements Fishable {
           if (!def) {
             def = this.instances.find(
               i =>
-                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'constraint' &&
-                i.type !== 'Extension'
+                i.type !== 'Extension' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
             );
           }
           break;
@@ -51,11 +51,11 @@ export class Package implements Fishable {
           if (!def) {
             def = this.instances.find(
               i =>
-                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'constraint' &&
-                i.type === 'Extension'
+                i.type === 'Extension' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
             );
           }
           break;
@@ -64,11 +64,11 @@ export class Package implements Fishable {
           if (!def) {
             def = this.instances.find(
               i =>
-                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'specialization' &&
-                i.kind === 'logical'
+                i.kind === 'logical' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
             );
           }
           break;
@@ -77,11 +77,11 @@ export class Package implements Fishable {
           if (!def) {
             def = this.instances.find(
               i =>
-                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'specialization' &&
-                i.kind === 'resource'
+                i.kind === 'resource' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
             );
           }
           break;
@@ -90,9 +90,9 @@ export class Package implements Fishable {
           if (!def) {
             def = this.instances.find(
               i =>
-                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
                 i._instanceMeta.usage === 'Definition' &&
-                i.resourceType === 'ValueSet'
+                i.resourceType === 'ValueSet' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
             );
           }
           break;
@@ -101,9 +101,9 @@ export class Package implements Fishable {
           if (!def) {
             def = this.instances.find(
               i =>
-                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
                 i._instanceMeta.usage === 'Definition' &&
-                i.resourceType === 'CodeSystem'
+                i.resourceType === 'CodeSystem' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
             );
           }
           break;

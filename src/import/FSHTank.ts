@@ -207,11 +207,11 @@ export class FSHTank implements Fishable {
             // There may be a matching definitional Instance of StructureDefinition with type Extension
             result = this.getAllInstances().find(
               extensionInstance =>
+                extensionInstance.instanceOf === 'StructureDefinition' &&
+                extensionInstance.usage === 'Definition' &&
                 (extensionInstance.name === item ||
                   extensionInstance.id === item ||
                   getUrlFromFshDefinition(extensionInstance, this.config.canonical) === item) &&
-                extensionInstance.instanceOf === 'StructureDefinition' &&
-                extensionInstance.usage === 'Definition' &&
                 extensionInstance.rules.some(
                   rule =>
                     rule instanceof AssignmentRule &&
