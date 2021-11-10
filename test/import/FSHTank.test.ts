@@ -64,6 +64,16 @@ describe('FSHTank', () => {
     doc2.logicals.set('Logical1', new Logical('Logical1'));
     doc2.logicals.get('Logical1').id = 'log1';
     doc2.logicals.get('Logical1').parent = 'Element';
+    doc2.instances.set('LogicalInstance', new Instance('LogicalInstance'));
+    doc2.instances.get('LogicalInstance').instanceOf = 'StructureDefinition';
+    doc2.instances.get('LogicalInstance').usage = 'Definition';
+    const logicalInstanceDerivation = new AssignmentRule('derivation');
+    logicalInstanceDerivation.value = new FshCode('specialization');
+    const logicalInstanceKind = new AssignmentRule('kind');
+    logicalInstanceKind.value = new FshCode('logical');
+    doc2.instances
+      .get('LogicalInstance')
+      .rules.push(logicalInstanceDerivation, logicalInstanceKind);
     doc2.resources.set('Resource1', new Resource('Resource1'));
     doc2.resources.get('Resource1').id = 'res1';
     const doc3 = new FSHDocument('doc3.fsh');
@@ -72,6 +82,16 @@ describe('FSHTank', () => {
     doc3.logicals.get('Logical2').parent = 'Logical1';
     doc3.resources.set('Resource2', new Resource('Resource2'));
     doc3.resources.get('Resource2').id = 'res2';
+    doc3.instances.set('ResourceInstance', new Instance('ResourceInstance'));
+    doc3.instances.get('ResourceInstance').instanceOf = 'StructureDefinition';
+    doc3.instances.get('ResourceInstance').usage = 'Definition';
+    const resourceInstanceDerivation = new AssignmentRule('derivation');
+    resourceInstanceDerivation.value = new FshCode('specialization');
+    const resourceInstanceKind = new AssignmentRule('kind');
+    resourceInstanceKind.value = new FshCode('resource');
+    doc3.instances
+      .get('ResourceInstance')
+      .rules.push(resourceInstanceDerivation, resourceInstanceKind);
     doc3.valueSets.set('ValueSet2', new FshValueSet('ValueSet2'));
     doc3.valueSets.get('ValueSet2').id = 'vs2';
     doc3.codeSystems.set('CodeSystem2', new FshCodeSystem('CodeSystem2'));
@@ -263,6 +283,24 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find logical models defined as instance definitions when logical models are requested', () => {
+      expect(tank.fish('LogicalInstance', Type.Logical).name).toBe('LogicalInstance');
+      expect(
+        tank.fish(
+          'LogicalInstance',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
     it('should only find resources when resources are requested', () => {
       expect(tank.fish('res2', Type.Resource).name).toBe('Resource2');
       expect(
@@ -273,6 +311,24 @@ describe('FSHTank', () => {
           Type.ValueSet,
           Type.CodeSystem,
           Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find resources defined as instance definitions when resources are requested', () => {
+      expect(tank.fish('ResourceInstance', Type.Resource).name).toBe('ResourceInstance');
+      expect(
+        tank.fish(
+          'ResourceInstanceres2',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,

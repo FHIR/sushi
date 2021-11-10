@@ -61,9 +61,29 @@ export class Package implements Fishable {
           break;
         case Type.Logical:
           def = this.logicals.find(e => e.id === item || e.name === item || e.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'StructureDefinition' &&
+                i.derivation === 'specialization' &&
+                i.kind === 'logical'
+            );
+          }
           break;
         case Type.Resource:
           def = this.resources.find(e => e.id === item || e.name === item || e.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                (i.id === item || i._instanceMeta.name === item || i.url === item) &&
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'StructureDefinition' &&
+                i.derivation === 'specialization' &&
+                i.kind === 'resource'
+            );
+          }
           break;
         case Type.ValueSet:
           def = this.valueSets.find(vs => vs.id === item || vs.name === item || vs.url === item);

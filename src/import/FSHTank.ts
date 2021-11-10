@@ -235,6 +235,30 @@ export class FSHTank implements Fishable {
               l.id === item ||
               getUrlFromFshDefinition(l, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              logicalInstance =>
+                logicalInstance.instanceOf === 'StructureDefinition' &&
+                logicalInstance.usage === 'Definition' &&
+                (logicalInstance.name === item ||
+                  logicalInstance.id === item ||
+                  getUrlFromFshDefinition(logicalInstance, this.config.canonical) === item) &&
+                logicalInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'specialization'
+                ) &&
+                logicalInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'kind' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'logical'
+                )
+            );
+          }
           break;
         case Type.Resource:
           result = this.getAllResources().find(
@@ -243,6 +267,30 @@ export class FSHTank implements Fishable {
               r.id === item ||
               getUrlFromFshDefinition(r, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              resourceInstance =>
+                resourceInstance.instanceOf === 'StructureDefinition' &&
+                resourceInstance.usage === 'Definition' &&
+                (resourceInstance.name === item ||
+                  resourceInstance.id === item ||
+                  getUrlFromFshDefinition(resourceInstance, this.config.canonical) === item) &&
+                resourceInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'specialization'
+                ) &&
+                resourceInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'kind' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'resource'
+                )
+            );
+          }
           break;
         case Type.ValueSet:
           result = this.getAllValueSets().find(

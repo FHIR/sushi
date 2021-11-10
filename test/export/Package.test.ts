@@ -164,6 +164,30 @@ describe('Package', () => {
     instance5.url = 'http://hl7.org/fhir/us/minimal/ValueSet/cookie-varieties';
     instance5.version = '4.0.1';
     pkg.instances.push(instance5);
+    // Instance[6]: SpiderHouse / spider-house / Logical
+    const instance6 = new InstanceDefinition();
+    instance6._instanceMeta.name = 'SpiderHouse';
+    instance6._instanceMeta.usage = 'Definition';
+    instance6.id = 'spider-house';
+    instance6.resourceType = 'StructureDefinition';
+    instance6.derivation = 'specialization';
+    instance6.kind = 'logical';
+    instance6.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/spider-house';
+    instance6.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Base';
+    instance6.fhirVersion = '4.0.1';
+    pkg.instances.push(instance6);
+    // Instance[7]: Zone / zone / Resource
+    const instance7 = new InstanceDefinition();
+    instance7._instanceMeta.name = 'Zone';
+    instance7._instanceMeta.usage = 'Definition';
+    instance7.id = 'zone';
+    instance7.resourceType = 'StructureDefinition';
+    instance7.derivation = 'specialization';
+    instance7.kind = 'resource';
+    instance7.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/zone';
+    instance7.baseDefinition = '';
+    instance7.fhirVersion = '4.0.1';
+    pkg.instances.push(instance7);
   });
 
   describe('#fishForFHIR()', () => {
@@ -235,6 +259,21 @@ describe('Package', () => {
       ).toEqual(beerLogical);
     });
 
+    it('should find instances of logicals', () => {
+      const spiderHouse = pkg.fishForFHIR('spider-house', Type.Logical);
+      expect(spiderHouse.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/spider-house'
+      );
+      expect(spiderHouse.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('SpiderHouse', Type.Logical)).toEqual(spiderHouse);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/spider-house',
+          Type.Logical
+        )
+      ).toEqual(spiderHouse);
+    });
+
     it('should find resources', () => {
       const destination = pkg.fishForFHIR('Destination', Type.Resource);
       expect(destination.url).toBe(
@@ -248,6 +287,16 @@ describe('Package', () => {
           Type.Resource
         )
       ).toEqual(destination);
+    });
+
+    it('should find instances of resources', () => {
+      const zoneResource = pkg.fishForFHIR('zone', Type.Resource);
+      expect(zoneResource.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/zone');
+      expect(zoneResource.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Zone', Type.Resource)).toEqual(zoneResource);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/zone', Type.Resource)
+      ).toEqual(zoneResource);
     });
 
     it('should find value sets', () => {
