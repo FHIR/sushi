@@ -1104,8 +1104,8 @@ export class FSHImporter extends FSHVisitor {
       return this.visitConcept(ctx.concept());
     } else if (ctx.codeCaretValueRule()) {
       return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
-    } else if (ctx.insertRule()) {
-      return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.codeInsertRule()) {
+      return this.visitCodeInsertRule(ctx.codeInsertRule());
     }
   }
 
@@ -1626,70 +1626,23 @@ export class FSHImporter extends FSHVisitor {
     this.getPathWithContext(this.visitPath(ctx.path()), ctx);
   }
 
+  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {
+    const insertRule = new InsertRule('')
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    const localCodePath = ctx.CODE().map(code => {
+      return this.parseCodeLexeme(code.getText(), ctx).code;
+    });
+    const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
+    insertRule.pathArray = fullCodePath;
+    return this.applyRuleSetParams(ctx, insertRule);
+  }
+
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
     const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
-    );
-    insertRule.ruleSet = rulesetName;
-    if (ruleParams) {
-      insertRule.params = this.parseInsertRuleParams(ruleParams);
-      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
-      if (ruleSet) {
-        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
-        if (ruleSet.parameters.length === insertRule.params.length) {
-          // no need to create the appliedRuleSet again if we already have it
-          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
-            // create a new document with the substituted parameters
-            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
-              insertRule.params
-            )}${EOL}`;
-            const appliedRuleSet = this.parseGeneratedRuleSet(
-              appliedFsh,
-              ruleSet.name,
-              ctx,
-              insertRule
-            );
-            if (appliedRuleSet) {
-              // set the source info based on the original source info
-              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
-              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
-              appliedRuleSet.rules.forEach(rule => {
-                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
-                rule.sourceInfo.location.startLine +=
-                  appliedRuleSet.sourceInfo.location.startLine - 1;
-                rule.sourceInfo.location.endLine +=
-                  appliedRuleSet.sourceInfo.location.startLine - 1;
-              });
-              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
-            } else {
-              logger.error(
-                `Failed to parse RuleSet ${
-                  insertRule.ruleSet
-                } with provided parameters (${insertRule.params.join(', ')})`,
-                insertRule.sourceInfo
-              );
-              return;
-            }
-          }
-        } else {
-          logger.error(
-            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
-            insertRule.sourceInfo
-          );
-          return;
-        }
-      } else {
-        logger.error(
-          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
-          insertRule.sourceInfo
-        );
-        return;
-      }
-    }
-    return insertRule;
+    return this.applyRuleSetParams(ctx, insertRule);
   }
 
   private parseRulesetReference(reference: string): [string, string] {
@@ -1747,12 +1700,68 @@ export class FSHImporter extends FSHVisitor {
     return paramList.map(param => param.trim());
   }
 
-  private parseGeneratedRuleSet(
-    input: string,
-    name: string,
-    ctx: pc.InsertRuleContext,
+  private applyRuleSetParams(
+    ctx: pc.InsertRuleContext | pc.CodeInsertRuleContext,
     insertRule: InsertRule
-  ) {
+  ): InsertRule {
+    const [rulesetName, ruleParams] = this.parseRulesetReference(
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
+    );
+    insertRule.ruleSet = rulesetName;
+    if (ruleParams) {
+      insertRule.params = this.parseInsertRuleParams(ruleParams);
+      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
+      if (ruleSet) {
+        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
+        if (ruleSet.parameters.length === insertRule.params.length) {
+          // no need to create the appliedRuleSet again if we already have it
+          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
+            // create a new document with the substituted parameters
+            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
+              insertRule.params
+            )}${EOL}`;
+            const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name, insertRule);
+            if (appliedRuleSet) {
+              // set the source info based on the original source info
+              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
+              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
+              appliedRuleSet.rules.forEach(rule => {
+                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
+                rule.sourceInfo.location.startLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+                rule.sourceInfo.location.endLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+              });
+              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
+            } else {
+              logger.error(
+                `Failed to parse RuleSet ${
+                  insertRule.ruleSet
+                } with provided parameters (${insertRule.params.join(', ')})`,
+                insertRule.sourceInfo
+              );
+              return;
+            }
+          }
+        } else {
+          logger.error(
+            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
+            insertRule.sourceInfo
+          );
+          return;
+        }
+      } else {
+        logger.error(
+          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
+          insertRule.sourceInfo
+        );
+        return;
+      }
+    }
+    return insertRule;
+  }
+
+  private parseGeneratedRuleSet(input: string, name: string, insertRule: InsertRule) {
     // define a temporary document that will contain this RuleSet
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet
@@ -1960,42 +1969,35 @@ export class FSHImporter extends FSHVisitor {
       throw new ValueSetFilterMissingValueError(operator);
     }
     const value = ctx.vsFilterValue() ? this.visitVsFilterValue(ctx.vsFilterValue()) : true;
+
+    // NOTE: We support string value for every operator, in addition to the specific typed values
+    // for some operators based on the filter value documentation:
+    // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
+    // and the discussion on https://github.com/FHIR/sushi/issues/936
     switch (operator) {
       case VsOperator.EQUALS:
       case VsOperator.IN:
       case VsOperator.NOT_IN:
-        // NOTE: We believe that =, in, and not-in operators should ONLY support code values
-        // based on the filter value documentation:
-        // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
-        // Both string and code are supported for now in order to maintain backwards compatibility.
-        if (typeof value === 'string') {
-          logger.warn(
-            `The match value of filter operator "${operator}" must be a code. ` +
-              'For string valued properties, use the regex filter operator with a regular expression value. ' +
-              'Support for using strings as filter values has been deprecated and will be removed in a future release.',
-            { location: this.extractStartStop(ctx), file: this.currentFile }
-          );
-        }
-        if (typeof value !== 'string' && !(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
-        }
-        break;
       case VsOperator.IS_A:
       case VsOperator.DESCENDENT_OF:
       case VsOperator.IS_NOT_A:
       case VsOperator.GENERALIZES:
-        if (!(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
+        if (!(value instanceof FshCode) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['code', 'string']);
         }
         break;
       case VsOperator.REGEX:
-        if (!(value instanceof RegExp)) {
-          throw new ValueSetFilterValueTypeError(operator, 'regex');
+        if (!(value instanceof RegExp) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['regex', 'string']);
         }
         break;
       case VsOperator.EXISTS:
-        if (typeof value !== 'boolean') {
-          throw new ValueSetFilterValueTypeError(operator, 'boolean');
+        const allowedStrings = ['true', 'false'];
+        if (
+          typeof value !== 'boolean' &&
+          !(typeof value === 'string' && allowedStrings.includes(value))
+        ) {
+          throw new ValueSetFilterValueTypeError(operator, ['boolean'], allowedStrings);
         }
         break;
       default:
