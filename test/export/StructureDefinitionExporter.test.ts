@@ -5259,7 +5259,7 @@ describe('StructureDefinitionExporter R4', () => {
       const slice = sd.elements.find(e => e.id === 'Observation.status:test');
       expect(slice).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Cannot slice element 'status' which is not an array or choice.*File: SingleElement\.fsh.*Line: 6\D*/s
+        /Cannot slice element 'status'.*File: SingleElement\.fsh.*Line: 6\D*/s
       );
     });
   });
