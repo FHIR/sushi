@@ -128,26 +128,31 @@ export async function loadDependency(
 
   // If the packageUrl is set, we must download the package from that url, and extract it to our local cache
   if (packageUrl) {
-    // Create a temporary file and write the package to there
-    temp.track();
-    const tempFile = temp.openSync();
-    const targetDirectory = path.join(cachePath, fullPackageName);
     logger.info(`Downloading ${fullPackageName}...`);
     const res = await axios.get(packageUrl, {
       responseType: 'arraybuffer'
     });
     if (res?.data) {
       logger.info(`Downloaded ${fullPackageName}`);
-      fs.ensureDirSync(targetDirectory);
+      // Create a temporary file and write the package to there
+      temp.track();
+      const tempFile = temp.openSync();
       fs.writeFileSync(tempFile.path, res.data);
-      // Extract the package from that temporary file location
+      // Extract the package to a temporary directory
+      const tempDirectory = temp.mkdirSync();
       tar.x({
-        cwd: targetDirectory,
+        cwd: tempDirectory,
         file: tempFile.path,
         sync: true,
         strict: true
       });
-      cleanCachedPackage(targetDirectory);
+      cleanCachedPackage(tempDirectory);
+      // Add or replace the package in the FHIR cache
+      const targetDirectory = path.join(cachePath, fullPackageName);
+      if (fs.existsSync(targetDirectory)) {
+        fs.removeSync(targetDirectory);
+      }
+      fs.moveSync(tempDirectory, targetDirectory);
       // Now try to load again from the path
       loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
     } else {
