@@ -21,7 +21,8 @@ import {
   ParentNameConflictError,
   ParentNotDefinedError,
   ParentNotProvidedError,
-  MismatchedBindingTypeError
+  MismatchedBindingTypeError,
+  InvalidElementForSlicingError
 } from '../errors';
 import {
   AddElementRule,
@@ -528,6 +529,9 @@ export class StructureDefinitionExporter implements Fishable {
             if (isExtension) {
               this.handleExtensionContainsRule(fshDefinition, rule, structDef, element);
             } else {
+              if (!element.isArrayOrChoice()) {
+                throw new InvalidElementForSlicingError(rule.path);
+              }
               // Not an extension -- just add a slice for each item
               rule.items.forEach(item => {
                 if (item.type) {
