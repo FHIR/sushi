@@ -308,18 +308,6 @@ export class ElementDefinition {
 
   private validateSlicing(slicing: ElementDefinitionSlicing): ValidationError[] {
     const validationErrors: ValidationError[] = [];
-    if (
-      this.max !== '*' &&
-      parseInt(this.max) <= 1 &&
-      this.base.max !== '*' &&
-      parseInt(this.base.max) <= 1 &&
-      !this.id.endsWith('[x]')
-    ) {
-      validationErrors.push(
-        new ValidationError('Cannot slice element which is not an array or choice', 'slicing')
-      );
-    }
-
     validationErrors.push(this.validateRequired(slicing.rules, 'slicing.rules'));
     validationErrors.push(
       this.validateIncludes(slicing.rules, ALLOWED_SLICING_RULES, 'slicing.rules')
