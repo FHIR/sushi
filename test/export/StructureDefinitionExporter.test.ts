@@ -5240,6 +5240,28 @@ describe('StructureDefinitionExporter R4', () => {
         /Cannot create spoon extension; unable to locate extension definition for: IDoNotExist\..*File: BadExt\.fsh.*Line: 6\D*/s
       );
     });
+
+    it('should report an error for a ContainsRule on a single element', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+
+      const containsRule = new ContainsRule('status')
+        .withFile('SingleElement.fsh')
+        .withLocation([6, 3, 6, 12]);
+      containsRule.items = [{ name: 'test' }];
+      profile.rules.push(containsRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+      expect(sd.elements.length).toBe(baseStructDef.elements.length);
+
+      const slice = sd.elements.find(e => e.id === 'Observation.status:test');
+      expect(slice).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot slice element 'status' which is not an array or choice.*File: SingleElement\.fsh.*Line: 6\D*/s
+      );
+    });
   });
 
   describe('#CaretValueRule', () => {
@@ -6886,70 +6908,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(rootCode.constraint).toContainEqual(expectedWalking);
       expect(labCode.constraint).toContainEqual(expectedRunning);
       expect(labCode.constraint).toContainEqual(expectedWalking);
-    });
-
-    it('should apply rules that modify a slice on a choice element', () => {
-      // Profile: PizzaBusiness
-      // Parent: Practitioner
-      // * extension contains TheBusiness named business 1..1
-      // * extension[business].valueString contains badSlice 0..1
-      // * extension[business].valueString[badSlice] = "The Bad Slice"
-
-      // Extension: TheBusiness
-      // * valueString ^slicing.discriminator.type = #value
-      // * valueString contains goodSlice 0..1
-      // * valueString[goodSlice] = "The Good Slice"
-
-      const extension = new Extension('TheBusiness');
-      const slicingType = new CaretValueRule('valueString');
-      slicingType.caretPath = 'slicing.discriminator.type';
-      slicingType.value = new FshCode('value');
-      const valueContains = new ContainsRule('valueString');
-      valueContains.items.push({ name: 'goodSlice' });
-      const valueCard = new CardRule('valueString[goodSlice]');
-      valueCard.min = 0;
-      valueCard.max = '1';
-      const goodValue = new AssignmentRule('valueString[goodSlice]');
-      goodValue.value = 'The Good Slice';
-      extension.rules.push(slicingType, valueContains, valueCard, goodValue);
-
-      const profile = new Profile('PizzaBusiness');
-      profile.parent = 'Practitioner';
-      const profileContains = new ContainsRule('extension');
-      profileContains.items.push({ name: 'business', type: 'TheBusiness' });
-      const profileCard = new CardRule('extension[business]');
-      profileCard.min = 1;
-      profileCard.max = '1';
-      const businessContains = new ContainsRule('extension[business].valueString');
-      businessContains.items.push({ name: 'badSlice' });
-      const businessCard = new CardRule('extension[business].valueString[badSlice]');
-      businessCard.min = 0;
-      businessCard.max = '1';
-      const badSliceValue = new AssignmentRule('extension[business].valueString[badSlice]');
-      badSliceValue.value = 'The Bad Slice';
-      profile.rules.push(
-        profileContains,
-        profileCard,
-        businessContains,
-        businessCard,
-        badSliceValue
-      );
-
-      doc.extensions.set(extension.name, extension);
-      doc.profiles.set(profile.name, profile);
-      exporter.export();
-
-      const businessSd = pkg.extensions[0];
-      expect(businessSd).toBeDefined();
-      const goodSliceElement = businessSd.findElement('Extension.value[x]:valueString/goodSlice');
-      expect(goodSliceElement).toBeDefined();
-
-      const pizzaSd = pkg.profiles[0];
-      expect(pizzaSd).toBeDefined();
-      const badSliceElement = pizzaSd.findElement(
-        'Practitioner.extension:business.value[x]:valueString/badSlice'
-      );
-      expect(badSliceElement).toBeDefined();
     });
 
     it.todo('should have some tests involving slices and CaretValueRule');

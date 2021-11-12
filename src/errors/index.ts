@@ -55,3 +55,4 @@ export * from './InvalidMustSupportError';
 export * from './InvalidChoiceTypeRulePathError';
 export * from './MismatchedBindingTypeError';
 export * from './ValidationError';
+export * from './InvalidElementForSlicingError';

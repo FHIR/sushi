@@ -306,6 +306,16 @@ export class ElementDefinition {
     return null;
   }
 
+  isArrayOrChoice(): boolean {
+    return (
+      this.max === '*' ||
+      parseInt(this.max) > 1 ||
+      this.base.max === '*' ||
+      parseInt(this.base.max) > 1 ||
+      this.id.endsWith('[x]')
+    );
+  }
+
   private validateSlicing(slicing: ElementDefinitionSlicing): ValidationError[] {
     const validationErrors: ValidationError[] = [];
     validationErrors.push(this.validateRequired(slicing.rules, 'slicing.rules'));
