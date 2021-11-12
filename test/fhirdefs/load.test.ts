@@ -69,9 +69,37 @@ describe('#loadDependency()', () => {
   let axiosSpy: jest.SpyInstance;
   let axiosHeadSpy: jest.SpyInstance;
   let tarSpy: jest.SpyInstance;
-  let ensureDirSpy: jest.SpyInstance;
+  let removeSpy: jest.SpyInstance;
+  let moveSpy: jest.SpyInstance;
   let writeSpy: jest.SpyInstance;
   let cachePath: string;
+
+  // Many tests check that the right package was downloaded to the right place.
+  // This function encapsulates that testing logic. It's coupled more tightly to
+  // the actual implementation than I'd prefer, but... at least it's in one place.
+  const expectDownloadSequence = (source: string, destination: string, isCurrent = false): void => {
+    if (isCurrent) {
+      expect(axiosSpy.mock.calls).toEqual([
+        ['https://build.fhir.org/ig/qas.json'],
+        [source.replace(/package\.tgz$/, 'package.manifest.json')],
+        [source, { responseType: 'arraybuffer' }]
+      ]);
+    } else {
+      expect(axiosSpy.mock.calls).toEqual([[source, { responseType: 'arraybuffer' }]]);
+    }
+    if (destination != null) {
+      const tempTarFile = writeSpy.mock.calls[0][0];
+      const tempTarDirectory = tarSpy.mock.calls[0][0].cwd;
+      expect(tarSpy.mock.calls[0][0].file).toBe(tempTarFile);
+      expect(moveSpy.mock.calls[0][0]).toBe(tempTarDirectory);
+      expect(moveSpy.mock.calls[0][1]).toBe(destination);
+    } else {
+      expect(writeSpy).toHaveBeenCalledTimes(0);
+      expect(tarSpy).toHaveBeenCalledTimes(0);
+      expect(moveSpy).toHaveBeenCalledTimes(0);
+    }
+  };
+
   beforeAll(() => {
     axiosSpy = jest.spyOn(axios, 'get').mockImplementation((uri: string): any => {
       if (uri === 'https://build.fhir.org/ig/qas.json') {
@@ -166,7 +194,8 @@ describe('#loadDependency()', () => {
     });
     tarSpy = jest.spyOn(tar, 'x').mockImplementation(() => {});
     writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-    ensureDirSpy = jest.spyOn(fs, 'ensureDirSync').mockImplementation(() => {});
+    removeSpy = jest.spyOn(fs, 'removeSync').mockImplementation(() => {});
+    moveSpy = jest.spyOn(fs, 'moveSync').mockImplementation(() => {});
     cachePath = path.join(__dirname, 'fixtures');
   });
 
@@ -177,7 +206,8 @@ describe('#loadDependency()', () => {
     axiosHeadSpy.mockClear();
     tarSpy.mockClear();
     writeSpy.mockClear();
-    ensureDirSpy.mockClear();
+    moveSpy.mockClear();
+    removeSpy.mockClear();
   });
 
   // Packages with numerical versions
@@ -198,61 +228,50 @@ describe('#loadDependency()', () => {
     await expect(loadDependency('sushi-test', '0.2.0', defs, 'foo')).rejects.toThrow(
       'The package sushi-test#0.2.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://packages.fhir.org/sushi-test/0.2.0', { responseType: 'arraybuffer' }]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'sushi-test#0.2.0')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'sushi-test#0.2.0'));
+    expectDownloadSequence(
+      'https://packages.fhir.org/sushi-test/0.2.0',
+      path.join('foo', 'sushi-test#0.2.0')
+    );
   });
 
   it('should try to load FHIR R4 (4.0.1) from packages.fhir.org when it is not cached', async () => {
     await expect(loadDependency('hl7.fhir.r4.core', '4.0.1', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.r4.core#4.0.1 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://packages.fhir.org/hl7.fhir.r4.core/4.0.1', { responseType: 'arraybuffer' }]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r4.core#4.0.1')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r4.core#4.0.1'));
+    expectDownloadSequence(
+      'https://packages.fhir.org/hl7.fhir.r4.core/4.0.1',
+      path.join('foo', 'hl7.fhir.r4.core#4.0.1')
+    );
   });
 
   it('should try to load prerelease FHIR R4B (4.1.0) from packages2.fhir.org when it is not cached', async () => {
     await expect(loadDependency('hl7.fhir.r4b.core', '4.1.0', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.r4b.core#4.1.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(axiosSpy.mock.calls).toEqual([
-      [
-        'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0',
-        { responseType: 'arraybuffer' }
-      ]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r4b.core#4.1.0')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r4b.core#4.1.0'));
+    expectDownloadSequence(
+      'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0',
+      path.join('foo', 'hl7.fhir.r4b.core#4.1.0')
+    );
   });
 
   it('should try to load FHIR R4B (4.3.0) from packages.fhir.org when it is not cached', async () => {
     await expect(loadDependency('hl7.fhir.r4b.core', '4.3.0', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.r4b.core#4.3.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://packages.fhir.org/hl7.fhir.r4b.core/4.3.0', { responseType: 'arraybuffer' }]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r4b.core#4.3.0')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r4b.core#4.3.0'));
+    expectDownloadSequence(
+      'https://packages.fhir.org/hl7.fhir.r4b.core/4.3.0',
+      path.join('foo', 'hl7.fhir.r4b.core#4.3.0')
+    );
   });
 
   it('should try to load prerelease FHIR R5 (4.5.0) from packages2.fhir.org when it is not cached', async () => {
     await expect(loadDependency('hl7.fhir.r5.core', '4.5.0', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.r5.core#4.5.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(axiosSpy.mock.calls).toEqual([
-      [
-        'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0',
-        { responseType: 'arraybuffer' }
-      ]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r5.core#4.5.0')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r5.core#4.5.0'));
+    expectDownloadSequence(
+      'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0',
+      path.join('foo', 'hl7.fhir.r5.core#4.5.0')
+    );
   });
 
   it('should throw PackageLoadError when a package with a non-current version is not cached or available on packages.fhir.org', async () => {
@@ -262,11 +281,7 @@ describe('#loadDependency()', () => {
     expect(loggerSpy.getLastMessage('info')).toMatch(
       /Unable to download most current version of sushi-test#0.3.0/
     );
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://packages.fhir.org/sushi-test/0.3.0', { responseType: 'arraybuffer' }]
-    ]);
-    expect(ensureDirSpy.mock.calls).toHaveLength(0);
-    expect(tarSpy.mock.calls).toHaveLength(0);
+    expectDownloadSequence('https://packages.fhir.org/sushi-test/0.3.0', null);
   });
 
   // Packages with current versions
@@ -290,40 +305,34 @@ describe('#loadDependency()', () => {
     await expect(loadDependency('hl7.fhir.us.core.r4', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.us.core.r4#current could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://build.fhir.org/ig/qas.json'],
-      ['https://build.fhir.org/ig/HL7/US-Core-R4/package.manifest.json'],
-      ['https://build.fhir.org/ig/HL7/US-Core-R4/package.tgz', { responseType: 'arraybuffer' }]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.us.core.r4#current')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.us.core.r4#current'));
+    expectDownloadSequence(
+      'https://build.fhir.org/ig/HL7/US-Core-R4/package.tgz',
+      path.join('foo', 'hl7.fhir.us.core.r4#current'),
+      true
+    );
   });
 
   it('should try to load the latest package from build.fhir.org when a current package version has an older version that is locally cached', async () => {
     await expect(
       loadDependency('sushi-test-old', 'current', defs, cachePath)
     ).resolves.toBeTruthy(); // Since tar is mocked, the actual cache is not updated
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://build.fhir.org/ig/qas.json'],
-      ['https://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
-      [
-        'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
-        { responseType: 'arraybuffer' }
-      ]
-    ]);
-    expect(ensureDirSpy.mock.calls[0][0]).toEqual(path.join(cachePath, 'sushi-test-old#current'));
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join(cachePath, 'sushi-test-old#current'));
+    expectDownloadSequence(
+      'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
+      path.join(cachePath, 'sushi-test-old#current'),
+      true
+    );
+    expect(removeSpy.mock.calls[0][0]).toBe(path.join(cachePath, 'sushi-test-old#current'));
   });
 
   it('should try to load the latest FHIR R5 package from build.fhir.org when it is not locally cached', async () => {
     await expect(loadDependency('hl7.fhir.r5.core', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.r5.core#current could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://build.fhir.org/hl7.fhir.r5.core.tgz', { responseType: 'arraybuffer' }]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join('foo', 'hl7.fhir.r5.core#current')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join('foo', 'hl7.fhir.r5.core#current'));
+    expectDownloadSequence(
+      'https://build.fhir.org/hl7.fhir.r5.core.tgz',
+      path.join('foo', 'hl7.fhir.r5.core#current'),
+      false // technically not treated like other current builds (for some reason)
+    );
   });
 
   it('should revert to an old locally cached current version when a newer current version is not available for download', async () => {
@@ -336,16 +345,12 @@ describe('#loadDependency()', () => {
     await expect(
       loadDependency('sushi-test-no-download', 'current', defs, cachePath)
     ).resolves.toEqual(expectedDefs);
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://build.fhir.org/ig/qas.json'],
-      ['https://build.fhir.org/ig/sushi/sushi-test-no-download/package.manifest.json'],
-      [
-        'https://build.fhir.org/ig/sushi/sushi-test-no-download/package.tgz',
-        { responseType: 'arraybuffer' }
-      ]
-    ]);
-    expect(ensureDirSpy.mock.calls).toHaveLength(0);
-    expect(tarSpy.mock.calls).toHaveLength(0);
+    expectDownloadSequence(
+      'https://build.fhir.org/ig/sushi/sushi-test-no-download/package.tgz',
+      null,
+      true
+    );
+    expect(removeSpy).toHaveBeenCalledTimes(0);
   });
 
   // Packages with dev versions
@@ -369,16 +374,12 @@ describe('#loadDependency()', () => {
           )
         )
     ).toBeTruthy();
-    expect(axiosSpy.mock.calls).toEqual([
-      ['https://build.fhir.org/ig/qas.json'],
-      ['https://build.fhir.org/ig/sushi/sushi-test-old/package.manifest.json'],
-      [
-        'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
-        { responseType: 'arraybuffer' }
-      ]
-    ]);
-    expect(ensureDirSpy.mock.calls[0]).toEqual([path.join(cachePath, 'sushi-test-old#current')]);
-    expect(tarSpy.mock.calls[0][0].cwd).toBe(path.join(cachePath, 'sushi-test-old#current'));
+    expectDownloadSequence(
+      'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
+      path.join(cachePath, 'sushi-test-old#current'),
+      true
+    );
+    expect(removeSpy.mock.calls[0][0]).toBe(path.join(cachePath, 'sushi-test-old#current'));
   });
 
   it('should throw CurrentPackageLoadError when a current package is not listed', async () => {
