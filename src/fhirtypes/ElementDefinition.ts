@@ -2181,10 +2181,15 @@ export class ElementDefinition {
    */
   private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
     return targetElement?.children().map(e => {
-      const eClone = e.clone();
+      // When an element is a slice, all constraints should be carried on into the diff
+      // so we do not clear the original
+      const isSlice = e.sliceName != null;
+      const eClone = e.clone(!isSlice);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
-      eClone.captureOriginal();
+      if (!isSlice) {
+        eClone.captureOriginal();
+      }
       return eClone;
     });
   }
