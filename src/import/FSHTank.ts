@@ -10,7 +10,8 @@ import {
   Invariant,
   RuleSet,
   Mapping,
-  Configuration
+  Configuration,
+  FshCode
 } from '../fshtypes';
 import { AssignmentRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
@@ -171,6 +172,29 @@ export class FSHTank implements Fishable {
               p.id === item ||
               getUrlFromFshDefinition(p, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              profileInstance =>
+                profileInstance.instanceOf === 'StructureDefinition' &&
+                profileInstance.usage === 'Definition' &&
+                (profileInstance.name === item ||
+                  profileInstance.id === item ||
+                  getUrlFromFshDefinition(profileInstance, this.config.canonical) === item) &&
+                profileInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'constraint'
+                ) &&
+                !profileInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'type' &&
+                    rule.value === 'Extension'
+                )
+            );
+          }
           break;
         case Type.Extension:
           result = this.getAllExtensions().find(
@@ -179,6 +203,30 @@ export class FSHTank implements Fishable {
               e.id === item ||
               getUrlFromFshDefinition(e, this.config.canonical) === item
           );
+          if (!result) {
+            // There may be a matching definitional Instance of StructureDefinition with type Extension
+            result = this.getAllInstances().find(
+              extensionInstance =>
+                extensionInstance.instanceOf === 'StructureDefinition' &&
+                extensionInstance.usage === 'Definition' &&
+                (extensionInstance.name === item ||
+                  extensionInstance.id === item ||
+                  getUrlFromFshDefinition(extensionInstance, this.config.canonical) === item) &&
+                extensionInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'constraint'
+                ) &&
+                extensionInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'type' &&
+                    rule.value === 'Extension'
+                )
+            );
+          }
           break;
         case Type.Logical:
           result = this.getAllLogicals().find(
@@ -187,6 +235,30 @@ export class FSHTank implements Fishable {
               l.id === item ||
               getUrlFromFshDefinition(l, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              logicalInstance =>
+                logicalInstance.instanceOf === 'StructureDefinition' &&
+                logicalInstance.usage === 'Definition' &&
+                (logicalInstance.name === item ||
+                  logicalInstance.id === item ||
+                  getUrlFromFshDefinition(logicalInstance, this.config.canonical) === item) &&
+                logicalInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'specialization'
+                ) &&
+                logicalInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'kind' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'logical'
+                )
+            );
+          }
           break;
         case Type.Resource:
           result = this.getAllResources().find(
@@ -195,6 +267,30 @@ export class FSHTank implements Fishable {
               r.id === item ||
               getUrlFromFshDefinition(r, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              resourceInstance =>
+                resourceInstance.instanceOf === 'StructureDefinition' &&
+                resourceInstance.usage === 'Definition' &&
+                (resourceInstance.name === item ||
+                  resourceInstance.id === item ||
+                  getUrlFromFshDefinition(resourceInstance, this.config.canonical) === item) &&
+                resourceInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'derivation' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'specialization'
+                ) &&
+                resourceInstance.rules.some(
+                  rule =>
+                    rule instanceof AssignmentRule &&
+                    rule.path === 'kind' &&
+                    rule.value instanceof FshCode &&
+                    rule.value.code === 'resource'
+                )
+            );
+          }
           break;
         case Type.ValueSet:
           result = this.getAllValueSets().find(
@@ -203,6 +299,16 @@ export class FSHTank implements Fishable {
               vs.id === item ||
               getUrlFromFshDefinition(vs, this.config.canonical) === item
           );
+          if (!result) {
+            result = this.getAllInstances().find(
+              vsInstance =>
+                vsInstance?.instanceOf === 'ValueSet' &&
+                vsInstance?.usage === 'Definition' &&
+                (vsInstance?.name === item ||
+                  vsInstance.id === item ||
+                  getUrlFromFshDefinition(vsInstance, this.config.canonical) === item)
+            );
+          }
           break;
         case Type.CodeSystem:
           result = this.getAllCodeSystems().find(

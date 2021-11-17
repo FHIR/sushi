@@ -15,6 +15,7 @@ import {
 } from '../../src/fshtypes';
 import { Metadata, Type } from '../../src/utils/Fishable';
 import { minimalConfig } from '../utils/minimalConfig';
+import { AssignmentRule } from '../../src/fshtypes/rules';
 
 describe('FSHTank', () => {
   let tank: FSHTank;
@@ -27,6 +28,12 @@ describe('FSHTank', () => {
     doc1.profiles.set('Profile2', new Profile('Profile2'));
     doc1.profiles.get('Profile2').id = 'prf2';
     doc1.profiles.get('Profile2').parent = 'Observation';
+    doc1.instances.set('ProfileInstance', new Instance('ProfileInstance'));
+    doc1.instances.get('ProfileInstance').instanceOf = 'StructureDefinition';
+    doc1.instances.get('ProfileInstance').usage = 'Definition';
+    const profileInstanceDerivation = new AssignmentRule('derivation');
+    profileInstanceDerivation.value = new FshCode('constraint');
+    doc1.instances.get('ProfileInstance').rules.push(profileInstanceDerivation);
     doc1.extensions.set('Extension1', new Extension('Extension1'));
     doc1.extensions.get('Extension1').id = 'ext1';
     doc1.extensions.get('Extension1').parent = 'Extension2';
@@ -34,8 +41,21 @@ describe('FSHTank', () => {
     doc2.aliases.set('BAR', 'http://bar.com');
     doc2.extensions.set('Extension2', new Extension('Extension2'));
     doc2.extensions.get('Extension2').id = 'ext2';
+    doc2.instances.set('ExtensionInstance', new Instance('ExtensionInstance'));
+    doc2.instances.get('ExtensionInstance').instanceOf = 'StructureDefinition';
+    doc2.instances.get('ExtensionInstance').usage = 'Definition';
+    const extensionInstanceDerivation = new AssignmentRule('derivation');
+    extensionInstanceDerivation.value = new FshCode('constraint');
+    const extensionInstanceType = new AssignmentRule('type');
+    extensionInstanceType.value = 'Extension';
+    doc2.instances
+      .get('ExtensionInstance')
+      .rules.push(extensionInstanceDerivation, extensionInstanceType);
     doc2.valueSets.set('ValueSet1', new FshValueSet('ValueSet1'));
     doc2.valueSets.get('ValueSet1').id = 'vs1';
+    doc2.instances.set('ValueSetInstance', new Instance('ValueSetInstance'));
+    doc2.instances.get('ValueSetInstance').instanceOf = 'ValueSet';
+    doc2.instances.get('ValueSetInstance').usage = 'Definition';
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
     doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
@@ -44,6 +64,16 @@ describe('FSHTank', () => {
     doc2.logicals.set('Logical1', new Logical('Logical1'));
     doc2.logicals.get('Logical1').id = 'log1';
     doc2.logicals.get('Logical1').parent = 'Element';
+    doc2.instances.set('LogicalInstance', new Instance('LogicalInstance'));
+    doc2.instances.get('LogicalInstance').instanceOf = 'StructureDefinition';
+    doc2.instances.get('LogicalInstance').usage = 'Definition';
+    const logicalInstanceDerivation = new AssignmentRule('derivation');
+    logicalInstanceDerivation.value = new FshCode('specialization');
+    const logicalInstanceKind = new AssignmentRule('kind');
+    logicalInstanceKind.value = new FshCode('logical');
+    doc2.instances
+      .get('LogicalInstance')
+      .rules.push(logicalInstanceDerivation, logicalInstanceKind);
     doc2.resources.set('Resource1', new Resource('Resource1'));
     doc2.resources.get('Resource1').id = 'res1';
     const doc3 = new FSHDocument('doc3.fsh');
@@ -52,6 +82,16 @@ describe('FSHTank', () => {
     doc3.logicals.get('Logical2').parent = 'Logical1';
     doc3.resources.set('Resource2', new Resource('Resource2'));
     doc3.resources.get('Resource2').id = 'res2';
+    doc3.instances.set('ResourceInstance', new Instance('ResourceInstance'));
+    doc3.instances.get('ResourceInstance').instanceOf = 'StructureDefinition';
+    doc3.instances.get('ResourceInstance').usage = 'Definition';
+    const resourceInstanceDerivation = new AssignmentRule('derivation');
+    resourceInstanceDerivation.value = new FshCode('specialization');
+    const resourceInstanceKind = new AssignmentRule('kind');
+    resourceInstanceKind.value = new FshCode('resource');
+    doc3.instances
+      .get('ResourceInstance')
+      .rules.push(resourceInstanceDerivation, resourceInstanceKind);
     doc3.valueSets.set('ValueSet2', new FshValueSet('ValueSet2'));
     doc3.valueSets.get('ValueSet2').id = 'vs2';
     doc3.codeSystems.set('CodeSystem2', new FshCodeSystem('CodeSystem2'));
@@ -135,6 +175,34 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find profiles defined as instance definitions when profiles are requested', () => {
+      expect(tank.fish('ProfileInstance', Type.Profile).name).toBe('ProfileInstance');
+      expect(
+        tank.fish(
+          'ProfileInstance',
+          Type.Extension,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should not find instances where the derivation is not constraint when profiles are requested', () => {
+      const instance = tank.docs[0].instances.get('ProfileInstance');
+      const profileInstanceDerivation = new AssignmentRule('derivation');
+      profileInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [profileInstanceDerivation];
+      expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
+    });
+
     it('should only find extensions when extensions are requested', () => {
       expect(tank.fish('ext1', Type.Extension).name).toBe('Extension1');
       expect(
@@ -154,6 +222,48 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find extensions defined as instance definitions when extensions are requested', () => {
+      expect(tank.fish('ExtensionInstance', Type.Extension).name).toBe('ExtensionInstance');
+      expect(
+        tank.fish(
+          'ExtensionInstance',
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should not find instances where the type is not Extension when extensions are requested', () => {
+      const instance = tank.docs[1].instances.get('ExtensionInstance');
+      const extensionInstanceType = new AssignmentRule('type');
+      extensionInstanceType.value = 'Observation';
+      const extensionInstanceDerivation = new AssignmentRule('derivation');
+      extensionInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [extensionInstanceType, extensionInstanceDerivation];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+    });
+
+    it('should not find instances where the derivation is not constraint when extensions are requested', () => {
+      const instance = tank.docs[1].instances.get('ExtensionInstance');
+      const extensionInstanceType = new AssignmentRule('type');
+      extensionInstanceType.value = 'Extension';
+      const extensionInstanceDerivation = new AssignmentRule('derivation');
+      extensionInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [extensionInstanceType, extensionInstanceDerivation];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+    });
+
     it('should only find logical models when logical models are requested', () => {
       expect(tank.fish('log1', Type.Logical).name).toBe('Logical1');
       expect(
@@ -164,6 +274,24 @@ describe('FSHTank', () => {
           Type.ValueSet,
           Type.CodeSystem,
           Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find logical models defined as instance definitions when logical models are requested', () => {
+      expect(tank.fish('LogicalInstance', Type.Logical).name).toBe('LogicalInstance');
+      expect(
+        tank.fish(
+          'LogicalInstance',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
@@ -192,6 +320,24 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find resources defined as instance definitions when resources are requested', () => {
+      expect(tank.fish('ResourceInstance', Type.Resource).name).toBe('ResourceInstance');
+      expect(
+        tank.fish(
+          'ResourceInstanceres2',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
     it('should only find valuesets when valuesets are requested', () => {
       expect(tank.fish('vs1', Type.ValueSet).name).toBe('ValueSet1');
       expect(
@@ -201,6 +347,24 @@ describe('FSHTank', () => {
           Type.Extension,
           Type.CodeSystem,
           Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find valuesets defined as instance definitions when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance', Type.ValueSet).name).toBe('ValueSetInstance');
+      expect(
+        tank.fish(
+          'ValueSetInstance',
+          Type.Profile,
+          Type.Extension,
+          Type.CodeSystem,
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
