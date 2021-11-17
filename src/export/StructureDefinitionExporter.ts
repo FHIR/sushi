@@ -7,7 +7,15 @@ import {
   StructureDefinition,
   STRUCTURE_DEFINITION_R4_BASE
 } from '../fhirtypes';
-import { Extension, Invariant, isAllowedRule, Logical, Profile, Resource } from '../fshtypes';
+import {
+  Extension,
+  Invariant,
+  isAllowedRule,
+  Logical,
+  Profile,
+  Resource,
+  Instance
+} from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
 import {
@@ -804,9 +812,18 @@ export class StructureDefinitionExporter implements Fishable {
         Type.Extension,
         Type.Logical,
         Type.Resource
-      ) as Profile | Extension | Logical | Resource;
-      if (fshDefinition) {
+      ) as Profile | Extension | Logical | Resource | Instance;
+      if (
+        fshDefinition instanceof Profile ||
+        fshDefinition instanceof Extension ||
+        fshDefinition instanceof Logical ||
+        fshDefinition instanceof Resource
+      ) {
         this.exportStructDef(fshDefinition);
+        result = this.fisher.fishForFHIR(item, ...types);
+      } else if (fshDefinition instanceof Instance) {
+        const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+        instanceExporter.exportInstance(fshDefinition);
         result = this.fisher.fishForFHIR(item, ...types);
       }
     }

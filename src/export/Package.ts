@@ -35,21 +35,77 @@ export class Package implements Fishable {
       switch (type) {
         case Type.Profile:
           def = this.profiles.find(p => p.id === item || p.name === item || p.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'StructureDefinition' &&
+                i.derivation === 'constraint' &&
+                i.type !== 'Extension' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
+            );
+          }
           break;
         case Type.Extension:
           def = this.extensions.find(e => e.id === item || e.name === item || e.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'StructureDefinition' &&
+                i.derivation === 'constraint' &&
+                i.type === 'Extension' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
+            );
+          }
           break;
         case Type.Logical:
           def = this.logicals.find(e => e.id === item || e.name === item || e.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'StructureDefinition' &&
+                i.derivation === 'specialization' &&
+                i.kind === 'logical' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
+            );
+          }
           break;
         case Type.Resource:
           def = this.resources.find(e => e.id === item || e.name === item || e.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'StructureDefinition' &&
+                i.derivation === 'specialization' &&
+                i.kind === 'resource' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
+            );
+          }
           break;
         case Type.ValueSet:
           def = this.valueSets.find(vs => vs.id === item || vs.name === item || vs.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'ValueSet' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
+            );
+          }
           break;
         case Type.CodeSystem:
           def = this.codeSystems.find(cs => cs.id === item || cs.name === item || cs.url === item);
+          if (!def) {
+            def = this.instances.find(
+              i =>
+                i._instanceMeta.usage === 'Definition' &&
+                i.resourceType === 'CodeSystem' &&
+                (i.id === item || i._instanceMeta.name === item || i.url === item)
+            );
+          }
           break;
         case Type.Instance:
           def = this.instances.find(i => i.id === item || i._instanceMeta.name === item);
