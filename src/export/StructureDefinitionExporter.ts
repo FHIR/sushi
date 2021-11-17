@@ -654,7 +654,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
     rule.items.forEach(item => {
       if (item.type) {
-        const extension = this.fishForMetadata(item.type, Type.Extension);
+        const extension = this.fishForFHIR(item.type, Type.Extension);
         if (extension == null) {
           logger.error(
             `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
@@ -680,6 +680,22 @@ export class StructureDefinitionExporter implements Fishable {
           }
           // Otherwise it is a conflicting duplicate extension or some other error
           logger.error(e.message, rule.sourceInfo);
+        }
+        // check if we have used modifier extensions correctly
+        const isModifierExtension =
+          extension.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
+            .isModifier === true;
+        const isModifierPath = element.path.endsWith('.modifierExtension');
+        if (isModifierExtension && !isModifierPath) {
+          logger.error(
+            'Modifier extension assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.',
+            rule.sourceInfo
+          );
+        } else if (!isModifierExtension && isModifierPath) {
+          logger.error(
+            'Non-modifier extension assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.',
+            rule.sourceInfo
+          );
         }
       } else {
         try {

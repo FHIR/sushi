@@ -5219,6 +5219,94 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should report an error for an extension ContainsRule with a non-modifier extension type on a modifierExtension path', () => {
+      const extension = new Extension('MyExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('modifierExtension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([5, 3, 5, 29]);
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.modifierExtension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Non-modifier extension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: WrongModifier\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should not report an error for an extension ContainsRule with a modifier extension type on a modifierExtension path', () => {
+      const extension = new Extension('MyExtension');
+      const modifierRule = new CaretValueRule('.');
+      modifierRule.caretPath = 'isModifier';
+      modifierRule.value = true;
+      extension.rules.push(modifierRule);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('modifierExtension');
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.modifierExtension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should report an error for an extension ContainsRule with a modifier extension type on an extension path', () => {
+      const extension = new Extension('MyExtension');
+      const modifierRule = new CaretValueRule('.');
+      modifierRule.caretPath = 'isModifier';
+      modifierRule.value = true;
+      extension.rules.push(modifierRule);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('extension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([9, 4, 9, 21]);
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: WrongModifier\.fsh.*Line: 9\D*/s
+      );
+    });
+
+    it('should not report an error for an extension ContainsRule with a non-modifier extension type on an extension path', () => {
+      const extension = new Extension('MyExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('category.extension');
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.category.extension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should report an error for an extension ContainsRule with a type that does not resolve', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
