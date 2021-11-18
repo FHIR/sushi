@@ -2136,7 +2136,7 @@ export class ElementDefinition {
       } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
-        newElements = this.cloneChildren(slicedElement);
+        newElements = this.cloneChildren(slicedElement, false);
       }
       if (newElements.length === 0) {
         // If we have exactly one profile to use, use that, otherwise use the code
@@ -2176,18 +2176,22 @@ export class ElementDefinition {
   /**
    * Returns an array of an ElementDefinition's unfolded children.
    * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
+   * @param {boolean} recaptureSlices - Indicates whether or not slices should be recaptured
    * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
    * the original property re-captured.
    */
-  private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
+  private cloneChildren(
+    targetElement: ElementDefinition,
+    recaptureSlices = true
+  ): ElementDefinition[] {
     return targetElement?.children().map(e => {
-      // When an element is a slice, all constraints should be carried on into the diff
-      // so we do not clear the original
-      const isSlice = e.sliceName != null;
-      const eClone = e.clone(!isSlice);
+      // Sometimes we want to avoid recapturing slices, but if an element is not a slice
+      // we always capture it
+      const shouldCaptureOriginal = recaptureSlices || e.sliceName == null;
+      const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
-      if (!isSlice) {
+      if (shouldCaptureOriginal) {
         eClone.captureOriginal();
       }
       return eClone;
