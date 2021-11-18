@@ -2375,7 +2375,7 @@ export class ElementDefinition {
       throw new SlicingNotDefinedError(this.id, name);
     }
 
-    const slice = this.clone(true);
+    const slice = this.clone(false);
     delete slice.slicing;
     slice.id = this.sliceName ? `${this.id}/${name}` : `${this.id}:${name}`;
 
@@ -2385,14 +2385,13 @@ export class ElementDefinition {
       throw new DuplicateSliceError(this.structDef.name, this.id, name);
     }
 
-    // On a new slice, delete slice.min, slice.max, and slice.mustSupport. Then, reset slice.min and slice.max
+    // From the original, delete slice.min, slice.max, and slice.mustSupport. Then, reset slice.min and slice.max
     // so that they are always captured in diff
-    delete slice.min;
-    delete slice.max;
-    delete slice.mustSupport;
+    delete slice._original.min;
+    delete slice._original.max;
+    delete slice._original.mustSupport;
 
     // Capture the original so that the differential only contains changes from this point on.
-    slice.captureOriginal();
     slice.sliceName = this.sliceName ? `${this.sliceName}/${name}` : name;
 
     // Usually, when we slice, we do not inherit min cardinality, but rather make it 0.
