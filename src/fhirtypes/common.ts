@@ -218,6 +218,24 @@ export function setPropertyOnInstance(
         } else {
           if (typeof assignedValue === 'object') {
             Object.assign(current[key][index], assignedValue);
+            // check if we have used modifier extensions correctly
+            if ((key === 'extension' || key === 'modifierExtension') && assignedValue.url != null) {
+              const extension = fisher.fishForFHIR(assignedValue.url, Type.Extension);
+              if (extension) {
+                const isModifierExtension =
+                  extension.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
+                    .isModifier === true;
+                if (key === 'extension' && isModifierExtension) {
+                  throw new Error(
+                    'Modifier extension assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.'
+                  );
+                } else if (key === 'modifierExtension' && !isModifierExtension) {
+                  throw new Error(
+                    'Non-modifier extension assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.'
+                  );
+                }
+              }
+            }
           } else {
             current[key][index] = assignedValue;
           }

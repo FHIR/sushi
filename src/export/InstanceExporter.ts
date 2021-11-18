@@ -1,6 +1,6 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
-import { Instance } from '../fshtypes';
+import { Instance, SourceInfo } from '../fshtypes';
 import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
 import {
   setPropertyOnInstance,
@@ -85,7 +85,10 @@ export class InstanceExporter implements Fishable {
     // This order is required due to the fact that validateValueAtPath changes instanceOfStructureDefinition
     // in certain cases that must happen before setting rules from the Structure Definition. In the future
     // we may want to refactor validateValueAtPath, but for now things should happen in this order
-    const ruleMap: Map<string, { pathParts: PathPart[]; assignedValue: any }> = new Map();
+    const ruleMap: Map<
+      string,
+      { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }
+    > = new Map();
     rules.forEach(rule => {
       try {
         const matchingInlineResourcePaths = inlineResourcePaths.filter(
@@ -107,7 +110,8 @@ export class InstanceExporter implements Fishable {
         // Record each valid rule in a map
         ruleMap.set(rule.path, {
           pathParts: validatedRule.pathParts,
-          assignedValue: validatedRule.assignedValue
+          assignedValue: validatedRule.assignedValue,
+          sourceInfo: rule.sourceInfo
         });
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
@@ -122,9 +126,13 @@ export class InstanceExporter implements Fishable {
     //     in step 2 are maintained...don't worry I'm confused too
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
     const ruleInstance = cloneDeep(instanceDef);
-    ruleMap.forEach(rule =>
-      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher)
-    );
+    ruleMap.forEach(rule => {
+      try {
+        setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
+      } catch (e) {
+        logger.error(e.message, rule.sourceInfo);
+      }
+    });
     instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;
   }
