@@ -153,7 +153,7 @@ export async function loadDependency(
       }
       fs.moveSync(tempDirectory, targetDirectory);
       // Now try to load again from the path
-      loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
+      loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
     } else {
       logger.info(`Unable to download most current version of ${fullPackageName}`);
     }
