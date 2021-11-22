@@ -2741,7 +2741,7 @@ describe('InstanceExporter', () => {
         }
       ]);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Modifier extension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+        /Instance of modifier extension StrangeExtension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: Strange\.fsh.*Line: 5\D*/s
       );
     });
 
@@ -2777,7 +2777,7 @@ describe('InstanceExporter', () => {
         }
       ]);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Non-modifier extension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+        /Instance of non-modifier extension StrangeExtension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: Strange\.fsh.*Line: 5\D*/s
       );
     });
 

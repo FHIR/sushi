@@ -227,11 +227,15 @@ export function setPropertyOnInstance(
                     .isModifier === true;
                 if (key === 'extension' && isModifierExtension) {
                   throw new Error(
-                    'Modifier extension assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.'
+                    `Instance of modifier extension ${
+                      extension.name ?? extension.id
+                    } assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.`
                   );
                 } else if (key === 'modifierExtension' && !isModifierExtension) {
                   throw new Error(
-                    'Non-modifier extension assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.'
+                    `Instance of non-modifier extension ${
+                      extension.name ?? extension.id
+                    } assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.`
                   );
                 }
               }

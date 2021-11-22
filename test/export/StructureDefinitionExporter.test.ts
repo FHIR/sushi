@@ -3500,6 +3500,59 @@ describe('StructureDefinitionExporter R4', () => {
       expect(sd).toBeTruthy();
       expect(loggerSpy.getAllLogs()).toHaveLength(0);
     });
+
+    it('should log an error when extension is constrained with a modifier extension', () => {
+      const extension = new Extension('StrangeExtension');
+      const modifier = new CaretValueRule('.');
+      modifier.caretPath = 'isModifier';
+      modifier.value = true;
+      extension.rules.push(modifier);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('category.extension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([8, 3, 8, 55]);
+      onlyRule.types = [{ type: 'StrangeExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.category.extension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        )
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used to constrain extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+    });
+
+    it('should not log an error when extension is constrained with a non-modifier extension', () => {
+      const extension = new Extension('RegularExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('category.extension');
+      onlyRule.types = [{ type: 'RegularExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.category.extension');
+      expect(categoryExtension.type).toHaveLength(1);
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/RegularExtension'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
   });
 
   describe('#AssignedValueRule', () => {
@@ -5237,7 +5290,7 @@ describe('StructureDefinitionExporter R4', () => {
       const extensionSlice = sd.elements.find(e => e.id === 'Observation.modifierExtension:myExt');
       expect(extensionSlice).toBeDefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Non-modifier extension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: WrongModifier\.fsh.*Line: 5\D*/s
+        /Non-modifier extension MyExtension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: WrongModifier\.fsh.*Line: 5\D*/s
       );
     });
 
@@ -5285,7 +5338,7 @@ describe('StructureDefinitionExporter R4', () => {
       const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:myExt');
       expect(extensionSlice).toBeDefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Modifier extension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: WrongModifier\.fsh.*Line: 9\D*/s
+        /Modifier extension MyExtension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: WrongModifier\.fsh.*Line: 9\D*/s
       );
     });
 

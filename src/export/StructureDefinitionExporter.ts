@@ -688,12 +688,12 @@ export class StructureDefinitionExporter implements Fishable {
         const isModifierPath = element.path.endsWith('.modifierExtension');
         if (isModifierExtension && !isModifierPath) {
           logger.error(
-            'Modifier extension assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.',
+            `Modifier extension ${item.type} assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.`,
             rule.sourceInfo
           );
         } else if (!isModifierExtension && isModifierPath) {
           logger.error(
-            'Non-modifier extension assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.',
+            `Non-modifier extension ${item.type} assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.`,
             rule.sourceInfo
           );
         }

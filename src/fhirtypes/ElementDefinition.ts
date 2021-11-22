@@ -961,6 +961,30 @@ export class ElementDefinition {
 
     // Finally, reset this element's types to the new types
     this.type = newTypes;
+    // extra check for modifier extension usage
+    if (typeMatches.get('Extension')?.length > 0) {
+      // fish up each specific profile by url to see if it is a modifier extension
+      const isModifierPath = this.path.endsWith('.modifierExtension');
+      typeMatches.get('Extension').forEach(typeMatch => {
+        const fullExtension = fisher.fishForFHIR(typeMatch.metadata.url, Type.Extension);
+        if (fullExtension) {
+          const isModifierExtension =
+            fullExtension.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
+              .isModifier === true;
+          if (isModifierExtension && !isModifierPath) {
+            logger.error(
+              `Modifier extension ${typeMatch.metadata.name} used to constrain extension element. Modifier extensions should only be used with modifierExtension elements.`,
+              rule.sourceInfo
+            );
+          } else if (!isModifierExtension && isModifierPath) {
+            logger.error(
+              `Non-modifier extension ${typeMatch.metadata.name} used to constrain modifierExtension element. Non-modifier extensions should only be used with extension elements.`,
+              rule.sourceInfo
+            );
+          }
+        }
+      });
+    }
   }
 
   /**
