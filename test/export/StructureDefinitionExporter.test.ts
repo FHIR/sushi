@@ -3532,6 +3532,54 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should log an error each time a modifier extension is used to constrain an extension element', () => {
+      const strangeExtension = new Extension('StrangeExtension');
+      const modifier = new CaretValueRule('.');
+      modifier.caretPath = 'isModifier';
+      modifier.value = true;
+      strangeExtension.rules.push(modifier);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+
+      const oddExtension = new Extension('OddExtension');
+      oddExtension.rules.push(modifier);
+      doc.extensions.set(oddExtension.name, oddExtension);
+
+      const regularExtension = new Extension('RegularExtension');
+      doc.extensions.set(regularExtension.name, regularExtension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('category.extension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([8, 3, 8, 55]);
+      onlyRule.types = [
+        { type: 'StrangeExtension' },
+        { type: 'RegularExtension' },
+        { type: 'OddExtension' }
+      ];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.category.extension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/RegularExtension',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/OddExtension'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(2);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Modifier extension StrangeExtension used to constrain extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+        /Modifier extension OddExtension used to constrain extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+    });
+
     it('should not log an error when extension is constrained with a non-modifier extension', () => {
       const extension = new Extension('RegularExtension');
       doc.extensions.set(extension.name, extension);
@@ -3549,6 +3597,60 @@ describe('StructureDefinitionExporter R4', () => {
       expect(categoryExtension.type[0]).toEqual(
         new ElementDefinitionType('Extension').withProfiles(
           'http://hl7.org/fhir/us/minimal/StructureDefinition/RegularExtension'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when modifierExtension is constrained with a non-modifier extension', () => {
+      const extension = new Extension('OrdinaryExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('modifierExtension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([8, 3, 8, 55]);
+      onlyRule.types = [{ type: 'OrdinaryExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.modifierExtension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/OrdinaryExtension'
+        )
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Non-modifier extension OrdinaryExtension used to constrain modifierExtension element\. Non-modifier extensions should only be used with extension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+    });
+
+    it('should not log an error when modifierExtension is constrained with a modifier extension', () => {
+      const extension = new Extension('UsefulExtension');
+      const modifier = new CaretValueRule('.');
+      modifier.caretPath = 'isModifier';
+      modifier.value = true;
+      extension.rules.push(modifier);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('modifierExtension');
+      onlyRule.types = [{ type: 'UsefulExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.modifierExtension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/UsefulExtension'
         )
       );
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
