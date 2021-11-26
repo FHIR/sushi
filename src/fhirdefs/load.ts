@@ -114,15 +114,14 @@ export async function loadDependency(
   } else if (!loadedPackage) {
     packageUrl = `https://packages.fhir.org/${packageName}/${version}`;
 
-    // If this is an R4B or R5 package, then we may need to get it from packages2 if it is not in packages
-    if (/^hl7\.fhir\.r(4b|5)\./.test(packageName)) {
-      try {
-        await axios.head(packageUrl);
-      } catch {
-        // It didn't exist in the normal registry.  Fallback to packages2 registry. This should be TEMPORARY.
-        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
-        packageUrl = `https://packages2.fhir.org/packages/${packageName}/${version}`;
-      }
+    // If the package is not available in packages, then we may need to get it from packages2
+    try {
+      await axios.head(packageUrl);
+    } catch {
+      // It didn't exist in the normal registry.  Fallback to packages2 registry.
+      // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
+      // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/fhir.2Edicom/near/262334652
+      packageUrl = `https://packages2.fhir.org/packages/${packageName}/${version}`;
     }
   }
 
