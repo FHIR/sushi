@@ -2426,6 +2426,26 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    // Assigning Quantities with value 0 (e.g., Age)
+    it('should assign a Quantity with value 0 (and not drop the 0)', () => {
+      const observationInstance = new Instance('ZeroValueObservation');
+      observationInstance.instanceOf = 'Observation';
+      const assignedValueQuantityRule = new AssignmentRule('valueQuantity');
+      assignedValueQuantityRule.value = new FshQuantity(
+        0,
+        new FshCode('mm', 'http://unitsofmeasure.org', 'mm')
+      );
+      observationInstance.rules.push(assignedValueQuantityRule);
+      doc.instances.set(observationInstance.name, observationInstance);
+      const exported = exportInstance(observationInstance);
+      expect(exported.valueQuantity).toEqual({
+        value: 0,
+        code: 'mm',
+        system: 'http://unitsofmeasure.org',
+        unit: 'mm'
+      });
+    });
+
     // Assigning Quantities to Quantity specializations (e.g., Age)
     it('should assign a Quantity to a Quantity specialization', () => {
       const conditionInstance = new Instance('SomeCondition');

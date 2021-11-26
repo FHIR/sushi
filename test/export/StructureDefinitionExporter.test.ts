@@ -3524,6 +3524,27 @@ describe('StructureDefinitionExporter R4', () => {
       });
     });
 
+    it('should apply a correct AssignmentRule for Quantity w/ value 0', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+
+      const rule = new AssignmentRule('valueQuantity');
+      rule.value = new FshQuantity(0, new FshCode('mm', 'http://unitsofmeasure.org', 'mm'));
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      const assignedValue = sd.findElement('Observation.value[x]:valueQuantity');
+
+      expect(assignedValue.patternQuantity).toEqual({
+        value: 0,
+        code: 'mm',
+        system: 'http://unitsofmeasure.org',
+        unit: 'mm'
+      });
+    });
+
     it('should apply a Reference AssignmentRule and replace the Reference', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';

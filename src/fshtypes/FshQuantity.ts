@@ -25,7 +25,7 @@ export class FshQuantity extends FshEntity {
 
   toFHIRQuantity(): Quantity {
     const quantity: Quantity = {};
-    if (this.value) {
+    if (this.value != null) {
       quantity.value = this.value;
     }
     if (this.unit?.code) {
