@@ -62,6 +62,10 @@ describe('#loadFromPath()', () => {
   it('should load base FHIR code sytems', () => {
     expect(defs.allCodeSystems().some(r => r.id === 'allergyintolerance-clinical')).toBeTruthy();
   });
+
+  it('should load the package.json file', () => {
+    expect(defs.getPackageJson('test#1.1.1')).toBeDefined();
+  });
 });
 
 describe('#loadDependency()', () => {

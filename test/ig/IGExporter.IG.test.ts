@@ -40,6 +40,11 @@ describe('IGExporter', () => {
         'testPackage',
         defs
       );
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'fhir.no.ig.package#1.0.1'),
+        'fhir.no.ig.package#1.0.1',
+        defs
+      );
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -322,6 +327,39 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       // Ensure US Core is exported but special fhir extension packages are not
       expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
+    it('should get a canonical from package.json when a dependency has no implementation guide', () => {
+      config.dependencies = [
+        { packageId: 'fhir.no.ig.package', version: '1.0.1' },
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // ensure both packages are in the dependencies
+      expect(dependencies).toEqual([
+        {
+          id: 'fhir_no_ig_package',
+          uri: 'http://example.org/fhir/no/ig/package',
+          packageId: 'fhir.no.ig.package',
+          version: '1.0.1'
+        },
         {
           id: 'hl7_fhir_us_core',
           uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',

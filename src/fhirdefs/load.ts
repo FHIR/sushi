@@ -291,6 +291,9 @@ export function loadFromPath(
         if (file.endsWith('.json')) {
           const def = JSON.parse(fs.readFileSync(path.join(targetPath, file), 'utf-8').trim());
           FHIRDefs.add(def);
+          if (file === 'package.json') {
+            FHIRDefs.addPackageJson(targetPackage, def);
+          }
         }
       }
     }
