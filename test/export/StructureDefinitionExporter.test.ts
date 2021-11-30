@@ -7070,8 +7070,7 @@ describe('StructureDefinitionExporter R4', () => {
           path: 'Observation.component',
           sliceName: 'SystolicBP',
           min: 0,
-          max: '1',
-          comment: 'BP comment'
+          max: '1'
         },
         {
           id: 'Observation.component:SystolicBP.code',
@@ -7090,8 +7089,7 @@ describe('StructureDefinitionExporter R4', () => {
           path: 'Observation.component',
           sliceName: 'DiastolicBP',
           min: 0,
-          max: '1',
-          comment: 'BP comment'
+          max: '1'
         },
         {
           id: 'Observation.component:DiastolicBP.code',

@@ -2185,9 +2185,10 @@ export class ElementDefinition {
     recaptureSlices = true
   ): ElementDefinition[] {
     return targetElement?.children().map(e => {
-      // Sometimes we want to avoid recapturing slices, but if an element is not a slice
-      // we always capture it
-      const shouldCaptureOriginal = recaptureSlices || e.sliceName == null;
+      // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
+      // extension, we always capture it
+      const shouldCaptureOriginal =
+        recaptureSlices || e.sliceName == null || !e.path.endsWith('.extension');
       const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
@@ -2379,7 +2380,7 @@ export class ElementDefinition {
       throw new SlicingNotDefinedError(this.id, name);
     }
 
-    const slice = this.clone(false);
+    const slice = this.clone(true);
     delete slice.slicing;
     slice.id = this.sliceName ? `${this.id}/${name}` : `${this.id}:${name}`;
 
@@ -2389,13 +2390,14 @@ export class ElementDefinition {
       throw new DuplicateSliceError(this.structDef.name, this.id, name);
     }
 
-    // From the original, delete slice.min, slice.max, and slice.mustSupport. Then, reset slice.min and slice.max
+    // On a new slice, delete slice.min, slice.max, and slice.mustSupport. Then, reset slice.min and slice.max
     // so that they are always captured in diff
-    delete slice._original.min;
-    delete slice._original.max;
-    delete slice._original.mustSupport;
+    delete slice.min;
+    delete slice.max;
+    delete slice.mustSupport;
 
     // Capture the original so that the differential only contains changes from this point on.
+    slice.captureOriginal();
     slice.sliceName = this.sliceName ? `${this.sliceName}/${name}` : name;
 
     // Usually, when we slice, we do not inherit min cardinality, but rather make it 0.
