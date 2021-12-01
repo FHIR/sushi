@@ -881,6 +881,20 @@ describe('StructureDefinition', () => {
       expect(VSCat.id).toBe('Observation.category:VSCat');
     });
 
+    it('should find a sliced element by path when a previous element in a different slice has a child w/ the same slice name', () => {
+      // This test is intended to reproduce the problematic edge case in this issue: https://github.com/FHIR/sushi/issues/956
+      const Cat = respRate.findElement('Observation.category');
+      Cat.addSlice('CommonName');
+
+      const VSCatCoding = respRate.findElement('Observation.category:VSCat.coding');
+      VSCatCoding.slicing = { discriminator: [{ type: 'pattern', path: '$this' }], rules: 'open' };
+      VSCatCoding.addSlice('CommonName');
+
+      const VSCat = respRate.findElementByPath('category[CommonName]', fisher);
+      expect(VSCat).toBeDefined();
+      expect(VSCat.id).toBe('Observation.category:CommonName');
+    });
+
     it('should find a child of a sliced element by path', () => {
       const VSCatID = respRate.findElementByPath('category[VSCat].id', fisher);
       expect(VSCatID).toBeDefined();

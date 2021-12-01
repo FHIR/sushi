@@ -167,7 +167,8 @@ describe('#loadDependency()', () => {
         uri === 'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0' ||
         uri === 'https://packages.fhir.org/hl7.fhir.r4b.core/4.3.0' ||
         uri === 'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0' ||
-        uri === 'https://packages.fhir.org/hl7.fhir.r4.core/4.0.1'
+        uri === 'https://packages.fhir.org/hl7.fhir.r4.core/4.0.1' ||
+        uri === 'https://packages2.fhir.org/packages/fhir.dicom/2021.4.20210910'
       ) {
         return {
           data: {
@@ -181,7 +182,8 @@ describe('#loadDependency()', () => {
     axiosHeadSpy = jest.spyOn(axios, 'head').mockImplementation((uri: string): any => {
       if (
         uri === 'https://packages.fhir.org/hl7.fhir.r4b.core/4.1.0' ||
-        uri === 'https://packages.fhir.org/hl7.fhir.r5.core/4.5.0'
+        uri === 'https://packages.fhir.org/hl7.fhir.r5.core/4.5.0' ||
+        uri === 'https://packages.fhir.org/fhir.dicom/2021.4.20210910'
       ) {
         throw 'Not Found';
       } else {
@@ -272,6 +274,16 @@ describe('#loadDependency()', () => {
     expectDownloadSequence(
       'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0',
       path.join('foo', 'hl7.fhir.r5.core#4.5.0')
+    );
+  });
+
+  it('should try to load a package from packages2.fhir.org when it is not on packages.fhir.org', async () => {
+    await expect(loadDependency('fhir.dicom', '2021.4.20210910', defs, 'foo')).rejects.toThrow(
+      'The package fhir.dicom#2021.4.20210910 could not be loaded locally or from the FHIR package registry'
+    ); // the package is never actually added to the cache, since tar is mocked
+    expectDownloadSequence(
+      'https://packages2.fhir.org/packages/fhir.dicom/2021.4.20210910',
+      path.join('foo', 'fhir.dicom#2021.4.20210910')
     );
   });
 
