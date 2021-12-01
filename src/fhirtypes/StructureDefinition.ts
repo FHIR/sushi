@@ -270,7 +270,12 @@ export class StructureDefinition {
 
       // After getting matches based on the 'base' part, we now filter according to 'brackets'
       if (pathPart.brackets) {
-        const sliceElement = this.findMatchingSlice(pathPart, matchingElements, fisher);
+        const sliceElement = this.findMatchingSlice(
+          fhirPathString,
+          pathPart,
+          matchingElements,
+          fisher
+        );
         if (sliceElement) {
           matchingElements = [sliceElement, ...sliceElement.children()];
         } else {
@@ -697,18 +702,22 @@ export class StructureDefinition {
 
   /**
    * Looks for a slice within the set of elements that matches the fhirPath
-   * @param {PathPart} pathPart - The path to match sliceName against
+   * @param {string} fhirPathString - the current FHIR path to match against
+   * @param {PathPart} pathPart - The path part to match sliceName against
    * @param {ElementDefinition[]} elements - The set of elements to search through
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition} - The sliceElement if found, else undefined
    */
   private findMatchingSlice(
+    fhirPathString: string,
     pathPart: PathPart,
     elements: ElementDefinition[],
     fisher: Fishable
   ): ElementDefinition {
     let matchingSlice: ElementDefinition;
-    matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    matchingSlice = elements.find(
+      e => e.path === fhirPathString && e.sliceName === pathPart.brackets.join('/')
+    );
     if (!matchingSlice && pathPart.brackets?.length === 1) {
       // If the current element is a child of a slice, the match may exist on the original
       // sliced element, search for that here
@@ -716,7 +725,7 @@ export class StructureDefinition {
         const connectedSliceElement = e.findConnectedSliceElement();
         const matchingConnectedSlice = connectedSliceElement
           ?.getSlices()
-          .find(e => e.sliceName === pathPart.brackets.join('/'));
+          .find(e => e.path === fhirPathString && e.sliceName === pathPart.brackets.join('/'));
 
         if (matchingConnectedSlice) {
           const newSlice = matchingConnectedSlice.clone(false);
