@@ -2176,19 +2176,19 @@ export class ElementDefinition {
   /**
    * Returns an array of an ElementDefinition's unfolded children.
    * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
-   * @param {boolean} recaptureSlices - Indicates whether or not slices should be recaptured
+   * @param {boolean} recaptureSliceExtensions - Indicates whether or not slice extensions should be recaptured
    * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
    * the original property re-captured.
    */
   private cloneChildren(
     targetElement: ElementDefinition,
-    recaptureSlices = true
+    recaptureSliceExtensions = true
   ): ElementDefinition[] {
     return targetElement?.children().map(e => {
       // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
       // extension, we always capture it
       const shouldCaptureOriginal =
-        recaptureSlices || e.sliceName == null || !e.path.endsWith('.extension');
+        recaptureSliceExtensions || e.sliceName == null || !e.path.endsWith('.extension');
       const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
