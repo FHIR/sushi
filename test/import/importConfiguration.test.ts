@@ -1397,6 +1397,27 @@ describe('importConfiguration', () => {
         { packageId: 'bar', version: '2.3' }
       ]);
     });
+
+    it('should convert uppercase package Ids to lowercase', () => {
+      minYAML.dependencies = {
+        'hl7.ex.PAcKage.iD1': '1.2.3',
+        'hl7.ex.package.id2': '4.5.6'
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.dependencies).toEqual([
+        { packageId: 'hl7.ex.package.id1', version: '1.2.3' },
+        { packageId: 'hl7.ex.package.id2', version: '4.5.6' }
+      ]);
+      expect(
+        loggerSpy
+          .getAllMessages('warn')
+          .some(message =>
+            message.match(
+              /hl7.ex.PAcKage.iD1 contains uppercase characters, which is discouraged. SUSHI will use hl7.ex.package.id1 as the package name./
+            )
+          )
+      ).toBeTruthy();
+    });
   });
 
   describe('#global', () => {
