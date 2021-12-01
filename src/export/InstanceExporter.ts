@@ -8,7 +8,10 @@ import {
   cleanResource,
   splitOnPathPeriods,
   setImpliedPropertiesOnInstance,
-  applyInsertRules
+  applyInsertRules,
+  isExtension,
+  getSliceName,
+  isModifierExtension
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
@@ -127,11 +130,60 @@ export class InstanceExporter implements Fishable {
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
-      try {
-        setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
-      } catch (e) {
-        logger.error(e.message, rule.sourceInfo);
+      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
+      // was an instance of an extension used correctly with respect to modifiers?
+      if (
+        isExtension(rule.pathParts[rule.pathParts.length - 1].base) &&
+        typeof rule.assignedValue === 'object'
+      ) {
+        const extension = this.fisher.fishForFHIR(rule.assignedValue.url, Type.Extension);
+        if (extension) {
+          const pathBase = rule.pathParts[rule.pathParts.length - 1].base;
+          const isModifier = isModifierExtension(extension);
+          if (isModifier && pathBase === 'extension') {
+            logger.error(
+              `Instance of modifier extension ${
+                extension.name ?? extension.id
+              } assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.`,
+              rule.sourceInfo
+            );
+          } else if (!isModifier && pathBase === 'modifierExtension') {
+            logger.error(
+              `Instance of non-modifier extension ${
+                extension.name ?? extension.id
+              } assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.`,
+              rule.sourceInfo
+            );
+          }
+        }
       }
+      // were extensions used correctly along the path?
+      rule.pathParts.forEach(pathPart => {
+        if (isExtension(pathPart.base)) {
+          const sliceName = getSliceName(pathPart);
+          if (sliceName) {
+            const extension = this.fisher.fishForFHIR(sliceName, Type.Extension);
+            if (extension) {
+              const isModifier = isModifierExtension(extension);
+              if (isModifier && pathPart.base === 'extension') {
+                logger.error(
+                  `Modifier extension ${
+                    extension.name ?? extension.id
+                  } used on extension element. Modifier extensions should only be used with modifierExtension elements.`,
+                  rule.sourceInfo
+                );
+              } else if (!isModifier && pathPart.base === 'modifierExtension') {
+                logger.error(
+                  `Non-modifier extension ${
+                    extension.name ?? extension.id
+                  } used on modifierExtension element. Non-modifier extensions should only be used with extension elements.`,
+                  rule.sourceInfo
+                );
+              }
+            }
+          }
+        }
+      });
     });
     instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;

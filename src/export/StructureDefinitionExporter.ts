@@ -50,7 +50,8 @@ import {
   getTypeFromFshDefinitionOrParent,
   getUrlFromFshDefinition,
   replaceReferences,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  isModifierExtension
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -682,16 +683,14 @@ export class StructureDefinitionExporter implements Fishable {
           logger.error(e.message, rule.sourceInfo);
         }
         // check if we have used modifier extensions correctly
-        const isModifierExtension =
-          extension.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
-            .isModifier === true;
+        const isModifier = isModifierExtension(extension);
         const isModifierPath = element.path.endsWith('.modifierExtension');
-        if (isModifierExtension && !isModifierPath) {
+        if (isModifier && !isModifierPath) {
           logger.error(
             `Modifier extension ${item.type} assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.`,
             rule.sourceInfo
           );
-        } else if (!isModifierExtension && isModifierPath) {
+        } else if (!isModifier && isModifierPath) {
           logger.error(
             `Non-modifier extension ${item.type} assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.`,
             rule.sourceInfo

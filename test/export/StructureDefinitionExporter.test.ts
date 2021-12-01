@@ -3503,9 +3503,8 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log an error when extension is constrained with a modifier extension', () => {
       const extension = new Extension('StrangeExtension');
-      const modifier = new CaretValueRule('.');
-      modifier.caretPath = 'isModifier';
-      modifier.value = true;
+      const modifier = new FlagRule('.');
+      modifier.modifier = true;
       extension.rules.push(modifier);
       doc.extensions.set(extension.name, extension);
 
@@ -3534,9 +3533,8 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log an error each time a modifier extension is used to constrain an extension element', () => {
       const strangeExtension = new Extension('StrangeExtension');
-      const modifier = new CaretValueRule('.');
-      modifier.caretPath = 'isModifier';
-      modifier.value = true;
+      const modifier = new FlagRule('.');
+      modifier.modifier = true;
       strangeExtension.rules.push(modifier);
       doc.extensions.set(strangeExtension.name, strangeExtension);
 
@@ -3631,9 +3629,8 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should not log an error when modifierExtension is constrained with a modifier extension', () => {
       const extension = new Extension('UsefulExtension');
-      const modifier = new CaretValueRule('.');
-      modifier.caretPath = 'isModifier';
-      modifier.value = true;
+      const modifier = new FlagRule('.');
+      modifier.modifier = true;
       extension.rules.push(modifier);
       doc.extensions.set(extension.name, extension);
 
@@ -5398,9 +5395,8 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should not report an error for an extension ContainsRule with a modifier extension type on a modifierExtension path', () => {
       const extension = new Extension('MyExtension');
-      const modifierRule = new CaretValueRule('.');
-      modifierRule.caretPath = 'isModifier';
-      modifierRule.value = true;
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
       extension.rules.push(modifierRule);
       doc.extensions.set(extension.name, extension);
 
@@ -5420,9 +5416,8 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should report an error for an extension ContainsRule with a modifier extension type on an extension path', () => {
       const extension = new Extension('MyExtension');
-      const modifierRule = new CaretValueRule('.');
-      modifierRule.caretPath = 'isModifier';
-      modifierRule.value = true;
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
       extension.rules.push(modifierRule);
       doc.extensions.set(extension.name, extension);
 
