@@ -2136,7 +2136,7 @@ export class ElementDefinition {
       } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
-        newElements = this.cloneChildren(slicedElement);
+        newElements = this.cloneChildren(slicedElement, false);
       }
       if (newElements.length === 0) {
         // If we have exactly one profile to use, use that, otherwise use the code
@@ -2176,15 +2176,25 @@ export class ElementDefinition {
   /**
    * Returns an array of an ElementDefinition's unfolded children.
    * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
+   * @param {boolean} recaptureSliceExtensions - Indicates whether or not slice extensions should be recaptured
    * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
    * the original property re-captured.
    */
-  private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
+  private cloneChildren(
+    targetElement: ElementDefinition,
+    recaptureSliceExtensions = true
+  ): ElementDefinition[] {
     return targetElement?.children().map(e => {
-      const eClone = e.clone();
+      // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
+      // extension, we always capture it
+      const shouldCaptureOriginal =
+        recaptureSliceExtensions || e.sliceName == null || !e.path.endsWith('.extension');
+      const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
-      eClone.captureOriginal();
+      if (shouldCaptureOriginal) {
+        eClone.captureOriginal();
+      }
       return eClone;
     });
   }
