@@ -36,11 +36,7 @@ describe('InstanceExporter', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
@@ -4191,11 +4187,7 @@ describe('InstanceExporter R5', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
   });
 
   beforeEach(() => {
