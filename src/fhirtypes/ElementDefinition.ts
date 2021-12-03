@@ -452,9 +452,6 @@ export class ElementDefinition {
         }
       }
     }
-    // Set the diff id
-    // NOTE: The path also gets set automatically when setting id
-    diff.id = this.id;
     // If the original has a sliceName, the diff needs to have a sliceName, so use the original.
     if (original.sliceName && diff.sliceName == null) {
       diff.sliceName = original.sliceName;
