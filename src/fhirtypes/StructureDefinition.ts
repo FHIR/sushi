@@ -90,7 +90,7 @@ export class StructureDefinition {
         validationErrors.push(
           new ValidationError(
             err.issue,
-            `${e.diffId().replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
+            `${e.id.replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
           )
         );
       });
