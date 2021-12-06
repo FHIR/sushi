@@ -701,6 +701,38 @@ describe('ElementDefinition', () => {
       expect(observation.elements).toHaveLength(numOriginalElements);
       expect(observation.elements[valueIdx + 1].id).toBe('Observation.dataAbsentReason');
     });
+
+    it('should add a slice from the structure definition if it exists, while preserving all constraints', () => {
+      const extension = observation.elements.find(
+        e => e.path === 'Observation.component.extension'
+      );
+      extension.slicing = {
+        discriminator: [
+          {
+            type: 'value',
+            path: 'url'
+          }
+        ],
+        ordered: false,
+        rules: 'open'
+      };
+      const extensionSlice = extension.addSlice('Test');
+      extensionSlice.type[0].profile = [
+        'http://example.org/fhir/StructureDefinition/ExampleExtension'
+      ];
+      const component = observation.elements.find(e => e.path === 'Observation.component');
+      component.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'code' }]
+      };
+      const componentSlice = component.addSlice('FooSlice');
+      const newElements = componentSlice.unfold(fisher);
+      const fooSliceExtensionTest = newElements.find(
+        e => e.id === 'Observation.component:FooSlice.extension:Test'
+      );
+      expect(fooSliceExtensionTest.calculateDiff().type).toEqual(extensionSlice.type);
+    });
   });
 
   describe('#clone', () => {
