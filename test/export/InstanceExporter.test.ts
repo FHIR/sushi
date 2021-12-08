@@ -36,11 +36,7 @@ describe('InstanceExporter', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
@@ -2729,6 +2725,164 @@ describe('InstanceExporter', () => {
       expect(exported.extension).toBeUndefined();
     });
 
+    it('should log an error when a modifier extension is assigned to an extension path', () => {
+      // Extension: StrangeExtension
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: StrangeInstance
+      // InstanceOf: StrangeExtension
+      // Usage: #inline
+      const strangeInstance = new Instance('StrangeInstance');
+      strangeInstance.instanceOf = 'StrangeExtension';
+      strangeInstance.usage = 'Inline';
+      doc.instances.set(strangeInstance.name, strangeInstance);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // extension[0] = StrangeInstance
+      const strangeRule = new AssignmentRule('extension[0]')
+        .withFile('Strange.fsh')
+        .withLocation([5, 3, 5, 28]);
+      strangeRule.value = 'StrangeInstance';
+      strangeRule.isInstance = true;
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Instance of modifier extension StrangeExtension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should log an error when a non-modifier extension is assigned to a modifierExtension path', () => {
+      // Extension: StrangeExtension
+      const strangeExtension = new Extension('StrangeExtension');
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: StrangeInstance
+      // InstanceOf: StrangeExtension
+      // Usage: #inline
+      const strangeInstance = new Instance('StrangeInstance');
+      strangeInstance.instanceOf = 'StrangeExtension';
+      strangeInstance.usage = 'Inline';
+      doc.instances.set(strangeInstance.name, strangeInstance);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // modifierExtension[0] = StrangeInstance
+      const strangeRule = new AssignmentRule('modifierExtension[0]')
+        .withFile('Strange.fsh')
+        .withLocation([5, 3, 5, 28]);
+      strangeRule.value = 'StrangeInstance';
+      strangeRule.isInstance = true;
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Instance of non-modifier extension StrangeExtension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should log an error when a modifier extension is used on an extension element as part of a longer path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(onlyRule, modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // extension[StrangeExtension].valueString = "This is strange"
+      const strangeRule = new AssignmentRule('extension[StrangeExtension].valueString')
+        .withFile('Strange.fsh')
+        .withLocation([7, 7, 7, 19]);
+      strangeRule.value = 'This is strange';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is strange'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used on extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: Strange\.fsh.*Line: 7\D*/s
+      );
+    });
+
+    it('should log an error when a modifier extension is used on an extension element in the middle of a path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(onlyRule, modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // maritalStatus.extension[StrangeExtension].valueString = "This is strange"
+      const strangeRule = new AssignmentRule(
+        'maritalStatus.extension[StrangeExtension].valueString'
+      )
+        .withFile('Strange.fsh')
+        .withLocation([9, 5, 9, 23]);
+      strangeRule.value = 'This is strange';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is strange'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used on extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: Strange\.fsh.*Line: 9\D*/s
+      );
+    });
+
+    it('should log an error when a non-modifier extension is used on a modifierExtension element as part of a longer path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      strangeExtension.rules.push(onlyRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // * modifierExtension[StrangeExtension].valueString = "This is normal"
+      const strangeRule = new AssignmentRule('modifierExtension[StrangeExtension].valueString')
+        .withFile('Strange.fsh')
+        .withLocation([6, 7, 6, 19]);
+      strangeRule.value = 'This is normal';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is normal'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Non-modifier extension StrangeExtension used on modifierExtension element\. Non-modifier extensions should only be used with extension elements\..*File: Strange\.fsh.*Line: 6\D*/s
+      );
+    });
+
     it.skip('should throw when ordered is set in the discriminator but slices arrive out of order', () => {
       const assignedValRule = new AssignmentRule('result[Triglyceride].display');
       assignedValRule.value = 'foo';
@@ -4033,11 +4187,7 @@ describe('InstanceExporter R5', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
   });
 
   beforeEach(() => {

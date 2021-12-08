@@ -36,15 +36,11 @@ describe('IGExporter', () => {
     beforeAll(() => {
       defs = new FHIRDefinitions();
       loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'fhir.no.ig.package#1.0.1'),
+        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
         'fhir.no.ig.package#1.0.1',
         defs
       );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -677,11 +673,7 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig-plus');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -914,11 +906,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1191,11 +1179,7 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
       loadCustomResources(path.join(fixtures, 'input'), defs);
     });
@@ -1563,11 +1547,7 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
       loadCustomResources(path.join(fixtures, 'input'), defs);
     });
@@ -1634,11 +1614,6 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-logical-model-example');
       loadCustomResources(path.join(fixtures, 'input'), defs);
     });
@@ -1741,11 +1716,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'pages-folder-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1841,11 +1812,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'invalid-pages-folder-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1894,11 +1861,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       pkg = new Package(minimalConfig);
     });
 
@@ -1999,11 +1962,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
       const defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       const pkg = new Package(minimalConfig);
       const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you

@@ -46,7 +46,12 @@ import {
   MismatchedBindingTypeError,
   ValidationError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
+import {
+  setPropertyOnDefinitionInstance,
+  splitOnPathPeriods,
+  isReferenceType,
+  isModifierExtension
+} from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -961,6 +966,28 @@ export class ElementDefinition {
 
     // Finally, reset this element's types to the new types
     this.type = newTypes;
+    // extra check for modifier extension usage
+    if (typeMatches.get('Extension')?.length > 0) {
+      // fish up each specific profile by url to see if it is a modifier extension
+      const isModifierPath = this.path.endsWith('.modifierExtension');
+      typeMatches.get('Extension').forEach(typeMatch => {
+        const fullExtension = fisher.fishForFHIR(typeMatch.metadata.url, Type.Extension);
+        if (fullExtension) {
+          const isModifier = isModifierExtension(fullExtension);
+          if (isModifier && !isModifierPath) {
+            logger.error(
+              `Modifier extension ${typeMatch.metadata.name} used to constrain extension element. Modifier extensions should only be used with modifierExtension elements.`,
+              rule.sourceInfo
+            );
+          } else if (!isModifier && isModifierPath) {
+            logger.error(
+              `Non-modifier extension ${typeMatch.metadata.name} used to constrain modifierExtension element. Non-modifier extensions should only be used with extension elements.`,
+              rule.sourceInfo
+            );
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -2136,7 +2163,7 @@ export class ElementDefinition {
       } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
-        newElements = this.cloneChildren(slicedElement);
+        newElements = this.cloneChildren(slicedElement, false);
       }
       if (newElements.length === 0) {
         // If we have exactly one profile to use, use that, otherwise use the code
@@ -2176,15 +2203,25 @@ export class ElementDefinition {
   /**
    * Returns an array of an ElementDefinition's unfolded children.
    * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
+   * @param {boolean} recaptureSliceExtensions - Indicates whether or not slice extensions should be recaptured
    * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
    * the original property re-captured.
    */
-  private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
+  private cloneChildren(
+    targetElement: ElementDefinition,
+    recaptureSliceExtensions = true
+  ): ElementDefinition[] {
     return targetElement?.children().map(e => {
-      const eClone = e.clone();
+      // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
+      // extension, we always capture it
+      const shouldCaptureOriginal =
+        recaptureSliceExtensions || e.sliceName == null || !e.path.endsWith('.extension');
+      const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
-      eClone.captureOriginal();
+      if (shouldCaptureOriginal) {
+        eClone.captureOriginal();
+      }
       return eClone;
     });
   }
