@@ -2069,6 +2069,23 @@ export class FSHImporter extends FSHVisitor {
 
     // If the element is not indented, just reset the context
     if (contextIndex === 0) {
+      // If the last context still has [+], that means the path was never used
+      // and the [+] will be discarded without incrementing
+      if (
+        this.pathContext.length > 0 &&
+        this.pathContext[this.pathContext.length - 1].some(p => /\[\+\]/.test(p))
+      ) {
+        logger.warn(
+          'The previous line(s) use path rules to establish a context using soft indexing ' +
+            '(e.g., [+]), but that context is reset by the following rule before it is ever ' +
+            'used. As a result, the previous path context will be ignored and its ' +
+            'soft-indices will not be incremented',
+          {
+            location,
+            file: this.currentFile
+          }
+        );
+      }
       this.pathContext = [path];
       return path;
     }
