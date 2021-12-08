@@ -14,6 +14,7 @@ export class FHIRDefinitions implements Fishable {
   private implementationGuides: Map<string, any>;
   private predefinedResources: Map<string, any>;
   private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
+  private packageJsons: Map<string, any>;
   packages: string[];
 
   constructor(public readonly isSupplementalFHIRDefinitions = false) {
@@ -28,6 +29,7 @@ export class FHIRDefinitions implements Fishable {
     this.implementationGuides = new Map();
     this.predefinedResources = new Map();
     this.supplementalFHIRDefinitions = new Map();
+    this.packageJsons = new Map();
     // FHIR R4 does not have a StructureDefinition that defines "Base" but FHIR R5 does.
     // We have defined a "placeholder" StructureDefinition for "Base" for R4.
     // Inject the R4 "Base" placeholder StructureDefinition
@@ -183,6 +185,14 @@ export class FHIRDefinitions implements Fishable {
         resourceType: resource.resourceType as string
       };
     }
+  }
+
+  addPackageJson(id: string, definition: any): void {
+    this.packageJsons.set(id, definition);
+  }
+
+  getPackageJson(id: string): any {
+    return this.packageJsons.get(id);
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
