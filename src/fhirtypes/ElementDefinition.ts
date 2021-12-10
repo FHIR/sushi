@@ -465,28 +465,6 @@ export class ElementDefinition {
   }
 
   /**
-   * Gets the id of an element on the differential using the shortcut syntax described here
-   * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-   * @returns {string} the id for the differential
-   */
-  diffId(): string {
-    return this.id
-      .split('.')
-      .map(p => {
-        const i = p.indexOf('[x]:');
-        const baseElementId = p.slice(0, i);
-        const choiceType = p.slice(i + baseElementId.length + 4);
-        const isChoiceSlice =
-          i > -1
-            ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
-              p === `${baseElementId}[x]:${baseElementId}${choiceType}`
-            : false;
-        return isChoiceSlice ? p.slice(i + 4) : p;
-      })
-      .join('.');
-  }
-
-  /**
    * Apply the AddElementRule to this new element using the appropriate methods
    * for specific rules for the AddElementRule's implied rules (i.e., cardinality,
    * type constraints, and flags).
@@ -2655,7 +2633,7 @@ const PROPS = [
   'mapping'
 ];
 
-const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+export const CHOICE_TYPE_SLICENAME_POSTFIXES = [
   'Base64Binary',
   'Boolean',
   'Canonical',
