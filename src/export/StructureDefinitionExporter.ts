@@ -50,7 +50,8 @@ import {
   getTypeFromFshDefinitionOrParent,
   getUrlFromFshDefinition,
   replaceReferences,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  isModifierExtension
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -654,7 +655,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
     rule.items.forEach(item => {
       if (item.type) {
-        const extension = this.fishForMetadata(item.type, Type.Extension);
+        const extension = this.fishForFHIR(item.type, Type.Extension);
         if (extension == null) {
           logger.error(
             `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
@@ -680,6 +681,20 @@ export class StructureDefinitionExporter implements Fishable {
           }
           // Otherwise it is a conflicting duplicate extension or some other error
           logger.error(e.message, rule.sourceInfo);
+        }
+        // check if we have used modifier extensions correctly
+        const isModifier = isModifierExtension(extension);
+        const isModifierPath = element.path.endsWith('.modifierExtension');
+        if (isModifier && !isModifierPath) {
+          logger.error(
+            `Modifier extension ${item.type} assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.`,
+            rule.sourceInfo
+          );
+        } else if (!isModifier && isModifierPath) {
+          logger.error(
+            `Non-modifier extension ${item.type} assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.`,
+            rule.sourceInfo
+          );
         }
       } else {
         try {

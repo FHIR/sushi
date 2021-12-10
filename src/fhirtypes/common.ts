@@ -773,6 +773,13 @@ export function isExtension(path: string): boolean {
   return ['modifierExtension', 'extension'].includes(path);
 }
 
+export function isModifierExtension(extension: any): boolean {
+  return (
+    extension?.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
+      ?.isModifier === true
+  );
+}
+
 /**
  * Checks if a provided type can be treated as a Reference
  * @param type - The type being checked

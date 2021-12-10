@@ -294,6 +294,9 @@ export function loadFromPath(
             fs.readFileSync(path.join(cachePath, cachedPackage, 'package', file), 'utf-8').trim()
           );
           FHIRDefs.add(def);
+          if (file === 'package.json') {
+            FHIRDefs.addPackageJson(targetPackage, def);
+          }
         }
       }
     }

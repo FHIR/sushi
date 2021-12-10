@@ -238,6 +238,13 @@ export class IGExporter {
             'dev' === dependsOn.version)
       );
       dependsOn.uri = dependencyIG?.url;
+      if (dependsOn.uri == null) {
+        // there may be a package.json that can help us here
+        const dependencyPackageJson = this.fhirDefs.getPackageJson(
+          `${dependsOn.packageId}#${dependsOn.version}`
+        );
+        dependsOn.uri = dependencyPackageJson?.canonical;
+      }
 
       if (dependsOn.uri == null) {
         logger.error(

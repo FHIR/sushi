@@ -46,7 +46,12 @@ import {
   MismatchedBindingTypeError,
   ValidationError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
+import {
+  setPropertyOnDefinitionInstance,
+  splitOnPathPeriods,
+  isReferenceType,
+  isModifierExtension
+} from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -954,6 +959,28 @@ export class ElementDefinition {
 
     // Finally, reset this element's types to the new types
     this.type = newTypes;
+    // extra check for modifier extension usage
+    if (typeMatches.get('Extension')?.length > 0) {
+      // fish up each specific profile by url to see if it is a modifier extension
+      const isModifierPath = this.path.endsWith('.modifierExtension');
+      typeMatches.get('Extension').forEach(typeMatch => {
+        const fullExtension = fisher.fishForFHIR(typeMatch.metadata.url, Type.Extension);
+        if (fullExtension) {
+          const isModifier = isModifierExtension(fullExtension);
+          if (isModifier && !isModifierPath) {
+            logger.error(
+              `Modifier extension ${typeMatch.metadata.name} used to constrain extension element. Modifier extensions should only be used with modifierExtension elements.`,
+              rule.sourceInfo
+            );
+          } else if (!isModifier && isModifierPath) {
+            logger.error(
+              `Non-modifier extension ${typeMatch.metadata.name} used to constrain modifierExtension element. Non-modifier extensions should only be used with extension elements.`,
+              rule.sourceInfo
+            );
+          }
+        }
+      });
+    }
   }
 
   /**
