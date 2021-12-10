@@ -98,7 +98,6 @@ ehealthsuisse/ch-orf#master
 DavidPyke/HotBeverage#master
 # Added Wed Jun 16 2021 16:00:22 GMT-0400 (Eastern Daylight Time)
 HL7/fhir-radiation-dose-summary-ig#main
-HL7/pacio-adi#main
 hl7-it/terminology#master
 JohnMoehrke/testBundle#main
 hl7dk/kl-ffb-messaging#main
@@ -149,3 +148,20 @@ IHE/pharm-mm#master
 IHE/ITI.BasicAudit#main
 HL7NZ/structured-path#main
 nightingaleproject/vital_records_fhir_messaging_ig#main
+# Added Tue Dec 07 2021 10:11:29 GMT-0500 (Eastern Standard Time)
+HL7/fhir-directory-exchange#master
+HL7/fhir-pacio-adi#main
+peturv/fhir-autobuild-test#master
+SvenskaIndustriProfiler/fhir#master
+ahdis/chmed20af#master
+ahdis/scs-versandservice#master
+ahdis/claraspital-versandservice#master
+ahdis/chmed16af#master
+hl7ch/ch-lab-order#master
+hl7nordic/common-nordic-terminology#main
+hl7-be/hl7-be-fhir-laboratory-report#master
+hl7-be/hl7-be-patient-dossier#master
+mcode/mcode-omop#master
+mcode/biomarker#master
+ehealthsuisse/ch-vacd#master
+oliveregger/BundleConformsTo#master

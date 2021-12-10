@@ -190,6 +190,49 @@ describe('FSHImporter', () => {
       assertAssignmentRule(instance.rules[1], 'item[=].item[+].linkId', 'bar');
     });
 
+    it('should keep + on consecutive path rules when setting context on first child of soft indexed rules', () => {
+      const input = leftAlign(`
+      Instance: Foo
+      InstanceOf: Questionnaire
+      * item[+]
+        * item[+]
+          * linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Questionnaire');
+      expect(instance.rules.length).toBe(1);
+      assertAssignmentRule(instance.rules[0], 'item[+].item[+].linkId', 'bar');
+    });
+
+    it('should log a warning for path rules that increment the index but then do not use it', () => {
+      const input = leftAlign(`
+      Instance: Foo
+      InstanceOf: Questionnaire
+      * item[+]
+      * item[+]
+        * linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /the previous path context will be ignored(.|\s)*Line: 5$/
+      );
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Questionnaire');
+      expect(instance.rules.length).toBe(1);
+      assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'bar');
+    });
+
     it('should change + to = when setting context on children of soft indexed rules which are not path rules', () => {
       const input = leftAlign(`
       Instance: Foo
@@ -209,6 +252,31 @@ describe('FSHImporter', () => {
       expect(instance.rules.length).toBe(2);
       assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'foo');
       assertAssignmentRule(instance.rules[1], 'item[=].item[+].linkId', 'bar');
+    });
+
+    it('should change + to = when setting context on grandchildren of soft indexed rules which are not path rules', () => {
+      const input = leftAlign(`
+      Instance: Foo
+      InstanceOf: Questionnaire
+      * item[+]
+        * code = #foo
+          * display = "Foo"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Questionnaire');
+      expect(instance.rules.length).toBe(2);
+      assertAssignmentRule(
+        instance.rules[0],
+        'item[+].code',
+        new FshCode('foo').withFile('Context.fsh').withLocation([5, 12, 5, 15])
+      );
+      assertAssignmentRule(instance.rules[1], 'item[=].code.display', 'Foo');
     });
 
     it('should change nested + to = when setting context on children of soft indexed rules', () => {

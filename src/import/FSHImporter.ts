@@ -1130,13 +1130,17 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  getPathWithContext(path: string, parentCtx: ParserRuleContext): string {
+  getPathWithContext(path: string, parentCtx: ParserRuleContext, isPathRule = false): string {
     const splitPath = path === '.' ? [path] : splitOnPathPeriods(path).filter(p => p);
-    return this.getArrayPathWithContext(splitPath, parentCtx).join('.');
+    return this.getArrayPathWithContext(splitPath, parentCtx, isPathRule).join('.');
   }
 
-  getArrayPathWithContext(pathArray: string[], parentCtx: ParserRuleContext): string[] {
-    return this.prependPathContext(pathArray, parentCtx);
+  getArrayPathWithContext(
+    pathArray: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule = false
+  ): string[] {
+    return this.prependPathContext(pathArray, parentCtx, isPathRule);
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1623,7 +1627,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitPathRule(ctx: pc.PathRuleContext) {
-    this.getPathWithContext(this.visitPath(ctx.path()), ctx);
+    this.getPathWithContext(this.visitPath(ctx.path()), ctx, true);
   }
 
   visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {
@@ -2050,7 +2054,11 @@ export class FSHImporter extends FSHVisitor {
    * @param parentCtx - The parent element containing the path
    * @returns {string[]} - The path with context prepended
    */
-  private prependPathContext(path: string[], parentCtx: ParserRuleContext): string[] {
+  private prependPathContext(
+    path: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule: boolean
+  ): string[] {
     const location = this.extractStartStop(parentCtx);
     const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
     const contextIndex = currentIndent / INDENT_WIDTH;
@@ -2061,6 +2069,23 @@ export class FSHImporter extends FSHVisitor {
 
     // If the element is not indented, just reset the context
     if (contextIndex === 0) {
+      // If the last context still has [+], that means the path was never used
+      // and the [+] will be discarded without incrementing
+      if (
+        this.pathContext.length > 0 &&
+        this.pathContext[this.pathContext.length - 1].some(p => /\[\+\]/.test(p))
+      ) {
+        logger.warn(
+          'The previous line(s) use path rules to establish a context using soft indexing ' +
+            '(e.g., [+]), but that context is reset by the following rule before it is ever ' +
+            'used. As a result, the previous path context will be ignored and its ' +
+            'soft-indices will not be incremented',
+          {
+            location,
+            file: this.currentFile
+          }
+        );
+      }
       this.pathContext = [path];
       return path;
     }
@@ -2088,14 +2113,18 @@ export class FSHImporter extends FSHVisitor {
 
     // Trim out-of-scope contexts
     this.pathContext.splice(contextIndex);
-    // Once we have used the existing context, clear it of any [+] so that a rule that is only setting path only applies [+] once
-    if (this.pathContext.length > 0) {
-      this.pathContext[this.pathContext.length - 1] = this.pathContext[
-        this.pathContext.length - 1
-      ].map(c => c.replace(/\[\+\]/g, '[=]'));
-    }
+
+    // Get the new path and add as the last context
     const fullPath = currentContext.concat(path);
     this.pathContext.push(fullPath);
+
+    // Once we have used the existing context in a non-path-only rule, replace [+] with [=] in all
+    // existing contexts so that the [+] isn't re-applied in further contexts
+    if (!isPathRule) {
+      this.pathContext.forEach((path, i) => {
+        this.pathContext[i] = path.map(c => c.replace(/\[\+\]/g, '[=]'));
+      });
+    }
 
     return fullPath;
   }
