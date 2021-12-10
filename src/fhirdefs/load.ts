@@ -112,49 +112,58 @@ export async function loadDependency(
     }
   } else if (!loadedPackage) {
     packageUrl = `https://packages.fhir.org/${packageName}/${version}`;
-
-    // If the package is not available in packages, then we may need to get it from packages2
-    try {
-      await axios.head(packageUrl);
-    } catch {
-      // It didn't exist in the normal registry.  Fallback to packages2 registry.
-      // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
-      // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/fhir.2Edicom/near/262334652
-      packageUrl = `https://packages2.fhir.org/packages/${packageName}/${version}`;
-    }
   }
 
   // If the packageUrl is set, we must download the package from that url, and extract it to our local cache
   if (packageUrl) {
-    logger.info(`Downloading ${fullPackageName}...`);
-    const res = await axios.get(packageUrl, {
-      responseType: 'arraybuffer'
-    });
-    if (res?.data) {
-      logger.info(`Downloaded ${fullPackageName}`);
-      // Create a temporary file and write the package to there
-      temp.track();
-      const tempFile = temp.openSync();
-      fs.writeFileSync(tempFile.path, res.data);
-      // Extract the package to a temporary directory
-      const tempDirectory = temp.mkdirSync();
-      tar.x({
-        cwd: tempDirectory,
-        file: tempFile.path,
-        sync: true,
-        strict: true
+    const doDownload = async (url: string) => {
+      logger.info(`Downloading ${fullPackageName}...`);
+      const res = await axios.get(url, {
+        responseType: 'arraybuffer'
       });
-      cleanCachedPackage(tempDirectory);
-      // Add or replace the package in the FHIR cache
-      const targetDirectory = path.join(cachePath, fullPackageName);
-      if (fs.existsSync(targetDirectory)) {
-        fs.removeSync(targetDirectory);
+      if (res?.data) {
+        logger.info(`Downloaded ${fullPackageName}`);
+        // Create a temporary file and write the package to there
+        temp.track();
+        const tempFile = temp.openSync();
+        fs.writeFileSync(tempFile.path, res.data);
+        // Extract the package to a temporary directory
+        const tempDirectory = temp.mkdirSync();
+        tar.x({
+          cwd: tempDirectory,
+          file: tempFile.path,
+          sync: true,
+          strict: true
+        });
+        cleanCachedPackage(tempDirectory);
+        // Add or replace the package in the FHIR cache
+        const targetDirectory = path.join(cachePath, fullPackageName);
+        if (fs.existsSync(targetDirectory)) {
+          fs.removeSync(targetDirectory);
+        }
+        fs.moveSync(tempDirectory, targetDirectory);
+        // Now try to load again from the path
+        loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
+      } else {
+        logger.info(`Unable to download most current version of ${fullPackageName}`);
       }
-      fs.moveSync(tempDirectory, targetDirectory);
-      // Now try to load again from the path
-      loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
-    } else {
-      logger.info(`Unable to download most current version of ${fullPackageName}`);
+    };
+    try {
+      await doDownload(packageUrl);
+    } catch (e) {
+      if (packageUrl === `https://packages.fhir.org/${packageName}/${version}`) {
+        // It didn't exist in the normal registry.  Fallback to packages2 registry.
+        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
+        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/fhir.2Edicom/near/262334652
+        packageUrl = `https://packages2.fhir.org/packages/${packageName}/${version}`;
+        try {
+          await doDownload(packageUrl);
+        } catch (e) {
+          throw new PackageLoadError(fullPackageName);
+        }
+      } else {
+        throw new PackageLoadError(fullPackageName);
+      }
     }
   }
 
