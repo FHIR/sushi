@@ -2059,74 +2059,77 @@ export class FSHImporter extends FSHVisitor {
     parentCtx: ParserRuleContext,
     isPathRule: boolean
   ): string[] {
-    const location = this.extractStartStop(parentCtx);
-    const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
-    const contextIndex = currentIndent / INDENT_WIDTH;
+    try {
+      const location = this.extractStartStop(parentCtx);
+      const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
+      const contextIndex = currentIndent / INDENT_WIDTH;
 
-    if (!this.isValidContext(location, currentIndent, this.pathContext)) {
-      return path;
-    }
+      if (!this.isValidContext(location, currentIndent, this.pathContext)) {
+        return path;
+      }
 
-    // If the element is not indented, just reset the context
-    if (contextIndex === 0) {
-      // If the last context still has [+], that means the path was never used
-      // and the [+] will be discarded without incrementing
-      if (
-        this.pathContext.length > 0 &&
-        this.pathContext[this.pathContext.length - 1].some(p => /\[\+\]/.test(p))
-      ) {
-        logger.warn(
-          'The previous line(s) use path rules to establish a context using soft indexing ' +
-            '(e.g., [+]), but that context is reset by the following rule before it is ever ' +
-            'used. As a result, the previous path context will be ignored and its ' +
-            'soft-indices will not be incremented',
+      // If the element is not indented, just reset the context
+      if (contextIndex === 0) {
+        // If the last context still has [+], that means the path was never used
+        // and the [+] will be discarded without incrementing
+        if (
+          this.pathContext.length > 0 &&
+          this.pathContext[this.pathContext.length - 1].some(p => /\[\+\]/.test(p))
+        ) {
+          logger.warn(
+            'The previous line(s) use path rules to establish a context using soft indexing ' +
+              '(e.g., [+]), but that context is reset by the following rule before it is ever ' +
+              'used. As a result, the previous path context will be ignored and its ' +
+              'soft-indices will not be incremented',
+            {
+              location,
+              file: this.currentFile
+            }
+          );
+        }
+        this.pathContext = [path];
+        return path;
+      }
+
+      if (path.length === 1 && path[0] === '.') {
+        logger.error(
+          "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
           {
             location,
             file: this.currentFile
           }
         );
+        return path;
       }
-      this.pathContext = [path];
-      return path;
+
+      // Otherwise, get the context based on the indent level.
+      const currentContext = this.pathContext[contextIndex - 1];
+      if (currentContext.length === 0) {
+        logger.error(
+          'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
+          { location, file: this.currentFile }
+        );
+        return path;
+      }
+
+      // Trim out-of-scope contexts
+      this.pathContext.splice(contextIndex);
+
+      // Get the new path and add as the last context
+      const fullPath = currentContext.concat(path);
+      this.pathContext.push(fullPath);
+
+      return fullPath;
+    } finally {
+      // NOTE: This block is in finally so it is always executed, no matter where/when we exit the function
+      // Once we have used the existing context in a non-path-only rule, replace [+] with [=] in all
+      // existing contexts so that the [+] isn't re-applied in further contexts
+      if (!isPathRule) {
+        this.pathContext.forEach((path, i) => {
+          this.pathContext[i] = path.map(c => c.replace(/\[\+\]/g, '[=]'));
+        });
+      }
     }
-
-    if (path.length === 1 && path[0] === '.') {
-      logger.error(
-        "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
-        {
-          location,
-          file: this.currentFile
-        }
-      );
-      return path;
-    }
-
-    // Otherwise, get the context based on the indent level.
-    const currentContext = this.pathContext[contextIndex - 1];
-    if (currentContext.length === 0) {
-      logger.error(
-        'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
-        { location, file: this.currentFile }
-      );
-      return path;
-    }
-
-    // Trim out-of-scope contexts
-    this.pathContext.splice(contextIndex);
-
-    // Get the new path and add as the last context
-    const fullPath = currentContext.concat(path);
-    this.pathContext.push(fullPath);
-
-    // Once we have used the existing context in a non-path-only rule, replace [+] with [=] in all
-    // existing contexts so that the [+] isn't re-applied in further contexts
-    if (!isPathRule) {
-      this.pathContext.forEach((path, i) => {
-        this.pathContext[i] = path.map(c => c.replace(/\[\+\]/g, '[=]'));
-      });
-    }
-
-    return fullPath;
   }
 
   private isValidContext(

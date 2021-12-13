@@ -233,6 +233,26 @@ describe('FSHImporter', () => {
       assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'bar');
     });
 
+    it('should not log a warning for non-path rules that increment the index', () => {
+      const input = leftAlign(`
+      Instance: Foo
+      InstanceOf: Questionnaire
+      * item[+].linkId = "foo"
+      * item[+].linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Questionnaire');
+      expect(instance.rules.length).toBe(2);
+      assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'foo');
+      assertAssignmentRule(instance.rules[1], 'item[+].linkId', 'bar');
+    });
+
     it('should change + to = when setting context on children of soft indexed rules which are not path rules', () => {
       const input = leftAlign(`
       Instance: Foo
