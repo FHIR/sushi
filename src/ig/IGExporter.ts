@@ -952,11 +952,14 @@ export class IGExporter {
     }
     if (deeplyNestedFiles.length) {
       logger.warn(
-        'The following files were not added to the ImplementationGuide JSON because they are nested too deep. While ' +
-          'SUSHI supports these paths, the IG Publisher does not. To fix this, move these files so they are directly ' +
-          `under a supported input folder (e.g., input/resources, input/profiles, etc.):\n  - ${deeplyNestedFiles.join(
-            '\n  - '
-          )}`
+
+        'The following files were not added to the ImplementationGuide JSON because they are not in one of the supported' +
+        'input folders or are nested too deep in one of those folders. While SUSHI automatically supports resources in' +
+        'sub-folders, the IG Publisher does not, unless the folder is explicitly added via the template or an IG parameter.' +
+        'To fix any issues you may encounter due to this, adjust your IG parameters or template accordingly or move these' +
+        `files so they are directly under a supported input folder (e.g., input/resources, input/profiles, etc.):\n  - ${deeplyNestedFiles.join(
+          '\n  - '
+        )}`
       );
     }
   }
