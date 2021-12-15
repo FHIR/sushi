@@ -19,8 +19,7 @@ describe('FHIRExporter', () => {
         canonical: 'http://hl7.org/fhir/us/minimal',
         name: 'MinimalIG',
         status: 'draft',
-        fhirVersion: ['4.0.1'],
-        template: 'hl7.fhir.template#0.0.5'
+        fhirVersion: ['4.0.1']
       })
     );
   });
@@ -32,11 +31,7 @@ describe('FHIRExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -50,6 +45,7 @@ describe('FHIRExporter', () => {
 
     it('should allow a profile to contain a defined FHIR resource', () => {
       const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'allergyintolerance-clinical';
@@ -73,6 +69,7 @@ describe('FHIRExporter', () => {
       doc.instances.set(instance.name, instance);
 
       const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'myObservation';
@@ -115,6 +112,7 @@ describe('FHIRExporter', () => {
 
     it('should log an error when a profile tries to contain a resource that does not exist', () => {
       const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
       const caretValueRule = new CaretValueRule('');
       caretValueRule.caretPath = 'contained';
       caretValueRule.value = 'oops-no-resource';

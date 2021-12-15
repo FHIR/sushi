@@ -10,18 +10,21 @@ import {
   InvalidElementAccessError,
   MissingSnapshotError,
   InvalidResourceTypeError,
-  InvalidTypeAccessError
+  InvalidTypeAccessError,
+  ValidationError
 } from '../errors';
 import {
   getArrayIndex,
   setPropertyOnDefinitionInstance,
-  HasName,
-  HasId,
-  isInheritedResource
+  isInheritedResource,
+  isExtension
 } from './common';
+import { HasName, HasId } from './mixins';
 import { Fishable, Type } from '../utils/Fishable';
-import { applyMixins, parseFSHPath, assembleFSHPath } from '../utils';
+import { applyMixins } from '../utils/Mixin';
+import { parseFSHPath, assembleFSHPath } from '../utils/PathUtils';
 import { InstanceDefinition } from './InstanceDefinition';
+import { isUri } from 'valid-url';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -80,6 +83,21 @@ export class StructureDefinition {
    */
   private _sdStructureDefinition: StructureDefinition;
 
+  validate(): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
+    this.elements.forEach(e => {
+      e.validate().forEach(err => {
+        validationErrors.push(
+          new ValidationError(
+            err.issue,
+            `${e.diffId().replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
+          )
+        );
+      });
+    });
+    return validationErrors;
+  }
+
   /**
    * A flag indicating if the StructureDefinition is currently being processed.
    * This allows us to log messages when processing might be affected by circular dependencies.
@@ -107,6 +125,12 @@ export class StructureDefinition {
    */
   getFileName(): string {
     return `StructureDefinition-${this.id}.json`;
+  }
+
+  get pathType(): string {
+    return this.type.startsWith('http')
+      ? this.type.slice(this.type.lastIndexOf('/') + 1)
+      : this.type;
   }
 
   /**
@@ -177,7 +201,7 @@ export class StructureDefinition {
   findElementByPath(path: string, fisher: Fishable): ElementDefinition {
     // If the path already exists, get it and return the match
     // If !path just return the base parent element
-    const fullPath = path && path !== '.' ? `${this.type}.${path}` : this.type;
+    const fullPath = path && path !== '.' ? `${this.pathType}.${path}` : this.pathType;
     const match = this.elements.find(e => e.path === fullPath && !e.id.includes(':'));
     if (match != null) {
       return match;
@@ -186,7 +210,7 @@ export class StructureDefinition {
     // Parse the FSH Path into a form we can work with
     const parsedPath = parseFSHPath(path);
 
-    let fhirPathString = this.type;
+    let fhirPathString = this.pathType;
     let matchingElements = this.elements;
     let newMatchingElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
@@ -246,12 +270,17 @@ export class StructureDefinition {
 
       // After getting matches based on the 'base' part, we now filter according to 'brackets'
       if (pathPart.brackets) {
-        const sliceElement = this.findMatchingSlice(pathPart, matchingElements, fisher);
+        const sliceElement = this.findMatchingSlice(
+          fhirPathString,
+          pathPart,
+          matchingElements,
+          fisher
+        );
         if (sliceElement) {
           matchingElements = [sliceElement, ...sliceElement.children()];
         } else {
           // If we didn't find a matching sliceElement, there must be a reference
-          const matchingRefElement = this.findMatchingRef(pathPart, matchingElements);
+          const matchingRefElement = this.findMatchingRefOrCanonical(pathPart, matchingElements);
           if (matchingRefElement) {
             matchingElements = [matchingRefElement, ...matchingRefElement.children()];
           } else {
@@ -292,8 +321,7 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    const parentName = this.type;
-    if (path === 'type' && value !== parentName) {
+    if (path === 'type' && value !== this.pathType) {
       throw new InvalidTypeAccessError();
     }
     setPropertyOnDefinitionInstance(this, path, value, fisher);
@@ -355,8 +383,10 @@ export class StructureDefinition {
 
     // Populate the differential
     j.differential = { element: [] };
-    this.elements.forEach(e => {
-      if (e.hasDiff()) {
+    this.elements.forEach((e, idx) => {
+      // If this is a logical model or a resource (derivation = 'specialization'),
+      // we need to make sure the root element is included in the differential.
+      if (e.hasDiff() || (this.derivation === 'specialization' && idx === 0)) {
         const diff = e.calculateDiff().toJSON();
         const isTypeSlicingChoiceDiff =
           diff.id.endsWith('[x]') &&
@@ -399,8 +429,8 @@ export class StructureDefinition {
 
   /**
    * Constructs a new StructureDefinition representing the passed in JSON.  The JSON that is passed in must be a
-   * properly formatted FHIR 3.0.1 StructureDefinition JSON.
-   * @param {any} json - the FHIR 3.0.1 JSON representation of a StructureDefinition to construct
+   * properly formatted FHIR 4.0.1 StructureDefinition JSON.
+   * @param {any} json - the FHIR 4.0.1 JSON representation of a StructureDefinition to construct
    * @param {captureOriginalElements} - indicate if original elements should be captured for purposes of
    *   detecting differentials.  Defaults to true.
    * @returns {StructureDefinition} a new StructureDefinition instance representing the passed in JSON
@@ -438,7 +468,7 @@ export class StructureDefinition {
    * @param {string} path - The path to the ElementDefinition to assign
    * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @param {inlineResourceTypes} - Types that will be used to replace Resource elements
+   * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
    * @returns {any} - The object or value to assign
@@ -469,19 +499,21 @@ export class StructureDefinition {
       }
       currentElement = this.findElementByPath(currentPath, fisher);
       // Allow for adding extension elements to the instance that are not on the SD
-      if (!currentElement && pathPart.base === 'extension') {
+      if (!currentElement && isExtension(pathPart.base)) {
         // Get extension element (if currentPath is A.B.extension[C], get A.B.extension)
         const extensionPath = `${previousPath ? `${previousPath}.` : ''}${pathPart.base}`;
         const extensionElement = this.findElementByPath(extensionPath, fisher);
         // Get the extension being referred to
-        const extension = fisher.fishForMetadata(pathPart.brackets[0]);
+        const extension = fisher.fishForMetadata(pathPart.brackets[0], Type.Extension);
         if (extension && extensionElement) {
           // If the extension exists, add it as a slice to the SD so that we can assign it
           // This function is only called by InstanceExporter on copies of SDs, not those being exported
           if (!extensionElement.slicing) {
             extensionElement.sliceIt('value', 'url');
           }
-          const slice = extensionElement.addSlice(pathPart.brackets[0]);
+          // If an extension is referenced by url, we'll want to add the slice with it's id instead
+          const sliceName = isUri(pathPart.brackets[0]) ? extension.id : pathPart.brackets[0];
+          const slice = extensionElement.addSlice(sliceName);
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }
@@ -489,6 +521,18 @@ export class StructureDefinition {
           // Search again for the desired element now that the extension is added
           currentElement = this.findElementByPath(currentPath, fisher);
         }
+      }
+
+      // If the element is an extension, and we found that extension via some other identifier than the sliceName
+      // we want to replace the path to use the sliceName, since we can assume that was the user's intent
+      if (
+        isExtension(pathPart.base) &&
+        pathPart.slices &&
+        currentElement?.sliceName &&
+        currentElement?.sliceName !== pathPart.slices.join('/')
+      ) {
+        pathPart.slices = currentElement.sliceName.split('/');
+        pathPart.brackets = [...pathPart.slices, ...pathPart.brackets.filter(b => /^\d+$/.test(b))];
       }
 
       if (
@@ -503,11 +547,6 @@ export class StructureDefinition {
         }
       }
 
-      // If the element has a base.max that is greater than 1, but the element has been constrained, still set properties in an array
-      const nonArrayElementIsBasedOnArray =
-        currentElement?.base?.max !== '0' &&
-        currentElement?.base?.max !== '1' &&
-        (currentElement?.max === '0' || currentElement?.max === '1');
       if (
         !currentElement ||
         currentElement.max === '0' ||
@@ -518,17 +557,24 @@ export class StructureDefinition {
         // We throw an error if the currentElement doesn't exist, has been zeroed out,
         // or is being incorrectly accessed as an array
         throw new CannotResolvePathError(path);
-      } else if (
-        (arrayIndex == null &&
-          currentElement.max != null &&
-          currentElement.max !== '0' &&
-          currentElement.max !== '1') ||
-        nonArrayElementIsBasedOnArray
-      ) {
-        // Modify the path to have 0 indices
+      }
+
+      // Determine if base and/or current are arrays. Note that this is not perfect (if base or current max is missing),
+      // but in practice, it appears to be sufficient. We could walk the inheritance tree to get the base and current values
+      // when they are missing, but this comes at a cost, and as noted above, the current approach works (likely due to
+      // how the publisher populates base in snapshots and how previous code processes the current element).
+      const baseIsArray =
+        currentElement?.base?.max != null &&
+        currentElement.base.max !== '0' &&
+        currentElement.base.max !== '1';
+      const currentIsArray =
+        currentElement?.max != null && currentElement.max !== '0' && currentElement.max !== '1';
+      // If the base is an array and we don't yet have an index or the currentElement is singular, make this index 0.
+      if (baseIsArray && (arrayIndex == null || !currentIsArray)) {
         if (!pathPart.brackets) pathPart.brackets = [];
         pathPart.brackets.push('0');
       }
+
       // Primitive and only primitives have a lower case first letter
       if (
         currentElement.type?.length === 1 &&
@@ -578,20 +624,31 @@ export class StructureDefinition {
 
       previousElement = currentElement;
     }
-    const clone = currentElement.clone();
+    const originalKey = Object.keys(currentElement).find(
+      k => k.startsWith('pattern') || k.startsWith('fixed')
+    ) as keyof ElementDefinition;
+    const originalValue = currentElement[originalKey];
+
     let assignedValue;
     // Assigned resources cannot be assigned by pattern[x]/fixed[x], so we must set assignedValue directly
     if (value instanceof InstanceDefinition) {
-      assignedValue = clone.checkAssignInlineInstance(value, fisher).toJSON();
+      assignedValue = currentElement.checkAssignInlineInstance(value, fisher).toJSON();
     } else {
       // assignValue will throw if it fails, but skip the check if value is null
       if (value != null) {
         // exactly must be true so that we always test assigning with the more strict fixed[x] approach
-        clone.assignValue(value, true, fisher);
+        currentElement.assignValue(value, true, fisher);
       }
       // If there is a fixedValue or patternValue, find it and return it
-      const key = Object.keys(clone).find(k => k.startsWith('pattern') || k.startsWith('fixed'));
-      if (key != null) assignedValue = clone[key as keyof ElementDefinition];
+      const key = Object.keys(currentElement).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      if (key != null) {
+        assignedValue = currentElement[key];
+        delete currentElement[key];
+        // @ts-ignore
+        currentElement[originalKey] = originalValue;
+      }
     }
 
     return { assignedValue, pathParts };
@@ -645,17 +702,22 @@ export class StructureDefinition {
 
   /**
    * Looks for a slice within the set of elements that matches the fhirPath
-   * @param {PathPart} pathPart - The path to match sliceName against
+   * @param {string} fhirPathString - the current FHIR path to match against
+   * @param {PathPart} pathPart - The path part to match sliceName against
    * @param {ElementDefinition[]} elements - The set of elements to search through
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition} - The sliceElement if found, else undefined
    */
   private findMatchingSlice(
+    fhirPathString: string,
     pathPart: PathPart,
     elements: ElementDefinition[],
     fisher: Fishable
   ): ElementDefinition {
     let matchingSlice: ElementDefinition;
-    matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    matchingSlice = elements.find(
+      e => e.path === fhirPathString && e.sliceName === pathPart.brackets.join('/')
+    );
     if (!matchingSlice && pathPart.brackets?.length === 1) {
       // If the current element is a child of a slice, the match may exist on the original
       // sliced element, search for that here
@@ -663,7 +725,7 @@ export class StructureDefinition {
         const connectedSliceElement = e.findConnectedSliceElement();
         const matchingConnectedSlice = connectedSliceElement
           ?.getSlices()
-          .find(e => e.sliceName === pathPart.brackets.join('/'));
+          .find(e => e.path === fhirPathString && e.sliceName === pathPart.brackets.join('/'));
 
         if (matchingConnectedSlice) {
           const newSlice = matchingConnectedSlice.clone(false);
@@ -712,13 +774,16 @@ export class StructureDefinition {
   }
 
   /**
-   * Looks for a Reference type element within the set of elements that matches the fhirPath
-   * @param {PathPart} pathPart - The path to match the Reference type elements against
+   * Looks for a Reference or canonical type element within the set of elements that matches the fhirPath
+   * @param {PathPart} pathPart - The path to match the Reference/canonical type elements against
    * @param {ElementDefinition[]} elements - The set of elements to search through
-   * @returns {ElementDefinition} - The Reference type element if found, else undefined
+   * @returns {ElementDefinition} - The Reference/canonical type element if found, else undefined
    */
-  private findMatchingRef(pathPart: PathPart, elements: ElementDefinition[]): ElementDefinition {
-    const matchingRefElement = elements.find(e => {
+  private findMatchingRefOrCanonical(
+    pathPart: PathPart,
+    elements: ElementDefinition[]
+  ): ElementDefinition {
+    return elements.find(e => {
       // If we have foo[a][b][c], and c is the ref, we need to find an element with sliceName = a/b
       if (
         pathPart.brackets.length === 1 ||
@@ -726,35 +791,34 @@ export class StructureDefinition {
       ) {
         for (const t of e.type ?? []) {
           return (
-            t.code === 'Reference' &&
+            ['Reference', 'canonical'].includes(t.code) &&
             t.targetProfile &&
             t.targetProfile.find(tp => {
-              const refName = pathPart.brackets.slice(-1)[0];
+              const name = pathPart.brackets.slice(-1)[0];
               // Slice to get last part of url
               // http://hl7.org/fhir/us/core/StructureDefinition/profile|3.0.0 -> profile|3.0.0
-              let tpRefName = tp.split('/').slice(-1)[0];
+              let tpName = tp.split('/').slice(-1)[0];
               // Slice to get rid of version, profile|3.0.0 -> profile
-              tpRefName = tpRefName.split('|')[0];
-              return tpRefName === refName;
+              tpName = tpName.split('|')[0];
+              return tpName === name;
             })
           );
         }
       }
     });
-    return matchingRefElement;
   }
 
   /**
-   * Gets the specific reference being referred to by a path with brackets
+   * Gets the specific reference or canonical being referred to by a path with brackets
    * @param {string} path - The path
-   * @param {ElementDefinition} element - The element that may contain the reference
-   * @returns {string} - The name of the reference if it exists, else undefined
+   * @param {ElementDefinition} element - The element that may contain the reference/canonical
+   * @returns {string} - The name of the reference/canonical if it exists, else undefined
    */
-  getReferenceName(path: string, element: ElementDefinition): string {
+  getReferenceOrCanonicalName(path: string, element: ElementDefinition): string {
     const parsedPath = parseFSHPath(path);
     const pathEnd = parsedPath.slice(-1)[0];
     if (pathEnd.brackets) {
-      const refElement = this.findMatchingRef(pathEnd, [element]);
+      const refElement = this.findMatchingRefOrCanonical(pathEnd, [element]);
       if (refElement) {
         return pathEnd.brackets.slice(-1)[0];
       }

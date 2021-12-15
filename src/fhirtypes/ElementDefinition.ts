@@ -1,48 +1,63 @@
 import {
+  cloneDeep,
+  differenceWith,
+  flatten,
+  intersectionWith,
   isEmpty,
   isEqual,
   isMatch,
-  cloneDeep,
-  upperFirst,
-  intersectionWith,
-  flatten
+  uniqWith,
+  upperFirst
 } from 'lodash';
-import sax = require('sax');
 import { minify } from 'html-minifier';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
-import { AssignmentValueType, OnlyRule } from '../fshtypes/rules';
+import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
+  AssignmentToCodeableReferenceError,
   BindingStrengthError,
   CodedTypeNotFoundError,
-  ValueAlreadyAssignedError,
-  NoSingleTypeError,
-  MismatchedTypeError,
+  DuplicateSliceError,
+  FixedToPatternError,
   InvalidCanonicalUrlError,
   InvalidCardinalityError,
+  InvalidFHIRIdError,
+  InvalidMappingError,
+  InvalidMustSupportError,
+  InvalidSumOfSliceMinsError,
   InvalidTypeError,
+  InvalidUriError,
+  MismatchedTypeError,
+  MultipleStandardsStatusError,
+  NarrowingRootCardinalityError,
+  NonAbstractParentOfSpecializationError,
+  NoSingleTypeError,
+  SliceTypeRemovalError,
   SlicingDefinitionError,
   SlicingNotDefinedError,
   TypeNotFoundError,
-  WideningCardinalityError,
-  InvalidSumOfSliceMinsError,
-  InvalidMaxOfSliceError,
-  NarrowingRootCardinalityError,
-  SliceTypeRemovalError,
-  InvalidUriError,
-  FixedToPatternError,
-  MultipleStandardsStatusError,
-  InvalidMappingError,
-  InvalidFHIRIdError,
-  DuplicateSliceError,
-  NonAbstractParentOfSpecializationError
+  ValueAlreadyAssignedError,
+  ValueConflictsWithClosedSlicingError,
+  ConstrainingCardinalityError,
+  InvalidChoiceTypeRulePathError,
+  CannotResolvePathError,
+  MismatchedBindingTypeError,
+  ValidationError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods } from './common';
+import {
+  setPropertyOnDefinitionInstance,
+  splitOnPathPeriods,
+  isReferenceType,
+  isModifierExtension
+} from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
+import sax = require('sax');
+const PROFILE_ELEMENT_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
 export class ElementDefinitionType {
   private _code: string;
@@ -108,6 +123,7 @@ export class ElementDefinitionType {
     elDefType.aggregation = json.aggregation;
     elDefType.versioning = json.versioning;
     elDefType.extension = json.extension;
+
     return elDefType;
   }
 }
@@ -182,6 +198,8 @@ export class ElementDefinition {
   patternDecimal: number;
   fixedInteger: number;
   patternInteger: number;
+  fixedInteger64: string;
+  patternInteger64: string;
   fixedUnsignedInt: number;
   patternUnsignedInt: number;
   fixedPositiveInt: number;
@@ -261,6 +279,64 @@ export class ElementDefinition {
         return name;
       })
       .join('.');
+  }
+
+  validate(): ValidationError[] {
+    if (this.slicing) {
+      return this.validateSlicing(this.slicing);
+    }
+    return [];
+  }
+
+  private validateRequired(value: AssignmentValueType, fshPath: string): ValidationError {
+    if (!value) {
+      return new ValidationError('Missing required value', fshPath);
+    }
+    return null;
+  }
+
+  private validateIncludes(
+    value: string,
+    allowedValues: string[],
+    fshPath: string
+  ): ValidationError {
+    if (value && !allowedValues.includes(value)) {
+      return new ValidationError(
+        `Invalid value: #${value}. Value must be selected from one of the following: ${allowedValues
+          .map(v => `#${v}`)
+          .join(', ')}`,
+        fshPath
+      );
+    }
+    return null;
+  }
+
+  isArrayOrChoice(): boolean {
+    return (
+      this.max === '*' ||
+      parseInt(this.max) > 1 ||
+      this.base.max === '*' ||
+      parseInt(this.base.max) > 1 ||
+      this.id.endsWith('[x]')
+    );
+  }
+
+  private validateSlicing(slicing: ElementDefinitionSlicing): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
+    validationErrors.push(this.validateRequired(slicing.rules, 'slicing.rules'));
+    validationErrors.push(
+      this.validateIncludes(slicing.rules, ALLOWED_SLICING_RULES, 'slicing.rules')
+    );
+
+    slicing.discriminator?.forEach((d, i) => {
+      const discriminatorPath = `slicing.discriminator[${i}]`;
+      validationErrors.push(this.validateRequired(d.type, `${discriminatorPath}.type`));
+      validationErrors.push(
+        this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_TYPES, `${discriminatorPath}.type`)
+      );
+      validationErrors.push(this.validateRequired(d.path, `${discriminatorPath}.path`));
+    });
+    return validationErrors.filter(e => e);
   }
 
   getPathWithoutBase(): string {
@@ -367,8 +443,18 @@ export class ElementDefinition {
       }
       // @ts-ignore
       if (prop && !isEqual(this[prop], original[prop])) {
-        // @ts-ignore
-        diff[prop] = cloneDeep(this[prop]);
+        if (ADDITIVE_PROPS.includes(prop)) {
+          // @ts-ignore
+          diff[prop] = differenceWith(this[prop], original[prop], isEqual);
+          // @ts-ignore
+          if (isEmpty(diff[prop])) {
+            // @ts-ignore
+            delete diff[prop];
+          }
+        } else {
+          // @ts-ignore
+          diff[prop] = cloneDeep(this[prop]);
+        }
       }
     }
     // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
@@ -384,6 +470,7 @@ export class ElementDefinition {
     }
     return diff;
   }
+
   /**
    * Gets the id of an element on the differential using the shortcut syntax described here
    * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
@@ -394,9 +481,140 @@ export class ElementDefinition {
       .split('.')
       .map(p => {
         const i = p.indexOf('[x]:');
-        return i > -1 ? p.slice(i + 4) : p;
+        const baseElementId = p.slice(0, i);
+        const choiceType = p.slice(i + baseElementId.length + 4);
+        const isChoiceSlice =
+          i > -1
+            ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
+              p === `${baseElementId}[x]:${baseElementId}${choiceType}`
+            : false;
+        return isChoiceSlice ? p.slice(i + 4) : p;
       })
       .join('.');
+  }
+
+  /**
+   * Apply the AddElementRule to this new element using the appropriate methods
+   * for specific rules for the AddElementRule's implied rules (i.e., cardinality,
+   * type constraints, and flags).
+   * @param {AddElementRule} rule - specific instance of the rule
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   */
+  applyAddElementRule(rule: AddElementRule, fisher: Fishable): void {
+    // Verify the rule path. When adding a new element, a parent will always be defined,
+    // even it the parent element is the root element. If parent is not defined, there
+    // is something wrong with the rule.path value.
+    if (!this.parent()) {
+      throw new CannotResolvePathError(rule.path);
+    }
+
+    // Add the base attribute
+    this.base = {
+      path: `${this.structDef.pathType}.${rule.path}`,
+      min: rule.min,
+      max: rule.max
+    };
+
+    // Add the root element's constraints to this element
+    const elementSD = fisher.fishForFHIR('Element', Type.Type);
+    // The root element's constraint does not define the source property
+    // because it is the source. So, we need to add the missing source property.
+    elementSD.snapshot.element[0].constraint.forEach((c: ElementDefinitionConstraint) => {
+      c.source = elementSD.url;
+    });
+    this.constraint = elementSD.snapshot.element[0].constraint;
+
+    // Capture the current state as the original element definition.
+    // All changes after this will be a part of the differential.
+    this.captureOriginal();
+
+    // The constrainType() method applies a type constraint to an existing
+    // ElementDefinition.type. Since this is a new ElementDefinition, it
+    // does not yet have a 'type', so we need to assign an "initial" value
+    // that the constrainType() method can process.
+    this.type = this.initializeElementType(rule, fisher);
+    const target = this.structDef.getReferenceOrCanonicalName(rule.path, this);
+    this.constrainType(rule, fisher, target);
+
+    this.constrainCardinality(rule.min, rule.max);
+
+    this.applyFlags(
+      rule.mustSupport,
+      rule.summary,
+      rule.modifier,
+      rule.trialUse,
+      rule.normative,
+      rule.draft
+    );
+
+    // Since 'short' and 'definition' are plain string values, directly assign the values.
+    if (!isEmpty(rule.short)) {
+      this.short = rule.short;
+    }
+    if (isEmpty(rule.definition)) {
+      if (!isEmpty(rule.short)) {
+        // According to sdf-3 in http://hl7.org/fhir/structuredefinition.html#invs,
+        // definition should be provided. Default it here.
+        this.definition = rule.short;
+      }
+    } else {
+      this.definition = rule.definition;
+    }
+  }
+
+  /**
+   * Define and return the initial base ElementDefinition.type from the AddElementRule.
+   * @ref https://github.com/FHIR/sushi/pull/802#discussion_r631300737
+   * @param {AddElementRule} rule - specific instance of the rule
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   * @returns {ElementDefinitionType[]} The element types as defined by the AddElementRule
+   * @private
+   */
+  private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
+    if (rule.types.length > 1 && !rule.path.endsWith('[x]')) {
+      // Reference/Canonical data type with multiple targets is not considered a choice data type.
+      if (!rule.types.every(t => t.isReference) && !rule.types.every(t => t.isCanonical)) {
+        throw new InvalidChoiceTypeRulePathError(rule);
+      }
+    }
+
+    let refTypeCnt = 0;
+    let canTypeCnt = 0;
+
+    const initialTypes: ElementDefinitionType[] = [];
+    rule.types.forEach(t => {
+      if (t.isReference) {
+        refTypeCnt++;
+      } else if (t.isCanonical) {
+        canTypeCnt++;
+      } else {
+        const metadata = fisher.fishForMetadata(t.type);
+        initialTypes.push(new ElementDefinitionType(metadata.sdType));
+      }
+    });
+
+    const finalTypes: ElementDefinitionType[] = uniqWith(initialTypes, isEqual);
+    if (refTypeCnt > 0) {
+      // We only need to capture a single Reference type. The targetProfiles attribute
+      // will contain the URLs for each reference.
+      finalTypes.push(new ElementDefinitionType('Reference'));
+    }
+    if (canTypeCnt > 0) {
+      // We only need to capture a single canonical type. The targetProfiles attribute
+      // will contain the URLs for each canonical.
+      finalTypes.push(new ElementDefinitionType('canonical'));
+    }
+
+    const refCheckCnt = refTypeCnt > 0 ? refTypeCnt - 1 : 0;
+    const canCheckCnt = canTypeCnt > 0 ? canTypeCnt - 1 : 0;
+    if (rule.types.length !== finalTypes.length + refCheckCnt + canCheckCnt) {
+      logger.warn(
+        `${rule.path} includes duplicate types. Duplicates have been ignored.`,
+        rule.sourceInfo
+      );
+    }
+
+    return finalTypes;
   }
 
   /**
@@ -448,9 +666,8 @@ export class ElementDefinition {
    * @param {number} min - the minimum cardinality
    * @param {number|string} max - the maximum cardinality
    * @throws {InvalidCardinalityError} when min > max
-   * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
+   * @throws {ConstrainingCardinalityError} when new cardinality is wider than existing cardinality
    * @throws {InvalidSumOfSliceMinsError} when the mins of slice elements > max of sliced element
-   * @throws {InvalidMaxOfSliceError} when a sliced element's max is < an individual slice's max
    * @throws {NarrowingRootCardinalityError} when the new cardinality on an element is narrower than
    *   the cardinality on a connected element
    */
@@ -469,25 +686,37 @@ export class ElementDefinition {
 
     // Check to ensure min >= existing min
     if (this.min != null && min < this.min) {
-      throw new WideningCardinalityError(this.min, this.max, min, max);
+      throw new ConstrainingCardinalityError(this.min, this.max, min, max);
     }
 
     // Check to ensure max <= existing max
     if (this.max != null && this.max !== '*' && (maxInt > parseInt(this.max) || isUnbounded)) {
-      throw new WideningCardinalityError(this.min, this.max, min, max);
+      throw new ConstrainingCardinalityError(this.min, this.max, min, max);
     }
 
     // Sliced elements and slices have special card rules described here:
     // http://www.hl7.org/fhiR/profiling.html#slice-cardinality
     // If element is slice definition
-    if (this.slicing) {
+    if (this.slicing && !isUnbounded) {
       // Check that new max >= sum of mins of children
       this.checkSumOfSliceMins(max);
       // Check that new max >= every individual child max
       const slices = this.getSlices();
-      const overMaxChild = slices.find(child => child.max === '*' || parseInt(child.max) > maxInt);
-      if (!isUnbounded && overMaxChild) {
-        throw new InvalidMaxOfSliceError(overMaxChild.max, overMaxChild.sliceName, max);
+      const overMaxChildren: string[] = [];
+      slices.forEach(child => {
+        if (child.max === '*' || parseInt(child.max) > maxInt) {
+          child.max = max;
+          overMaxChildren.push(child.sliceName);
+        }
+      });
+      if (overMaxChildren.length > 0) {
+        logger.warn(
+          `At least one slice of ${
+            this.id
+          } has a max greater than the overall element max. The max of the following slice(s) has been reduced to match the max of ${
+            this.id
+          }: ${overMaxChildren.join(',')}`
+        );
       }
     }
 
@@ -511,22 +740,29 @@ export class ElementDefinition {
             );
           }
         });
-      connectedElements.forEach(ce => {
-        // if the connected element's max is not null and is not *, we can't make the max smaller than its max
-        if (ce.max != null && ce.max != '*' && maxInt != null && maxInt < parseInt(ce.max)) {
-          throw new NarrowingRootCardinalityError(this.path, ce.id, min, max, ce.min ?? 0, ce.max);
-        }
-      });
     }
 
     // If element is a slice
     const slicedElement = this.slicedElement();
     if (slicedElement) {
-      // Check that slicedElement max >= new sum of mins
-      const sumOfMins = slicedElement.checkSumOfSliceMins(slicedElement.max, min - this.min);
-      // If new sum of mins > slicedElement min, increase slicedElement min
-      if (sumOfMins > slicedElement.min) {
-        slicedElement.min = sumOfMins;
+      const parentSlice = this.findParentSlice();
+      const sliceSiblings = this.structDef.elements.filter(
+        el =>
+          this !== el &&
+          slicedElement === el.slicedElement() &&
+          parentSlice === el.findParentSlice()
+      );
+      const newParentMin = min + sliceSiblings.reduce((sum, el) => sum + el.min, 0);
+      // if this is a reslice, the parent element will also be a slice of the sliced element.
+      // if this is not a reslice, the parent element is the sliced element.
+      const parentElement = parentSlice ?? slicedElement;
+      // Check that parentElement max >= new sum of mins
+      if (parentElement.max !== '*' && newParentMin > parseInt(parentElement.max)) {
+        throw new InvalidSumOfSliceMinsError(newParentMin, parentElement.max, parentElement.id);
+      }
+      // If new sum of mins > parentElement min, increase parentElement min
+      if (newParentMin > parentElement.min) {
+        parentElement.constrainCardinality(newParentMin, '');
       }
     }
 
@@ -572,6 +808,26 @@ export class ElementDefinition {
       return this.parent().findConnectedSliceElement(
         `.${this.path.split('.').slice(-1)[0]}${postPath}`
       );
+    }
+  }
+
+  findParentSlice(): ElementDefinition {
+    if (this.sliceName) {
+      const slicedElement = this.slicedElement();
+      const parentNameParts = this.sliceName.split('/').slice(0, -1);
+      const potentialParentNames = parentNameParts
+        .map((_part, i) => {
+          return parentNameParts.slice(0, i + 1).join('/');
+        })
+        .reverse();
+      for (const parentName of potentialParentNames) {
+        const potentialParent = this.structDef.elements.find(el => {
+          return el.sliceName === parentName && el.slicedElement() === slicedElement;
+        });
+        if (potentialParent) {
+          return potentialParent;
+        }
+      }
     }
   }
 
@@ -622,7 +878,7 @@ export class ElementDefinition {
    *   types
    * @throws {SliceTypeRemovalError} when a rule would eliminate all types on a slice
    */
-  constrainType(rule: OnlyRule, fisher: Fishable, target?: string): void {
+  constrainType(rule: OnlyRule | AddElementRule, fisher: Fishable, target?: string): void {
     const types = rule.types;
     // Establish the target types (if applicable)
     const targetType = this.getTargetType(target, fisher);
@@ -635,6 +891,10 @@ export class ElementDefinition {
     // Loop through the input types and associate them to the element types in the map
     for (const type of types) {
       const typeMatch = this.findTypeMatch(type, targetTypes, fisher);
+      // if the type is Canonical, it may have a version. preserve it in the match's metadata.
+      if (type.isCanonical && type.type.indexOf('|') > -1) {
+        typeMatch.metadata.url = `${typeMatch.metadata.url}|${type.type.split('|', 2)[1]}`;
+      }
       typeMatches.get(typeMatch.code).push(typeMatch);
     }
 
@@ -706,6 +966,28 @@ export class ElementDefinition {
 
     // Finally, reset this element's types to the new types
     this.type = newTypes;
+    // extra check for modifier extension usage
+    if (typeMatches.get('Extension')?.length > 0) {
+      // fish up each specific profile by url to see if it is a modifier extension
+      const isModifierPath = this.path.endsWith('.modifierExtension');
+      typeMatches.get('Extension').forEach(typeMatch => {
+        const fullExtension = fisher.fishForFHIR(typeMatch.metadata.url, Type.Extension);
+        if (fullExtension) {
+          const isModifier = isModifierExtension(fullExtension);
+          if (isModifier && !isModifierPath) {
+            logger.error(
+              `Modifier extension ${typeMatch.metadata.name} used to constrain extension element. Modifier extensions should only be used with modifierExtension elements.`,
+              rule.sourceInfo
+            );
+          } else if (!isModifier && isModifierPath) {
+            logger.error(
+              `Non-modifier extension ${typeMatch.metadata.name} used to constrain modifierExtension element. Non-modifier extensions should only be used with extension elements.`,
+              rule.sourceInfo
+            );
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -723,6 +1005,7 @@ export class ElementDefinition {
       const targetSD = fisher.fishForMetadata(
         target,
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension
@@ -746,7 +1029,7 @@ export class ElementDefinition {
         throw new InvalidTypeError(target, this.type);
       }
 
-      // Re-assign the targetProfiles/profiles as appopriate to remove non-targets
+      // Re-assign the targetProfiles/profiles as appropriate to remove non-targets
       if (targetType.profile?.includes(targetSD.url)) {
         targetType.profile = [targetSD.url];
       } else if (targetType.targetProfile?.includes(targetSD.url)) {
@@ -759,8 +1042,8 @@ export class ElementDefinition {
   /**
    * Given an input type (the constraint) and a set of target types (the things to potentially
    * constrain), find the match and return information about it.
-   * @param {{ type: string; isReference?: boolean }} type - the constrained types, identified by
-   *   id/type/url string and an optional reference flag (defaults false)
+   * @param {{ type: string; isReference?: boolean; isCanonical?: boolean }} type - the constrained
+   *   types, identified by id/type/url string and an optional reference/canonical flags (defaults false)
    * @param {ElementDefinitionType[]} targetTypes - the element types that the constrained type
    *   can be potentially applied to
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -771,14 +1054,15 @@ export class ElementDefinition {
    * @throws {InvalidTypeError} when the type doesn't match any of the targetTypes
    */
   private findTypeMatch(
-    type: { type: string; isReference?: boolean },
+    type: { type: string; isReference?: boolean; isCanonical?: boolean },
     targetTypes: ElementDefinitionType[],
     fisher: Fishable
   ): ElementTypeMatchInfo {
     let matchedType: ElementDefinitionType;
+    const typeName = type.isCanonical ? type.type.split('|', 2)[0] : type.type;
 
     // Get the lineage (type hierarchy) so we can walk up it when attempting to match
-    const lineage = this.getTypeLineage(type.type, fisher);
+    const lineage = this.getTypeLineage(typeName, fisher);
     if (isEmpty(lineage)) {
       throw new TypeNotFoundError(type.type);
     }
@@ -795,15 +1079,30 @@ export class ElementDefinition {
         // reference is allowed.
         matchedType = targetTypes.find(
           t2 =>
-            t2.code === 'Reference' &&
+            isReferenceType(t2.code) &&
+            (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+        );
+      } else if (type.isCanonical) {
+        // Canonicals always have a code 'canonical' w/ the referenced type's defining URL set as
+        // one of the targetProfiles.  If the targetProfile property is null, that means any
+        // canonical is allowed.
+        matchedType = targetTypes.find(
+          t2 =>
+            t2.code === 'canonical' &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
-        // Look for exact match on the code (w/ no profile) or a match on the same base type with
+        // Look for exact match on the code (w/ no profile) or a match on an allowed base type with
         // a matching profile
         matchedType = targetTypes.find(t2 => {
           const matchesUnprofiledResource = t2.code === md.id && isEmpty(t2.profile);
-          const matchesProfile = t2.code === md.sdType && t2.profile?.includes(md.url);
+          const matchesProfile =
+            this.getTypeLineage(md.sdType, fisher).some(ancestor => ancestor.sdType === t2.code) &&
+            t2.profile?.includes(md.url);
+          let matchesLogicalType = false;
+          if (this.structDef.kind === 'logical') {
+            matchesLogicalType = t2.code && t2.code === md.sdType;
+          }
           // True if we match an unprofiled type that is not abstract, is a parent, and that we are
           // specializing (the type does not match the sdType of the type to match)
           specializationOfNonAbstractType =
@@ -811,7 +1110,7 @@ export class ElementDefinition {
             !md.abstract &&
             md.id !== lineage[0].id &&
             md.id !== lineage[0].sdType;
-          return matchesUnprofiledResource || matchesProfile;
+          return matchesUnprofiledResource || matchesProfile || matchesLogicalType;
         });
       }
 
@@ -821,10 +1120,15 @@ export class ElementDefinition {
     }
 
     if (!matchedType) {
-      throw new InvalidTypeError(
-        type.isReference ? `Reference(${type.type})` : type.type,
-        targetTypes
-      );
+      let typeString: string;
+      if (type.isReference) {
+        typeString = `Reference(${type.type})`;
+      } else if (type.isCanonical) {
+        typeString = `Canonical(${type.type})`;
+      } else {
+        typeString = type.type;
+      }
+      throw new InvalidTypeError(typeString, targetTypes);
     } else if (specializationOfNonAbstractType) {
       throw new NonAbstractParentOfSpecializationError(type.type, matchedType.code);
     }
@@ -880,12 +1184,23 @@ export class ElementDefinition {
     for (const match of matches) {
       if (match.metadata.id === newType.code) {
         continue;
-      } else if (match.code === 'Reference' && match.metadata.sdType !== 'Reference') {
+      } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);
+      } else if (match.code === 'canonical' && match.metadata.sdType !== 'canonical') {
+        matchedTargetProfiles.push(match.metadata.url);
+      } else if (
+        this.structDef.kind === 'logical' &&
+        newType.code === match.metadata.sdType &&
+        match.metadata.sdType === match.metadata.url
+      ) {
+        // The logical model's newType has a code that is a URL. This should NOT be
+        // included in newType.targetProfile or newType.profile.
+        continue;
       } else {
         matchedProfiles.push(match.metadata.url);
       }
     }
+
     if (targetType) {
       if (!isEmpty(matchedTargetProfiles)) {
         const targetIdx = newType.targetProfile?.indexOf(targetType.targetProfile[0]);
@@ -924,13 +1239,18 @@ export class ElementDefinition {
     const intersection: ElementDefinitionType[] = [];
     let match: ElementTypeMatchInfo;
     leftTypes.forEach(left => {
+      // if the left type has profiles, check each of them.
+      // otherwise, just try with the code.
       const matches: ElementTypeMatchInfo[] = [];
-      try {
-        match = this.findTypeMatch({ type: left.code }, rightTypes, fisher);
-        matches.push(match);
-      } catch (ex) {
-        // it's okay if a given type doesn't have any matches.
-      }
+      const typesToTry = left.profile?.length ? left.profile : [left.code];
+      typesToTry.forEach(typeToTry => {
+        try {
+          match = this.findTypeMatch({ type: typeToTry }, rightTypes, fisher);
+          matches.push(match);
+        } catch (ex) {
+          // it's okay if a given type doesn't have any matches.
+        }
+      });
       intersection.push(...this.applyTypeIntersection(left, targetType, matches));
     });
 
@@ -952,9 +1272,12 @@ export class ElementDefinition {
     const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
     const fhirPathPrimitive = /^http:\/\/hl7\.org\/fhirpath\/System\./;
     for (const match of matches) {
-      // If the original element type is a Reference, keep it a reference, otherwise take on the
+      // If the original element type is a Reference/canonical, keep it as is, otherwise take on the
       // input type's type code (as represented in its StructureDefinition.type).
-      const typeString = match.code === 'Reference' ? 'Reference' : match.metadata.sdType;
+      const typeString =
+        isReferenceType(match.code) || match.code === 'canonical'
+          ? match.code
+          : match.metadata.sdType;
       if (!currentTypeMatches.has(typeString)) {
         currentTypeMatches.set(typeString, []);
       }
@@ -1025,6 +1348,11 @@ export class ElementDefinition {
 
     const connectedElements = this.findConnectedElements();
     if (mustSupport === true) {
+      if (this.structDef.derivation === 'specialization') {
+        // MustSupport is only allowed in profiles
+        throw new InvalidMustSupportError(this.structDef.name, this.id);
+      }
+
       this.mustSupport = mustSupport;
       // MS only gets applied to connected elements that are not themselves slices
       // For example, Observation.component.interpretation MS implies Observation.component:Lab.interpretation MS
@@ -1079,6 +1407,7 @@ export class ElementDefinition {
       'code',
       'Coding',
       'CodeableConcept',
+      'CodeableReference',
       'Quantity',
       'string',
       'uri'
@@ -1147,6 +1476,8 @@ export class ElementDefinition {
       type = 'Canonical';
     } else if (value instanceof InstanceDefinition) {
       type = 'InstanceDefinition';
+    } else if (typeof value === 'bigint') {
+      type = 'number';
     } else {
       type = typeof value;
     }
@@ -1203,20 +1534,25 @@ export class ElementDefinition {
         break;
       case 'Reference':
         value = value as FshReference;
-        // If no targetProfile is present, there is nothing to check the value against, so just assign it
-        if (value.sdType && this.type[0].targetProfile) {
-          const validTypes: string[] = [];
-          this.type[0].targetProfile.forEach(tp => {
-            const tpType = fisher.fishForMetadata(tp)?.sdType;
-            if (tpType) {
-              validTypes.push(tpType);
-            }
-          });
 
-          const referenceLineage = this.getTypeLineage(value.sdType, fisher);
-          if (!referenceLineage.some(md => validTypes.includes(md.sdType))) {
-            throw new InvalidTypeError(`Reference(${value.sdType})`, this.type);
-          }
+        // If we are assigning to a CodeableReference, we want to give a more descriptive error
+        // so we check the type and log this error separately from all other type checking
+        if (this.type[0].code === 'CodeableReference') {
+          throw new AssignmentToCodeableReferenceError('reference', value, 'reference');
+        }
+
+        // It is possible the reference constraints do not come from the current element itself, so find the
+        // element which is constraining the current element, and check the assignment against it
+        const referenceConstrainingElement =
+          this.type[0].code === 'Reference' &&
+          this.parent()?.type?.[0]?.code === 'CodeableReference'
+            ? this.parent()
+            : this;
+        if (!referenceConstrainingElement.typeSatisfiesTargetProfile(value.sdType, fisher)) {
+          throw new InvalidTypeError(
+            `Reference(${value.sdType})`,
+            referenceConstrainingElement.type
+          );
         }
         this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
         break;
@@ -1226,6 +1562,7 @@ export class ElementDefinition {
         const canonicalDefinition = fisher.fishForMetadata(
           value.entityName,
           Type.Resource,
+          Type.Logical,
           Type.Type,
           Type.Profile,
           Type.Extension,
@@ -1234,6 +1571,9 @@ export class ElementDefinition {
           Type.Instance
         );
         let canonicalUrl: string;
+        if (!this.typeSatisfiesTargetProfile(canonicalDefinition?.resourceType, fisher)) {
+          throw new InvalidTypeError(`Canonical(${canonicalDefinition.resourceType})`, this.type);
+        }
         if (canonicalDefinition?.url) {
           canonicalUrl = canonicalDefinition.url;
         } else if (canonicalDefinition?.id && canonicalDefinition.instanceUsage === 'Inline') {
@@ -1262,14 +1602,17 @@ export class ElementDefinition {
     }
 
     // If the element is found in a discriminator.path, then we enforce that it has minimum cardinality 1
-    // since its value is assigned
+    // since its value is assigned. It has to be there, otherwise it's not that slice. The one exception
+    // is if you are fixing the value of the sliced element itself (e.g., discriminator path is $this),
+    // in which case we don't want to force the whole slice to be required.
     const parentSlices = [this, ...this.getAllParents().reverse()].filter(el => el.sliceName);
     parentSlices.forEach(parentSlice => {
       const slicedElement = parentSlice.slicedElement();
       if (
         slicedElement.slicing.discriminator?.some(
           d =>
-            `${slicedElement.path}${d.path === '$this' ? '' : `.${d.path}`}` === this.path &&
+            d.path !== '$this' &&
+            `${slicedElement.path}.${d.path}` === this.path &&
             ['value', 'pattern'].includes(d.type)
         ) &&
         this.min === 0
@@ -1306,20 +1649,22 @@ export class ElementDefinition {
     const currentElementValue = this[fixedX] ?? this[patternX] ?? this.assignedByAnyParent();
     // For complex types, use isMatch to check if they are a subset, otherwise use isEqual
     const compareFn = typeof fhirValue === 'object' ? isMatch : isEqual;
-    if (currentElementValue != null && !compareFn(fhirValue, currentElementValue)) {
+    if (
+      currentElementValue != null &&
+      !Array.isArray(currentElementValue) &&
+      !compareFn(fhirValue, currentElementValue)
+    ) {
       // It's a different value and not a compatible subset (e.g., the new value doesn't contain the old)
       throw new ValueAlreadyAssignedError(fshValue, type, JSON.stringify(currentElementValue));
     }
 
     // Children of elements with complex types such as Quantity may already have assigned values
-    this.children().forEach(child => this.checkChildAssignedValue(child, fhirValue));
+    this.checkAssignedValueAgainstChildren(this, fhirValue);
 
     // if this is a slice, make sure that nothing on this.slicedElement() is being violated
     const slicedElement = this.slicedElement();
     if (slicedElement) {
-      slicedElement
-        .children()
-        .forEach(child => slicedElement.checkChildAssignedValue(child, fhirValue));
+      slicedElement.checkAssignedValueAgainstChildren(slicedElement, fhirValue);
     }
 
     // If we made it this far, assign the value using fixed[x] or pattern[x] as appropriate
@@ -1334,7 +1679,39 @@ export class ElementDefinition {
     }
   }
 
-  private checkChildAssignedValue(child: ElementDefinition, fhirValue: any) {
+  private checkAssignedValueAgainstChildren(currentChild: ElementDefinition, fhirValue: any) {
+    const directChildren = currentChild.children(true);
+
+    let i = 0;
+    while (i < directChildren.length) {
+      const child = directChildren[i];
+
+      this.checkAssignedValueAgainstChild(child, fhirValue);
+      this.checkAssignedValueAgainstChildren(child, fhirValue);
+
+      // If the slicing is closed, only throw an error if all slices conflict
+      if (child.slicing?.rules === 'closed') {
+        let numInvalid = 0;
+        child.getSlices().forEach(slice => {
+          try {
+            this.checkAssignedValueAgainstChild(slice, fhirValue);
+            this.checkAssignedValueAgainstChildren(slice, fhirValue);
+          } catch (e) {
+            numInvalid += 1;
+          }
+        });
+        if (numInvalid >= child.getSlices().length) {
+          throw new ValueConflictsWithClosedSlicingError(JSON.stringify(fhirValue));
+        }
+      }
+
+      // If there is any slicing, skip past the slices. Closed slices are handled above
+      // And open slices need not be validated against
+      i += child.slicing ? child.getSlices().length + 1 : 1;
+    }
+  }
+
+  private checkAssignedValueAgainstChild(child: ElementDefinition, fhirValue: any) {
     const childType = child.type[0].code;
     const fixedX = `fixed${upperFirst(childType)}` as keyof ElementDefinition;
     const patternX = `pattern${upperFirst(childType)}` as keyof ElementDefinition;
@@ -1365,6 +1742,32 @@ export class ElementDefinition {
         }
       });
     }
+  }
+
+  /**
+   * @param sdType - The type to check
+   * @param fisher - A fishable implementation for finding definitions and metadata
+   * @returns - False if the type does not satisfy the targetProfile, true otherwise (or if it can't be determined)
+   */
+  private typeSatisfiesTargetProfile(sdType: string, fisher: Fishable): boolean {
+    // If no targetProfile is present, there is nothing to check the value against, so just allow it
+    if (sdType && this.type[0].targetProfile) {
+      const validTypes: string[] = [];
+      this.type[0].targetProfile.forEach(tp => {
+        // target profile may have a version after a | character. don't include it when fishing.
+        const unversionedProfile = tp.split('|', 2)[0];
+        const tpType = fisher.fishForMetadata(unversionedProfile)?.sdType;
+        if (tpType) {
+          validTypes.push(tpType);
+        }
+      });
+
+      const typeLineage = this.getTypeLineage(sdType, fisher);
+      if (!typeLineage.some(md => validTypes.includes(md.sdType))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -1425,15 +1828,20 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private assignNumber(value: number, exactly = false): void {
+  private assignNumber(value: number | bigint, exactly = false): void {
     const type = this.type[0].code;
+    const valueAsNumber = Number(value);
     if (
       type === 'decimal' ||
-      (type === 'integer' && Number.isInteger(value)) ||
-      (type === 'unsignedInt' && Number.isInteger(value) && value >= 0) ||
-      (type === 'positiveInt' && Number.isInteger(value) && value > 0)
+      (type === 'integer' && Number.isInteger(valueAsNumber)) ||
+      (type === 'unsignedInt' && Number.isInteger(valueAsNumber) && valueAsNumber >= 0) ||
+      (type === 'positiveInt' && Number.isInteger(valueAsNumber) && valueAsNumber > 0)
     ) {
-      this.assignFHIRValue(value.toString(), value, exactly, type);
+      this.assignFHIRValue(value.toString(), valueAsNumber, exactly, type);
+    } else if (type === 'integer64' && typeof value === 'bigint') {
+      // integer64 is dealt with separately, since it is represented as a string in FHIR
+      // see: http://hl7.org/fhir/2020Sep/datatypes.html#integer64
+      this.assignFHIRValue(value.toString(), value.toString(), exactly, type);
     } else {
       throw new MismatchedTypeError('number', value, type);
     }
@@ -1456,7 +1864,8 @@ export class ElementDefinition {
       (type === 'uri' && /^\S*$/.test(value)) ||
       (type === 'url' && /^\S*$/.test(value)) ||
       (type === 'canonical' && /^\S*$/.test(value)) ||
-      (type === 'base64Binary' && /^(\s*([0-9a-zA-Z\+\/=]){4}\s*)+$/.test(value)) ||
+      (type === 'base64Binary' &&
+        (/^(\s*([0-9a-zA-Z\+\/=]){4}\s*)+$/.test(value) || value.startsWith('ig-loader-'))) ||
       (type === 'instant' &&
         /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
           value
@@ -1474,7 +1883,8 @@ export class ElementDefinition {
       (type === 'oid' && /^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$/.test(value)) ||
       (type === 'id' && /^[A-Za-z0-9\-\.]{1,64}$/.test(value)) ||
       (type === 'markdown' && /^\s*(\S|\s)*$/.test(value)) ||
-      type === 'uuid'
+      type === 'uuid' ||
+      (type === 'integer64' && /^[-]?\d+$/.test(value))
     ) {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
     } else if (type == 'xhtml' && this.checkXhtml(value)) {
@@ -1528,13 +1938,19 @@ export class ElementDefinition {
    * @param {FshCode} code - the code to assign
    * @param {boolean} exactly - True if if fixed[x] should be used, otherwise pattern[x] is used
    * @param {Fishable} fisher - A fishable object used for finding structure definitions
-   * @throws {CodedTypeNotFoundError} when there is no coded type on this element
+   * @throws {MismatchedTypeError} when the type of the value cannot be assigned to the element
    * @throws {ValueAlreadyAssignedError} when the code is already assigned to a different code
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
   private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
-    if (code.system && !isUri(code.system.split('|')[0])) {
-      throw new InvalidUriError(code.system);
+    if (code.system) {
+      const csURI = code.system.split('|')[0];
+      const vsURI = fisher?.fishForMetadata(code.system, Type.ValueSet)?.url ?? '';
+      if (vsURI) {
+        throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
+      } else if (!isUri(csURI)) {
+        throw new InvalidUriError(code.system);
+      }
     }
 
     const type = this.type[0].code;
@@ -1562,8 +1978,10 @@ export class ElementDefinition {
         quantity.comparator = existing.comparator;
       }
       this.assignFHIRValue(code.toString(), quantity, exactly, type);
+    } else if (type === 'CodeableReference') {
+      throw new AssignmentToCodeableReferenceError('code', code, 'concept');
     } else {
-      throw new CodedTypeNotFoundError([type]);
+      throw new MismatchedTypeError('code', code, type);
     }
   }
 
@@ -1660,6 +2078,7 @@ export class ElementDefinition {
       );
     });
   }
+
   /**
    * Finds and returns all assignable descendents of the element. A assignable descendent is a direct child of the
    * element that has minimum cardinality greater than 0, and all assignable descendents of such children
@@ -1675,7 +2094,7 @@ export class ElementDefinition {
   }
 
   /**
-   * Finds and returns the elemnent being sliced
+   * Finds and returns the element being sliced
    * @returns {ElementDefinition | undefined} the sliced element or undefined if the element is not a slice
    */
   slicedElement(): ElementDefinition | undefined {
@@ -1693,29 +2112,48 @@ export class ElementDefinition {
    *   be resolved.
    */
   unfold(fisher: Fishable): ElementDefinition[] {
-    if (
-      (this.type?.length === 1 && (this.type[0].profile ?? []).length <= 1) ||
-      this.contentReference
-    ) {
+    // if we have a choice element where id ends with [x], proceed if there is at most one profile, since it expects to get [] back in that case
+    // if we don't have a choice element, proceed with any number of profiles
+    const isChoiceElement = this.id.endsWith('[x]');
+    const proceedToUnfold =
+      (this.type?.length === 1 && (!isChoiceElement || (this.type[0].profile ?? []).length <= 1)) ||
+      this.contentReference;
+    if (proceedToUnfold) {
+      let profileToUse: string;
+      const availableProfiles = this.type?.length === 1 ? this.type[0].profile : [];
+      // if more than one profile is available, none of them can be used, since there's no way to decide.
+      if (availableProfiles?.length > 1) {
+        logger.warn(
+          `Multiple profiles present on element ${this.id}. Base element type will be used instead of any profiles.`
+        );
+      } else if (availableProfiles?.length === 1) {
+        profileToUse = availableProfiles[0];
+      }
       let newElements: ElementDefinition[] = [];
       if (this.contentReference) {
-        // If the element is a content reference, we need to unfold from the referenced element
         // Get the original resource JSON so we unfold unconstrained reference
         const type = this.structDef.type;
         const json = fisher.fishForFHIR(type, Type.Resource);
-        if (json) {
+        // contentReference elements will not contain a type field, so we must fish for the StructDef and
+        // check the differential
+        const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
+        if (profileJson && this.hasProfileElementExtension(profileJson)) {
+          const def = this.structDef;
+          // Content references start with #, slice that off to get the id of referenced element
+          const contentRefId = this.getContentReferenceId();
+          const referencedElement = def.findElement(contentRefId);
+          newElements = this.cloneChildren(referencedElement);
+          if (newElements.length > 0) {
+            // If we successfully unfolded, this element is no longer a content reference
+            this.type = referencedElement.type;
+            delete this.contentReference;
+          }
+        } else if (json) {
           const def = StructureDefinition.fromJSON(json);
           // Content references start with #, slice that off to id of referenced element
-          const referencedElement = def.findElement(
-            this.contentReference.slice(this.contentReference.indexOf('#') + 1)
-          );
-          newElements = referencedElement?.children().map(e => {
-            const eClone = e.clone();
-            eClone.id = eClone.id.replace(referencedElement.id, this.id);
-            eClone.structDef = this.structDef;
-            eClone.captureOriginal();
-            return eClone;
-          });
+          const contentRefId = this.getContentReferenceId();
+          const referencedElement = def.findElement(contentRefId);
+          newElements = this.cloneChildren(referencedElement);
           if (newElements.length > 0) {
             // If we successfully unfolded, this element is no longer a content reference
             this.type = referencedElement.type;
@@ -1725,17 +2163,11 @@ export class ElementDefinition {
       } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
-        newElements = slicedElement.children().map(e => {
-          const eClone = e.clone();
-          eClone.id = eClone.id.replace(slicedElement.id, this.id);
-          eClone.structDef = this.structDef;
-          eClone.captureOriginal();
-          return eClone;
-        });
+        newElements = this.cloneChildren(slicedElement, false);
       }
       if (newElements.length === 0) {
-        // If it has a profile, use that, otherwise use the code
-        const type = this.type[0].profile?.[0] ?? this.type[0].code;
+        // If we have exactly one profile to use, use that, otherwise use the code
+        const type = profileToUse ?? this.type[0].code;
         const json = fisher.fishForFHIR(
           type,
           Type.Resource,
@@ -1766,6 +2198,96 @@ export class ElementDefinition {
       }
     }
     return [];
+  }
+
+  /**
+   * Returns an array of an ElementDefinition's unfolded children.
+   * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
+   * @param {boolean} recaptureSliceExtensions - Indicates whether or not slice extensions should be recaptured
+   * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
+   * the original property re-captured.
+   */
+  private cloneChildren(
+    targetElement: ElementDefinition,
+    recaptureSliceExtensions = true
+  ): ElementDefinition[] {
+    return targetElement?.children().map(e => {
+      // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
+      // extension, we always capture it
+      const shouldCaptureOriginal =
+        recaptureSliceExtensions || e.sliceName == null || !e.path.endsWith('.extension');
+      const eClone = e.clone(shouldCaptureOriginal);
+      eClone.id = eClone.id.replace(targetElement.id, this.id);
+      eClone.structDef = this.structDef;
+      if (shouldCaptureOriginal) {
+        eClone.captureOriginal();
+      }
+      return eClone;
+    });
+  }
+
+  /**
+   * Checks a StructureDefinition's differential to determine if the profile element extension has been used on
+   * an element.
+   * @param {Object} profileJson - The json representation of this ElementDefinition's structDef
+   * @returns {boolean} True if the profile element extension is found on this elements profile property, false
+   * if the extension is not found
+   */
+  private hasProfileElementExtension(profileJson: any): boolean {
+    const elementName = this.getContentReferenceId();
+
+    const elementType = profileJson.differential.element.find(
+      (element: any) => element.id === elementName
+    )?.type?.[0];
+
+    // If the type property is not present in the differential, the profile-element extension is not present
+    if (!elementType) {
+      return false;
+    }
+
+    let profileCanonical, extensionUrl, targetElement: string;
+
+    // If the profile and _profile arrays are not present, the profile-element extension is not present
+    if (elementType.profile && elementType._profile) {
+      const profileIndex = elementType._profile.findIndex(
+        (profile: any) =>
+          profile &&
+          profile.extension.some(
+            (extension: any) =>
+              extension.hasOwnProperty('url') &&
+              extension.hasOwnProperty('valueString') &&
+              extension.url === PROFILE_ELEMENT_EXTENSION
+          )
+      );
+
+      if (profileIndex === -1) {
+        return false;
+      }
+
+      const extensionIndex = elementType._profile[profileIndex].extension?.findIndex(
+        (extensionObj: any) =>
+          extensionObj.hasOwnProperty('url') &&
+          extensionObj.hasOwnProperty('valueString') &&
+          extensionObj.url === PROFILE_ELEMENT_EXTENSION
+      );
+      extensionUrl = elementType._profile[profileIndex].extension[extensionIndex].url;
+      targetElement = elementType._profile[profileIndex].extension[extensionIndex].valueString;
+      profileCanonical = elementType.profile[profileIndex];
+    } else {
+      return false;
+    }
+
+    return (
+      profileCanonical === this.structDef.url &&
+      extensionUrl === PROFILE_ELEMENT_EXTENSION &&
+      targetElement === elementName
+    );
+  }
+
+  private getContentReferenceId(): string | undefined {
+    if (this.contentReference) {
+      return this.contentReference.slice(this.contentReference.indexOf('#') + 1);
+    }
   }
 
   /**
@@ -1903,7 +2425,6 @@ export class ElementDefinition {
 
     // Capture the original so that the differential only contains changes from this point on.
     slice.captureOriginal();
-
     slice.sliceName = this.sliceName ? `${this.sliceName}/${name}` : name;
 
     // Usually, when we slice, we do not inherit min cardinality, but rather make it 0.
@@ -2015,10 +2536,18 @@ export type ElementDefinitionSlicing = {
   rules: string;
 };
 
+// Cannot constrain ElementDefinitionSlicing.rules to have these values as a type
+// since we want to process other string values, but log an error
+const ALLOWED_SLICING_RULES = ['closed', 'open', 'openAtEnd'];
+
 export type ElementDefinitionSlicingDiscriminator = {
   type: string;
   path: string;
 };
+
+// Cannot constrain ElementDefinitionSlicingDiscriminator to have these values as a type
+// since we want to process other string values, but log an error
+const ALLOWED_DISCRIMINATOR_TYPES = ['value', 'exists', 'pattern', 'type', 'profile'];
 
 export type ElementDefinitionBase = {
   path: string;
@@ -2132,3 +2661,65 @@ const PROPS = [
   'binding',
   'mapping'
 ];
+
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+  'Base64Binary',
+  'Boolean',
+  'Canonical',
+  'Code',
+  'Date',
+  'DateTime',
+  'Decimal',
+  'Id',
+  'Instant',
+  'Integer',
+  'Markdown',
+  'Oid',
+  'PositiveInt',
+  'String',
+  'Time',
+  'UnsignedInt',
+  'Uri',
+  'Url',
+  'Uuid',
+  'Address',
+  'Age',
+  'Annotation',
+  'Attachment',
+  'CodeableConcept',
+  'Coding',
+  'ContactPoint',
+  'Count',
+  'Distance',
+  'Duration',
+  'HumanName',
+  'Identifier',
+  'Money',
+  'Period',
+  'Quantity',
+  'Range',
+  'Ratio',
+  'Reference',
+  'SampledData',
+  'Signature',
+  'Timing',
+  'ContactDetail',
+  'Contributor',
+  'DataRequirement',
+  'Expression',
+  'ParameterDefinition',
+  'RelatedArtifact',
+  'TriggerDefinition',
+  'UsageContext',
+  'Dosage',
+  'Meta',
+  'CodeableReference',
+  'Integer64'
+];
+
+/**
+ * These list properties are considered to be additive in the differential.
+ * Thus, the differential should contain only new entries in these lists.
+ * See http://hl7.org/fhir/elementdefinition.html#interpretation.
+ */
+const ADDITIVE_PROPS = ['mapping', 'constraint'];

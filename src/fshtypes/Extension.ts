@@ -1,22 +1,24 @@
-import { FshEntity } from './FshEntity';
+import { FshStructure } from './FshStructure';
 import { SdRule } from './rules';
+import { EOL } from 'os';
 
-export class Extension extends FshEntity {
-  id: string;
-  parent: string;
-  title?: string;
-  description?: string;
-  mixins?: string[];
+export class Extension extends FshStructure {
   rules: SdRule[];
 
   constructor(public name: string) {
-    super();
-    // Init id to be same as name.  This can be overridden using FSH syntax (Id: keyword)
-    this.id = name;
+    super(name);
     // Init the parent to 'Extension', as this is what 99% of extensions do.
     // This can still be overridden via the FSH syntax (using Parent: keyword).
     this.parent = 'Extension'; // init to 'Extension'
-    this.mixins = [];
-    this.rules = [];
+  }
+
+  get constructorName() {
+    return 'Extension';
+  }
+
+  toFSH(): string {
+    const metadataFSH = this.metadataToFSH();
+    const rulesFSH = this.rules.map(r => r.toFSH()).join(EOL);
+    return `${metadataFSH}${rulesFSH.length ? EOL + rulesFSH : ''}`;
   }
 }

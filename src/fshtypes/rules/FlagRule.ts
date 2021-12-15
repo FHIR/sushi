@@ -1,14 +1,21 @@
-import { Rule } from './Rule';
+import { FlagCarryingRule } from './FlagCarryingRule';
 
-export class FlagRule extends Rule {
-  mustSupport: boolean;
-  summary: boolean;
-  modifier: boolean;
-  trialUse: boolean;
-  normative: boolean;
-  draft: boolean;
+export class FlagRule extends FlagCarryingRule {
+  // flags provided by HasFlags mixin
 
   constructor(path: string) {
     super(path);
+  }
+
+  get constructorName() {
+    return 'FlagRule';
+  }
+
+  flagsToString(): string {
+    return this.flags.join(' ');
+  }
+
+  toFSH(): string {
+    return `* ${this.path} ${this.flagsToString()}`;
   }
 }

@@ -1,0 +1,26 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "MyTitlePatient",
+  "url": "http://hl7.org/fhir/us/mcode/StructureDefinition/MyTitlePatient",
+  "title": "This patient has a title",
+  "name": "MyTitlePatient",
+  "status": "active",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.deceased[x]",
+        "path": "Patient.deceased[x]",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

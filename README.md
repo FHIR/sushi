@@ -11,7 +11,7 @@ For more information about the evolving FSH syntax see the [FHIR Shorthand Refer
 
 # Installation for SUSHI Users
 
-SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system.  Users should install Node.js 12 (LTS), although the previous LTS version (Node.js 10) is also expected to work.
+SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system. Users should install Node.js 12 (LTS), although the previous LTS version (Node.js 10) is also expected to work.
 
 Once Node.js is installed, run the following command to install or update SUSHI:
 
@@ -26,12 +26,13 @@ $ sushi --help
 Usage: sushi [path-to-fsh-defs] [options]
 
 Options:
-  -o, --out <out>  the path to the output folder
-  -d, --debug      output extra debugging information
-  -s, --snapshot   generate snapshot in Structure Definition output (default: false)
-  -i, --init       initialize a SUSHI project
-  -v, --version    print SUSHI version
-  -h, --help       output usage information
+  -o, --out <out>     the path to the output folder
+  -d, --debug         output extra debugging information
+  -p, --preprocessed  output FSH produced by preprocessing steps
+  -s, --snapshot      generate snapshot in Structure Definition output (default: false)
+  -i, --init          initialize a SUSHI project
+  -v, --version       print SUSHI version
+  -h, --help          output usage information
 
 Additional information:
   [path-to-fsh-defs]
@@ -39,8 +40,6 @@ Additional information:
     If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]
   -o, --out <out>
     Default: "fsh-generated"
-    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"
-    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"
 
 ```
 
@@ -48,13 +47,13 @@ See the [SUSHI documentation](https://fshschool.org/docs/sushi/) for detailed in
 
 # IG Generation
 
-SUSHI supports publishing implementation guides via the new template-based IG Publisher.  The template-based publisher is still being developed by the FHIR community.  See the [Guidance for HL7 IG Creation](https://build.fhir.org/ig/FHIR/ig-guidance/) for more details.
+SUSHI supports publishing implementation guides via the new template-based IG Publisher. The template-based publisher is still being developed by the FHIR community. See the [Guidance for HL7 IG Creation](https://build.fhir.org/ig/FHIR/ig-guidance/) for more details.
 
 Based on the inputs in FSH files, **sushi-config.yaml**, and the IG project directory, SUSHI populates the output directory. See the [documentation on IG Project with SUSHI](https://fshschool.org/docs/sushi/project/#ig-projects) for more information on using SUSHI to generate IGs.
 
 # Installation for Developers
 
-SUSHI is a [TypeScript](https://www.typescriptlang.org/) project.  At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI.  Developers should install Node.js 12 (LTS), although the previous LTS version (Node.js 10) is also expected to work.
+SUSHI is a [TypeScript](https://www.typescriptlang.org/) project. At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI. Developers should install Node.js 12 (LTS), although the previous LTS version (Node.js 10) is also expected to work.
 
 Once Node.js is installed, run the following command from this project's root folder:
 
@@ -66,21 +65,21 @@ $ npm install
 
 The following NPM tasks are useful in development:
 
-| Task | Description |
-| ---- | ----------- |
-| **build** | compiles `src/**/*.ts` files to `dist/**/*.js` files using the TypeScript compiler (tsc) |
-| **build:watch** | similar to _build_ but automatically builds when changes are detected in src files |
-| **build:grammar** | builds the ANTLR grammar from 'antlr/src/main/antlr' to 'src/import/generated' |
-| **test** | runs all unit tests using Jest |
-| **test:watch** | similar to _test_, but automatically runs affected tests when changes are detected in src files |
-| **lint** | checks all src files to ensure they follow project code styles and rules |
-| **lint:fix** | fixes lint errors when automatic fixes are available for them |
-| **prettier** | checks all src files to ensure they follow project formatting conventions |
-| **prettier:fix** | fixes prettier errors by rewriting files using project formatting conventions |
-| **check** | runs all the checks performed as part of ci (test, lint, prettier) |
-| **regression** | runs regression against select set of repos in regression/repos-select.txt |
+| Task              | Description                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| **build**         | compiles `src/**/*.ts` files to `dist/**/*.js` files using the TypeScript compiler (tsc)        |
+| **build:watch**   | similar to _build_ but automatically builds when changes are detected in src files              |
+| **build:grammar** | builds the ANTLR grammar from 'antlr/src/main/antlr' to 'src/import/generated'                  |
+| **test**          | runs all unit tests using Jest                                                                  |
+| **test:watch**    | similar to _test_, but automatically runs affected tests when changes are detected in src files |
+| **lint**          | checks all src files to ensure they follow project code styles and rules                        |
+| **lint:fix**      | fixes lint errors when automatic fixes are available for them                                   |
+| **prettier**      | checks all src files to ensure they follow project formatting conventions                       |
+| **prettier:fix**  | fixes prettier errors by rewriting files using project formatting conventions                   |
+| **check**         | runs all the checks performed as part of ci (test, lint, prettier)                              |
+| **regression**    | runs regression against select set of repos in regression/repos-select.txt                      |
 
-To run any of these tasks, use `npm run`.  For example:
+To run any of these tasks, use `npm run`. For example:
 
 ```sh
 $ npm run check
@@ -88,20 +87,23 @@ $ npm run check
 
 # Regression
 
-The `regression/run-regression.ts` script can be used to run regression on a set of repos.  It takes the following arguments:
-* `repoFile`: A text file for which each line is a GitHub `{org}/{repo}#{branch}` to run regression on (e.g.,
+The `regression/run-regression.ts` script can be used to run regression on a set of repos. It takes the following arguments:
+
+- `repoFile`: A text file for which each line is a GitHub `{org}/{repo}#{branch}` to run regression on (e.g.,
   `HL7/fhir-mCODE-ig#master`). Comment out lines using a leading `#`. _(default: regression/repos-select.txt)_
-* `version1`: The base version of SUSHI to use. Can be an NPM version number or tag, `gh:{branch}` to use a GitHub branch,
+- `version1`: The base version of SUSHI to use. Can be an NPM version number or tag, `gh:{branch}` to use a GitHub branch,
   or `local` to use the local code with `ts-node`. _(default: gh:master)_
-* `version2`: The version of SUSHI under test. Can be an NPM version number or tag, `gh:{branch}` to use a GitHub branch,
+- `version2`: The version of SUSHI under test. Can be an NPM version number or tag, `gh:{branch}` to use a GitHub branch,
   or `local` to use the local code with `ts-node`. _(default: local)_
 
 For example:
+
 ```sh
 $ ts-node regression/run-regression.ts regression/repos-all.txt 1.0.2 local
 ```
 
 The regression script first installs the `version1` and `version2` SUSHIs to temporary folders (except for `local`, in which case it runs `npm install` on the local SUSHI). Then for each of the listed repositories, it does the following:
+
 1. Downloads the repo source from GitHub, creating two copies (for the base version of SUSHI and the version under test)
 2. Runs the base version of SUSHI against one copy of the repo
 3. Runs the version of SUSHI under test against the other copy of the repo
@@ -113,15 +115,15 @@ When the script is complete, it will generate and launch a top-level index file 
 
 For the best experience, developers should use [Visual Studio Code](https://code.visualstudio.com/) with the following plugins:
 
-* [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
-* [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
-  * Consider configuring the formatOnSave feature in VS Code settings:
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
+- [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+  - Consider configuring the formatOnSave feature in VS Code settings:
     ```json
     "[typescript]": {
         "editor.formatOnSave": true
     }
     ```
-* [vscode-language-fsh](https://marketplace.visualstudio.com/items?itemName=kmahalingam.vscode-language-fsh)
+- [vscode-language-fsh](https://marketplace.visualstudio.com/items?itemName=kmahalingam.vscode-language-fsh)
 
 # License
 

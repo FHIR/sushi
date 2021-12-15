@@ -5,7 +5,7 @@ import {
   StructureDefinition
 } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
-import { FshValueSet, FshCode, ValueSetFilterValue } from '../fshtypes';
+import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError, InvalidUriError } from '../errors';
 import { Package } from '.';
@@ -16,8 +16,14 @@ import {
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule
 } from '../fshtypes/rules';
-import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
+import {
+  setPropertyOnInstance,
+  applyInsertRules,
+  listUndefinedLocalCodes
+} from '../fhirtypes/common';
 import { isUri } from 'valid-url';
+import { flatMap } from 'lodash';
+
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
 
@@ -44,12 +50,14 @@ export class ValueSetExporter {
       components.forEach(component => {
         const composeElement: ValueSetComposeIncludeOrExclude = {};
         if (component.from.system) {
+          const systemParts = component.from.system.split('|');
           const foundSystem = (
-            this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
+            this.fisher.fishForMetadata(systemParts[0], Type.CodeSystem)?.url ??
             component.from.system
           ).split('|');
           composeElement.system = foundSystem[0];
-          composeElement.version = foundSystem.slice(1).join('|') || undefined;
+          // if the rule specified a version, use that version.
+          composeElement.version = systemParts.slice(1).join('|') || undefined;
           if (!isUri(composeElement.system)) {
             throw new InvalidUriError(composeElement.system);
           }
@@ -75,11 +83,34 @@ export class ValueSetExporter {
             }
             return composeConcept;
           });
+          // if we can fish up the system in the tank, it's local, and we should check the listed concepts
+          const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
+          if (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) {
+            listUndefinedLocalCodes(
+              codeSystem,
+              composeElement.concept.map(concept => concept.code),
+              this.tank,
+              component
+            );
+          }
         } else if (
           component instanceof ValueSetFilterComponentRule &&
           component.filters.length > 0
         ) {
           composeElement.filter = component.filters.map(filter => {
+            // if filter.value is a FshCode, perform the local code system check here as well
+            if (filter.value instanceof FshCode) {
+              const codeSystem = this.tank.fish(composeElement.system, Type.CodeSystem);
+              if (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) {
+                listUndefinedLocalCodes(
+                  codeSystem,
+                  [(filter.value as FshCode).code],
+                  this.tank,
+                  component
+                );
+              }
+            }
+
             return {
               property: filter.property.toString(),
               op: filter.operator.toString(),
@@ -88,7 +119,45 @@ export class ValueSetExporter {
           });
         }
         if (component.inclusion) {
-          valueSet.compose.include.push(composeElement);
+          if (composeElement.concept?.length > 0) {
+            // warn the user if they have already included a concept in this component
+            // concept, system, and version must all match to be considered equal
+            const matchingComposeElements = valueSet.compose.include.filter(compose => {
+              return (
+                compose.system === composeElement.system &&
+                compose.version === composeElement.version &&
+                compose.concept?.length > 0
+              );
+            });
+            const potentialMatches = flatMap(
+              matchingComposeElements,
+              compose => compose.concept
+            ).map(concept => concept.code);
+            composeElement.concept = composeElement.concept.filter(
+              (concept, idx, currentConcepts) => {
+                if (
+                  potentialMatches.includes(concept.code) ||
+                  currentConcepts
+                    .slice(0, idx)
+                    .some(duplicateConcept => duplicateConcept.code === concept.code)
+                ) {
+                  logger.warn(
+                    `ValueSet ${valueSet.name} already includes ${composeElement.system}${
+                      composeElement.version ? `|${composeElement.version}` : ''
+                    }#${concept.code}`,
+                    component.sourceInfo
+                  );
+                  return false;
+                }
+                return true;
+              }
+            );
+            if (composeElement.concept.length > 0) {
+              valueSet.compose.include.push(composeElement);
+            }
+          } else {
+            valueSet.compose.include.push(composeElement);
+          }
         } else {
           valueSet.compose.exclude.push(composeElement);
         }
@@ -112,7 +181,7 @@ export class ValueSetExporter {
             rule.value,
             this.fisher
           );
-          setPropertyOnInstance(valueSet, pathParts, assignedValue);
+          setPropertyOnInstance(valueSet, pathParts, assignedValue, this.fisher);
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);

@@ -15,7 +15,9 @@ import {
   getRawFSHes,
   hasFshFiles,
   writeFHIRResources,
-  init
+  init,
+  checkNullValuesOnArray,
+  writePreprocessedFSH
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -23,6 +25,20 @@ import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
 import { PackageLoadError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
+import { FSHTank, FSHDocument } from '../../src/import';
+import {
+  Profile,
+  Extension,
+  Instance,
+  FshValueSet,
+  FshCodeSystem,
+  Invariant,
+  RuleSet,
+  Mapping,
+  Logical,
+  Resource
+} from '../../src/fshtypes';
+import { EOL } from 'os';
 describe('Processing', () => {
   temp.track();
 
@@ -56,7 +72,7 @@ describe('Processing', () => {
       fs.mkdirpSync(path.join(tempRoot, 'has-input', 'input'));
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'fsh')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirpSync(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
-      fs.mkdirpSync(path.join(tempRoot, 'flat-tank', 'ig-data'));
+      fs.mkdirpSync(path.join(tempRoot, 'flat-tank', 'ig-data')); // TODO: Tests legacy support. Remove when no longer supported.
       fs.mkdirSync(path.join(tempRoot, 'no-fsh'));
       fs.ensureFileSync(path.join(tempRoot, 'no-fsh', 'notfsh.txt'));
     });
@@ -74,16 +90,6 @@ describe('Processing', () => {
       expect(foundInput).toBe('.');
     });
 
-    // TODO: Tests legacy support. Remove when no longer supported.
-    it('should find a path to the fsh subdirectory if present', () => {
-      const input = path.join(tempRoot, 'has-fsh');
-      const foundInput = findInputDir(input);
-      expect(foundInput).toBe(path.join(tempRoot, 'has-fsh', 'fsh'));
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /Use of this folder is DEPRECATED and will be REMOVED in a future release/s
-      );
-    });
-
     it('should find a path to the input/fsh subdirectory if present', () => {
       const input = path.join(tempRoot, 'has-input-fsh');
       const foundInput = findInputDir(input);
@@ -97,23 +103,37 @@ describe('Processing', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    // TODO: Tests legacy support. Remove when no longer supported.
+    it('should find a path to input/fsh if no fsh files are present, no root level ig-data folder, and no fsh subdirectory (current tank with no fsh files)', () => {
+      const input = path.join(tempRoot, 'no-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'no-fsh', 'input', 'fsh'));
+    });
+
+    // TODO: Tests current tank configuration is preferred over legacy. Remove when legacy error handling is removed.
     it('should prefer path to input/fsh over fsh/ if both present', () => {
       const input = path.join(tempRoot, 'has-fsh-and-input-fsh');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(path.join(tempRoot, 'has-fsh-and-input-fsh', 'input', 'fsh'));
     });
 
-    it('should find a path to the provided directory if the fsh subdirectory is not present and a root ig-data is present (legacy flat tank)', () => {
+    // TODO: Tests legacy case logs error. Remove when error is removed.
+    it('should log an error and not change input directory if the fsh subdirectory if present (legacy ./fsh/)', () => {
+      const input = path.join(tempRoot, 'has-fsh');
+      const foundInput = findInputDir(input);
+      expect(foundInput).toBe(path.join(tempRoot, 'has-fsh'));
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Use of this folder is NO LONGER SUPPORTED/s
+      );
+    });
+
+    // TODO: Tests legacy case logs error. Remove when error is removed.
+    it('should log an error and not change input directory if the fsh subdirectory is not present and a root ig-data is present (legacy flat tank)', () => {
       const input = path.join(tempRoot, 'flat-tank');
       const foundInput = findInputDir(input);
       expect(foundInput).toBe(input);
-    });
-
-    it('should find a path to input/fsh if no fsh files are present, no root level ig-data folder, and no fsh subdirectory (current tank with no fsh files)', () => {
-      const input = path.join(tempRoot, 'no-fsh');
-      const foundInput = findInputDir(input);
-      expect(foundInput).toBe(path.join(tempRoot, 'no-fsh', 'input', 'fsh'));
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Support for other folder structures is NO LONGER SUPPORTED/s
+      );
     });
   });
 
@@ -138,34 +158,17 @@ describe('Processing', () => {
     it('should use and create the output directory when it is provided', () => {
       const input = path.join(tempRoot, 'my-input');
       const output = path.join(tempRoot, 'my-output');
-      const legacyIgContextOutputDir = ensureOutputDir(input, output, false, true);
-      const igContextOutputDir = ensureOutputDir(input, output, true, false);
-      const nonIgContextOutputDir = ensureOutputDir(input, output, false, false);
-      expect(igContextOutputDir).toBe(output);
-      expect(nonIgContextOutputDir).toBe(output);
-      expect(legacyIgContextOutputDir).toBe(output);
+      const outputDir = ensureOutputDir(input, output);
+      expect(outputDir).toBe(output);
       expect(fs.existsSync(output)).toBeTruthy();
     });
 
-    it('should default the output directory to "build" when not running in IG Publisher context', () => {
-      const input = path.join(tempRoot, 'my-input');
-      const outputDir = ensureOutputDir(input, undefined, false, false);
-      expect(outputDir).toBe('build');
-      expect(fs.existsSync(outputDir)).toBeTruthy();
-    });
-
-    it('should default the output directory to the parent of the input when running in legacy IG Publisher context', () => {
-      const input = path.join(tempRoot, 'my-input');
-      const outputDir = ensureOutputDir(input, undefined, false, true);
-      expect(outputDir).toBe(tempRoot);
-      expect(fs.existsSync(outputDir)).toBeTruthy();
-    });
-
-    it('should default the output directory to the grandparent of the input when running in IG Publisher context', () => {
+    it('should default the output directory to the grandparent of the input no output directory provided (e.g. ./input/fsh -> ./)', () => {
       const input = path.join(tempRoot, 'my-input', 'my-fsh');
-      const outputDir = ensureOutputDir(input, undefined, true, false);
+      const outputDir = ensureOutputDir(input, undefined);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
+      expect(loggerSpy.getLastMessage('info')).toMatch(/No output path specified/);
     });
 
     it('should empty the fsh-generated folder if the output directory contains one', () => {
@@ -173,7 +176,7 @@ describe('Processing', () => {
         .spyOn(fs, 'existsSync')
         .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
       const input = path.join(tempRoot, 'my-input', 'my-fsh');
-      const outputDir = ensureOutputDir(input, undefined, true, false);
+      const outputDir = ensureOutputDir(input, undefined);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
       expect(emptyDirSpy.mock.calls).toHaveLength(1);
@@ -188,7 +191,7 @@ describe('Processing', () => {
         .spyOn(fs, 'existsSync')
         .mockImplementationOnce(dir => dir === path.join(tempRoot, 'fsh-generated'));
       const input = path.join(tempRoot, 'my-input', 'my-fsh');
-      const outputDir = ensureOutputDir(input, undefined, true, false);
+      const outputDir = ensureOutputDir(input, undefined);
       expect(outputDir).toBe(tempRoot);
       expect(fs.existsSync(outputDir)).toBeTruthy();
       expect(emptyDirSpy.mock.calls).toHaveLength(1);
@@ -206,7 +209,7 @@ describe('Processing', () => {
 
     it('should return the contents of sushi-config.yaml from the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       expect(config).toEqual({
         filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
         id: 'sushi-test',
@@ -235,6 +238,7 @@ describe('Processing', () => {
         ],
         FSHOnly: false,
         applyExtensionMetadataToRoot: true,
+        instanceOptions: { setMetaProfile: 'always', setId: 'always' },
         parameters: [
           {
             code: 'copyrightyear',
@@ -250,29 +254,19 @@ describe('Processing', () => {
 
     it('should allow FHIR R5', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-r5');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       expect(config.fhirVersion).toEqual(['4.5.0']);
     });
 
     it('should allow FHIR current', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-current');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       expect(config.fhirVersion).toEqual(['current']);
     });
 
-    it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent', () => {
+    it('should extract a configuration from an ImplementationGuide JSON when sushi-config.yaml is absent', () => {
       const input = path.join(__dirname, 'fixtures', 'ig-JSON-only');
-      const config = readConfig(input, false);
-      expect(config).toEqual({
-        FSHOnly: true,
-        canonical: 'http://example.org',
-        fhirVersion: ['4.0.1']
-      });
-    });
-
-    it('should extract a configuration from an ImplementationGuide JSON when config.yaml is absent (legacy)', () => {
-      const input = path.join(__dirname, 'fixtures', 'ig-JSON-only-legacy', 'fsh');
-      const config = readConfig(input, true);
+      const config = readConfig(input);
       expect(config).toEqual({
         FSHOnly: true,
         canonical: 'http://example.org',
@@ -283,7 +277,7 @@ describe('Processing', () => {
     it('should log and throw an error when sushi-config.yaml is not found in the input directory', () => {
       const input = path.join(__dirname, 'fixtures', 'no-package');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/No sushi-config\.yaml/s);
     });
@@ -291,7 +285,7 @@ describe('Processing', () => {
     it('should log and throw an error when the contents of sushi-config.yaml are not valid yaml', () => {
       const input = path.join(__dirname, 'fixtures', 'invalid-yaml');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/not a valid YAML object/s);
     });
@@ -299,7 +293,7 @@ describe('Processing', () => {
     it('should log and throw an error when the configuration uses an unsupported FHIR version (DSTU2)', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-dstu2');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /must specify a supported version of FHIR/s
@@ -309,7 +303,7 @@ describe('Processing', () => {
     it('should log and throw an error when the configuration uses an unsupported FHIR version (4.0.0)', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-four-oh-oh');
       expect(() => {
-        readConfig(input, false);
+        readConfig(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /must specify a supported version of FHIR/s
@@ -323,14 +317,12 @@ describe('Processing', () => {
         .spyOn(loadModule, 'loadDependency')
         .mockImplementation(
           async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
-            // the mock loader can find hl7.fhir.r4.core, hl7.fhir.r5.core, and hl7.fhir.us.core
-            if (
-              packageName === 'hl7.fhir.r4.core' ||
-              packageName === 'hl7.fhir.r5.core' ||
-              packageName === 'hl7.fhir.us.core'
-            ) {
+            // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core
+            if (/^hl7.fhir.(r2|r3|r4|r4b|r5|us).core$/.test(packageName)) {
               FHIRDefs.packages.push(`${packageName}#${version}`);
               return Promise.resolve(FHIRDefs);
+            } else if (/^self-signed.package$/.test(packageName)) {
+              throw new Error('self signed certificate in certificate chain');
             } else {
               throw new PackageLoadError(`${packageName}#${version}`);
             }
@@ -345,8 +337,7 @@ describe('Processing', () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, usCoreDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(2);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(defs.packages).toContain('hl7.fhir.us.core#3.1.0');
@@ -354,12 +345,33 @@ describe('Processing', () => {
       });
     });
 
-    it('should support FHIR R5 dependencies', () => {
+    it('should support prerelease FHIR R4B dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['4.1.0'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r4b.core#4.1.0']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
+      });
+    });
+
+    it('should support official FHIR R4B dependency (will be 4.3.0)', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['4.3.0'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r4b.core#4.3.0']);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should support prerelease FHIR R5 dependencies', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.5.0'];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, config).then(() => {
         expect(defs.packages).toEqual(['hl7.fhir.r5.core#4.5.0']);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
@@ -371,8 +383,7 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['current'];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, config);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, config).then(() => {
         expect(defs.packages).toEqual(['hl7.fhir.r5.core#current']);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
@@ -380,16 +391,106 @@ describe('Processing', () => {
       });
     });
 
+    it('should support virtual FHIR extension packages', () => {
+      // We want to do this for each, so make a function we'll just call for each version
+      const testExtPackage = async (
+        extId: string,
+        suppFhirId: string,
+        suppFhirVersion: string,
+        fhirId: string,
+        fhirVersion: string
+      ) => {
+        const virtualExtensionsConfig = cloneDeep(minimalConfig);
+        virtualExtensionsConfig.fhirVersion = [fhirVersion];
+        virtualExtensionsConfig.dependencies = [{ packageId: extId, version: fhirVersion }];
+        const defs = new FHIRDefinitions();
+        return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
+          expect(defs.packages.length).toBe(1);
+          expect(defs.packages).toContain(`${fhirId}#${fhirVersion}`);
+          expect(defs.supplementalFHIRPackages).toEqual([`${suppFhirId}#${suppFhirVersion}`]);
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        });
+      };
+      return Promise.all([
+        testExtPackage(
+          'hl7.fhir.extensions.r2',
+          'hl7.fhir.r2.core',
+          '1.0.2',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r3',
+          'hl7.fhir.r3.core',
+          '3.0.2',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r4',
+          'hl7.fhir.r4.core',
+          '4.0.1',
+          'hl7.fhir.r5.core',
+          '4.5.0'
+        ),
+        testExtPackage(
+          'hl7.fhir.extensions.r5',
+          'hl7.fhir.r5.core',
+          'current',
+          'hl7.fhir.r4.core',
+          '4.0.1'
+        )
+      ]);
+    });
+
+    it('should log a warning if wrong virtual FHIR extension package version is used', () => {
+      const virtualExtensionsConfig = cloneDeep(minimalConfig);
+      virtualExtensionsConfig.fhirVersion = ['4.0.1'];
+      virtualExtensionsConfig.dependencies = [
+        { packageId: 'hl7.fhir.extensions.r2', version: '1.0.2' }
+      ];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
+        expect(defs.packages.length).toBe(1);
+        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
+        expect(defs.supplementalFHIRPackages).toEqual(['hl7.fhir.r2.core#1.0.2']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Incorrect package version: hl7\.fhir\.extensions\.r2#1\.0\.2\./
+        );
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+    });
+
     it('should log an error when it fails to load a dependency', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, badDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(1);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.does\.not\.exist#current/s
+        );
+        // But don't log the error w/ details about proxies
+        expect(loggerSpy.getLastMessage('error')).not.toMatch(/SSL/s);
+      });
+    });
+
+    it('should log a more detailed error when it fails to load a dependency due to certificate issue', () => {
+      const selfSignedDependencyConfig = cloneDeep(minimalConfig);
+      selfSignedDependencyConfig.dependencies = [
+        { packageId: 'self-signed.package', version: '1.0.0' }
+      ];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, selfSignedDependencyConfig).then(() => {
+        expect(defs.packages.length).toBe(1);
+        expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Failed to load self-signed\.package#1\.0\.0/s
+        );
+        // AND it should log the detailed message about SSL
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Sometimes this error occurs in corporate or educational environments that use proxies and\/or SSL inspection/s
         );
       });
     });
@@ -398,13 +499,14 @@ describe('Processing', () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.r4.core' }];
       const defs = new FHIRDefinitions();
-      const dependencyDefs = loadExternalDependencies(defs, badDependencyConfig);
-      return Promise.all(dependencyDefs).then(() => {
+      return loadExternalDependencies(defs, badDependencyConfig).then(() => {
         expect(defs.packages.length).toBe(1);
         expect(defs.packages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.fhir\.r4\.core: No version specified\./s
         );
+        // But don't log the error w/ details about proxies
+        expect(loggerSpy.getLastMessage('error')).not.toMatch(/SSL/s);
       });
     });
   });
@@ -430,6 +532,48 @@ describe('Processing', () => {
         getRawFSHes(input);
       }).toThrow();
       expect(loggerSpy.getLastMessage('error')).toMatch(/Invalid path to FSH definition folder\./s);
+    });
+
+    describe('#symlinks', () => {
+      const linkPath = path.join(__dirname, 'fixtures', 'fsh-files', 'myLock.fsh');
+      const linkTarget = path.join(__dirname, 'fixtures', 'fsh-files', 'meaninglessTarget');
+
+      beforeAll(() => {
+        try {
+          fs.removeSync(linkPath);
+        } catch {
+          // This will fail if the link doesn't exist, which is fine.
+          // We just want to be extra sure to clean up before making it.
+        }
+        try {
+          fs.symlinkSync(linkTarget, linkPath);
+        } catch {
+          // This may fail if the user running the test doesn't have permission to create a symbolic link.
+          // On Windows systems, normal users do not have this permission.
+        }
+      });
+
+      it('should return a RawFSH for each real file in the input directory that ends with .fsh', () => {
+        const input = path.join(__dirname, 'fixtures', 'fsh-files');
+        const rawFSHes = getRawFSHes(input);
+        expect(rawFSHes.length).toBe(2);
+        expect(rawFSHes).toContainEqual({
+          content: '// Content of first file',
+          path: path.join(input, 'first.fsh')
+        });
+        expect(rawFSHes).toContainEqual({
+          content: '// Content of second file',
+          path: path.join(input, 'second.fsh')
+        });
+      });
+
+      afterAll(() => {
+        try {
+          fs.removeSync(linkPath);
+        } catch {
+          // This will fail if someone removed the link in the middle of the test.
+        }
+      });
     });
   });
 
@@ -463,17 +607,117 @@ describe('Processing', () => {
     });
   });
 
+  describe('#checkNullValuesOnArray', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
+    it('should log a warning when a resource includes null values in a top-level array', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      exInstance.name = [null, 'John', null, 'Doe', null];
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name' in example-instance is missing values at the following indices: 0,2,4"
+      );
+    });
+
+    it('should log a warning when a resource includes null values in a nested array', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        testNames: [null, 'John', null, 'Doe', null]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name.testNames' in example-instance is missing values at the following indices: 0,2,4"
+      );
+    });
+
+    it('should log a warning when a resource includes null values in an array, nested within both objects and arrays ', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        foo: [
+          {
+            coding: [
+              null, // this is bad
+              { system: 'http://foo.org', code: 'bar' }
+            ]
+          }
+        ]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name.foo[0].coding' in example-instance is missing values at the following indices: 0"
+      );
+    });
+
+    it('should ignore null values on primitive arrays, but warn on null values in nested arrays', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        _foo: [
+          null, // this is ok
+          {
+            extension: [
+              null, // this is NOT ok
+              { url: 'http://foo.org', valueBoolean: true }
+            ]
+          }
+        ]
+      };
+      exInstance.name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array 'name._foo[1].extension' in example-instance is missing values at the following indices: 0"
+      );
+    });
+
+    it('should not log a warning when a resource includes null values in an array prefixed with an underscore', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      exInstance._name = [null, 'John', null, 'Doe', null];
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should log a warning when a resource includes null values in an array nested within an object prefixed with an underscore', () => {
+      const exInstance = new InstanceDefinition();
+      exInstance.resourceType = 'Profile';
+      exInstance.id = 'example-instance';
+      const nameObj = {
+        testNames: [null, 'John', null, 'Doe', null]
+      };
+      exInstance._name = nameObj;
+      checkNullValuesOnArray(exInstance);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        "The array '_name.testNames' in example-instance is missing values at the following indices: 0,2,4"
+      );
+    });
+  });
+
   describe('#writeFHIRResources()', () => {
-    let tempRoot: string;
     let tempIGPubRoot: string;
     let outPackage: Package;
     let defs: FHIRDefinitions;
 
     beforeAll(() => {
-      tempRoot = temp.mkdirSync('output-dir');
       tempIGPubRoot = temp.mkdirSync('output-ig-dir');
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
-      const config = readConfig(input, false);
+      const config = readConfig(input);
       outPackage = new Package(config);
       defs = new FHIRDefinitions();
 
@@ -481,6 +725,10 @@ describe('Processing', () => {
       myProfile.id = 'my-profile';
       const myExtension = new StructureDefinition();
       myExtension.id = 'my-extension';
+      const myLogical = new StructureDefinition();
+      myLogical.id = 'my-logical';
+      const myResource = new StructureDefinition();
+      myResource.id = 'my-resource';
       const myValueSet = new ValueSet();
       myValueSet.id = 'my-value-set';
       const myCodeSystem = new CodeSystem();
@@ -541,6 +789,8 @@ describe('Processing', () => {
 
       outPackage.profiles.push(myProfile, myFSHDefinedProfile);
       outPackage.extensions.push(myExtension);
+      outPackage.logicals.push(myLogical);
+      outPackage.resources.push(myResource);
       outPackage.valueSets.push(myValueSet);
       outPackage.codeSystems.push(myCodeSystem);
       outPackage.instances.push(
@@ -563,7 +813,7 @@ describe('Processing', () => {
 
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        writeFHIRResources(tempIGPubRoot, outPackage, defs, false, true);
+        writeFHIRResources(tempIGPubRoot, outPackage, defs, false);
       });
 
       afterAll(() => {
@@ -574,11 +824,13 @@ describe('Processing', () => {
         const generatedPath = path.join(tempIGPubRoot, 'fsh-generated', 'resources');
         expect(fs.existsSync(generatedPath)).toBeTruthy();
         const allGeneratedFiles = fs.readdirSync(generatedPath);
-        expect(allGeneratedFiles.length).toBe(12);
+        expect(allGeneratedFiles.length).toBe(14);
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile-instance.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-extension.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-extension-instance.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-logical.json');
+        expect(allGeneratedFiles).toContain('StructureDefinition-my-resource.json');
         expect(allGeneratedFiles).toContain('ValueSet-my-value-set.json');
         expect(allGeneratedFiles).toContain('CodeSystem-my-code-system.json');
         expect(allGeneratedFiles).toContain('ConceptMap-my-concept-map.json');
@@ -587,6 +839,7 @@ describe('Processing', () => {
         expect(allGeneratedFiles).toContain('StructureDefinition-my-model.json');
         expect(allGeneratedFiles).toContain('OperationDefinition-my-operation.json');
         expect(allGeneratedFiles).toContain('Observation-my-other-instance.json');
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 14 FHIR resources/s);
       });
 
       it('should not write a resource if that resource already exists in the "input" folder', () => {
@@ -622,87 +875,136 @@ describe('Processing', () => {
         ).toBeTruthy();
       });
     });
+  });
 
-    describe('legacy IG Publisher mode and legacy flat tank', () => {
-      beforeAll(() => {
-        writeFHIRResources(tempRoot, outPackage, defs, false, false);
-      });
+  describe('#writePreprocessedFSH', () => {
+    let tank: FSHTank;
+    let tempIn: string;
+    let tempOut: string;
 
-      afterAll(() => {
-        temp.cleanupSync();
-      });
+    beforeAll(() => {
+      tempIn = temp.mkdirSync('input-dir');
+      tempOut = temp.mkdirSync('output-dir');
+      const firstDoc = new FSHDocument(path.join(tempIn, 'first.fsh'));
+      firstDoc.aliases.set('LOINC', 'http://loinc.org');
+      firstDoc.profiles.set('MyProfile', new Profile('MyProfile').withLocation([3, 0, 15, 7]));
+      firstDoc.extensions.set(
+        'MyExtension',
+        new Extension('MyExtension').withLocation([17, 0, 20, 8])
+      );
+      firstDoc.logicals.set('MyLogical', new Logical('MyLogical').withLocation([31, 0, 39, 23]));
+      const secondDoc = new FSHDocument(path.join(tempIn, 'second.fsh'));
+      secondDoc.instances.set(
+        'MyInstance',
+        new Instance('MyInstance').withLocation([20, 0, 25, 5])
+      );
+      secondDoc.valueSets.set(
+        'MyValueSet',
+        new FshValueSet('MyValueSet').withLocation([30, 0, 35, 9])
+      );
+      secondDoc.codeSystems.set(
+        'MyCodeSystem',
+        new FshCodeSystem('MyCodeSystem').withLocation([10, 0, 15, 18])
+      );
+      const thirdDoc = new FSHDocument(path.join(tempIn, 'extra', 'third.fsh'));
+      thirdDoc.invariants.set('inv-1', new Invariant('inv-1').withLocation([222, 0, 224, 9]));
+      thirdDoc.ruleSets.set('MyRuleSet', new RuleSet('MyRuleSet').withLocation([33, 0, 39, 15]));
+      thirdDoc.mappings.set('MyMapping', new Mapping('MyMapping').withLocation([10, 0, 21, 18]));
+      thirdDoc.resources.set(
+        'MyResource',
+        new Resource('MyResource').withLocation([55, 0, 69, 31])
+      );
+      const ruleSetDoc = new FSHDocument(path.join(tempIn, 'extra', 'rulesets.fsh'));
+      ruleSetDoc.ruleSets.set('OneRuleSet', new RuleSet('OneRuleSet').withLocation([8, 0, 18, 35]));
+      ruleSetDoc.ruleSets.set(
+        'TwoRuleSet',
+        new RuleSet('TwoRuleSet').withLocation([20, 0, 35, 21])
+      );
+      tank = new FSHTank([firstDoc, secondDoc, thirdDoc, ruleSetDoc], null);
+      writePreprocessedFSH(tempOut, tempIn, tank);
+    });
 
-      it('should write profiles and profile instances to the "profiles" directory', () => {
-        const profilesPath = path.join(tempRoot, 'input', 'profiles');
-        expect(fs.existsSync(profilesPath)).toBeTruthy();
-        const profilesFiles = fs.readdirSync(profilesPath);
-        expect(profilesFiles.length).toBe(2);
-        expect(profilesFiles).toContain('StructureDefinition-my-profile.json');
-        expect(profilesFiles).toContain('StructureDefinition-my-profile-instance.json');
-      });
+    afterAll(() => {
+      temp.cleanupSync();
+    });
 
-      it('should write extensions and extension instances to the "extensions" directory', () => {
-        const extensionsPath = path.join(tempRoot, 'input', 'extensions');
-        expect(fs.existsSync(extensionsPath)).toBeTruthy();
-        const extensionsFiles = fs.readdirSync(extensionsPath);
-        expect(extensionsFiles.length).toBe(2);
-        expect(extensionsFiles).toContain('StructureDefinition-my-extension.json');
-        expect(extensionsFiles).toContain('StructureDefinition-my-extension-instance.json');
-      });
+    it('should produce files in a structure that mirrors the input', () => {
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'first.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'second.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'third.fsh')));
+      expect(fs.existsSync(path.join(tempOut, '_preprocessed', 'extra', 'aliases.fsh')));
+    });
 
-      it('should write value sets, code systems, and vocabulary instances to the "vocabulary" directory', () => {
-        const vocabularyPath = path.join(tempRoot, 'input', 'vocabulary');
-        expect(fs.existsSync(vocabularyPath)).toBeTruthy();
-        const vocabularyFiles = fs.readdirSync(vocabularyPath);
-        expect(vocabularyFiles.length).toBe(3);
-        expect(vocabularyFiles).toContain('ValueSet-my-value-set.json');
-        expect(vocabularyFiles).toContain('CodeSystem-my-code-system.json');
-        expect(vocabularyFiles).toContain('ConceptMap-my-concept-map.json');
-      });
+    it('should write all entities that exist after preprocessing', () => {
+      // first.fsh should contain LOINC (an Alias), MyProfile, and MyExtension
+      const firstContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'first.fsh'),
+        'utf-8'
+      );
+      expect(firstContents).toMatch('Alias: LOINC');
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 3 - 15${EOL}Profile: MyProfile`
+      );
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 17 - 20${EOL}Extension: MyExtension`
+      );
+      expect(firstContents).toMatch(
+        `// Originally defined on lines 31 - 39${EOL}Logical: MyLogical`
+      );
+      // second.fsh should contain MyCodeSystem, MyInstance, and MyValueSet
+      const secondContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'second.fsh'),
+        'utf-8'
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 10 - 15${EOL}CodeSystem: MyCodeSystem`
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 20 - 25${EOL}Instance: MyInstance`
+      );
+      expect(secondContents).toMatch(
+        `// Originally defined on lines 30 - 35${EOL}ValueSet: MyValueSet`
+      );
+      // third.fsh should contain MyMapping and inv-1
+      const thirdContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'third.fsh'),
+        'utf-8'
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 10 - 21${EOL}Mapping: MyMapping`
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 222 - 224${EOL}Invariant: inv-1`
+      );
+      expect(thirdContents).toMatch(
+        `// Originally defined on lines 55 - 69${EOL}Resource: MyResource`
+      );
+      // RuleSets do not exist after preprocessing
+      expect(thirdContents).not.toMatch('RuleSet: MyRuleSet');
+    });
 
-      it('should write example instances to the "examples" directory', () => {
-        const examplesPath = path.join(tempRoot, 'input', 'examples');
-        expect(fs.existsSync(examplesPath)).toBeTruthy();
-        const examplesFiles = fs.readdirSync(examplesPath);
-        expect(examplesFiles.length).toBe(1);
-        expect(examplesFiles).toContain('Observation-my-example.json');
-      });
+    it('should write entities in their original order', () => {
+      const secondContents = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'second.fsh'),
+        'utf-8'
+      );
+      const instanceLocation = secondContents.indexOf('Instance: MyInstance');
+      const valueSetLocation = secondContents.indexOf('ValueSet: MyValueSet');
+      const codeSystemLocation = secondContents.indexOf('CodeSystem: MyCodeSystem');
+      expect(instanceLocation).toBeGreaterThan(-1);
+      expect(valueSetLocation).toBeGreaterThan(-1);
+      expect(codeSystemLocation).toBeGreaterThan(-1);
+      expect(codeSystemLocation).toBeLessThan(instanceLocation);
+      expect(instanceLocation).toBeLessThan(valueSetLocation);
+    });
 
-      it('should write capability instances to the "capabilities" directory', () => {
-        const capabilitiesPath = path.join(tempRoot, 'input', 'capabilities');
-        expect(fs.existsSync(capabilitiesPath)).toBeTruthy();
-        const capabilitiesFiles = fs.readdirSync(capabilitiesPath);
-        expect(capabilitiesFiles.length).toBe(1);
-        expect(capabilitiesFiles).toContain('CapabilityStatement-my-capabilities.json');
-      });
-
-      it('should write model instances to the "models" directory', () => {
-        const modelsPath = path.join(tempRoot, 'input', 'models');
-        expect(fs.existsSync(modelsPath)).toBeTruthy();
-        const modelsFiles = fs.readdirSync(modelsPath);
-        expect(modelsFiles.length).toBe(1);
-        expect(modelsFiles).toContain('StructureDefinition-my-model.json');
-      });
-
-      it('should write operation instances to the "operations" directory', () => {
-        const operationsPath = path.join(tempRoot, 'input', 'operations');
-        expect(fs.existsSync(operationsPath)).toBeTruthy();
-        const operationsFiles = fs.readdirSync(operationsPath);
-        expect(operationsFiles.length).toBe(1);
-        expect(operationsFiles).toContain('OperationDefinition-my-operation.json');
-      });
-
-      it('should write all other non-inline instances to the "resources" directory', () => {
-        const resourcesPath = path.join(tempRoot, 'input', 'resources');
-        expect(fs.existsSync(resourcesPath)).toBeTruthy();
-        const resourcesFiles = fs.readdirSync(resourcesPath);
-        expect(resourcesFiles.length).toBe(1);
-        expect(resourcesFiles).toContain('Observation-my-other-instance.json');
-      });
-
-      it('should write an info message with the number of instances exported', () => {
-        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 12 FHIR resources/s);
-      });
+    it('should write a comment for a file with no entities after preprocessing', () => {
+      // A file with only RuleSet definitions will have no content after preprocessing.
+      const ruleSetContent = fs.readFileSync(
+        path.join(tempOut, '_preprocessed', 'extra', 'rulesets.fsh'),
+        'utf-8'
+      );
+      expect(ruleSetContent).toBe('// This file has no content after preprocessing.');
     });
   });
 
@@ -741,7 +1043,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);
@@ -799,6 +1103,10 @@ describe('Processing', () => {
           return 'active';
         } else if (question.startsWith('Version')) {
           return '2.0.0';
+        } else if (question.startsWith('Publisher Name')) {
+          return 'SUSHI Chefs';
+        } else if (question.startsWith('Publisher Url')) {
+          return 'http://custom-publisher.org';
         }
       });
       await init();
@@ -807,7 +1115,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*MyNonDefaultName/);
@@ -863,7 +1173,9 @@ describe('Processing', () => {
         ['Id (Default: fhir.example): '],
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
-        ['Version (Default: 0.1.0): ']
+        ['Version (Default: 0.1.0): '],
+        ['Publisher Name (Default: Example Publisher): '],
+        ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
       expect(yesNoSpy.mock.calls[0][0]).toMatch(/Initialize SUSHI project in .*ExampleIG/);

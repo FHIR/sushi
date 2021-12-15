@@ -1,25 +1,23 @@
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { MultipleStandardsStatusError } from '../../src/errors';
+import { InvalidMustSupportError, MultipleStandardsStatusError } from '../../src/errors';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
+  let obsResource: StructureDefinition;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
-    observation = fisher.fishForStructureDefinition('Observation');
+    observation = fisher.fishForStructureDefinition('us-core-observation-lab');
+    obsResource = fisher.fishForStructureDefinition('Observation');
   });
 
   describe('#applyFlags()', () => {
@@ -104,6 +102,13 @@ describe('ElementDefinition', () => {
         MultipleStandardsStatusError
       );
       expect(note.extension).toBeUndefined();
+    });
+
+    it('should throw an error when applying mustSupport to an element in a resource', () => {
+      const note = obsResource.elements.find(e => e.id === 'Observation.note');
+      expect(() =>
+        note.applyFlags(true, undefined, undefined, undefined, undefined, undefined)
+      ).toThrow(InvalidMustSupportError);
     });
   });
 });

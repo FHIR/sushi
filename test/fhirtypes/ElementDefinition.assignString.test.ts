@@ -1,8 +1,9 @@
 import path from 'path';
+import fs from 'fs-extra';
 import { cloneDeep } from 'lodash';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
+import { StructureDefinition, ElementDefinition } from '../../src/fhirtypes';
 import { TestFisher } from '../testhelpers';
 
 describe('ElementDefinition', () => {
@@ -16,15 +17,12 @@ describe('ElementDefinition', () => {
   let imagingStudy: StructureDefinition;
   let device: StructureDefinition;
   let task: StructureDefinition;
+  let binary: StructureDefinition;
   let fisher: TestFisher;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
@@ -37,6 +35,7 @@ describe('ElementDefinition', () => {
     imagingStudy = fisher.fishForStructureDefinition('ImagingStudy');
     device = fisher.fishForStructureDefinition('Device');
     task = fisher.fishForStructureDefinition('Task');
+    binary = fisher.fishForStructureDefinition('Binary');
   });
   describe('#assignString', () => {
     // Assigning a string
@@ -366,6 +365,20 @@ describe('ElementDefinition', () => {
       udiCarrierCarrierAIDC.assignValue('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=', true);
       expect(udiCarrierCarrierAIDC.fixedBase64Binary).toBe('QXJlIHdlIHRoZSBzdWJqZWN0cz8/P+w=');
       expect(udiCarrierCarrierAIDC.patternBase64Binary).toBeUndefined();
+    });
+
+    it('should assign a string utilizing binary adjunct to a base64Binary', () => {
+      const dataElement = binary.elements.find(e => e.id === 'Binary.data');
+      dataElement.assignValue('ig-loader-ExampleFile.txt');
+      expect(dataElement.patternBase64Binary).toBe('ig-loader-ExampleFile.txt');
+      expect(dataElement.fixedBase64Binary).toBeUndefined();
+    });
+
+    it('should assign a string utilizing binary adjunct to a base64Binary (exactly)', () => {
+      const dataElement = binary.elements.find(e => e.id === 'Binary.data');
+      dataElement.assignValue('ig-loader-ExampleFile.txt', true);
+      expect(dataElement.fixedBase64Binary).toBe('ig-loader-ExampleFile.txt');
+      expect(dataElement.patternBase64Binary).toBeUndefined();
     });
 
     it('should throw ValueAlreadyAssignedError when assigning an already assigned base64Binary by pattern[x]', () => {
@@ -1090,6 +1103,67 @@ describe('ElementDefinition', () => {
       );
       expect(valueX.patternString).toBeUndefined();
       expect(valueX.fixedString).toBeUndefined();
+    });
+    describe('#integer64', () => {
+      let valueX: ElementDefinition;
+      let valueInteger64: ElementDefinition;
+      beforeAll(() => {
+        const r5Extension = StructureDefinition.fromJSON(
+          JSON.parse(
+            fs.readFileSync(
+              path.join(
+                __dirname,
+                '..',
+                'testhelpers',
+                'testdefs',
+                'r5-definitions',
+                'package',
+                'StructureDefinition-Extension.json'
+              ),
+              'utf-8'
+            )
+          )
+        );
+        valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
+      });
+
+      beforeEach(() => {
+        valueInteger64 = cloneDeep(valueX);
+        valueInteger64.type = valueInteger64.type.filter(t => t.code === 'integer64');
+      });
+
+      // assigning an integer64
+      // NOTE: Tests of assigning an integer64 as a number are in ElementDefinition.assignNumber.test.ts
+      it('should assign an integer string to an integer64', () => {
+        valueInteger64.assignValue('123');
+        expect(valueInteger64.patternInteger64).toBe('123');
+        expect(valueInteger64.fixedInteger64).toBeUndefined();
+      });
+
+      it('should assign an integer string to an integer64 (exactly)', () => {
+        valueInteger64.assignValue('123', true);
+        expect(valueInteger64.patternInteger64).toBeUndefined();
+        expect(valueInteger64.fixedInteger64).toBe('123');
+      });
+
+      it('should throw MismatchedTypeError when assigning a decimal string to an integer64 value', () => {
+        expect(() => {
+          valueInteger64.assignValue('12.3');
+        }).toThrow(
+          'Cannot assign string value: 12.3. Value does not match element type: integer64'
+        );
+        expect(() => {
+          valueInteger64.assignValue('12.3', true);
+        }).toThrow(
+          'Cannot assign string value: 12.3. Value does not match element type: integer64'
+        );
+      });
+
+      it('should throw MismatchedTypeError when assigning a string to an integer64 value', () => {
+        expect(() => {
+          valueInteger64.assignValue('foo');
+        }).toThrow('Cannot assign string value: foo. Value does not match element type: integer64');
+      });
     });
   });
 });

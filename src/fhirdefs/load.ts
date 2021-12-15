@@ -7,7 +7,7 @@ import tar from 'tar';
 import axios from 'axios';
 import junk from 'junk';
 import temp from 'temp';
-import { logger } from '../utils';
+import { logger, getFilesRecursive } from '../utils';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
 
 /**
@@ -26,12 +26,12 @@ export async function loadDependency(
   cachePath: string = path.join(os.homedir(), '.fhir', 'packages')
 ): Promise<FHIRDefinitions> {
   let fullPackageName = `${packageName}#${version}`;
-  let loadPath = path.join(cachePath, fullPackageName, 'package');
+  const loadPath = path.join(cachePath, fullPackageName, 'package');
   let loadedPackage: string;
 
   // First, try to load the package from the local cache
   logger.info(`Checking local cache for ${fullPackageName}...`);
-  loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
+  loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
   if (loadedPackage) {
     logger.info(`Found ${fullPackageName} in local cache.`);
   } else {
@@ -46,13 +46,12 @@ export async function loadDependency(
     );
     version = 'current';
     fullPackageName = `${packageName}#${version}`;
-    loadPath = path.join(cachePath, fullPackageName, 'package');
-    loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
+    loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
   }
 
   let packageUrl;
   if (packageName.startsWith('hl7.fhir.r5.') && version === 'current') {
-    packageUrl = `http://build.fhir.org/${packageName}.tgz`;
+    packageUrl = `https://build.fhir.org/${packageName}.tgz`;
     // TODO: Figure out how to determine if the cached package is current
     // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
     if (loadedPackage) {
@@ -63,7 +62,7 @@ export async function loadDependency(
   } else if (version === 'current') {
     // Even if a local current package is loaded, we must still check that the local package date matches
     // the date on the most recent version on build.fhir.org. If the date does not match, we re-download to the cache
-    const baseUrl = 'http://build.fhir.org/ig';
+    const baseUrl = 'https://build.fhir.org/ig';
     const res = await axios.get(`${baseUrl}/qas.json`);
     const qaData: { 'package-id': string; date: string; repo: string }[] = res?.data;
     // Find matching packages and sort by date to get the most recent
@@ -112,42 +111,59 @@ export async function loadDependency(
       throw new CurrentPackageLoadError(fullPackageName);
     }
   } else if (!loadedPackage) {
-    // If the package is not locally cached, and it is not a current or dev version, we attempt to get it
-    // from packages.fhir.org or packages2.fhir.org
-    if (packageName.startsWith('hl7.fhir.r5.')) {
-      // Temporary.  See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
-      packageUrl = `http://packages2.fhir.org/packages/${packageName}/${version}`;
-    } else {
-      packageUrl = `http://packages.fhir.org/${packageName}/${version}`;
-    }
+    packageUrl = `https://packages.fhir.org/${packageName}/${version}`;
   }
 
   // If the packageUrl is set, we must download the package from that url, and extract it to our local cache
   if (packageUrl) {
-    // Create a temporary file and write the package to there
-    temp.track();
-    const tempFile = temp.openSync();
-    const targetDirectory = path.join(cachePath, fullPackageName);
-    logger.info(`Downloading ${fullPackageName}...`);
-    const res = await axios.get(packageUrl, {
-      responseType: 'arraybuffer'
-    });
-    if (res?.data) {
-      logger.info(`Downloaded ${fullPackageName}`);
-      fs.ensureDirSync(targetDirectory);
-      fs.writeFileSync(tempFile.path, res.data);
-      // Extract the package from that temporary file location
-      tar.x({
-        cwd: targetDirectory,
-        file: tempFile.path,
-        sync: true,
-        strict: true
+    const doDownload = async (url: string) => {
+      logger.info(`Downloading ${fullPackageName}...`);
+      const res = await axios.get(url, {
+        responseType: 'arraybuffer'
       });
-      cleanCachedPackage(targetDirectory);
-      // Now try to load again from the path
-      loadedPackage = loadFromPath(loadPath, fullPackageName, FHIRDefs);
-    } else {
-      logger.info(`Unable to download most current version of ${fullPackageName}`);
+      if (res?.data) {
+        logger.info(`Downloaded ${fullPackageName}`);
+        // Create a temporary file and write the package to there
+        temp.track();
+        const tempFile = temp.openSync();
+        fs.writeFileSync(tempFile.path, res.data);
+        // Extract the package to a temporary directory
+        const tempDirectory = temp.mkdirSync();
+        tar.x({
+          cwd: tempDirectory,
+          file: tempFile.path,
+          sync: true,
+          strict: true
+        });
+        cleanCachedPackage(tempDirectory);
+        // Add or replace the package in the FHIR cache
+        const targetDirectory = path.join(cachePath, fullPackageName);
+        if (fs.existsSync(targetDirectory)) {
+          fs.removeSync(targetDirectory);
+        }
+        fs.moveSync(tempDirectory, targetDirectory);
+        // Now try to load again from the path
+        loadedPackage = loadFromPath(cachePath, fullPackageName, FHIRDefs);
+      } else {
+        logger.info(`Unable to download most current version of ${fullPackageName}`);
+      }
+    };
+    try {
+      await doDownload(packageUrl);
+    } catch (e) {
+      if (packageUrl === `https://packages.fhir.org/${packageName}/${version}`) {
+        // It didn't exist in the normal registry.  Fallback to packages2 registry.
+        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Registry.20for.20FHIR.20Core.20packages.20.3E.204.2E0.2E1
+        // See: https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/fhir.2Edicom/near/262334652
+        packageUrl = `https://packages2.fhir.org/packages/${packageName}/${version}`;
+        try {
+          await doDownload(packageUrl);
+        } catch (e) {
+          throw new PackageLoadError(fullPackageName);
+        }
+      } else {
+        throw new PackageLoadError(fullPackageName);
+      }
     }
   }
 
@@ -184,7 +200,7 @@ export function cleanCachedPackage(packageDirectory: string): void {
 }
 
 /**
- * Loads custom resources defined in ig-data into FHIRDefs
+ * Loads custom resources defined in resourceDir into FHIRDefs
  * @param {string} resourceDir - The path to the directory containing the resource subdirs
  * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
  */
@@ -206,7 +222,7 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
     let foundSpreadsheets = false;
     const dirPath = path.join(resourceDir, pathEnd);
     if (fs.existsSync(dirPath)) {
-      const files = fs.readdirSync(dirPath);
+      const files = getFilesRecursive(dirPath);
       for (const file of files) {
         let resourceJSON: any;
         try {
@@ -214,12 +230,12 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
             // Ignore "junk" files created by the OS, like .DS_Store on macOS and Thumbs.db on Windows
             continue;
           } else if (file.endsWith('.json')) {
-            resourceJSON = fs.readJSONSync(path.join(dirPath, file));
+            resourceJSON = fs.readJSONSync(file);
           } else if (file.endsWith('-spreadsheet.xml')) {
             foundSpreadsheets = true;
             continue;
           } else if (file.endsWith('xml')) {
-            const xml = fs.readFileSync(path.join(dirPath, file)).toString();
+            const xml = fs.readFileSync(file).toString();
             if (/<\?mso-application progid="Excel\.Sheet"\?>/m.test(xml)) {
               foundSpreadsheets = true;
               continue;
@@ -230,6 +246,11 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
             continue;
           }
         } catch (e) {
+          if (e.message.startsWith('Unknown resource type:')) {
+            // Skip unknown FHIR resource types. When we have instances of Logical Models,
+            // the resourceType will not be recognized as a known FHIR resourceType, but that's okay.
+            continue;
+          }
           logger.error(`Loading ${file} failed with the following error:\n${e.message}`);
           continue;
         }
@@ -259,25 +280,32 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
 }
 
 /**
- * Loads a set of JSON files at targetPath into FHIRDefs
- * @param {string} targetPath - The path to the directory containing the JSON definitions
+ * Locates the targetPackage within the cachePath and loads the set of JSON files into FHIRDefs
+ * @param {string} cachePath - The path to the directory containing cached packages
  * @param {string} targetPackage - The name of the package we are trying to load
  * @param {FHIRDefinitions} FHIRDefs - The FHIRDefinitions object to load defs into
  * @returns {string} the name of the loaded package if successful
  */
 export function loadFromPath(
-  targetPath: string,
+  cachePath: string,
   targetPackage: string,
   FHIRDefs: FHIRDefinitions
 ): string {
   if (FHIRDefs.packages.indexOf(targetPackage) < 0) {
     const originalSize = FHIRDefs.size();
-    if (fs.existsSync(targetPath)) {
-      const files = fs.readdirSync(targetPath);
+    const packages = fs.existsSync(cachePath) ? fs.readdirSync(cachePath) : [];
+    const cachedPackage = packages.find(packageName => packageName.toLowerCase() === targetPackage);
+    if (cachedPackage) {
+      const files = fs.readdirSync(path.join(cachePath, cachedPackage, 'package'));
       for (const file of files) {
         if (file.endsWith('.json')) {
-          const def = JSON.parse(fs.readFileSync(path.join(targetPath, file), 'utf-8').trim());
+          const def = JSON.parse(
+            fs.readFileSync(path.join(cachePath, cachedPackage, 'package', file), 'utf-8').trim()
+          );
           FHIRDefs.add(def);
+          if (file === 'package.json') {
+            FHIRDefs.addPackageJson(targetPackage, def);
+          }
         }
       }
     }
@@ -290,6 +318,33 @@ export function loadFromPath(
     // If the package has already been loaded, just return the targetPackage string
     return targetPackage;
   }
+}
+
+/**
+ * Loads a "supplemental" FHIR package other than the primary FHIR version being used. This is
+ * needed to support extensions for converting between versions (e.g., "implied" extensions).
+ * The definitions from the supplemental FHIR package are not loaded into the main set of
+ * definitions, but rather, are loaded into their own private FHIRDefinitions instance accessible
+ * within the primary FHIRDefinitions instance passed into this function.
+ * @param fhirPackage - the FHIR package to load in the format {packageId}#{version}
+ * @param defs - the FHIRDefinitions object to load the supplemental FHIR defs into
+ * @returns Promise<void> promise that always resolves successfully (even if there is an error)
+ */
+export async function loadSupplementalFHIRPackage(
+  fhirPackage: string,
+  defs: FHIRDefinitions
+): Promise<void> {
+  const supplementalDefs = new FHIRDefinitions(true);
+  const [fhirPackageId, fhirPackageVersion] = fhirPackage.split('#');
+  // Testing Hack: Use exports.loadDependency instead of loadDependency so that this function
+  // calls the mocked loadDependency in unit tests.  In normal (non-test) use, this should
+  // have no negative effects.
+  return exports
+    .loadDependency(fhirPackageId, fhirPackageVersion, supplementalDefs)
+    .then((def: FHIRDefinitions) => defs.addSupplementalFHIRDefinitions(fhirPackage, def))
+    .catch((e: Error) => {
+      logger.error(`Failed to load supplemental FHIR package ${fhirPackage}: ${e.message}`);
+    });
 }
 
 /**

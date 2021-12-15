@@ -11,7 +11,8 @@ KW_VALUESET:        'ValueSet' WS* ':';
 KW_CODESYSTEM:      'CodeSystem' WS* ':';
 KW_RULESET:         'RuleSet' WS* ':' -> pushMode(RULESET_OR_INSERT);
 KW_MAPPING:         'Mapping' WS* ':';
-KW_MIXINS:          'Mixins' WS* ':';
+KW_LOGICAL:         'Logical' WS* ':';
+KW_RESOURCE:        'Resource' WS* ':';
 KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';
 KW_TITLE:           'Title' WS* ':';
@@ -47,13 +48,12 @@ KW_CODES:           'codes';
 KW_WHERE:           'where';
 KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
-KW_UNITS:           'units';
 KW_EXACTLY:         '(' WS* 'exactly' WS* ')';
 KW_INSERT:          'insert' -> pushMode(RULESET_OR_INSERT);
 
 // SYMBOLS
 EQUAL:              '=';
-STAR:               '*'  [0-9]*;
+STAR:               ([\r\n] | LINE_COMMENT) WS* '*' [ \u00A0];
 COLON:              ':';
 COMMA:              ',';
 ARROW:              '->';
@@ -87,12 +87,11 @@ TIME:               [0-9][0-9](':'[0-9][0-9](':'[0-9][0-9]('.'[0-9]+)?)?)?('Z' |
                  // DIGITS  ..  (DIGITS |  * )
 CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
 
-                 //  Reference       (        ITEM         |         ITEM         )
-OR_REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
-PIPE_REFERENCE:          'Reference' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)* ')';
+              //  Reference       (        ITEM         |         ITEM         )
+REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
 
-                 // Canonical(Item)
-CANONICAL:         'Canonical' WS* '(' WS* SEQUENCE WS* ('|' WS* SEQUENCE WS*)? ')';
+                 // Canonical       (              URL|VERSION               or              URL|VERSION             )
+CANONICAL     :    'Canonical' WS* '(' WS* SEQUENCE ('|' SEQUENCE)? WS* (WS 'or' WS+ SEQUENCE ('|' SEQUENCE)? WS*)* ')';
 
                  //  ^  NON-WHITESPACE
 CARET_SEQUENCE:     '^' NONWS+;
@@ -100,14 +99,7 @@ CARET_SEQUENCE:     '^' NONWS+;
                  // '/' EXPRESSION '/'
 REGEX:              '/' ('\\/' | ~[*/\r\n])('\\/' | ~[/\r\n])* '/';
 
-
-COMMA_DELIMITED_CODES: (CODE (WS+ STRING)? WS* COMMA WS+)+ CODE (WS+ STRING)?;
-
 PARAMETER_DEF_LIST: '(' (SEQUENCE WS* COMMA WS*)* SEQUENCE ')';
-
-
-                        // (NON-WS  WS  ,   WS )+ NON-WS
-COMMA_DELIMITED_SEQUENCES: (SEQUENCE WS* COMMA WS*)+ SEQUENCE;
 
 // BLOCK_COMMENT must precede SEQUENCE so that a block comment without whitespace does not become a SEQUENCE
 BLOCK_COMMENT:      '/*' .*? '*/' -> skip;
@@ -123,7 +115,7 @@ fragment NONWS_STR: ~[ \t\r\n\f\u00A0\\"];
 
 // IGNORED TOKENS
 WHITESPACE:         WS -> channel(HIDDEN);
-LINE_COMMENT:       '//' .*? [\r\n] -> skip;
+LINE_COMMENT:       '//' ~[\r\n]* [\r\n] -> skip;
 
 mode RULESET_OR_INSERT;
 PARAM_RULESET_REFERENCE:      WS* NONWS+ (WS* ('(' ('\\)' | '\\\\' | ~[)])+ ')')) -> popMode;

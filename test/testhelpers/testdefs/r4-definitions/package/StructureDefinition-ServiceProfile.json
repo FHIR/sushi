@@ -1,0 +1,49 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "service-profile",
+  "url": "http://hl7.org/fhir/some/example/StructureDefinition/ServiceProfile",
+  "version": "0.9.5",
+  "name": "ServiceProfile",
+  "title": "Service Profile",
+  "status": "active",
+  "fhirVersion": "4.0.1",
+  "mapping": [
+    {
+      "identity": "rim",
+      "name": "RIM Mapping",
+      "uri": "http://hl7.org/v3"
+    }
+  ],
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel",
+  "baseDefinition": "http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "ELTSSServiceModel",
+        "path": "ELTSSServiceModel"
+      }
+    ]
+  },
+  "snapshot": {
+    "element": [
+      {
+        "id": "ELTSSServiceModel",
+        "path": "ELTSSServiceModel",
+        "definition": "eLTSS Dataset Service data.",
+        "min": 0,
+        "max": "*",
+        "base": {
+          "path": "ELTSSServiceModel",
+          "min": 0,
+          "max": "*"
+        },
+        "mustSupport": false,
+        "isModifier": false,
+        "isSummary": false
+      }
+    ]
+  }
+}

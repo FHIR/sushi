@@ -1,6 +1,7 @@
 import { FshCode } from './FshCode';
 import { FshEntity } from './FshEntity';
 import { Quantity } from '../fhirtypes';
+import { fshifyString } from './common';
 
 export class FshQuantity extends FshEntity {
   constructor(public value: number, public unit?: FshCode) {
@@ -10,15 +11,21 @@ export class FshQuantity extends FshEntity {
   toString(): string {
     let str = this.value.toString();
     if (this.unit?.code != null) {
-      str += ` '${this.unit.code}'`;
-      if (this.unit.display != null) str += ` "${this.unit.display}"`;
+      if (this.unit?.system == 'http://unitsofmeasure.org') {
+        str += ` '${this.unit.code}'`;
+        if (this.unit.display) {
+          str += ` "${fshifyString(this.unit.display)}"`;
+        }
+      } else {
+        str += ` ${this.unit.toString()}`;
+      }
     }
     return str;
   }
 
   toFHIRQuantity(): Quantity {
     const quantity: Quantity = {};
-    if (this.value) {
+    if (this.value != null) {
       quantity.value = this.value;
     }
     if (this.unit?.code) {

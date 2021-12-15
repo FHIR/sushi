@@ -1,12 +1,12 @@
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Extension } from '../../src/fshtypes';
+import { Extension, Instance, FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
 import { minimalConfig } from '../utils/minimalConfig';
-import { ContainsRule } from '../../src/fshtypes/rules';
+import { ContainsRule, AssignmentRule } from '../../src/fshtypes/rules';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
@@ -15,14 +15,11 @@ describe('ExtensionExporter', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
@@ -76,7 +73,7 @@ describe('ExtensionExporter', () => {
     doc.extensions.set(extension.name, extension);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Parent Patient is not of type Extension, so it is an invalid Parent for Extension Wrong.*File: Wrong\.fsh.*Line: 14 - 24\D*/s
+      /The parent of an extension must be the base Extension or another defined extension.*File: Wrong\.fsh.*Line: 14 - 24\D*/s
     );
   });
 
@@ -161,5 +158,58 @@ describe('ExtensionExporter', () => {
     exporter.export();
 
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+  });
+
+  it('should export extensions with extension instance parents', () => {
+    const parentExtensionInstance = new Instance('ParentExtension');
+    parentExtensionInstance.instanceOf = 'StructureDefinition';
+    parentExtensionInstance.usage = 'Definition';
+    const parentName = new AssignmentRule('name');
+    parentName.value = 'ParentExtension';
+    const parentStatus = new AssignmentRule('status');
+    parentStatus.value = new FshCode('active');
+    const parentKind = new AssignmentRule('kind');
+    parentKind.value = new FshCode('resource');
+    const parentAbstract = new AssignmentRule('abstract');
+    parentAbstract.value = false;
+    const parentType = new AssignmentRule('type');
+    parentType.value = 'Extension';
+    const parentDerivation = new AssignmentRule('derivation');
+    parentDerivation.value = new FshCode('constraint');
+    const parentBaseDefinition = new AssignmentRule('baseDefinition');
+    parentBaseDefinition.value = 'http://hl7.org/fhir/StructureDefinition/Extension';
+    const parentElementId = new AssignmentRule('snapshot.element[0].id');
+    parentElementId.value = 'Extension';
+    const parentElementPath = new AssignmentRule('snapshot.element[0].path');
+    parentElementPath.value = 'Extension';
+    const parentUrlId = new AssignmentRule('snapshot.element[1].id');
+    parentUrlId.value = 'Extension.url';
+    const parentUrlPath = new AssignmentRule('snapshot.element[1].path');
+    parentUrlPath.value = 'Extension.url';
+    parentExtensionInstance.rules.push(
+      parentName,
+      parentStatus,
+      parentKind,
+      parentAbstract,
+      parentType,
+      parentDerivation,
+      parentBaseDefinition,
+      parentElementId,
+      parentElementPath,
+      parentUrlId,
+      parentUrlPath
+    );
+    doc.instances.set(parentExtensionInstance.name, parentExtensionInstance);
+
+    const childExtension = new Extension('ChildExtension');
+    childExtension.parent = 'ParentExtension';
+    doc.extensions.set(childExtension.name, childExtension);
+    const exported = exporter.export().extensions;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('ChildExtension');
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/ParentExtension'
+    );
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
   });
 });

@@ -40,9 +40,8 @@ hl7dk/kl-gateway#master
 costateixeira/devdays-covid19-vaccine#main
 IHE/ITI.MHD#master
 IHE/ITI_MHD_FHIR#master
-openhie/hiv-ig#master
 openhie/covid-ig#master
-DavidPyke/CEQSubscription#master
+# DavidPyke/CEQSubscription#master (moved to Carequality/CEQSubscription#master)
 HL7Sweden/basprofiler-r4#master
 HL7NZ/northernregion#master
 HL7NZ/hpi#master
@@ -56,4 +55,113 @@ IHE/pharm-vaccination#main
 IHE/pharm-supply#master
 openhie/hiv-ig#main
 openhie/case-reporting#master
-DavidPyke/SAFE-COVID-eCR#master
+# DavidPyke/SAFE-COVID-eCR#master
+# Added Wed Jan 27 2021 09:49:17 GMT-0500 (Eastern Standard Time)
+IHE/pharm-medicationrecord#master
+paulschneider/auto-ig-builder#master
+HL7NZ/medtech#main
+dvci/vaccine-credential-ig#main
+dvci/vaccine-yellow-card-ig#main
+# Added Mon Feb 08 2021 11:01:34 GMT-0500 (Eastern Standard Time)
+JohnMoehrke/BasicAudit#main
+# Added Mon Mar 08 2021 13:27:24 GMT-0500 (Eastern Standard Time)
+standardhealth/fsh-ae#master
+hl7ch/ch-etoc#main
+hl7ch/ch-rad-order#master
+ehealthsuisse/ch-rad-order#master
+HL7NZ/nzf#main
+# Added Thu Apr 29 2021 09:31:21 GMT-0400 (Eastern Daylight Time)
+HL7/fhir-project-mhealth#master
+HL7/FHIR-us-pq-cmc#master
+hl7-it/base#master
+danka74/dgc#master
+ahdis/ch-ig#master
+hl7ch/ch-allergyintolerance#master
+hl7ch/ch-orf#master
+davidhay25/nhip#main
+hl7-be/riziv-medication-record#master
+hl7-be/vitalink-ig#master
+hl7dk/kl-gateway-national-care-data#master
+hl7dk/kl-gateway-municipality-care-data#master
+hl7dk/kl-gateway-care-data#master
+hl7dk/dk-core-r4#master
+hl7dk/dk-core#master
+jamlung-ri/PEPFAR-WHO-Simple-HIV#main
+IHE/PCC.PCS#master
+IHE/ITI.mCSD#main
+gatekeeper-project/gk-fhir-ig#master
+hl7-eu/base#master
+hl7-eu/pcsp#master
+hl7-eu/x-ehealth#master
+barbrov/wof-portal-fhir-ig#main
+ehealthsuisse/ch-orf#master
+DavidPyke/HotBeverage#master
+# Added Wed Jun 16 2021 16:00:22 GMT-0400 (Eastern Daylight Time)
+HL7/fhir-radiation-dose-summary-ig#main
+hl7-it/terminology#master
+JohnMoehrke/testBundle#main
+hl7dk/kl-ffb-messaging#main
+hl7dk/kl-ffb-reporting#master
+IHE/ITI.PDQm#main
+IHE/ITI.PIXm#master
+IHE/RO.XRTS#master
+hl7-eu/dgc#master
+daniel-thomson/CIRImmunization#master
+oridashi/item-715-data#main
+# Added Mon Sep 20 2021 21:56:07 GMT-0400 (Eastern Daylight Time)
+HL7/cimi-labs#master
+HL7/codex-radiation-therapy#master
+HL7/davinci-dtr#master
+HL7/davinci-pct#master
+HL7/dicom-sr#main
+HL7/fhir-COVID19Library-ig#master
+HL7/fhir-for-fair#master
+HL7/fhir-pacio-cognitive-status#master
+HL7/fhir-pacio-functional-status#master
+HL7/fhir-registry-protocols-ig#master
+HL7/fhir-shc-vaccination-ig#master
+HL7/fhir-udap-security-ig#main
+HL7/ihe-sdc-ecc-on-fhir#main
+aehrc/item-715-data#main
+ahdis/WorkshopIG#main
+hl7-be/hl7-be-fhir-referral-prescription#master
+saulakravitz/fhir-mCODE-ig#master
+IHE-SDC-WG/IHESDCWGsdcOnFHIR#main
+hl7-eu/dcc#master
+hl7-eu/gravitate-health#master
+servicewell/wof-portal-fhir-ig#master
+oridashi/pc-au-logical#main
+HL7NZ/sysmex#main
+# Added Wed Nov 10 2021 11:35:18 GMT-0500 (Eastern Standard Time)
+HL7/carin-digital-insurance-card#master
+HL7/fhir-identity-matching-ig#master
+HL7/fhir-pacio-rt#master
+hl7-it/dossier-pharma#master
+ahdis/ch-crl#master
+ahdis/ch-rad-poc#master
+hl7-be/riziv-perinatal#master
+hl7dk/kl-gateway-municipality-healthcare-data#master
+saulakravitz/vrdr-fsh#master
+IHE/pharm-mpd#master
+IHE/QRPH.QORE#master
+IHE/pharm-mm#master
+IHE/ITI.BasicAudit#main
+HL7NZ/structured-path#main
+nightingaleproject/vital_records_fhir_messaging_ig#main
+# Added Tue Dec 07 2021 10:11:29 GMT-0500 (Eastern Standard Time)
+HL7/fhir-directory-exchange#master
+HL7/fhir-pacio-adi#main
+peturv/fhir-autobuild-test#master
+SvenskaIndustriProfiler/fhir#master
+ahdis/chmed20af#master
+ahdis/scs-versandservice#master
+ahdis/claraspital-versandservice#master
+ahdis/chmed16af#master
+hl7ch/ch-lab-order#master
+hl7nordic/common-nordic-terminology#main
+hl7-be/hl7-be-fhir-laboratory-report#master
+hl7-be/hl7-be-patient-dossier#master
+mcode/mcode-omop#master
+mcode/biomarker#master
+ehealthsuisse/ch-vacd#master
+oliveregger/BundleConformsTo#master

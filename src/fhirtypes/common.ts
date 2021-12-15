@@ -1,4 +1,4 @@
-import { isEmpty, cloneDeep } from 'lodash';
+import { isEmpty, cloneDeep, upperFirst } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -13,27 +13,27 @@ import {
   InsertRule,
   ConceptRule,
   ValueSetConceptComponentRule,
-  SdRule,
   CaretValueRule,
   AssignmentValueType
 } from '../fshtypes/rules';
 import {
   FshReference,
   Instance,
-  SourceInfo,
   FshCode,
+  Logical,
   Profile,
   Extension,
   RuleSet,
   FshValueSet,
   FshCodeSystem,
   Mapping,
-  isAllowedRule
+  isAllowedRule,
+  Resource,
+  FshEntity
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import { logger } from '../utils';
-import { FHIRId, idRegex } from './primitiveTypes';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -41,7 +41,7 @@ export function splitOnPathPeriods(path: string): string[] {
 
 /**
  * This function sets an instance property of an SD or ED if possible
- * @param {StructureDefinition | ElementDefinition} - The instance to assign a value on
+ * @param {StructureDefinition | ElementDefinition} instance - The instance to assign a value on
  * @param {string} path - The path to assign a value at
  * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -55,7 +55,7 @@ export function setPropertyOnDefinitionInstance(
   const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
   setImpliedPropertiesOnInstance(instance, instanceSD, [path], fisher);
-  setPropertyOnInstance(instance, pathParts, assignedValue);
+  setPropertyOnInstance(instance, pathParts, assignedValue, fisher);
 }
 
 export function setImpliedPropertiesOnInstance(
@@ -71,7 +71,7 @@ export function setImpliedPropertiesOnInstance(
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
     if (element) {
       // If an element is pointed to by a path, that means we must assign values on its parents, its own
-      // assignable descendents, and assignable descenendents of its parents. An assignable descendent is a 1..n direct child
+      // assignable descendents, and assignable descendents of its parents. An assignable descendent is a 1..n direct child
       // or an assignable descendent of such a child
       const parents = element.getAllParents();
       const associatedElements = [...element.getAssignableDescendents(), ...parents];
@@ -89,11 +89,16 @@ export function setImpliedPropertiesOnInstance(
           let overlapIdx = 0;
           const elParts = element.id.split('.');
           const assocElParts = associatedEl.id.split('.');
-          for (
-            ;
-            overlapIdx < elParts.length && elParts[overlapIdx] === assocElParts[overlapIdx];
-            overlapIdx++
-          );
+          for (; overlapIdx < elParts.length && overlapIdx < assocElParts.length; overlapIdx++) {
+            // If an associated path applies to all choices (e.g., value[x]), and the element path
+            // is a specific choice (e.g., value[x]:valueQuantity), then treat it as a match
+            const [elPart, assocElPart] = [elParts[overlapIdx], assocElParts[overlapIdx]];
+            if (assocElPart.endsWith('[x]') && elPart.startsWith(`${assocElPart}:`)) {
+              continue;
+            } else if (elPart !== assocElPart) {
+              break;
+            }
+          }
           // We must keep the relevant portion of the beginning of path to preserve sliceNames
           // and combine this with portion of the associatedEl's path that is not overlapped
           const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
@@ -109,21 +114,46 @@ export function setImpliedPropertiesOnInstance(
             // Implied paths are found via the index free path
             finalPath.replace(/\[[-+]?\d+\]$/g, '')
           );
-          [finalPath, ...impliedPaths].forEach(ip => sdRuleMap.set(ip, foundAssignedValue));
+          [finalPath, ...impliedPaths].forEach(ip => {
+            // Don't let any non-constrained choice paths (e.g., value[x]) through since instances
+            // must specify a particular choice (i.e., value[x] is not a valid path in an instance)
+            if (/\[x]/.test(ip)) {
+              // Fix any single-type choices to be type-specific (e.g., value[x] -> valueString)
+              const parts = splitOnPathPeriods(ip);
+              for (let i = 0; i < parts.length; i++) {
+                if (parts[i].endsWith('[x]')) {
+                  const partEl = instanceOfStructureDefinition.findElementByPath(
+                    parts.slice(0, i + 1).join('.'),
+                    fisher
+                  );
+                  if (partEl?.type?.length === 1) {
+                    parts[i] = parts[i].replace('[x]', upperFirst(partEl.type[0].code));
+                  }
+                }
+              }
+              ip = parts.join('.');
+              // If there is still a [x], we couldn't fix it, so skip it
+              if (/\[x]/.test(ip)) {
+                return; // out of the forEach of implied paths
+              }
+            }
+            sdRuleMap.set(ip, foundAssignedValue);
+          });
         }
       }
     }
   });
   sdRuleMap.forEach((value, path) => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, value);
+    setPropertyOnInstance(instanceDef, pathParts, value, fisher);
   });
 }
 
 export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
-  assignedValue: any
+  assignedValue: any,
+  fisher: Fishable
 ): void {
   if (assignedValue != null) {
     // If we can assign the value on the StructureDefinition StructureDefinition, then we can set the
@@ -150,8 +180,9 @@ export function setPropertyOnInstance(
           }
           const sliceIndices: number[] = [];
           // Find the indices where slices are placed
+          const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
           current[pathPart.base]?.forEach((el: any, i: number) => {
-            if (el?._sliceName === sliceName) {
+            if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
               sliceIndices.push(i);
             }
           });
@@ -251,6 +282,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const instanceMeta = fisher.fishForMetadata(
       instance?.instanceOf,
       Type.Resource,
+      Type.Logical,
       Type.Type,
       Type.Profile,
       Type.Extension
@@ -268,12 +300,20 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       assignedReference.sdType = instanceMeta.sdType;
     }
   } else if (value instanceof FshCode) {
-    const codeSystem = tank.fish(value.system, Type.CodeSystem);
+    const [system, ...versionParts] = value.system?.split('|') ?? [];
+    const version = versionParts.join('|');
+    const codeSystem = tank.fish(system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
-    if (codeSystem && codeSystemMeta) {
+    if (
+      codeSystem &&
+      (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) &&
+      codeSystemMeta
+    ) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
-      assignedCode.system = codeSystemMeta.url;
+      assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
+      // if a local system was used, check to make sure the code is actually in that system
+      listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
     }
   }
   return clone ?? rule;
@@ -289,6 +329,66 @@ function getRuleValue(rule: AssignmentRule | CaretValueRule): AssignmentValueTyp
     return rule.value;
   } else if (rule instanceof CaretValueRule) {
     return rule.value;
+  }
+}
+
+export function listUndefinedLocalCodes(
+  codeSystem: FshCodeSystem | Instance,
+  codes: string[],
+  tank: FSHTank,
+  sourceEntity: FshEntity
+): void {
+  let undefinedCodes: string[] = [];
+  applyInsertRules(codeSystem, tank);
+  // if the CodeSystem content is complete, a code not present in this system should be listed as undefined.
+  // if the CodeSystem content is not complete, then do not list any code as undefined.
+  // in a FshCodeSystem, content is complete by default, so make sure it isn't set to something else.
+  // in an Instance, content does not have a default value, so make sure there is a rule that sets it to complete.
+  if (
+    codeSystem instanceof FshCodeSystem &&
+    !codeSystem.rules.some(
+      rule =>
+        rule instanceof CaretValueRule &&
+        rule.path === '' &&
+        rule.caretPath === 'content' &&
+        rule.value instanceof FshCode &&
+        rule.value.code !== 'complete'
+    )
+  ) {
+    undefinedCodes = codes.filter(code => {
+      return !codeSystem.rules.some(rule => rule instanceof ConceptRule && rule.code === code);
+    });
+  } else if (
+    codeSystem instanceof Instance &&
+    codeSystem.usage == 'Definition' &&
+    codeSystem.rules.some(
+      rule =>
+        rule instanceof AssignmentRule &&
+        rule.path === 'content' &&
+        rule.value instanceof FshCode &&
+        rule.value.code === 'complete'
+    )
+  ) {
+    const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
+    undefinedCodes = codes.filter(code => {
+      return !codeSystem.rules.some(
+        rule =>
+          rule instanceof AssignmentRule &&
+          conceptRulePath.test(rule.path) &&
+          rule.value instanceof FshCode &&
+          rule.value.code === code
+      );
+    });
+  }
+  if (undefinedCodes.length > 0) {
+    logger.error(
+      `Code${undefinedCodes.length > 1 ? 's' : ''} ${undefinedCodes
+        .map(code => `"${code}"`)
+        .join(', ')} ${undefinedCodes.length > 1 ? 'are' : 'is'} not defined for system ${
+        codeSystem.name
+      }.`,
+      sourceEntity.sourceInfo
+    );
   }
 }
 
@@ -309,7 +409,7 @@ export function getSliceName(pathPart: PathPart): string {
  * @param { {[key: string]: any} } object - The object to replace fields on
  * @param {(object: { [key: string]: any }, prop: string) => boolean} matchFn - The function to match with
  * @param {(object: { [key: string]: any }, prop: string) => void} replaceFn - The function to replace with
- * @param {string => boolean} skipFn - A function that returns true if a property should not be traversed
+ * @param {(object: { [key: string]: any }, prop: string) => boolean} skipFn - A function that returns true if a property should not be traversed
  */
 export function replaceField(
   object: { [key: string]: any },
@@ -371,59 +471,21 @@ export function cleanResource(
 }
 
 /**
- * Adds Mixin rules onto a Profile, Extension, or Instance
- * @param {Profile | Extension | Instance} fshDefinition - The definition to apply mixin rules on
- * @param {FSHTank} tank - The FSHTank containing the fshDefinition
- */
-export function applyMixinRules(
-  fshDefinition: Profile | Extension | Instance,
-  tank: FSHTank
-): void {
-  if (fshDefinition.mixins.length > 0) {
-    const insertString = fshDefinition.mixins.map(m => `* insert ${m}`).join('\n');
-    logger.warn(
-      'Use of the "Mixins" keyword is deprecated and will be removed in a future release. ' +
-        'Instead, use the "insert" keyword, which can be placed anywhere in a list of rules to indicate ' +
-        'the exact location rules should be inserted. The RuleSets added here with the "Mixin" keyword can ' +
-        `be added with the "insert" keyword by adding the following rule(s):\n${insertString}`,
-      fshDefinition.sourceInfo
-    );
-  }
-  // Rules are added to beginning of rules array, so add the last mixin rules first
-  const mixedInRules: SdRule[] = [];
-  fshDefinition.mixins.forEach(mixinName => {
-    const ruleSet = tank.fish(mixinName, Type.RuleSet) as RuleSet;
-    if (ruleSet) {
-      ruleSet.rules.forEach(r => {
-        // Record source information of Profile/Extension/Instance on which Mixin is applied
-        r.sourceInfo.appliedFile = fshDefinition.sourceInfo.file;
-        r.sourceInfo.appliedLocation = fshDefinition.sourceInfo.location;
-      });
-      const rules = ruleSet.rules.filter(r => {
-        if (fshDefinition instanceof Instance && !(r instanceof AssignmentRule)) {
-          logger.error(
-            'Rules applied by mixins to an instance must assign a value. Other rules are ignored.',
-            r.sourceInfo
-          );
-          return false;
-        }
-        return true;
-      });
-      mixedInRules.push(...(rules as SdRule[]));
-    } else {
-      logger.error(`Unable to find definition for RuleSet ${mixinName}.`, fshDefinition.sourceInfo);
-    }
-  });
-  fshDefinition.rules = [...mixedInRules, ...fshDefinition.rules];
-}
-
-/**
  * Adds insert rules onto a Profile, Extension, or Instance
  * @param fshDefinition - The definition to apply rules on
  * @param tank - The FSHTank containing the fshDefinition
  */
 export function applyInsertRules(
-  fshDefinition: Profile | Extension | Instance | FshValueSet | FshCodeSystem | Mapping | RuleSet,
+  fshDefinition:
+    | Profile
+    | Extension
+    | Logical
+    | Resource
+    | Instance
+    | FshValueSet
+    | FshCodeSystem
+    | Mapping
+    | RuleSet,
   tank: FSHTank,
   seenRuleSets: string[] = []
 ): void {
@@ -433,6 +495,7 @@ export function applyInsertRules(
       expandedRules.push(rule);
       return;
     }
+
     const ruleSetIdentifier = JSON.stringify([rule.ruleSet, ...rule.params]);
     let ruleSet: RuleSet;
     if (rule.params.length) {
@@ -452,32 +515,83 @@ export function applyInsertRules(
       // RuleSets may contain other RuleSets via insert rules on themselves, so before applying the rules
       // from a RuleSet, we must first recursively expand any insert rules on that RuleSet
       applyInsertRules(ruleSet, tank, [...seenRuleSets, ruleSetIdentifier]);
+      let context = rule.path;
+      let firstRule = true;
       ruleSet.rules.forEach(ruleSetRule => {
-        // On the import side, a rule that is intended to be a ValueSetConceptComponent can
-        // be imported as a ConceptRule because the syntax is identical. If this is the case,
-        // create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that
-        if (fshDefinition instanceof FshValueSet && ruleSetRule instanceof ConceptRule) {
-          if (ruleSetRule.definition != null) {
-            logger.warn(
-              'ValueSet concepts should not include a definition, only system, code, and display are supported. The definition will be ignored.',
+        ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
+        ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
+        // On the import side, there are some rules that syntactically match both ConceptRule and
+        // ValueSetConceptComponentRule. When this happens, a ConceptRule is created with a value
+        // set on its system. If we are applying rules to a ValueSet, and the ConceptRule has a
+        // system, create a ValueSetConceptComponent that corresponds to the ConceptRule, and use that.
+        // BUT! If we have a ConceptRule with a system, and we are applying rules to a CodeSystem,
+        // log an error to let the author know to not do that.
+        if (ruleSetRule instanceof ConceptRule && ruleSetRule.system) {
+          if (fshDefinition instanceof FshValueSet) {
+            const relatedCode = new FshCode(
+              ruleSetRule.code,
+              ruleSetRule.system,
+              ruleSetRule.display
+            );
+            ruleSetRule = new ValueSetConceptComponentRule(true);
+            (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
+          } else if (fshDefinition instanceof FshCodeSystem) {
+            logger.error(
+              'Do not include the system when listing concepts for a code system.',
               ruleSetRule.sourceInfo
             );
           }
-          const relatedCode = new FshCode(
-            ruleSetRule.code,
-            ruleSetRule.system,
-            ruleSetRule.display
-          );
-          ruleSetRule = new ValueSetConceptComponentRule(true);
-          (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
         }
-        ruleSetRule.sourceInfo.appliedFile = rule.sourceInfo.file;
-        ruleSetRule.sourceInfo.appliedLocation = rule.sourceInfo.location;
         if (isAllowedRule(fshDefinition, ruleSetRule)) {
-          expandedRules.push(cloneDeep(ruleSetRule));
+          const ruleSetRuleClone = cloneDeep(ruleSetRule);
+          if (context) {
+            let newPath = context;
+            if (ruleSetRuleClone?.path === '.') {
+              logger.error(
+                "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
+                ruleSetRule.sourceInfo
+              );
+              newPath = ruleSetRuleClone.path;
+            } else if (ruleSetRuleClone.path) {
+              newPath += `.${ruleSetRuleClone.path}`;
+            }
+            ruleSetRuleClone.path = newPath;
+          }
+          if (rule.pathArray.length > 0) {
+            if (ruleSetRuleClone instanceof ConceptRule) {
+              ruleSetRuleClone.hierarchy.unshift(...rule.pathArray);
+            } else if (ruleSetRuleClone instanceof CaretValueRule) {
+              ruleSetRuleClone.pathArray.unshift(...rule.pathArray);
+            }
+          }
+          if (ruleSetRuleClone instanceof ConceptRule && fshDefinition instanceof FshCodeSystem) {
+            // ConceptRules should not have a path context, so if one exists, show an error.
+            // The concept is still added to the CodeSystem.
+            if (context) {
+              logger.error(
+                'Do not insert a RuleSet at a path when the RuleSet adds a concept.',
+                ruleSetRuleClone.sourceInfo
+              );
+            }
+            try {
+              if (fshDefinition.checkConcept(ruleSetRuleClone)) {
+                expandedRules.push(ruleSetRuleClone);
+              }
+            } catch (e) {
+              logger.error(e.message, ruleSetRuleClone.sourceInfo);
+            }
+          } else {
+            expandedRules.push(ruleSetRuleClone);
+          }
+          if (firstRule) {
+            // Once one rule has been applied, all future rules should inherit the index used on that rule
+            // rather than continuing to increment the index with the [+] operator
+            context = context.replace(/\[\+\]/g, '[=]');
+            firstRule = false;
+          }
         } else {
           logger.error(
-            `Rule of type ${ruleSetRule.constructor.name} cannot be applied to entity of type ${fshDefinition.constructor.name}`,
+            `Rule of type ${ruleSetRule.constructorName} cannot be applied to entity of type ${fshDefinition.constructorName}`,
             ruleSetRule.sourceInfo
           );
         }
@@ -579,18 +693,35 @@ export function isInheritedResource(
  *
  * @param fshDefinition - The FSH definition that the returned URL refers to
  * @param canonical - The canonical URL for the FSH project
- * @returns {string} - The URL to use to refer to the FHIR entity
+ * @returns The URL to use to refer to the FHIR entity
  */
 export function getUrlFromFshDefinition(
-  fshDefinition: Profile | Extension | FshValueSet | FshCodeSystem,
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
   canonical: string
 ): string {
-  for (const rule of fshDefinition.rules) {
-    if (rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url') {
+  const fshRules: Rule[] = fshDefinition.rules;
+  if (fshDefinition instanceof Instance) {
+    const assignmentRules = fshRules.filter(
+      rule =>
+        rule instanceof AssignmentRule && rule.path === 'url' && typeof rule.value === 'string'
+    ) as AssignmentRule[];
+    if (assignmentRules.length > 0) {
+      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
+      return lastAssignmentRule.value.toString();
+    }
+  } else {
+    const caretValueRules = fshRules.filter(
+      rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
+    ) as CaretValueRule[];
+    if (caretValueRules.length > 0) {
+      // Select last CaretValueRule with caretPath === 'url' because rules processing
+      // ends up applying the last rule in the processing order
+      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
       // this value should only be a string, but that might change at some point
-      return rule.value.toString();
+      return lastCaretValueRule.value.toString();
     }
   }
+
   let fhirType: string;
   if (fshDefinition instanceof FshValueSet) {
     fhirType = 'ValueSet';
@@ -602,77 +733,58 @@ export function getUrlFromFshDefinition(
   return `${canonical}/${fhirType}/${fshDefinition.id}`;
 }
 
-const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
-
-export class HasName {
-  name?: string;
-  /**
-   * Set the name and check if it matches the regular expression specified
-   * in the invariant for "name" properties. A name must be between 1 and 255 characters long,
-   * begin with an uppercase letter, and contain only uppercase letter, lowercase letter,
-   * numeral, and '_' characters.
-   * If the string does not match, log an error.
-   *
-   * @see {@link http://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.name}
-   * @see {@link http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.name}
-   * @see {@link http://hl7.org/fhir/R4/codesystem-definitions.html#CodeSystem.name}
-   * @param {string} name - The name to check against the name invariant
-   * @param {SourceInfo} sourceInfo - The FSH file and location that specified the name
-   */
-  setName(name: string, sourceInfo: SourceInfo) {
-    this.name = name;
-    if (!nameRegex.test(name)) {
-      logger.error(
-        `The string "${name}" does not represent a valid FHIR name. Valid names start with an upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.`,
-        sourceInfo
-      );
-    }
+/**
+ * Determines the formal FHIR type to use to define to this entity for logical models and
+ * resources. The type for profiles and extension should not be changed. If a caret value
+ * rule has been applied to the entity's type, use the value specified in that rule.
+ * Otherwise, use the appropriate default based on the fshDefinition.
+ *
+ * @param fshDefinition - The FSH definition (Logical or Resource) that the returned type refers to
+ * @param parentSD - The parent StructureDefinition for the fshDefinition
+ * @returns The type to specify in the StructureDefinition for this fshDefinition
+ */
+export function getTypeFromFshDefinitionOrParent(
+  fshDefinition: Profile | Extension | Logical | Resource,
+  parentSD: StructureDefinition
+): string {
+  if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
+    return parentSD.type;
   }
+
+  const fshRules: Rule[] = fshDefinition.rules;
+  const caretValueRules = fshRules.filter(
+    rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'type'
+  ) as CaretValueRule[];
+  if (caretValueRules.length > 0) {
+    // Select last CaretValueRule with caretPath === 'type' because rules processing
+    // ends up applying the last rule in the processing order
+    const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+    // this value should only be a string, but that might change at some point
+    return lastCaretValueRule.value.toString();
+  }
+
+  // Default type for logical model to the StructureDefinition url;
+  // otherwise default to the id meta property.
+  // Ref: https://chat.fhir.org/#narrow/pm-with/191469,210024,211704,239822-group/near/240237602
+  return fshDefinition instanceof Logical ? parentSD.url : fshDefinition.id;
 }
 
-export class HasId {
-  id?: FHIRId;
-  /**
-   * Set the id and check if it matches the regular expression specified
-   * in the definition of the "id" type.
-   * If the FHIRId does not match, log an error.
-   *
-   * @param id - The new id to set
-   * @param sourceInfo - The FSH file and location that specified the id
-   */
-  setId(id: FHIRId, sourceInfo: SourceInfo) {
-    this.id = id;
-    this.validateId(sourceInfo);
-  }
+export function isExtension(path: string): boolean {
+  return ['modifierExtension', 'extension'].includes(path);
+}
 
-  /**
-   * Check if the current id matches the regular expression specified
-   * in the definition of the "id" type.
-   * If the FHIRId does not match, log an error.
-   * If the id is a valid name, sanitize it to a valid id and log a warning
-   *
-   * @param sourceInfo - The FSH file and location that specified the id
-   */
-  validateId(sourceInfo: SourceInfo) {
-    let validId = idRegex.test(this.id);
-    if (!validId && nameRegex.test(this.id)) {
-      // A valid name can be turned into a valid id by replacing _ with - and slicing to 64 character limit
-      const sanitizedId = this.id.replace(/_/g, '-').slice(0, 64);
-      if (idRegex.test(sanitizedId)) {
-        // Use the sanitized id, but warn the user to fix this
-        logger.warn(
-          `The string "${this.id}" represents a valid FHIR name but not a valid FHIR id. FHIR ids cannot contain "_" and can be at most 64 characters. The id will be exported as "${sanitizedId}". Avoid this warning by specifying a valid id directly using the "Id" keyword.`,
-          sourceInfo
-        );
-        this.id = sanitizedId;
-        validId = true;
-      }
-    }
-    if (!validId) {
-      logger.error(
-        `The string "${this.id}" does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
-        sourceInfo
-      );
-    }
-  }
+export function isModifierExtension(extension: any): boolean {
+  return (
+    extension?.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
+      ?.isModifier === true
+  );
+}
+
+/**
+ * Checks if a provided type can be treated as a Reference
+ * @param type - The type being checked
+ * @returns - True if the type can be treated as a reference, false otherwise
+ */
+export function isReferenceType(type: string): boolean {
+  return ['Reference', 'CodeableReference'].includes(type);
 }

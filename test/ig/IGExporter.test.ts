@@ -18,7 +18,7 @@ describe('IGExporter', () => {
       const configYaml = fs.readFileSync(configPath, 'utf8');
       const config = importConfiguration(configYaml, configPath);
       const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, path.join(__dirname, 'ig-data'), true);
+      const exporter = new IGExporter(pkg, null, __dirname);
       exporter.export(tempOut);
     });
 
@@ -72,12 +72,8 @@ describe('IGExporter', () => {
       const config = importConfiguration(configYaml, configPath);
       const pkg = new Package(config);
       const defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
-      const exporter = new IGExporter(pkg, defs, path.join(__dirname, 'ig-data'));
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      const exporter = new IGExporter(pkg, defs, __dirname);
       exporter.export(tempOut);
     });
 
@@ -86,7 +82,12 @@ describe('IGExporter', () => {
     });
 
     it('should add elements to the implementation guide definition based upon configuration', () => {
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.example.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.example.json'
+      );
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.grouping).toHaveLength(2);
       expect(igContent.definition.grouping[0].id).toBe('GroupA');
@@ -103,21 +104,23 @@ describe('IGExporter', () => {
       });
     });
 
-    it('should create package-list.json based upon configuration', () => {
-      const packageListPath = path.join(tempOut, 'package-list.json');
-      expect(fs.existsSync(packageListPath)).toBeTruthy();
-      const packageListContent = fs.readJSONSync(packageListPath);
-      expect(packageListContent['package-id']).toBe('fhir.us.example');
-      expect(packageListContent.list).toHaveLength(3);
-    });
-
     it('should create menu.xml based upon configuration', () => {
-      const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
+      const menuPath = path.join(tempOut, 'fsh-generated', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeTruthy();
       const menuContent = fs.readFileSync(menuPath, 'utf8');
       expect(menuContent).toMatch(
         /Artifacts.*Profiles.*Extensions.*Value Sets.*Downloads.*History/s
       );
+    });
+
+    it('should not create package-list.json based upon configuration', () => {
+      const packageListPath = path.join(tempOut, 'package-list.json');
+      expect(fs.existsSync(packageListPath)).toBeFalsy();
+    });
+
+    it('should not create ig.ini based upon configuration', () => {
+      const igIniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(igIniPath)).toBeFalsy();
     });
   });
 });

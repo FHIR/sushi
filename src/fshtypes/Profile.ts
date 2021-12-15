@@ -1,18 +1,21 @@
-import { FshEntity } from './FshEntity';
+import { FshStructure } from './FshStructure';
 import { SdRule } from './rules';
+import { EOL } from 'os';
 
-export class Profile extends FshEntity {
-  id: string;
-  parent?: string;
-  title?: string;
-  description?: string;
-  mixins?: string[];
+export class Profile extends FshStructure {
   rules: SdRule[];
 
   constructor(public name: string) {
-    super();
-    this.id = name; // init same as name
-    this.mixins = [];
-    this.rules = [];
+    super(name);
+  }
+
+  get constructorName() {
+    return 'Profile';
+  }
+
+  toFSH(): string {
+    const metadataFSH = this.metadataToFSH();
+    const rulesFSH = this.rules.map(r => r.toFSH()).join(EOL);
+    return `${metadataFSH}${rulesFSH.length ? EOL + rulesFSH : ''}`;
   }
 }

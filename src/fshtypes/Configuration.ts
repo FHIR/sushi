@@ -100,10 +100,10 @@ export type Configuration = {
   // refers to the IG.definiton.template definitions; not the publisher template in ig.ini.
   templates?: ImplementationGuideDefinitionTemplate[];
 
-  // DEPRECATED: Use of the template property is no longer recommended.  Authors should manage the
-  // ig.ini file themselves. Support for the template property will be removed in a future release.
-  // The template property will be used to generate an ig.ini file.
-  // To provide a custom ig.ini file, do not include this property and include an `ig.ini` file in ig-data.
+  // NO LONGER SUPPORTED: Use of the template property is no longer supported.  Authors should manage the
+  // ig.ini file themselves.
+  // NOTE: This property is kept in the type so we can log more useful error messages in IGExporter.
+  // If those errors are removed, the property should be removed entirely.
   template?: string;
 
   // The menu property will be used to generate the input/menu.xml file. The menu is represented as
@@ -112,19 +112,10 @@ export type Configuration = {
   // file, do not include this property and include a `menu.xml` file in input/includes.
   menu?: ConfigurationMenuItem[];
 
-  // The history property corresponds to package-list.json. SUSHI will use the existing top-level
-  // properties in its config to populate the top-level package-list.json properties: package-id,
-  // canonical, title, and introduction. Authors that wish to provide different values can supply
-  // them as properties under history. All other properties under history are assumed to be
-  // versions. To provide a custom package-list.json file, remove this property and include a
-  // package-list.json file in ig-data.
-  //
-  // The current version is special. If the author provides only a single string value, it is
-  // assumed to be the URL path to the current build. The following default values will then be
-  // used:
-  // * desc: Continuous Integration Build (latest in version control)
-  // * status: ci-build
-  // * current: true
+  // NO LONGER SUPPORTED: Use of the history property is no longer supported.  Authors should manage
+  // the package-list.json file directly.
+  // NOTE: This property is kept in the type so we can log more useful error messages in IGExporter.
+  // If those errors are removed, the property should be removed entirely.
   history?: ConfigurationHistory;
 
   // The indexPageContent property is used to generate a basic index.md file. To provide a
@@ -139,6 +130,10 @@ export type Configuration = {
   // When set to true, the "short" and "definition" field on the root element of an Extension will
   // be set to the "Title" and "Description" of that Extension. Default is true.
   applyExtensionMetadataToRoot?: boolean;
+
+  // The instanceOptions property is used to configure certain aspects of how SUSHI processed instances.
+  // See the individual option definitions in ConfigurationInstanceOptions for more detail.
+  instanceOptions?: ConfigurationInstanceOptions;
 };
 
 export type ConfigurationGroup = {
@@ -182,4 +177,19 @@ export type ConfigurationHistoryItem = {
   sequence?: string;
   fhirversion?: string;
   current?: boolean;
+};
+
+export type ConfigurationInstanceOptions = {
+  // Determines for which types of Instances SUSHI will automatically set meta.profile
+  // if InstanceOf references a profile. Options are:
+  // - always: Set meta.profile for all Instances of profiles (default)
+  // - never: Do not set meta.profile on any Instances
+  // - inline-only: Set meta.profile for only Instances of profiles with Usage set to #inline
+  // - standalone-only: Set meta.profile for only Instances of profiles where Usage is any value other than #inline
+  setMetaProfile?: 'always' | 'never' | 'inline-only' | 'standalone-only';
+  // Determines for which types of Instances SUSHI will automatically set id
+  // if InstanceOf references a profile. Options are:
+  // - always: Set id for all Instances (default)
+  // - standalone-only: Set id for only Instances where Usage is any value other than #inline
+  setId?: 'always' | 'standalone-only';
 };

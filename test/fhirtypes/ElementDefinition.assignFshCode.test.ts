@@ -18,11 +18,7 @@ describe('ElementDefinition', () => {
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
@@ -180,6 +176,25 @@ describe('ElementDefinition', () => {
       expect(() => {
         clone.assignValue(new FshCode('code', 'notAUri'), true);
       }).toThrow(/notAUri/);
+    });
+
+    it('should throw MismatchedBindingTypeError when binding with a ValueSet as a system', () => {
+      const category = observation.elements.find(e => e.id === 'Observation.category');
+      const clone = cloneDeep(category);
+      expect(() => {
+        clone.assignValue(
+          new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category'),
+          false,
+          fisher
+        );
+      }).toThrow(/CodeSystem/);
+      expect(() => {
+        clone.assignValue(
+          new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category'),
+          true,
+          fisher
+        );
+      }).toThrow(/CodeSystem/);
     });
 
     it('should assign a code to a Coding', () => {

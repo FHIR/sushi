@@ -14,11 +14,12 @@ import {
 } from '../../src/fshtypes';
 import {
   AssignmentRule,
-  ContainsRule,
   CardRule,
-  OnlyRule,
   CaretValueRule,
-  InsertRule
+  ContainsRule,
+  FlagRule,
+  InsertRule,
+  OnlyRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
@@ -28,26 +29,24 @@ import { minimalConfig } from '../utils/minimalConfig';
 describe('InstanceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let tank: FSHTank;
   let sdExporter: StructureDefinitionExporter;
   let exporter: InstanceExporter;
   let exportInstance: (instance: Instance) => InstanceDefinition;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
-    sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
-    exporter = new InstanceExporter(input, pkg, fisher);
+    tank = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(tank.config);
+    const fisher = new TestFisher(tank, defs, pkg);
+    sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
+    exporter = new InstanceExporter(tank, pkg, fisher);
     exportInstance = (instance: Instance) => {
       sdExporter.export();
       return exporter.exportInstance(instance);
@@ -98,6 +97,17 @@ describe('InstanceExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
   });
 
+  it('should log a message with source information when the parent is a profile of a logical model', () => {
+    const instance = new Instance('MyServiceInstance')
+      .withFile('Incorrect.fsh')
+      .withLocation([15, 1, 18, 27]);
+    instance.instanceOf = 'ServiceProfile';
+    doc.instances.set(instance.name, instance);
+    const exported = exporter.export().instances;
+    expect(exported.length).toBe(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Incorrect\.fsh.*Line: 15 - 18\D*/s);
+  });
+
   it('should export instances with InstanceOf FSHy profile', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Patient';
@@ -137,8 +147,8 @@ describe('InstanceExporter', () => {
     let valueSetInstance: Instance;
     let respRateInstance: Instance;
     let bundleInstance: Instance;
+    let carePlanInstance: Instance;
     beforeEach(() => {
-      loggerSpy.reset();
       questionnaire = new Profile('TestQuestionnaire');
       questionnaire.parent = 'Questionnaire';
       doc.profiles.set(questionnaire.name, questionnaire);
@@ -162,6 +172,9 @@ describe('InstanceExporter', () => {
       patientProfInstance = new Instance('Baz');
       patientProfInstance.instanceOf = 'TestPatientProf';
       doc.instances.set(patientProfInstance.name, patientProfInstance);
+      carePlanInstance = new Instance('C');
+      carePlanInstance.instanceOf = 'CarePlan';
+      doc.instances.set(carePlanInstance.name, carePlanInstance);
       lipidInstance = new Instance('Bam')
         .withFile('LipidInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -191,6 +204,430 @@ describe('InstanceExporter', () => {
       boo.instanceOf = 'Patient';
       const exported = exportInstance(boo);
       expect(exported.meta).toBeUndefined();
+    });
+
+    it('should set meta.profile with the InstanceOf profile before checking for required elements', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      patient.rules.push(metaMS, metaCard, metaProfileMS, metaProfileCard);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should only set meta.profile with one profile when profile is set on the InstanceOf profile', () => {
+      const patientAbstractProfile = new Profile('MyPatientAbstract');
+      patientAbstractProfile.parent = 'Patient';
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedPatientProfile 1..1
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedPatientProfile' }];
+      const cardRule = new CardRule('meta.profile[supportedPatientProfile]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patientAbstractProfile.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        cardRule
+      );
+
+      const patientProfile = new Profile('MyPatient');
+      patientProfile.parent = 'MyPatientAbstract';
+      // * meta.profile[supportedPatientProfile] = Canonical(MyPatient)
+      const metaProfileAssignment = new AssignmentRule('meta.profile[supportedPatientProfile]');
+      metaProfileAssignment.value = new FshCanonical('MyPatient');
+      patientProfile.rules.push(metaProfileAssignment);
+      doc.profiles.set(patientAbstractProfile.name, patientAbstractProfile);
+      doc.profiles.set(patientProfile.name, patientProfile);
+
+      const patientInstance = new Instance('MyPatientInstance');
+      patientInstance.instanceOf = 'MyPatient';
+      // * name[0].family = "LastName"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      patientInstance.rules.push(patientAssignmentRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(1);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/MyPatient'
+      ]);
+    });
+
+    it('should add the InstanceOf profile as the first meta.profile if it is not added by any rules', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule
+      );
+
+      // * name[0].family = "LastName"
+      // * meta.profile[+] = "http://example.org/fhir/StructureDefinition/OtherPatient"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      const otherProfileRule = new AssignmentRule('meta.profile[+]');
+      otherProfileRule.value = 'http://example.org/fhir/StructureDefinition/OtherPatient';
+      patientInstance.rules.push(patientAssignmentRule, otherProfileRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(2);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient',
+        'http://example.org/fhir/StructureDefinition/OtherPatient'
+      ]);
+    });
+
+    it('should set meta.profile without the unversioned InstanceOf profile if a versioned InstanceOf profile is present', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedProfile 1..1
+       * meta.profile[supportedProfile] = Canonical(TestPatient|0.1.0)
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedProfile' }];
+      const cardRule = new CardRule('meta.profile[supportedProfile]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const supportedProfileCanonical = new AssignmentRule('meta.profile[supportedProfile]');
+      supportedProfileCanonical.value = new FshCanonical('TestPatient');
+      supportedProfileCanonical.value.version = '0.1.0';
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        cardRule,
+        supportedProfileCanonical
+      );
+
+      // * name[0].family = "LastName"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      patientInstance.rules.push(patientAssignmentRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(1);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|0.1.0'
+      ]);
+    });
+
+    it('should keep the unversioned InstanceOf in meta.profile if it is also added by a rule on the profile', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 2..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedProfile 1..1 and unversionedProfile 1..1
+       * meta.profile[supportedProfile] = Canonical(TestPatient|0.1.0)
+       * meta.profile[unversionedProfile] = Canonical(TestPatient)
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 2;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedProfile' }, { name: 'unversionedProfile' }];
+      const supportedCardRule = new CardRule('meta.profile[supportedProfile]');
+      supportedCardRule.min = 1;
+      supportedCardRule.max = '1';
+      const supportedProfileCanonical = new AssignmentRule('meta.profile[supportedProfile]');
+      supportedProfileCanonical.value = new FshCanonical('TestPatient');
+      supportedProfileCanonical.value.version = '0.1.0';
+      const unversionedCardRule = new CardRule('meta.profile[unversionedProfile]');
+      unversionedCardRule.min = 1;
+      unversionedCardRule.max = '1';
+      const unversionedProfileCanonical = new AssignmentRule('meta.profile[unversionedProfile]');
+      unversionedProfileCanonical.value = new FshCanonical('TestPatient');
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        supportedCardRule,
+        supportedProfileCanonical,
+        unversionedCardRule,
+        unversionedProfileCanonical
+      );
+
+      // * name[0].family = "LastName"
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      patientInstance.rules.push(patientAssignmentRule);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(2);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|0.1.0',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient'
+      ]);
+    });
+
+    it('should keep the unversioned InstanceOf in meta.profile if it is also added by a rule on the instance', () => {
+      /*
+       * meta 1..1 MS
+       * meta.profile 1..* MS
+       * meta.profile ^slicing.discriminator.type = #pattern
+       * meta.profile ^slicing.discriminator.path = "$this"
+       * meta.profile contains supportedProfile 1..1
+       * meta.profile[supportedProfile] = Canonical(TestPatient|0.1.0)
+       */
+      const metaMS = new FlagRule('meta');
+      metaMS.mustSupport = true;
+      const metaCard = new CardRule('meta');
+      metaCard.min = 1;
+      metaCard.max = '1';
+      const metaProfileMS = new FlagRule('meta.profile');
+      metaProfileMS.mustSupport = true;
+      const metaProfileCard = new CardRule('meta.profile');
+      metaProfileCard.min = 1;
+      metaProfileCard.max = '*';
+      const typeCaretRule = new CaretValueRule('meta.profile');
+      typeCaretRule.caretPath = 'slicing.discriminator.type';
+      typeCaretRule.value = new FshCode('pattern');
+      const pathCaretRule = new CaretValueRule('meta.profile');
+      pathCaretRule.caretPath = 'slicing.discriminator.path';
+      pathCaretRule.value = '$this';
+      const containsRule = new ContainsRule('meta.profile');
+      containsRule.items = [{ name: 'supportedProfile' }];
+      const cardRule = new CardRule('meta.profile[supportedProfile]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const supportedProfileCanonical = new AssignmentRule('meta.profile[supportedProfile]');
+      supportedProfileCanonical.value = new FshCanonical('TestPatient');
+      supportedProfileCanonical.value.version = '0.1.0';
+      patient.rules.push(
+        metaMS,
+        metaCard,
+        metaProfileMS,
+        metaProfileCard,
+        typeCaretRule,
+        pathCaretRule,
+        containsRule,
+        cardRule,
+        supportedProfileCanonical
+      );
+
+      // * name[0].family = "LastName"
+      // * meta.profile[+] = Canonical(TestPatient|0.1.0)
+      // * meta.profile[+] = Canonical(TestPatient)
+      const patientAssignmentRule = new AssignmentRule('name[0].family');
+      patientAssignmentRule.value = 'LastName';
+      const versionedProfileRule = new AssignmentRule('meta.profile[+]');
+      versionedProfileRule.value = new FshCanonical('TestPatient');
+      versionedProfileRule.value.version = '0.1.0';
+      const unversionedProfileRule = new AssignmentRule('meta.profile[+]');
+      unversionedProfileRule.value = new FshCanonical('TestPatient');
+
+      patientInstance.rules.push(
+        patientAssignmentRule,
+        versionedProfileRule,
+        unversionedProfileRule
+      );
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.meta.profile).toHaveLength(2);
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|0.1.0',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient'
+      ]);
+    });
+
+    it('should set meta.profile on all instances when setMetaProfile is always', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'always' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on all instances when setMetaProfile is not set', () => {
+      tank.config.instanceOptions = {};
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on no instances when setMetaProfile is never', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'never' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toBeUndefined();
+      expect(exportInstance(spooky).meta).toBeUndefined();
+    });
+
+    it('should set meta.profile on inline instances when setMetaProfile is inline-only', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'inline-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toBeUndefined();
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on non-inline instances when setMetaProfile is standalone-only', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'standalone-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toBeUndefined();
+    });
+
+    it('should automatically set the URL property on definition instances', () => {
+      const codeSystemInstance = new Instance('TestInstance');
+      codeSystemInstance.instanceOf = 'CodeSystem';
+      codeSystemInstance.usage = 'Definition';
+      const exported = exportInstance(codeSystemInstance);
+      expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/CodeSystem/TestInstance');
+    });
+
+    it('should not automatically set the URL property on definition instances if the URL is set explicitly', () => {
+      const codeSystemInstance = new Instance('TestInstance');
+      codeSystemInstance.instanceOf = 'CodeSystem';
+      codeSystemInstance.usage = 'Definition';
+
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://someDifferentCanonical.org/testInstance';
+      codeSystemInstance.rules.push(urlRule);
+      const exported = exportInstance(codeSystemInstance);
+      expect(exported.url).toBe('http://someDifferentCanonical.org/testInstance');
+    });
+
+    it('should not automatically set the URL property on definition instances if the profile does not support URL setting', () => {
+      const patientInstance = new Instance('TestInstance');
+      patientInstance.instanceOf = 'Patient';
+      patientInstance.usage = 'Definition';
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.url).toBeUndefined;
     });
 
     // Setting instance id
@@ -369,6 +806,39 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should set id on all instances when setId is always', () => {
+      tank.config.instanceOptions = { setId: 'always' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBe('Skeleton');
+    });
+
+    it('should set id on all instances when setId is not set', () => {
+      tank.config.instanceOptions = {};
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBe('Skeleton');
+    });
+
+    it('should set id on only non-inline instances when setId is standalone-only', () => {
+      tank.config.instanceOptions = { setId: 'standalone-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBeUndefined();
+    });
+
     // Assigning top level elements
     it('should assign top level elements that are assigned by pattern[x] on the Structure Definition', () => {
       const cardRule = new CardRule('active');
@@ -517,6 +987,349 @@ describe('InstanceExporter', () => {
       expect(exported.deceasedBoolean).toBe(true);
     });
 
+    it('should not assign fixed values from value[x] children when a specific choice has not been chosen', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'Hello World';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] }
+      });
+    });
+
+    it('should assign fixed values from value[x] children using the correct specific choice property name', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'some-id';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * valueQuantity = 5 'mm'
+      const valueQuantityAssignment = new AssignmentRule('valueQuantity');
+      valueQuantityAssignment.value = new FshQuantity(
+        5,
+        new FshCode('mm', 'http://unitsofmeasure.org')
+      );
+      testInstance.rules.push(valueQuantityAssignment);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] },
+        valueQuantity: {
+          id: 'some-id',
+          value: 5,
+          system: 'http://unitsofmeasure.org',
+          code: 'mm'
+        }
+      });
+    });
+
+    it('should assign fixed values from value[x] children using the correct specific choice property name (primitive edition)', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * value[x] 1..1
+      const valueCardRequired = new CardRule('value[x]');
+      valueCardRequired.min = 1;
+      valueCardRequired.max = '1';
+      observationProfile.rules.push(valueCardRequired);
+      // * value[x].id 1..1
+      const valueIdCardRequired = new CardRule('value[x].id');
+      valueIdCardRequired.min = 1;
+      valueIdCardRequired.max = '1';
+      observationProfile.rules.push(valueIdCardRequired);
+      // * value[x].id = "some-required-id"
+      const valueIdAssignment = new AssignmentRule('value[x].id');
+      valueIdAssignment.value = 'some-id';
+      observationProfile.rules.push(valueIdAssignment);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * valueString = 'Hello World'
+      const valueStringAssignment = new AssignmentRule('valueString');
+      valueStringAssignment.value = 'Hello World';
+      testInstance.rules.push(valueStringAssignment);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Observation',
+        id: 'TestInstance',
+        meta: {
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/ObservationProfile']
+        },
+        status: 'final',
+        code: { coding: [{ code: 'testcode' }] },
+        valueString: 'Hello World',
+        _valueString: { id: 'some-id' }
+      });
+    });
+
+    it('should assign fixed value[x] correctly and log no errors when multiple choice slices are assigned', () => {
+      // Example from SUSHI 911: https://github.com/FHIR/sushi/issues/911
+
+      // Instance: MyQuestionnaire
+      // InstanceOf: Questionnaire
+      const questionnaireInstance = new Instance('MyQuestionnaire');
+      questionnaireInstance.instanceOf = 'Questionnaire';
+
+      // Add required properties
+      // status = #draft
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      questionnaireInstance.rules.push(statusDraft);
+      // * item[+].linkId = "findrisc-score"
+      // * item[=].type = #decimal
+      const itemLinkId = new AssignmentRule('item[+].linkId');
+      itemLinkId.value = 'findrisc-score';
+      questionnaireInstance.rules.push(itemLinkId);
+      const itemType = new AssignmentRule('item[=].type');
+      itemType.value = new FshCode('decimal');
+      questionnaireInstance.rules.push(itemType);
+
+      // Add choiceSlices and ensure values are set and no warnings are logged
+      // * item[=].extension[0].url = "http://example.org"
+      // * item[=].extension[=].valueExpression.name = "scoreExt"
+      // * item[=].extension[=].valueExpression.language = #text/fhirpath
+      // * item[=].extension[=].valueExpression.expression = "'http://hl7.org/fhir/StructureDefinition/ordinalValue'"
+      // * item[=].extension[+].url = "http://example.org"
+      // * item[=].extension[=].valueCoding.display = "{score}"
+      const firstExtensionUrl = new AssignmentRule('item[=].extension[0].url');
+      firstExtensionUrl.value = 'http://example.org';
+      questionnaireInstance.rules.push(firstExtensionUrl);
+      const valueExpressionName = new AssignmentRule('item[=].extension[=].valueExpression.name');
+      valueExpressionName.value = 'scoreExt';
+      questionnaireInstance.rules.push(valueExpressionName);
+      const valueExpressionLanguage = new AssignmentRule(
+        'item[=].extension[=].valueExpression.language'
+      );
+      valueExpressionLanguage.value = new FshCode('#text/fhirpath');
+      questionnaireInstance.rules.push(valueExpressionLanguage);
+      const valueExpressionExpression = new AssignmentRule(
+        'item[=].extension[=].valueExpression.expression'
+      );
+      valueExpressionExpression.value = "'http://hl7.org/fhir/StructureDefinition/ordinalValue'";
+      questionnaireInstance.rules.push(valueExpressionExpression);
+      const secondExtensionUrl = new AssignmentRule('item[=].extension[+].url');
+      secondExtensionUrl.value = 'http://example.org';
+      questionnaireInstance.rules.push(secondExtensionUrl);
+      const valueCodingDisplay = new AssignmentRule('item[=].extension[=].valueCoding.display');
+      valueCodingDisplay.value = '{score}';
+      questionnaireInstance.rules.push(valueCodingDisplay);
+      doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+      const exported = exportInstance(questionnaireInstance);
+      // There should be no errors saying that valueExpression.language has min cardinality 1 but occurs 0 times
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(exported.toJSON()).toEqual({
+        resourceType: 'Questionnaire',
+        id: 'MyQuestionnaire',
+        status: 'draft',
+        item: [
+          {
+            linkId: 'findrisc-score',
+            type: 'decimal',
+            extension: [
+              {
+                url: 'http://example.org',
+                valueExpression: {
+                  name: 'scoreExt',
+                  language: '#text/fhirpath',
+                  expression: "'http://hl7.org/fhir/StructureDefinition/ordinalValue'"
+                }
+              },
+              {
+                url: 'http://example.org',
+                valueCoding: {
+                  display: '{score}'
+                }
+              }
+            ]
+          }
+        ]
+      });
+    });
+
+    it('should assign fixed value[x] correctly even in weird situations (SUSHI #760)', () => {
+      // See https://github.com/FHIR/sushi/issues/760
+
+      // Profile: EURMoney
+      // Parent: Money
+      const eurMoney = new Profile('EURMoney');
+      eurMoney.parent = 'Money';
+      // * currency 1..1
+      const currencyRequired = new CardRule('currency');
+      currencyRequired.min = 1;
+      eurMoney.rules.push(currencyRequired);
+      // * currency = #EUR (exactly)
+      const currencyFixed = new AssignmentRule('currency');
+      currencyFixed.value = new FshCode('EUR');
+      currencyFixed.exactly = true;
+      eurMoney.rules.push(currencyFixed);
+      doc.profiles.set(eurMoney.name, eurMoney);
+
+      // Extension: InsuranceCost
+      const insCost = new Extension('InsuranceCost');
+      // * extension contains Amount 1..1
+      const containsAmount = new ContainsRule('extension');
+      containsAmount.items = [{ name: 'Amount' }];
+      insCost.rules.push(containsAmount);
+      const amountRequired = new CardRule('extension[Amount]');
+      amountRequired.min = 1;
+      insCost.rules.push(amountRequired);
+      const noValue = new CardRule('value[x]');
+      noValue.max = '0';
+      insCost.rules.push(noValue);
+      // * extension[Amount].value[x] 1..1
+      const amountValueRequired = new CardRule('extension[Amount].value[x]');
+      amountValueRequired.min = 1;
+      insCost.rules.push(amountValueRequired);
+      const noExtension = new CardRule('extension[Amount].extension');
+      noExtension.max = '0';
+      insCost.rules.push(noExtension);
+      // * extension[Amount].value[x] only EURMoney
+      const amountOnlyEurMoney = new OnlyRule('extension[Amount].value[x]');
+      amountOnlyEurMoney.types = [{ type: 'EURMoney' }];
+      insCost.rules.push(amountOnlyEurMoney);
+      // * extension[Amount].value[x].value ^short = "Cost"
+      const amountMoneyValueShort = new CaretValueRule('extension[Amount].value[x].value');
+      amountMoneyValueShort.caretPath = 'short';
+      amountMoneyValueShort.value = 'Cost';
+      insCost.rules.push(amountMoneyValueShort);
+      doc.extensions.set(insCost.name, insCost);
+
+      // Profile: ObservationProfile
+      // Parent: Observation
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      // * extension contains InsuranceCost named InsCost 1..1
+      const containsInsCost = new ContainsRule('extension');
+      containsInsCost.items = [{ name: 'InsCost', type: 'InsuranceCost' }];
+      observationProfile.rules.push(containsInsCost);
+      const insCostRequired = new CardRule('extension[InsCost]');
+      insCostRequired.min = 1;
+      observationProfile.rules.push(insCostRequired);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: TestInstance
+      // InstanceOf: ObservationProfile
+      const testInstance = new Instance('TestInstance');
+      testInstance.instanceOf = 'ObservationProfile';
+      // * status = #final
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      testInstance.rules.push(statusFinal);
+      // * code = #testcode
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      testInstance.rules.push(codeTestCode);
+      // * extension[InsCost].extension[Amount].valueMoney.value = 5.00
+      const moneyValueFive = new AssignmentRule(
+        'extension[InsCost].extension[Amount].valueMoney.value'
+      );
+      moneyValueFive.value = 5;
+      testInstance.rules.push(moneyValueFive);
+      doc.instances.set(testInstance.name, testInstance);
+
+      const exported = exportInstance(testInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/InsuranceCost',
+          extension: [
+            {
+              url: 'Amount',
+              valueMoney: {
+                currency: 'EUR',
+                value: 5
+              }
+            }
+          ]
+        }
+      ]);
+    });
+
     it('should assign an element to a value the same as the assigned value on the Structure Definition', () => {
       const assignedValRule = new AssignmentRule('active');
       assignedValRule.value = true;
@@ -598,6 +1411,30 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage()).toMatch(
         'Cannot assign http://bar.com#bar to this element; a different CodeableConcept is already assigned: {"coding":[{"code":"foo","system":"http://foo.com"}]}.'
       );
+    });
+
+    it('should assign an element to a value different than the pattern value on the Structure Definition on an array', () => {
+      const assignedValRule = new AssignmentRule('maritalStatus');
+      const assignedFshCode = new FshCode('foo', 'http://foo.com');
+      assignedValRule.value = assignedFshCode;
+      patient.rules.push(assignedValRule);
+      const cardRule = new CardRule('maritalStatus');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
+      const instanceAssignedValRule = new AssignmentRule('maritalStatus.coding[1]');
+      const instanceAssignedFshCode = new FshCode('bar', 'http://bar.com');
+      instanceAssignedValRule.value = instanceAssignedFshCode;
+      patientInstance.rules.push(instanceAssignedValRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus.coding[0]).toEqual({
+        code: 'foo',
+        system: 'http://foo.com'
+      });
+      expect(exported.maritalStatus.coding[1]).toEqual({
+        code: 'bar',
+        system: 'http://bar.com'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     // Nested elements
@@ -823,6 +1660,43 @@ describe('InstanceExporter', () => {
         system: 'email'
         // period not included since it is 0..1
       });
+    });
+
+    it('should log a warning when assigning a value to an element nested within an element with multiple profiles', () => {
+      // Consider two Identifier profiles with mutually incompatible assigned values
+      const regularIdentifier = new Profile('RegularIdentifier');
+      regularIdentifier.parent = 'Identifier';
+      const regularSystem = new AssignmentRule('system');
+      regularSystem.value = 'http://example.org/regular';
+      regularIdentifier.rules.push(regularSystem);
+      doc.profiles.set(regularIdentifier.name, regularIdentifier);
+      const unusualIdentifier = new Profile('UnusualIdentifier');
+      unusualIdentifier.parent = 'Identifier';
+      const unusualSystem = new AssignmentRule('system');
+      unusualSystem.value = 'http://example.org/unusual';
+      unusualIdentifier.rules.push(unusualSystem);
+      doc.profiles.set(unusualIdentifier.name, unusualIdentifier);
+      // In TestPatient, give the generalPractitioner.identifier element multiple profiles
+      const gpOnly = new OnlyRule('generalPractitioner.identifier');
+      gpOnly.types.push({ type: 'RegularIdentifier' }, { type: 'UnusualIdentifier' });
+      patient.rules.push(gpOnly);
+      // Assign a value to generalPractitioner.identifier.value, which is nested within the profiled element
+      const gpValue = new AssignmentRule('generalPractitioner.identifier.value');
+      gpValue.value = '12345';
+      // Assign a value to generalPractitioner.identifier.system. This value is invalid on both profiles, but those profiles are being ignored.
+      const gpSystem = new AssignmentRule('generalPractitioner.identifier.system');
+      gpSystem.value = 'http://example.org/something-else';
+      patientInstance.rules.push(gpValue, gpSystem);
+      const exported = exportInstance(patientInstance);
+      // The assigned values should be present
+      expect(exported.generalPractitioner[0].identifier.value).toBe('12345');
+      expect(exported.generalPractitioner[0].identifier.system).toBe(
+        'http://example.org/something-else'
+      );
+      // We should receive a warning that the profiles are being ignored
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Multiple profiles present on element Patient.generalPractitioner.identifier. Base element type will be used instead of any profiles.'
+      );
     });
 
     // Assigning with pattern[x]
@@ -1255,6 +2129,27 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should apply an Assignment rule with Canonical of a Questionnaire instance', () => {
+      const questionnaireInstance = new Instance('MyQuestionnaire');
+      questionnaireInstance.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire';
+      questionnaireInstance.rules.push(urlRule);
+      doc.instances.set(questionnaireInstance.name, questionnaireInstance);
+
+      const responseInstance = new Instance('MyQuestionnaireResponse');
+      responseInstance.instanceOf = 'QuestionnaireResponse';
+      const assignedValueRule = new AssignmentRule('questionnaire');
+      assignedValueRule.value = new FshCanonical('MyQuestionnaire');
+      responseInstance.rules.push(assignedValueRule);
+      doc.instances.set(responseInstance.name, responseInstance);
+
+      const exported = exportInstance(responseInstance);
+      expect(exported.questionnaire).toEqual(
+        'http://my.awesome.questions.org/Questionnaire/MyQuestionnaire'
+      );
+    });
+
     it('should apply an Assignment rule with Canonical of an inline instance', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';
@@ -1290,6 +2185,108 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should assign a Canonical that is one of the valid types', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const pdInstance = new Instance('TestPD');
+      pdInstance.instanceOf = 'PlanDefinition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://example.org/PlanDefition/1';
+      pdInstance.rules.push(urlRule);
+      doc.instances.set(pdInstance.name, pdInstance);
+      assignedRefRule.value = new FshCanonical('TestPD');
+      // * instantiatesCanonical = Canonical(TestPD)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(['http://example.org/PlanDefition/1']); // instantiatesCanonical is set
+    });
+
+    it('should assign a Canonical that is one of the valid types (without checking the version) when the type is versioned', () => {
+      // Profile: SpecialQuestionnaire
+      // Parent: Questionnaire
+      // derivedFrom only Canonical(TestQuestionnaire|3.1)
+      const specialQuestionnaire = new Profile('SpecialQuestionnaire');
+      specialQuestionnaire.parent = 'Questionnaire';
+      const onlyRule = new OnlyRule('derivedFrom');
+      onlyRule.types = [{ type: 'TestQuestionnaire|3.1', isCanonical: true }];
+      specialQuestionnaire.rules.push(onlyRule);
+      doc.profiles.set(specialQuestionnaire.name, specialQuestionnaire);
+      // Instance: TQInstance
+      // InstanceOf: TestQuestionnaire
+      // url = "http://example.org/TQ/1"
+      const tqInstance = new Instance('TQInstance');
+      tqInstance.instanceOf = 'TestQuestionnaire';
+      const tqUrl = new AssignmentRule('url');
+      tqUrl.value = 'http://example.org/TQ/1';
+      tqInstance.rules.push(tqUrl);
+      doc.instances.set(tqInstance.name, tqInstance);
+      // Instance: SQInstance
+      // InstanceOf: SpecialQuestionnaire
+      // derivedFrom = Canonical(TQInstance)
+      const sqInstance = new Instance('SQInstance');
+      sqInstance.instanceOf = 'SpecialQuestionnaire';
+      const sqDerivedFrom = new AssignmentRule('derivedFrom');
+      sqDerivedFrom.value = new FshCanonical('TQInstance');
+      sqInstance.rules.push(sqDerivedFrom);
+
+      const exported = exportInstance(sqInstance);
+      expect(exported.derivedFrom).toBeDefined();
+      expect(exported.derivedFrom).toEqual(['http://example.org/TQ/1']);
+    });
+
+    it('should assign a Canonical that is a child of the valid types', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const pdProfile = new Profile('PlanDefProfile');
+      pdProfile.parent = 'PlanDefinition';
+      doc.profiles.set(pdProfile.name, pdProfile);
+      const pdInstance = new Instance('PlanDefInstance');
+      pdInstance.instanceOf = 'PlanDefProfile';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://example.org/PlanDefition/1';
+      pdInstance.rules.push(urlRule);
+      doc.instances.set(pdInstance.name, pdInstance);
+      assignedRefRule.value = new FshCanonical('PlanDefInstance');
+      // * instantiatesCanonical = Canonical(PlanDefInstance)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(['http://example.org/PlanDefition/1']); // instantiatesCanonical is set
+    });
+
+    it('should log an error when an invalid canonical is assigned', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const vsInstance = new Instance('TestVS');
+      vsInstance.instanceOf = 'ValueSet';
+      doc.instances.set(vsInstance.name, vsInstance);
+      assignedRefRule.value = new FshCanonical('TestVS');
+      // * instantiatesCanonical = Canonical(TestVS)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
+      expect(loggerSpy.getFirstMessage('error')).toMatch(
+        /The type "Canonical\(ValueSet\)" does not match any of the allowed types\D*/s
+      );
+    });
+
+    it('should log an error when an already exported invalid canonical is assigned', () => {
+      const assignedRefRule = new AssignmentRule('instantiatesCanonical');
+      const vsInstance = new Instance('TestVS');
+      vsInstance.instanceOf = 'ValueSet';
+      doc.instances.set(vsInstance.name, vsInstance);
+      // First export the VS so that it is fished from  the package instead of FSHTank
+      exportInstance(vsInstance);
+      assignedRefRule.value = new FshCanonical('TestVS');
+      // * instantiatesCanonical = Canonical(TestVS)
+      carePlanInstance.rules.push(assignedRefRule);
+
+      const exported = exportInstance(carePlanInstance);
+      expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
+      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+        /The type "Canonical\(ValueSet\)" does not match any of the allowed types\D*/s
+      );
+    });
+
     // Assigning codes from local systems
     it('should assign a code to a top level element while replacing the local code system name with its url', () => {
       const brightInstance = new Instance('BrightObservation');
@@ -1310,6 +2307,102 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign a code with a version to a top level element while replacing the local code system name with its url and use the specified version', () => {
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'Visible|1.0.0|a'); // Version should include anything that comes after the first |
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+      const exported = exportInstance(brightInstance);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bright',
+          version: '1.0.0|a',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+    });
+
+    it('should assign a code to a top level element if the code system was defined as an instance of usage definition', () => {
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const nameRule = new AssignmentRule('name');
+      nameRule.value = 'Visible';
+      visibleSystem.rules.push(urlRule, nameRule);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+      exportInstance(visibleSystem);
+
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'Visible');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const exported = exportInstance(brightInstance);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+    });
+
+    it('should not assign a code to a top level element if the system references an instance that is not a CodeSystem', () => {
+      const invalidSystem = new Instance('NonSystem');
+      invalidSystem.instanceOf = 'CapabilityStatement';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/NonSystem';
+      invalidSystem.rules.push(urlRule);
+      doc.instances.set(invalidSystem.name, invalidSystem);
+      exportInstance(invalidSystem);
+
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'NonSystem');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const exported = exportInstance(brightInstance);
+      expect(loggerSpy.getAllMessages('error')).toContain(
+        'Resolved value "NonSystem" is not a valid URI.'
+      );
+      expect(exported.code).not.toBeDefined();
+    });
+
+    it('should not assign a code to a top level element if the code system was defined as an instance of a non-definition usage', () => {
+      const invalidSystem = new Instance('NonDefinition');
+      invalidSystem.instanceOf = 'CodeSystem';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/NonDefinition';
+      const nameRule = new AssignmentRule('name');
+      nameRule.value = 'Visible';
+      invalidSystem.rules.push(urlRule, nameRule);
+      doc.instances.set(invalidSystem.name, invalidSystem);
+      exportInstance(invalidSystem);
+
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'NonDefinition');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const exported = exportInstance(brightInstance);
+      expect(loggerSpy.getAllMessages('error')).toContain(
+        'Resolved value "NonDefinition" is not a valid URI.'
+      );
+      expect(exported.code).not.toBeDefined();
+    });
+
     it('should assign a code to a nested element while replacing the local code system name with its url', () => {
       const brightInstance = new Instance('BrightObservation');
       brightInstance.instanceOf = 'Observation';
@@ -1327,6 +2420,26 @@ describe('InstanceExporter', () => {
           system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
+    });
+
+    // Assigning Quantities with value 0 (e.g., Age)
+    it('should assign a Quantity with value 0 (and not drop the 0)', () => {
+      const observationInstance = new Instance('ZeroValueObservation');
+      observationInstance.instanceOf = 'Observation';
+      const assignedValueQuantityRule = new AssignmentRule('valueQuantity');
+      assignedValueQuantityRule.value = new FshQuantity(
+        0,
+        new FshCode('mm', 'http://unitsofmeasure.org', 'mm')
+      );
+      observationInstance.rules.push(assignedValueQuantityRule);
+      doc.instances.set(observationInstance.name, observationInstance);
+      const exported = exportInstance(observationInstance);
+      expect(exported.valueQuantity).toEqual({
+        value: 0,
+        code: 'mm',
+        system: 'http://unitsofmeasure.org',
+        unit: 'mm'
+      });
     });
 
     // Assigning Quantities to Quantity specializations (e.g., Age)
@@ -1516,6 +2629,33 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign a nested sliced extension element that is referred to by name', () => {
+      const fooExtension = new Extension('FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const containsRule = new ContainsRule('maritalStatus.extension');
+      containsRule.items = [{ name: 'foo', type: 'FooExtension' }];
+      patient.rules.push(containsRule);
+      const barRule = new AssignmentRule('maritalStatus.extension[foo].valueString');
+      barRule.value = 'bar';
+      const maritalRule = new AssignmentRule('maritalStatus');
+      maritalRule.value = new FshCode('boo');
+      patientInstance.rules.push(maritalRule, barRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus).toEqual({
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+            valueString: 'bar'
+          }
+        ],
+        coding: [
+          {
+            code: 'boo'
+          }
+        ]
+      });
+    });
+
     it('should assign a sliced extension element that is referred to by url', () => {
       const fooExtension = new Extension('FooExtension');
       doc.extensions.set(fooExtension.name, fooExtension);
@@ -1583,6 +2723,164 @@ describe('InstanceExporter', () => {
       patientInstance.rules.push(barRule);
       const exported = exportInstance(patientInstance);
       expect(exported.extension).toBeUndefined();
+    });
+
+    it('should log an error when a modifier extension is assigned to an extension path', () => {
+      // Extension: StrangeExtension
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: StrangeInstance
+      // InstanceOf: StrangeExtension
+      // Usage: #inline
+      const strangeInstance = new Instance('StrangeInstance');
+      strangeInstance.instanceOf = 'StrangeExtension';
+      strangeInstance.usage = 'Inline';
+      doc.instances.set(strangeInstance.name, strangeInstance);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // extension[0] = StrangeInstance
+      const strangeRule = new AssignmentRule('extension[0]')
+        .withFile('Strange.fsh')
+        .withLocation([5, 3, 5, 28]);
+      strangeRule.value = 'StrangeInstance';
+      strangeRule.isInstance = true;
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Instance of modifier extension StrangeExtension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should log an error when a non-modifier extension is assigned to a modifierExtension path', () => {
+      // Extension: StrangeExtension
+      const strangeExtension = new Extension('StrangeExtension');
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: StrangeInstance
+      // InstanceOf: StrangeExtension
+      // Usage: #inline
+      const strangeInstance = new Instance('StrangeInstance');
+      strangeInstance.instanceOf = 'StrangeExtension';
+      strangeInstance.usage = 'Inline';
+      doc.instances.set(strangeInstance.name, strangeInstance);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // modifierExtension[0] = StrangeInstance
+      const strangeRule = new AssignmentRule('modifierExtension[0]')
+        .withFile('Strange.fsh')
+        .withLocation([5, 3, 5, 28]);
+      strangeRule.value = 'StrangeInstance';
+      strangeRule.isInstance = true;
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Instance of non-modifier extension StrangeExtension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should log an error when a modifier extension is used on an extension element as part of a longer path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(onlyRule, modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // extension[StrangeExtension].valueString = "This is strange"
+      const strangeRule = new AssignmentRule('extension[StrangeExtension].valueString')
+        .withFile('Strange.fsh')
+        .withLocation([7, 7, 7, 19]);
+      strangeRule.value = 'This is strange';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is strange'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used on extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: Strange\.fsh.*Line: 7\D*/s
+      );
+    });
+
+    it('should log an error when a modifier extension is used on an extension element in the middle of a path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(onlyRule, modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // maritalStatus.extension[StrangeExtension].valueString = "This is strange"
+      const strangeRule = new AssignmentRule(
+        'maritalStatus.extension[StrangeExtension].valueString'
+      )
+        .withFile('Strange.fsh')
+        .withLocation([9, 5, 9, 23]);
+      strangeRule.value = 'This is strange';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is strange'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used on extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: Strange\.fsh.*Line: 9\D*/s
+      );
+    });
+
+    it('should log an error when a non-modifier extension is used on a modifierExtension element as part of a longer path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      strangeExtension.rules.push(onlyRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // * modifierExtension[StrangeExtension].valueString = "This is normal"
+      const strangeRule = new AssignmentRule('modifierExtension[StrangeExtension].valueString')
+        .withFile('Strange.fsh')
+        .withLocation([6, 7, 6, 19]);
+      strangeRule.value = 'This is normal';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is normal'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Non-modifier extension StrangeExtension used on modifierExtension element\. Non-modifier extensions should only be used with extension elements\..*File: Strange\.fsh.*Line: 6\D*/s
+      );
     });
 
     it.skip('should throw when ordered is set in the discriminator but slices arrive out of order', () => {
@@ -1890,14 +3188,22 @@ describe('InstanceExporter', () => {
       const caretRule = new CaretValueRule('item');
       caretRule.caretPath = 'slicing.discriminator.path';
       caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('item');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('item');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
       const containsRule = new ContainsRule('item');
       containsRule.items.push({ name: 'boo' });
       const cardRule = new CardRule('item[boo]');
       cardRule.min = 0;
       cardRule.max = '1';
       // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #open
       // * item contains boo 0..1
-      questionnaire.rules.push(caretRule, containsRule, cardRule);
+      questionnaire.rules.push(caretRule, dTypeRule, rulesRule, containsRule, cardRule);
       const answerRule = new AssignmentRule('item[boo].answerOption[0].valueString');
       answerRule.value = 'foo';
       const linkIdRule = new AssignmentRule('item[boo].linkId');
@@ -1915,6 +3221,228 @@ describe('InstanceExporter', () => {
       questionnaireInstance.rules.push(answerRule, linkIdRule, typeRule, statusRule);
       exportInstance(questionnaireInstance);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not log an error when a reslice element fulfills a cardinality constraint', () => {
+      // Profile: TestPatient
+      // Parent: Patient
+      // * identifier ^slicing.discriminator.type = #value
+      // * identifier ^slicing.discriminator.path = "value"
+      // * identifier ^slicing.rules = #open
+      // * identifier contains ParentSlice 1..1
+      // * identifier[ParentSlice] ^slicing.discriminator.type = #value
+      // * identifier[ParentSlice] ^slicing.discriminator.path = "value"
+      // * identifier[ParentSlice] ^slicing.rules = #open
+      // * identifier[ParentSlice] contains ChildSlice 1..1
+      const identifierSlicing = new CaretValueRule('identifier');
+      identifierSlicing.caretPath = 'slicing.discriminator.path';
+      identifierSlicing.value = 'value';
+      const slicingType = new CaretValueRule('identifier');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const slicingRules = new CaretValueRule('identifier');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const identifierContains = new ContainsRule('identifier');
+      identifierContains.items.push({ name: 'ParentSlice' });
+      const parentCard = new CardRule('identifier[ParentSlice]');
+      parentCard.min = 1;
+      parentCard.max = '1';
+      const parentSlicing = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicing.caretPath = 'slicing.discriminator.path';
+      parentSlicing.value = 'value';
+      const parentSlicingType = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicingType.caretPath = 'slicing.discriminator.type';
+      parentSlicingType.value = new FshCode('value');
+      const parentSlicingRules = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicingRules.caretPath = 'slicing.rules';
+      parentSlicingRules.value = new FshCode('open');
+      const parentContains = new ContainsRule('identifier[ParentSlice]');
+      parentContains.items.push({ name: 'ChildSlice' });
+      const childCard = new CardRule('identifier[ParentSlice][ChildSlice]');
+      childCard.min = 1;
+      childCard.max = '1';
+      patient.rules.push(
+        identifierSlicing,
+        slicingRules,
+        slicingType,
+        identifierContains,
+        parentCard,
+        parentSlicing,
+        parentSlicingType,
+        parentSlicingRules,
+        parentContains,
+        childCard
+      );
+      // Instance: PatientInstance
+      // InstanceOf: TestPatient
+      // * identifier[ParentSlice][ChildSlice] = SomeIdentifier
+      const identifierAssignment = new AssignmentRule('identifier[ParentSlice][ChildSlice]');
+      identifierAssignment.isInstance = true;
+      identifierAssignment.value = 'SomeIdentifier';
+      patientInstance.rules.push(identifierAssignment);
+      // Instance: SomeIdentifier
+      // InstanceOf: Identifier
+      // * value = "Something"
+      const someIdentifier = new Instance('SomeIdentifier');
+      someIdentifier.instanceOf = 'Identifier';
+      const valueAssignment = new AssignmentRule('value');
+      valueAssignment.value = 'Something';
+      someIdentifier.rules.push(valueAssignment);
+      doc.instances.set(someIdentifier.name, someIdentifier);
+
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not assign a value which violates a closed child slicing', () => {
+      // Profile: MyProfile
+      // Parent: Observation
+      // * category.coding ^slicing.discriminator.type = #value
+      // * category.coding ^slicing.discriminator.path = "coding"
+      // * category.coding ^slicing.rules = #closed
+      // * category.coding contains slice1 0..1
+      // * category.coding[slice1] = http://example.com#foo
+      const profile = new Profile('MyProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category.coding');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category.coding');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = 'code';
+      const rulesRule = new CaretValueRule('category.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('category.coding');
+      containsRule.items.push({ name: 'slice1' });
+      const assignmentRule = new AssignmentRule('category.coding[slice1]');
+      assignmentRule.value = new FshCode('foo', 'http://example.com');
+      profile.rules.push(typeRule, pathRule, rulesRule, containsRule, assignmentRule);
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: MyInstance
+      // InstanceOf: MyProfile
+      // * category[0] = http://not-example.org#bar
+      const instance = new Instance('MyInstance');
+      instance.instanceOf = 'MyProfile';
+      const categoryRule = new AssignmentRule('category[0]');
+      categoryRule.value = new FshCode('bar', 'http://not-example.com');
+      instance.rules.push(categoryRule);
+      doc.instances.set(instance.name, instance);
+
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      const exportedInstance = exported.find(i => i._instanceMeta.name === 'MyInstance');
+      expect(exportedInstance.category).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toContainEqual(
+        'Cannot assign {"coding":[{"code":"bar","system":"http://not-example.com"}]} to this element since it conflicts with all values of the closed slicing.'
+      );
+    });
+
+    it('should assign a value which does not violate all elements of a closed child slicing', () => {
+      // Profile: MyProfile
+      // Parent: Observation
+      // * category.coding ^slicing.discriminator.type = #value
+      // * category.coding ^slicing.discriminator.path = "coding"
+      // * category.coding ^slicing.rules = #closed
+      // * category.coding contains slice1 0..1 and slice2 0..1
+      // * category.coding[slice1] = http://example.com#foo
+      // * category.coding[slice2] = http://example.com#bar
+      const profile = new Profile('MyProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category.coding');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category.coding');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = 'code';
+      const rulesRule = new CaretValueRule('category.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('category.coding');
+      containsRule.items.push({ name: 'slice1' });
+      containsRule.items.push({ name: 'slice2' });
+      const assignmentRule = new AssignmentRule('category.coding[slice1]');
+      assignmentRule.value = new FshCode('foo', 'http://example.com');
+      const assignmentRule2 = new AssignmentRule('category.coding[slice2]');
+      assignmentRule2.value = new FshCode('bar', 'http://example.com');
+      profile.rules.push(
+        typeRule,
+        pathRule,
+        rulesRule,
+        containsRule,
+        assignmentRule,
+        assignmentRule2
+      );
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: MyInstance
+      // InstanceOf: MyProfile
+      // * category[0] = http://example#bar
+      const instance = new Instance('MyInstance');
+      instance.instanceOf = 'MyProfile';
+      const categoryRule = new AssignmentRule('category[0]');
+      categoryRule.value = new FshCode('bar', 'http://example.com');
+      instance.rules.push(categoryRule);
+      doc.instances.set(instance.name, instance);
+
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      const exportedInstance = exported.find(i => i._instanceMeta.name === 'MyInstance');
+      expect(exportedInstance.category).toEqual([
+        { coding: [{ code: 'bar', system: 'http://example.com' }] }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).not.toContainEqual(
+        'Cannot assign {"coding":[{"code":"bar","system":"http://not-example.com"}]} to this element since it conflicts with all values of the closed slicing.'
+      );
+    });
+
+    it('should assign a value which violates an open child slicing', () => {
+      // Profile: MyProfile
+      // Parent: Observation
+      // * category.coding ^slicing.discriminator.type = #value
+      // * category.coding ^slicing.discriminator.path = "coding"
+      // * category.coding ^slicing.rules = #open
+      // * category.coding contains slice1 0..1
+      // * category.coding[slice1] = http://example.com#foo
+      const profile = new Profile('MyProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category.coding');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category.coding');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = 'code';
+      const rulesRule = new CaretValueRule('category.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('category.coding');
+      containsRule.items.push({ name: 'slice1' });
+      const assignmentRule = new AssignmentRule('category.coding[slice1]');
+      assignmentRule.value = new FshCode('foo', 'http://example.com');
+      profile.rules.push(typeRule, pathRule, rulesRule, containsRule, assignmentRule);
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: MyInstance
+      // InstanceOf: MyProfile
+      // * category[0] = http://not-example.org#bar
+      const instance = new Instance('MyInstance');
+      instance.instanceOf = 'MyProfile';
+      const categoryRule = new AssignmentRule('category[0]');
+      categoryRule.value = new FshCode('bar', 'http://not-example.com');
+      instance.rules.push(categoryRule);
+      doc.instances.set(instance.name, instance);
+
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      const exportedInstance = exported.find(i => i._instanceMeta.name === 'MyInstance');
+      expect(exportedInstance.category).toEqual([
+        { coding: [{ code: 'bar', system: 'http://not-example.com' }] }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).not.toContainEqual(
+        'Cannot assign {"coding":[{"code":"bar","system":"http://not-example.com"}]} to this element since it conflicts with all values of the closed slicing.'
+      );
     });
 
     it('should only export an instance once', () => {
@@ -1996,6 +3524,51 @@ describe('InstanceExporter', () => {
           }
         ]
       });
+    });
+
+    it('should handle extensions on non-zero element of primitive arrays', () => {
+      // * address.line.extension contains
+      //     http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator named locator 0..1
+      const containsRule = new ContainsRule('address.line.extension');
+      containsRule.items.push({
+        name: 'locator',
+        type: 'http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator'
+      });
+      const extensionCard = new CardRule('address.line.extension[locator]');
+      extensionCard.min = 0;
+      extensionCard.max = '1';
+      patient.rules.push(containsRule, extensionCard);
+
+      // * address.line[1].extension[locator] = "3rd floor"
+      const loc = new AssignmentRule('address.line[1].extension[locator].valueString');
+      loc.value = '3rd Floor';
+      patientInstance.rules.push(loc);
+
+      // In-memory result should be correct
+      const result = exportInstance(patientInstance);
+      expect(result.address).toHaveLength(1);
+      expect(result.address[0].line).toBeUndefined();
+      expect(result.address[0]._line).toHaveLength(2);
+      expect(result.address[0]._line[0]).toBeNull();
+      expect(result.address[0]._line[1].extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator',
+          valueString: '3rd Floor'
+        }
+      ]);
+
+      // JSON representation should be correct
+      const json = result.toJSON();
+      expect(json.address).toHaveLength(1);
+      expect(json.address[0].line).toBeUndefined();
+      expect(json.address[0]._line).toHaveLength(2);
+      expect(json.address[0]._line[0]).toBeNull();
+      expect(json.address[0]._line[1].extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator',
+          valueString: '3rd Floor'
+        }
+      ]);
     });
 
     describe('#Inline Instances', () => {
@@ -2344,9 +3917,7 @@ describe('InstanceExporter', () => {
         // * valueQuantity = MyAge
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
-        expect(exported.valueQuantity).toEqual({
-          value: 42
-        });
+        expect(exported.valueQuantity.value).toBe(42);
       });
 
       it('should not overwrite the value property when assigning a Quantity object', () => {
@@ -2400,9 +3971,7 @@ describe('InstanceExporter', () => {
         // * valueQuantity = MySimple
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
-        expect(exported.valueQuantity).toEqual({
-          value: 7
-        });
+        expect(exported.valueQuantity.value).toBe(7);
       });
 
       it('should assign an inline instance of a FSH defined profile of a type to an instance', () => {
@@ -2425,9 +3994,7 @@ describe('InstanceExporter', () => {
         // * valueQuantity = MyQuantity
         respRateInstance.rules.push(inlineRule);
         const exported = exportInstance(respRateInstance);
-        expect(exported.valueQuantity).toEqual({
-          value: 7
-        });
+        expect(exported.valueQuantity.value).toBe(7);
       });
 
       it('should assign an inline instance of an extension to an instance', () => {
@@ -2515,97 +4082,6 @@ describe('InstanceExporter', () => {
     });
   });
 
-  describe('#Mixins', () => {
-    let instance: Instance;
-    let mixin: RuleSet;
-
-    beforeEach(() => {
-      instance = new Instance('Foo').withFile('Instance.fsh').withLocation([5, 6, 7, 16]);
-      instance.instanceOf = 'Patient';
-      doc.instances.set(instance.name, instance);
-
-      mixin = new RuleSet('Bar');
-      doc.ruleSets.set(mixin.name, mixin);
-      instance.mixins.push('Bar');
-    });
-
-    it('should apply rules from a single mixin', () => {
-      const rule = new AssignmentRule('active');
-      rule.value = true;
-      mixin.rules.push(rule);
-
-      const exported = exporter.exportInstance(instance);
-      expect(exported.active).toBe(true);
-    });
-
-    it('should apply rules from multiple mixins in the correct order', () => {
-      const rule1 = new AssignmentRule('active');
-      rule1.value = true;
-      mixin.rules.push(rule1);
-
-      const mixin2 = new RuleSet('Baz');
-      doc.ruleSets.set(mixin2.name, mixin2);
-      const rule2 = new AssignmentRule('active');
-      rule2.value = false;
-      mixin2.rules.push(rule2);
-      instance.mixins.push('Baz');
-
-      const exported = exporter.exportInstance(instance);
-      expect(exported.active).toBe(false);
-    });
-
-    it('should emit an error when the path is not found on a mixin rule', () => {
-      const rule = new AssignmentRule('activez').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.value = true;
-      mixin.rules.push(rule);
-
-      exporter.exportInstance(instance);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/activez/);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-
-    it('should emit an error when applying an invalid mixin rule', () => {
-      const rule = new AssignmentRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.value = 'some string';
-      mixin.rules.push(rule);
-
-      exporter.exportInstance(instance);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/some string/);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-
-    it('should emit an error when a mixin cannot be found', () => {
-      instance.mixins.push('Barz');
-
-      exporter.exportInstance(instance);
-
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Barz/);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Instance\.fsh.*Line: 5 - 7\D*/s);
-    });
-
-    it('should emit an error when a mixin applies a non-assigned value rule', () => {
-      const rule = new CardRule('active').withFile('Mixin.fsh').withLocation([1, 2, 3, 12]);
-      rule.min = 0;
-      rule.max = '1';
-      mixin.rules.push(rule);
-
-      exporter.exportInstance(instance);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Rules applied by mixins to an instance must assign a value. Other rules are ignored/
-      );
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Mixin\.fsh.*Line: 1 - 3\D*/s);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Applied in File: Instance\.fsh.*Applied on Line: 5 - 7\D*/s
-      );
-    });
-  });
-
   describe('#insertRules', () => {
     let instance: Instance;
     let patientInstance: Instance;
@@ -2635,7 +4111,7 @@ describe('InstanceExporter', () => {
       valueRule.value = 'my-id';
       ruleSet.rules.push(valueRule);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       instance.rules.push(insertRule);
 
@@ -2657,7 +4133,7 @@ describe('InstanceExporter', () => {
       assignedValRule4.value = 'Jackson';
       ruleSet.rules.push(assignedValRule4);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       patientInstance.rules.push(insertRule);
       const exported = exporter.exportInstance(patientInstance);
@@ -2688,7 +4164,7 @@ describe('InstanceExporter', () => {
       valueRule.value = 'my-id';
       ruleSet.rules.push(caretRule, valueRule);
 
-      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
       insertRule.ruleSet = 'Bar';
       instance.rules.push(insertRule);
 
@@ -2697,6 +4173,118 @@ describe('InstanceExporter', () => {
       expect(exported.id).toBe('my-id');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /CaretValueRule.*Instance.*File: Caret\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+      );
+    });
+  });
+});
+
+describe('InstanceExporter R5', () => {
+  let defs: FHIRDefinitions;
+  let doc: FSHDocument;
+  let sdExporter: StructureDefinitionExporter;
+  let exporter: InstanceExporter;
+  let exportInstance: (instance: Instance) => InstanceDefinition;
+
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+  });
+
+  beforeEach(() => {
+    doc = new FSHDocument('fileName');
+    const input = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#current', 'r5-definitions');
+    sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
+    exporter = new InstanceExporter(input, pkg, fisher);
+    exportInstance = (instance: Instance) => {
+      sdExporter.export();
+      return exporter.exportInstance(instance);
+    };
+  });
+
+  describe('#exportInstance', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
+    // Assignment on CodeableReference
+    it('should log a meaningful error when assigning a Reference directly to a CodeableReference', () => {
+      const condition = new Instance('TestCondition');
+      condition.instanceOf = 'Condition';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'condition-id';
+      condition.rules.push(assignedIdRule);
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshReference('TestCondition');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(condition.name, condition);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Cannot assign.*Reference\(Condition\/condition-id\).*Assign to CodeableReference.reference\D*/s
+      );
+    });
+
+    it('should log a meaningful error when assigning a code directly to a CodeableReference', () => {
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshCode('foo');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Cannot assign.*#foo.*Assign to CodeableReference.concept\D*/s
+      );
+    });
+
+    // Assigning References
+
+    it('should assign a reference while resolving the Instance being referred to on a CodeableReference', () => {
+      const condition = new Instance('TestCondition');
+      condition.instanceOf = 'Condition';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'condition-id';
+      condition.rules.push(assignedIdRule);
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses.reference');
+      assignedRefRule.value = new FshReference('TestCondition');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(condition.name, condition);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses[0].reference).toEqual({
+        reference: 'Condition/condition-id'
+      });
+    });
+
+    it('should log an error when an invalid reference is assigned on a CodeableReference', () => {
+      const patient = new Instance('TestPatient');
+      patient.instanceOf = 'Patient';
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses.reference');
+      assignedRefRule.value = new FshReference('TestPatient');
+      carePlan.rules.push(assignedRefRule);
+
+      doc.instances.set(patient.name, patient);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses).toBeUndefined();
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
       );
     });
   });

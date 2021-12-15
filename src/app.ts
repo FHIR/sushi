@@ -24,12 +24,14 @@ import {
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
+  writePreprocessedFSH,
   getRawFSHes,
   init,
-  getRandomPun
+  getRandomPun,
+  setIgnoredWarnings
 } from './utils';
 
-const FSH_VERSION = '1.1.0';
+const FSH_VERSION = '1.2.0';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -41,26 +43,20 @@ async function app() {
 
   program
     .name('sushi')
-    .usage('[path-to-fsh-defs] [options]')
+    .usage('[path-to-fsh-project] [options]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
+    .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .option('-i, --init', 'initialize a SUSHI project')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .on('--help', () => {
       console.log('');
       console.log('Additional information:');
-      console.log('  [path-to-fsh-defs]');
+      console.log('  [path-to-fsh-project]');
       console.log('    Default: "."');
-      console.log('    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]');
       console.log('  -o, --out <out>');
       console.log('    Default: "fsh-generated"');
-      console.log(
-        '    If legacy publisher mode (fsh subdirectory present), default output is parent of "fsh"'
-      );
-      console.log(
-        '    If legacy flat mode (no input/fsh or fsh subdirectories present), default output is "build"'
-      );
     })
     .arguments('[path-to-fsh-defs]')
     .action(function (pathToFshDefs) {
@@ -75,11 +71,31 @@ async function app() {
   if (program.debug) logger.level = 'debug';
   input = ensureInputDir(input);
 
+  const rootIgnoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
+  const nestedIgnoreWarningsPath = path.join(input, 'input', 'sushi-ignoreWarnings.txt');
+  if (fs.existsSync(rootIgnoreWarningsPath)) {
+    setIgnoredWarnings(fs.readFileSync(rootIgnoreWarningsPath, 'utf-8'));
+    if (fs.existsSync(nestedIgnoreWarningsPath)) {
+      logger.warn(
+        'Found sushi-ignoreWarnings.txt files in the following locations:\n\n' +
+          ` - ${rootIgnoreWarningsPath}\n` +
+          ` - ${nestedIgnoreWarningsPath}\n\n` +
+          `Only the file at ${rootIgnoreWarningsPath} will be processed. ` +
+          'Remove one of these files to avoid this warning.'
+      );
+    }
+  } else if (fs.existsSync(nestedIgnoreWarningsPath)) {
+    setIgnoredWarnings(fs.readFileSync(nestedIgnoreWarningsPath, 'utf-8'));
+  }
+
   logger.info(`Running ${getVersion()}`);
 
   logger.info('Arguments:');
   if (program.debug) {
     logger.info('  --debug');
+  }
+  if (program.preprocessed) {
+    logger.info('  --preprocessed');
   }
   if (program.snapshot) {
     logger.info('  --snapshot');
@@ -89,52 +105,42 @@ async function app() {
   }
   logger.info(`  ${path.resolve(input)}`);
 
-  // IG Publisher HACK: the IG Publisher invokes SUSHI with `/fsh` appended (even if it doesn't
-  // exist).  If we detect a direct fsh path, we need to fix it by backing up a folder, else it
-  // won't correctly detect the IG Publisher mode.
-  if (path.basename(input) === 'fsh') {
-    input = path.dirname(input);
-  }
-
   const originalInput = input;
   input = findInputDir(input);
 
   // If an input/fsh subdirectory is used, we are in an IG Publisher context
   const fshFolder = path.basename(input) === 'fsh';
   const inputFshFolder = fshFolder && path.basename(path.dirname(input)) === 'input';
-  const isIgPubContext = inputFshFolder;
-  // TODO: Legacy support for top level fsh/ subdirectory. Remove when no longer supported.
-  const isLegacyIgPubContext = fshFolder && !inputFshFolder;
-  const outDir = ensureOutputDir(input, program.out, isIgPubContext, isLegacyIgPubContext);
+  if (!inputFshFolder) {
+    // Since current supported tank configuration requires input/fsh folder,
+    // both legacy IG publisher mode and legacy flat tank cases occur when
+    // there is no input/fsh/ folder.
+    // If we detect this case, things are about to go very wrong, so exit immediately.
+    logger.error(
+      'Migration to current SUSHI project structure is required. See above error message for details. Exiting.'
+    );
+    process.exit(1);
+  }
+  const outDir = ensureOutputDir(input, program.out);
 
   let tank: FSHTank;
   let config: Configuration;
 
   try {
     let rawFSH: RawFSH[];
-    if (
-      path.basename(path.dirname(input)) === 'input' &&
-      path.basename(input) === 'fsh' &&
-      !fs.existsSync(input)
-    ) {
+    if (!fs.existsSync(input)) {
       // If we have a path that ends with input/fsh but that folder does not exist,
-      // we are in a sushi-config.yaml-only case (new tank configuration with no FSH files)
+      // we are in a sushi-config.yaml-only case (current tank configuration with no FSH files)
       // so we can safely say there are no FSH files and therefore rawFSH is empty.
       rawFSH = [];
     } else {
       rawFSH = getRawFSHes(input);
     }
-    if (
-      rawFSH.length === 0 &&
-      !fs.existsSync(path.join(originalInput, 'config.yaml')) &&
-      !fs.existsSync(path.join(originalInput, 'sushi-config.yaml')) &&
-      !fs.existsSync(path.join(originalInput, 'fsh', 'config.yaml')) &&
-      !fs.existsSync(path.join(originalInput, 'fsh', 'sushi-config.yaml'))
-    ) {
+    if (rawFSH.length === 0 && !fs.existsSync(path.join(originalInput, 'sushi-config.yaml'))) {
       logger.info('No FSH files or sushi-config.yaml present.');
       process.exit(0);
     }
-    config = readConfig(isIgPubContext ? originalInput : input, isLegacyIgPubContext);
+    config = readConfig(originalInput);
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
@@ -143,18 +149,10 @@ async function app() {
 
   // Load dependencies
   const defs = new FHIRDefinitions();
-  const dependencyDefs = loadExternalDependencies(defs, config);
+  await loadExternalDependencies(defs, config);
 
-  // Load custom resources
-  if (!isIgPubContext) {
-    // In legacy configuration (both IG publisher context and any other tank), resources are in ig-data/input/
-    loadCustomResources(path.join(input, 'ig-data', 'input'), defs);
-  } else {
-    // In current tank configuration (input/fsh), resources will be in input/
-    loadCustomResources(path.join(input, '..'), defs);
-  }
-
-  await Promise.all(dependencyDefs);
+  // Load custom resources. In current tank configuration (input/fsh), resources will be in input/
+  loadCustomResources(path.join(input, '..'), defs);
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
@@ -169,17 +167,20 @@ async function app() {
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  writeFHIRResources(outDir, outPackage, defs, program.snapshot, isIgPubContext);
+  writeFHIRResources(outDir, outPackage, defs, program.snapshot);
+
+  if (program.preprocessed) {
+    logger.info('Writing preprocessed FSH...');
+    writePreprocessedFSH(outDir, input, tank);
+  }
 
   // If FSHOnly is true in the config, do not generate IG content, otherwise, generate IG content
   if (config.FSHOnly) {
     logger.info('Exporting FSH definitions only. No IG related content will be exported.');
   } else {
-    const igDataPath = isIgPubContext
-      ? path.resolve(input, '..', '..')
-      : path.resolve(input, 'ig-data');
+    const igFilesPath = path.resolve(input, '..', '..');
     logger.info('Assembling Implementation Guide sources...');
-    const igExporter = new IGExporter(outPackage, defs, igDataPath, isIgPubContext);
+    const igExporter = new IGExporter(outPackage, defs, igFilesPath);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
     if (
@@ -194,10 +195,9 @@ async function app() {
   }
 
   console.log();
-  printResults(outPackage, !config.FSHOnly);
+  printResults(outPackage);
 
-  const exitCode = stats.numError > 0 ? 1 : 0;
-  process.exit(exitCode);
+  process.exit(stats.numError);
 }
 
 function getVersion(): string {
@@ -209,13 +209,15 @@ function getVersion(): string {
   return 'unknown';
 }
 
-function printResults(pkg: Package, isIG: boolean) {
+function printResults(pkg: Package) {
   // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
-  const prNum = pad(pkg.profiles.length.toString(), 8);
-  const extnNum = pad(pkg.extensions.length.toString(), 10);
-  const vstNum = pad(pkg.valueSets.length.toString(), 9);
-  const cdsysNum = pad(pkg.codeSystems.length.toString(), 11);
-  const insNum = pad(pkg.instances.length.toString(), 9);
+  const profileNum = pad(pkg.profiles.length.toString(), 13);
+  const extentNum = pad(pkg.extensions.length.toString(), 12);
+  const logiclNum = pad(pkg.logicals.length.toString(), 12);
+  const resourcNum = pad(pkg.resources.length.toString(), 13);
+  const valueSetsNumber = pad(pkg.valueSets.length.toString(), 18);
+  const codeSystemsNum = pad(pkg.codeSystems.length.toString(), 17);
+  const instancesNumber = pad(pkg.instances.length.toString(), 18);
   const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''}`, 13);
   const wrNumMsg = padStart(`${stats.numWarn} Warning${stats.numWarn !== 1 ? 's' : ''}`, 12);
 
@@ -226,19 +228,21 @@ function printResults(pkg: Package, isIG: boolean) {
   // NOTE: Doing some funky things w/ strings on some lines to keep overall alignment in the code
   const results = [
     clr('╔' + '════════════════════════ SUSHI RESULTS ══════════════════════════' + '' + '╗'),
-    clr('║') + ' ╭──────────┬────────────┬───────────┬─────────────┬───────────╮ ' + clr('║'),
-    clr('║') + ' │ Profiles │ Extensions │ ValueSets │ CodeSystems │ Instances │ ' + clr('║'),
-    clr('║') + ' ├──────────┼────────────┼───────────┼─────────────┼───────────┤ ' + clr('║'),
-    clr('║') + ` │ ${prNum} │ ${extnNum} │ ${vstNum} │ ${cdsysNum} │ ${insNum} │ ` + clr('║'),
-    clr('║') + ' ╰──────────┴────────────┴───────────┴─────────────┴───────────╯ ' + clr('║'),
+    clr('║') + ' ╭───────────────┬──────────────┬──────────────┬───────────────╮ ' + clr('║'),
+    clr('║') + ' │    Profiles   │  Extensions  │   Logicals   │   Resources   │ ' + clr('║'),
+    clr('║') + ' ├───────────────┼──────────────┼──────────────┼───────────────┤ ' + clr('║'),
+    clr('║') + ` │ ${profileNum} │ ${extentNum} │ ${logiclNum} │ ${resourcNum} │ ` + clr('║'),
+    clr('║') + ' ╰───────────────┴──────────────┴──────────────┴───────────────╯ ' + clr('║'),
+    clr('║') + ' ╭────────────────────┬───────────────────┬────────────────────╮ ' + clr('║'),
+    clr('║') + ' │      ValueSets     │    CodeSystems    │     Instances      │ ' + clr('║'),
+    clr('║') + ' ├────────────────────┼───────────────────┼────────────────────┤ ' + clr('║'),
+    clr('║') + ` │ ${valueSetsNumber} │ ${codeSystemsNum} │ ${instancesNumber} │ ` + clr('║'),
+    clr('║') + ' ╰────────────────────┴───────────────────┴────────────────────╯ ' + clr('║'),
     clr('║' + '                                                                 ' + '' + '║'),
     clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
     clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
   ];
-  if (!isIG) {
-    results.splice(7, 1);
-  }
 
   const convertChars = !supportsFancyCharacters();
   results.forEach(r => {

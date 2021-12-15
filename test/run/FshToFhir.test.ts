@@ -3,18 +3,17 @@ import path from 'path';
 import { loggerSpy } from '../testhelpers';
 import { logger } from '../../src/utils/';
 import { fshToFhir } from '../../src/run';
-import * as utils from '../../src/utils';
+import * as processing from '../../src/utils/Processing';
 import { Configuration } from '../../src/fshtypes';
 import { FHIRDefinitions } from '../../src/fhirdefs';
+import { leftAlign } from '../utils/leftAlign';
 
 describe('#FshToFhir', () => {
   let loadSpy: jest.SpyInstance;
   let defaultConfig: Configuration;
 
   beforeAll(() => {
-    loadSpy = jest.spyOn(utils, 'loadExternalDependencies').mockImplementation(() => {
-      return [undefined];
-    });
+    loadSpy = jest.spyOn(processing, 'loadExternalDependencies').mockResolvedValue();
     defaultConfig = {
       canonical: 'http://example.org',
       FSHOnly: true,
@@ -115,6 +114,7 @@ describe('#FshToFhir', () => {
             '..',
             'testhelpers',
             'testdefs',
+            'r4-definitions',
             'package',
             'StructureDefinition-StructureDefinition.json'
           ),
@@ -128,6 +128,7 @@ describe('#FshToFhir', () => {
             '..',
             'testhelpers',
             'testdefs',
+            'r4-definitions',
             'package',
             'StructureDefinition-Patient.json'
           ),
@@ -137,23 +138,23 @@ describe('#FshToFhir', () => {
       loadSpy.mockImplementation(defs => {
         defs.add(sd);
         defs.add(patient);
-        return [undefined];
+        return Promise.resolve();
       });
     });
 
     afterAll(() => {
       loadSpy.mockImplementation(() => {
-        return [undefined];
+        return Promise.resolve();
       });
     });
 
     it('should convert valid FSH into FHIR with a single input', async () => {
       const results = await fshToFhir(
-        `
+        leftAlign(`
       Profile: MyPatient
       Parent: Patient
       * name MS
-      `
+       `)
       );
       expect(results.errors).toHaveLength(0);
       expect(results.warnings).toHaveLength(0);
@@ -166,16 +167,16 @@ describe('#FshToFhir', () => {
 
     it('should convert valid FSH into FHIR with several inputs', async () => {
       const results = await fshToFhir([
-        `
+        leftAlign(`
       Profile: MyPatient1
       Parent: Patient
       * name MS
-      `,
-        `
+       `),
+        leftAlign(`
       Profile: MyPatient2
       Parent: Patient
       * gender MS
-      `
+       `)
       ]);
       expect(results.errors).toHaveLength(0);
       expect(results.warnings).toHaveLength(0);
@@ -192,16 +193,16 @@ describe('#FshToFhir', () => {
 
     it('should trace errors back to the originating input when multiple inputs are given', async () => {
       const results = await fshToFhir([
-        `
+        leftAlign(`
       Profile: MyPatient1
       Parent: FakeProfile
       * name MS
-      `,
-        `
+       `),
+        leftAlign(`
       Profile: MyPatient2
       Parent: AlsoFakeProfile
       * gender MS
-      `
+       `)
       ]);
       expect(results.errors).toHaveLength(2);
       expect(results.errors[0].message).toMatch(/Parent FakeProfile not found/);

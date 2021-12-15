@@ -8,6 +8,8 @@ import { FSHParser } from './generated/FSHParser';
 import {
   Profile,
   Extension,
+  Resource,
+  Logical,
   FshCanonical,
   FshCode,
   FshQuantity,
@@ -45,8 +47,12 @@ import {
   ValueSetComponentRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
-  SdRule
+  SdRule,
+  LrRule,
+  AddElementRule,
+  OnlyRuleType
 } from '../fshtypes/rules';
+import { splitOnPathPeriods } from '../fhirtypes/common';
 import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
 import { TerminalNode } from 'antlr4/tree/Tree';
@@ -56,6 +62,7 @@ import {
   ValueSetFilterValueTypeError,
   ValueSetFilterMissingValueError
 } from '../errors';
+import isEmpty from 'lodash/isEmpty';
 import isEqual from 'lodash/isEqual';
 import sortBy from 'lodash/sortBy';
 import upperFirst from 'lodash/upperFirst';
@@ -68,7 +75,6 @@ enum SdMetadataKey {
   Parent = 'Parent',
   Title = 'Title',
   Description = 'Description',
-  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -77,7 +83,6 @@ enum InstanceMetadataKey {
   Title = 'Title',
   Description = 'Description',
   Usage = 'Usage',
-  Mixins = 'Mixins',
   Unknown = 'Unknown'
 }
 
@@ -122,6 +127,10 @@ enum Flag {
   Unknown
 }
 
+const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
+const INDENT_WIDTH = 2;
+const DEFAULT_START_COLUMN = 1;
+
 /**
  * FSHImporter handles the parsing of FSH documents, constructing the data into FSH types.
  * FSHImporter uses a visitor pattern approach with some accomodations due to the ANTLR4
@@ -130,11 +139,13 @@ enum Flag {
  * we must call the explicit visitX functions.
  */
 export class FSHImporter extends FSHVisitor {
+  private docs: FSHDocument[] = [];
   private currentFile: string;
   private currentDoc: FSHDocument;
   private allAliases: Map<string, string>;
   paramRuleSets: Map<string, ParamRuleSet>;
   private topLevelParse: boolean;
+  private pathContext: string[][];
 
   constructor() {
     super();
@@ -144,14 +155,13 @@ export class FSHImporter extends FSHVisitor {
 
   import(rawFSHes: RawFSH[]): FSHDocument[] {
     this.allAliases = new Map();
-    const docs: FSHDocument[] = [];
     const contexts: pc.DocContext[] = [];
 
     // Preprocess the FSH files
     rawFSHes.forEach(rawFSH => {
       // Create and store doc for main import process
       const doc = new FSHDocument(rawFSH.path);
-      docs.push(doc);
+      this.docs.push(doc);
       this.currentDoc = doc;
       this.currentFile = this.currentDoc.file ?? '';
 
@@ -168,10 +178,13 @@ export class FSHImporter extends FSHVisitor {
       // Collect the aliases and store in global map
       ctx.entity().forEach(e => {
         if (e.alias()) {
-          const [name, value] = e
-            .alias()
-            .SEQUENCE()
-            .map(s => s.getText());
+          const name = e.alias().SEQUENCE()[0].getText();
+          let value = e.alias().SEQUENCE()[1]?.getText();
+          // When the url contains a fragment (http://example.org#fragment), the grammar will read it as a
+          // CODE, so we also accept that for the value here
+          if (!value && e.alias().CODE()) {
+            value = e.alias().CODE().getText();
+          }
           if (name.includes('|')) {
             logger.error(
               `Alias ${name} cannot include "|" since the "|" character is reserved for indicating a version`,
@@ -199,11 +212,11 @@ export class FSHImporter extends FSHVisitor {
       this.currentDoc = null;
       this.currentFile = null;
     });
-    logger.info(`Preprocessed ${docs.length} documents with ${this.allAliases.size} aliases.`);
+    logger.info(`Preprocessed ${this.docs.length} documents with ${this.allAliases.size} aliases.`);
 
     // Now do the main import
     contexts.forEach((context, index) => {
-      this.currentDoc = docs[index];
+      this.currentDoc = this.docs[index];
       this.currentFile = this.currentDoc.file ?? '';
       this.visitDoc(context);
       this.currentDoc = null;
@@ -211,14 +224,14 @@ export class FSHImporter extends FSHVisitor {
     });
 
     let [definitions, instances] = [0, 0];
-    docs.forEach(doc => {
+    this.docs.forEach(doc => {
       definitions +=
         doc.codeSystems.size + doc.extensions.size + doc.profiles.size + doc.valueSets.size;
       instances += doc.instances.size;
     });
     logger.info(`Imported ${definitions} definitions and ${instances} instances.`);
 
-    return docs;
+    return this.docs;
   }
 
   visitDoc(ctx: pc.DocContext): void {
@@ -233,44 +246,37 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitEntity(ctx: pc.EntityContext): void {
+    // Reset the pathContext for each entity
+    this.pathContext = [];
+
     if (ctx.profile()) {
       this.visitProfile(ctx.profile());
-    }
-
-    if (ctx.extension()) {
+    } else if (ctx.extension()) {
       this.visitExtension(ctx.extension());
-    }
-
-    if (ctx.instance()) {
+    } else if (ctx.resource()) {
+      this.visitResource(ctx.resource());
+    } else if (ctx.logical()) {
+      this.visitLogical(ctx.logical());
+    } else if (ctx.instance()) {
       this.visitInstance(ctx.instance());
-    }
-
-    if (ctx.valueSet()) {
+    } else if (ctx.valueSet()) {
       this.visitValueSet(ctx.valueSet());
-    }
-
-    if (ctx.codeSystem()) {
+    } else if (ctx.codeSystem()) {
       this.visitCodeSystem(ctx.codeSystem());
-    }
-
-    if (ctx.invariant()) {
+    } else if (ctx.invariant()) {
       this.visitInvariant(ctx.invariant());
-    }
-
-    if (ctx.ruleSet()) {
+    } else if (ctx.ruleSet()) {
       this.visitRuleSet(ctx.ruleSet());
-    }
-
-    if (ctx.mapping()) {
+    } else if (ctx.mapping()) {
       this.visitMapping(ctx.mapping());
     }
   }
 
   visitProfile(ctx: pc.ProfileContext) {
-    const profile = new Profile(ctx.SEQUENCE().getText())
+    const profile = new Profile(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.profiles.has(profile.name)) {
+    if (this.docs.some(doc => doc.profiles.has(profile.name))) {
       logger.error(`Skipping Profile: a Profile named ${profile.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -282,10 +288,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitExtension(ctx: pc.ExtensionContext) {
-    const extension = new Extension(ctx.SEQUENCE().getText())
+    const extension = new Extension(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.extensions.has(extension.name)) {
+    if (this.docs.some(doc => doc.extensions.has(extension.name))) {
       logger.error(`Skipping Extension: an Extension named ${extension.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -323,8 +329,6 @@ export class FSHImporter extends FSHVisitor {
           def.title = pair.value as string;
         } else if (pair.key === SdMetadataKey.Description) {
           def.description = pair.value as string;
-        } else if (pair.key === SdMetadataKey.Mixins) {
-          def.mixins = pair.value as string[];
         }
       });
     ruleCtx.forEach(sdRule => {
@@ -332,11 +336,78 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
-  visitInstance(ctx: pc.InstanceContext) {
-    const instance = new Instance(ctx.SEQUENCE().getText())
+  visitResource(ctx: pc.ResourceContext) {
+    const resource = new Resource(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.instances.has(instance.name)) {
+    if (this.docs.some(doc => doc.resources.has(resource.name))) {
+      logger.error(`Skipping Resource: a Resource named ${resource.name} already exists.`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else {
+      this.parseResourceOrLogical(resource, ctx.sdMetadata(), ctx.lrRule());
+      this.currentDoc.resources.set(resource.name, resource);
+    }
+  }
+
+  visitLogical(ctx: pc.LogicalContext) {
+    const logical = new Logical(ctx.name().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.docs.some(doc => doc.logicals.has(logical.name))) {
+      logger.error(
+        `Skipping Logical Model: a Logical Model named ${logical.name} already exists.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
+      this.parseResourceOrLogical(logical, ctx.sdMetadata(), ctx.lrRule());
+      this.currentDoc.logicals.set(logical.name, logical);
+    }
+  }
+
+  private parseResourceOrLogical(
+    def: Resource | Logical,
+    metaCtx: pc.SdMetadataContext[] = [],
+    ruleCtx: pc.LrRuleContext[] = []
+  ): void {
+    const seenPairs: Map<SdMetadataKey, string | string[]> = new Map();
+    metaCtx
+      .map(sdMeta => ({ ...this.visitSdMetadata(sdMeta), context: sdMeta }))
+      .forEach(pair => {
+        if (seenPairs.has(pair.key)) {
+          logger.error(
+            `Metadata field '${pair.key}' already declared with value '${seenPairs.get(
+              pair.key
+            )}'.`,
+            { file: this.currentFile, location: this.extractStartStop(pair.context) }
+          );
+          return;
+        }
+        seenPairs.set(pair.key, pair.value);
+        if (pair.key === SdMetadataKey.Id) {
+          def.id = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Parent) {
+          def.parent = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Title) {
+          def.title = pair.value as string;
+        } else if (pair.key === SdMetadataKey.Description) {
+          def.description = pair.value as string;
+        }
+      });
+    ruleCtx.forEach(lrRule => {
+      def.rules.push(...this.visitLrRule(lrRule));
+    });
+  }
+
+  visitInstance(ctx: pc.InstanceContext) {
+    const instance = new Instance(ctx.name().getText())
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    if (this.docs.some(doc => doc.instances.has(instance.name))) {
       logger.error(`Skipping Instance: an Instance named ${instance.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -381,8 +452,6 @@ export class FSHImporter extends FSHVisitor {
           instance.description = pair.value as string;
         } else if (pair.key === InstanceMetadataKey.Usage) {
           instance.usage = pair.value as InstanceUsage;
-        } else if (pair.key === InstanceMetadataKey.Mixins) {
-          instance.mixins = pair.value as string[];
         }
       });
     if (!instance.instanceOf) {
@@ -397,10 +466,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSet(ctx: pc.ValueSetContext) {
-    const valueSet = new FshValueSet(ctx.SEQUENCE().getText())
+    const valueSet = new FshValueSet(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.valueSets.has(valueSet.name)) {
+    if (this.docs.some(doc => doc.valueSets.has(valueSet.name))) {
       logger.error(`Skipping ValueSet: a ValueSet named ${valueSet.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -466,10 +535,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCodeSystem(ctx: pc.CodeSystemContext) {
-    const codeSystem = new FshCodeSystem(ctx.SEQUENCE().getText())
+    const codeSystem = new FshCodeSystem(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.codeSystems.has(codeSystem.name)) {
+    if (this.docs.some(doc => doc.codeSystems.has(codeSystem.name))) {
       logger.error(`Skipping code system: a code system named ${codeSystem.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -525,10 +594,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInvariant(ctx: pc.InvariantContext) {
-    const invariant = new Invariant(ctx.SEQUENCE().getText())
+    const invariant = new Invariant(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.invariants.has(invariant.name)) {
+    if (this.docs.some(doc => doc.invariants.has(invariant.name))) {
       logger.error(`Skipping Invariant: an Invariant named ${invariant.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -579,7 +648,7 @@ export class FSHImporter extends FSHVisitor {
     const ruleSet = new RuleSet(ctx.RULESET_REFERENCE().getText().trim())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.ruleSets.has(ruleSet.name)) {
+    if (this.docs.some(doc => doc.ruleSets.has(ruleSet.name))) {
       logger.error(`Skipping RuleSet: a RuleSet named ${ruleSet.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -590,7 +659,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  parseRuleSet(ruleSet: RuleSet, rules: pc.RuleSetRuleContext[]) {
+  private parseRuleSet(ruleSet: RuleSet, rules: pc.RuleSetRuleContext[]) {
     rules.forEach(rule => {
       if (rule.sdRule()) {
         ruleSet.rules.push(...this.visitSdRule(rule.sdRule()));
@@ -598,6 +667,12 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitVsComponent(rule.vsComponent()));
       } else if (rule.concept()) {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
+      } else if (rule.addElementRule()) {
+        ruleSet.rules.push(this.visitAddElementRule(rule.addElementRule()));
+      } else if (rule.codeCaretValueRule()) {
+        ruleSet.rules.push(this.visitCodeCaretValueRule(rule.codeCaretValueRule()));
+      } else if (rule.mappingRule()) {
+        ruleSet.rules.push(this.visitMappingRule(rule.mappingRule()));
       }
     });
   }
@@ -638,10 +713,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitMapping(ctx: pc.MappingContext): void {
-    const mapping = new Mapping(ctx.SEQUENCE().getText())
+    const mapping = new Mapping(ctx.name().getText())
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (this.currentDoc.mappings.has(mapping.name)) {
+    if (this.docs.some(doc => doc.mappings.has(mapping.name))) {
       logger.error(`Skipping Mapping: a Mapping named ${mapping.name} already exists.`, {
         file: this.currentFile,
         location: this.extractStartStop(ctx)
@@ -652,7 +727,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  parseMapping(
+  private parseMapping(
     mapping: Mapping,
     metaCtx: pc.MappingMetadataContext[] = [],
     ruleCtx: pc.MappingEntityRuleContext[] = []
@@ -700,15 +775,14 @@ export class FSHImporter extends FSHVisitor {
       return { key: SdMetadataKey.Title, value: this.visitTitle(ctx.title()) };
     } else if (ctx.description()) {
       return { key: SdMetadataKey.Description, value: this.visitDescription(ctx.description()) };
-    } else if (ctx.mixins()) {
-      return { key: SdMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: SdMetadataKey.Unknown, value: ctx.getText() };
   }
 
-  visitInstanceMetadata(
-    ctx: pc.InstanceMetadataContext
-  ): { key: InstanceMetadataKey; value: string | string[] } {
+  visitInstanceMetadata(ctx: pc.InstanceMetadataContext): {
+    key: InstanceMetadataKey;
+    value: string | string[];
+  } {
     if (ctx.instanceOf()) {
       return { key: InstanceMetadataKey.InstanceOf, value: this.visitInstanceOf(ctx.instanceOf()) };
     } else if (ctx.title()) {
@@ -723,8 +797,6 @@ export class FSHImporter extends FSHVisitor {
         key: InstanceMetadataKey.Usage,
         value: this.visitUsage(ctx.usage())
       };
-    } else if (ctx.mixins()) {
-      return { key: InstanceMetadataKey.Mixins, value: this.visitMixins(ctx.mixins()) };
     }
     return { key: InstanceMetadataKey.Unknown, value: ctx.getText() };
   }
@@ -751,9 +823,10 @@ export class FSHImporter extends FSHVisitor {
     return { key: CsMetadataKey.Unknown, value: ctx.getText() };
   }
 
-  visitInvariantMetadata(
-    ctx: pc.InvariantMetadataContext
-  ): { key: InvariantMetadataKey; value: string | FshCode } {
+  visitInvariantMetadata(ctx: pc.InvariantMetadataContext): {
+    key: InvariantMetadataKey;
+    value: string | FshCode;
+  } {
     if (ctx.description()) {
       return {
         key: InvariantMetadataKey.Description,
@@ -800,11 +873,11 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitId(ctx: pc.IdContext): string {
-    return ctx.SEQUENCE().getText();
+    return ctx.name().getText();
   }
 
   visitParent(ctx: pc.ParentContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE());
+    return this.aliasAwareValue(ctx.name());
   }
 
   visitTitle(ctx: pc.TitleContext): string {
@@ -814,37 +887,15 @@ export class FSHImporter extends FSHVisitor {
   visitDescription(ctx: pc.DescriptionContext): string {
     if (ctx.STRING()) {
       return this.extractString(ctx.STRING());
+    } else if (ctx.MULTILINE_STRING()) {
+      return this.extractMultilineString(ctx.MULTILINE_STRING());
     }
-
-    // it must be a multiline string
-    return this.extractMultilineString(ctx.MULTILINE_STRING());
+    // this can happen due to parsing errors, so just return empty string
+    return '';
   }
 
   visitInstanceOf(ctx: pc.InstanceOfContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE());
-  }
-
-  visitMixins(ctx: pc.MixinsContext): string[] {
-    let mixins: string[];
-    if (ctx.COMMA_DELIMITED_SEQUENCES()) {
-      mixins = ctx
-        .COMMA_DELIMITED_SEQUENCES()
-        .getText()
-        .split(/\s*,\s*/);
-    } else {
-      mixins = ctx.SEQUENCE().map(sequence => sequence.getText());
-    }
-    mixins = mixins.filter((m, i) => {
-      const duplicated = mixins.indexOf(m) !== i;
-      if (duplicated) {
-        logger.warn(`Detected duplicated Mixin: ${m}. Ignoring duplicates.`, {
-          location: this.extractStartStop(ctx),
-          file: this.currentFile
-        });
-      }
-      return !duplicated;
-    });
-    return mixins;
+    return this.aliasAwareValue(ctx.name());
   }
 
   visitUsage(ctx: pc.UsageContext): InstanceUsage {
@@ -890,7 +941,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitSource(ctx: pc.SourceContext): string {
-    return this.aliasAwareValue(ctx.SEQUENCE());
+    return this.aliasAwareValue(ctx.name());
   }
 
   visitTarget(ctx: pc.TargetContext): string {
@@ -903,6 +954,87 @@ export class FSHImporter extends FSHVisitor {
       concept.system = this.aliasAwareValue(parentCtx, concept.system);
     }
     return concept;
+  }
+
+  visitLrRule(ctx: pc.LrRuleContext): LrRule[] {
+    if (ctx.addElementRule()) {
+      return [this.visitAddElementRule(ctx.addElementRule())];
+    } else if (ctx.sdRule()) {
+      return this.visitSdRule(ctx.sdRule());
+    }
+    logger.warn(`Unsupported rule: ${ctx.getText()}`, {
+      file: this.currentFile,
+      location: this.extractStartStop(ctx)
+    });
+    return [];
+  }
+
+  visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
+    const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
+    const addElementRule = new AddElementRule(path)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+
+    const card = this.parseCard(ctx.CARD().getText(), addElementRule);
+    if (card.min == null || Number.isNaN(card.min)) {
+      logger.error(
+        `The 'min' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    if (isEmpty(card.max)) {
+      logger.error(
+        `The 'max' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    addElementRule.min = card.min;
+    addElementRule.max = card.max;
+
+    if (ctx.flag() && ctx.flag().length > 0) {
+      this.parseFlags(addElementRule, ctx.flag());
+    }
+
+    addElementRule.types = this.parseTargetType(ctx);
+    addElementRule.types.forEach(onlyRuleType => {
+      if (FLAGS.includes(onlyRuleType.type)) {
+        logger.warn(
+          `The targetType '${onlyRuleType.type}' appears to be a flag value rather than a valid target data type.`,
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    });
+
+    if (isEmpty(ctx.STRING())) {
+      logger.error(
+        `The 'short' attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
+      addElementRule.short = this.extractString(ctx.STRING()[0]);
+      if (isEmpty(ctx.STRING()[1]) && isEmpty(ctx.MULTILINE_STRING())) {
+        // Default definition to the value of short
+        addElementRule.definition = addElementRule.short;
+      } else if (!isEmpty(ctx.STRING()[1])) {
+        addElementRule.definition = this.extractString(ctx.STRING()[1]);
+      } else {
+        addElementRule.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
+      }
+    }
+
+    return addElementRule;
   }
 
   visitSdRule(ctx: pc.SdRuleContext): SdRule[] {
@@ -926,6 +1058,9 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.insertRule()) {
       const rule = this.visitInsertRule(ctx.insertRule());
       return rule ? [rule] : [];
+    } else if (ctx.pathRule()) {
+      this.visitPathRule(ctx.pathRule());
+      return [];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -939,6 +1074,9 @@ export class FSHImporter extends FSHVisitor {
       return this.visitFixedValueRule(ctx.fixedValueRule());
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.pathRule()) {
+      this.visitPathRule(ctx.pathRule());
+      return;
     }
   }
 
@@ -964,18 +1102,10 @@ export class FSHImporter extends FSHVisitor {
   visitCsRule(ctx: pc.CsRuleContext): ConceptRule | CaretValueRule | InsertRule {
     if (ctx.concept()) {
       return this.visitConcept(ctx.concept());
-    } else if (ctx.caretValueRule()) {
-      const rule = this.visitCaretValueRule(ctx.caretValueRule());
-      if (rule.path) {
-        logger.error(
-          'Caret rule on CodeSystem cannot contain path before ^, skipping rule.',
-          rule.sourceInfo
-        );
-      } else {
-        return this.visitCaretValueRule(ctx.caretValueRule());
-      }
-    } else if (ctx.insertRule()) {
-      return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.codeCaretValueRule()) {
+      return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
+    } else if (ctx.codeInsertRule()) {
+      return this.visitCodeInsertRule(ctx.codeInsertRule());
     }
   }
 
@@ -984,31 +1114,50 @@ export class FSHImporter extends FSHVisitor {
       return this.visitMappingRule(ctx.mappingRule());
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.pathRule()) {
+      // A path rule may swallow a mapping rule that has no spaces, so catch that case here
+      if (this.visitPath(ctx.pathRule().path()).includes('->')) {
+        logger.error(
+          "Mapping rules must include at least one space both before and after the '->' operator",
+          {
+            location: this.extractStartStop(ctx.pathRule()),
+            file: this.currentFile
+          }
+        );
+      }
+      this.visitPathRule(ctx.pathRule());
+      return;
     }
   }
 
+  getPathWithContext(path: string, parentCtx: ParserRuleContext, isPathRule = false): string {
+    const splitPath = path === '.' ? [path] : splitOnPathPeriods(path).filter(p => p);
+    return this.getArrayPathWithContext(splitPath, parentCtx, isPathRule).join('.');
+  }
+
+  getArrayPathWithContext(
+    pathArray: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule = false
+  ): string[] {
+    return this.prependPathContext(pathArray, parentCtx, isPathRule);
+  }
+
   visitPath(ctx: pc.PathContext): string {
-    if (ctx.KW_SYSTEM()) {
+    if (ctx?.KW_SYSTEM()) {
       return ctx.KW_SYSTEM().getText();
     }
-    return ctx.SEQUENCE().getText();
+    return ctx?.SEQUENCE().getText() || '';
   }
 
   visitCaretPath(ctx: pc.CaretPathContext): string {
     return ctx.CARET_SEQUENCE().getText();
   }
 
-  visitPaths(ctx: pc.PathsContext): string[] {
-    return ctx
-      .COMMA_DELIMITED_SEQUENCES()
-      .getText()
-      .split(/\s*,\s*/);
-  }
-
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
     const rules: (CardRule | FlagRule)[] = [];
 
-    const cardRule = new CardRule(this.visitPath(ctx.path()))
+    const cardRule = new CardRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     const card = this.parseCard(ctx.CARD().getText(), cardRule);
@@ -1026,7 +1175,7 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  private parseCard(card: string, rule: CardRule): { min: number; max: string } {
+  private parseCard(card: string, rule: CardRule | AddElementRule): { min: number; max: string } {
     const parts = card.split('..', 2);
     if (parts[0] === '' && parts[1] === '') {
       logger.error(
@@ -1041,19 +1190,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFlagRule(ctx: pc.FlagRuleContext): FlagRule[] {
-    let paths: string[];
-    if (ctx.path().length > 0) {
-      paths = ctx.path().map(path => this.visitPath(path));
-    } else if (ctx.paths()) {
-      logger.warn('Using "," to list paths is deprecated. Please use "and" to list paths.', {
-        file: this.currentFile,
-        location: this.extractStartStop(ctx.paths())
-      });
-      paths = this.visitPaths(ctx.paths());
-    }
-
-    return paths.map(path => {
-      const flagRule = new FlagRule(path)
+    return ctx.path().map(path => {
+      const flagRule = new FlagRule(this.getPathWithContext(this.visitPath(path), ctx))
         .withLocation(this.extractStartStop(ctx))
         .withFile(this.currentFile);
       this.parseFlags(flagRule, ctx.flag());
@@ -1061,7 +1199,7 @@ export class FSHImporter extends FSHVisitor {
     });
   }
 
-  private parseFlags(flagRule: FlagRule, flagContext: pc.FlagContext[]): void {
+  private parseFlags(flagRule: FlagRule | AddElementRule, flagContext: pc.FlagContext[]): void {
     const flags = flagContext.map(f => this.visitFlag(f));
     if (flags.includes(Flag.MustSupport)) {
       flagRule.mustSupport = true;
@@ -1101,17 +1239,11 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitValueSetRule(ctx: pc.ValueSetRuleContext): BindingRule {
-    const vsRule = new BindingRule(this.visitPath(ctx.path()))
+    const vsRule = new BindingRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    vsRule.valueSet = this.aliasAwareValue(ctx.SEQUENCE());
+    vsRule.valueSet = this.aliasAwareValue(ctx.name());
     vsRule.strength = ctx.strength() ? this.visitStrength(ctx.strength()) : 'required';
-    if (ctx.KW_UNITS()) {
-      logger.warn(
-        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        vsRule.sourceInfo
-      );
-    }
     return vsRule;
   }
 
@@ -1127,19 +1259,15 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitFixedValueRule(ctx: pc.FixedValueRuleContext): AssignmentRule {
-    const assignmentRule = new AssignmentRule(this.visitPath(ctx.path()))
+    const assignmentRule = new AssignmentRule(
+      this.getPathWithContext(this.visitPath(ctx.path()), ctx)
+    )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     assignmentRule.value = this.visitValue(ctx.value());
     assignmentRule.exactly = ctx.KW_EXACTLY() != null;
-    if (ctx.KW_UNITS()) {
-      logger.warn(
-        'The "units" keyword is deprecated and has no effect. Support will be removed entirely in a future release.',
-        assignmentRule.sourceInfo
-      );
-    }
     assignmentRule.isInstance =
-      ctx.value().SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
+      ctx.value().name() != null && !this.allAliases.has(ctx.value().name().getText());
     return assignmentRule;
   }
 
@@ -1149,8 +1277,8 @@ export class FSHImporter extends FSHVisitor {
       return;
     }
 
-    if (ctx.SEQUENCE()) {
-      return this.aliasAwareValue(ctx, ctx.SEQUENCE().getText());
+    if (ctx.name()) {
+      return this.aliasAwareValue(ctx, ctx.name().getText());
     }
 
     if (ctx.STRING()) {
@@ -1162,7 +1290,10 @@ export class FSHImporter extends FSHVisitor {
     }
 
     if (ctx.NUMBER()) {
-      return parseFloat(ctx.NUMBER().getText());
+      const numberString = ctx.NUMBER().getText();
+      // If the number is an integer, store it as a bigint, a FHIR integer64 may be larger
+      // than an integer we can safely store as a number
+      return /^[-]?\d+$/.test(numberString) ? BigInt(numberString) : parseFloat(numberString);
     }
 
     if (ctx.DATETIME()) {
@@ -1180,7 +1311,17 @@ export class FSHImporter extends FSHVisitor {
     }
 
     if (ctx.canonical()) {
-      return this.visitCanonical(ctx.canonical());
+      const canonicals = this.visitCanonical(ctx.canonical());
+      if (canonicals.length > 1) {
+        logger.error(
+          'Multiple choices of canonicals are not allowed when setting a value. Only the first choice will be used.',
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx.canonical())
+          }
+        );
+      }
+      return canonicals[0];
     }
 
     if (ctx.code()) {
@@ -1211,38 +1352,72 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitConcept(ctx: pc.ConceptContext): ConceptRule {
-    const codePart = this.visitCode(ctx.code());
-    const concept = new ConceptRule(codePart.code, codePart.display)
+    const localCodePath = ctx
+      .CODE()
+      .map(codeCtx => this.parseCodeLexeme(codeCtx.getText(), codeCtx));
+    // the last code in allCodes is the one we are actually defining.
+    // the rest are the hierarchy, which may be empty.
+    // indentation may also be used to define the hierarchy, which is what the code path with context is for.
+    const fullCodePath = this.getArrayPathWithContext(
+      localCodePath.map(localCode => localCode.code),
+      ctx
+    );
+    const codePart = localCodePath.slice(-1)[0];
+    const availableStrings = ctx.STRING().map(strCtx => this.extractString(strCtx));
+    const concept = new ConceptRule(codePart.code)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    if (codePart.system) {
-      logger.error(
-        'Do not include the system when listing concepts for a code system.',
-        concept.sourceInfo
-      );
-      // If this is on a ruleset, and if this rule is then used on a ValueSet, this could actually
-      // be a ValueSetConceptComponent, and not a ConceptRule, in which case we should carry through
-      // the system
-      concept.system = codePart.system;
+    concept.hierarchy = fullCodePath.slice(0, -1);
+    if (availableStrings.length > 0) {
+      concept.display = availableStrings[0];
     }
-    if (ctx.STRING()) {
-      concept.definition = this.extractString(ctx.STRING());
+    if (availableStrings.length > 1) {
+      concept.definition = availableStrings[1];
     } else if (ctx.MULTILINE_STRING()) {
       concept.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
+    }
+    if (localCodePath.some(listedConcept => listedConcept.system)) {
+      // If this concept is part of a RuleSet and has a system, no definition, and no hierarchy,
+      // it might actually represent a ValueSetConceptComponent. We can't know for sure until the RuleSet
+      // is inserted somewhere. For now, assume it will be okay, so keep the system for later.
+      if (
+        ctx.parentCtx instanceof FSHParser.RuleSetRuleContext &&
+        codePart.system &&
+        !concept.definition &&
+        concept.hierarchy.length === 0
+      ) {
+        concept.system = codePart.system;
+      } else {
+        logger.error(
+          'Do not include the system when listing concepts for a code system.',
+          concept.sourceInfo
+        );
+      }
     }
     return concept;
   }
 
   visitQuantity(ctx: pc.QuantityContext): FshQuantity {
     const value = parseFloat(ctx.NUMBER().getText());
-    const delimitedUnit = ctx.UNIT().getText(); // e.g., 'mm'
+    let delimitedUnit = ctx.UNIT() ? ctx.UNIT().getText() : ''; // e.g., 'mm'
+    // We'll want to assume the UCUM code system unless another system is specified
+    let unitSystem = 'http://unitsofmeasure.org';
+    // If there's no unit string, then we're using FSHCode syntax
+    if (!delimitedUnit) {
+      const unitCode = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      unitSystem = unitCode.system;
+      delimitedUnit = unitCode.code;
+    } else {
+      delimitedUnit = delimitedUnit.slice(1, -1);
+    }
     let displayUnit: string;
     if (ctx.STRING()) {
       displayUnit = this.extractString(ctx.STRING());
     }
-    // the literal version of quantity always assumes UCUM code system
-    const unit = new FshCode(delimitedUnit.slice(1, -1), 'http://unitsofmeasure.org', displayUnit)
-      .withLocation(this.extractStartStop(ctx.UNIT()))
+    const unit = new FshCode(delimitedUnit, unitSystem, displayUnit)
+      .withLocation(this.extractStartStop(ctx.UNIT() ? ctx.UNIT() : ctx))
       .withFile(this.currentFile);
     const quantity = new FshQuantity(value, unit)
       .withLocation(this.extractStartStop(ctx))
@@ -1273,22 +1448,8 @@ export class FSHImporter extends FSHVisitor {
   // This function is called when fixing a value, and a value can only be set
   // to a specific reference, not a choice of references.
   visitReference(ctx: pc.ReferenceContext): FshReference {
-    let ref: FshReference;
-    let parsedReferences: string[];
-    if (ctx.OR_REFERENCE()) {
-      parsedReferences = this.parseOrReference(ctx.OR_REFERENCE().getText());
-      ref = new FshReference(this.aliasAwareValue(ctx.OR_REFERENCE(), parsedReferences[0]));
-    } else {
-      parsedReferences = this.parsePipeReference(ctx.PIPE_REFERENCE().getText());
-      ref = new FshReference(this.aliasAwareValue(ctx.PIPE_REFERENCE(), parsedReferences[0]));
-      logger.warn(
-        'Using "|" to list references is deprecated. Please use "or" to list references.',
-        {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        }
-      );
-    }
+    const parsedReferences = this.parseOrReference(ctx.REFERENCE().getText());
+    const ref = new FshReference(this.aliasAwareValue(ctx.REFERENCE(), parsedReferences[0]));
     if (parsedReferences.length > 1) {
       logger.error(
         'Multiple choices of references are not allowed when setting a value. Only the first choice will be used.',
@@ -1312,29 +1473,23 @@ export class FSHImporter extends FSHVisitor {
       .map(r => r.trim());
   }
 
-  private parsePipeReference(reference: string): string[] {
-    return reference
-      .slice(reference.indexOf('(') + 1, reference.length - 1)
-      .split(/\s*\|\s*/)
+  visitCanonical(ctx: pc.CanonicalContext): FshCanonical[] {
+    const canonicalText = ctx.CANONICAL().getText();
+    const choices = canonicalText
+      .slice(canonicalText.indexOf('(') + 1, canonicalText.length - 1)
+      .split(/\s+or\s+/)
       .map(r => r.trim());
-  }
 
-  visitCanonical(ctx: pc.CanonicalContext): FshCanonical {
-    const [canonicalText, versionText] = this.parseCanonical(ctx.CANONICAL().getText());
-    const fshCanonical = new FshCanonical(canonicalText)
-      .withLocation(this.extractStartStop(ctx))
-      .withFile(this.currentFile);
-    if (versionText) {
-      fshCanonical.version = versionText;
-    }
-    return fshCanonical;
-  }
-
-  private parseCanonical(canonical: string): string[] {
-    return canonical
-      .slice(canonical.indexOf('(') + 1, canonical.length - 1)
-      .split(/\s*\|\s*(.+)/)
-      .map(str => str.trim());
+    return choices.map(c => {
+      const [item, version] = c.split(/\s*\|\s*(.+)/).map(str => str.trim());
+      const fshCanonical = new FshCanonical(item)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
+      if (version) {
+        fshCanonical.version = version;
+      }
+      return fshCanonical;
+    });
   }
 
   visitBool(ctx: pc.BoolContext): boolean {
@@ -1342,43 +1497,46 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitOnlyRule(ctx: pc.OnlyRuleContext): OnlyRule {
-    const onlyRule = new OnlyRule(this.visitPath(ctx.path()))
+    const onlyRule = new OnlyRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+
+    onlyRule.types = this.parseTargetType(ctx);
+    return onlyRule;
+  }
+
+  private parseTargetType(ctx: pc.AddElementRuleContext | pc.OnlyRuleContext): OnlyRuleType[] {
+    const orTypes: OnlyRuleType[] = [];
     ctx.targetType().forEach(t => {
-      if (t.reference()) {
-        let referenceToken: ParserRuleContext;
-        let references: string[];
-        if (t.reference().OR_REFERENCE()) {
-          referenceToken = t.reference().OR_REFERENCE();
-          references = this.parseOrReference(referenceToken.getText());
-        } else {
-          referenceToken = t.reference().PIPE_REFERENCE();
-          references = this.parsePipeReference(referenceToken.getText());
-          logger.warn(
-            'Using "|" to list references is deprecated. Please use "or" to list references.',
-            {
-              file: this.currentFile,
-              location: this.extractStartStop(ctx)
-            }
-          );
-        }
+      if (t.referenceType()) {
+        const referenceToken = t.referenceType().REFERENCE();
+        const references = this.parseOrReference(referenceToken.getText());
         references.forEach(r =>
-          onlyRule.types.push({
+          orTypes.push({
             type: this.aliasAwareValue(referenceToken, r),
             isReference: true
           })
         );
+      } else if (t.canonical()) {
+        const canonicals = this.visitCanonical(t.canonical());
+        canonicals.forEach(c =>
+          orTypes.push({
+            type: `${this.aliasAwareValue(t.canonical(), c.entityName)}${
+              c.version ? `|${c.version}` : ''
+            }`,
+            isCanonical: true
+          })
+        );
       } else {
-        onlyRule.types.push({ type: this.aliasAwareValue(t.SEQUENCE()) });
+        orTypes.push({ type: this.aliasAwareValue(t.name()) });
       }
     });
-    return onlyRule;
+    return orTypes;
   }
 
   visitContainsRule(ctx: pc.ContainsRuleContext): (ContainsRule | CardRule | FlagRule)[] {
     const rules: (ContainsRule | CardRule | FlagRule)[] = [];
-    const containsRule = new ContainsRule(this.visitPath(ctx.path()))
+    const containsRule = new ContainsRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
 
@@ -1387,18 +1545,18 @@ export class FSHImporter extends FSHVisitor {
       let item: ContainsRuleItem;
       if (i.KW_NAMED()) {
         item = {
-          type: this.aliasAwareValue(i.SEQUENCE()[0], i.SEQUENCE()[0].getText()),
-          name: i.SEQUENCE()[1].getText()
+          type: this.aliasAwareValue(i.name()[0], i.name()[0].getText()),
+          name: i.name()[1].getText()
         };
       } else {
         item = {
-          name: i.SEQUENCE()[0].getText()
+          name: i.name()[0].getText()
         };
       }
       containsRule.items.push(item);
 
       const cardRule = new CardRule(`${containsRule.path}[${item.name}]`)
-        .withLocation(this.extractStartStop(i))
+        .withLocation(this.extractStartStop(ctx))
         .withFile(this.currentFile);
       const card = this.parseCard(i.CARD().getText(), cardRule);
       cardRule.min = card.min;
@@ -1407,7 +1565,7 @@ export class FSHImporter extends FSHVisitor {
 
       if (i.flag() && i.flag().length > 0) {
         const flagRule = new FlagRule(`${containsRule.path}[${item.name}]`)
-          .withLocation(this.extractStartStop(i))
+          .withLocation(this.extractStartStop(ctx))
           .withFile(this.currentFile);
         this.parseFlags(flagRule, i.flag());
         rules.push(flagRule);
@@ -1417,23 +1575,48 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCaretValueRule(ctx: pc.CaretValueRuleContext): CaretValueRule {
-    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
-    const caretValueRule = new CaretValueRule(path)
+    const path = this.visitPath(ctx.path());
+    const splitPath =
+      path === '.' ? [path] : splitOnPathPeriods(this.visitPath(ctx.path())).filter(p => p);
+    const pathArray = this.getArrayPathWithContext(splitPath, ctx);
+    const caretValueRule = new CaretValueRule(pathArray.join('.'))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-
+    // We must save the path in array form, in case this rule is a part
+    // of a RuleSet which ends up applied on a CodeSystem
+    caretValueRule.pathArray = pathArray;
     // Get the caret path, but slice off the starting ^
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
     caretValueRule.isInstance =
-      ctx.value()?.SEQUENCE() != null && !this.allAliases.has(ctx.value().SEQUENCE().getText());
+      ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
     return caretValueRule;
+  }
+
+  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CaretValueRule {
+    const localCodePath = ctx.CODE()
+      ? ctx.CODE().map(code => {
+          return this.parseCodeLexeme(code.getText(), ctx).code;
+        })
+      : [];
+    const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
+    // It's fine to make a CodeCaretValueRule with an empty code path.
+    const caretRule = new CaretValueRule('')
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    caretRule.pathArray = fullCodePath;
+    // Get the caret path, but slice off the starting ^
+    caretRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
+    caretRule.value = this.visitValue(ctx.value());
+    caretRule.isInstance =
+      ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
+    return caretRule;
   }
 
   visitObeysRule(ctx: pc.ObeysRuleContext): ObeysRule[] {
     const rules: ObeysRule[] = [];
-    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
-    ctx.SEQUENCE().forEach(invariant => {
+    const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
+    ctx.name().forEach(invariant => {
       const obeysRule = new ObeysRule(path)
         .withLocation(this.extractStartStop(ctx))
         .withFile(this.currentFile);
@@ -1443,12 +1626,90 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
-    const insertRule = new InsertRule()
+  visitPathRule(ctx: pc.PathRuleContext) {
+    this.getPathWithContext(this.visitPath(ctx.path()), ctx, true);
+  }
+
+  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {
+    const insertRule = new InsertRule('')
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+    const localCodePath = ctx.CODE().map(code => {
+      return this.parseCodeLexeme(code.getText(), ctx).code;
+    });
+    const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
+    insertRule.pathArray = fullCodePath;
+    return this.applyRuleSetParams(ctx, insertRule);
+  }
+
+  visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
+    const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    return this.applyRuleSetParams(ctx, insertRule);
+  }
+
+  private parseRulesetReference(reference: string): [string, string] {
+    const paramListStart = reference.indexOf('(');
+    if (paramListStart === -1) {
+      return [reference.trim(), null];
+    } else {
+      return [reference.slice(0, paramListStart).trim(), reference.slice(paramListStart)];
+    }
+  }
+
+  private parseInsertRuleParams(ruleText: string): string[] {
+    // first, trim parentheses
+    const ruleNoParens = ruleText.slice(1, ruleText.length - 1);
+    // since backslash is the escape character, deal with literal backslash first
+    const splitBackslash = ruleNoParens.split(/\\\\/g);
+    // then, split the parameters apart with unescaped commas
+    const splitComma = splitBackslash.map(substrBackslash => {
+      // This workaround is to avoid using the more elegant regex lookbehind when we split (substrBackslash.split(/(?<!\\),/g))
+      let subStringToCombine = '';
+      return substrBackslash
+        .split(/,/g)
+        .map(substrComma => {
+          // If we had a previous substring that ended in an escape character, combine with current substring
+          if (subStringToCombine) {
+            substrComma = `${subStringToCombine},${substrComma}`;
+            subStringToCombine = '';
+          }
+          // If the current substring ends with an escape character, we should be escaping the comma that this was split on
+          // Keep track of this substring to be combined with the next one
+          if (substrComma.endsWith('\\')) {
+            subStringToCombine = substrComma;
+            return null;
+          }
+          // then, make all the replacements: closing parenthesis and comma
+          return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
+        })
+        .filter(s => s != null); // Filter out any null values from incorrectly split escaped commas
+    });
+    const paramList: string[] = [];
+    // if splitComma has more than one list, that means we split on literal backslash
+    // so to rejoin all the strings, the last string joins the first string in the next sublist
+    splitComma.forEach((list, index) => {
+      list.forEach((paramPart, subIndex) => {
+        if (index > 0 && subIndex === 0) {
+          // join with \\ on the last param
+          paramList.push(`${paramList.pop()}\\\\${paramPart}`);
+        } else {
+          // push a new param
+          paramList.push(paramPart);
+        }
+      });
+    });
+    // trim whitespace from each parameter, since it may be formatted for readability
+    return paramList.map(param => param.trim());
+  }
+
+  private applyRuleSetParams(
+    ctx: pc.InsertRuleContext | pc.CodeInsertRuleContext,
+    insertRule: InsertRule
+  ): InsertRule {
     const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE().getText()
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
     );
     insertRule.ruleSet = rulesetName;
     if (ruleParams) {
@@ -1463,12 +1724,7 @@ export class FSHImporter extends FSHVisitor {
             const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
               insertRule.params
             )}${EOL}`;
-            const appliedRuleSet = this.parseGeneratedRuleSet(
-              appliedFsh,
-              ruleSet.name,
-              ctx,
-              insertRule
-            );
+            const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name, insertRule);
             if (appliedRuleSet) {
               // set the source info based on the original source info
               appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
@@ -1509,55 +1765,12 @@ export class FSHImporter extends FSHVisitor {
     return insertRule;
   }
 
-  private parseRulesetReference(reference: string): [string, string] {
-    const paramListStart = reference.indexOf('(');
-    if (paramListStart === -1) {
-      return [reference.trim(), null];
-    } else {
-      return [reference.slice(0, paramListStart).trim(), reference.slice(paramListStart)];
-    }
-  }
-
-  private parseInsertRuleParams(ruleText: string): string[] {
-    // first, trim parentheses
-    const ruleNoParens = ruleText.slice(1, ruleText.length - 1);
-    // since backslash is the escape character, deal with literal backslash first
-    const splitBackslash = ruleNoParens.split(/\\\\/g);
-    // then, split the parameters apart with unescaped commas
-    const splitComma = splitBackslash.map(substrBackslash => {
-      return substrBackslash.split(/(?<!\\),/g).map(substrComma => {
-        // then, make all the replacements: closing parenthesis and comma
-        return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
-      });
-    });
-    const paramList: string[] = [];
-    // if splitComma has more than one list, that means we split on literal backslash
-    // so to rejoin all the strings, the last string joins the first string in the next sublist
-    splitComma.forEach((list, index) => {
-      list.forEach((paramPart, subIndex) => {
-        if (index > 0 && subIndex === 0) {
-          // join with \\ on the last param
-          paramList.push(`${paramList.pop()}\\\\${paramPart}`);
-        } else {
-          // push a new param
-          paramList.push(paramPart);
-        }
-      });
-    });
-    // trim whitespace from each parameter, since it may be formatted for readability
-    return paramList.map(param => param.trim());
-  }
-
-  private parseGeneratedRuleSet(
-    input: string,
-    name: string,
-    ctx: pc.InsertRuleContext,
-    insertRule: InsertRule
-  ) {
+  private parseGeneratedRuleSet(input: string, name: string, insertRule: InsertRule) {
     // define a temporary document that will contain this RuleSet
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet
     const parentDocument = this.currentDoc;
+    const parentContext = this.pathContext;
     this.currentDoc = tempDocument;
     // errors should be collected, not printed, when parsing generated documents
     // we should only retrieve errors if we are currently in the top-level parse
@@ -1572,6 +1785,7 @@ export class FSHImporter extends FSHVisitor {
     } finally {
       // be sure to restore parentDocument
       this.currentDoc = parentDocument;
+      this.pathContext = parentContext;
     }
     // if tempDocument has appliedRuleSets, merge them in
     tempDocument.appliedRuleSets.forEach((ruleSet, identifier) =>
@@ -1609,8 +1823,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitMappingRule(ctx: pc.MappingRuleContext): MappingRule {
-    const path = ctx.path() ? this.visitPath(ctx.path()) : '';
-    const mappingRule = new MappingRule(path)
+    const mappingRule = new MappingRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     mappingRule.map = this.extractString(ctx.STRING()[0]);
@@ -1635,12 +1848,16 @@ export class FSHImporter extends FSHVisitor {
     const inclusion = ctx.KW_EXCLUDE() == null;
     let vsComponent: ValueSetConceptComponentRule | ValueSetFilterComponentRule;
     if (ctx.vsConceptComponent()) {
-      vsComponent = new ValueSetConceptComponentRule(inclusion);
+      vsComponent = new ValueSetConceptComponentRule(inclusion)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
       [vsComponent.concepts, vsComponent.from] = this.visitVsConceptComponent(
         ctx.vsConceptComponent()
       );
     } else if (ctx.vsFilterComponent()) {
-      vsComponent = new ValueSetFilterComponentRule(inclusion);
+      vsComponent = new ValueSetFilterComponentRule(inclusion)
+        .withLocation(this.extractStartStop(ctx))
+        .withFile(this.currentFile);
       [vsComponent.filters, vsComponent.from] = this.visitVsFilterComponent(
         ctx.vsFilterComponent()
       );
@@ -1688,49 +1905,6 @@ export class FSHImporter extends FSHVisitor {
           location: this.extractStartStop(ctx)
         });
       }
-    } else if (ctx.COMMA_DELIMITED_CODES()) {
-      logger.warn('Using "," to list concepts is deprecated. Please use "and" to list concepts.', {
-        file: this.currentFile,
-        location: this.extractStartStop(ctx)
-      });
-      if (from.system) {
-        const codes = ctx
-          .COMMA_DELIMITED_CODES()
-          .getText()
-          .split(/\s*,\s+#/);
-        codes[0] = codes[0].slice(1);
-        const location = this.extractStartStop(ctx.COMMA_DELIMITED_CODES());
-        codes.forEach(code => {
-          let codePart: string, description: string;
-          if (code.charAt(0) == '"') {
-            // codePart is a quoted string, just like description (if present).
-            [codePart, description] = code
-              .match(/"([^\s\\"]|\\"|\\\\)+(\s([^\s\\"]|\\"|\\\\)+)*"/g)
-              .map(quotedString => quotedString.slice(1, -1));
-          } else {
-            // codePart is not a quoted string.
-            // if there is a description after the code,
-            // it will be separated by whitespace before the leading "
-            const codeEnd = code.match(/\s+"/)?.index;
-            if (codeEnd) {
-              codePart = code.slice(0, codeEnd);
-              description = code.slice(codeEnd).trim().slice(1, -1);
-            } else {
-              codePart = code.trim();
-            }
-          }
-          concepts.push(
-            new FshCode(codePart, from.system, description)
-              .withLocation(location)
-              .withFile(this.currentFile)
-          );
-        });
-      } else {
-        logger.error('System is required when listing concepts in a value set component', {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        });
-      }
     }
     return [concepts, from];
   }
@@ -1770,30 +1944,14 @@ export class FSHImporter extends FSHVisitor {
   visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
     const from: ValueSetComponentFrom = {};
     if (ctx.vsFromSystem()) {
-      from.system = this.aliasAwareValue(ctx.vsFromSystem().SEQUENCE());
+      from.system = this.aliasAwareValue(ctx.vsFromSystem().name());
     }
     if (ctx.vsFromValueset()) {
-      if (ctx.vsFromValueset().SEQUENCE().length > 0) {
+      if (ctx.vsFromValueset().name().length > 0) {
         from.valueSets = ctx
           .vsFromValueset()
-          .SEQUENCE()
-          .map(sequence => this.aliasAwareValue(sequence));
-      } else if (ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES()) {
-        logger.warn(
-          'Using "," to list valuesets is deprecated. Please use "and" to list valuesets.',
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-        from.valueSets = ctx
-          .vsFromValueset()
-          .COMMA_DELIMITED_SEQUENCES()
-          .getText()
-          .split(/\s*,\s*/)
-          .map(fromVs =>
-            this.aliasAwareValue(ctx.vsFromValueset().COMMA_DELIMITED_SEQUENCES(), fromVs.trim())
-          );
+          .name()
+          .map(name => this.aliasAwareValue(name));
       }
     }
     return from;
@@ -1805,7 +1963,7 @@ export class FSHImporter extends FSHVisitor {
    * @see {@link http://hl7.org/fhir/valueset-filter-operator.html}
    */
   visitVsFilterDefinition(ctx: pc.VsFilterDefinitionContext): ValueSetFilter {
-    const property = ctx.SEQUENCE().getText();
+    const property = ctx.name().getText();
     const operator = ctx
       .vsFilterOperator()
       .getText()
@@ -1815,30 +1973,35 @@ export class FSHImporter extends FSHVisitor {
       throw new ValueSetFilterMissingValueError(operator);
     }
     const value = ctx.vsFilterValue() ? this.visitVsFilterValue(ctx.vsFilterValue()) : true;
+
+    // NOTE: We support string value for every operator, in addition to the specific typed values
+    // for some operators based on the filter value documentation:
+    // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
+    // and the discussion on https://github.com/FHIR/sushi/issues/936
     switch (operator) {
       case VsOperator.EQUALS:
       case VsOperator.IN:
       case VsOperator.NOT_IN:
-        if (typeof value !== 'string') {
-          throw new ValueSetFilterValueTypeError(operator, 'string');
-        }
-        break;
       case VsOperator.IS_A:
       case VsOperator.DESCENDENT_OF:
       case VsOperator.IS_NOT_A:
       case VsOperator.GENERALIZES:
-        if (!(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
+        if (!(value instanceof FshCode) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['code', 'string']);
         }
         break;
       case VsOperator.REGEX:
-        if (!(value instanceof RegExp)) {
-          throw new ValueSetFilterValueTypeError(operator, 'regex');
+        if (!(value instanceof RegExp) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['regex', 'string']);
         }
         break;
       case VsOperator.EXISTS:
-        if (typeof value !== 'boolean') {
-          throw new ValueSetFilterValueTypeError(operator, 'boolean');
+        const allowedStrings = ['true', 'false'];
+        if (
+          typeof value !== 'boolean' &&
+          !(typeof value === 'string' && allowedStrings.includes(value))
+        ) {
+          throw new ValueSetFilterValueTypeError(operator, ['boolean'], allowedStrings);
         }
         break;
       default:
@@ -1883,6 +2046,123 @@ export class FSHImporter extends FSHVisitor {
     } else {
       return value;
     }
+  }
+
+  /**
+   * Given a path and the context containing it, apply the path context indicated by the path's indent
+   * @param path - The path to apply context to
+   * @param parentCtx - The parent element containing the path
+   * @returns {string[]} - The path with context prepended
+   */
+  private prependPathContext(
+    path: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule: boolean
+  ): string[] {
+    try {
+      const location = this.extractStartStop(parentCtx);
+      const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
+      const contextIndex = currentIndent / INDENT_WIDTH;
+
+      if (!this.isValidContext(location, currentIndent, this.pathContext)) {
+        return path;
+      }
+
+      // If the element is not indented, just reset the context
+      if (contextIndex === 0) {
+        // If the last context still has [+], that means the path was never used
+        // and the [+] will be discarded without incrementing
+        if (
+          this.pathContext.length > 0 &&
+          this.pathContext[this.pathContext.length - 1].some(p => /\[\+\]/.test(p))
+        ) {
+          logger.warn(
+            'The previous line(s) use path rules to establish a context using soft indexing ' +
+              '(e.g., [+]), but that context is reset by the following rule before it is ever ' +
+              'used. As a result, the previous path context will be ignored and its ' +
+              'soft-indices will not be incremented',
+            {
+              location,
+              file: this.currentFile
+            }
+          );
+        }
+        this.pathContext = [path];
+        return path;
+      }
+
+      if (path.length === 1 && path[0] === '.') {
+        logger.error(
+          "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
+          {
+            location,
+            file: this.currentFile
+          }
+        );
+        return path;
+      }
+
+      // Otherwise, get the context based on the indent level.
+      const currentContext = this.pathContext[contextIndex - 1];
+      if (currentContext.length === 0) {
+        logger.error(
+          'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
+          { location, file: this.currentFile }
+        );
+        return path;
+      }
+
+      // Trim out-of-scope contexts
+      this.pathContext.splice(contextIndex);
+
+      // Get the new path and add as the last context
+      const fullPath = currentContext.concat(path);
+      this.pathContext.push(fullPath);
+
+      return fullPath;
+    } finally {
+      // NOTE: This block is in finally so it is always executed, no matter where/when we exit the function
+      // Once we have used the existing context in a non-path-only rule, replace [+] with [=] in all
+      // existing contexts so that the [+] isn't re-applied in further contexts
+      if (!isPathRule) {
+        this.pathContext.forEach((path, i) => {
+          this.pathContext[i] = path.map(c => c.replace(/\[\+\]/g, '[=]'));
+        });
+      }
+    }
+  }
+
+  private isValidContext(
+    location: TextLocation,
+    currentIndent: number,
+    existingContext: string[] | string[][]
+  ): boolean {
+    if (currentIndent > 0 && existingContext.length === 0) {
+      logger.error(
+        'The first rule of a definition must be left-aligned. The rule will be processed as if it is not indented.',
+        { location, file: this.currentFile }
+      );
+      return false;
+    }
+
+    if (currentIndent % INDENT_WIDTH !== 0 || currentIndent < 0) {
+      logger.error(
+        `Unable to determine path context for rule indented ${currentIndent} space(s). Rules must be indented in multiples of ${INDENT_WIDTH} space(s).`,
+        { location, file: this.currentFile }
+      );
+      return false;
+    }
+
+    // And we require that rules are not indented too deeply
+    const contextIndex = currentIndent / INDENT_WIDTH;
+    if (contextIndex > existingContext.length) {
+      logger.error(
+        `Cannot determine path context of rule since it is indented too deeply. Rules must be indented in increments of ${INDENT_WIDTH} space(s).`,
+        { location, file: this.currentFile }
+      );
+      return false;
+    }
+    return true;
   }
 
   private extractString(stringCtx: ParserRuleContext): string {
@@ -1953,7 +2233,24 @@ export class FSHImporter extends FSHVisitor {
   }
 
   private extractStartStop(ctx: ParserRuleContext): TextLocation {
-    if (ctx instanceof TerminalNode) {
+    if (pc.isStarContext(ctx)) {
+      const location = {
+        startLine: ctx.STAR().symbol.line + 1,
+        startColumn: this.getStarContextStartColumn(ctx),
+        endLine: ctx.stop.line,
+        endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
+      };
+      if (
+        !(pc.containsPathContext(ctx) || pc.containsCodePathContext(ctx)) &&
+        location.startColumn - DEFAULT_START_COLUMN > 0
+      ) {
+        logger.error(
+          'A rule that does not use a path cannot be indented to indicate context. The rule will be processed as if it is not indented.',
+          { location, file: this.currentFile }
+        );
+      }
+      return location;
+    } else if (ctx instanceof TerminalNode) {
       return {
         startLine: ctx.symbol.line,
         startColumn: ctx.symbol.column + 1,
@@ -1968,6 +2265,10 @@ export class FSHImporter extends FSHVisitor {
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
     }
+  }
+
+  private getStarContextStartColumn(ctx: pc.StarContext): number {
+    return ctx.STAR().getText().length - ctx.STAR().getText().lastIndexOf('\n') - 2;
   }
 
   // NOTE: Since the ANTLR parser/lexer is JS (not typescript), we need to use some ts-ignore here.

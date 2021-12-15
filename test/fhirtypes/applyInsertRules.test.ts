@@ -1,11 +1,29 @@
 import { FSHTank, FSHDocument } from '../../src/import';
-import { Profile, RuleSet, FshCode, FshValueSet } from '../../src/fshtypes';
-import { InsertRule, CardRule, ConceptRule, AssignmentRule } from '../../src/fshtypes/rules';
+import {
+  Profile,
+  Logical,
+  RuleSet,
+  FshCode,
+  FshValueSet,
+  Instance,
+  FshCodeSystem
+} from '../../src/fshtypes';
+import {
+  InsertRule,
+  CardRule,
+  ConceptRule,
+  AssignmentRule,
+  AddElementRule,
+  CaretValueRule
+} from '../../src/fshtypes/rules';
 import {
   loggerSpy,
   assertCardRule,
   assertValueSetConceptComponent,
-  assertAssignmentRule
+  assertAssignmentRule,
+  assertAddElementRule,
+  assertCaretValueRule,
+  assertConceptRule
 } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { applyInsertRules } from '../../src/fhirtypes/common';
@@ -14,6 +32,7 @@ describe('applyInsertRules', () => {
   let doc: FSHDocument;
   let tank: FSHTank;
   let profile: Profile;
+  let instance: Instance;
   let ruleSet1: RuleSet;
   let ruleSet2: RuleSet;
 
@@ -25,6 +44,10 @@ describe('applyInsertRules', () => {
     profile = new Profile('Foo').withFile('Profile.fsh').withLocation([5, 6, 7, 16]);
     profile.parent = 'Observation';
     doc.profiles.set(profile.name, profile);
+
+    instance = new Instance('Far');
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
 
     ruleSet1 = new RuleSet('Bar');
     doc.ruleSets.set(ruleSet1.name, ruleSet1);
@@ -45,7 +68,7 @@ describe('applyInsertRules', () => {
     cardRule.max = '1';
     ruleSet1.rules.push(cardRule);
 
-    const insertRule = new InsertRule();
+    const insertRule = new InsertRule('');
     insertRule.ruleSet = 'Bar';
     profile.rules.push(insertRule);
 
@@ -53,6 +76,79 @@ describe('applyInsertRules', () => {
 
     expect(profile.rules).toHaveLength(1);
     assertCardRule(profile.rules[0], 'category', 1, '1');
+  });
+
+  it('should apply rules from a single level insert rule with a path', () => {
+    // RuleSet: Bar
+    // * coding 1..*
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const cardRule = new CardRule('coding');
+    cardRule.min = 1;
+    cardRule.max = '*';
+    ruleSet1.rules.push(cardRule);
+
+    const insertRule = new InsertRule('category');
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCardRule(profile.rules[0], 'category.coding', 1, '*');
+  });
+
+  it('should apply a rule without a path from a single level insert rule with a path', () => {
+    // RuleSet: Bar
+    // * ^short = "foo"
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const caretRule = new CaretValueRule('');
+    caretRule.caretPath = 'short';
+    caretRule.value = 'foo';
+    ruleSet1.rules.push(caretRule);
+
+    const insertRule = new InsertRule('category');
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCaretValueRule(profile.rules[0], 'category', 'short', 'foo', undefined, []);
+  });
+
+  it('should only apply soft indexing once when applying rules from a rule with a path', () => {
+    // RuleSet: Bar
+    // * family = "foo"
+    // * given[0] = "bar"
+    //
+    // Instance: Foo
+    // InstanceOf: Patient
+    // * name[+] insert Bar
+    const rule1 = new AssignmentRule('family');
+    rule1.value = 'foo';
+    rule1.exactly = false;
+    rule1.isInstance = false;
+    const rule2 = new AssignmentRule('given[0]');
+    rule2.value = 'bar';
+    rule2.exactly = false;
+    rule2.isInstance = false;
+    ruleSet1.rules.push(rule1, rule2);
+
+    const insertRule1 = new InsertRule('name[+]');
+    insertRule1.ruleSet = 'Bar';
+    instance.rules.push(insertRule1);
+
+    applyInsertRules(instance, tank);
+
+    expect(instance.rules).toHaveLength(2);
+    assertAssignmentRule(instance.rules[0], 'name[+].family', 'foo', false, false);
+    assertAssignmentRule(instance.rules[1], 'name[=].given[0]', 'bar', false, false);
   });
 
   it('should not apply rules from a single level insert rule that are not valid', () => {
@@ -65,7 +161,7 @@ describe('applyInsertRules', () => {
     const concept = new ConceptRule('bear').withFile('Concept.fsh').withLocation([1, 2, 3, 4]);
     ruleSet1.rules.push(concept);
 
-    const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+    const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
     insertRule.ruleSet = 'Bar';
     profile.rules.push(insertRule);
 
@@ -96,7 +192,7 @@ describe('applyInsertRules', () => {
     const focusRule = new CardRule('focus');
     focusRule.min = 1;
     focusRule.max = '1';
-    const insertRule = new InsertRule();
+    const insertRule = new InsertRule('');
     insertRule.ruleSet = 'Bar';
 
     ruleSet1.rules.push(subjectRule);
@@ -128,9 +224,9 @@ describe('applyInsertRules', () => {
     focusRule.max = '1';
     ruleSet2.rules.push(focusRule);
 
-    const barRule = new InsertRule();
+    const barRule = new InsertRule('');
     barRule.ruleSet = 'Bar';
-    const bazRule = new InsertRule();
+    const bazRule = new InsertRule('');
     bazRule.ruleSet = 'Baz';
     profile.rules.push(barRule, bazRule);
 
@@ -153,7 +249,7 @@ describe('applyInsertRules', () => {
     subjectRule.max = '1';
     ruleSet1.rules.push(subjectRule);
 
-    const barRule = new InsertRule();
+    const barRule = new InsertRule('');
     barRule.ruleSet = 'Bar';
     profile.rules.push(barRule, barRule);
 
@@ -182,9 +278,9 @@ describe('applyInsertRules', () => {
     const focusRule = new CardRule('focus');
     focusRule.min = 1;
     focusRule.max = '1';
-    const insertBazRule = new InsertRule();
+    const insertBazRule = new InsertRule('');
     insertBazRule.ruleSet = 'Baz';
-    const insertBarRule = new InsertRule();
+    const insertBarRule = new InsertRule('');
     insertBarRule.ruleSet = 'Bar';
 
     ruleSet1.rules.push(categoryRule, insertBazRule);
@@ -195,6 +291,43 @@ describe('applyInsertRules', () => {
     expect(profile.rules).toHaveLength(3);
     assertCardRule(profile.rules[0], 'category', 1, '1');
     assertCardRule(profile.rules[1], 'subject', 1, '1');
+    assertCardRule(profile.rules[2], 'focus', 1, '1');
+  });
+
+  it('should apply rules from a nested insert rule with paths', () => {
+    // RuleSet: Bar
+    // * coding 1..*
+    // * coding insert Baz
+    //
+    // RuleSet: Baz
+    // * system 1..1
+    //
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    // * focus ..1
+    const categoryRule = new CardRule('coding');
+    categoryRule.min = 1;
+    categoryRule.max = '*';
+    const subjectRule = new CardRule('system');
+    subjectRule.min = 1;
+    subjectRule.max = '1';
+    const focusRule = new CardRule('focus');
+    focusRule.min = 1;
+    focusRule.max = '1';
+    const insertBazRule = new InsertRule('coding');
+    insertBazRule.ruleSet = 'Baz';
+    const insertBarRule = new InsertRule('category');
+    insertBarRule.ruleSet = 'Bar';
+
+    ruleSet1.rules.push(categoryRule, insertBazRule);
+    ruleSet2.rules.push(subjectRule);
+    profile.rules.push(insertBarRule, focusRule);
+
+    applyInsertRules(profile, tank);
+    expect(profile.rules).toHaveLength(3);
+    assertCardRule(profile.rules[0], 'category.coding', 1, '*');
+    assertCardRule(profile.rules[1], 'category.coding.system', 1, '1');
     assertCardRule(profile.rules[2], 'focus', 1, '1');
   });
 
@@ -218,9 +351,9 @@ describe('applyInsertRules', () => {
     const focusRule = new CardRule('focus');
     focusRule.min = 1;
     focusRule.max = '1';
-    const insertBazRule = new InsertRule();
+    const insertBazRule = new InsertRule('');
     insertBazRule.ruleSet = 'Baz';
-    const insertBarRule = new InsertRule();
+    const insertBarRule = new InsertRule('');
     insertBarRule.ruleSet = 'Bar';
 
     ruleSet1.rules.push(categoryRule, insertBazRule);
@@ -235,7 +368,7 @@ describe('applyInsertRules', () => {
     assertCardRule(profile.rules[3], 'focus', 1, '1');
   });
 
-  it('should convert a ConceptRule to a ValueSetConceptComponent when applying to a FshValueSet', () => {
+  it('should convert a ConceptRule with a system to a ValueSetConceptComponent when applying to a FshValueSet', () => {
     // RuleSet: Bar
     // * ZOO#bear "brown bear"
     //
@@ -248,7 +381,7 @@ describe('applyInsertRules', () => {
     concept.system = 'ZOO';
     ruleSet1.rules.push(concept);
 
-    const insertRule = new InsertRule();
+    const insertRule = new InsertRule('');
     insertRule.ruleSet = 'Bar';
     vs.rules.push(insertRule);
 
@@ -264,37 +397,86 @@ describe('applyInsertRules', () => {
     );
   });
 
-  it('should convert a ConceptRule with a definition to a ValueSetConceptComponent and log a warning when applying to a FshValueSet', () => {
+  it('should not convert a ConceptRule without a system to a ValueSetConceptComponent when applying to a FshValueSet', () => {
     // RuleSet: Bar
-    // * ZOO#bear "brown bear" "brown bears are kind of scary"
+    // * #bear "brown bear"
     //
     // ValueSet: Foo
     // * insert Bar
-    const vs = new FshValueSet('Foo').withFile('VS.fsh').withLocation([5, 6, 7, 16]);
+    const vs = new FshValueSet('Foo');
     doc.valueSets.set(vs.name, vs);
 
-    const concept = new ConceptRule('bear', 'brown bear', 'brown bears are kind of scary')
-      .withFile('Concept.fsh')
-      .withLocation([1, 2, 3, 4]);
-    concept.system = 'ZOO';
+    const concept = new ConceptRule('bear', 'brown bear')
+      .withFile('RuleSets.fsh')
+      .withLocation([8, 5, 8, 16]);
     ruleSet1.rules.push(concept);
 
-    const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
+    const insertRule = new InsertRule('').withFile('VS.fsh').withLocation([7, 6, 7, 16]);
     insertRule.ruleSet = 'Bar';
     vs.rules.push(insertRule);
 
     applyInsertRules(vs, tank);
 
-    expect(vs.rules).toHaveLength(1);
-    assertValueSetConceptComponent(
-      vs.rules[0],
-      undefined,
-      undefined,
-      [new FshCode('bear', 'ZOO', 'brown bear')],
-      true
+    expect(vs.rules).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /ConceptRule.*ValueSet.*File: RuleSets\.fsh.*Line: 8.*Applied in File: VS\.fsh.*Line: 7\D*/s
     );
-    expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /ValueSet concepts should not include a definition, only system, code, and display are supported.*File: Concept\.fsh.*Line: 1 - 3\D*/s
+  });
+
+  it('should log an error when a ConceptRule with a system is applied to a FshCodeSystem', () => {
+    // RuleSet: Bar
+    // * ZOO#bear "brown bear"
+    //
+    // CodeSystem: Foo
+    // * insert Bar
+    const cs = new FshCodeSystem('Foo');
+    doc.codeSystems.set(cs.name, cs);
+
+    const concept = new ConceptRule('bear', 'brown bear')
+      .withFile('RuleSets.fsh')
+      .withLocation([7, 5, 7, 12]);
+    concept.system = 'ZOO';
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule('').withFile('CodeSystems.fsh').withLocation([3, 5, 3, 19]);
+    insertRule.ruleSet = 'Bar';
+    cs.rules.push(insertRule);
+
+    applyInsertRules(cs, tank);
+
+    expect(cs.rules).toHaveLength(1);
+    assertConceptRule(cs.rules[0], 'bear', 'brown bear', undefined, []);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Do not include the system when listing concepts for a code system\..*File: RuleSets\.fsh.*Line: 7.*Applied in File: CodeSystems\.fsh.*Line: 3\D*/s
+    );
+  });
+
+  it('should log an error when a ConceptRule is inserted at a path', () => {
+    // RuleSet: Bar
+    // * #bear "Bear"
+    //
+    // CodeSystem: MyCodeSystem
+    // * somePath insert Bar
+    const cs = new FshCodeSystem('MyCodeSystem');
+    doc.codeSystems.set(cs.name, cs);
+
+    const concept = new ConceptRule('bear', 'Bear')
+      .withFile('RuleSets.fsh')
+      .withLocation([7, 5, 7, 12]);
+    ruleSet1.rules.push(concept);
+
+    const insertRule = new InsertRule('somePath')
+      .withFile('CodeSystems.fsh')
+      .withLocation([3, 5, 3, 19]);
+    insertRule.ruleSet = 'Bar';
+    cs.rules.push(insertRule);
+
+    applyInsertRules(cs, tank);
+
+    expect(cs.rules).toHaveLength(1);
+    assertConceptRule(cs.rules[0], 'bear', 'Bear', undefined, []);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Do not insert a RuleSet at a path when the RuleSet adds a concept\..*File: RuleSets\.fsh.*Line: 7.*Applied in File: CodeSystems\.fsh.*Line: 3\D*/s
     );
   });
 
@@ -310,7 +492,7 @@ describe('applyInsertRules', () => {
     concept.system = 'ZOO';
     ruleSet1.rules.push(concept);
 
-    const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
+    const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
     insertRule.ruleSet = 'Bar';
     profile.rules.push(insertRule);
 
@@ -334,9 +516,9 @@ describe('applyInsertRules', () => {
     const subjectRule = new CardRule('subject');
     subjectRule.min = 1;
     subjectRule.max = '1';
-    const insertBazRule = new InsertRule();
+    const insertBazRule = new InsertRule('');
     insertBazRule.ruleSet = 'Baz';
-    const insertBarRule = new InsertRule().withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
+    const insertBarRule = new InsertRule('').withFile('Insert.fsh').withLocation([1, 2, 3, 4]);
     insertBarRule.ruleSet = 'Bar';
 
     ruleSet1.rules.push(insertBazRule);
@@ -360,7 +542,7 @@ describe('applyInsertRules', () => {
     cardRule.max = '1';
     ruleSet1.rules.push(cardRule);
 
-    const insertRule = new InsertRule().withFile('NoBam.fsh').withLocation([1, 2, 3, 4]);
+    const insertRule = new InsertRule('').withFile('NoBam.fsh').withLocation([1, 2, 3, 4]);
     insertRule.ruleSet = 'Bam';
     profile.rules.push(insertRule);
 
@@ -370,6 +552,94 @@ describe('applyInsertRules', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Unable to find definition for RuleSet Bam.*File: NoBam\.fsh.*Line: 1 - 3\D*/s
     );
+  });
+
+  it('should log an error when applying context to a . path', () => {
+    // RuleSet: Bar
+    // * . ^short = "foo"
+
+    // Profile: Foo
+    // Parent: Observation
+    // * category insert Bar
+    const caretValueRule = new CaretValueRule('.');
+    caretValueRule.caretPath = 'short';
+    caretValueRule.path = '.';
+    caretValueRule.value = 'foo';
+    ruleSet1.rules.push(caretValueRule);
+
+    const insertRule = new InsertRule('category').withFile('Bar.fsh').withLocation([1, 2, 3, 4]);
+    insertRule.ruleSet = 'Bar';
+    profile.rules.push(insertRule);
+
+    applyInsertRules(profile, tank);
+
+    expect(profile.rules).toHaveLength(1);
+    assertCaretValueRule(profile.rules[0], '.', 'short', 'foo', undefined, []);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The special '\.' path.*File: Bar\.fsh.*Line: 1 - 3\D*/s
+    );
+  });
+
+  it('should apply add element rules from a single level insert rule', () => {
+    // RuleSet: AddCoreElements
+    // primaryId 1..1 SU uri "Primary ID"
+    // primaryOrganization 1..1 SU Reference(Organization) "Primary Organization"
+    // sharedNotes 0..* Annotation "Shared notes"
+    //
+    // Logical: Foo
+    // * insert AddCoreElements
+    const ruleSet = new RuleSet('AddCoreElements');
+
+    const addElementRule1 = new AddElementRule('primaryId');
+    addElementRule1.min = 1;
+    addElementRule1.max = '1';
+    addElementRule1.summary = true;
+    addElementRule1.types = [{ type: 'uri' }];
+    addElementRule1.short = 'Primary ID';
+
+    const addElementRule2 = new AddElementRule('primaryOrganization');
+    addElementRule2.min = 1;
+    addElementRule2.max = '1';
+    addElementRule2.summary = true;
+    addElementRule2.types = [{ type: 'Organization', isReference: true }];
+    addElementRule2.short = 'Primary Organization';
+
+    const addElementRule3 = new AddElementRule('sharedNotes');
+    addElementRule3.min = 0;
+    addElementRule3.max = '*';
+    addElementRule3.types = [{ type: 'Annotation' }];
+    addElementRule3.short = 'Shared notes';
+
+    ruleSet.rules.push(addElementRule1, addElementRule2, addElementRule3);
+    doc.ruleSets.set(ruleSet.name, ruleSet);
+
+    const logical = new Logical('Foo').withFile('Logical.fsh').withLocation([5, 6, 7, 16]);
+    doc.logicals.set(logical.name, logical);
+
+    const insertRule = new InsertRule('');
+    insertRule.ruleSet = 'AddCoreElements';
+    logical.rules.push(insertRule);
+
+    applyInsertRules(logical, tank);
+    expect(logical.rules).toHaveLength(3);
+
+    assertAddElementRule(logical.rules[0], 'primaryId', {
+      card: { min: 1, max: '1' },
+      flags: { summary: true },
+      types: [{ type: 'uri' }],
+      defs: { short: 'Primary ID' }
+    });
+    assertAddElementRule(logical.rules[1], 'primaryOrganization', {
+      card: { min: 1, max: '1' },
+      flags: { summary: true },
+      types: [{ type: 'Organization', isReference: true }],
+      defs: { short: 'Primary Organization' }
+    });
+    assertAddElementRule(logical.rules[2], 'sharedNotes', {
+      card: { min: 0, max: '*' },
+      types: [{ type: 'Annotation' }],
+      defs: { short: 'Shared notes' }
+    });
   });
 
   describe('#appliedRuleSet', () => {
@@ -395,7 +665,7 @@ describe('applyInsertRules', () => {
         appliedSimpleRules
       );
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'SimpleRules';
       insertRule.params = ['"Something"', '5'];
       profile.rules.push(insertRule);
@@ -422,7 +692,7 @@ describe('applyInsertRules', () => {
       const simpleCard = new CardRule('note');
       simpleCard.min = 0;
       simpleCard.max = '5';
-      const insertFancy = new InsertRule();
+      const insertFancy = new InsertRule('');
       insertFancy.ruleSet = 'FancyRules';
       insertFancy.params = ['5'];
       appliedSimpleRules.rules.push(simpleCard, insertFancy);
@@ -431,7 +701,7 @@ describe('applyInsertRules', () => {
       const fancyCard = new CardRule('interpretation');
       fancyCard.min = 0;
       fancyCard.max = '5';
-      const insertSimple = new InsertRule().withFile('Fancy.fsh').withLocation([4, 9, 4, 29]);
+      const insertSimple = new InsertRule('').withFile('Fancy.fsh').withLocation([4, 9, 4, 29]);
       insertSimple.ruleSet = 'SimpleRules';
       insertSimple.params = ['5'];
       appliedFancyRules.rules.push(fancyCard, insertSimple);
@@ -440,7 +710,7 @@ describe('applyInsertRules', () => {
         .set(JSON.stringify(['SimpleRules', '5']), appliedSimpleRules)
         .set(JSON.stringify(['FancyRules', '5']), appliedFancyRules);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'SimpleRules';
       insertRule.params = ['5'];
       profile.rules.push(insertRule);

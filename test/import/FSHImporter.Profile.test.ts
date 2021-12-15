@@ -20,17 +20,18 @@ import {
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { stats } from '../../src/utils/FSHLogger';
 import { importSingleText } from '../testhelpers/importSingleText';
-import { FSHImporter, RawFSH } from '../../src/import';
+import { FSHImporter, importText, RawFSH } from '../../src/import';
 import { EOL } from 'os';
+import { leftAlign } from '../utils/leftAlign';
 
 describe('FSHImporter', () => {
   describe('Profile', () => {
     describe('#sdMetadata', () => {
       it('should parse the simplest possible profile', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
-        `;
+        `);
 
         const result = importSingleText(input, 'Simple.fsh');
         expect(result.profiles.size).toBe(1);
@@ -41,22 +42,53 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('ObservationProfile');
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
-          startColumn: 9,
+          startColumn: 1,
           endLine: 3,
-          endColumn: 27
+          endColumn: 19
         });
         expect(profile.sourceInfo.file).toBe('Simple.fsh');
       });
 
+      it('should parse profile with name matching various possible tokens recognized as name', () => {
+        // This basically exercises all the tokens we accept for name:
+        // SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM;
+
+        // Since we'll do the same thing over and over (and over), create a function for it
+        const testToken = (token: string) => {
+          const input = leftAlign(`
+          Profile: ${token}
+          Parent: Observation
+          * value[x] only boolean
+          `);
+          const result = importSingleText(input);
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+          expect(result).toBeDefined();
+          expect(result.profiles.size).toBe(1);
+          const profile = result.profiles.get(token);
+          expect(profile).toBeDefined();
+          expect(profile.name).toBe(token);
+        };
+
+        testToken('MyProfile'); // SEQUENCE
+        testToken('123'); // NUMBER
+        testToken('MS'); // KW_MS
+        testToken('SU'); // KW_SU
+        testToken('TU'); // KW_TU
+        testToken('N'); // KW_NORMATIVE
+        testToken('D'); // KW_DRAFT
+        testToken('codes'); // KW_CODES
+        testToken('valueset'); // KW_VSREFERENCE
+        testToken('system'); // KW_SYSTEM
+      });
+
       it('should parse profile with additional metadata properties', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
-        `;
+        `);
 
         const result = importSingleText(input);
         expect(result.profiles.size).toBe(1);
@@ -66,17 +98,31 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
         expect(profile.sourceInfo.location).toEqual({
           startLine: 2,
-          startColumn: 9,
-          endLine: 7,
-          endColumn: 55
+          startColumn: 1,
+          endLine: 6,
+          endColumn: 39
         });
       });
 
+      it('should parse profile with numeric name, parent, and id', () => {
+        const input = leftAlign(`
+        Profile: 123
+        Parent: 456
+        Id: 789
+        `);
+
+        const result = importSingleText(input);
+        expect(result.profiles.size).toBe(1);
+        const profile = result.profiles.get('123');
+        expect(profile.name).toBe('123');
+        expect(profile.parent).toBe('456');
+        expect(profile.id).toBe('789');
+      });
+
       it('should properly parse a multi-string description', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         Description:
@@ -93,7 +139,7 @@ describe('FSHImporter', () => {
             * Bullet C
           * Bullet 2
           """
-        `;
+        `);
 
         const result = importSingleText(input);
         expect(result.profiles.size).toBe(1);
@@ -115,12 +161,12 @@ describe('FSHImporter', () => {
       });
 
       it('should accept and translate an alias for the parent', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: OBS = http://hl7.org/fhir/StructureDefinition/Observation
 
         Profile: ObservationProfile
         Parent: OBS
-        `;
+        `);
 
         const result = importSingleText(input);
         expect(result.profiles.size).toBe(1);
@@ -130,19 +176,17 @@ describe('FSHImporter', () => {
       });
 
       it('should only apply each metadata attribute the first time it is declared', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         Id: observation-profile
         Title: "An Observation Profile"
         Description: "A profile on Observation"
-        Mixins: Mixin1
         Parent: DuplicateObservation
         Id: duplicate-observation-profile
         Title: "Duplicate Observation Profile"
         Description: "A duplicated profile on Observation"
-        Mixins: DuplicateMixin1
-        `;
+        `);
 
         const result = importSingleText(input);
         expect(result.profiles.size).toBe(1);
@@ -151,26 +195,10 @@ describe('FSHImporter', () => {
         expect(profile.id).toBe('observation-profile');
         expect(profile.title).toBe('An Observation Profile');
         expect(profile.description).toBe('A profile on Observation');
-        expect(profile.mixins).toEqual(['Mixin1']);
-      });
-
-      it('should deduplicate repeated mixins and log a warning', () => {
-        const input = `
-        Profile: ObservationProfile
-        Parent: Observation
-        Mixins: Mixin1 and Mixin2 and Mixin1
-        `;
-
-        const result = importSingleText(input, 'Dupe.fsh');
-        expect(result.profiles.size).toBe(1);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.name).toBe('ObservationProfile');
-        expect(profile.mixins).toEqual(['Mixin1', 'Mixin2']);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Mixin1.*File: Dupe.fsh.*Line: 4\D*/s);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         Id: observation-profile
@@ -178,7 +206,7 @@ describe('FSHImporter', () => {
         Description: "A profile on Observation"
         Title: "Duplicate Observation Profile"
         Description: "A duplicated profile on Observation"
-        `;
+        `);
 
         importSingleText(input, 'Dupe.fsh');
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
@@ -186,7 +214,7 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error and skip the profile when encountering a profile with a name used by another profile', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         Title: "First Observation Profile"
@@ -194,7 +222,7 @@ describe('FSHImporter', () => {
         Profile: ObservationProfile
         Parent: Observation
         Title: "Second Observation Profile"
-        `;
+        `);
         const result = importSingleText(input, 'SameName.fsh');
         expect(result.profiles.size).toBe(1);
         const profile = result.profiles.get('ObservationProfile');
@@ -204,17 +232,60 @@ describe('FSHImporter', () => {
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 6 - 8\D*/s);
       });
+
+      it('should log an error and skip the profile when encountering an profile with a name used by another profile in another file', () => {
+        const input1 = `
+        Profile: SameProfile
+        Title: "First Profile"
+        Parent: Observation
+      `;
+
+        const input2 = `
+        Profile: SameProfile
+        Title: "Second Profile"
+        Parent: Observation
+      `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.profiles.size, 0)).toBe(1);
+        const p = result[0].profiles.get('SameProfile');
+        expect(p.title).toBe('First Profile');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Profile named SameProfile already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 4\D*/s);
+      });
+
+      it('should log an error when the deprecated Mixins keyword is used', () => {
+        const input = leftAlign(`
+        Profile: SomeProfile
+        Parent: Observation
+        Mixins: RuleSet1 and RuleSet2
+        `);
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        expect(result.profiles.size).toBe(1);
+        const extension = result.profiles.get('SomeProfile');
+        expect(extension.name).toBe('SomeProfile');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'Mixins' keyword is no longer supported\./s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
+      });
     });
 
     describe('#cardRule', () => {
       it('should parse simple card rules', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category 1..5
         * value[x] 1..1
         * component 2..*
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -225,11 +296,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse card rule with only min', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category 1..
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -238,11 +309,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse card rule with only max', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category ..5
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -251,11 +322,11 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error if neither side is specified', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category ..
-        `;
+        `);
 
         const result = importSingleText(input, 'BadCard.fsh');
         const profile = result.profiles.get('ObservationProfile');
@@ -267,7 +338,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse card rules w/ flags', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category 1..5 MS
@@ -276,7 +347,7 @@ describe('FSHImporter', () => {
         * interpretation 1..* TU
         * note 0..11 N
         * bodySite 1..1 D
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -350,13 +421,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse card rules w/ multiple flags', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category 1..5 MS ?! TU
         * value[x] 1..1 ?! SU N
         * component 2..* SU MS D
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -399,7 +470,7 @@ describe('FSHImporter', () => {
 
     describe('#flagRule', () => {
       it('should parse single-path single-value flag rules', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category MS
@@ -408,7 +479,7 @@ describe('FSHImporter', () => {
         * interpretation TU
         * note N
         * bodySite D
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -476,13 +547,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse single-path multi-value flag rules', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category MS ?! N
         * value[x] ?! SU D
         * component MS SU ?! TU
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -511,13 +582,13 @@ describe('FSHImporter', () => {
       });
 
       it('should parse multi-path single-value flag rules', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category and value[x] and component MS
         * subject and focus ?!
         * interpretation and note N
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -595,12 +666,12 @@ describe('FSHImporter', () => {
       });
 
       it('should parse multi-path multi-value flag rules', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category and value[x] and component MS SU N
         * subject and focus ?! SU TU
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -657,60 +728,33 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when paths are listed with commas', () => {
-        const input = `
+      it('should log an error when paths are listed with commas', () => {
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category, value[x] , component MS SU N
-        `;
+        `);
 
-        const result = importSingleText(input);
+        const result = importSingleText(input, 'Deprecated.fsh');
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(3);
-        assertFlagRule(
-          profile.rules[0],
-          'category',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
         );
-        assertFlagRule(
-          profile.rules[1],
-          'value[x]',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        assertFlagRule(
-          profile.rules[2],
-          'component',
-          true,
-          true,
-          undefined,
-          undefined,
-          true,
-          undefined
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/Using "," to list paths is deprecated/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 4\D*/s);
       });
     });
 
     describe('#BindingRule', () => {
       it('should parse value set rules w/ names and strengths', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category from CategoryValueSet (required)
         * code from CodeValueSet (extensible)
         * valueCodeableConcept from ValueValueSet (preferred)
         * component.code from ComponentCodeValueSet (example)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -722,14 +766,14 @@ describe('FSHImporter', () => {
       });
 
       it('should parse value set rules w/ urls and strengths', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category from http://example.org/fhir/ValueSet/CategoryValueSet (required)
         * code from http://example.org/fhir/ValueSet/CodeValueSet (extensible)
         * valueCodeableConcept from http://example.org/fhir/ValueSet/ValueValueSet (preferred)
         * component.code from http://example.org/fhir/ValueSet/ComponentCodeValueSet (example)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -761,7 +805,7 @@ describe('FSHImporter', () => {
       });
 
       it('should accept and translate aliases for value set URLs', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: CAT = http://example.org/fhir/ValueSet/CategoryValueSet
         Alias: CODE = http://example.org/fhir/ValueSet/CodeValueSet
         Alias: VALUE = http://example.org/fhir/ValueSet/ValueValueSet
@@ -773,7 +817,7 @@ describe('FSHImporter', () => {
         * code from CODE (extensible)
         * valueCodeableConcept from VALUE (preferred)
         * component.code from COMP (example)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -804,13 +848,28 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse value set rules w/ numeric names', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * category from 123 (required)
+        * code from 456 (extensible)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(2);
+        assertBindingRule(profile.rules[0], 'category', '123', 'required');
+        assertBindingRule(profile.rules[1], 'code', '456', 'extensible');
+      });
+
       it('should parse value set rules w/ no strength and default to required', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category from CategoryValueSet
         * code from http://example.org/fhir/ValueSet/CodeValueSet
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -824,12 +883,12 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should ignore the units keyword and log a warning when parsing value set rules on Quantity', () => {
-        const input = `
+      it('should parse value set rules on Quantity', () => {
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
-        * valueQuantity units from http://unitsofmeasure.org
-        `;
+        * valueQuantity from http://unitsofmeasure.org
+        `);
 
         const result = importSingleText(input, 'UselessQuant.fsh');
         const profile = result.profiles.get('ObservationProfile');
@@ -840,19 +899,31 @@ describe('FSHImporter', () => {
           'http://unitsofmeasure.org',
           'required'
         );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessQuant\.fsh.*Line: 4\D*/s
+      });
+
+      it('should log an error when parsing value set rules using the unit keyword', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units from http://unitsofmeasure.org
+        `);
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: Deprecated\.fsh.*Line: 4\D*/s
         );
       });
     });
 
     describe('#assignmentRule', () => {
       it('should parse assigned value boolean rule', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * valueBoolean = true
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -861,11 +932,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse assigned value boolean rule with (exactly) modifier', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * valueBoolean = true (exactly)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -873,12 +944,12 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueBoolean', true, true);
       });
 
-      it('should parse assigned value number rule', () => {
-        const input = `
+      it('should parse assigned value number (decimal) rule', () => {
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * valueDecimal = 1.23
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -886,12 +957,25 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueDecimal', 1.23);
       });
 
+      it('should parse assigned value number (integer) rule', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueInteger = 123
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertAssignmentRule(profile.rules[0], 'valueInteger', BigInt(123));
+      });
+
       it('should parse assigned value string rule', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * valueString = "hello world"
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -900,14 +984,14 @@ describe('FSHImporter', () => {
       });
 
       it('should parse assigned value multi-line string rule', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * valueString = """
             hello
             world
             """
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -916,11 +1000,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse assigned value date rule', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * valueDateTime = 2019-11-01T12:30:01.999Z
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -930,11 +1014,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse assigned value time rule', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * valueTime = 12:30:01.999-05:00
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -944,29 +1028,29 @@ describe('FSHImporter', () => {
       });
 
       it('should parse assigned value code rule', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: LOINC = http://loinc.org
 
         Profile: ObservationProfile
         Parent: Observation
         * status = #final
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        const expectedCode = new FshCode('final').withLocation([6, 20, 6, 25]).withFile('');
+        const expectedCode = new FshCode('final').withLocation([6, 12, 6, 17]).withFile('');
         assertAssignmentRule(profile.rules[0], 'status', expectedCode);
       });
 
       it('should parse assigned value CodeableConcept rule', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: LOINC = http://loinc.org
 
         Profile: ObservationProfile
         Parent: Observation
         * valueCodeableConcept = LOINC#718-7 "Hemoglobin [Mass/volume] in Blood"
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -976,19 +1060,19 @@ describe('FSHImporter', () => {
           'http://loinc.org',
           'Hemoglobin [Mass/volume] in Blood'
         )
-          .withLocation([6, 34, 6, 80])
+          .withLocation([6, 26, 6, 72])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueCodeableConcept', expectedCode);
       });
 
       it('should parse assigned value CodeableConcept rule with (exactly) modifier', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: LOINC = http://loinc.org
 
         Profile: ObservationProfile
         Parent: Observation
         * valueCodeableConcept = LOINC#718-7 "Hemoglobin [Mass/volume] in Blood" (exactly)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -998,57 +1082,69 @@ describe('FSHImporter', () => {
           'http://loinc.org',
           'Hemoglobin [Mass/volume] in Blood'
         )
-          .withLocation([6, 34, 6, 80])
+          .withLocation([6, 26, 6, 72])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueCodeableConcept', expectedCode, true);
       });
 
-      it('should ignore the units keyword and log a warning when parsing an assigned value FSHCode rule with units on Quantity', () => {
-        const input = `
+      it('should parse an assigned value FSHCode rule with units on Quantity', () => {
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
-        * valueQuantity units = http://unitsofmeasure.org#cGy
-        `;
+        * valueQuantity = http://unitsofmeasure.org#cGy
+        `);
 
         const result = importSingleText(input, 'UselessUnits.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedCode = new FshCode('cGy', 'http://unitsofmeasure.org')
-          .withLocation([4, 33, 4, 61])
+          .withLocation([4, 19, 4, 47])
           .withFile('UselessUnits.fsh');
         assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedCode);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /The "units" keyword is deprecated and has no effect.*File: UselessUnits\.fsh.*Line: 4\D*/s
+      });
+
+      it('should log an error when parsing an assigned value FSHCode rule using the unit keyword', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity units = http://unitsofmeasure.org#cGy
+        `);
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'units' keyword is no longer supported.*File: Deprecated\.fsh.*Line: 4\D*/s
         );
       });
 
       it('should parse assigned value Quantity rule', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity = 1.5 'mm'
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedQuantity = new FshQuantity(
           1.5,
-          new FshCode('mm', 'http://unitsofmeasure.org').withLocation([5, 31, 5, 34]).withFile('')
+          new FshCode('mm', 'http://unitsofmeasure.org').withLocation([5, 23, 5, 26]).withFile('')
         )
-          .withLocation([5, 27, 5, 34])
+          .withLocation([5, 19, 5, 26])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
       it('should parse assigned value Quantity rule with unit display', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * valueQuantity = 155.0 '[lb_av]' "lb"
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1056,21 +1152,21 @@ describe('FSHImporter', () => {
         const expectedQuantity = new FshQuantity(
           155.0,
           new FshCode('[lb_av]', 'http://unitsofmeasure.org', 'lb')
-            .withLocation([5, 33, 5, 41])
+            .withLocation([5, 25, 5, 33])
             .withFile('')
         )
-          .withLocation([5, 27, 5, 46])
+          .withLocation([5, 19, 5, 38])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
       it('should parse assigned value Ratio rule', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * valueRatio = 130 'mg' : 1 'dL'
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1078,54 +1174,54 @@ describe('FSHImporter', () => {
         const expectedRatio = new FshRatio(
           new FshQuantity(
             130,
-            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 28, 5, 31]).withFile('')
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 20, 5, 23]).withFile('')
           )
-            .withLocation([5, 24, 5, 31])
+            .withLocation([5, 16, 5, 23])
             .withFile(''),
           new FshQuantity(
             1,
-            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 37, 5, 40]).withFile('')
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 29, 5, 32]).withFile('')
           )
-            .withLocation([5, 35, 5, 40])
+            .withLocation([5, 27, 5, 32])
             .withFile('')
         )
-          .withLocation([5, 24, 5, 40])
+          .withLocation([5, 16, 5, 32])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse assigned value Ratio rule w/ numeric numerator', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * valueRatio = 130 : 1 'dL'
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedRatio = new FshRatio(
-          new FshQuantity(130).withLocation([5, 24, 5, 26]).withFile(''),
+          new FshQuantity(130).withLocation([5, 16, 5, 18]).withFile(''),
           new FshQuantity(
             1,
-            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 32, 5, 35]).withFile('')
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 24, 5, 27]).withFile('')
           )
-            .withLocation([5, 30, 5, 35])
+            .withLocation([5, 22, 5, 27])
             .withFile('')
         )
-          .withLocation([5, 24, 5, 35])
+          .withLocation([5, 16, 5, 27])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse assigned value Ratio rule w/ numeric denominator', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * valueRatio = 130 'mg' : 1
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1133,63 +1229,63 @@ describe('FSHImporter', () => {
         const expectedRatio = new FshRatio(
           new FshQuantity(
             130,
-            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 28, 5, 31]).withFile('')
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 20, 5, 23]).withFile('')
           )
-            .withLocation([5, 24, 5, 31])
+            .withLocation([5, 16, 5, 23])
             .withFile(''),
-          new FshQuantity(1).withLocation([5, 35, 5, 35]).withFile('')
+          new FshQuantity(1).withLocation([5, 27, 5, 27]).withFile('')
         )
-          .withLocation([5, 24, 5, 35])
+          .withLocation([5, 16, 5, 27])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse assigned value Ratio rule w/ numeric numerator and denominator', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * valueRatio = 130 : 1
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
         const expectedRatio = new FshRatio(
-          new FshQuantity(130).withLocation([5, 24, 5, 26]).withFile(''),
-          new FshQuantity(1).withLocation([5, 30, 5, 30]).withFile('')
+          new FshQuantity(130).withLocation([5, 16, 5, 18]).withFile(''),
+          new FshQuantity(1).withLocation([5, 22, 5, 22]).withFile('')
         )
-          .withLocation([5, 24, 5, 30])
+          .withLocation([5, 16, 5, 22])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
 
       it('should parse assigned value Reference rule', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * basedOn = Reference(fooProfile)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedReference = new FshReference('fooProfile')
-          .withLocation([5, 21, 5, 41])
+          .withLocation([5, 13, 5, 33])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
       it('should parse assigned value Reference rules while allowing and translating aliases', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: FOO = http://hl7.org/fhir/StructureDefinition/Foo
 
         Profile: ObservationProfile
         Parent: Observation
         * basedOn = Reference(FOO) "bar"
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1199,61 +1295,61 @@ describe('FSHImporter', () => {
           'http://hl7.org/fhir/StructureDefinition/Foo',
           'bar'
         )
-          .withLocation([6, 21, 6, 40])
+          .withLocation([6, 13, 6, 32])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
       it('should parse assigned value Reference rule with a display string', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * basedOn = Reference(fooProfile) "bar"
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedReference = new FshReference('fooProfile', 'bar')
-          .withLocation([5, 21, 5, 47])
+          .withLocation([5, 13, 5, 39])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
       it('should parse assigned value Reference rule with whitespace', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * basedOn = Reference(   fooProfile   )
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedReference = new FshReference('fooProfile')
-          .withLocation([5, 21, 5, 47])
+          .withLocation([5, 13, 5, 39])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
       it('should log an error when an assigned value Reference rule has a choice of references', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * basedOn = Reference(cakeProfile or pieProfile)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedReference = new FshReference('cakeProfile')
-          .withLocation([5, 21, 5, 56])
+          .withLocation([5, 13, 5, 48])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -1262,7 +1358,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse assigned value using Canonical', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: Example
         * #first
         * #second
@@ -1270,20 +1366,20 @@ describe('FSHImporter', () => {
         Profile: ObservationProfile
         Parent: Observation
         * code.coding.system = Canonical(Example)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 49])
+          .withLocation([8, 24, 8, 41])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
       it('should parse assigned value using Canonical with spaces around entity name', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: SpaceyExample
         * #first
         * #second
@@ -1291,20 +1387,20 @@ describe('FSHImporter', () => {
         Profile: ObservationProfile
         Parent: Observation
         * code.coding.system = Canonical(   SpaceyExample )
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedCanonical = new FshCanonical('SpaceyExample') // No spaces are included in the entityName
-          .withLocation([8, 32, 8, 59])
+          .withLocation([8, 24, 8, 51])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
       it('should parse assigned value using Canonical with a version', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: Example
         * #first
         * #second
@@ -1312,71 +1408,73 @@ describe('FSHImporter', () => {
         Profile: ObservationProfile
         Parent: Observation
         * code.coding.system = Canonical(Example|1.2.3)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 55])
-          .withFile('');
-        expectedCanonical.version = '1.2.3';
-        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
-      });
-
-      it('should parse assigned value using Canonical with spaces around the version', () => {
-        const input = `
-        CodeSystem: Example
-        * #first
-        * #second
-
-        Profile: ObservationProfile
-        Parent: Observation
-        * code.coding.system = Canonical(  Example | 1.2.3  )
-        `;
-
-        const result = importSingleText(input);
-        const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-
-        const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 61])
+          .withLocation([8, 24, 8, 47])
           .withFile('');
         expectedCanonical.version = '1.2.3';
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
       it('should parse assigned value using Canonical with a version which contains a |', () => {
-        const input = `
+        const input = leftAlign(`
         CodeSystem: Example
         * #first
         * #second
 
         Profile: ObservationProfile
         Parent: Observation
-        * code.coding.system = Canonical(  Example | 1.2.3|aWeirdVersion  )
-        `;
+        * code.coding.system = Canonical(  Example|1.2.3|aWeirdVersion  )
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
 
         const expectedCanonical = new FshCanonical('Example')
-          .withLocation([8, 32, 8, 75])
+          .withLocation([8, 24, 8, 65])
           .withFile('');
         expectedCanonical.version = '1.2.3|aWeirdVersion';
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
       });
 
+      it('should log an error when an assigned value Canonical rule has a choice of canonicals', () => {
+        const input = leftAlign(`
+        CodeSystem: Example
+        * #first
+        * #second
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * code.coding.system = Canonical(Example or OtherExample)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedCanonical = new FshCanonical('Example')
+          .withLocation([8, 24, 8, 57])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Multiple choices of canonicals are not allowed when setting a value.*Line: 8\D*/s
+        );
+      });
+
       it('should parse assigned values that are an alias', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: EXAMPLE = http://example.org
 
         Profile: PatientProfile
         Parent: Patient
         * identifier.system = EXAMPLE
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('PatientProfile');
@@ -1385,12 +1483,12 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an assigned value Resource rule', () => {
-        const input = `
+        const input = leftAlign(`
 
         Profile: ObservationProfile
         Parent: Observation
         * contained[0] = SomeInstance
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1401,11 +1499,11 @@ describe('FSHImporter', () => {
 
     describe('#onlyRule', () => {
       it('should parse an only rule with one type', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * value[x] only Quantity
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1414,11 +1512,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an only rule with multiple types', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * value[x] only Quantity or CodeableConcept or string
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1432,12 +1530,44 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an only rule with one numeric type name', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * value[x] only 123
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'value[x]', { type: '123' });
+      });
+
+      it('should parse an only rule with multiple numeric type names', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * value[x] only 123 or 456 or 789
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'value[x]',
+          { type: '123' },
+          { type: '456' },
+          { type: '789' }
+        );
+      });
+
       it('should parse an only rule with a reference to one type', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(Practitioner)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1446,11 +1576,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an only rule with a reference to multiple types', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(Organization or CareTeam)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1464,11 +1594,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an only rule with a reference to multiple types with whitespace', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(   Organization    or  CareTeam)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1481,15 +1611,85 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an only rule with a canonical to one type', () => {
+        const input = leftAlign(`
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(ActivityDefinition)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'action.definition[x]', {
+          type: 'ActivityDefinition',
+          isCanonical: true
+        });
+      });
+
+      it('should parse an only rule with a canonical to multiple types', () => {
+        const input = leftAlign(`
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(ActivityDefinition or PlanDefinition)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'action.definition[x]',
+          { type: 'ActivityDefinition', isCanonical: true },
+          { type: 'PlanDefinition', isCanonical: true }
+        );
+      });
+
+      it('should parse an only rule with a canonical to multiple types with whitespace', () => {
+        const input = leftAlign(`
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(     ActivityDefinition   or    PlanDefinition    )
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'action.definition[x]',
+          { type: 'ActivityDefinition', isCanonical: true },
+          { type: 'PlanDefinition', isCanonical: true }
+        );
+      });
+
+      it('should parse an only rule with a canonical to multiple types with versions', () => {
+        const input = leftAlign(`
+        Profile: PlanDefinitionProfile
+        Parent: PlanDefinition
+        * action.definition[x] only Canonical(ActivityDefinition|4.0.1 or PlanDefinition|4.0.1)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('PlanDefinitionProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'action.definition[x]',
+          { type: 'ActivityDefinition|4.0.1', isCanonical: true },
+          { type: 'PlanDefinition|4.0.1', isCanonical: true }
+        );
+      });
+
       it('should allow and translate aliases for only types', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: QUANTITY = http://hl7.org/fhir/StructureDefinition/Quantity
         Alias: CODING = http://hl7.org/fhir/StructureDefinition/Coding
 
         Profile: ObservationProfile
         Parent: Observation
         * value[x] only CodeableConcept or CODING or string or QUANTITY
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1504,56 +1704,44 @@ describe('FSHImporter', () => {
         );
       });
 
-      it('should log a warning when references are listed with pipes', () => {
-        const input = `
+      it('should log an error when references are listed with pipes', () => {
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(Organization | CareTeam)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '\|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
 
-      it('should log a warning when references are listed with pipes with whitespace', () => {
-        const input = `
+      it('should log an error when references are listed with pipes with whitespace', () => {
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * performer only Reference(   Organization  |   CareTeam)
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
-        expect(profile.rules).toHaveLength(1);
-        assertOnlyRule(
-          profile.rules[0],
-          'performer',
-          { type: 'Organization', isReference: true },
-          { type: 'CareTeam', isReference: true }
-        );
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Using "\|" to list references is deprecated\..*Line: 4\D*/s
+        expect(profile).toBeDefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Using '\|' to list references is no longer supported\..*Line: 4\D*/s
         );
       });
     });
 
     describe('#containsRule', () => {
       it('should parse contains rule with one item', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * component contains SystolicBP 1..1
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1563,12 +1751,12 @@ describe('FSHImporter', () => {
       });
 
       it('should parse contains rule with one item declaring an aliased type', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: OffsetExtension = http://hl7.org/fhir/StructureDefinition/observation-timeOffset
         Profile: ObservationProfile
         Parent: Observation
         * component.extension contains OffsetExtension named offset 0..1
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1581,7 +1769,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse contains rule with one item declaring an FSH extension type', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * component.extension contains ComponentExtension named compext 0..1
@@ -1589,7 +1777,7 @@ describe('FSHImporter', () => {
         Extension: ComponentExtension
         Id: component-extension
         * value[x] only CodeableConcept
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1602,11 +1790,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse contains rules with multiple items', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * component contains SystolicBP 1..1 and DiastolicBP 2..*
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1617,7 +1805,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse contains rule with mutliple items, some declaring types', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: FocusCodeExtension = http://hl7.org/fhir/StructureDefinition/observation-focusCode
         Alias: PreconditionExtension = http://hl7.org/fhir/StructureDefinition/observation-precondition
         Profile: ObservationProfile
@@ -1627,7 +1815,7 @@ describe('FSHImporter', () => {
             FocusCodeExtension named focus 1..1 and
             bar 0..* and
             PreconditionExtension named pc 1..*
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1653,11 +1841,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse contains rules with flags', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * component contains SystolicBP 1..1 MS D and DiastolicBP 2..* MS SU
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1688,12 +1876,12 @@ describe('FSHImporter', () => {
       });
 
       it('should parse contains rule with item declaring a type and flags', () => {
-        const input = `
+        const input = leftAlign(`
         Alias: OffsetExtension = http://hl7.org/fhir/StructureDefinition/observation-timeOffset
         Profile: ObservationProfile
         Parent: Observation
         * component.extension contains OffsetExtension named offset 0..1 MS TU
-        `;
+        `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
@@ -1718,13 +1906,13 @@ describe('FSHImporter', () => {
 
     describe('#caretValueRule', () => {
       it('should parse caret value rules with no path', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * ^description = "foo"
         * ^experimental = false
         * ^keyword[0] = foo#bar "baz"
-        `;
+        `);
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         assertCaretValueRule(profile.rules[0], '', 'description', 'foo', false);
@@ -1733,19 +1921,30 @@ describe('FSHImporter', () => {
           profile.rules[2],
           '',
           'keyword[0]',
-          new FshCode('bar', 'foo', 'baz').withLocation([6, 25, 6, 37]).withFile(''),
+          new FshCode('bar', 'foo', 'baz').withLocation([6, 17, 6, 29]).withFile(''),
           false
         );
       });
 
+      it('should parse caret value rules with a . path', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * . ^definition = "foo"
+        `);
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        assertCaretValueRule(profile.rules[0], '.', 'definition', 'foo', false, ['.']);
+      });
+
       it('should parse caret value rules with a path', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * status ^short = "foo"
         * status ^sliceIsConstraining = false
         * status ^code[0] = foo#bar "baz"
-        `;
+        `);
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         assertCaretValueRule(profile.rules[0], 'status', 'short', 'foo', false);
@@ -1754,28 +1953,28 @@ describe('FSHImporter', () => {
           profile.rules[2],
           'status',
           'code[0]',
-          new FshCode('bar', 'foo', 'baz').withLocation([6, 29, 6, 41]).withFile(''),
+          new FshCode('bar', 'foo', 'baz').withLocation([6, 21, 6, 33]).withFile(''),
           false
         );
       });
 
       it('should not include non-breaking spaces as part of the caret path', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * status ^short\u00A0= "Non-breaking"
-        `;
+        `);
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         assertCaretValueRule(profile.rules[0], 'status', 'short', 'Non-breaking', false);
       });
 
       it('should add resources to the contained array using a CaretValueRule', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * ^contained = myResource
-        `;
+        `);
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         assertCaretValueRule(profile.rules[0], '', 'contained', 'myResource', true);
@@ -1784,11 +1983,11 @@ describe('FSHImporter', () => {
 
     describe('#obeysRule', () => {
       it('should parse an obeys rule with one invariant and no path', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * obeys SomeInvariant
-        `;
+        `);
         const result = importSingleText(input, 'Obeys.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
@@ -1796,11 +1995,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an obeys rule with one invariant and a path', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category obeys SomeInvariant
-        `;
+        `);
         const result = importSingleText(input, 'Obeys.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
@@ -1808,11 +2007,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an obeys rule with multiple invariants and no path', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * obeys SomeInvariant and ThisInvariant and ThatInvariant
-        `;
+        `);
         const result = importSingleText(input, 'Obeys.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(3);
@@ -1822,17 +2021,42 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an obeys rule with multiple invariants and a path', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * category obeys SomeInvariant and ThisInvariant and ThatInvariant
-        `;
+        `);
         const result = importSingleText(input, 'Obeys.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(3);
         assertObeysRule(profile.rules[0], 'category', 'SomeInvariant');
         assertObeysRule(profile.rules[1], 'category', 'ThisInvariant');
         assertObeysRule(profile.rules[2], 'category', 'ThatInvariant');
+      });
+
+      it('should parse an obeys rule with a numeric invariant name', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * obeys 123
+        `);
+        const result = importSingleText(input, 'Obeys.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertObeysRule(profile.rules[0], '', '123');
+      });
+    });
+
+    describe('#pathRule', () => {
+      it('should parse a pathRule', () => {
+        const input = leftAlign(`
+        Profile: PatientProfile
+        Parent: Patient
+        * name
+        `);
+        const result = importSingleText(input, 'Path.fsh');
+        const profile = result.profiles.get('PatientProfile');
+        expect(profile.rules).toHaveLength(0);
       });
     });
 
@@ -1931,6 +2155,7 @@ describe('FSHImporter', () => {
         // RuleSet: WarningRuleSet(value)
         // * focus[0] only Reference(Patient | {value})
         // * focus[1] only Reference(Group | {value})
+        // NOTE: This now causes ERRORS (not warnings), so associated test is skipped!
         const warningRuleSet = new ParamRuleSet('WarningRuleSet')
           .withFile('RuleSet.fsh')
           .withLocation([30, 12, 32, 53]);
@@ -1943,30 +2168,79 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert MyRuleSet
-        `;
+        `);
         const result = importSingleText(input, 'Insert.fsh');
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MyRuleSet');
+        assertInsertRule(profile.rules[0], '', 'MyRuleSet');
+      });
+
+      it('should parse an insert rule with a single RuleSet and a path', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * code insert MyRuleSet
+        `);
+        const result = importSingleText(input, 'Insert.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'code', 'MyRuleSet');
       });
 
       it('should parse an insert rule with a RuleSet with one parameter', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final)
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final']);
+        assertInsertRule(profile.rules[0], '', 'OneParamRuleSet', ['#final']);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['OneParamRuleSet', '#final'])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 1,
+            startColumn: 12,
+            endLine: 2,
+            endColumn: 27
+          }
+        });
+        expect(appliedRuleSet.rules[0].sourceInfo).toEqual({
+          file: 'RuleSet.fsh',
+          location: {
+            startLine: 2,
+            startColumn: 1,
+            endLine: 2,
+            endColumn: 17
+          }
+        });
+      });
+
+      it('should parse an insert rule with a RuleSet with one parameter and a path', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * code insert OneParamRuleSet (#final)
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], 'code', 'OneParamRuleSet', ['#final']);
         const appliedRuleSet = doc.appliedRuleSets.get(
           JSON.stringify(['OneParamRuleSet', '#final'])
         );
@@ -1992,18 +2266,18 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a RuleSet with multiple parameters', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#preliminary, "this is a string value\\, right?", 4)
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
           '#preliminary',
           '"this is a string value, right?"',
           '4'
@@ -2054,18 +2328,18 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with a parameter that contains right parenthesis', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final "(Final\\)")
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'OneParamRuleSet', ['#final "(Final)"']);
+        assertInsertRule(profile.rules[0], '', 'OneParamRuleSet', ['#final "(Final)"']);
         const appliedRuleSet = doc.appliedRuleSets.get(
           JSON.stringify(['OneParamRuleSet', '#final "(Final)"'])
         );
@@ -2092,18 +2366,18 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with parameters that contain newline, tab, or backslash characters', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#final, "very\\nstrange\\rvalue\\\\\\tindeed", 1)
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
           '#final',
           '"very\\nstrange\\rvalue\\\\\\tindeed"',
           '1'
@@ -2145,7 +2419,7 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule that separates its parameters onto multiple lines', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (
@@ -2153,14 +2427,18 @@ describe('FSHImporter', () => {
           "string value",
           7
         )
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', ['#final', '"string value"', '7']);
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
+          '#final',
+          '"string value"',
+          '7'
+        ]);
         const appliedRuleSet = doc.appliedRuleSets.get(
           JSON.stringify(['MultiParamRuleSet', '#final', '"string value"', '7'])
         );
@@ -2187,12 +2465,12 @@ describe('FSHImporter', () => {
       });
 
       it('should generate a RuleSet only once when inserted with the same parameters multiple times in the same document', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert MultiParamRuleSet (#preliminary, "something", 3)
         * insert MultiParamRuleSet (#preliminary, "something", 3)
-        `;
+        `);
         const visitDocSpy = jest.spyOn(importer, 'visitDoc');
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -2205,12 +2483,12 @@ describe('FSHImporter', () => {
         const profile = doc.profiles.get('ObservationProfile');
         expect(profile).toBeDefined();
         expect(profile.rules).toHaveLength(2);
-        assertInsertRule(profile.rules[0], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
           '#preliminary',
           '"something"',
           '3'
         ]);
-        assertInsertRule(profile.rules[1], 'MultiParamRuleSet', [
+        assertInsertRule(profile.rules[1], '', 'MultiParamRuleSet', [
           '#preliminary',
           '"something"',
           '3'
@@ -2218,11 +2496,11 @@ describe('FSHImporter', () => {
       });
 
       it('should parse an insert rule with parameters that will use the same RuleSet more than once with different parameters each time', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert EntryRules (Recursive)
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(allDocs).toHaveLength(1);
@@ -2243,7 +2521,7 @@ describe('FSHImporter', () => {
           }
         });
         expect(firstEntryRules.rules).toHaveLength(1);
-        assertInsertRule(firstEntryRules.rules[0], 'RecursiveRules', ['5']);
+        assertInsertRule(firstEntryRules.rules[0], '', 'RecursiveRules', ['5']);
 
         const recursiveRules = doc.appliedRuleSets.get(JSON.stringify(['RecursiveRules', '5']));
         expect(recursiveRules).toBeDefined();
@@ -2258,7 +2536,7 @@ describe('FSHImporter', () => {
         });
         expect(recursiveRules.rules).toHaveLength(2);
         assertCardRule(recursiveRules.rules[0], 'interpretation', 0, '5');
-        assertInsertRule(recursiveRules.rules[1], 'EntryRules', ['BaseCase']);
+        assertInsertRule(recursiveRules.rules[1], '', 'EntryRules', ['BaseCase']);
 
         const secondEntryRules = doc.appliedRuleSets.get(
           JSON.stringify(['EntryRules', 'BaseCase'])
@@ -2273,7 +2551,7 @@ describe('FSHImporter', () => {
           }
         });
         expect(secondEntryRules.rules).toHaveLength(1);
-        assertInsertRule(secondEntryRules.rules[0], 'BaseCaseRules', ['5']);
+        assertInsertRule(secondEntryRules.rules[0], '', 'BaseCaseRules', ['5']);
 
         const baseCaseRules = doc.appliedRuleSets.get(JSON.stringify(['BaseCaseRules', '5']));
         expect(baseCaseRules).toBeDefined();
@@ -2291,11 +2569,11 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error and not add a rule when an insert rule has the wrong number of parameters', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert OneParamRuleSet (#final, "Final")
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
@@ -2307,11 +2585,11 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error and not add a rule when an insert rule with parameters refers to an undefined parameterized RuleSet', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
         * insert MysteriousRuleSet ("mystery")
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         const doc = allDocs[0];
         const profile = doc.profiles.get('ObservationProfile');
@@ -2323,11 +2601,11 @@ describe('FSHImporter', () => {
       });
 
       it('should log an error when an insert rule with parameters results in a parser error in the generated RuleSet', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(path with spaces, 1, *)
-        `;
+        `);
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);
@@ -2338,26 +2616,26 @@ describe('FSHImporter', () => {
       });
 
       it('should log one error when nested insert rules with parameters result in multiple parser errors in the generated RuleSets', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: MyObservation
         Parent: Observation
         * note 0..1
         * insert FirstRiskyRuleSet("Observation.id")
-        `;
+        `);
         importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(stats.numError).toBe(1);
         expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Errors parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
+          /Error parsing insert rule with parameterized RuleSet FirstRiskyRuleSet/s
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Insert\.fsh.*Line: 5/s);
       });
 
       it('should not log an error when an insert rule with parameters results in rules that are syntactically correct but semantically invalid', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(nonExistentPath, 7, 4)
-        `;
+        `);
         const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
         expect(allDocs).toHaveLength(1);
         const doc = allDocs[0];
@@ -2382,12 +2660,15 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should log one warning when an insert rule with parameters results in warnings', () => {
-        const input = `
+      // Skipping the following rule because SUSHI no longer has any warnings associated w/ parsing rules.
+      // All deprecated syntaxes are now errors (not warnings).  We can re-enable if/when the importer
+      // produces warnings on rules.
+      it.skip('should log one warning when an insert rule with parameters results in warnings', () => {
+        const input = leftAlign(`
         Profile: MyObservation
         Parent: Observation
         * insert WarningRuleSet(Device)
-        `;
+        `);
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numWarn).toBe(1);
@@ -2398,11 +2679,11 @@ describe('FSHImporter', () => {
       });
 
       it('should log one error when an insert rule with parameters results in non-parser errors', () => {
-        const input = `
+        const input = leftAlign(`
         Profile: MyObservation
         Parent: Observation
         * insert CardRuleSet(nonExistentPath, , )
-        `;
+        `);
         importer.import([new RawFSH(input, 'Insert.fsh')]);
 
         expect(stats.numError).toBe(1);

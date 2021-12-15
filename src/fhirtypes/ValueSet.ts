@@ -4,8 +4,8 @@ import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { cloneDeep } from 'lodash';
-import { HasName, HasId } from './common';
-import { applyMixins } from '../utils';
+import { HasName, HasId } from './mixins';
+import { applyMixins } from '../utils/Mixin';
 
 /**
  * Class representing a FHIR R4 ValueSet.

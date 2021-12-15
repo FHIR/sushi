@@ -107,7 +107,7 @@ describe('YAMLConfiguration', () => {
         validation: ['allow-any-extensions', 'no-broken-links']
       });
       expect(config.history).toEqual({
-        current: 'http://build.fhir.org/ig/HL7/example-ig/',
+        current: 'https://build.fhir.org/ig/HL7/example-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -128,6 +128,7 @@ describe('YAMLConfiguration', () => {
       });
       expect(config.FSHOnly).toBeFalse();
       expect(config.applyExtensionMetadataToRoot).toBeTrue();
+      expect(config.instanceOptions).toEqual({ setMetaProfile: 'always', setId: 'always' });
     });
   });
 });

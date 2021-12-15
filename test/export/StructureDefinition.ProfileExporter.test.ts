@@ -2,11 +2,16 @@ import path from 'path';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Profile, Instance } from '../../src/fshtypes';
+import { Profile, Instance, FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { CaretValueRule, ContainsRule } from '../../src/fshtypes/rules';
+import {
+  BindingRule,
+  CaretValueRule,
+  ContainsRule,
+  AssignmentRule
+} from '../../src/fshtypes/rules';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -15,14 +20,11 @@ describe('ProfileExporter', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
@@ -37,6 +39,7 @@ describe('ProfileExporter', () => {
 
   it('should export a single profile', () => {
     const profile = new Profile('Foo');
+    profile.parent = 'Basic';
     doc.profiles.set(profile.name, profile);
     const exported = exporter.export().profiles;
     expect(exported.length).toBe(1);
@@ -44,7 +47,9 @@ describe('ProfileExporter', () => {
 
   it('should export multiple profiles', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
+    profileBar.parent = 'Basic';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     const exported = exporter.export().profiles;
@@ -55,6 +60,7 @@ describe('ProfileExporter', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Baz';
     const profileBar = new Profile('Bar');
+    profileBar.parent = 'Basic';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     const exported = exporter.export().profiles;
@@ -62,16 +68,28 @@ describe('ProfileExporter', () => {
     expect(exported[0].name).toBe('Bar');
   });
 
-  it('should log a message with source information when the parent is not found', () => {
+  it('should log a error with source information when the parent is not found', () => {
     const profile = new Profile('Bogus').withFile('Bogus.fsh').withLocation([2, 9, 4, 23]);
     profile.parent = 'BogusParent';
     doc.profiles.set(profile.name, profile);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Parent BogusParent not found for Bogus/s);
+  });
+
+  it('should log a error with source information when the parent is not provided', () => {
+    const profile = new Profile('Missing').withFile('Missing.fsh').withLocation([2, 9, 4, 23]);
+    doc.profiles.set(profile.name, profile);
+    exporter.export();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Missing\.fsh.*Line: 2 - 4\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The definition for Missing does not include a Parent/s
+    );
   });
 
   it('should export profiles with FSHy parents', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
     doc.profiles.set(profileFoo.name, profileFoo);
@@ -85,6 +103,7 @@ describe('ProfileExporter', () => {
 
   it('should export profiles with the same FSHy parents', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
     const profileBaz = new Profile('Baz');
@@ -103,6 +122,7 @@ describe('ProfileExporter', () => {
 
   it('should export profiles with deep FSHy parents', () => {
     const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Foo';
     const profileBaz = new Profile('Baz');
@@ -125,6 +145,7 @@ describe('ProfileExporter', () => {
     const profileBar = new Profile('Bar');
     profileBar.parent = 'Baz';
     const profileBaz = new Profile('Baz');
+    profileBaz.parent = 'Basic';
     doc.profiles.set(profileFoo.name, profileFoo);
     doc.profiles.set(profileBar.name, profileBar);
     doc.profiles.set(profileBaz.name, profileBaz);
@@ -137,12 +158,87 @@ describe('ProfileExporter', () => {
     expect(exported[2].baseDefinition === exported[1].url);
   });
 
+  it('should export a profile with a logical parent', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'ELTSSServiceModel';
+    doc.profiles.set(profile.name, profile);
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].kind).toBe('logical');
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
+  it('should export profiles with deep logical parents', () => {
+    const fooProfile = new Profile('Foo');
+    fooProfile.parent = 'ELTSSServiceModel';
+    const barProfile = new Profile('Bar');
+    barProfile.parent = 'Foo';
+    doc.profiles.set(fooProfile.name, fooProfile);
+    doc.profiles.set(barProfile.name, barProfile);
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(2);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].kind).toBe('logical');
+    expect(exported[1].name).toBe('Bar');
+    expect(exported[1].kind).toBe('logical');
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
+  it('should export profiles with profile instance parents', () => {
+    const parentProfileInstance = new Instance('ParentProfile');
+    parentProfileInstance.instanceOf = 'StructureDefinition';
+    parentProfileInstance.usage = 'Definition';
+    const parentName = new AssignmentRule('name');
+    parentName.value = 'ParentProfile';
+    const parentStatus = new AssignmentRule('status');
+    parentStatus.value = new FshCode('active');
+    const parentKind = new AssignmentRule('kind');
+    parentKind.value = new FshCode('resource');
+    const parentAbstract = new AssignmentRule('abstract');
+    parentAbstract.value = false;
+    const parentType = new AssignmentRule('type');
+    parentType.value = 'Observation';
+    const parentDerivation = new AssignmentRule('derivation');
+    parentDerivation.value = new FshCode('constraint');
+    const parentBaseDefinition = new AssignmentRule('baseDefinition');
+    parentBaseDefinition.value = 'http://hl7.org/fhir/StructureDefinition/Observation';
+    const parentElementId = new AssignmentRule('snapshot.element[0].id');
+    parentElementId.value = 'Observation';
+    const parentElementPath = new AssignmentRule('snapshot.element[0].path');
+    parentElementPath.value = 'Observation';
+    parentProfileInstance.rules.push(
+      parentName,
+      parentStatus,
+      parentKind,
+      parentAbstract,
+      parentType,
+      parentDerivation,
+      parentBaseDefinition,
+      parentElementId,
+      parentElementPath
+    );
+    doc.instances.set(parentProfileInstance.name, parentProfileInstance);
+
+    const childProfile = new Profile('ChildProfile');
+    childProfile.parent = 'ParentProfile';
+    doc.profiles.set(childProfile.name, childProfile);
+    const exported = exporter.export().profiles;
+    expect(exported).toHaveLength(1);
+    expect(exported[0].name).toBe('ChildProfile');
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/ParentProfile'
+    );
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
   it('should defer adding an instance to a profile as a contained resource', () => {
     const instance = new Instance('myResource');
     instance.instanceOf = 'Observation';
     doc.instances.set(instance.name, instance);
 
     const profile = new Profile('ContainingProfile');
+    profile.parent = 'Basic';
     const caretValueRule = new CaretValueRule('');
     caretValueRule.caretPath = 'contained';
     caretValueRule.value = 'myResource';
@@ -156,6 +252,19 @@ describe('ProfileExporter', () => {
     expect(exporter.deferredRules.size).toBe(1);
     expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
     expect(exporter.deferredRules.get(exported[0])).toContainEqual(caretValueRule);
+  });
+
+  it('should throw a MismatchedBindingTypeError when a code property is bound to a code system', () => {
+    const profile = new Profile('TestProfile');
+    profile.parent = 'Patient';
+    const bindingRule = new BindingRule('identifier.type');
+    bindingRule.valueSet = 'W3cProvenanceActivityType';
+    bindingRule.strength = 'required';
+    profile.rules.push(bindingRule);
+    doc.profiles.set(profile.name, profile);
+    exporter.export();
+
+    expect(loggerSpy.getLastMessage('error')).toMatch(/A ValueSet must be used./);
   });
 
   it('should log an error when an inline extension is used', () => {
@@ -173,7 +282,7 @@ describe('ProfileExporter', () => {
 
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyObservation\.fsh.*Line: 3\D*/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Inline extensions should not be used on profiles/s
+      /Inline extensions should only be defined in Extensions/s
     );
   });
 });

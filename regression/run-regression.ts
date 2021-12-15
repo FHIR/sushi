@@ -8,8 +8,9 @@ import program from 'commander';
 import readlineSync from 'readline-sync';
 import extract from 'extract-zip';
 import opener from 'opener';
-import { union } from 'lodash';
+import { isEqual, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
+import chalk from 'chalk';
 
 // Track temporary files so they are deleted when the process exits
 temp.track();
@@ -104,7 +105,10 @@ class Config {
 
 class Repo {
   public changed: boolean;
+  public error: boolean;
   public elapsed: number;
+  public sushiErrorNum1: number;
+  public sushiErrorNum2: number;
 
   constructor(public name: string, public branch: string) {}
 
@@ -128,10 +132,18 @@ async function main() {
     const repoStart = new Date();
     console.log();
     console.log(`Processing ${repo.name}#${repo.branch} (${i++} of ${repos.length})`);
-    await downloadAndExtractRepo(repo, config);
+    try {
+      await downloadAndExtractRepo(repo, config);
+    } catch (e) {
+      console.log(
+        chalk.redBright(`Regression aborted for ${repo.name}#${repo.branch}: ${e.message}`)
+      );
+      repo.error = true;
+      continue;
+    }
     // We can only run SUSHI one at a time due to its asynch management of the .fhir cache
-    await runSUSHI(1, repo, config);
-    await runSUSHI(2, repo, config);
+    repo.sushiErrorNum1 = await runSUSHI(1, repo, config);
+    repo.sushiErrorNum2 = await runSUSHI(2, repo, config);
     await generateDiff(repo, config, htmlTemplate);
     repo.elapsed = Math.ceil((new Date().getTime() - repoStart.getTime()) / 1000);
   }
@@ -269,11 +281,11 @@ async function downloadAndExtractZip(zipURL: string, zipPath: string, extractTo:
   await fs.unlink(zipPath);
 }
 
-async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<void> {
+async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<number> {
   const version = config.getVersion(num);
   const repoSUSHIDir = config.getRepoSUSHIDir(repo, num);
   console.log(`  - Running SUSHI ${version}`);
-  let result: { stdout: string; stderr: string };
+  let result: { stdout: string; stderr: string; code?: number };
   try {
     result = await util.promisify(execFile)(
       config.getSUSHIExecFile(num),
@@ -292,6 +304,7 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<void> {
   out += '==================================== STDERR ====================================\n';
   out += result.stderr || '<empty>';
   await fs.writeFile(`${repoSUSHIDir}.log`, out, 'utf8');
+  return result.code ?? 0;
 }
 
 async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): Promise<void> {
@@ -312,6 +325,12 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
     const v1File = path.join(repoSUSHIDir1, file);
     const v2File = path.join(repoSUSHIDir2, file);
     const [v1Contents, v2Contents] = await Promise.all([readFile(v1File), readFile(v2File)]);
+
+    try {
+      if (isEqual(JSON.parse(v1Contents), JSON.parse(v2Contents))) {
+        continue;
+      }
+    } catch {}
 
     const v1Label = path.relative(config.getRepoDir(repo), v1File);
     const v2Label = path.relative(config.getRepoDir(repo), v2File);
@@ -385,8 +404,8 @@ async function createReport(repos: Repo[], config: Config) {
         <tr>
           <th>Repo</th>
           <th>Diff</th>
-          <th>Log 1</th>
-          <th>Log 2</th>
+          <th>Log 1 (# errors)</th>
+          <th>Log 2 (# errors)</th>
           <th>Time (sec)</th>
         </tr>
       </thead>
@@ -394,10 +413,11 @@ async function createReport(repos: Repo[], config: Config) {
 `,
     { encoding: 'utf8' }
   );
-  for (const repo of repos) {
+  for (const repo of repos.filter(r => !r.error)) {
     const sushiLog1 = config.getRepoSUSHILogFile(repo, 1);
     const sushiLog2 = config.getRepoSUSHILogFile(repo, 2);
     const diffReport = config.getRepoDiffReport(repo);
+    // prettier-ignore
     await fs.appendFile(
       reportFile,
       `
@@ -406,8 +426,14 @@ async function createReport(repos: Repo[], config: Config) {
             <td style="padding: 10px;">${
               repo.changed ? `<a href="${diffReport}">${path.basename(diffReport)}</a>` : 'n/a'
             }</td>
-            <td style="padding: 10px;"><a href="${sushiLog1}">${path.basename(sushiLog1)}</a></td>
-            <td style="padding: 10px;"><a href="${sushiLog2}">${path.basename(sushiLog2)}</a></td>
+            <td style="padding: 10px;">
+              <a href="${sushiLog1}">${path.basename(sushiLog1)}</a>
+              (<span${repo.sushiErrorNum1 > 0 ? ' style="color:red"' : ''}>${repo.sushiErrorNum1}</span>)
+            </td>
+            <td style="padding: 10px;">
+              <a href="${sushiLog2}">${path.basename(sushiLog2)}</a>
+              (<span${repo.sushiErrorNum2 > 0 ? ' style="color:red"' : ''}>${repo.sushiErrorNum2}</span>)
+            </td>
             <td style="padding: 10px;">${repo.elapsed}</td>
           </tr>
 `,
@@ -424,7 +450,17 @@ async function createReport(repos: Repo[], config: Config) {
 `,
     { encoding: 'utf8' }
   );
-
+  const numError = repos.reduce((sum, repo) => sum + (repo.error ? 1 : 0), 0);
+  if (numError > 0) {
+    console.log();
+    console.log(
+      chalk.redBright(
+        `Processing errors detected. Unable to run regression on ${numError} of ${
+          repos.length
+        } repo${repos.length > 1 ? 's' : ''}.`
+      )
+    );
+  }
   console.log();
   const numChanged = repos.reduce((sum, repo) => sum + (repo.changed ? 1 : 0), 0);
   if (numChanged > 0) {

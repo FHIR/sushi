@@ -4,35 +4,47 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
-import { TestFisher } from '../testhelpers';
-import { FshCode } from '../../src/fshtypes';
+import { loggerSpy, TestFisher } from '../testhelpers';
+import { FshCode, Invariant, Logical, Resource } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
-import { OnlyRule } from '../../src/fshtypes/rules';
+import { AddElementRule, ObeysRule, OnlyRule } from '../../src/fshtypes/rules';
 import { InstanceDefinition } from '../../src/fhirtypes';
+import { FSHDocument, FSHTank } from '../../src/import';
+import { minimalConfig } from '../utils/minimalConfig';
+import { Package, StructureDefinitionExporter } from '../../src/export';
+import { ValidationError } from '../../src/errors';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let observation: StructureDefinition;
+  let jsonPlanDefinition: any;
+  let planDefinition: StructureDefinition;
   let resprate: StructureDefinition;
+  let usCoreObservation: StructureDefinition;
+  let jsonUsCoreObservation: StructureDefinition;
   let fisher: TestFisher;
+
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
-
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
+    usCoreObservation = fisher.fishForStructureDefinition('us-core-observation-lab');
+    jsonUsCoreObservation = defs.fishForFHIR('us-core-observation-lab', Type.Profile);
+    planDefinition = fisher.fishForStructureDefinition('PlanDefinition');
+    jsonPlanDefinition = defs.fishForFHIR('PlanDefinition', Type.Resource);
   });
+
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    planDefinition = StructureDefinition.fromJSON(jsonPlanDefinition);
+    usCoreObservation = StructureDefinition.fromJSON(jsonUsCoreObservation);
     resprate = fisher.fishForStructureDefinition('resprate');
   });
+
   describe('#fromJSON', () => {
     it('should load a resource properly', () => {
       // Don't test everything, but get a sample anyway
@@ -116,12 +128,12 @@ describe('StructureDefinition', () => {
     });
 
     it('should reflect differentials for elements that changed after capturing originals', () => {
-      const code = observation.elements.find(e => e.id === 'Observation.code');
+      const code = usCoreObservation.elements.find(e => e.id === 'Observation.code');
       code.short = 'Special observation code';
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.min = 1;
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       expect(json.differential.element).toHaveLength(2);
       expect(json.differential.element[0]).toEqual({
         id: 'Observation.code',
@@ -136,12 +148,12 @@ describe('StructureDefinition', () => {
     });
 
     it('should reflect differentials for elements that changed after capturing originals without generating snapshot', () => {
-      const code = observation.elements.find(e => e.id === 'Observation.code');
+      const code = usCoreObservation.elements.find(e => e.id === 'Observation.code');
       code.short = 'Special observation code';
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.min = 1;
 
-      const json = observation.toJSON(false);
+      const json = usCoreObservation.toJSON(false);
       expect(json.differential.element).toHaveLength(2);
       expect(json.differential.element[0]).toEqual({
         id: 'Observation.code',
@@ -157,10 +169,12 @@ describe('StructureDefinition', () => {
     });
 
     it('should generate sparse differentials', () => {
-      const componentCode = observation.elements.find(e => e.id === 'Observation.component.code');
+      const componentCode = usCoreObservation.elements.find(
+        e => e.id === 'Observation.component.code'
+      );
       componentCode.short = 'Special component code';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       expect(json.differential.element).toHaveLength(1);
       expect(json.differential.element[0]).toEqual({
         id: 'Observation.component.code',
@@ -170,19 +184,21 @@ describe('StructureDefinition', () => {
     });
 
     it('should reflect basic differential for structure definitions with no changes', () => {
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
     });
 
     it('should reflect basic differential for structure definitions with no changes without generating snapshot', () => {
-      const json = observation.toJSON(false);
+      const json = usCoreObservation.toJSON(false);
       expect(json.differential).toEqual({ element: [{ id: 'Observation', path: 'Observation' }] });
       expect(json.snapshot).toBeUndefined();
     });
 
     it('should properly serialize snapshot and differential for constrained choice type with constraints on specific choices', () => {
       // constrain value[x] to only a Quantity or string and give each its own short
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       valueX.sliceIt('type', '$this', false, 'open');
       const valueConstraint = new OnlyRule('value[x]');
       valueConstraint.types = [{ type: 'Quantity' }, { type: 'string' }];
@@ -192,9 +208,11 @@ describe('StructureDefinition', () => {
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       valueString.short = 'the string choice';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
-      const valueXSnapshot = json.snapshot.element[21];
+      const valueXSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       expect(valueXSnapshot.id).toBe('Observation.value[x]');
       expect(valueXSnapshot.path).toBe('Observation.value[x]');
       expect(valueXSnapshot.type).toEqual([{ code: 'Quantity' }, { code: 'string' }]);
@@ -203,13 +221,17 @@ describe('StructureDefinition', () => {
         ordered: false,
         rules: 'open'
       });
-      const valueQuantitySnapshot = json.snapshot.element[22];
+      const valueQuantitySnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueQuantity'
+      );
       expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
       expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringSnapshot = json.snapshot.element[23];
+      const valueStringSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueString'
+      );
       expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
       expect(valueStringSnapshot.path).toBe('Observation.value[x]');
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
@@ -243,7 +265,7 @@ describe('StructureDefinition', () => {
     });
 
     it('should properly serialize snapshot and differential for unconstrained choice type with constraints on specific choices', () => {
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.sliceIt('type', '$this', false, 'open');
       // note: NOT constraining value[x] types.  Just adding specific elements for valueQuantity and valueString.
       const valueQuantity = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
@@ -251,9 +273,11 @@ describe('StructureDefinition', () => {
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       valueString.short = 'the string choice';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
-      const valueXSnapshot = json.snapshot.element[21];
+      const valueXSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       expect(valueXSnapshot.id).toBe('Observation.value[x]');
       expect(valueXSnapshot.path).toBe('Observation.value[x]');
       expect(valueXSnapshot.type).toHaveLength(11);
@@ -262,13 +286,17 @@ describe('StructureDefinition', () => {
         ordered: false,
         rules: 'open'
       });
-      const valueQuantitySnapshot = json.snapshot.element[22];
+      const valueQuantitySnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueQuantity'
+      );
       expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
       expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringSnapshot = json.snapshot.element[23];
+      const valueStringSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueString'
+      );
       expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
       expect(valueStringSnapshot.path).toBe('Observation.value[x]');
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
@@ -293,7 +321,7 @@ describe('StructureDefinition', () => {
     it('should properly serialize snapshot and differential for choice type with non-type constraint and with constraints on specific choices', () => {
       // This is the same test as above, but we add a non-type constraint on value[x] to make sure it doesn't get
       // blindly thrown away just because it doesn't constrain the types
-      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueX = usCoreObservation.elements.find(e => e.id === 'Observation.value[x]');
       valueX.short = 'a choice of many things';
       valueX.sliceIt('type', '$this', false, 'open');
       // note: NOT constraining value[x] types.  Just adding specific elements for valueQuantity and valueString.
@@ -302,9 +330,11 @@ describe('StructureDefinition', () => {
       const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
       valueString.short = 'the string choice';
 
-      const json = observation.toJSON();
+      const json = usCoreObservation.toJSON();
       // first check the snapshot value[x], value[x]:valueQuantity, and value[x]:valueString for formal correctness
-      const valueXSnapshot = json.snapshot.element[21];
+      const valueXSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]'
+      );
       expect(valueXSnapshot.id).toBe('Observation.value[x]');
       expect(valueXSnapshot.path).toBe('Observation.value[x]');
       expect(valueXSnapshot.type).toHaveLength(11);
@@ -314,13 +344,17 @@ describe('StructureDefinition', () => {
         ordered: false,
         rules: 'open'
       });
-      const valueQuantitySnapshot = json.snapshot.element[22];
+      const valueQuantitySnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueQuantity'
+      );
       expect(valueQuantitySnapshot.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantitySnapshot.path).toBe('Observation.value[x]');
       expect(valueQuantitySnapshot.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantitySnapshot.sliceName).toEqual('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringSnapshot = json.snapshot.element[23];
+      const valueStringSnapshot = json.snapshot.element.find(
+        (e: ElementDefinition) => e.id === 'Observation.value[x]:valueString'
+      );
       expect(valueStringSnapshot.id).toBe('Observation.value[x]:valueString');
       expect(valueStringSnapshot.path).toBe('Observation.value[x]');
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
@@ -411,6 +445,292 @@ describe('StructureDefinition', () => {
       expect(catDiff).toEqual({
         id: 'Observation.category',
         path: 'Observation.category'
+      });
+    });
+
+    describe('#toJson - Logicals and Resources', () => {
+      let addElementRule1: AddElementRule;
+      let addElementRule2: AddElementRule;
+      let invariant: Invariant;
+      let doc: FSHDocument;
+      let exporter: StructureDefinitionExporter;
+
+      beforeAll(() => {
+        addElementRule1 = new AddElementRule('prop1');
+        addElementRule1.min = 0;
+        addElementRule1.max = '1';
+        addElementRule1.types = [{ type: 'dateTime' }];
+        addElementRule1.short = 'property1 dateTime';
+
+        addElementRule2 = new AddElementRule('prop2');
+        addElementRule2.min = 0;
+        addElementRule2.max = '*';
+        addElementRule2.types = [{ type: 'string' }];
+        addElementRule2.short = 'property2 string';
+      });
+
+      beforeEach(() => {
+        loggerSpy.reset();
+        doc = new FSHDocument('fileName');
+        invariant = new Invariant('TestInvariant');
+        doc.invariants.set(invariant.name, invariant);
+
+        const input = new FSHTank([doc], minimalConfig);
+        const pkg = new Package(input.config);
+        const fisher = new TestFisher(input, defs, pkg);
+        exporter = new StructureDefinitionExporter(input, pkg, fisher);
+      });
+
+      it('should properly serialize snapshot and differential root elements for logical model', () => {
+        const logical = new Logical('MyTestModel');
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(3);
+        expect(json.differential.element).toHaveLength(3);
+
+        const expectedSnapshotRootElement = {
+          id: 'MyModel',
+          path: 'MyModel',
+          min: 0,
+          max: '*',
+          base: {
+            path: 'MyModel',
+            min: 0,
+            max: '*'
+          },
+          constraint: [
+            {
+              key: 'ele-1',
+              severity: 'error',
+              human: 'All FHIR elements must have a @value or children',
+              expression: 'hasValue() or (children().count() > id.count())',
+              xpath: '@value|f:*|h:div',
+              source: 'http://hl7.org/fhir/StructureDefinition/Element'
+            }
+          ],
+          isModifier: false
+        };
+        expect(json.snapshot.element[0]).toStrictEqual(expectedSnapshotRootElement);
+
+        const expectedDifferentialRootElement = {
+          id: 'MyModel',
+          path: 'MyModel'
+        };
+        expect(json.differential.element[0]).toStrictEqual(expectedDifferentialRootElement);
+      });
+
+      it('should properly serialize snapshot and differential elements with constraint for logical model', () => {
+        const logical = new Logical('MyTestModel');
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        const obeysRule = new ObeysRule('prop2');
+        obeysRule.invariant = invariant.id;
+        logical.rules.push(obeysRule);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(3);
+        expect(json.differential.element).toHaveLength(3);
+
+        const prop2Snap = json.snapshot.element.find(
+          (e: ElementDefinition) => e.path === 'MyModel.prop2'
+        );
+        expect(prop2Snap.constraint).toHaveLength(2);
+
+        const prop2Diff = json.differential.element.find(
+          (e: ElementDefinition) => e.path === 'MyModel.prop2'
+        );
+        expect(prop2Diff.constraint).toHaveLength(1);
+        const expectedDiffConstraint = {
+          key: 'TestInvariant',
+          source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel'
+        };
+        expect(prop2Diff.constraint[0]).toStrictEqual(expectedDiffConstraint);
+      });
+
+      it('should properly serialize snapshot and differential root elements for resource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'Resource';
+        resource.title = 'MyTestResource Title';
+        resource.description = 'MyTestResource description goes here.';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(7);
+        expect(json.differential.element).toHaveLength(3);
+
+        const expectedSnapshotRootElement = {
+          id: 'MyResource',
+          path: 'MyResource',
+          short: 'MyTestResource Title',
+          definition: 'MyTestResource description goes here.',
+          min: 0,
+          max: '*',
+          base: {
+            path: 'MyResource',
+            min: 0,
+            max: '*'
+          },
+          isModifier: false,
+          isSummary: false,
+          mapping: [
+            {
+              identity: 'rim',
+              map: 'Entity. Role, or Act'
+            }
+          ]
+        };
+        expect(json.snapshot.element[0]).toStrictEqual(expectedSnapshotRootElement);
+
+        const expectedDifferentialRootElement = {
+          id: 'MyResource',
+          path: 'MyResource',
+          short: 'MyTestResource Title',
+          definition: 'MyTestResource description goes here.'
+        };
+        expect(json.differential.element[0]).toStrictEqual(expectedDifferentialRootElement);
+      });
+
+      it('should properly serialize snapshot and differential elements with constraint for resource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'Resource';
+        resource.title = 'MyTestResource Title';
+        resource.description = 'MyTestResource description goes here.';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        const obeysRule = new ObeysRule('prop2');
+        obeysRule.invariant = invariant.id;
+        resource.rules.push(obeysRule);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(7);
+        expect(json.differential.element).toHaveLength(3);
+
+        const prop2Snap = json.snapshot.element.find(
+          (e: ElementDefinition) => e.path === 'MyResource.prop2'
+        );
+        expect(prop2Snap.constraint).toHaveLength(2);
+
+        const prop2Diff = json.differential.element.find(
+          (e: ElementDefinition) => e.path === 'MyResource.prop2'
+        );
+        expect(prop2Diff.constraint).toHaveLength(1);
+        const expectedDiffConstraint = {
+          key: 'TestInvariant',
+          source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyResource'
+        };
+        expect(prop2Diff.constraint[0]).toStrictEqual(expectedDiffConstraint);
+      });
+
+      it('should properly serialize snapshot and differential for logical model with parent set to Base', () => {
+        const logical = new Logical('MyTestModel');
+        logical.parent = 'Base';
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(3);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for logical model with parent set to Element', () => {
+        const logical = new Logical('MyTestModel');
+        logical.parent = 'Element';
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(5);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for logical model with parent set to AlternateIdentification', () => {
+        const logical = new Logical('MyTestModel');
+        logical.parent = 'AlternateIdentification';
+        logical.id = 'MyModel';
+        logical.rules.push(addElementRule1);
+        logical.rules.push(addElementRule2);
+        doc.logicals.set(logical.name, logical);
+
+        const exported = exporter.export().logicals;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(8);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for custom resource with parent set to Resource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'Resource';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(7);
+        expect(json.differential.element).toHaveLength(3);
+      });
+
+      it('should properly serialize snapshot and differential for custom resource with parent set to DomainResource', () => {
+        const resource = new Resource('MyTestResource');
+        resource.parent = 'DomainResource';
+        resource.id = 'MyResource';
+        resource.rules.push(addElementRule1);
+        resource.rules.push(addElementRule2);
+        doc.resources.set(resource.name, resource);
+
+        const exported = exporter.export().resources;
+        expect(exported).toHaveLength(1);
+
+        const json = exported[0].toJSON(true);
+        expect(json).toBeDefined();
+        expect(json.snapshot.element).toHaveLength(11);
+        expect(json.differential.element).toHaveLength(3);
       });
     });
   });
@@ -559,6 +879,20 @@ describe('StructureDefinition', () => {
       const VSCat = respRate.findElementByPath('category[VSCat]', fisher);
       expect(VSCat).toBeDefined();
       expect(VSCat.id).toBe('Observation.category:VSCat');
+    });
+
+    it('should find a sliced element by path when a previous element in a different slice has a child w/ the same slice name', () => {
+      // This test is intended to reproduce the problematic edge case in this issue: https://github.com/FHIR/sushi/issues/956
+      const Cat = respRate.findElement('Observation.category');
+      Cat.addSlice('CommonName');
+
+      const VSCatCoding = respRate.findElement('Observation.category:VSCat.coding');
+      VSCatCoding.slicing = { discriminator: [{ type: 'pattern', path: '$this' }], rules: 'open' };
+      VSCatCoding.addSlice('CommonName');
+
+      const VSCat = respRate.findElementByPath('category[CommonName]', fisher);
+      expect(VSCat).toBeDefined();
+      expect(VSCat.id).toBe('Observation.category:CommonName');
     });
 
     it('should find a child of a sliced element by path', () => {
@@ -1204,6 +1538,23 @@ describe('StructureDefinition', () => {
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
 
+    it('should allow setting abritrary defined extensions by url', () => {
+      const originalLength = respRate.elements.length;
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'extension[http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName].value[x]',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'extension',
+        brackets: ['patient-mothersMaidenName', '0'],
+        slices: ['patient-mothersMaidenName']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 5);
+    });
+
     it('should allow setting nested arbitrary defined extensions', () => {
       const originalLength = respRate.elements.length;
       const { assignedValue, pathParts } = respRate.validateValueAtPath(
@@ -1227,6 +1578,50 @@ describe('StructureDefinition', () => {
       }).toThrow(
         'The element or path you referenced does not exist: extension[fake-extension].value[x]'
       );
+    });
+
+    it('should rename extensions when they are referred to by name instead of sliceName', () => {
+      const originalLength = respRate.elements.length;
+      const extension = respRate.findElementByPath('extension', fisher);
+      extension.sliceIt('type', '$this', false, 'open');
+      const slice = extension.addSlice('maiden-name');
+      slice.type[0].profile = ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'];
+
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'extension[patient-mothersMaidenName].valueString',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'extension',
+        brackets: ['maiden-name', '0'],
+        slices: ['maiden-name']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 6);
+    });
+
+    it('should rename modifierExtensions when they are referred to by name instead of sliceName', () => {
+      const originalLength = respRate.elements.length;
+      const modExtension = respRate.findElementByPath('modifierExtension', fisher);
+      modExtension.sliceIt('type', '$this', false, 'open');
+      const slice = modExtension.addSlice('maiden-name');
+      slice.type[0].profile = ['http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'];
+
+      const { assignedValue, pathParts } = respRate.validateValueAtPath(
+        'modifierExtension[patient-mothersMaidenName].valueString',
+        'foo',
+        fisher
+      );
+      expect(assignedValue).toBe('foo');
+      expect(pathParts.length).toBe(2);
+      expect(pathParts[0]).toEqual({
+        base: 'modifierExtension',
+        brackets: ['maiden-name', '0'],
+        slices: ['maiden-name']
+      });
+      expect(respRate.elements.length).toBe(originalLength + 6);
     });
 
     describe('#Inline Instances', () => {
@@ -1445,15 +1840,12 @@ describe('StructureDefinition', () => {
 
       it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle', () => {
         const gender = new FshCode('F');
-        const {
-          assignedValue,
-          pathParts
-        } = respRate.validateValueAtPath('contained[0].entry[0].resource.gender', gender, fisher, [
-          'Bundle',
-          null,
-          'Patient',
-          null
-        ]);
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].entry[0].resource.gender',
+          gender,
+          fisher,
+          ['Bundle', null, 'Patient', null]
+        );
         expect(assignedValue).toBe('F');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
@@ -1465,10 +1857,7 @@ describe('StructureDefinition', () => {
 
       it('should allow overriding a Resource with a Patient within a Resource overriden by a Bundle within a Bundle', () => {
         const gender = new FshCode('F');
-        const {
-          assignedValue,
-          pathParts
-        } = respRate.validateValueAtPath(
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
           'contained[0].entry[0].resource.entry[0].resource.gender',
           gender,
           fisher,
@@ -1487,14 +1876,12 @@ describe('StructureDefinition', () => {
 
       it('should allow overriding a Resource with a Profile', () => {
         const unit = 'slugs';
-        const {
-          assignedValue,
-          pathParts
-        } = respRate.validateValueAtPath('contained[0].valueQuantity.unit', unit, fisher, [
-          'http://hl7.org/fhir/StructureDefinition/resprate',
-          null,
-          null
-        ]);
+        const { assignedValue, pathParts } = respRate.validateValueAtPath(
+          'contained[0].valueQuantity.unit',
+          unit,
+          fisher,
+          ['http://hl7.org/fhir/StructureDefinition/resprate', null, null]
+        );
         expect(assignedValue).toBe('slugs');
         expect(pathParts).toEqual([
           { base: 'contained', brackets: ['0'] },
@@ -1660,25 +2047,65 @@ describe('StructureDefinition', () => {
     });
   });
 
-  describe('#getReferenceName', () => {
+  describe('#getReferenceOrCanonicalName', () => {
     let basedOn: ElementDefinition;
+    let actDef: ElementDefinition;
     beforeEach(() => {
       basedOn = observation.findElement('Observation.basedOn');
+      actDef = planDefinition.findElement('PlanDefinition.action.definition[x]');
     });
 
-    it('should find the target when it exists', () => {
-      const refTarget = observation.getReferenceName('basedOn[MedicationRequest]', basedOn);
+    it('should find the reference target when it exists', () => {
+      const refTarget = observation.getReferenceOrCanonicalName(
+        'basedOn[MedicationRequest]',
+        basedOn
+      );
       expect(refTarget).toBe('MedicationRequest');
     });
 
-    it('should not find the target when it does not exist', () => {
-      const refTarget = observation.getReferenceName('basedOn[foo]', basedOn);
+    it('should not find the reference target when it does not exist', () => {
+      const refTarget = observation.getReferenceOrCanonicalName('basedOn[foo]', basedOn);
       expect(refTarget).toBeUndefined();
     });
 
-    it('should not find the target when there are no brackets', () => {
-      const refTarget = observation.getReferenceName('basedOn', basedOn);
+    it('should not find the reference target when there are no brackets', () => {
+      const refTarget = observation.getReferenceOrCanonicalName('basedOn', basedOn);
       expect(refTarget).toBeUndefined();
+    });
+
+    it('should find the canonical target when it exists', () => {
+      const canTarget = planDefinition.getReferenceOrCanonicalName(
+        'action.definition[x][ActivityDefinition]',
+        actDef
+      );
+      expect(canTarget).toBe('ActivityDefinition');
+    });
+
+    it('should not find the reference target when it does not exist', () => {
+      const canTarget = planDefinition.getReferenceOrCanonicalName(
+        'action.definition[x][foo]',
+        actDef
+      );
+      expect(canTarget).toBeUndefined();
+    });
+
+    it('should not find the reference target when there are no brackets', () => {
+      const canTarget = planDefinition.getReferenceOrCanonicalName('action.definition[x]', actDef);
+      expect(canTarget).toBeUndefined();
+    });
+  });
+
+  describe('#valid', () => {
+    it('should log an error when at least one element is invalid', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const errorSpy = jest
+        .spyOn(valueX, 'validate')
+        .mockReturnValue([new ValidationError('issue', 'path')]);
+
+      const validationErrors = observation.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(/Observation\.value\[x\] \^path: issue/);
+      errorSpy.mockRestore();
     });
   });
 });

@@ -6,4 +6,12 @@ export class ObeysRule extends Rule {
   constructor(path: string) {
     super(path);
   }
+
+  get constructorName() {
+    return 'ObeysRule';
+  }
+
+  toFSH(): string {
+    return `* ${this.path === '.' ? '' : `${this.path} `}obeys ${this.invariant}`;
+  }
 }

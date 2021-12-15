@@ -1,3 +1,5 @@
+import 'jest-extended';
+import { get } from 'lodash';
 import {
   Rule,
   CardRule,
@@ -14,9 +16,12 @@ import {
   MappingRule,
   InsertRule,
   ValueSetConceptComponentRule,
-  ValueSetFilterComponentRule
+  ValueSetFilterComponentRule,
+  AddElementRule,
+  ConceptRule
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
+import { splitOnPathPeriods } from '../../src/fhirtypes/common';
 
 export function assertCardRule(rule: Rule, path: string, min: number, max: number | string): void {
   expect(rule).toBeInstanceOf(CardRule);
@@ -100,7 +105,8 @@ export function assertCaretValueRule(
   path: string,
   caretPath: string,
   value: AssignmentValueType,
-  isInstance: boolean
+  isInstance: boolean,
+  pathArray?: string[]
 ): void {
   expect(rule).toBeInstanceOf(CaretValueRule);
   const caretValueRule = rule as CaretValueRule;
@@ -108,6 +114,7 @@ export function assertCaretValueRule(
   expect(caretValueRule.caretPath).toBe(caretPath);
   expect(caretValueRule.value).toEqual(value);
   expect(caretValueRule.isInstance).toBe(isInstance);
+  expect(caretValueRule.pathArray).toEqual(pathArray ?? splitOnPathPeriods(path).filter(p => p));
 }
 
 export function assertObeysRule(rule: Rule, path: string, invariant: string) {
@@ -117,12 +124,19 @@ export function assertObeysRule(rule: Rule, path: string, invariant: string) {
   expect(obeysRule.invariant).toBe(invariant);
 }
 
-export function assertInsertRule(rule: Rule, ruleSet: string, params: string[] = []) {
+export function assertInsertRule(
+  rule: Rule,
+  path: string,
+  ruleSet: string,
+  params: string[] = [],
+  pathArray: string[] = []
+) {
   expect(rule).toBeInstanceOf(InsertRule);
   const insertRule = rule as InsertRule;
-  expect(insertRule.path).toBe('');
+  expect(insertRule.path).toBe(path);
   expect(insertRule.ruleSet).toBe(ruleSet);
   expect(insertRule.params).toEqual(params);
+  expect(insertRule.pathArray).toEqual(pathArray);
 }
 
 export function assertMappingRule(
@@ -168,4 +182,105 @@ export function assertValueSetFilterComponent(
   expect(filterComponent.from.valueSets).toEqual(fromValueSets);
   expect(filterComponent.filters).toEqual(filters);
   expect(filterComponent.inclusion).toBe(included);
+}
+
+export interface AddElementCard {
+  min: number;
+  max: string;
+}
+
+export interface AddElementFlags {
+  mustSupport?: boolean;
+  summary?: boolean;
+  modifier?: boolean;
+  trialUse?: boolean;
+  normative?: boolean;
+  draft?: boolean;
+}
+
+export interface AddElementType {
+  type: string;
+  isReference?: boolean;
+  isCanonical?: boolean;
+}
+
+export interface AddElementDefs {
+  short?: string;
+  definition?: string;
+}
+
+export interface AddElementArgs {
+  card: AddElementCard;
+  flags?: AddElementFlags;
+  types: AddElementType[];
+  defs?: AddElementDefs;
+}
+
+export function assertAddElementRule(rule: Rule, path: string, args: AddElementArgs): void {
+  expect(rule).toBeInstanceOf(AddElementRule);
+  const addElementRule = rule as AddElementRule;
+  expect(addElementRule.constructorName).toStrictEqual('AddElementRule');
+  expect(addElementRule.path).toBe(path);
+
+  expect(addElementRule.min).toBe(args.card.min);
+  expect(addElementRule.max).toBe(args.card.max);
+
+  if (args.flags) {
+    if (args.flags.mustSupport) {
+      expect(addElementRule.mustSupport).toBe(args.flags.mustSupport);
+    }
+    if (args.flags.summary) {
+      expect(addElementRule.summary).toBe(args.flags.summary);
+    }
+    if (args.flags.modifier) {
+      expect(addElementRule.modifier).toBe(args.flags.modifier);
+    }
+    if (args.flags.trialUse) {
+      expect(addElementRule.trialUse).toBe(args.flags.trialUse);
+    }
+    if (args.flags.normative) {
+      expect(addElementRule.normative).toBe(args.flags.normative);
+    }
+    if (args.flags.draft) {
+      expect(addElementRule.draft).toBe(args.flags.draft);
+    }
+  }
+
+  // The parser does not return the 'isReference' or 'isCanonical' attribute if they are false.
+  // To compare with the test's expected values, we need to remove the args.type's 'isReference'
+  // and/or 'isCanonical' attributes when they are false.
+  const expectedTypes = args.types.map(t => {
+    if (get(t, 'isReference', false)) {
+      return { type: t.type, isReference: true };
+    } else if (get(t, 'isCanonical', false)) {
+      return { type: t.type, isCanonical: true };
+    }
+    return { type: t.type };
+  });
+  expect(addElementRule.types).toIncludeSameMembers(expectedTypes);
+
+  if (args.defs) {
+    if (args.defs.short) {
+      expect(addElementRule.short).toBe(args.defs.short);
+    }
+    if (args.defs.definition) {
+      expect(addElementRule.definition).toBe(args.defs.definition);
+    }
+  }
+}
+export function assertConceptRule(
+  rule: Rule,
+  code: string,
+  display?: string,
+  definition?: string,
+  hierarchy?: string[]
+) {
+  expect(rule).toBeInstanceOf(ConceptRule);
+  const conceptRule = rule as ConceptRule;
+  expect(conceptRule.code).toBe(code);
+  expect(conceptRule.display).toBe(display);
+  expect(conceptRule.definition).toBe(definition);
+  if (hierarchy !== undefined) {
+    expect(conceptRule.hierarchy).toEqual(hierarchy);
+  }
 }

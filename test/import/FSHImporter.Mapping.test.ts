@@ -2,6 +2,7 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { assertMappingRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   beforeAll(() => {
@@ -54,6 +55,21 @@ describe('FSHImporter', () => {
       expect(mapping.sourceInfo.file).toBe('Mapping.fsh');
     });
 
+    it('should parse numeric Mapping name, id, and source', () => {
+      // NOT recommended, but possible
+      const input = `
+        Mapping: 123
+        Id: 456
+        Source: 789
+        `;
+      const result = importSingleText(input, 'Mapping.fsh');
+      expect(result.mappings.size).toBe(1);
+      const mapping = result.mappings.get('123');
+      expect(mapping.name).toBe('123');
+      expect(mapping.id).toBe('456');
+      expect(mapping.source).toBe('789');
+    });
+
     it('should only apply each metadata attribute the first time it is declared', () => {
       const input = `
         Mapping: MyMapping
@@ -84,7 +100,7 @@ describe('FSHImporter', () => {
     it('should accept and translate an alias for the Source', () => {
       const input = `
         Alias: OBS = http://hl7.org/fhir/StructureDefinition/Observation
-      
+
         Mapping: MyMapping
         Source: OBS
         `;
@@ -106,7 +122,7 @@ describe('FSHImporter', () => {
       const input = `
       Mapping: SameMapping
       Title: "First Mapping"
-      
+
       Mapping: SameMapping
       Title: "Second Mapping"
       `;
@@ -118,6 +134,27 @@ describe('FSHImporter', () => {
         /Mapping named SameMapping already exists/s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
+    });
+
+    it('should log an error and skip the mapping when encountering an mapping with a name used by another mapping in another file', () => {
+      const input1 = `
+        Mapping: SameMapping
+        Title: "First Mapping"
+      `;
+
+      const input2 = `
+        Mapping: SameMapping
+        Title: "Second Mapping"
+      `;
+
+      const result = importText([new RawFSH(input1, 'File1.fsh'), new RawFSH(input2, 'File2.fsh')]);
+      expect(result.reduce((sum, d2) => sum + d2.mappings.size, 0)).toBe(1);
+      const m = result[0].mappings.get('SameMapping');
+      expect(m.title).toBe('First Mapping');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Mapping named SameMapping already exists/s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
     });
 
     describe('#mappingRule', () => {
@@ -230,7 +267,21 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const mapping = result.mappings.get('MyMapping');
         expect(mapping.rules).toHaveLength(1);
-        assertInsertRule(mapping.rules[0], 'MyRuleSet');
+        assertInsertRule(mapping.rules[0], '', 'MyRuleSet');
+      });
+    });
+
+    describe('#pathRule', () => {
+      it('should parse a pathRule', () => {
+        const input = `
+        Mapping: MyMapping
+        Source: Patient1
+        Target: http://example.org/target
+        * name
+        `;
+        const result = importSingleText(input, 'Path.fsh');
+        const mapping = result.mappings.get('MyMapping');
+        expect(mapping.rules).toHaveLength(0);
       });
     });
   });

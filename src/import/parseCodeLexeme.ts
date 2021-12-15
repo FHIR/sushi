@@ -19,7 +19,7 @@ export function parseCodeLexeme(conceptText: string): FshCode {
     code = conceptText.slice(splitPoint.index + splitPoint[0].length);
   }
   system = system.replace(/\\\\/g, '\\').replace(/\\#/g, '#');
-  if (code.startsWith('"')) {
+  if (code.startsWith('"') && code.endsWith('"')) {
     code = code
       .slice(1, code.length - 1)
       .replace(/\\\\/g, '\\')

@@ -1,17 +1,21 @@
-import { FSHTank, FSHDocument } from '../../src/import';
+import { FSHDocument, FSHTank } from '../../src/import';
 import {
-  Profile,
+  Configuration,
   Extension,
+  FshCode,
+  FshCodeSystem,
   FshValueSet,
   Instance,
-  FshCodeSystem,
   Invariant,
-  FshCode,
-  RuleSet,
-  Mapping
+  Logical,
+  Mapping,
+  Profile,
+  Resource,
+  RuleSet
 } from '../../src/fshtypes';
-import { Type, Metadata } from '../../src/utils/Fishable';
+import { Metadata, Type } from '../../src/utils/Fishable';
 import { minimalConfig } from '../utils/minimalConfig';
+import { AssignmentRule } from '../../src/fshtypes/rules';
 
 describe('FSHTank', () => {
   let tank: FSHTank;
@@ -24,6 +28,12 @@ describe('FSHTank', () => {
     doc1.profiles.set('Profile2', new Profile('Profile2'));
     doc1.profiles.get('Profile2').id = 'prf2';
     doc1.profiles.get('Profile2').parent = 'Observation';
+    doc1.instances.set('ProfileInstance', new Instance('ProfileInstance'));
+    doc1.instances.get('ProfileInstance').instanceOf = 'StructureDefinition';
+    doc1.instances.get('ProfileInstance').usage = 'Definition';
+    const profileInstanceDerivation = new AssignmentRule('derivation');
+    profileInstanceDerivation.value = new FshCode('constraint');
+    doc1.instances.get('ProfileInstance').rules.push(profileInstanceDerivation);
     doc1.extensions.set('Extension1', new Extension('Extension1'));
     doc1.extensions.get('Extension1').id = 'ext1';
     doc1.extensions.get('Extension1').parent = 'Extension2';
@@ -31,11 +41,57 @@ describe('FSHTank', () => {
     doc2.aliases.set('BAR', 'http://bar.com');
     doc2.extensions.set('Extension2', new Extension('Extension2'));
     doc2.extensions.get('Extension2').id = 'ext2';
+    doc2.instances.set('ExtensionInstance', new Instance('ExtensionInstance'));
+    doc2.instances.get('ExtensionInstance').instanceOf = 'StructureDefinition';
+    doc2.instances.get('ExtensionInstance').usage = 'Definition';
+    const extensionInstanceDerivation = new AssignmentRule('derivation');
+    extensionInstanceDerivation.value = new FshCode('constraint');
+    const extensionInstanceType = new AssignmentRule('type');
+    extensionInstanceType.value = 'Extension';
+    doc2.instances
+      .get('ExtensionInstance')
+      .rules.push(extensionInstanceDerivation, extensionInstanceType);
     doc2.valueSets.set('ValueSet1', new FshValueSet('ValueSet1'));
     doc2.valueSets.get('ValueSet1').id = 'vs1';
+    doc2.instances.set('ValueSetInstance', new Instance('ValueSetInstance'));
+    doc2.instances.get('ValueSetInstance').instanceOf = 'ValueSet';
+    doc2.instances.get('ValueSetInstance').usage = 'Definition';
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
+    doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
+    doc2.instances.get('CodeSystemInstance').instanceOf = 'CodeSystem';
+    doc2.instances.get('CodeSystemInstance').usage = 'Definition';
+    doc2.logicals.set('Logical1', new Logical('Logical1'));
+    doc2.logicals.get('Logical1').id = 'log1';
+    doc2.logicals.get('Logical1').parent = 'Element';
+    doc2.instances.set('LogicalInstance', new Instance('LogicalInstance'));
+    doc2.instances.get('LogicalInstance').instanceOf = 'StructureDefinition';
+    doc2.instances.get('LogicalInstance').usage = 'Definition';
+    const logicalInstanceDerivation = new AssignmentRule('derivation');
+    logicalInstanceDerivation.value = new FshCode('specialization');
+    const logicalInstanceKind = new AssignmentRule('kind');
+    logicalInstanceKind.value = new FshCode('logical');
+    doc2.instances
+      .get('LogicalInstance')
+      .rules.push(logicalInstanceDerivation, logicalInstanceKind);
+    doc2.resources.set('Resource1', new Resource('Resource1'));
+    doc2.resources.get('Resource1').id = 'res1';
     const doc3 = new FSHDocument('doc3.fsh');
+    doc3.logicals.set('Logical2', new Logical('Logical2'));
+    doc3.logicals.get('Logical2').id = 'log2';
+    doc3.logicals.get('Logical2').parent = 'Logical1';
+    doc3.resources.set('Resource2', new Resource('Resource2'));
+    doc3.resources.get('Resource2').id = 'res2';
+    doc3.instances.set('ResourceInstance', new Instance('ResourceInstance'));
+    doc3.instances.get('ResourceInstance').instanceOf = 'StructureDefinition';
+    doc3.instances.get('ResourceInstance').usage = 'Definition';
+    const resourceInstanceDerivation = new AssignmentRule('derivation');
+    resourceInstanceDerivation.value = new FshCode('specialization');
+    const resourceInstanceKind = new AssignmentRule('kind');
+    resourceInstanceKind.value = new FshCode('resource');
+    doc3.instances
+      .get('ResourceInstance')
+      .rules.push(resourceInstanceDerivation, resourceInstanceKind);
     doc3.valueSets.set('ValueSet2', new FshValueSet('ValueSet2'));
     doc3.valueSets.get('ValueSet2').id = 'vs2';
     doc3.codeSystems.set('CodeSystem2', new FshCodeSystem('CodeSystem2'));
@@ -60,6 +116,8 @@ describe('FSHTank', () => {
       expect(tank.fish('vs1').name).toBe('ValueSet1');
       expect(tank.fish('cs1').name).toBe('CodeSystem1');
       expect(tank.fish('inst1').name).toBe('Instance1');
+      expect(tank.fish('log1').name).toBe('Logical1');
+      expect(tank.fish('res1').name).toBe('Resource1');
       // not applicable for Invariant or RuleSet or Mapping
     });
 
@@ -72,6 +130,8 @@ describe('FSHTank', () => {
       expect(tank.fish('Invariant1').name).toBe('Invariant1');
       expect(tank.fish('RuleSet1').name).toBe('RuleSet1');
       expect(tank.fish('Mapping1').name).toBe('Mapping1');
+      expect(tank.fish('Logical2').id).toBe('log2');
+      expect(tank.fish('Resource2').id).toBe('res2');
     });
 
     it('should find valid fish when fishing by url for all types', () => {
@@ -83,6 +143,12 @@ describe('FSHTank', () => {
       );
       expect(tank.fish('http://hl7.org/fhir/us/minimal/ValueSet/vs1').name).toBe('ValueSet1');
       expect(tank.fish('http://hl7.org/fhir/us/minimal/CodeSystem/cs1').name).toBe('CodeSystem1');
+      expect(tank.fish('http://hl7.org/fhir/us/minimal/StructureDefinition/log1').name).toBe(
+        'Logical1'
+      );
+      expect(tank.fish('http://hl7.org/fhir/us/minimal/StructureDefinition/res2').name).toBe(
+        'Resource2'
+      );
       // not applicable for Instance or Invariant or RuleSet or Mapping
     });
 
@@ -102,10 +168,39 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find profiles defined as instance definitions when profiles are requested', () => {
+      expect(tank.fish('ProfileInstance', Type.Profile).name).toBe('ProfileInstance');
+      expect(
+        tank.fish(
+          'ProfileInstance',
+          Type.Extension,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should not find instances where the derivation is not constraint when profiles are requested', () => {
+      const instance = tank.docs[0].instances.get('ProfileInstance');
+      const profileInstanceDerivation = new AssignmentRule('derivation');
+      profileInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [profileInstanceDerivation];
+      expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
     });
 
     it('should only find extensions when extensions are requested', () => {
@@ -120,7 +215,124 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find extensions defined as instance definitions when extensions are requested', () => {
+      expect(tank.fish('ExtensionInstance', Type.Extension).name).toBe('ExtensionInstance');
+      expect(
+        tank.fish(
+          'ExtensionInstance',
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should not find instances where the type is not Extension when extensions are requested', () => {
+      const instance = tank.docs[1].instances.get('ExtensionInstance');
+      const extensionInstanceType = new AssignmentRule('type');
+      extensionInstanceType.value = 'Observation';
+      const extensionInstanceDerivation = new AssignmentRule('derivation');
+      extensionInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [extensionInstanceType, extensionInstanceDerivation];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+    });
+
+    it('should not find instances where the derivation is not constraint when extensions are requested', () => {
+      const instance = tank.docs[1].instances.get('ExtensionInstance');
+      const extensionInstanceType = new AssignmentRule('type');
+      extensionInstanceType.value = 'Extension';
+      const extensionInstanceDerivation = new AssignmentRule('derivation');
+      extensionInstanceDerivation.value = new FshCode('specialization');
+      instance.rules = [extensionInstanceType, extensionInstanceDerivation];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+      instance.rules = [];
+      expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
+    });
+
+    it('should only find logical models when logical models are requested', () => {
+      expect(tank.fish('log1', Type.Logical).name).toBe('Logical1');
+      expect(
+        tank.fish(
+          'log1',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find logical models defined as instance definitions when logical models are requested', () => {
+      expect(tank.fish('LogicalInstance', Type.Logical).name).toBe('LogicalInstance');
+      expect(
+        tank.fish(
+          'LogicalInstance',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should only find resources when resources are requested', () => {
+      expect(tank.fish('res2', Type.Resource).name).toBe('Resource2');
+      expect(
+        tank.fish(
+          'res2',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find resources defined as instance definitions when resources are requested', () => {
+      expect(tank.fish('ResourceInstance', Type.Resource).name).toBe('ResourceInstance');
+      expect(
+        tank.fish(
+          'ResourceInstanceres2',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
           Type.Type
         )
       ).toBeUndefined();
@@ -138,6 +350,25 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find valuesets defined as instance definitions when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance', Type.ValueSet).name).toBe('ValueSetInstance');
+      expect(
+        tank.fish(
+          'ValueSetInstance',
+          Type.Profile,
+          Type.Extension,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -156,6 +387,25 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find codesystems defined as instance definitions when codesystems are requested', () => {
+      expect(tank.fish('CodeSystemInstance', Type.CodeSystem).name).toBe('CodeSystemInstance');
+      expect(
+        tank.fish(
+          'CodeSystemInstance',
+          Type.Profile,
+          Type.Extension,
+          Type.ValueSet,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -174,6 +424,7 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -192,6 +443,7 @@ describe('FSHTank', () => {
           Type.Instance,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -210,6 +462,7 @@ describe('FSHTank', () => {
           Type.Instance,
           Type.Invariant,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -228,6 +481,7 @@ describe('FSHTank', () => {
           Type.Instance,
           Type.Invariant,
           Type.RuleSet,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -240,23 +494,42 @@ describe('FSHTank', () => {
       id: 'prf1',
       name: 'Profile1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
-      parent: 'Observation'
+      parent: 'Observation',
+      resourceType: 'StructureDefinition'
     };
     const ext1MD: Metadata = {
       id: 'ext1',
       name: 'Extension1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ext1',
-      parent: 'Extension2'
+      parent: 'Extension2',
+      resourceType: 'StructureDefinition'
+    };
+    const log1MD: Metadata = {
+      id: 'log1',
+      name: 'Logical1',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+      sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+      parent: 'Element',
+      resourceType: 'StructureDefinition'
+    };
+    const res1MD: Metadata = {
+      id: 'res1',
+      name: 'Resource1',
+      parent: 'DomainResource',
+      url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/res1',
+      resourceType: 'StructureDefinition'
     };
     const vs1MD: Metadata = {
       id: 'vs1',
       name: 'ValueSet1',
-      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1'
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1',
+      resourceType: 'ValueSet'
     };
     const cs1MD: Metadata = {
       id: 'cs1',
       name: 'CodeSystem1',
-      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1'
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1',
+      resourceType: 'CodeSystem'
     };
     const inst1MD: Metadata = {
       id: 'inst1',
@@ -268,7 +541,7 @@ describe('FSHTank', () => {
       name: 'Invariant1'
     };
     const rul1MD: Metadata = {
-      id: 'RuleSet1', // id will always be name for Mixins
+      id: 'RuleSet1', // id will always be name for RuleSets
       name: 'RuleSet1'
     };
     const map1MD: Metadata = {
@@ -279,6 +552,8 @@ describe('FSHTank', () => {
     it('should find valid fish metadata when fishing by id for all types', () => {
       expect(tank.fishForMetadata('prf1')).toEqual(prf1MD);
       expect(tank.fishForMetadata('ext1')).toEqual(ext1MD);
+      expect(tank.fishForMetadata('log1')).toEqual(log1MD);
+      expect(tank.fishForMetadata('res1')).toEqual(res1MD);
       expect(tank.fishForMetadata('vs1')).toEqual(vs1MD);
       expect(tank.fishForMetadata('cs1')).toEqual(cs1MD);
       expect(tank.fishForMetadata('inst1')).toEqual(inst1MD);
@@ -288,6 +563,8 @@ describe('FSHTank', () => {
     it('should find valid fish when fishing by name for all types', () => {
       expect(tank.fishForMetadata('Profile1')).toEqual(prf1MD);
       expect(tank.fishForMetadata('Extension1')).toEqual(ext1MD);
+      expect(tank.fishForMetadata('Logical1')).toEqual(log1MD);
+      expect(tank.fishForMetadata('Resource1')).toEqual(res1MD);
       expect(tank.fishForMetadata('ValueSet1')).toEqual(vs1MD);
       expect(tank.fishForMetadata('CodeSystem1')).toEqual(cs1MD);
       expect(tank.fishForMetadata('Instance1')).toEqual(inst1MD);
@@ -303,6 +580,12 @@ describe('FSHTank', () => {
       expect(
         tank.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/ext1')
       ).toEqual(ext1MD);
+      expect(
+        tank.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/log1')
+      ).toEqual(log1MD);
+      expect(
+        tank.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/res1')
+      ).toEqual(res1MD);
       expect(tank.fishForMetadata('http://hl7.org/fhir/us/minimal/ValueSet/vs1')).toEqual(vs1MD);
       expect(tank.fishForMetadata('http://hl7.org/fhir/us/minimal/CodeSystem/cs1')).toEqual(cs1MD);
       // not applicable for Instance or Invariant or RuleSet or Mapping
@@ -324,6 +607,7 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -342,7 +626,46 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should only find logical models when logical models are requested', () => {
+      expect(tank.fishForMetadata('log1', Type.Logical)).toEqual(log1MD);
+      expect(
+        tank.fishForMetadata(
+          'log1',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should only find resources when resources are requested', () => {
+      expect(tank.fishForMetadata('res1', Type.Resource)).toEqual(res1MD);
+      expect(
+        tank.fishForMetadata(
+          'res1',
+          Type.Extension,
+          Type.Profile,
+          Type.ValueSet,
+          Type.CodeSystem,
+          Type.Instance,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
           Type.Type
         )
       ).toBeUndefined();
@@ -360,6 +683,7 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -378,6 +702,7 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -396,6 +721,7 @@ describe('FSHTank', () => {
           Type.Invariant,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -414,6 +740,7 @@ describe('FSHTank', () => {
           Type.Instance,
           Type.RuleSet,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -432,6 +759,7 @@ describe('FSHTank', () => {
           Type.Instance,
           Type.Invariant,
           Type.Mapping,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -450,6 +778,7 @@ describe('FSHTank', () => {
           Type.Instance,
           Type.Invariant,
           Type.RuleSet,
+          Type.Logical,
           Type.Resource,
           Type.Type
         )
@@ -471,6 +800,18 @@ describe('FSHTank', () => {
       expect(
         tank.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/ext1')
       ).toBeUndefined();
+      expect(tank.fishForFHIR('log1')).toBeUndefined();
+      expect(tank.fishForFHIR('log1', Type.Logical)).toBeUndefined();
+      expect(tank.fishForFHIR('Logical2')).toBeUndefined();
+      expect(
+        tank.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/log1')
+      ).toBeUndefined();
+      expect(tank.fishForFHIR('ref1')).toBeUndefined();
+      expect(tank.fishForFHIR('ref1', Type.Resource)).toBeUndefined();
+      expect(tank.fishForFHIR('Reference2')).toBeUndefined();
+      expect(
+        tank.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/ref1')
+      ).toBeUndefined();
       expect(tank.fishForFHIR('vs1')).toBeUndefined();
       expect(tank.fishForFHIR('vs1', Type.ValueSet)).toBeUndefined();
       expect(tank.fishForFHIR('ValueSet2')).toBeUndefined();
@@ -489,6 +830,44 @@ describe('FSHTank', () => {
       expect(tank.fishForFHIR('map1')).toBeUndefined();
       expect(tank.fishForFHIR('map1', Type.Mapping)).toBeUndefined();
       expect(tank.fishForFHIR('Mapping1')).toBeUndefined();
+    });
+  });
+});
+
+describe('FSHTank for HL7', () => {
+  const hl7Config: Configuration = {
+    filePath: 'sushi-config.yaml',
+    id: 'hl7.fhir',
+    canonical: 'http://hl7.org/fhir',
+    name: 'HL7',
+    status: 'draft',
+    version: '4.9.0',
+    fhirVersion: ['4.9.0'],
+    template: 'hl7.fhir.template#0.0.5'
+  };
+
+  let hl7Tank: FSHTank;
+  beforeEach(() => {
+    const hl7Doc = new FSHDocument('HL7Doc.fsh');
+    hl7Doc.logicals.set('HL7Logical', new Logical('HL7Logical'));
+    hl7Doc.logicals.get('HL7Logical').id = 'hl7-log';
+    hl7Doc.logicals.get('HL7Logical').parent = 'Element';
+
+    hl7Tank = new FSHTank([hl7Doc], hl7Config);
+  });
+
+  describe('#fishForMetadata', () => {
+    const hl7logMD: Metadata = {
+      id: 'hl7-log',
+      name: 'HL7Logical',
+      url: 'http://hl7.org/fhir/StructureDefinition/hl7-log',
+      sdType: 'hl7-log',
+      parent: 'Element',
+      resourceType: 'StructureDefinition'
+    };
+
+    it('should find valid HL7 fish metadata when fishing by id for logical models', () => {
+      expect(hl7Tank.fishForMetadata('hl7-log')).toEqual(hl7logMD);
     });
   });
 });

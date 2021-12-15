@@ -37,8 +37,8 @@ export class FHIRExporter {
 
   export(): Package {
     this.structureDefinitionExporter.export();
-    this.valueSetExporter.export();
     this.codeSystemExporter.export();
+    this.valueSetExporter.export();
     this.instanceExporter.export();
     this.structureDefinitionExporter.applyDeferredRules();
     this.mappingExporter.export();

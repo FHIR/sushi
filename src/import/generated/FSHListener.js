@@ -56,6 +56,24 @@ FSHListener.prototype.exitExtension = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#logical.
+FSHListener.prototype.enterLogical = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#logical.
+FSHListener.prototype.exitLogical = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#resource.
+FSHListener.prototype.enterResource = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#resource.
+FSHListener.prototype.exitResource = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#sdMetadata.
 FSHListener.prototype.enterSdMetadata = function(ctx) {
 };
@@ -71,6 +89,15 @@ FSHListener.prototype.enterSdRule = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#sdRule.
 FSHListener.prototype.exitSdRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#lrRule.
+FSHListener.prototype.enterLrRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#lrRule.
+FSHListener.prototype.exitLrRule = function(ctx) {
 };
 
 
@@ -317,15 +344,6 @@ FSHListener.prototype.exitUsage = function(ctx) {
 };
 
 
-// Enter a parse tree produced by FSHParser#mixins.
-FSHListener.prototype.enterMixins = function(ctx) {
-};
-
-// Exit a parse tree produced by FSHParser#mixins.
-FSHListener.prototype.exitMixins = function(ctx) {
-};
-
-
 // Enter a parse tree produced by FSHParser#source.
 FSHListener.prototype.enterSource = function(ctx) {
 };
@@ -416,6 +434,15 @@ FSHListener.prototype.exitCaretValueRule = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#codeCaretValueRule.
+FSHListener.prototype.enterCodeCaretValueRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#codeCaretValueRule.
+FSHListener.prototype.exitCodeCaretValueRule = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#mappingRule.
 FSHListener.prototype.enterMappingRule = function(ctx) {
 };
@@ -431,6 +458,33 @@ FSHListener.prototype.enterInsertRule = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#insertRule.
 FSHListener.prototype.exitInsertRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#codeInsertRule.
+FSHListener.prototype.enterCodeInsertRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#codeInsertRule.
+FSHListener.prototype.exitCodeInsertRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#addElementRule.
+FSHListener.prototype.enterAddElementRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#addElementRule.
+FSHListener.prototype.exitAddElementRule = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#pathRule.
+FSHListener.prototype.enterPathRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#pathRule.
+FSHListener.prototype.exitPathRule = function(ctx) {
 };
 
 
@@ -524,21 +578,21 @@ FSHListener.prototype.exitVsFilterValue = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#name.
+FSHListener.prototype.enterName = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#name.
+FSHListener.prototype.exitName = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#path.
 FSHListener.prototype.enterPath = function(ctx) {
 };
 
 // Exit a parse tree produced by FSHParser#path.
 FSHListener.prototype.exitPath = function(ctx) {
-};
-
-
-// Enter a parse tree produced by FSHParser#paths.
-FSHListener.prototype.enterPaths = function(ctx) {
-};
-
-// Exit a parse tree produced by FSHParser#paths.
-FSHListener.prototype.exitPaths = function(ctx) {
 };
 
 
@@ -629,6 +683,15 @@ FSHListener.prototype.enterReference = function(ctx) {
 
 // Exit a parse tree produced by FSHParser#reference.
 FSHListener.prototype.exitReference = function(ctx) {
+};
+
+
+// Enter a parse tree produced by FSHParser#referenceType.
+FSHListener.prototype.enterReferenceType = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#referenceType.
+FSHListener.prototype.exitReferenceType = function(ctx) {
 };
 
 

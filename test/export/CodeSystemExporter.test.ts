@@ -15,11 +15,7 @@ describe('CodeSystemExporter', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
@@ -139,6 +135,85 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should export a code system with hierarchical codes', () => {
+    // The concept hierarchy looks like this:
+    // topCode
+    //   middleCode
+    //     bottomCode
+    //   otherMiddle
+    // unrelatedCode
+    const codeSystem = new FshCodeSystem('HierarchicalCodeSystem');
+    const topCode = new ConceptRule('topCode', 'Top Code', 'This is at the top of the hierarchy.');
+    const middleCode = new ConceptRule(
+      'middleCode',
+      'Middle Code',
+      'This is in the middle of the hierarchy.'
+    );
+    middleCode.hierarchy = ['topCode'];
+    const bottomCode = new ConceptRule(
+      'bottomCode',
+      'Bottom Code',
+      'This is at the bottom of the hierarchy.'
+    );
+    bottomCode.hierarchy = ['topCode', 'middleCode'];
+    const otherMiddle = new ConceptRule(
+      'otherMiddle',
+      'Other Middle',
+      'This is another middle code.'
+    );
+    otherMiddle.hierarchy = ['topCode'];
+    const unrelatedCode = new ConceptRule(
+      'unrelatedCode',
+      'Unrelated Code',
+      'This is not related to the hierarchy.'
+    );
+    codeSystem.rules.push(topCode, middleCode, bottomCode, otherMiddle, unrelatedCode);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      name: 'HierarchicalCodeSystem',
+      id: 'HierarchicalCodeSystem',
+      status: 'active',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/HierarchicalCodeSystem',
+      version: '1.0.0',
+      count: 5,
+      concept: [
+        {
+          code: 'topCode',
+          display: 'Top Code',
+          definition: 'This is at the top of the hierarchy.',
+          concept: [
+            {
+              code: 'middleCode',
+              display: 'Middle Code',
+              definition: 'This is in the middle of the hierarchy.',
+              concept: [
+                {
+                  code: 'bottomCode',
+                  display: 'Bottom Code',
+                  definition: 'This is at the bottom of the hierarchy.'
+                }
+              ]
+            },
+            {
+              code: 'otherMiddle',
+              display: 'Other Middle',
+              definition: 'This is another middle code.'
+            }
+          ]
+        },
+        {
+          code: 'unrelatedCode',
+          display: 'Unrelated Code',
+          definition: 'This is not related to the hierarchy.'
+        }
+      ]
+    });
+  });
+
   it('should log a message when the code system has an invalid id', () => {
     const codeSystem = new FshCodeSystem('StrangeSystem')
       .withFile('Strange.fsh')
@@ -160,8 +235,10 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.export().codeSystems;
     expect(exported.length).toBe(1);
     expect(exported[0].name).toBe('Strange.Code.System');
-    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR name/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /may not be suitable for machine processing applications such as code generation/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
   });
 
   it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
@@ -236,7 +313,83 @@ describe('CodeSystemExporter', () => {
     });
   });
 
-  it('should resolve soft indexing when applying Caret Value rules', () => {
+  it('should apply a CaretValueRule on a top-level concept', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const someCaret = new CaretValueRule('');
+    someCaret.pathArray = ['someCode'];
+    someCaret.caretPath = 'designation[0].value';
+    someCaret.value = 'Designated value';
+    codeSystem.rules.push(someCode, someCaret);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      version: '1.0.0',
+      count: 1,
+      status: 'active',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          designation: [
+            {
+              value: 'Designated value'
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  it('should apply a CaretValueRule on a concept within a hierarchy', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const otherCode = new ConceptRule('otherCode', 'Other Code');
+    otherCode.hierarchy = ['someCode'];
+    const someCaret = new CaretValueRule('');
+    someCaret.pathArray = ['someCode', 'otherCode'];
+    someCaret.caretPath = 'designation[0].value';
+    someCaret.value = 'Other designated value';
+    codeSystem.rules.push(someCode, otherCode, someCaret);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      version: '1.0.0',
+      count: 2,
+      status: 'active',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          concept: [
+            {
+              code: 'otherCode',
+              display: 'Other Code',
+              designation: [
+                {
+                  value: 'Other designated value'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  it('should resolve soft indexing when applying top level Caret Value rules', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const contactRule1 = new CaretValueRule('');
     contactRule1.caretPath = 'contact[+].name';
@@ -265,6 +418,74 @@ describe('CodeSystemExporter', () => {
         ]
       }
     ]);
+  });
+
+  it('should resolve soft indexing when applying CaretValue rules with paths', () => {
+    const codeSystem = new FshCodeSystem('CodeCaretCS');
+    const topCode = new ConceptRule('topCode', 'Top Code');
+    const bottomCode = new ConceptRule('bottomCode', 'Bottom Code');
+    bottomCode.hierarchy = ['topCode'];
+
+    const firstTop = new CaretValueRule('');
+    firstTop.pathArray = ['topCode'];
+    firstTop.caretPath = 'designation[+].value';
+    firstTop.value = 'First top designation';
+    const secondTop = new CaretValueRule('');
+    secondTop.pathArray = ['topCode'];
+    secondTop.caretPath = 'designation[+].value';
+    secondTop.value = 'Second top designation';
+
+    const firstBottom = new CaretValueRule('');
+    firstBottom.pathArray = ['topCode', 'bottomCode'];
+    firstBottom.caretPath = 'designation[+].value';
+    firstBottom.value = 'First bottom designation';
+    const secondBottom = new CaretValueRule('');
+    secondBottom.pathArray = ['topCode', 'bottomCode'];
+    secondBottom.caretPath = 'designation[+].value';
+    secondBottom.value = 'Second bottom designation';
+
+    codeSystem.rules.push(topCode, bottomCode, firstTop, secondTop, firstBottom, secondBottom);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CodeCaretCS',
+      name: 'CodeCaretCS',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CodeCaretCS',
+      version: '1.0.0',
+      count: 2,
+      status: 'active',
+      concept: [
+        {
+          code: 'topCode',
+          display: 'Top Code',
+          designation: [
+            {
+              value: 'First top designation'
+            },
+            {
+              value: 'Second top designation'
+            }
+          ],
+          concept: [
+            {
+              code: 'bottomCode',
+              display: 'Bottom Code',
+              designation: [
+                {
+                  value: 'First bottom designation'
+                },
+                {
+                  value: 'Second bottom designation'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
   });
 
   it('should not override count when ^count is provided by user', () => {
@@ -345,6 +566,23 @@ describe('CodeSystemExporter', () => {
     expect(exported[0].count).toBeUndefined();
   });
 
+  it('should log a message when applying an invalid ConceptRule', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    const topCode = new ConceptRule('top');
+    const bottomCode = new ConceptRule('bottom');
+    bottomCode.hierarchy = ['top'];
+    const mistakeCode = new ConceptRule('mistake')
+      .withFile('InvalidHierarchy.fsh')
+      .withLocation([8, 3, 8, 25]);
+    mistakeCode.hierarchy = ['bottom']; // This is an incomplete hierarchy, and will generate an error.
+    codeSystem.rules.push(topCode, bottomCode, mistakeCode);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].count).toBe(2); // top and bottom were added, but not mistake
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidHierarchy\.fsh.*Line: 8\D*/s);
+  });
+
   it('should log a message when applying invalid CaretValueRule', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);
@@ -364,6 +602,46 @@ describe('CodeSystemExporter', () => {
       status: 'active'
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
+  });
+
+  it('should log a message when applying an invalid CaretValueRule', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const otherCode = new ConceptRule('otherCode', 'Other Code');
+    otherCode.hierarchy = ['someCode'];
+    const someCaret = new CaretValueRule('')
+      .withFile('InvalidValue.fsh')
+      .withLocation([8, 5, 8, 25]);
+    someCaret.pathArray = ['someCode', 'wrongCode'];
+    someCaret.caretPath = 'designation[0].value';
+    someCaret.value = 'Other designated value';
+    codeSystem.rules.push(someCode, otherCode, someCaret);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      version: '1.0.0',
+      count: 2,
+      status: 'active',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          concept: [
+            {
+              code: 'otherCode',
+              display: 'Other Code'
+            }
+          ]
+        }
+      ]
+    });
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 8\D*/s);
   });
 
   describe('#insertRules', () => {
@@ -389,7 +667,7 @@ describe('CodeSystemExporter', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(nameRule);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
@@ -420,7 +698,7 @@ describe('CodeSystemExporter', () => {
       contactRule3.value = 'example@email.com';
       ruleSet.rules.push(contactRule3);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
@@ -438,6 +716,42 @@ describe('CodeSystemExporter', () => {
       ]);
     });
 
+    it('should insert a rule set at a code path', () => {
+      // RuleSet: Bar
+      // * ^designation[+].value = "Bar Value"
+      // * #extra
+      //
+      // CodeSystem: Foo
+      // * #bear
+      // * #bear insert Bar
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'designation[+].value';
+      caretValueRule.value = 'Bar Value';
+      const extraConcept = new ConceptRule('extra');
+      ruleSet.rules.push(caretValueRule, extraConcept);
+
+      const conceptRule = new ConceptRule('bear');
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'Bar';
+      insertRule.pathArray = ['bear'];
+      cs.rules.push(conceptRule, insertRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0]).toEqual({
+        code: 'bear',
+        designation: [
+          {
+            value: 'Bar Value'
+          }
+        ],
+        concept: [
+          {
+            code: 'extra'
+          }
+        ]
+      });
+    });
+
     it('should update count when applying concepts from an insert rule', () => {
       // RuleSet: Bar
       // * #lion
@@ -447,7 +761,7 @@ describe('CodeSystemExporter', () => {
       const concept = new ConceptRule('lion');
       ruleSet.rules.push(concept);
 
-      const insertRule = new InsertRule();
+      const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
@@ -472,7 +786,7 @@ describe('CodeSystemExporter', () => {
       nameRule.value = 'Wow fancy';
       ruleSet.rules.push(valueRule, nameRule);
 
-      const insertRule = new InsertRule().withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
+      const insertRule = new InsertRule('').withFile('Insert.fsh').withLocation([5, 6, 7, 8]);
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
@@ -483,6 +797,63 @@ describe('CodeSystemExporter', () => {
       expect(exported.experimental).toBeFalsy();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /AssignmentRule.*FshCodeSystem.*File: Value\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
+      );
+    });
+
+    it('should maintain concept order when adding concepts from an insert rule', () => {
+      // RuleSet: Bar
+      // * #lion
+      //
+      // CodeSystem: Foo
+      // * #bear
+      // * insert Bar
+      // * #alligator
+      const lionRule = new ConceptRule('lion');
+      ruleSet.rules.push(lionRule);
+
+      const bearRule = new ConceptRule('bear');
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'Bar';
+      const alligatorRule = new ConceptRule('alligator');
+      cs.rules.push(bearRule, insertRule, alligatorRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('bear');
+      expect(exported.concept[1].code).toBe('lion');
+      expect(exported.concept[2].code).toBe('alligator');
+      expect(exported.count).toBe(3);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not add concepts from an insert rule that are duplicates of existing concepts', () => {
+      // RuleSet: Bar
+      // * #lion "Lion"
+      // * #bear "Extra Bear"
+      //
+      // CodeSystem: Foo
+      // * #bear "Regular Bear"
+      // * insert Bar
+      // * #alligator "Alligator"
+      const lionRule = new ConceptRule('lion', 'Lion');
+      const duplicateBear = new ConceptRule('bear', 'Extra Bear')
+        .withFile('RuleSet.fsh')
+        .withLocation([3, 0, 3, 20]);
+      ruleSet.rules.push(lionRule, duplicateBear);
+
+      const bearRule = new ConceptRule('bear', 'Regular Bear');
+      const insertRule = new InsertRule('').withFile('CodeSystem.fsh').withLocation([4, 0, 4, 12]);
+      insertRule.ruleSet = 'Bar';
+      const alligatorRule = new ConceptRule('alligator', 'Alligator');
+      cs.rules.push(bearRule, insertRule, alligatorRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('bear');
+      expect(exported.concept[0].display).toBe('Regular Bear');
+      expect(exported.concept[1].code).toBe('lion');
+      expect(exported.concept[2].code).toBe('alligator');
+      expect(exported.count).toBe(3);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /CodeSystem Foo already contains code bear.*File: RuleSet\.fsh.*Line: 3\D.*Applied in File: CodeSystem\.fsh.*Applied on Line: 4\D*/s
       );
     });
   });

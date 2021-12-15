@@ -11,6 +11,7 @@ import {
 } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
+import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
   describe('Extension', () => {
@@ -43,7 +44,6 @@ describe('FSHImporter', () => {
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
-        Mixins: Mixin1 and Mixin2 and Mixin3 and Mixin4
         `;
 
         const result = importSingleText(input);
@@ -54,13 +54,28 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
-        expect(extension.mixins).toEqual(['Mixin1', 'Mixin2', 'Mixin3', 'Mixin4']);
         expect(extension.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 7,
-          endColumn: 55
+          endLine: 6,
+          endColumn: 48
         });
+      });
+
+      it('should parse numeric extension name, parent, and id', () => {
+        // NOT recommended, but possible
+        const input = `
+        Extension: 123
+        Parent: 456
+        Id: 789
+        `;
+
+        const result = importSingleText(input);
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('123');
+        expect(extension.name).toBe('123');
+        expect(extension.parent).toBe('456');
+        expect(extension.id).toBe('789');
       });
 
       it('should only apply each metadata attribute the first time it is declared', () => {
@@ -70,12 +85,10 @@ describe('FSHImporter', () => {
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
-        Mixins: Mixin1
         Parent: DuplicateParentExtension
         Id: some-duplicate-extension
         Title: "Some Duplicate Extension"
         Description: "A duplicated extension on something"
-        Mixins: DuplicateMixin1
         `;
 
         const result = importSingleText(input);
@@ -86,7 +99,6 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
-        expect(extension.mixins).toEqual(['Mixin1']);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -109,7 +121,7 @@ describe('FSHImporter', () => {
         const input = `
         Extension: SomeExtension
         Title: "This Extension"
-        
+
         Extension: SomeExtension
         Title: "That Extension"
         `;
@@ -123,9 +135,50 @@ describe('FSHImporter', () => {
         );
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: SameName\.fsh.*Line: 5 - 6\D*/s);
       });
+
+      it('should log an error and skip the extension when encountering an extension with a name used by another extension in another file', () => {
+        const input1 = `
+          Extension: SomeExtension
+          Title: "This Extension"
+        `;
+
+        const input2 = `
+          Extension: SomeExtension
+          Title: "That Extension"
+        `;
+
+        const result = importText([
+          new RawFSH(input1, 'File1.fsh'),
+          new RawFSH(input2, 'File2.fsh')
+        ]);
+        expect(result.reduce((sum, d2) => sum + d2.extensions.size, 0)).toBe(1);
+        const extension = result[0].extensions.get('SomeExtension');
+        expect(extension.title).toBe('This Extension');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Extension named SomeExtension already exists/s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 3\D*/s);
+      });
+
+      it('should log an error when the deprecated Mixins keyword is used', () => {
+        const input = `
+        Extension: SomeExtension
+        Mixins: RuleSet1 and RuleSet2
+        `;
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.name).toBe('SomeExtension');
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /The 'Mixins' keyword is no longer supported\./s
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
+      });
     });
 
-    // Since Extensions use the same rule parsing code as Profiles, only do minimal tests of rules
+    // Tests for all supported rules are in FSHImporter.SD-Rules.test.ts
+    // Since Extensions use the same rule parsing code as other StructureDefinitions, only do minimal tests of rules
     describe('#cardRule', () => {
       it('should parse simple card rules', () => {
         const input = `
@@ -347,7 +400,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const extension = result.extensions.get('MyExtension');
         expect(extension.rules).toHaveLength(1);
-        assertInsertRule(extension.rules[0], 'MyRuleSet');
+        assertInsertRule(extension.rules[0], '', 'MyRuleSet');
       });
     });
   });

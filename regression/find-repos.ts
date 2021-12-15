@@ -13,24 +13,34 @@ async function main() {
   const fshRepos = await getReposWithFSHFolder([...ghRepos, ...buildRepos]);
   const repoFilePath = path.join(__dirname, 'repos-all.txt');
   const repoFile = fs.readFileSync(repoFilePath, 'utf8');
-  const lines = repoFile
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(line => line.length > 0 && line[0] != '#');
+  const lines = repoFile.split(/\r?\n/).map(line => line.trim());
+  const newLines: string[] = [];
 
-  // First remove any found repos that are already listed in the file (commented or not)
   lines.forEach(line => {
-    remove(fshRepos, r => line === `${r.full_name}#${r.default_branch}`);
+    // Remove this line's repo from collected repos if it exists there (whether or not commented out in line)
+    const removed = remove(fshRepos, r => {
+      const lowerLine = line.toLowerCase();
+      const lowerRepoAndBranch = `${r.full_name}#${r.default_branch}`.toLowerCase();
+      return (
+        lowerLine === lowerRepoAndBranch ||
+        (line.startsWith('#') && lowerLine.indexOf(lowerRepoAndBranch) !== -1)
+      );
+    });
+    // If it was found, is commented, or is blank, then it's a valid line, so add it to new lines.
+    // Else drop it since it is no longer a valid FSH repo.
+    if (removed.length > 0 || line.startsWith('#')) {
+      newLines.push(line);
+    }
   });
 
+  // Then add the remaining (new) repos
   if (fshRepos.length) {
-    // Then add the remaining repos
-    lines.push(`# Added ${new Date()}`);
-    lines.push(...fshRepos.map(r => `${r.full_name}#${r.default_branch}`));
-    lines.push('');
+    newLines.push(`# Added ${new Date()}`);
+    newLines.push(...fshRepos.map(r => `${r.full_name}#${r.default_branch}`));
+    newLines.push('');
 
     // Write it out
-    fs.writeFileSync(repoFilePath, lines.join('\n'), 'utf8');
+    fs.writeFileSync(repoFilePath, newLines.join('\n'), 'utf8');
     console.log(`Added ${fshRepos.length} repos to ${repoFilePath}.`);
   } else {
     console.log(`No new repos found; ${repoFilePath} already contains all known FSH repos.`);
@@ -96,22 +106,44 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
   }
   // Now convert the map to GHRepo objects
   const repos: GHRepo[] = [];
-  repoToBranches.forEach((branches, repo) => {
+  for (const repo of repoToBranches.keys()) {
+    const branches = repoToBranches.get(repo);
     // Skip HL7 ones since we got them from GitHub already
     if (!repo.startsWith('HL7/')) {
       // We don't want to use GH API to get default branch (due to API rate limits, so just do our best...)
-      repos.push({
-        default_branch: branches.indexOf('main') != -1 ? 'main' : 'master',
-        full_name: repo,
-        html_url: `https://github.com/${repo}`,
-        clone_url: `https://github.com/${repo}.git`,
-        git_url: `git://github.com/${repo}.git`,
-        ssh_url: `git@github.com:${repo}.git`
-      });
+      const defaultBranch = await guessDefaultBranch(branches, repo);
+      if (defaultBranch) {
+        repos.push({
+          default_branch: defaultBranch,
+          full_name: repo,
+          html_url: `https://github.com/${repo}`,
+          clone_url: `https://github.com/${repo}.git`,
+          git_url: `git://github.com/${repo}.git`,
+          ssh_url: `git@github.com:${repo}.git`
+        });
+      }
     }
-  });
+  }
   console.log(`Found ${repos.length} non-HL7 repos in the auto-builder report.`);
   return repos;
+}
+
+async function guessDefaultBranch(branches: string[], repo: string): Promise<string> {
+  // prefer main, then master, then nothing
+  for (const branch of ['main', 'master']) {
+    if (branches.indexOf(branch) !== -1) {
+      // Just because the branch existed once does not mean it still exists, so check for the download tgz
+      try {
+        const res = await axios.head(`https://github.com/${repo}/archive/refs/heads/${branch}.zip`);
+        if (res.status === 200) {
+          return branch;
+        }
+      } catch (e) {
+        // The branch does not exist. Continue.
+      }
+    }
+  }
+  return;
 }
 
 async function getReposWithFSHFolder(repos: GHRepo[]): Promise<GHRepo[]> {

@@ -36,10 +36,11 @@ describe('IGExporter', () => {
     beforeAll(() => {
       defs = new FHIRDefinitions();
       loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
+        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
+        'fhir.no.ig.package#1.0.1',
         defs
       );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -110,7 +111,6 @@ describe('IGExporter', () => {
           }
         ],
         status: 'active',
-        template: 'fhir.base.template',
         fhirVersion: ['4.0.1'],
         language: 'en',
         publisher: 'James Tuna',
@@ -133,15 +133,14 @@ describe('IGExporter', () => {
             code: 'releaselabel',
             value: 'CI Build'
           }
-        ],
-        history: {} // to suppress warning for HL7 IGs
+        ]
       };
       pkg = new Package(config);
       pkg.profiles.push(...pkgProfiles);
       pkg.extensions.push(...pkgExtensions);
       pkg.instances.push(...pkgInstances);
       pkg.codeSystems.push(...pkgCodeSystems);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterAll(() => {
@@ -150,7 +149,12 @@ describe('IGExporter', () => {
 
     it('should generate an implementation guide for simple-ig', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       expect(content).toEqual({
@@ -298,6 +302,69 @@ describe('IGExporter', () => {
       });
     });
 
+    it('should not carry over the special virtual extension package dependencies', () => {
+      config.dependencies = [
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+        { packageId: 'hl7.fhir.extensions.r2', version: '4.0.1' },
+        { packageId: 'hl7.fhir.extensions.r3', version: '4.0.1' },
+        { packageId: 'hl7.fhir.extensions.r4', version: '4.0.1' },
+        { packageId: 'hl7.fhir.extensions.r5', version: '4.0.1' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // Ensure US Core is exported but special fhir extension packages are not
+      expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
+    it('should get a canonical from package.json when a dependency has no implementation guide', () => {
+      config.dependencies = [
+        { packageId: 'fhir.no.ig.package', version: '1.0.1' },
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // ensure both packages are in the dependencies
+      expect(dependencies).toEqual([
+        {
+          id: 'fhir_no_ig_package',
+          uri: 'http://example.org/fhir/no/ig/package',
+          packageId: 'fhir.no.ig.package',
+          version: '1.0.1'
+        },
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
     it('should issue an error when a dependency url cannot be inferred', () => {
       config.dependencies = [
         // NOTE: Will not find mCODE IG URL because we didn't load the mcode IG
@@ -305,7 +372,12 @@ describe('IGExporter', () => {
         { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
@@ -333,7 +405,12 @@ describe('IGExporter', () => {
         { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
@@ -360,13 +437,19 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation).toEqual({
         reference: { reference: 'StructureDefinition/sample-observation' },
         name: 'ConfiguredSampleObservation',
@@ -383,13 +466,19 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation).toBeUndefined();
     });
 
@@ -402,13 +491,19 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      const configOnlyObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/config-only-observation'
-      );
+      const configOnlyObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/config-only-observation'
+        );
       expect(configOnlyObservation).toEqual({
         reference: {
           reference: 'StructureDefinition/config-only-observation'
@@ -434,7 +529,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       expect(content.definition.grouping).toHaveLength(2);
@@ -464,7 +564,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-sushi-test.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       expect(content.definition.grouping).toContainEqual({
@@ -482,15 +587,17 @@ describe('IGExporter', () => {
           r?.reference?.reference === 'StructureDefinition/sample-patient'
       );
       expect(samplePatient.groupingId).toBe('MyPatientGroup');
-      const examplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'Patient/patient-example'
-      );
+      const examplePatient: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'Patient/patient-example'
+        );
       expect(examplePatient.groupingId).toBe('MyPatientGroup');
-      const sampleObservation: ImplementationGuideDefinitionResource = content.definition.resource.find(
-        (r: ImplementationGuideDefinitionResource) =>
-          r?.reference?.reference === 'StructureDefinition/sample-observation'
-      );
+      const sampleObservation: ImplementationGuideDefinitionResource =
+        content.definition.resource.find(
+          (r: ImplementationGuideDefinitionResource) =>
+            r?.reference?.reference === 'StructureDefinition/sample-observation'
+        );
       expect(sampleObservation.groupingId).toBe('MyObservationGroup');
     });
 
@@ -550,6 +657,244 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#simple-ig-plus', () => {
+    // Same as '#simple-ig' with logical model and custom resource included in the package
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    const pkgProfiles: StructureDefinition[] = [];
+    const pkgExtensions: StructureDefinition[] = [];
+    const pkgLogicals: StructureDefinition[] = [];
+    const pkgResources: StructureDefinition[] = [];
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      fixtures = path.join(__dirname, 'fixtures', 'simple-ig-plus');
+
+      const profiles = path.join(fixtures, 'profiles');
+      fs.readdirSync(profiles).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(profiles, f)));
+          pkgProfiles.push(sd);
+        }
+      });
+      const extensions = path.join(fixtures, 'extensions');
+      fs.readdirSync(extensions).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(extensions, f)));
+          pkgExtensions.push(sd);
+        }
+      });
+      const logicals = path.join(fixtures, 'logicals');
+      fs.readdirSync(logicals).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(logicals, f)));
+          pkgLogicals.push(sd);
+        }
+      });
+      const resources = path.join(fixtures, 'resources');
+      fs.readdirSync(resources).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(resources, f)));
+          pkgResources.push(sd);
+        }
+      });
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = {
+        filePath: path.join(fixtures, 'sushi-config.yml'),
+        id: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
+        version: '0.1.0',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        dependencies: [
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' },
+          {
+            packageId: 'hl7.fhir.us.mcode',
+            uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+            id: 'mcode',
+            version: '1.0.0'
+          }
+        ],
+        status: 'active',
+        template: 'fhir.base.template',
+        fhirVersion: ['4.0.1'],
+        language: 'en',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        license: 'CC0-1.0',
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020+'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
+          }
+        ],
+        history: {} // to suppress warning for HL7 IGs
+      };
+      pkg = new Package(config);
+      pkg.profiles.push(...pkgProfiles);
+      pkg.extensions.push(...pkgExtensions);
+      pkg.logicals.push(...pkgLogicals);
+      pkg.resources.push(...pkgResources);
+      exporter = new IGExporter(pkg, defs, fixtures);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should generate an implementation guide for simple-ig with package containing logical model and custom resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      // Expectations:
+      // - resource array contains object for 'StructureDefinition/CustomLogicalModel'
+      // - resource array DOES NOT contain object for 'StructureDefinition/CustomResource'
+      //   = It is not possible to include custom resources in IGs
+      // - parameter array contains object for 'autoload-resources'
+      //   = Because custom resources are included in the package being exported,
+      //     this parameter is automatically injected and set to false
+      expect(content).toEqual({
+        resourceType: 'ImplementationGuide',
+        id: 'sushi-test',
+        language: 'en',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
+        version: '0.1.0',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        status: 'active',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              {
+                system: 'url',
+                value: 'https://capecodfishermen.org/'
+              },
+              {
+                system: 'email',
+                value: 'cod@reef.gov'
+              }
+            ]
+          }
+        ],
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        packageId: 'sushi-test',
+        license: 'CC0-1.0',
+        fhirVersion: ['4.0.1'],
+        dependsOn: [
+          // USCore tests that it works with a package dependency w/ a specific version
+          {
+            id: 'hl7_fhir_us_core',
+            uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+            packageId: 'hl7.fhir.us.core',
+            version: '3.1.0'
+          },
+          // VHDir tests that it works with a package dependency w/ "current"
+          {
+            id: 'hl7_fhir_uv_vhdir',
+            uri: 'http://hl7.org/fhir/uv/vhdir/ImplementationGuide/hl7.core.uv.vhdir',
+            packageId: 'hl7.fhir.uv.vhdir',
+            version: 'current'
+          },
+          // mCODE tests that it works with the url and id explicitly provided in the config
+          {
+            id: 'mcode',
+            uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+            packageId: 'hl7.fhir.us.mcode',
+            version: '1.0.0'
+          }
+        ],
+        definition: {
+          resource: [
+            {
+              reference: {
+                reference: 'StructureDefinition/sample-observation'
+              },
+              name: 'SampleObservation',
+              description:
+                'Measurements and simple assertions made about a patient, device or other subject.',
+              exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'StructureDefinition/sample-complex-extension'
+              },
+              name: 'SampleComplexExtension',
+              description:
+                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+              exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'StructureDefinition/CustomLogicalModel'
+              },
+              name: 'Custom Logical Model Defined with FSH',
+              description:
+                'This is an example of a custom logical model defined using FSH with parent of Element',
+              exampleBoolean: false
+            }
+          ],
+          page: {
+            nameUrl: 'toc.html',
+            title: 'Table of Contents',
+            generation: 'html',
+            page: [] // no index file specified for this ig
+          },
+          parameter: [
+            {
+              code: 'copyrightyear',
+              value: '2020+'
+            },
+            {
+              code: 'releaselabel',
+              value: 'CI Build'
+            },
+            {
+              code: 'path-history',
+              value: 'http://hl7.org/fhir/sushi-test/history.html'
+            },
+            {
+              code: 'autoload-resources',
+              value: 'false'
+            }
+          ]
+        }
+      });
+    });
+  });
+
   describe('#customized-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
@@ -561,11 +906,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -573,7 +914,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterAll(() => {
@@ -582,7 +923,12 @@ describe('IGExporter', () => {
 
     it('should provide a default path-history for an HL7 IG', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.parameter).toContainEqual({
@@ -594,7 +940,12 @@ describe('IGExporter', () => {
     it('should not provide a default path-history for a non-HL7 IG', () => {
       config.canonical = 'http://different-domain.org/fhir/fhir.us.minimal';
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.parameter).not.toContainEqual(
@@ -617,7 +968,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
@@ -653,7 +1009,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
@@ -708,7 +1069,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
@@ -753,7 +1119,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
@@ -780,7 +1151,12 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.template).toEqual([
@@ -789,94 +1165,6 @@ describe('IGExporter', () => {
           source: 'bar',
           scope: 'mouthwash'
         }
-      ]);
-    });
-  });
-
-  describe('#customized-ig-with-resources in legacy IG Publisher mode', () => {
-    let pkg: Package;
-    let exporter: IGExporter;
-    let tempOut: string;
-    let fixtures: string;
-    let config: Configuration;
-    let defs: FHIRDefinitions;
-
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
-      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(path.join(fixtures, 'ig-data', 'input'), defs);
-    });
-
-    beforeEach(() => {
-      loggerSpy.reset();
-      tempOut = temp.mkdirSync('sushi-test');
-      config = cloneDeep(minimalConfig);
-      pkg = new Package(config);
-      // Add a patient to the package that will be overwritten
-      const fisher = new TestFisher(null, defs, pkg);
-      const patient = fisher.fishForStructureDefinition('Patient');
-      patient.id = 'MyPatient';
-      patient.name = 'MyPatient';
-      patient.description = 'This should go away';
-      pkg.profiles.push(patient);
-
-      const patientInstance = new InstanceDefinition();
-      patientInstance.resourceType = 'Patient';
-      patientInstance.id = 'FooPatient';
-      patientInstance._instanceMeta.description = 'This should stay';
-      patientInstance._instanceMeta.name = 'StayName';
-      patientInstance._instanceMeta.usage = 'Example';
-      pkg.instances.push(patientInstance);
-
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
-    });
-
-    afterAll(() => {
-      temp.cleanupSync();
-    });
-
-    it('should copy over resource files and fix names where possible', () => {
-      exporter.export(tempOut);
-      const directoryContents = new Map<string, string[]>();
-      const dirNames = [
-        'capabilities',
-        'extensions',
-        'models',
-        'operations',
-        'profiles',
-        'resources',
-        'vocabulary',
-        'examples'
-      ];
-      for (const dirName of dirNames) {
-        directoryContents.set(dirName, fs.readdirSync(path.join(tempOut, 'input', dirName)));
-      }
-      expect(directoryContents.get('capabilities')).toEqual(['CapabilityStatement-MyCS.json']);
-      expect(directoryContents.get('models')).toEqual(['StructureDefinition-MyLM.json']);
-      expect(directoryContents.get('extensions')).toEqual([
-        'StructureDefinition-patient-birthPlace.json',
-        'StructureDefinition-patient-birthPlaceXML.xml'
-      ]);
-      expect(directoryContents.get('operations')).toEqual(['OperationDefinition-MyOD.json']);
-      expect(directoryContents.get('profiles')).toEqual([
-        'StructureDefinition-MyPatient.json',
-        'StructureDefinition-MyTitlePatient.json'
-      ]);
-      expect(directoryContents.get('resources')).toEqual([
-        'Patient-BazPatient.json',
-        'Patient-MetaExtensionNotExamplePatient.json'
-      ]);
-      expect(directoryContents.get('vocabulary')).toEqual(['ValueSet-MyVS.json']);
-      expect(directoryContents.get('examples')).toEqual([
-        'Goal-GoalWithDescription.json',
-        'Patient-BarPatient.json',
-        'Patient-FooPatient.json', // Renamed from "PoorlyNamedPatient.json"
-        'Patient-MetaExtensionPatient.json'
       ]);
     });
   });
@@ -891,13 +1179,9 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(path.join(fixtures, 'ig-data', 'input'), defs);
+      loadCustomResources(path.join(fixtures, 'input'), defs);
     });
 
     beforeEach(() => {
@@ -921,7 +1205,7 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
 
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true);
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterAll(() => {
@@ -944,6 +1228,9 @@ describe('IGExporter', () => {
         // No provided resources are copied to output
         expect(fs.existsSync(path.join(tempOut, 'input', dirName))).toBeFalsy();
       }
+      expect(fs.existsSync(path.join(tempOut, 'fsh-generated', 'resources'))).toBeTruthy();
+      const pageContentFiles = fs.readdirSync(path.join(tempOut, 'fsh-generated', 'resources'));
+      expect(pageContentFiles).toHaveLength(1); // Contains only the generated IG resource
     });
 
     it('should add basic resource references to the ImplementationGuide resource', () => {
@@ -1252,6 +1539,172 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-nested-resources', () => {
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
+      loadCustomResources(path.join(fixtures, 'input'), defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      const config = cloneDeep(minimalConfig);
+      const pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should add only non-nested resource references to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toHaveLength(2);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/BarPatient'
+        },
+        name: 'BarPatient',
+        exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyPatient'
+        },
+        name: 'MyPatient',
+        exampleBoolean: false
+      });
+    });
+
+    it('should warn on deeply nested resources', () => {
+      exporter.export(tempOut);
+      const warning = loggerSpy.getFirstMessage('warn');
+      expect(warning).toInclude(
+        'The following files were not added to the ImplementationGuide JSON'
+      );
+      expect(warning).toInclude(path.join('nested1', 'StructureDefinition-MyTitlePatient.json'));
+      expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
+      expect(warning).not.toInclude('Patient-BarPatient.json');
+      expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
+    });
+  });
+
+  describe('#customized-ig-with-logical-model-example', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-logical-model-example');
+      loadCustomResources(path.join(fixtures, 'input'), defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      config.resources = [
+        {
+          reference: {
+            reference: 'Binary/example-logical-model-json'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/json'
+            }
+          ],
+          name: 'Example of LM JSON',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        },
+        {
+          reference: {
+            reference: 'Binary/example-logical-model-xml'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/xml'
+            }
+          ],
+          name: 'Example of LM XML',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        }
+      ];
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, fixtures);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should add logical model and example resource references to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toHaveLength(3);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyLM'
+        },
+        name: 'MyLM',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/example-logical-model-json'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/json'
+          }
+        ],
+        name: 'Example of LM JSON',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/example-logical-model-xml'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/xml'
+          }
+        ],
+        name: 'Example of LM XML',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+    });
+  });
+
   describe('#pages-folder-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
@@ -1263,11 +1716,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'pages-folder-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1275,7 +1724,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
       pkg = new Package(config);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterEach(() => {
@@ -1284,9 +1733,16 @@ describe('IGExporter', () => {
 
     it('should use all available page content when pages are not configured', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+
+      // Pages are added to IG content but nothing is copied
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
@@ -1304,15 +1760,9 @@ describe('IGExporter', () => {
           generation: 'markdown'
         }
       ]);
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'extra.xml'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'index.md'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'other-page.md'))).toBeTruthy();
-      expect(
-        fs.existsSync(path.join(tempOut, 'input', 'resource-docs', 'other-page-notes.md'))
-      ).toBeTruthy();
     });
 
-    it('should include only configured pages when provided, but still copy all available files', () => {
+    it('should include only configured pages when provided', () => {
       config.pages = [
         {
           nameUrl: 'index.md',
@@ -1326,9 +1776,16 @@ describe('IGExporter', () => {
         }
       ];
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      // Only the index.md and extra.xml pages were configured, so they are included.
+      // The other-page.md and other-page-notes.md are left alone.
       expect(igContent.definition.page.page).toEqual([
         {
           nameUrl: 'index.html',
@@ -1341,12 +1798,6 @@ describe('IGExporter', () => {
           generation: 'html'
         }
       ]);
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'extra.xml'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'index.md'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pages', 'other-page.md'))).toBeTruthy();
-      expect(
-        fs.existsSync(path.join(tempOut, 'input', 'resource-docs', 'other-page-notes.md'))
-      ).toBeTruthy();
     });
   });
 
@@ -1361,11 +1812,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'invalid-pages-folder-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1373,16 +1820,21 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       config = minimalConfig;
       pkg = new Package(config);
-      exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+      exporter = new IGExporter(pkg, defs, fixtures);
     });
 
     afterEach(() => {
       temp.cleanupSync();
     });
 
-    it('should copy over invalid page types but log a warning', () => {
+    it('should log a warning for invalid page types', () => {
       exporter.export(tempOut);
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
@@ -1392,11 +1844,9 @@ describe('IGExporter', () => {
           generation: 'markdown'
         }
       ]);
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'index.md'))).toBeTruthy();
-      expect(fs.existsSync(path.join(tempOut, 'input', 'pagecontent', 'invalid.txt'))).toBeTruthy();
       // Check for log messages indicating invalid input
       expect(loggerSpy.getFirstMessage('warn')).toMatch(
-        /Files not in the supported file types \(\.md and \.xml\) were detected\. These files will be copied over without any processing\..*File: .*[\/\\]invalid-pages-folder-ig[\/\\]ig-data[\/\\]input[\/\\]pagecontent/s
+        /Files not in the supported file types \(\.md and \.xml\) were detected\..*File: .*[\/\\]invalid-pages-folder-ig[\/\\]input[\/\\]pagecontent/s
       );
     });
   });
@@ -1411,11 +1861,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       pkg = new Package(minimalConfig);
     });
 
@@ -1427,95 +1873,9 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    describe('legacy IG Publisher mode', () => {
-      beforeAll(() => {
-        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
-        // No need to regenerate the IG on every test -- generate it once and inspect what you
-        // need to in the tests
-        exporter.export(tempOut);
-      });
-
-      afterAll(() => {
-        temp.cleanupSync();
-      });
-
-      it('should add user-provided pages in the user-specified order', () => {
-        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-        expect(fs.existsSync(pageContentPath)).toBeTruthy();
-
-        const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
-        expect(fs.existsSync(igPath)).toBeTruthy();
-        const igContent = fs.readJSONSync(igPath);
-        expect(igContent.definition.page.page).toHaveLength(9);
-        expect(igContent.definition.page.page).toEqual([
-          {
-            nameUrl: 'index.html',
-            title: 'Home',
-            generation: 'html'
-          },
-          {
-            nameUrl: 'oranges.html',
-            title: 'Oranges',
-            generation: 'markdown'
-          },
-          {
-            nameUrl: 'apples.html',
-            title: 'Apples',
-            generation: 'markdown'
-          },
-          {
-            nameUrl: 'bananas.html',
-            title: 'Bananas',
-            generation: 'markdown'
-          },
-          {
-            nameUrl: 'pears.html',
-            title: 'Pears',
-            generation: 'markdown'
-          },
-          {
-            nameUrl: 'left.html',
-            title: 'Left',
-            generation: 'markdown'
-          },
-          {
-            nameUrl: 'right.html',
-            title: 'Right',
-            generation: 'markdown'
-          },
-          {
-            nameUrl: 'big.html',
-            title: 'Big',
-            generation: 'markdown'
-          },
-          {
-            nameUrl: 'pasta.html',
-            title: 'Pasta',
-            generation: 'markdown'
-          }
-        ]);
-      });
-
-      it('should remove numeric prefixes from copied files', () => {
-        const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-        expect(fs.existsSync(pageContentPath)).toBeTruthy();
-        const pageContentFiles = fs.readdirSync(pageContentPath);
-        expect(pageContentFiles).toHaveLength(9);
-        expect(pageContentFiles).toContain('index.xml');
-        expect(pageContentFiles).toContain('oranges.md');
-        expect(pageContentFiles).toContain('apples.md');
-        expect(pageContentFiles).toContain('bananas.md');
-        expect(pageContentFiles).toContain('pears.md');
-        expect(pageContentFiles).toContain('left.md');
-        expect(pageContentFiles).toContain('right.md');
-        expect(pageContentFiles).toContain('big.md');
-        expect(pageContentFiles).toContain('pasta.md');
-      });
-    });
-
     describe('IG Publisher mode', () => {
       beforeAll(() => {
-        const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), true); // New publisher mode w/ input/fsh
+        const exporter = new IGExporter(pkg, defs, fixtures);
         // No need to regenerate the IG on every test -- generate it once and inspect what you
         // need to in the tests
         exporter.export(tempOut);
@@ -1602,13 +1962,9 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
       const defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       const pkg = new Package(minimalConfig);
-      const exporter = new IGExporter(pkg, defs, path.resolve(fixtures, 'ig-data'), false);
+      const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you
       // need to in the tests
       exporter.export(tempOut);
@@ -1619,7 +1975,12 @@ describe('IGExporter', () => {
     });
 
     it('should not remove numeric prefixes from page names when doing so would cause name collisions', () => {
-      const igPath = path.join(tempOut, 'input', 'ImplementationGuide-fhir.us.minimal.json');
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toHaveLength(5);
@@ -1653,56 +2014,6 @@ describe('IGExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Duplicate file index.xml will be ignored. Please rename to avoid collisions/
       );
-    });
-
-    it('should not remove numeric prefixes from files when doing so would cause name collisions', () => {
-      const pageContentPath = path.join(tempOut, 'input', 'pagecontent');
-      expect(fs.existsSync(pageContentPath)).toBeTruthy();
-      const pageContentFiles = fs.readdirSync(pageContentPath);
-      expect(pageContentFiles).toHaveLength(5);
-      expect(pageContentFiles).toContain('index.md');
-      expect(pageContentFiles).toContain('1_rocks.md');
-      expect(pageContentFiles).toContain('2_rocks.md');
-      expect(pageContentFiles).toContain('3_index.md');
-      expect(pageContentFiles).toContain('4_2_rocks.md');
-    });
-  });
-
-  describe('#hidden-files-ig', () => {
-    let pkg: Package;
-    let exporter: IGExporter;
-    let tempOut: string;
-    let fixtures: string;
-    let config: Configuration;
-
-    beforeAll(() => {
-      fixtures = path.join(__dirname, 'fixtures', 'hidden-files-ig');
-    });
-
-    beforeEach(() => {
-      loggerSpy.reset();
-      tempOut = temp.mkdirSync('sushi-test');
-      config = cloneDeep(minimalConfig);
-      delete config.template;
-      pkg = new Package(config);
-      exporter = new IGExporter(
-        pkg,
-        new FHIRDefinitions(),
-        path.resolve(fixtures, 'ig-data'),
-        false
-      );
-    });
-
-    it('should avoid copying over extra system files', () => {
-      exporter.export(tempOut);
-      const imagesDir = fs.readdirSync(path.join(tempOut, 'input', 'images'));
-      // No hidden files should be copied over
-      expect(imagesDir).toEqual(['Shorty.png']);
-      const pageContentDir = fs.readdirSync(path.join(tempOut, 'input', 'pagecontent'));
-      expect(pageContentDir).toEqual(['index.md']);
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      const includesDir = fs.readdirSync(path.join(tempOut, 'input', 'includes'));
-      expect(includesDir).toEqual(['menu.xml']);
     });
   });
 });

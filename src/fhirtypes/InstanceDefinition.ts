@@ -1,8 +1,8 @@
-import { difference, remove, pull, cloneDeep } from 'lodash';
+import { difference, remove, pull, cloneDeep, isObjectLike } from 'lodash';
 import { Meta } from './specialTypes';
-import { HasId } from './common';
-import { applyMixins } from '../utils';
-import { InstanceUsage } from '../fshtypes';
+import { HasId } from './mixins';
+import { applyMixins } from '../utils/Mixin';
+import { InstanceUsage } from '../fshtypes/InstanceUsage';
 
 /**
  * A class representing a FHIR Instance.
@@ -53,17 +53,20 @@ export class InstanceDefinition {
  * Otherwise, use all properties from the input.
  *
  * @param input - the value to clone
- * @param keys - optionally, the properties of the value to include in the clone
+ * @param keys - optionally, the properties of the value to include in the clone, defaults to input keys if not specified
  * @returns {any} - a clone of the input, with reordered properties
  */
-function orderedCloneDeep(input: any, keys: string[] = Object.keys(input)): any {
+function orderedCloneDeep(input: any, keys?: string[]): any {
   // non-objects should be cloned normally
   // arrays should get a recursive call on their elements, but don't need reordering
-  if (typeof input !== 'object') {
+  if (!isObjectLike(input)) {
     return cloneDeep(input);
   } else if (Array.isArray(input)) {
     return input.map(element => orderedCloneDeep(element));
   } else {
+    if (keys == null) {
+      keys = Object.keys(input);
+    }
     const underscoreKeys = remove(keys, key => key.startsWith('_'));
     const orderedKeys: string[] = [];
     const result: any = {};

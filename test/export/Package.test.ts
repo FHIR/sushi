@@ -1,5 +1,5 @@
 import { Package } from '../../src/export';
-import { ValueSet, StructureDefinition, InstanceDefinition, CodeSystem } from '../../src/fhirtypes';
+import { CodeSystem, InstanceDefinition, StructureDefinition, ValueSet } from '../../src/fhirtypes';
 import { Type } from '../../src/utils/Fishable';
 import { minimalConfig } from '../utils/minimalConfig';
 
@@ -42,6 +42,42 @@ describe('Package', () => {
     extension1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
     extension1.fhirVersion = '4.0.1';
     pkg.extensions.push(extension1);
+    // Logical[0]: WheatBeer / wheat-beer / wheat-beer
+    const logical0 = new StructureDefinition();
+    logical0.name = 'WheatBeer';
+    logical0.id = 'wheat-beer';
+    logical0.type = 'wheat-beer';
+    logical0.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer';
+    logical0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Element';
+    logical0.fhirVersion = '4.0.1';
+    pkg.logicals.push(logical0);
+    // Logical[1]: RedWine /red-wine / red-wine
+    const logical1 = new StructureDefinition();
+    logical1.name = 'RedWine';
+    logical1.id = 'red-wine';
+    logical1.type = 'red-wine';
+    logical1.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/red-wine';
+    logical1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Element';
+    logical1.fhirVersion = '4.0.1';
+    pkg.logicals.push(logical1);
+    // Resource[0]: Destination / Destination / Destination
+    const resource0 = new StructureDefinition();
+    resource0.name = 'Destination';
+    resource0.id = 'Destination';
+    resource0.type = 'Destination';
+    resource0.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination';
+    resource0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/DomainResource';
+    resource0.fhirVersion = '4.0.1';
+    pkg.resources.push(resource0);
+    // Resource[1]: MovieTheater / MovieTheater / MovieTheater
+    const resource1 = new StructureDefinition();
+    resource1.name = 'MovieTheater';
+    resource1.id = 'MovieTheater';
+    resource1.type = 'MovieTheater';
+    resource1.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/MovieTheater';
+    resource1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/DomainResource';
+    resource1.fhirVersion = '4.0.1';
+    pkg.resources.push(resource1);
     // ValueSet[0]: Soups / soup-flavors
     const valueset0 = new ValueSet();
     valueset0.name = 'Soups';
@@ -85,6 +121,73 @@ describe('Package', () => {
     instance1.resourceType = 'Practitioner';
     instance1.gender = 'male';
     pkg.instances.push(instance1);
+    // Instance[2]: Thrilling / thrill-ing / Condition
+    const instance2 = new InstanceDefinition();
+    instance2._instanceMeta.name = 'Thrilling';
+    instance2._instanceMeta.usage = 'Definition';
+    instance2.id = 'thrill-ing';
+    instance2.resourceType = 'StructureDefinition';
+    instance2.derivation = 'constraint';
+    instance2.type = 'Condition';
+    instance2.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/thrill-ing';
+    instance2.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
+    instance2.fhirVersion = '4.0.1';
+    pkg.instances.push(instance2);
+    // Instance[3]: TwoWolves / two-wolves / Extension
+    const instance3 = new InstanceDefinition();
+    instance3._instanceMeta.name = 'TwoWolves';
+    instance3._instanceMeta.usage = 'Definition';
+    instance3.id = 'two-wolves';
+    instance3.resourceType = 'StructureDefinition';
+    instance3.derivation = 'constraint';
+    instance3.type = 'Extension';
+    instance3.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/two-wolves';
+    instance3.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Extension';
+    instance3.fhirVersion = '4.0.1';
+    pkg.instances.push(instance3);
+    // Instance[4]: Spices / spices / CodeSystem
+    const instance4 = new InstanceDefinition();
+    instance4._instanceMeta.name = 'Spices';
+    instance4._instanceMeta.usage = 'Definition';
+    instance4.id = 'spices';
+    instance4.resourceType = 'CodeSystem';
+    instance4.url = 'http://hl7.org/fhir/us/minimal/CodeSystem/spices';
+    instance4.content = 'complete';
+    instance4.version = '4.0.1';
+    pkg.instances.push(instance4);
+    // Instance[5]: Cookies / cookie-varieties / ValueSet
+    const instance5 = new InstanceDefinition();
+    instance5._instanceMeta.name = 'Cookies';
+    instance5._instanceMeta.usage = 'Definition';
+    instance5.id = 'cookie-varieties';
+    instance5.resourceType = 'ValueSet';
+    instance5.url = 'http://hl7.org/fhir/us/minimal/ValueSet/cookie-varieties';
+    instance5.version = '4.0.1';
+    pkg.instances.push(instance5);
+    // Instance[6]: SpiderHouse / spider-house / Logical
+    const instance6 = new InstanceDefinition();
+    instance6._instanceMeta.name = 'SpiderHouse';
+    instance6._instanceMeta.usage = 'Definition';
+    instance6.id = 'spider-house';
+    instance6.resourceType = 'StructureDefinition';
+    instance6.derivation = 'specialization';
+    instance6.kind = 'logical';
+    instance6.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/spider-house';
+    instance6.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Base';
+    instance6.fhirVersion = '4.0.1';
+    pkg.instances.push(instance6);
+    // Instance[7]: Zone / zone / Resource
+    const instance7 = new InstanceDefinition();
+    instance7._instanceMeta.name = 'Zone';
+    instance7._instanceMeta.usage = 'Definition';
+    instance7.id = 'zone';
+    instance7.resourceType = 'StructureDefinition';
+    instance7.derivation = 'specialization';
+    instance7.kind = 'resource';
+    instance7.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/zone';
+    instance7.baseDefinition = '';
+    instance7.fhirVersion = '4.0.1';
+    pkg.instances.push(instance7);
   });
 
   describe('#fishForFHIR()', () => {
@@ -96,6 +199,21 @@ describe('Package', () => {
       expect(
         pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny', Type.Profile)
       ).toEqual(funnyProfile);
+    });
+
+    it('should find instances of profiles', () => {
+      const thrillingProfile = pkg.fishForFHIR('thrill-ing', Type.Profile);
+      expect(thrillingProfile.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/thrill-ing'
+      );
+      expect(thrillingProfile.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Thrilling', Type.Profile)).toEqual(thrillingProfile);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/thrill-ing',
+          Type.Profile
+        )
+      ).toEqual(thrillingProfile);
     });
 
     it('should find extensions', () => {
@@ -113,6 +231,74 @@ describe('Package', () => {
       ).toEqual(poorTasteExtensionByID);
     });
 
+    it('should find instances of extensions', () => {
+      const twoWolvesExtension = pkg.fishForFHIR('two-wolves', Type.Extension);
+      expect(twoWolvesExtension.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/two-wolves'
+      );
+      expect(twoWolvesExtension.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('TwoWolves', Type.Extension)).toEqual(twoWolvesExtension);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/two-wolves',
+          Type.Extension
+        )
+      ).toEqual(twoWolvesExtension);
+    });
+
+    it('should find logicals', () => {
+      const beerLogical = pkg.fishForFHIR('wheat-beer', Type.Logical);
+      expect(beerLogical.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer');
+      expect(beerLogical.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('WheatBeer', Type.Logical)).toEqual(beerLogical);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
+          Type.Logical
+        )
+      ).toEqual(beerLogical);
+    });
+
+    it('should find instances of logicals', () => {
+      const spiderHouse = pkg.fishForFHIR('spider-house', Type.Logical);
+      expect(spiderHouse.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/spider-house'
+      );
+      expect(spiderHouse.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('SpiderHouse', Type.Logical)).toEqual(spiderHouse);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/spider-house',
+          Type.Logical
+        )
+      ).toEqual(spiderHouse);
+    });
+
+    it('should find resources', () => {
+      const destination = pkg.fishForFHIR('Destination', Type.Resource);
+      expect(destination.url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination'
+      );
+      expect(destination.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Destination', Type.Resource)).toEqual(destination);
+      expect(
+        pkg.fishForFHIR(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination',
+          Type.Resource
+        )
+      ).toEqual(destination);
+    });
+
+    it('should find instances of resources', () => {
+      const zoneResource = pkg.fishForFHIR('zone', Type.Resource);
+      expect(zoneResource.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/zone');
+      expect(zoneResource.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Zone', Type.Resource)).toEqual(zoneResource);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/zone', Type.Resource)
+      ).toEqual(zoneResource);
+    });
+
     it('should find value sets', () => {
       const soupsValueSetByID = pkg.fishForFHIR('soup-flavors', Type.ValueSet);
       expect(soupsValueSetByID.url).toBe('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors');
@@ -123,6 +309,18 @@ describe('Package', () => {
       expect(
         pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors', Type.ValueSet)
       ).toEqual(soupsValueSetByID);
+    });
+
+    it('should find instances of value sets', () => {
+      const cookiesValueSetByID = pkg.fishForFHIR('cookie-varieties', Type.ValueSet);
+      expect(cookiesValueSetByID.url).toBe(
+        'http://hl7.org/fhir/us/minimal/ValueSet/cookie-varieties'
+      );
+      expect(cookiesValueSetByID.version).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Cookies', Type.ValueSet)).toEqual(cookiesValueSetByID);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/ValueSet/cookie-varieties', Type.ValueSet)
+      ).toEqual(cookiesValueSetByID);
     });
 
     it('should find code systems', () => {
@@ -137,6 +335,16 @@ describe('Package', () => {
       ).toEqual(numericsCodeSystemByID);
     });
 
+    it('should find instances of code systems', () => {
+      const spicesCodeSystemByID = pkg.fishForFHIR('spices', Type.CodeSystem);
+      expect(spicesCodeSystemByID.url).toBe('http://hl7.org/fhir/us/minimal/CodeSystem/spices');
+      expect(spicesCodeSystemByID.version).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Spices', Type.CodeSystem)).toEqual(spicesCodeSystemByID);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/CodeSystem/spices', Type.CodeSystem)
+      ).toEqual(spicesCodeSystemByID);
+    });
+
     it('should find instances', () => {
       const drSueInstanceById = pkg.fishForFHIR('dr-sue', Type.Instance);
       expect(drSueInstanceById.id).toBe('dr-sue');
@@ -148,6 +356,7 @@ describe('Package', () => {
       const funnyProfileByID = pkg.fishForFHIR(
         'fun-ny',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Extension,
         Type.ValueSet,
@@ -156,9 +365,21 @@ describe('Package', () => {
       );
       expect(funnyProfileByID).toBeUndefined();
 
+      const thrillingProfileByID = pkg.fishForFHIR(
+        'thrill-ing',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(thrillingProfileByID).toBeUndefined();
+
       const poorTasteExtensionByID = pkg.fishForFHIR(
         'poor-taste',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.ValueSet,
@@ -167,9 +388,45 @@ describe('Package', () => {
       );
       expect(poorTasteExtensionByID).toBeUndefined();
 
+      const twoWolvesExtensionByID = pkg.fishForFHIR(
+        'two-wolves',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(twoWolvesExtensionByID).toBeUndefined();
+
+      const wheatBeerLogicalByID = pkg.fishForFHIR(
+        'wheat-beer',
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem,
+        Type.Instance
+      );
+      expect(wheatBeerLogicalByID).toBeUndefined();
+
+      const destinationResourceByID = pkg.fishForFHIR(
+        'Destination',
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem,
+        Type.Instance
+      );
+      expect(destinationResourceByID).toBeUndefined();
+
       const soupsValueSetByID = pkg.fishForFHIR(
         'soup-flavors',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -181,6 +438,7 @@ describe('Package', () => {
       const numericsCodeSystemByID = pkg.fishForFHIR(
         'numerics',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -192,6 +450,7 @@ describe('Package', () => {
       const drSueInstanceByID = pkg.fishForFHIR(
         'dr-sue',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -217,6 +476,22 @@ describe('Package', () => {
       expect(
         pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste')
       ).toEqual(poorTasteExtensionByID);
+
+      const wheatBeerLogicalByID = pkg.fishForFHIR('wheat-beer');
+      expect(wheatBeerLogicalByID.name).toBe('WheatBeer');
+      expect(wheatBeerLogicalByID.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('WheatBeer')).toEqual(wheatBeerLogicalByID);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer')
+      ).toEqual(wheatBeerLogicalByID);
+
+      const destinationResourceByID = pkg.fishForFHIR('Destination');
+      expect(destinationResourceByID.name).toBe('Destination');
+      expect(destinationResourceByID.fhirVersion).toBe('4.0.1');
+      expect(pkg.fishForFHIR('Destination')).toEqual(destinationResourceByID);
+      expect(
+        pkg.fishForFHIR('http://hl7.org/fhir/us/minimal/StructureDefinition/Destination')
+      ).toEqual(destinationResourceByID);
 
       const soupsValueSetByID = pkg.fishForFHIR('soup-flavors');
       expect(soupsValueSetByID.name).toBe('Soups');
@@ -252,7 +527,8 @@ describe('Package', () => {
         name: 'Funny',
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('Funny', Type.Profile)).toEqual(funnyProfile);
       expect(
@@ -270,7 +546,8 @@ describe('Package', () => {
         name: 'PoorTaste',
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('PoorTaste', Type.Extension)).toEqual(poorTasteExtensionByID);
       expect(
@@ -281,12 +558,51 @@ describe('Package', () => {
       ).toEqual(poorTasteExtensionByID);
     });
 
+    it('should find logicals', () => {
+      const wheatBeerLogicalByID = pkg.fishForMetadata('wheat-beer', Type.Logical);
+      expect(wheatBeerLogicalByID).toEqual({
+        id: 'wheat-beer',
+        name: 'WheatBeer',
+        sdType: 'wheat-beer',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element',
+        resourceType: 'StructureDefinition'
+      });
+      expect(pkg.fishForMetadata('WheatBeer', Type.Logical)).toEqual(wheatBeerLogicalByID);
+      expect(
+        pkg.fishForMetadata(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
+          Type.Logical
+        )
+      ).toEqual(wheatBeerLogicalByID);
+    });
+
+    it('should find resources', () => {
+      const destinationResourceByID = pkg.fishForMetadata('Destination', Type.Resource);
+      expect(destinationResourceByID).toEqual({
+        id: 'Destination',
+        name: 'Destination',
+        sdType: 'Destination',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination',
+        parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+        resourceType: 'StructureDefinition'
+      });
+      expect(pkg.fishForMetadata('Destination', Type.Resource)).toEqual(destinationResourceByID);
+      expect(
+        pkg.fishForMetadata(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination',
+          Type.Resource
+        )
+      ).toEqual(destinationResourceByID);
+    });
+
     it('should find value sets', () => {
       const soupsValueSetByID = pkg.fishForMetadata('soup-flavors', Type.ValueSet);
       expect(soupsValueSetByID).toEqual({
         id: 'soup-flavors',
         name: 'Soups',
-        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors'
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
+        resourceType: 'ValueSet'
       });
       expect(pkg.fishForMetadata('Soups', Type.ValueSet)).toEqual(soupsValueSetByID);
       expect(
@@ -299,7 +615,8 @@ describe('Package', () => {
       expect(numericsCodeSystemByID).toEqual({
         id: 'numerics',
         name: 'Numbers',
-        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics'
+        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
+        resourceType: 'CodeSystem'
       });
       expect(pkg.fishForMetadata('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
       expect(
@@ -311,7 +628,8 @@ describe('Package', () => {
       const drSueInstanceById = pkg.fishForMetadata('dr-sue', Type.Instance);
       expect(drSueInstanceById).toEqual({
         id: 'dr-sue',
-        name: 'DrSue'
+        name: 'DrSue',
+        resourceType: 'Practitioner'
       });
       expect(pkg.fishForMetadata('DrSue', Type.Instance)).toEqual(drSueInstanceById);
     });
@@ -320,6 +638,7 @@ describe('Package', () => {
       const funnyProfileByID = pkg.fishForMetadata(
         'fun-ny',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Extension,
         Type.ValueSet,
@@ -331,6 +650,7 @@ describe('Package', () => {
       const poorTasteExtensionByID = pkg.fishForMetadata(
         'poor-taste',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.ValueSet,
@@ -339,9 +659,34 @@ describe('Package', () => {
       );
       expect(poorTasteExtensionByID).toBeUndefined();
 
+      const wheatBeerLogicalByID = pkg.fishForMetadata(
+        'wheat-beer',
+        Type.Resource,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem,
+        Type.Instance
+      );
+      expect(wheatBeerLogicalByID).toBeUndefined();
+
+      const destinationResourceByID = pkg.fishForMetadata(
+        'Destination',
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem,
+        Type.Instance
+      );
+      expect(destinationResourceByID).toBeUndefined();
+
       const soupsValueSetByID = pkg.fishForMetadata(
         'soup-flavors',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -353,6 +698,7 @@ describe('Package', () => {
       const numericsCodeSystemByID = pkg.fishForMetadata(
         'numerics',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -364,6 +710,7 @@ describe('Package', () => {
       const drSueInstanceByID = pkg.fishForMetadata(
         'dr-sue',
         Type.Resource,
+        Type.Logical,
         Type.Type,
         Type.Profile,
         Type.Extension,
@@ -380,7 +727,8 @@ describe('Package', () => {
         name: 'Funny',
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Condition'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('Funny')).toEqual(funnyProfileByID);
       expect(
@@ -393,18 +741,48 @@ describe('Package', () => {
         name: 'PoorTaste',
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Extension'
+        parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        resourceType: 'StructureDefinition'
       });
       expect(pkg.fishForMetadata('PoorTaste')).toEqual(poorTasteExtensionByID);
       expect(
         pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/poor-taste')
       ).toEqual(poorTasteExtensionByID);
 
+      const wheatBeerLogicalByID = pkg.fishForMetadata('wheat-beer');
+      expect(wheatBeerLogicalByID).toEqual({
+        id: 'wheat-beer',
+        name: 'WheatBeer',
+        sdType: 'wheat-beer',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Element',
+        resourceType: 'StructureDefinition'
+      });
+      expect(pkg.fishForMetadata('WheatBeer')).toEqual(wheatBeerLogicalByID);
+      expect(
+        pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer')
+      ).toEqual(wheatBeerLogicalByID);
+
+      const destinationResourceByID = pkg.fishForMetadata('Destination');
+      expect(destinationResourceByID).toEqual({
+        id: 'Destination',
+        name: 'Destination',
+        sdType: 'Destination',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Destination',
+        parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+        resourceType: 'StructureDefinition'
+      });
+      expect(pkg.fishForMetadata('Destination')).toEqual(destinationResourceByID);
+      expect(
+        pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/StructureDefinition/Destination')
+      ).toEqual(destinationResourceByID);
+
       const soupsValueSetByID = pkg.fishForMetadata('soup-flavors');
       expect(soupsValueSetByID).toEqual({
         id: 'soup-flavors',
         name: 'Soups',
-        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors'
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
+        resourceType: 'ValueSet'
       });
       expect(pkg.fishForMetadata('Soups')).toEqual(soupsValueSetByID);
       expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors')).toEqual(
@@ -415,7 +793,8 @@ describe('Package', () => {
       expect(numericsCodeSystemByID).toEqual({
         id: 'numerics',
         name: 'Numbers',
-        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics'
+        url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
+        resourceType: 'CodeSystem'
       });
       expect(pkg.fishForMetadata('Numbers')).toEqual(numericsCodeSystemByID);
       expect(pkg.fishForMetadata('http://hl7.org/fhir/us/minimal/CodeSystem/numerics')).toEqual(
@@ -425,7 +804,8 @@ describe('Package', () => {
       const drSueInstanceByID = pkg.fishForMetadata('dr-sue');
       expect(drSueInstanceByID).toEqual({
         id: 'dr-sue',
-        name: 'DrSue'
+        name: 'DrSue',
+        resourceType: 'Practitioner'
       });
 
       expect(pkg.fishForMetadata('DrSue')).toEqual(drSueInstanceByID);

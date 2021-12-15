@@ -2,25 +2,28 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
-import { logger } from './FSHLogger';
-import { loadDependency } from '../fhirdefs/load';
-import { FHIRDefinitions } from '../fhirdefs';
-import { FSHTank, RawFSH, importText, ensureConfiguration, importConfiguration } from '../import';
-import { cloneDeep, padEnd } from 'lodash';
 import YAML from 'yaml';
-import { Package } from '../export';
+import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { EOL } from 'os';
+import { logger } from './FSHLogger';
+import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
-  filterInlineInstances,
-  filterExampleInstances,
-  filterCapabilitiesInstances,
-  filterVocabularyInstances,
-  filterModelInstances,
-  filterOperationInstances,
-  filterExtensionInstances,
-  filterProfileInstances
-} from './InstanceDefinitionUtils';
+  FSHTank,
+  RawFSH,
+  importText,
+  ensureConfiguration,
+  importConfiguration,
+  loadConfigurationFromIgResource
+} from '../import';
+import { Package } from '../export';
 import { Configuration } from '../fshtypes';
-import { loadConfigurationFromIgResource } from '../import/loadConfigurationFromIgResource';
+
+const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
+  'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
+  'hl7.fhir.extensions.r3': 'hl7.fhir.r3.core#3.0.2',
+  'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
+  'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#current'
+};
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -39,6 +42,7 @@ export function ensureInputDir(input: string): string {
 
 export function hasFshFiles(path: string): boolean {
   try {
+    fs.statSync(path);
     const files = getFilesRecursive(path).filter(file => file.endsWith('.fsh'));
     return files.length > 0;
   } catch (error) {
@@ -64,26 +68,25 @@ export function findInputDir(input: string): string {
     input = path.join(originalInput, 'input', 'fsh');
   }
 
-  // TODO: Legacy support. Remove when no longer supported.
+  // TODO: Error about unsupported features. Remove when message no longer needed.
   // Use fsh/ subdirectory if not already specified and present
   if (!fs.existsSync(inputFshSubdirectoryPath) && !currentTankWithNoFsh) {
     let msg =
       '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n';
     if (fs.existsSync(fshSubdirectoryPath)) {
-      input = path.join(input, 'fsh');
       msg +=
         '\nSUSHI detected a "fsh" directory that will be used in the input path.\n' +
-        'Use of this folder is DEPRECATED and will be REMOVED in a future release.\n' +
+        'Use of this folder is NO LONGER SUPPORTED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - move fsh${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move fsh${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
-      if (fs.existsSync(path.join(input, 'ig-data'))) {
+      if (fs.existsSync(path.join(input, 'fsh', 'ig-data'))) {
         msg += `  - move fsh${path.sep}ig-data${path.sep}* files and folders to .${path.sep}*\n`;
       }
     } else {
       msg +=
         '\nSUSHI has adopted a new folder structure for FSH tanks (a.k.a. SUSHI projects).\n' +
-        'Support for other folder structures is DEPRECATED and will be REMOVED in a future release.\n' +
+        'Support for other folder structures is NO LONGER SUPPORTED.\n' +
         'To migrate to the new folder structure, make the following changes:\n' +
         `  - rename .${path.sep}config.yaml to .${path.sep}sushi-config.yaml\n` +
         `  - move .${path.sep}*.fsh files to .${path.sep}input${path.sep}fsh${path.sep}*.fsh\n`;
@@ -100,32 +103,18 @@ export function findInputDir(input: string): string {
     msg +=
       '  - ensure your .gitignore file is not configured to ignore the sources in their new locations\n' +
       '  - add /fsh-generated to your .gitignore file to prevent SUSHI output from being checked into source control\n\n' +
-      `NOTE: After you make these changes, the default ouput folder for SUSHI will change to .${path.sep}fsh-generated.\n\n` +
+      `NOTE: After you make these changes, the default output folder for SUSHI will change to .${path.sep}fsh-generated.\n\n` +
       'For detailed migration instructions, see: https://fshschool.org/docs/sushi/migration/\n\n';
-    logger.warn(msg);
+    logger.error(msg);
   }
   return input;
 }
 
-export function ensureOutputDir(
-  input: string,
-  output: string,
-  isIgPubContext: boolean,
-  isLegacyIgPubContext: boolean
-): string {
+export function ensureOutputDir(input: string, output: string): string {
   let outDir = output;
-  if (isLegacyIgPubContext && !output) {
-    // TODO: Legacy support for top level "fsh" directory. Remove when no longer supported.
-    // When running in a legacy IG Publisher context, default output is the parent folder of the tank
-    outDir = path.join(input, '..');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  } else if (isIgPubContext && !output) {
-    // When running in an IG Publisher context, default output is the parent folder of the input/fsh folder
+  if (!output) {
+    // Default output is the parent folder of the input/fsh folder
     outDir = path.join(input, '..', '..');
-    logger.info(`No output path specified. Output to ${outDir}`);
-  } else if (!output) {
-    // Any other time, default output is just to 'build'
-    outDir = path.join('.', 'build');
     logger.info(`No output path specified. Output to ${outDir}`);
   }
   fs.ensureDirSync(outDir);
@@ -143,11 +132,11 @@ export function ensureOutputDir(
   return outDir;
 }
 
-export function readConfig(input: string, isLegacyIgPubContext: boolean): Configuration {
+export function readConfig(input: string): Configuration {
   const configPath = ensureConfiguration(input);
   let config: Configuration;
   if (configPath == null || !fs.existsSync(configPath)) {
-    config = loadConfigurationFromIgResource(isLegacyIgPubContext ? path.dirname(input) : input);
+    config = loadConfigurationFromIgResource(input);
   } else {
     const configYaml = fs.readFileSync(configPath, 'utf8');
     config = importConfiguration(configYaml, configPath);
@@ -171,15 +160,27 @@ export function readConfig(input: string, isLegacyIgPubContext: boolean): Config
   return config;
 }
 
-export function loadExternalDependencies(
+export async function loadExternalDependencies(
   defs: FHIRDefinitions,
   config: Configuration
-): Promise<FHIRDefinitions | void>[] {
+): Promise<void> {
   // Add FHIR to the dependencies so it is loaded
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
   const fhirVersion = config.fhirVersion.find(v => isSupportedFHIRVersion(v));
-  const fhirPackageId = fhirVersion.startsWith('4.0') ? 'hl7.fhir.r4.core' : 'hl7.fhir.r5.core';
-  if (fhirPackageId === 'hl7.fhir.r5.core') {
+  let fhirPackageId: string;
+  let prerelease = false;
+  if (fhirVersion.startsWith('4.0.')) {
+    fhirPackageId = 'hl7.fhir.r4.core';
+  } else if (fhirVersion.startsWith('4.1.')) {
+    fhirPackageId = 'hl7.fhir.r4b.core';
+    prerelease = true;
+  } else if (fhirVersion.startsWith('4.3.')) {
+    fhirPackageId = 'hl7.fhir.r4b.core';
+  } else {
+    fhirPackageId = 'hl7.fhir.r5.core';
+    prerelease = true;
+  }
+  if (prerelease) {
     logger.warn(
       'SUSHI support for pre-release versions of FHIR is experimental. Use at your own risk!'
     );
@@ -187,8 +188,7 @@ export function loadExternalDependencies(
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
 
   // Load dependencies
-  const dependencyDefs: Promise<FHIRDefinitions | void>[] = [];
-  for (const dep of dependencies) {
+  const promises = dependencies.map(dep => {
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
@@ -201,24 +201,45 @@ export function loadExternalDependencies(
           `    uri: ${dep.uri ?? 'http://my-fhir-ig.org/ImplementationGuide/123'}\n` +
           '    version: current'
       );
-      continue;
+      return Promise.resolve();
+    } else if (EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]) {
+      // It is a special "virtual" FHIR extensions package indicating we need to load supplemental
+      // FHIR versions to support "implied extensions".
+      if (dep.version !== fhirVersion) {
+        logger.warn(
+          `Incorrect package version: ${dep.packageId}#${dep.version}. FHIR extensions packages ` +
+            "should use the same version as the implementation guide's fhirVersion. Version " +
+            `${fhirVersion} will be used instead. Update the dependency version in ` +
+            'sushi-config.yaml to eliminate this warning.'
+        );
+      }
+      logger.info(
+        `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
+      );
+      return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
+    } else {
+      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+        let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
+        if (/certificate/.test(e.message)) {
+          message +=
+            '\n\nSometimes this error occurs in corporate or educational environments that use proxies and/or SSL ' +
+            'inspection.\nTroubleshooting tips:\n' +
+            '  1. If a non-proxied network is available, consider connecting to that network instead.\n' +
+            '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
+            '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
+        }
+        logger.error(message);
+      });
     }
-    dependencyDefs.push(
-      loadDependency(dep.packageId, dep.version, defs)
-        .then(def => {
-          return def;
-        })
-        .catch(e => {
-          logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
-        })
-    );
-  }
-  return dependencyDefs;
+  });
+
+  return Promise.all(promises).then(() => {});
 }
 
 export function getRawFSHes(input: string): RawFSH[] {
   let files: string[];
   try {
+    fs.statSync(input);
     files = getFilesRecursive(input);
   } catch {
     logger.error('Invalid path to FSH definition folder.');
@@ -240,18 +261,60 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
   return new FSHTank(docs, config);
 }
 
+export function checkNullValuesOnArray(resource: any, parentName = '', priorPath = ''): void {
+  const resourceName = parentName ? parentName : resource.id ?? resource.name;
+  for (const propertyKey in resource) {
+    const property = resource[propertyKey];
+    const currentPath = !priorPath ? propertyKey : priorPath.concat(`.${propertyKey}`);
+    // If a property's key begins with "_", we'll want to ignore null values on it's top level
+    // but still check any nested objects for null values
+    if (propertyKey.startsWith('_')) {
+      if (isPlainObject(property)) {
+        // If we encounter an object property, we'll want to check its properties as well
+        checkNullValuesOnArray(property, resourceName, currentPath);
+      }
+      if (Array.isArray(property)) {
+        property.forEach((element: any, index: number) => {
+          if (isPlainObject(element)) {
+            // If we encounter an object property, we'll want to check its properties as well
+            checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+          }
+        });
+      }
+    } else {
+      if (isPlainObject(property)) {
+        // If we encounter an object property, we'll want to check its properties as well
+        checkNullValuesOnArray(property, resourceName, currentPath);
+      }
+      if (Array.isArray(property)) {
+        const nullIndexes: number[] = [];
+        property.forEach((element: any, index: number) => {
+          if (element === null) nullIndexes.push(index);
+          if (isPlainObject(element)) {
+            // If we encounter an object property, we'll want to check its properties as well
+            checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);
+          }
+        });
+        if (nullIndexes.length > 0) {
+          logger.warn(
+            `The array '${currentPath}' in ${resourceName} is missing values at the following indices: ${nullIndexes}`
+          );
+        }
+      }
+    }
+  }
+}
+
 export function writeFHIRResources(
   outDir: string,
   outPackage: Package,
   defs: FHIRDefinitions,
-  snapshot: boolean,
-  isIgPubContext: boolean
+  snapshot: boolean
 ) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const predefinedResources = defs.allPredefinedResources();
   const writeResources = (
-    folder: string,
     resources: {
       getFileName: () => string;
       toJSON: (snapshot: boolean) => any;
@@ -260,9 +323,7 @@ export function writeFHIRResources(
       resourceType?: string;
     }[]
   ) => {
-    const exportDir = isIgPubContext
-      ? path.join(outDir, 'fsh-generated', 'resources')
-      : path.join(outDir, 'input', folder);
+    const exportDir = path.join(outDir, 'fsh-generated', 'resources');
     resources.forEach(resource => {
       if (
         !predefinedResources.find(
@@ -272,6 +333,7 @@ export function writeFHIRResources(
             predef.id === resource.id
         )
       ) {
+        checkNullValuesOnArray(resource);
         fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
           spaces: 2
         });
@@ -288,23 +350,68 @@ export function writeFHIRResources(
       }
     });
   };
-  writeResources('profiles', outPackage.profiles);
-  writeResources('extensions', outPackage.extensions);
-  writeResources('vocabulary', [...outPackage.valueSets, ...outPackage.codeSystems]);
+  writeResources(outPackage.profiles);
+  writeResources(outPackage.extensions);
+  writeResources(outPackage.logicals);
+  // WARNING: While custom resources are written to disk, the IG Publisher does not
+  //          accept newly defined resources. However, it is configured to automatically
+  //          search the fsh-generated directory for StructureDefinitions rather than using
+  //          the StructureDefinitions defined in the exported implementation guide. So, be
+  //          aware that the IG Publisher will attempt to process custom resources.
+  //          NOTE: To mitigate against this, the parameter 'autoload-resources = false' is
+  //          injected automatically into the IG array pf parameters if the parameter was
+  //          not already defined and only if the custom resources were generated by Sushi.
+  writeResources(outPackage.resources);
+  writeResources([...outPackage.valueSets, ...outPackage.codeSystems]);
 
-  // Sort instances into appropriate directories
-  const instances = cloneDeep(outPackage.instances); // Filter functions below mutate the argument, so clone what is in the package
-  filterInlineInstances(instances);
-  writeResources('examples', filterExampleInstances(instances));
-  writeResources('capabilities', filterCapabilitiesInstances(instances));
-  writeResources('vocabulary', filterVocabularyInstances(instances));
-  writeResources('models', filterModelInstances(instances));
-  writeResources('operations', filterOperationInstances(instances));
-  writeResources('extensions', filterExtensionInstances(instances));
-  writeResources('profiles', filterProfileInstances(instances));
-  writeResources('resources', instances); // Any instance left cannot be categorized any further so should just be in generic resources
+  // Filter out inline instances
+  writeResources(outPackage.instances.filter(i => i._instanceMeta.usage !== 'Inline'));
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
+}
+
+export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTank) {
+  const preprocessedPath = path.join(outDir, '_preprocessed');
+  fs.ensureDirSync(preprocessedPath);
+  // Because this is the FSH that exists after processing, some entities from the original FSH are gone.
+  // Specifically, RuleSets have already been applied.
+  // Aliases have already been resolved for most cases, but since they may still
+  // be used in a slice name, they are included.
+  // TODO: Add Resources and Logicals once they are being imported and stored in docs
+  tank.docs.forEach(doc => {
+    let fileContent = '';
+    // First, get all Aliases. They don't have source information.
+    if (doc.aliases.size > 0) {
+      doc.aliases.forEach((url, alias) => {
+        fileContent += `Alias: ${alias} = ${url}${EOL}`;
+      });
+      fileContent += EOL;
+    }
+    // Then, get all other applicable entities. They will have source information.
+    const entities = [
+      ...doc.profiles.values(),
+      ...doc.extensions.values(),
+      ...doc.logicals.values(),
+      ...doc.resources.values(),
+      ...doc.instances.values(),
+      ...doc.valueSets.values(),
+      ...doc.codeSystems.values(),
+      ...doc.invariants.values(),
+      ...doc.mappings.values()
+    ];
+    // Sort entities by original line number, then write them out.
+    sortBy(entities, 'sourceInfo.location.startLine').forEach(entity => {
+      fileContent += `// Originally defined on lines ${entity.sourceInfo.location.startLine} - ${entity.sourceInfo.location.endLine}${EOL}`;
+      fileContent += `${entity.toFSH()}${EOL}${EOL}`;
+    });
+    if (fileContent.length === 0) {
+      fileContent = '// This file has no content after preprocessing.';
+    }
+    const outPath = path.relative(inDir, doc.file);
+    fs.ensureFileSync(path.join(preprocessedPath, outPath));
+    fs.writeFileSync(path.join(preprocessedPath, outPath), fileContent);
+  });
+  logger.info(`Wrote preprocessed FSH to ${preprocessedPath}`);
 }
 
 /**
@@ -312,11 +419,11 @@ export function writeFHIRResources(
  */
 export async function init(): Promise<void> {
   console.log(
-    '\n╭──────────────────────────────────────────────────────────╮\n' +
-      '│ This interactive tool will use your answers to create a  │\n' +
-      "│ working SUSHI project configured with your project's     │\n" +
-      '│ basic information.                                       │\n' +
-      '╰──────────────────────────────────────────────────────────╯\n'
+    '\n╭───────────────────────────────────────────────────────────╮\n' +
+      '│ This interactive tool will use your answers to create a   │\n' +
+      "│ working SUSHI project configured with your project's      │\n" +
+      '│ basic information.                                        │\n' +
+      '╰───────────────────────────────────────────────────────────╯\n'
   );
 
   const configDoc = YAML.parseDocument(
@@ -325,12 +432,29 @@ export async function init(): Promise<void> {
   // Accept user input for certain fields
   ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
     const userValue = readlineSync.question(
-      `${field.charAt(0).toUpperCase() + field.slice(1)} (Default: ${configDoc.get(field)}): `
+      `${upperFirst(field)} (Default: ${configDoc.get(field)}): `
     );
     if (userValue) {
-      configDoc.set(field, userValue);
+      if (field === 'status') {
+        const node = YAML.createNode(userValue);
+        node.comment = ' draft | active | retired | unknown';
+        configDoc.set(field, node);
+      } else {
+        configDoc.set(field, userValue);
+      }
     }
   });
+
+  // And for nested publisher fields
+  ['name', 'url'].forEach(field => {
+    const userValue = readlineSync.question(
+      `Publisher ${upperFirst(field)} (Default: ${configDoc.get('publisher').get(field)}): `
+    );
+    if (userValue) {
+      configDoc.get('publisher').set(field, userValue);
+    }
+  });
+
   // Ensure copyrightYear is accurate
   configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
   const projectName = configDoc.get('name');
@@ -389,29 +513,37 @@ export async function init(): Promise<void> {
       logger.error(`Unable to download ${script} from ${url}: ${e.message}`);
     }
   }
-  const maxLength = 31;
+  const maxLength = 32;
   const printName =
     projectName.length > maxLength ? projectName.slice(0, maxLength - 3) + '...' : projectName;
   console.log(
-    '\n╭──────────────────────────────────────────────────────────╮\n' +
+    '\n╭───────────────────────────────────────────────────────────╮\n' +
       `│ Project initialized at: ./${padEnd(printName, maxLength)}│\n` +
-      '├──────────────────────────────────────────────────────────┤\n' +
-      '│ Now try this:                                            │\n' +
-      '│                                                          │\n' +
+      '├───────────────────────────────────────────────────────────┤\n' +
+      '│ Now try this:                                             │\n' +
+      '│                                                           │\n' +
       `│ > cd ${padEnd(printName, maxLength + 21)}│\n` +
-      '│ > sushi .                                                │\n' +
-      '│                                                          │\n' +
-      '│ For guidance on project structure and configuration see  │\n' +
-      '│ the SUSHI documentation:  https://fshschool.org/sushi    │\n' +
-      '╰──────────────────────────────────────────────────────────╯\n'
+      '│ > sushi .                                                 │\n' +
+      '│                                                           │\n' +
+      '│ For guidance on project structure and configuration see   │\n' +
+      '│ the SUSHI documentation: https://fshschool.org/docs/sushi │\n' +
+      '╰───────────────────────────────────────────────────────────╯\n'
   );
 }
 
-function getFilesRecursive(dir: string): string[] {
-  if (fs.statSync(dir).isDirectory()) {
-    const ancestors = fs.readdirSync(dir, 'utf8').map(f => getFilesRecursive(path.join(dir, f)));
-    return [].concat(...ancestors);
-  } else {
-    return [dir];
+export function getFilesRecursive(dir: string): string[] {
+  // always return absolute paths
+  const absPath = path.resolve(dir);
+  try {
+    if (fs.statSync(absPath).isDirectory()) {
+      const descendants = fs
+        .readdirSync(absPath, 'utf8')
+        .map(f => getFilesRecursive(path.join(absPath, f)));
+      return [].concat(...descendants);
+    } else {
+      return [absPath];
+    }
+  } catch {
+    return [];
   }
 }

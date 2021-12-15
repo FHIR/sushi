@@ -25,7 +25,7 @@ describe('FshQuantity', () => {
       const code = new FshCode('mm');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual("100 'mm'");
+      expect(result).toEqual('100 #mm');
     });
 
     it('should return string for unit code with UCUM system', () => {
@@ -35,20 +35,18 @@ describe('FshQuantity', () => {
       expect(result).toEqual("100 'mm'");
     });
 
-    // NOTE: Technically this is invalid, but SUSHI never creates a FshQuantity with a non-UCUM system
-    // This is purely for testing purposes
     it('should return string for unit code with non-UCUM system', () => {
       const code = new FshCode('bar', 'http://foo.com');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual("100 'bar'");
+      expect(result).toEqual('100 http://foo.com#bar');
     });
 
     it('should return string for unit code with display', () => {
       const code = new FshCode('mm', null, 'Display');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual('100 \'mm\' "Display"');
+      expect(result).toEqual('100 #mm "Display"');
     });
 
     it('should return string for unit code with UCUM system and display', () => {
@@ -58,20 +56,25 @@ describe('FshQuantity', () => {
       expect(result).toEqual('100 \'mm\' "Display"');
     });
 
-    // NOTE: Technically this is invalid, but SUSHI never creates a FshQuantity with a non-UCUM system
-    // This is purely for testing purposes
     it('should return string for unit code with non-UCUM system and display', () => {
       const code = new FshCode('bar', 'http://foo.com', 'Display');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual('100 \'bar\' "Display"');
+      expect(result).toEqual('100 http://foo.com#bar "Display"');
     });
 
     it('should return string for unit code with code with spaces', () => {
       const code = new FshCode('milli meters');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
-      expect(result).toEqual("100 'milli meters'");
+      expect(result).toEqual('100 #"milli meters"');
+    });
+
+    it('should return a string for a unit code with UCUM system and a display containing characters that must be escaped', () => {
+      const code = new FshCode('mm', 'http://unitsofmeasure.org', 'strange" display\\');
+      const quantity = new FshQuantity(100, code);
+      const result = quantity.toString();
+      expect(result).toEqual('100 \'mm\' "strange\\" display\\\\"');
     });
   });
 });

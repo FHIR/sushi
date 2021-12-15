@@ -6,4 +6,3 @@ version: 1.0.0
 fhirVersion: 4.0.1
 copyrightYear: 2020+
 releaseLabel: Build CI
-template: hl7.fhir.template#0.0.5

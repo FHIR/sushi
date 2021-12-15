@@ -38,10 +38,10 @@ describe('importConfiguration', () => {
         { code: 'copyrightyear', value: '2020+' },
         { code: 'releaselabel', value: 'Build CI' }
       ],
-      template: 'hl7.fhir.template#0.0.5',
       packageId: 'fhir.us.minimal',
       FSHOnly: false,
-      applyExtensionMetadataToRoot: true
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -172,7 +172,7 @@ describe('importConfiguration', () => {
           {
             version: 'current',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: 'http://build.fhir.org/ig/HL7/example-ig/',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
             status: 'ci-build',
             current: true
           },
@@ -199,7 +199,8 @@ describe('importConfiguration', () => {
       },
       indexPageContent: 'Example Index Page Content',
       FSHOnly: false,
-      applyExtensionMetadataToRoot: true
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -1396,6 +1397,27 @@ describe('importConfiguration', () => {
         { packageId: 'bar', version: '2.3' }
       ]);
     });
+
+    it('should convert uppercase package Ids to lowercase', () => {
+      minYAML.dependencies = {
+        'hl7.ex.PAcKage.iD1': '1.2.3',
+        'hl7.ex.package.id2': '4.5.6'
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.dependencies).toEqual([
+        { packageId: 'hl7.ex.package.id1', version: '1.2.3' },
+        { packageId: 'hl7.ex.package.id2', version: '4.5.6' }
+      ]);
+      expect(
+        loggerSpy
+          .getAllMessages('warn')
+          .some(message =>
+            message.match(
+              /hl7.ex.PAcKage.iD1 contains uppercase characters, which is discouraged. SUSHI will use hl7.ex.package.id1 as the package name./
+            )
+          )
+      ).toBeTruthy();
+    });
   });
 
   describe('#global', () => {
@@ -1895,7 +1917,7 @@ describe('importConfiguration', () => {
       minYAML.title = 'HL7 FHIR Implementation Guide: Minimal IG Release 1 - US Realm | STU1';
       minYAML.description = 'Minimal IG exercises only required fields in a SUSHI configuration.';
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/'
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/'
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.history).toEqual({
@@ -1907,7 +1929,7 @@ describe('importConfiguration', () => {
           {
             version: 'current',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+            path: 'https://build.fhir.org/ig/HL7/minimal-ig/',
             status: 'ci-build',
             current: true
           }
@@ -1921,7 +1943,7 @@ describe('importConfiguration', () => {
         current: {
           fhirversion: '4.0.1',
           date: '2020-04-01',
-          path: 'http://build.fhir.org/ig/HL7/example-ig/',
+          path: 'https://build.fhir.org/ig/HL7/example-ig/',
           sequence: 'STU 2'
         }
       };
@@ -1937,7 +1959,7 @@ describe('importConfiguration', () => {
             fhirversion: '4.0.1',
             date: '2020-04-01',
             desc: 'Continuous Integration Build (latest in version control)',
-            path: 'http://build.fhir.org/ig/HL7/example-ig/',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
             status: 'ci-build',
             sequence: 'STU 2',
             current: true
@@ -1957,7 +1979,7 @@ describe('importConfiguration', () => {
           fhirversion: '4.0.1',
           date: '2020-04-01',
           desc: 'CI Build Release',
-          path: 'http://build.fhir.org/ig/HL7/example-ig/',
+          path: 'https://build.fhir.org/ig/HL7/example-ig/',
           status: 'ci-build',
           sequence: 'STU 2',
           current: true
@@ -1992,7 +2014,7 @@ describe('importConfiguration', () => {
             fhirversion: '4.0.1',
             date: '2020-04-01',
             desc: 'CI Build Release',
-            path: 'http://build.fhir.org/ig/HL7/example-ig/',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
             status: 'ci-build',
             sequence: 'STU 2',
             current: true
@@ -2059,7 +2081,7 @@ describe('importConfiguration', () => {
     });
     it('should report invalid history.[version].status code', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2087,7 +2109,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].date is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           desc: 'STU 1 Release',
@@ -2113,7 +2135,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].desc is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2139,7 +2161,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].path is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         // @ts-ignore Type '...' is not assignable to type ...
         '1.0.0': {
           fhirversion: '4.0.1',
@@ -2166,7 +2188,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].status is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2192,7 +2214,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].sequence is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           fhirversion: '4.0.1',
           date: '2020-03-06',
@@ -2218,7 +2240,7 @@ describe('importConfiguration', () => {
     });
     it('should report an error if history.[version].fhirVersion is missing', () => {
       minYAML.history = {
-        current: 'http://build.fhir.org/ig/HL7/minimal-ig/',
+        current: 'https://build.fhir.org/ig/HL7/minimal-ig/',
         '1.0.0': {
           date: '2020-03-06',
           desc: 'STU 1 Release',
@@ -2273,6 +2295,49 @@ describe('importConfiguration', () => {
         /The following properties are unused and only relevant for IG creation: copyrightYear, releaseLabel, template, menu, contained.*File: test-config.yaml/s
       );
       expect(config.FSHOnly).toBe(true);
+    });
+  });
+
+  describe('#instanceOptions', () => {
+    it('should use default values for instanceOptions where applicable', () => {
+      minYAML.instanceOptions = undefined;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'always',
+        setId: 'always'
+      });
+    });
+    it('should use provided values for instanceOptions where applicable', () => {
+      minYAML.instanceOptions = { setMetaProfile: 'never', setId: 'standalone-only' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'never',
+        setId: 'standalone-only'
+      });
+    });
+    it('should report invalid instanceOptions.setMetaProfile code', () => {
+      // @ts-ignore
+      minYAML.instanceOptions = { setMetaProfile: 'foo', setId: 'standalone-only' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'always',
+        setId: 'standalone-only'
+      });
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invalid instanceOptions\.setMetaProfile value: 'foo'\. Must be one of: 'always','never','inline-only','standalone-only'\.\s*File: test-config\.yaml/
+      );
+    });
+    it('should report invalid instanceOptions.setId code', () => {
+      // @ts-ignore
+      minYAML.instanceOptions = { setMetaProfile: 'never', setId: 'foo' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'never',
+        setId: 'always'
+      });
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invalid instanceOptions\.setId value: 'foo'\. Must be one of: 'always','standalone-only'\.\s*File: test-config\.yaml/
+      );
     });
   });
 });
