@@ -5,8 +5,7 @@ import {
   ElementDefinition,
   InstanceDefinition,
   ValueSet,
-  CodeSystem,
-  CHOICE_TYPE_SLICENAME_POSTFIXES
+  CodeSystem
 } from '.';
 import {
   AssignmentRule,
@@ -810,3 +809,58 @@ export function isModifierExtension(extension: any): boolean {
 export function isReferenceType(type: string): boolean {
   return ['Reference', 'CodeableReference'].includes(type);
 }
+
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+  'Base64Binary',
+  'Boolean',
+  'Canonical',
+  'Code',
+  'Date',
+  'DateTime',
+  'Decimal',
+  'Id',
+  'Instant',
+  'Integer',
+  'Markdown',
+  'Oid',
+  'PositiveInt',
+  'String',
+  'Time',
+  'UnsignedInt',
+  'Uri',
+  'Url',
+  'Uuid',
+  'Address',
+  'Age',
+  'Annotation',
+  'Attachment',
+  'CodeableConcept',
+  'Coding',
+  'ContactPoint',
+  'Count',
+  'Distance',
+  'Duration',
+  'HumanName',
+  'Identifier',
+  'Money',
+  'Period',
+  'Quantity',
+  'Range',
+  'Ratio',
+  'Reference',
+  'SampledData',
+  'Signature',
+  'Timing',
+  'ContactDetail',
+  'Contributor',
+  'DataRequirement',
+  'Expression',
+  'ParameterDefinition',
+  'RelatedArtifact',
+  'TriggerDefinition',
+  'UsageContext',
+  'Dosage',
+  'Meta',
+  'CodeableReference',
+  'Integer64'
+];
