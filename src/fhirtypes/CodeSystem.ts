@@ -53,7 +53,7 @@ export class CodeSystem {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return sanitize(`CodeSystem-${this.id.replace(/\/\\/g, '-')}.json`, { replacement: '-' });
+    return sanitize(`CodeSystem-${this.id}.json`, { replacement: '-' });
   }
 
   /**
