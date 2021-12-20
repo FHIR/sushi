@@ -16,6 +16,7 @@ import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fh
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { cloneDeep } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
+import { debug } from 'console';
 
 describe('IGExporter', () => {
   temp.track();
@@ -2014,6 +2015,39 @@ describe('IGExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Duplicate file index.xml will be ignored. Please rename to avoid collisions/
       );
+    });
+  });
+
+  describe('#devious-id-ig', () => {
+    let tempOut: string;
+
+    beforeAll(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      const deviousConfig = cloneDeep(minimalConfig);
+      deviousConfig.id = '/../../../arenticlever';
+      const pkg = new Package(deviousConfig);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should not allow devious characters in the IG file name  ', () => {
+      const deviousPath = path.join(tempOut, 'arenticlever.json');
+      expect(fs.existsSync(deviousPath)).toBeFalse();
+      const angelicPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide--..-..-..-arenticlever.json'
+      );
+      expect(fs.existsSync(angelicPath)).toBeTruthy();
     });
   });
 });
