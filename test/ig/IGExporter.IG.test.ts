@@ -16,7 +16,6 @@ import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fh
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { cloneDeep } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
-import { debug } from 'console';
 
 describe('IGExporter', () => {
   temp.track();
