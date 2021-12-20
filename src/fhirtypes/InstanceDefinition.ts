@@ -1,3 +1,4 @@
+import sanitize from 'sanitize-filename';
 import { difference, remove, pull, cloneDeep, isObjectLike } from 'lodash';
 import { Meta } from './specialTypes';
 import { HasId } from './mixins';
@@ -22,7 +23,9 @@ export class InstanceDefinition {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return `${this.resourceType}-${this.id ?? this._instanceMeta.name}.json`;
+    return sanitize(`${this.resourceType}-${this.id ?? this._instanceMeta.name}.json`, {
+      replacement: '-'
+    });
   }
 
   toJSON(): any {
