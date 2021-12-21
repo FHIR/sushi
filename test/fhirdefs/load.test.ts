@@ -77,15 +77,22 @@ describe('#loadDependency()', () => {
   // Many tests check that the right package was downloaded to the right place.
   // This function encapsulates that testing logic. It's coupled more tightly to
   // the actual implementation than I'd prefer, but... at least it's in one place.
-  const expectDownloadSequence = (source: string, destination: string, isCurrent = false): void => {
+  const expectDownloadSequence = (
+    sources: string | string[],
+    destination: string,
+    isCurrent = false
+  ): void => {
+    if (!Array.isArray(sources)) {
+      sources = [sources];
+    }
     if (isCurrent) {
       expect(axiosSpy.mock.calls).toEqual([
         ['https://build.fhir.org/ig/qas.json'],
-        [source.replace(/package\.tgz$/, 'package.manifest.json')],
-        [source, { responseType: 'arraybuffer' }]
+        [sources[0].replace(/package\.tgz$/, 'package.manifest.json')],
+        [sources[0], { responseType: 'arraybuffer' }]
       ]);
     } else {
-      expect(axiosSpy.mock.calls).toEqual([[source, { responseType: 'arraybuffer' }]]);
+      expect(axiosSpy.mock.calls).toEqual(sources.map(s => [s, { responseType: 'arraybuffer' }]));
     }
     if (destination != null) {
       const tempTarFile = writeSpy.mock.calls[0][0];
@@ -179,12 +186,7 @@ describe('#loadDependency()', () => {
             some: 'zipfile'
           }
         };
-      } else {
-        return {};
-      }
-    });
-    axiosHeadSpy = jest.spyOn(axios, 'head').mockImplementation((uri: string): any => {
-      if (
+      } else if (
         uri === 'https://packages.fhir.org/hl7.fhir.r4b.core/4.1.0' ||
         uri === 'https://packages.fhir.org/hl7.fhir.r5.core/4.5.0' ||
         uri === 'https://packages.fhir.org/fhir.dicom/2021.4.20210910'
@@ -193,6 +195,9 @@ describe('#loadDependency()', () => {
       } else {
         return {};
       }
+    });
+    axiosHeadSpy = jest.spyOn(axios, 'head').mockImplementation((): any => {
+      throw 'Method Not Allowed';
     });
     tarSpy = jest.spyOn(tar, 'x').mockImplementation(() => {});
     writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
@@ -256,7 +261,10 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.r4b.core#4.1.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expectDownloadSequence(
-      'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0',
+      [
+        'https://packages.fhir.org/hl7.fhir.r4b.core/4.1.0',
+        'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0'
+      ],
       path.join('foo', 'hl7.fhir.r4b.core#4.1.0')
     );
   });
@@ -276,7 +284,10 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.r5.core#4.5.0 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expectDownloadSequence(
-      'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0',
+      [
+        'https://packages.fhir.org/hl7.fhir.r5.core/4.5.0',
+        'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0'
+      ],
       path.join('foo', 'hl7.fhir.r5.core#4.5.0')
     );
   });
@@ -286,7 +297,10 @@ describe('#loadDependency()', () => {
       'The package fhir.dicom#2021.4.20210910 could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expectDownloadSequence(
-      'https://packages2.fhir.org/packages/fhir.dicom/2021.4.20210910',
+      [
+        'https://packages.fhir.org/fhir.dicom/2021.4.20210910',
+        'https://packages2.fhir.org/packages/fhir.dicom/2021.4.20210910'
+      ],
       path.join('foo', 'fhir.dicom#2021.4.20210910')
     );
   });

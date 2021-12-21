@@ -2169,6 +2169,52 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should apply an Assignment rule with Canonical of an instance that has its url assigned by a RuleSet', () => {
+      // RuleSet: LibraryMetadata
+      // * url = "http://fhir/ig/Library/273"
+      // * version = "0.1.0"
+      const ruleSet = new RuleSet('LibraryMetadata');
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://fhir/ig/Library/273';
+      const versionRule = new AssignmentRule('version');
+      versionRule.value = '0.1.0';
+      ruleSet.rules.push(urlRule, versionRule);
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+      // Instance: MyActivity
+      // InstanceOf: ActivityDefinition
+      // * status = #active
+      // * library = Canonical(MyLibrary)
+      const activityInstance = new Instance('MyActivity');
+      activityInstance.instanceOf = 'ActivityDefinition';
+      const activityStatus = new AssignmentRule('status');
+      activityStatus.value = new FshCode('active');
+      const activityLibrary = new AssignmentRule('library');
+      activityLibrary.value = new FshCanonical('MyLibrary');
+      activityInstance.rules.push(activityStatus, activityLibrary);
+      doc.instances.set(activityInstance.name, activityInstance);
+      // Instance: MyLibrary
+      // InstanceOf: Library
+      // * insert LibraryMetadata
+      // * status = #active
+      // * type = #logic-library
+      const libraryInstance = new Instance('MyLibrary');
+      libraryInstance.instanceOf = 'Library';
+      const libraryInsert = new InsertRule('');
+      libraryInsert.ruleSet = 'LibraryMetadata';
+      const libraryStatus = new AssignmentRule('status');
+      libraryStatus.value = new FshCode('active');
+      const libraryType = new AssignmentRule('type');
+      libraryType.value = new FshCode('logic-library');
+      libraryInstance.rules.push(libraryInsert, libraryStatus, libraryType);
+      doc.instances.set(libraryInstance.name, libraryInstance);
+
+      const instances = exporter.export().instances;
+      const exportedActivity = instances.find(
+        instanceDefinition => instanceDefinition.id === 'MyActivity'
+      );
+      expect(exportedActivity.library).toEqual(['http://fhir/ig/Library/273']);
+    });
+
     it('should not apply an Assignment rule with an invalid Canonical entity and log an error', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';

@@ -1,0 +1,17 @@
+
+<ImplementationGuide>
+  <url value="http://example.org/ImplementationGuide"/>
+  <dependsOn>
+    <packageId value="FOO.BAR"/>
+    <version value="1.2.3"/>
+  </dependsOn>
+  <dependsOn>
+    <packageId value="bAr.fOo"/>
+    <version value="current"/>
+  </dependsOn>
+  <dependsOn>
+    <packageId value="boo.far"/>
+    <version value="0.0.1"/>
+  </dependsOn>
+  <fhirVersion value="4.0.1"/>
+</ImplementationGuide>

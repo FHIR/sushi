@@ -1,6 +1,7 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
 import escapeRegExp from 'lodash/escapeRegExp';
+import sanitize from 'sanitize-filename';
 import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
@@ -124,7 +125,7 @@ export class StructureDefinition {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return `StructureDefinition-${this.id}.json`;
+    return sanitize(`StructureDefinition-${this.id}.json`, { replacement: '-' });
   }
 
   get pathType(): string {

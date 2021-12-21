@@ -4,12 +4,10 @@ module.exports = {
       tsconfig: 'tsconfig.json'
     }
   },
-  moduleFileExtensions: ['ts', 'js'],
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest'
-  },
+  moduleFileExtensions: ['js', 'ts'],
   testMatch: ['**/test/**/*.test.(ts|js)'],
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['jest-extended'],
-  coveragePathIgnorePatterns: ['<rootDir>/src/import/generated/']
+  setupFilesAfterEnv: ['jest-extended/all'],
+  coveragePathIgnorePatterns: ['<rootDir>/src/import/generated/'],
+  preset: 'ts-jest'
 };
