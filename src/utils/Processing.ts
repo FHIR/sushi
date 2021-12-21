@@ -26,9 +26,9 @@ const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
 };
 
 export function isSupportedFHIRVersion(version: string): boolean {
-  // For now, allow current or any 4.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
+  // For now, allow current or any 4.x/5.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
   // in an invalid version that passes this test (e.g., 4.99.0), it is still expected to fail when we load dependencies.
-  return /current|4\.0\.1|4\.[1-9]\d*.\d+/.test(version);
+  return version !== '4.0.0' && /^(current|[45]\.\d+.\d+(-.+)?)$/.test(version);
 }
 
 export function ensureInputDir(input: string): string {
@@ -151,7 +151,7 @@ export function readConfig(input: string): Configuration {
   if (!config.fhirVersion.some(v => isSupportedFHIRVersion(v))) {
     logger.error(
       `The ${path.basename(config.filePath)} must specify a supported version of FHIR. Be sure to` +
-        ` add "fhirVersion: 4.0.1" (or 4.x.y, as appropriate) to the ${path.basename(
+        ` add "fhirVersion: 4.0.1" (or 4.x.y, 5.0.0-snapshot1, etc., as appropriate) to the ${path.basename(
           config.filePath
         )} file.`
     );
@@ -169,13 +169,15 @@ export async function loadExternalDependencies(
   const fhirVersion = config.fhirVersion.find(v => isSupportedFHIRVersion(v));
   let fhirPackageId: string;
   let prerelease = false;
-  if (fhirVersion.startsWith('4.0.')) {
+  if (/^4\.0\./.test(fhirVersion)) {
     fhirPackageId = 'hl7.fhir.r4.core';
-  } else if (fhirVersion.startsWith('4.1.')) {
+  } else if (/^(4\.1\.|4\.3.\d+-)/.test(fhirVersion)) {
     fhirPackageId = 'hl7.fhir.r4b.core';
     prerelease = true;
-  } else if (fhirVersion.startsWith('4.3.')) {
+  } else if (/^4\.3.\d+$/.test(fhirVersion)) {
     fhirPackageId = 'hl7.fhir.r4b.core';
+  } else if (/^5\.0.\d+$/.test(fhirVersion)) {
+    fhirPackageId = 'hl7.fhir.r5.core';
   } else {
     fhirPackageId = 'hl7.fhir.r5.core';
     prerelease = true;
