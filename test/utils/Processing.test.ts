@@ -357,6 +357,18 @@ describe('Processing', () => {
       });
     });
 
+    it('should support prerelease FHIR R4B snapshot dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['4.3.0-snapshot1'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r4b.core#4.3.0-snapshot1']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
+      });
+    });
+
     it('should support official FHIR R4B dependency (will be 4.3.0)', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.3.0'];
@@ -376,6 +388,28 @@ describe('Processing', () => {
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
         );
+      });
+    });
+
+    it('should support prerelease FHIR R5 snapshot dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['5.0.0-snapshot1'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r5.core#5.0.0-snapshot1']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
+      });
+    });
+
+    it('should support official FHIR R5 dependency (will be 5.0.0)', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['5.0.0'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r5.core#5.0.0']);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
 
