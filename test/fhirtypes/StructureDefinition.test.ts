@@ -974,6 +974,19 @@ describe('StructureDefinition', () => {
       expect(respRate.elements.length).toBe(originalLength);
     });
 
+    it('should find an element that is the grandchild or deeper descendant of an element that has a slice with the same name as the ancestor element', () => {
+      const component = respRate.findElementByPath('component', fisher);
+      component.slicing = {
+        discriminator: [{ type: 'pattern', path: '$this' }],
+        rules: 'open'
+      };
+      component.addSlice('component');
+      // force an unfolding by finding a descendant of the slice
+      respRate.findElementByPath('component[component].dataAbsentReason', fisher);
+      const descendant = respRate.findElementByPath('component.referenceRange.low', fisher);
+      expect(descendant).toBeDefined();
+    });
+
     it('should find a re-sliced element by path', () => {
       const jsonReslice = JSON.parse(
         fs.readFileSync(
