@@ -118,6 +118,8 @@ export class ElementDefinitionType {
   static fromJSON(json: any): ElementDefinitionType {
     const elDefType = new ElementDefinitionType(json.code);
 
+    // TODO: other fromJSON methods check properties for undefined.
+    // investigate the implications of this change on materializing implied extensions.
     elDefType.profile = json.profile;
     elDefType.targetProfile = json.targetProfile;
     elDefType.aggregation = json.aggregation;
@@ -455,6 +457,10 @@ export class ElementDefinition {
           // @ts-ignore
           diff[prop] = cloneDeep(this[prop]);
         }
+      } else if (prop === 'type' && this.sliceName && this.path.endsWith('[x]')) {
+        // the IG publisher always requires that the type attribute is present on a slice of a choice element,
+        // even if this slice's type is equal to the choice element's type.
+        diff[prop] = cloneDeep(this[prop]);
       }
     }
     // If the original has a sliceName, the diff needs to have a sliceName, so use the original.

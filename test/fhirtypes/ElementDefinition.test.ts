@@ -7,6 +7,7 @@ import { Type } from '../../src/utils/Fishable';
 import { Invariant, FshCode } from '../../src/fshtypes';
 import path from 'path';
 import { cloneDeep } from 'lodash';
+import { OnlyRule } from '../../src/fshtypes/rules';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -430,6 +431,20 @@ describe('ElementDefinition', () => {
       );
       const diff = valueX.calculateDiff();
       expect(diff.mapping).toBeUndefined();
+    });
+
+    it('should always include type in the diff for a slice of a choice element', () => {
+      // constrain value[x] to Quantity so that, when sliced, the original on the slice will have only that type
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'Quantity' }];
+      valueX.constrainType(onlyRule, fisher);
+      valueX.sliceIt('type', '$this');
+      // use the exact ElementDefinitionType on value[x] to ensure deep equality
+      const matchingType = valueX.type[0];
+      const valueQuantity = valueX.addSlice('valueQuantity', matchingType);
+      const diff = valueQuantity.calculateDiff();
+      expect(diff.type).toBeDefined();
+      expect(diff.type).toEqual([matchingType]);
     });
   });
 
