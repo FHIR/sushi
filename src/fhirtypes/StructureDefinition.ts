@@ -301,7 +301,11 @@ export class StructureDefinition {
           // If matchingElement id ends with pathEnd:, then it is a slice
           // pathPart.brackets is null, so keep nonslices (no ":" in idEnd)
           // and choice slices since valueString is equivalent to value[x]:valueString
-          return !idEnd.includes(`${pathEnd}:`) || idEnd === `${pathEnd}:${pathPart.base}`;
+          // but, make sure to not be fooled by slices where the slice name is the same as the element name
+          return (
+            !idEnd.includes(`${pathEnd}:`) ||
+            (idEnd === `${pathEnd}:${pathPart.base}` && pathEnd !== pathPart.base)
+          );
         });
       }
     }
