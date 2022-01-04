@@ -1149,6 +1149,7 @@ describe('Processing', () => {
             'utf-8'
           )
           .replace(/[\n\r]/g, '')
+          .replace('${YEAR}', String(new Date().getFullYear()))
       );
 
       expect(copyFileSpy.mock.calls).toHaveLength(3);
@@ -1221,6 +1222,7 @@ describe('Processing', () => {
             'utf-8'
           )
           .replace(/[\n\r]/g, '')
+          .replace('${YEAR}', String(new Date().getFullYear()))
       );
       expect(copyFileSpy.mock.calls).toHaveLength(3);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);
