@@ -318,6 +318,12 @@ export class InstanceExporter implements Fishable {
       if (fshDefinition) {
         this.exportInstance(fshDefinition);
         result = this.pkg.fish(item, Type.Instance) as InstanceDefinition;
+      } else {
+        // If we don't find any Instances with the name, fish for other resources
+        const fishedFHIR = this.fisher.fishForFHIR(item);
+        if (fishedFHIR && fishedFHIR.resourceType) {
+          result = InstanceDefinition.fromJSON(fishedFHIR);
+        }
       }
     }
     return result;
