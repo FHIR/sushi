@@ -3703,6 +3703,24 @@ describe('InstanceExporter', () => {
         ]);
       });
 
+      it('should assign other resources to an instance', () => {
+        const containedRule1 = new AssignmentRule('contained[0]');
+        containedRule1.value = 'allergyintolerance-clinical';
+        containedRule1.isInstance = true;
+        patientInstance.rules.push(containedRule1); // * contained[0] = allergyintolerance-clinical
+
+        const containedRule2 = new AssignmentRule('contained[1]');
+        containedRule2.value = 'w3c-provenance-activity-type';
+        containedRule2.isInstance = true;
+        patientInstance.rules.push(containedRule2); // * contained[1] = w3c-provenance-activity-type
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained[0].id).toBe('allergyintolerance-clinical');
+        expect(exported.contained[0].resourceType).toBe('ValueSet');
+        expect(exported.contained[1].id).toBe('w3c-provenance-activity-type');
+        expect(exported.contained[1].resourceType).toBe('CodeSystem');
+      });
+
       it('should assign an inline resource to an instance element with a specific type', () => {
         const bundleValRule = new AssignmentRule('entry[PatientsOnly].resource');
         bundleValRule.value = 'MyInlinePatient';
