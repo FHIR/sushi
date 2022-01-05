@@ -11,7 +11,7 @@ name: ExampleIG
 status: draft # draft | active | retired | unknown
 version: 0.1.0
 fhirVersion: 4.0.1 # https://www.hl7.org/fhir/valueset-FHIR-version.html
-copyrightYear: 2021+
+copyrightYear: ${YEAR}+
 releaseLabel: ci-build # ci-build | draft | qa-preview | ballot | trial-use | release | update | normative+trial-use
 # license: CC0-1.0 # https://www.hl7.org/fhir/valueset-spdx-license.html
 # jurisdiction: urn:iso:std:iso:3166#US "United States of America" # https://www.hl7.org/fhir/valueset-jurisdiction.html
@@ -167,20 +167,20 @@ menu:
 # * copyright
 # * packageId
 #
-# 
+#
 # ╭──────────────────────────────────────────SUSHI flags───────────────────────────────────────────╮
 # │  The flags below configure aspects of how SUSHI processes FSH.                                 │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 # The FSHOnly flag indicates if only FSH resources should be exported.
 # If set to true, no IG related content will be generated.
 # The default value for this property is false.
-# 
+#
 # FSHOnly: false
 #
-# 
+#
 # When set to true, the "short" and "definition" field on the root element of an Extension will
 # be set to the "Title" and "Description" of that Extension. Default is true.
-# 
+#
 # applyExtensionMetadataToRoot: true
 #
 #
