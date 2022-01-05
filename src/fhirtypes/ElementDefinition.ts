@@ -1890,7 +1890,12 @@ export class ElementDefinition {
     } else if (type == 'xhtml' && this.checkXhtml(value)) {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
       // If we got here, the assigned value is valid. Replace the XML with a minimized version.
-      this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, { collapseWhitespace: true });
+      // For minimizer options, see: https://www.npmjs.com/package/html-minifier#options-quick-reference
+      this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, {
+        collapseWhitespace: true,
+        html5: false,
+        keepClosingSlash: true
+      });
     } else {
       throw new MismatchedTypeError('string', value, type);
     }
