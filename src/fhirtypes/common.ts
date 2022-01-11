@@ -102,8 +102,7 @@ export function setImpliedPropertiesOnInstance(
           // We must keep the relevant portion of the beginning of path to preserve sliceNames
           // and combine this with portion of the associatedEl's path that is not overlapped
           const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
-          const pathEnd = associatedEl
-            .diffId()
+          const pathEnd = getShortcutId(associatedEl)
             .split('.')
             .slice(overlapIdx)
             // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
@@ -192,6 +191,27 @@ function traverseRulePathTree(elements: PathNode[]): string[] {
     result.push(el.path);
   });
   return result;
+}
+/**
+ * Gets the id of an element using the shortcut syntax described here
+ * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+ * @returns {string} the id for the shortcut
+ */
+function getShortcutId(el: ElementDefinition): string {
+  return el.id
+    .split('.')
+    .map(p => {
+      const i = p.indexOf('[x]:');
+      const baseElementId = p.slice(0, i);
+      const choiceType = p.slice(i + baseElementId.length + 4);
+      const isChoiceSlice =
+        i > -1
+          ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
+            p === `${baseElementId}[x]:${baseElementId}${choiceType}`
+          : false;
+      return isChoiceSlice ? p.slice(i + 4) : p;
+    })
+    .join('.');
 }
 
 export function setPropertyOnInstance(
@@ -925,3 +945,58 @@ export function isModifierExtension(extension: any): boolean {
 export function isReferenceType(type: string): boolean {
   return ['Reference', 'CodeableReference'].includes(type);
 }
+
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+  'Base64Binary',
+  'Boolean',
+  'Canonical',
+  'Code',
+  'Date',
+  'DateTime',
+  'Decimal',
+  'Id',
+  'Instant',
+  'Integer',
+  'Markdown',
+  'Oid',
+  'PositiveInt',
+  'String',
+  'Time',
+  'UnsignedInt',
+  'Uri',
+  'Url',
+  'Uuid',
+  'Address',
+  'Age',
+  'Annotation',
+  'Attachment',
+  'CodeableConcept',
+  'Coding',
+  'ContactPoint',
+  'Count',
+  'Distance',
+  'Duration',
+  'HumanName',
+  'Identifier',
+  'Money',
+  'Period',
+  'Quantity',
+  'Range',
+  'Ratio',
+  'Reference',
+  'SampledData',
+  'Signature',
+  'Timing',
+  'ContactDetail',
+  'Contributor',
+  'DataRequirement',
+  'Expression',
+  'ParameterDefinition',
+  'RelatedArtifact',
+  'TriggerDefinition',
+  'UsageContext',
+  'Dosage',
+  'Meta',
+  'CodeableReference',
+  'Integer64'
+];
