@@ -118,6 +118,8 @@ export class ElementDefinitionType {
   static fromJSON(json: any): ElementDefinitionType {
     const elDefType = new ElementDefinitionType(json.code);
 
+    // TODO: other fromJSON methods check properties for undefined.
+    // investigate the implications of this change on materializing implied extensions.
     elDefType.profile = json.profile;
     elDefType.targetProfile = json.targetProfile;
     elDefType.aggregation = json.aggregation;
@@ -456,42 +458,17 @@ export class ElementDefinition {
           // @ts-ignore
           diff[prop] = cloneDeep(this[prop]);
         }
+      } else if (prop === 'type' && this.sliceName && this.path.endsWith('[x]')) {
+        // the IG publisher always requires that the type attribute is present on a slice of a choice element,
+        // even if this slice's type is equal to the choice element's type.
+        diff[prop] = cloneDeep(this[prop]);
       }
     }
-    // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
-    // NOTE: The path also gets set automatically when setting id
-    diff.id = diff.diffId();
-    // If the snapshot is a choice (e.g., value[x]), but the diff is a specific choice (e.g., valueString), then
-    // remove the slicename property from the diff (it is implied and not required in the diff)
-    // If the snapshot is not a choice, the diff needs to have a sliceName, so use the original.
-    if (this.path.endsWith('[x]') && !diff.path.endsWith('[x]')) {
-      delete diff.sliceName;
-    } else if (original.sliceName && diff.sliceName == null) {
+    // If the original has a sliceName, the diff needs to have a sliceName, so use the original.
+    if (original.sliceName && diff.sliceName == null) {
       diff.sliceName = original.sliceName;
     }
     return diff;
-  }
-
-  /**
-   * Gets the id of an element on the differential using the shortcut syntax described here
-   * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-   * @returns {string} the id for the differential
-   */
-  diffId(): string {
-    return this.id
-      .split('.')
-      .map(p => {
-        const i = p.indexOf('[x]:');
-        const baseElementId = p.slice(0, i);
-        const choiceType = p.slice(i + baseElementId.length + 4);
-        const isChoiceSlice =
-          i > -1
-            ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
-              p === `${baseElementId}[x]:${baseElementId}${choiceType}`
-            : false;
-        return isChoiceSlice ? p.slice(i + 4) : p;
-      })
-      .join('.');
   }
 
   /**
@@ -2770,61 +2747,6 @@ const PROPS = [
   'isSummary',
   'binding',
   'mapping'
-];
-
-const CHOICE_TYPE_SLICENAME_POSTFIXES = [
-  'Base64Binary',
-  'Boolean',
-  'Canonical',
-  'Code',
-  'Date',
-  'DateTime',
-  'Decimal',
-  'Id',
-  'Instant',
-  'Integer',
-  'Markdown',
-  'Oid',
-  'PositiveInt',
-  'String',
-  'Time',
-  'UnsignedInt',
-  'Uri',
-  'Url',
-  'Uuid',
-  'Address',
-  'Age',
-  'Annotation',
-  'Attachment',
-  'CodeableConcept',
-  'Coding',
-  'ContactPoint',
-  'Count',
-  'Distance',
-  'Duration',
-  'HumanName',
-  'Identifier',
-  'Money',
-  'Period',
-  'Quantity',
-  'Range',
-  'Ratio',
-  'Reference',
-  'SampledData',
-  'Signature',
-  'Timing',
-  'ContactDetail',
-  'Contributor',
-  'DataRequirement',
-  'Expression',
-  'ParameterDefinition',
-  'RelatedArtifact',
-  'TriggerDefinition',
-  'UsageContext',
-  'Dosage',
-  'Meta',
-  'CodeableReference',
-  'Integer64'
 ];
 
 /**
