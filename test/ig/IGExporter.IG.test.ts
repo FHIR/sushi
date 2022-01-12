@@ -110,6 +110,27 @@ describe('IGExporter', () => {
             version: '1.0.0'
           }
         ],
+        resources: [
+          {
+            reference: { reference: 'Patient/patient-example' },
+            name: 'Patient Example',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                valueCode: 'text/plain'
+              }
+            ]
+          },
+          {
+            reference: { reference: 'StructureDefinition/sample-patient' },
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                valueCode: 'text/plain'
+              }
+            ]
+          }
+        ],
         status: 'active',
         fhirVersion: ['4.0.1'],
         language: 'en',
@@ -224,6 +245,13 @@ describe('IGExporter', () => {
               reference: {
                 reference: 'StructureDefinition/sample-patient'
               },
+              extension: [
+                // Extension is added from config
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                  valueCode: 'text/plain'
+                }
+              ],
               name: 'SamplePatient',
               description:
                 'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
@@ -266,7 +294,14 @@ describe('IGExporter', () => {
               reference: {
                 reference: 'Patient/patient-example'
               },
-              name: 'patient-example',
+              name: 'Patient Example', // Name from config overrides _instanceMeta.name
+              extension: [
+                // Extension is added from config
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                  valueCode: 'text/plain'
+                }
+              ],
               exampleBoolean: true // No defined Usage on FSH file sets this to true
             },
             {
@@ -1188,6 +1223,17 @@ describe('IGExporter', () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      config.resources = [
+        {
+          reference: { reference: 'Patient/BazPatient' },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ]
+        }
+      ];
       pkg = new Package(config);
       // Add a patient to the package that will be overwritten
       const fisher = new TestFisher(null, defs, pkg);
@@ -1262,6 +1308,12 @@ describe('IGExporter', () => {
           reference: 'Patient/BazPatient'
         },
         name: 'BazPatient',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'text/plain'
+          }
+        ],
         exampleBoolean: false
       });
       expect(igContent.definition.resource).toContainEqual({
