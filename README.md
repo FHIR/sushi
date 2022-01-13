@@ -123,11 +123,11 @@ For the best experience, developers should use [Visual Studio Code](https://code
         "editor.formatOnSave": true
     }
     ```
-- [vscode-language-fsh](https://marketplace.visualstudio.com/items?itemName=kmahalingam.vscode-language-fsh)
+- [vscode-language-fsh](https://marketplace.visualstudio.com/items?itemName=MITRE-Health.vscode-language-fsh)
 
 # License
 
-Copyright 2019 Health Level Seven International
+Copyright 2019-2022 Health Level Seven International
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

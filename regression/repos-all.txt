@@ -165,3 +165,17 @@ mcode/mcode-omop#master
 mcode/biomarker#master
 ehealthsuisse/ch-vacd#master
 oliveregger/BundleConformsTo#master
+# Added Tue Dec 21 2021 16:33:22 GMT-0500 (Eastern Standard Time)
+HL7/fhir-directory-query#master
+HL7/fhircast-docs#master
+JohnMoehrke/SlicingSlicedExtension#main
+hl7ch/ch-resp#master
+hl7ch/ch-ems#master
+hl7dk/dk-medcom-core#master
+hl7dk/dk-medcom-hospitalnotification#master
+hl7dk/dk-medcom-messaging#main
+IHE/ITI.MHDS#master
+medcomdk/FFBFSHTestScripts#master
+medcomdk/HospitalnotificationFSHTestScripts#master
+ehealthsuisse/ch-epr-mhealth#master
+ehealthsuisse/ch-mhd#master

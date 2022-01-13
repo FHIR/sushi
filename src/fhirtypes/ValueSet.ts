@@ -1,5 +1,5 @@
+import sanitize from 'sanitize-filename';
 import { Meta } from './specialTypes';
-
 import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
@@ -46,7 +46,7 @@ export class ValueSet {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return `ValueSet-${this.id}.json`;
+    return sanitize(`ValueSet-${this.id}.json`, { replacement: '-' });
   }
 
   /**

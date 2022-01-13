@@ -357,6 +357,18 @@ describe('Processing', () => {
       });
     });
 
+    it('should support prerelease FHIR R4B snapshot dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['4.3.0-snapshot1'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r4b.core#4.3.0-snapshot1']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
+      });
+    });
+
     it('should support official FHIR R4B dependency (will be 4.3.0)', () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.3.0'];
@@ -376,6 +388,28 @@ describe('Processing', () => {
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
         );
+      });
+    });
+
+    it('should support prerelease FHIR R5 snapshot dependencies', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['5.0.0-snapshot1'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r5.core#5.0.0-snapshot1']);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /support for pre-release versions of FHIR is experimental/s
+        );
+      });
+    });
+
+    it('should support official FHIR R5 dependency (will be 5.0.0)', () => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['5.0.0'];
+      const defs = new FHIRDefinitions();
+      return loadExternalDependencies(defs, config).then(() => {
+        expect(defs.packages).toEqual(['hl7.fhir.r5.core#5.0.0']);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
 
@@ -842,6 +876,54 @@ describe('Processing', () => {
         expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 14 FHIR resources/s);
       });
 
+      it('should not allow devious characters in the resource file names', () => {
+        const tempDeviousIGPubRoot = temp.mkdirSync('output-ig-dir');
+        const deviousOutPackage = cloneDeep(outPackage);
+        deviousOutPackage.profiles.forEach(d => (d.id = `/../../devious/${d.id}`));
+        deviousOutPackage.extensions.forEach(d => (d.id = `/../../devious/${d.id}`));
+        deviousOutPackage.logicals.forEach(d => (d.id = `/../../devious/${d.id}`));
+        deviousOutPackage.resources.forEach(d => (d.id = `/../../devious/${d.id}`));
+        deviousOutPackage.valueSets.forEach(d => (d.id = `/../../devious/${d.id}`));
+        deviousOutPackage.codeSystems.forEach(d => (d.id = `/../../devious/${d.id}`));
+        deviousOutPackage.instances.forEach(d => (d.id = `/../../devious/${d.id}`));
+        writeFHIRResources(tempDeviousIGPubRoot, deviousOutPackage, defs, false);
+
+        // Make sure we didn't create the devious path
+        const deviousPath = path.join(tempDeviousIGPubRoot, 'fsh-generated', 'devious');
+        expect(fs.existsSync(deviousPath)).toBeFalse();
+
+        // Make sure we do have all the good file names
+        const angelicPath = path.join(tempDeviousIGPubRoot, 'fsh-generated', 'resources');
+        expect(fs.existsSync(angelicPath)).toBeTruthy();
+        const allAngelicFiles = fs.readdirSync(angelicPath);
+        expect(allAngelicFiles.length).toBe(16);
+        expect(allAngelicFiles).toContain(
+          'CapabilityStatement--..-..-devious-my-capabilities.json'
+        );
+        expect(allAngelicFiles).toContain('CodeSystem--..-..-devious-my-code-system.json');
+        expect(allAngelicFiles).toContain('ConceptMap--..-..-devious-my-concept-map.json');
+        expect(allAngelicFiles).toContain('Observation--..-..-devious-my-example.json');
+        expect(allAngelicFiles).toContain('Observation--..-..-devious-my-other-instance.json');
+        expect(allAngelicFiles).toContain('OperationDefinition--..-..-devious-my-operation.json');
+        expect(allAngelicFiles).toContain('Patient--..-..-devious-my-duplicate-instance.json');
+        expect(allAngelicFiles).toContain(
+          'StructureDefinition--..-..-devious-my-duplicate-profile.json'
+        );
+        expect(allAngelicFiles).toContain(
+          'StructureDefinition--..-..-devious-my-extension-instance.json'
+        );
+        expect(allAngelicFiles).toContain('StructureDefinition--..-..-devious-my-extension.json');
+        expect(allAngelicFiles).toContain('StructureDefinition--..-..-devious-my-logical.json');
+        expect(allAngelicFiles).toContain('StructureDefinition--..-..-devious-my-model.json');
+        expect(allAngelicFiles).toContain(
+          'StructureDefinition--..-..-devious-my-profile-instance.json'
+        );
+        expect(allAngelicFiles).toContain('StructureDefinition--..-..-devious-my-profile.json');
+        expect(allAngelicFiles).toContain('StructureDefinition--..-..-devious-my-resource.json');
+        expect(allAngelicFiles).toContain('ValueSet--..-..-devious-my-value-set.json');
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 16 FHIR resources/s);
+      });
+
       it('should not write a resource if that resource already exists in the "input" folder', () => {
         expect(
           fs.existsSync(
@@ -1067,6 +1149,7 @@ describe('Processing', () => {
             'utf-8'
           )
           .replace(/[\n\r]/g, '')
+          .replace('${YEAR}', String(new Date().getFullYear()))
       );
 
       expect(copyFileSpy.mock.calls).toHaveLength(3);
@@ -1139,6 +1222,7 @@ describe('Processing', () => {
             'utf-8'
           )
           .replace(/[\n\r]/g, '')
+          .replace('${YEAR}', String(new Date().getFullYear()))
       );
       expect(copyFileSpy.mock.calls).toHaveLength(3);
       expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyNonDefaultName.*fsh.*patient.fsh/);

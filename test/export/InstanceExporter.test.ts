@@ -2169,6 +2169,52 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should apply an Assignment rule with Canonical of an instance that has its url assigned by a RuleSet', () => {
+      // RuleSet: LibraryMetadata
+      // * url = "http://fhir/ig/Library/273"
+      // * version = "0.1.0"
+      const ruleSet = new RuleSet('LibraryMetadata');
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://fhir/ig/Library/273';
+      const versionRule = new AssignmentRule('version');
+      versionRule.value = '0.1.0';
+      ruleSet.rules.push(urlRule, versionRule);
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+      // Instance: MyActivity
+      // InstanceOf: ActivityDefinition
+      // * status = #active
+      // * library = Canonical(MyLibrary)
+      const activityInstance = new Instance('MyActivity');
+      activityInstance.instanceOf = 'ActivityDefinition';
+      const activityStatus = new AssignmentRule('status');
+      activityStatus.value = new FshCode('active');
+      const activityLibrary = new AssignmentRule('library');
+      activityLibrary.value = new FshCanonical('MyLibrary');
+      activityInstance.rules.push(activityStatus, activityLibrary);
+      doc.instances.set(activityInstance.name, activityInstance);
+      // Instance: MyLibrary
+      // InstanceOf: Library
+      // * insert LibraryMetadata
+      // * status = #active
+      // * type = #logic-library
+      const libraryInstance = new Instance('MyLibrary');
+      libraryInstance.instanceOf = 'Library';
+      const libraryInsert = new InsertRule('');
+      libraryInsert.ruleSet = 'LibraryMetadata';
+      const libraryStatus = new AssignmentRule('status');
+      libraryStatus.value = new FshCode('active');
+      const libraryType = new AssignmentRule('type');
+      libraryType.value = new FshCode('logic-library');
+      libraryInstance.rules.push(libraryInsert, libraryStatus, libraryType);
+      doc.instances.set(libraryInstance.name, libraryInstance);
+
+      const instances = exporter.export().instances;
+      const exportedActivity = instances.find(
+        instanceDefinition => instanceDefinition.id === 'MyActivity'
+      );
+      expect(exportedActivity.library).toEqual(['http://fhir/ig/Library/273']);
+    });
+
     it('should not apply an Assignment rule with an invalid Canonical entity and log an error', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';
@@ -3655,6 +3701,24 @@ describe('InstanceExporter', () => {
             valueString: 'Some Observation'
           }
         ]);
+      });
+
+      it('should assign other resources to an instance', () => {
+        const containedRule1 = new AssignmentRule('contained[0]');
+        containedRule1.value = 'allergyintolerance-clinical';
+        containedRule1.isInstance = true;
+        patientInstance.rules.push(containedRule1); // * contained[0] = allergyintolerance-clinical
+
+        const containedRule2 = new AssignmentRule('contained[1]');
+        containedRule2.value = 'w3c-provenance-activity-type';
+        containedRule2.isInstance = true;
+        patientInstance.rules.push(containedRule2); // * contained[1] = w3c-provenance-activity-type
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained[0].id).toBe('allergyintolerance-clinical');
+        expect(exported.contained[0].resourceType).toBe('ValueSet');
+        expect(exported.contained[1].id).toBe('w3c-provenance-activity-type');
+        expect(exported.contained[1].resourceType).toBe('CodeSystem');
       });
 
       it('should assign an inline resource to an instance element with a specific type', () => {

@@ -1,5 +1,6 @@
 import path from 'path';
 import ini from 'ini';
+import sanitize from 'sanitize-filename';
 import { EOL } from 'os';
 import { sortBy, words, pad, padEnd, repeat, cloneDeep } from 'lodash';
 import { titleCase } from 'title-case';
@@ -1074,7 +1075,11 @@ export class IGExporter {
    */
   addImplementationGuide(igPath: string): void {
     const igJSONFolder = path.join('fsh-generated', 'resources');
-    const igJsonPath = path.join(igPath, igJSONFolder, `ImplementationGuide-${this.ig.id}.json`);
+    const igJsonPath = path.join(
+      igPath,
+      igJSONFolder,
+      sanitize(`ImplementationGuide-${this.ig.id}.json`, { replacement: '-' })
+    );
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
     logger.info(`Generated ImplementationGuide-${this.ig.id}.json`);
   }

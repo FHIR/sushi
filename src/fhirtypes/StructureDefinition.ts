@@ -1,6 +1,7 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
 import escapeRegExp from 'lodash/escapeRegExp';
+import sanitize from 'sanitize-filename';
 import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
@@ -124,7 +125,7 @@ export class StructureDefinition {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return `StructureDefinition-${this.id}.json`;
+    return sanitize(`StructureDefinition-${this.id}.json`, { replacement: '-' });
   }
 
   get pathType(): string {
@@ -300,7 +301,11 @@ export class StructureDefinition {
           // If matchingElement id ends with pathEnd:, then it is a slice
           // pathPart.brackets is null, so keep nonslices (no ":" in idEnd)
           // and choice slices since valueString is equivalent to value[x]:valueString
-          return !idEnd.includes(`${pathEnd}:`) || idEnd === `${pathEnd}:${pathPart.base}`;
+          // but, make sure to not be fooled by slices where the slice name is the same as the element name
+          return (
+            !idEnd.includes(`${pathEnd}:`) ||
+            (idEnd === `${pathEnd}:${pathPart.base}` && pathEnd !== pathPart.base)
+          );
         });
       }
     }
