@@ -748,6 +748,9 @@ export class IGExporter {
         } else {
           newResource.exampleBoolean = false;
         }
+        if (configResource?.extension?.length) {
+          newResource.extension = configResource.extension;
+        }
         this.ig.definition.resource.push(newResource);
       }
     });
@@ -797,6 +800,9 @@ export class IGExporter {
             } else {
               newResource.exampleBoolean = false;
             }
+          }
+          if (configResource?.extension?.length) {
+            newResource.extension = configResource.extension;
           }
           this.ig.definition.resource.push(newResource);
         }
@@ -939,6 +945,9 @@ export class IGExporter {
                   title ??
                   name ??
                   resourceJSON.id;
+              }
+              if (configResource?.extension?.length) {
+                newResource.extension = configResource.extension;
               }
 
               if (existingIndex >= 0) {
