@@ -1,5 +1,6 @@
 import path from 'path';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { loadFromPath } from 'fhir-package-load';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import { ElementDefinition, ElementDefinitionType, StructureDefinition } from '../../src/fhirtypes';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { AddElementRule } from '../../src/fshtypes/rules';

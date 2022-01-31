@@ -1,4 +1,4 @@
-import { loadFromPath } from '../../src/fhirdefs/load';
+import { loadFromPath } from 'fhir-package-load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';

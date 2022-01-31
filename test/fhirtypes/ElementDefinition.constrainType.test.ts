@@ -1,5 +1,5 @@
+import { loadFromPath } from 'fhir-package-load';
 import { TestFisher } from '../testhelpers';
-import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType } from '../../src/fhirtypes';

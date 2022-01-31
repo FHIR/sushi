@@ -1,7 +1,8 @@
 import path from 'path';
+import { loadFromPath } from 'fhir-package-load';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Logical } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';

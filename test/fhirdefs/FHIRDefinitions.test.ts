@@ -1,4 +1,4 @@
-import { loadFromPath } from '../../src/fhirdefs/load';
+import { loadFromPath } from 'fhir-package-load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import path from 'path';
 import { Type } from '../../src/utils/Fishable';

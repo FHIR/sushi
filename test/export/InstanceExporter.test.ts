@@ -1,6 +1,7 @@
+import { loadFromPath } from 'fhir-package-load';
 import { InstanceExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import {
   Instance,
   Profile,

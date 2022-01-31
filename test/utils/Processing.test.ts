@@ -19,11 +19,10 @@ import {
   checkNullValuesOnArray,
   writePreprocessedFSH
 } from '../../src/utils/Processing';
-import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
-import { PackageLoadError } from '../../src/errors';
+import { PackageLoadError } from 'fhir-package-load';
 import { cloneDeep } from 'lodash';
 import { FSHTank, FSHDocument } from '../../src/import';
 import {
@@ -39,6 +38,28 @@ import {
   Resource
 } from '../../src/fshtypes';
 import { EOL } from 'os';
+
+jest.mock('fhir-package-load', () => {
+  const original = jest.requireActual('fhir-package-load');
+  return {
+    ...original,
+    loadDependency: jest.fn(
+      async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
+        // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core
+        if (/^hl7.fhir.(r2|r3|r4|r4b|r5|us).core$/.test(packageName)) {
+          // FHIRDefs.package = `${packageName}#${version}`;
+          FHIRDefs.packages.push(`${packageName}#${version}`);
+          return Promise.resolve(FHIRDefs);
+        } else if (/^self-signed.package$/.test(packageName)) {
+          throw new Error('self signed certificate in certificate chain');
+        } else {
+          throw new PackageLoadError(`${packageName}#${version}`);
+        }
+      }
+    )
+  };
+});
+
 describe('Processing', () => {
   temp.track();
 
@@ -313,23 +334,6 @@ describe('Processing', () => {
   });
 
   describe('#loadExternalDependencies()', () => {
-    beforeAll(() => {
-      jest
-        .spyOn(loadModule, 'loadDependency')
-        .mockImplementation(
-          async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
-            // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core
-            if (/^hl7.fhir.(r2|r3|r4|r4b|r5|us).core$/.test(packageName)) {
-              FHIRDefs.packages.push(`${packageName}#${version}`);
-              return Promise.resolve(FHIRDefs);
-            } else if (/^self-signed.package$/.test(packageName)) {
-              throw new Error('self signed certificate in certificate chain');
-            } else {
-              throw new PackageLoadError(`${packageName}#${version}`);
-            }
-          }
-        );
-    });
     beforeEach(() => {
       loggerSpy.reset();
     });
