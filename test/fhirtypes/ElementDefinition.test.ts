@@ -748,6 +748,12 @@ describe('ElementDefinition', () => {
       expect(clone.structDef).toBe(valueX.structDef);
     });
 
+    it('should keep the same structDef reference on the original version', () => {
+      const clone = valueX.clone(false);
+      // @ts-ignore
+      expect(clone._original.structDef).toBe(valueX._original.structDef);
+    });
+
     it('should clear original by default', () => {
       valueX.captureOriginal();
       const clone = valueX.clone();
