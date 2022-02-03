@@ -203,8 +203,13 @@ export function cleanCachedPackage(packageDirectory: string): void {
  * Loads custom resources defined in resourceDir into FHIRDefs
  * @param {string} resourceDir - The path to the directory containing the resource subdirs
  * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
+ * @param {string[]} pathResourcePaths - optional, an array of paths to additional directories containing predefined resources
  */
-export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions): void {
+export function loadCustomResources(
+  resourceDir: string,
+  defs: FHIRDefinitions,
+  pathResourcePaths: string[] = null
+): void {
   // Similar code for loading custom resources exists in IGExporter.ts addPredefinedResources()
   const pathEnds = [
     'capabilities',
@@ -216,11 +221,13 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
     'vocabulary',
     'examples'
   ];
+  const predefinedResourcePaths = pathEnds.map(pathEnd => path.join(resourceDir, pathEnd));
+  if (pathResourcePaths) predefinedResourcePaths.push(...pathResourcePaths);
   const converter = new FHIRConverter();
   let invalidFileCount = 0;
-  for (const pathEnd of pathEnds) {
+  for (const dirPath of predefinedResourcePaths) {
     let foundSpreadsheets = false;
-    const dirPath = path.join(resourceDir, pathEnd);
+    // const dirPath = path.join(resourceDir, pathEnd);
     if (fs.existsSync(dirPath)) {
       const files = getFilesRecursive(dirPath);
       for (const file of files) {
@@ -257,7 +264,7 @@ export function loadCustomResources(resourceDir: string, defs: FHIRDefinitions):
         // All resources are added to the predefined map, so that this map can later be used to
         // access predefined resources in the IG Exporter
         defs.addPredefinedResource(file, resourceJSON);
-        if (pathEnd !== 'examples') {
+        if (!dirPath.endsWith('examples')) {
           // add() will only add resources of resourceType:
           // StructureDefinition, ValueSet, CodeSystem, or ImplementationGuide
           defs.add(resourceJSON);

@@ -64,7 +64,8 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
       version: igResource.version,
       fhirVersion: igResource.fhirVersion ?? [],
       dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),
-      FSHOnly: true
+      FSHOnly: true,
+      parameters: igResource.definition?.parameter ?? []
     };
     config.dependencies?.forEach(dep => {
       if (/[A-Z]/.test(dep.packageId)) {

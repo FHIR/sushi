@@ -430,7 +430,7 @@ describe('#loadCustomResources', () => {
     loggerSpy.reset();
     defs = new FHIRDefinitions();
     pathToInput = path.join(__dirname, 'fixtures', 'customized-ig-with-resources', 'input');
-    loadCustomResources(pathToInput, defs);
+    loadCustomResources(pathToInput, defs, [path.join(pathToInput, 'path-resource-test')]);
   });
 
   it('should load custom JSON and XML resources', () => {
@@ -438,8 +438,9 @@ describe('#loadCustomResources', () => {
     const profiles = defs.allProfiles();
     const valueSets = defs.allValueSets();
     const extensions = defs.allExtensions();
-    expect(profiles).toHaveLength(2);
+    expect(profiles).toHaveLength(3);
     expect(profiles[0].id).toBe('MyPatient');
+    expect(profiles[2].id).toBe('MyObservation');
     expect(valueSets).toHaveLength(1);
     expect(valueSets[0].id).toBe('MyVS');
     // Each extension has 3 entries, one for url, one for id, and one for name
@@ -466,6 +467,11 @@ describe('#loadCustomResources', () => {
     expect(
       defs.getPredefinedResource(path.join(pathToInput, 'examples', 'Patient-MyPatient.json')).id
     ).toBe('MyPatient');
+    expect(
+      defs.getPredefinedResource(
+        path.join(pathToInput, 'path-resource-test', 'StructureDefinition-MyObservation.json')
+      ).id
+    ).toBe('MyObservation');
     expect(
       defs.getPredefinedResource(
         path.join(pathToInput, 'examples', 'Binary-LogicalModelExample.json')

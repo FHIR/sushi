@@ -270,7 +270,8 @@ describe('Processing', () => {
       expect(config).toEqual({
         FSHOnly: true,
         canonical: 'http://example.org',
-        fhirVersion: ['4.0.1']
+        fhirVersion: ['4.0.1'],
+        parameters: []
       });
     });
 
