@@ -385,10 +385,11 @@ export class ElementDefinition {
   /**
    * ElementDefinition is capable of producing its own differential, based on differences from a stored "original".
    * This function captures the current state as the "original", so any further changes made would be captured in
-   * the generated differential.
+   * the generated differential. The structDef reference isn't used in the differential, so it can be removed.
    */
   captureOriginal(): void {
     this._original = this.clone();
+    this._original.structDef = undefined;
   }
 
   /**
