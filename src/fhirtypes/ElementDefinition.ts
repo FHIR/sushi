@@ -385,10 +385,11 @@ export class ElementDefinition {
   /**
    * ElementDefinition is capable of producing its own differential, based on differences from a stored "original".
    * This function captures the current state as the "original", so any further changes made would be captured in
-   * the generated differential.
+   * the generated differential. The structDef reference isn't used in the differential, so it can be removed.
    */
   captureOriginal(): void {
     this._original = this.clone();
+    this._original.structDef = undefined;
   }
 
   /**
@@ -2467,18 +2468,9 @@ export class ElementDefinition {
     // We don't want to clone the reference to the StructureDefinition, so temporarily save it and remove it
     const savedStructDef = this.structDef;
     this.structDef = null;
-    // We don't want to clone the reference to the StructureDefinition on the original, either
-    let originalStructDef: StructureDefinition;
-    if (this._original?.structDef != null) {
-      originalStructDef = this._original.structDef;
-      this._original.structDef = null;
-    }
     const clone = cloneDeep(this);
     // Set the reference to the StructureDefinition again
     this.structDef = clone.structDef = savedStructDef;
-    if (originalStructDef != null) {
-      this._original.structDef = clone._original.structDef = originalStructDef;
-    }
     // Clear original if applicable
     if (clearOriginal) {
       clone.clearOriginal();
