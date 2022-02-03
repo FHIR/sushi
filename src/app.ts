@@ -155,7 +155,7 @@ async function app() {
   const pathResources = config.parameters
     ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
     .map(code => code.value);
-  let pathResourceDirectories = pathResources
+  const pathResourceDirectories = pathResources
     .map(directoryPath => path.join(originalInput, directoryPath))
     .filter(directoryPath => fs.existsSync(directoryPath));
   loadCustomResources(path.join(input, '..'), defs, pathResourceDirectories);
