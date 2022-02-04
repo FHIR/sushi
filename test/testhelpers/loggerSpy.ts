@@ -1,5 +1,6 @@
 import { logger } from '../../src/utils/FSHLogger';
 import { LogEntry } from 'winston';
+import { logger as packageLoadLogger } from 'fhir-package-load';
 
 // MUTE_LOGS controls whether or not logs get printed during testing.
 // Usually, we don't want logs actually printed, as they cause clutter.
@@ -10,9 +11,11 @@ type Level = 'silly' | 'debug' | 'verbose' | 'http' | 'info' | 'warn' | 'error';
 
 class LoggerSpy {
   private mockWriter = jest.spyOn(logger.transports[0], 'write');
+  private packageLoadMockWriter = jest.spyOn(packageLoadLogger.transports[0], 'write');
   constructor() {
     if (MUTE_LOGS) {
       this.mockWriter = this.mockWriter.mockImplementation(() => true);
+      this.packageLoadMockWriter = this.packageLoadMockWriter.mockImplementation(() => true);
     }
   }
 
