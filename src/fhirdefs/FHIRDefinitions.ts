@@ -1,5 +1,9 @@
 import { flatten } from 'lodash';
-import { cloneJsonMapValues, addDefinitionToMap, BaseFHIRDefinitions } from 'fhir-package-load';
+import {
+  cloneJsonMapValues,
+  addDefinitionToMap,
+  FHIRDefinitions as BaseFHIRDefinitions
+} from 'fhir-package-load';
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
