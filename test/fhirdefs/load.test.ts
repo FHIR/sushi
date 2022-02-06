@@ -6,6 +6,7 @@ import {
   loadSupplementalFHIRPackage
 } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
+import { ImplementationGuideDefinitionParameter } from '../../src/fhirtypes';
 import { Type } from '../../src/utils';
 import { PackageLoadError } from '../../src/errors';
 import { TestFisher, loggerSpy } from '../testhelpers';
@@ -430,7 +431,7 @@ describe('#loadCustomResources', () => {
     loggerSpy.reset();
     defs = new FHIRDefinitions();
     pathToInput = path.join(__dirname, 'fixtures', 'customized-ig-with-resources', 'input');
-    let configParamater = {
+    const configParamater: ImplementationGuideDefinitionParameter = {
       code: 'path-resource',
       value: 'path-resource-test'
     };
