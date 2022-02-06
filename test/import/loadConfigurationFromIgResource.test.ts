@@ -76,7 +76,13 @@ describe('loadConfigurationFromIgResource', () => {
     expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual(
       '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
     );
-    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  FSHOnly: true');
+    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual(
+      '  parameters[0]: {"code":"path-resource","value":"input/resources"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual(
+      '  parameters[1]: {"code":"path-resource","value":"input/second-resource"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual('  FSHOnly: true');
   });
 
   it('should convert uppercase package Ids to lowercase', () => {

@@ -430,7 +430,11 @@ describe('#loadCustomResources', () => {
     loggerSpy.reset();
     defs = new FHIRDefinitions();
     pathToInput = path.join(__dirname, 'fixtures', 'customized-ig-with-resources', 'input');
-    loadCustomResources(pathToInput, defs, [path.join(pathToInput, 'path-resource-test')]);
+    let configParamater = {
+      code: 'path-resource',
+      value: 'path-resource-test'
+    };
+    loadCustomResources(pathToInput, [configParamater], pathToInput, defs);
   });
 
   it('should load custom JSON and XML resources', () => {

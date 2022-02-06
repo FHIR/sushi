@@ -9,6 +9,7 @@ import junk from 'junk';
 import temp from 'temp';
 import { logger, getFilesRecursive } from '../utils';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
+import { ImplementationGuideDefinitionParameter } from '../fhirtypes';
 
 /**
  * Loads a dependency from user FHIR cache or from online
@@ -202,13 +203,16 @@ export function cleanCachedPackage(packageDirectory: string): void {
 /**
  * Loads custom resources defined in resourceDir into FHIRDefs
  * @param {string} resourceDir - The path to the directory containing the resource subdirs
+ * @param {string} projectDir - User's specified project directory
+ * @param {ImplementationGuideDefinitionParameter[]} configParameters - optional, an array of config parameters in which to 
+ *    determine if there are addiional resource paths for predefined resource
  * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
- * @param {string[]} pathResourcePaths - optional, an array of paths to additional directories containing predefined resources
  */
 export function loadCustomResources(
   resourceDir: string,
-  defs: FHIRDefinitions,
-  pathResourcePaths: string[] = null
+  configParameters: ImplementationGuideDefinitionParameter[] = null,
+  projectDir: string = null,
+  defs: FHIRDefinitions
 ): void {
   // Similar code for loading custom resources exists in IGExporter.ts addPredefinedResources()
   const pathEnds = [
@@ -222,12 +226,19 @@ export function loadCustomResources(
     'examples'
   ];
   const predefinedResourcePaths = pathEnds.map(pathEnd => path.join(resourceDir, pathEnd));
-  if (pathResourcePaths) predefinedResourcePaths.push(...pathResourcePaths);
+  if (configParameters && projectDir) {
+    const pathResources = configParameters
+    ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
+    .map(parameter => parameter.value);
+  const pathResourceDirectories = pathResources
+    .map(directoryPath => path.join(projectDir, directoryPath))
+    .filter(directoryPath => fs.existsSync(directoryPath));
+    if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
+  }
   const converter = new FHIRConverter();
   let invalidFileCount = 0;
   for (const dirPath of predefinedResourcePaths) {
     let foundSpreadsheets = false;
-    // const dirPath = path.join(resourceDir, pathEnd);
     if (fs.existsSync(dirPath)) {
       const files = getFilesRecursive(dirPath);
       for (const file of files) {
@@ -264,7 +275,7 @@ export function loadCustomResources(
         // All resources are added to the predefined map, so that this map can later be used to
         // access predefined resources in the IG Exporter
         defs.addPredefinedResource(file, resourceJSON);
-        if (!dirPath.endsWith('examples')) {
+        if (path.basename(dirPath) !== 'examples') {
           // add() will only add resources of resourceType:
           // StructureDefinition, ValueSet, CodeSystem, or ImplementationGuide
           defs.add(resourceJSON);
