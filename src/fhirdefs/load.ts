@@ -204,7 +204,7 @@ export function cleanCachedPackage(packageDirectory: string): void {
  * Loads custom resources defined in resourceDir into FHIRDefs
  * @param {string} resourceDir - The path to the directory containing the resource subdirs
  * @param {string} projectDir - User's specified project directory
- * @param {ImplementationGuideDefinitionParameter[]} configParameters - optional, an array of config parameters in which to 
+ * @param {ImplementationGuideDefinitionParameter[]} configParameters - optional, an array of config parameters in which to
  *    determine if there are addiional resource paths for predefined resource
  * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
  */
@@ -228,11 +228,11 @@ export function loadCustomResources(
   const predefinedResourcePaths = pathEnds.map(pathEnd => path.join(resourceDir, pathEnd));
   if (configParameters && projectDir) {
     const pathResources = configParameters
-    ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
-    .map(parameter => parameter.value);
-  const pathResourceDirectories = pathResources
-    .map(directoryPath => path.join(projectDir, directoryPath))
-    .filter(directoryPath => fs.existsSync(directoryPath));
+      ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
+      .map(parameter => parameter.value);
+    const pathResourceDirectories = pathResources
+      .map(directoryPath => path.join(projectDir, directoryPath))
+      .filter(directoryPath => fs.existsSync(directoryPath));
     if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
   }
   const converter = new FHIRConverter();
