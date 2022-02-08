@@ -810,5 +810,25 @@ describe('Package', () => {
 
       expect(pkg.fishForMetadata('DrSue')).toEqual(drSueInstanceByID);
     });
+
+    it('should return package metadata when fishing with the package id', () => {
+      const packageMetadata = pkg.fishForMetadata('fhir.us.minimal');
+
+      expect(packageMetadata.id).toEqual(minimalConfig.id);
+      expect(packageMetadata.name).toEqual(minimalConfig.name);
+      expect(packageMetadata.url).toEqual(
+        `${minimalConfig.canonical}/ImplementationGuide/${minimalConfig.id}`
+      );
+    });
+
+    it('should return package metadata when fishing with the package name', () => {
+      const packageMetadata = pkg.fishForMetadata('MinimalIG');
+
+      expect(packageMetadata.id).toEqual(minimalConfig.id);
+      expect(packageMetadata.name).toEqual(minimalConfig.name);
+      expect(packageMetadata.url).toEqual(
+        `${minimalConfig.canonical}/ImplementationGuide/${minimalConfig.id}`
+      );
+    });
   });
 });
