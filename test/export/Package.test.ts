@@ -819,6 +819,7 @@ describe('Package', () => {
       expect(packageMetadata.url).toEqual(
         `${minimalConfig.canonical}/ImplementationGuide/${minimalConfig.id}`
       );
+      expect(packageMetadata.resourceType).toEqual('ImplementationGuide');
     });
 
     it('should return package metadata when fishing with the package name', () => {
@@ -829,6 +830,7 @@ describe('Package', () => {
       expect(packageMetadata.url).toEqual(
         `${minimalConfig.canonical}/ImplementationGuide/${minimalConfig.id}`
       );
+      expect(packageMetadata.resourceType).toEqual('ImplementationGuide');
     });
   });
 });

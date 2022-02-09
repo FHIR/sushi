@@ -151,7 +151,8 @@ export class Package implements Fishable {
         name: this.config.name,
         url:
           this.config.url ||
-          `${this.config.canonical}/ImplementationGuide/${this.config.packageId || this.config.id}`
+          `${this.config.canonical}/ImplementationGuide/${this.config.packageId || this.config.id}`,
+        resourceType: 'ImplementationGuide'
       };
       return metadata;
     }
