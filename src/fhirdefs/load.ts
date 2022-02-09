@@ -205,13 +205,13 @@ export function cleanCachedPackage(packageDirectory: string): void {
  * @param {string} resourceDir - The path to the directory containing the resource subdirs
  * @param {string} projectDir - User's specified project directory
  * @param {ImplementationGuideDefinitionParameter[]} configParameters - optional, an array of config parameters in which to
- *    determine if there are addiional resource paths for predefined resource
+ *    determine if there are additional resource paths for predefined resource
  * @param {FHIRDefinitions} defs - The FHIRDefinitions object to load definitions into
  */
 export function loadCustomResources(
   resourceDir: string,
-  configParameters: ImplementationGuideDefinitionParameter[] = null,
   projectDir: string = null,
+  configParameters: ImplementationGuideDefinitionParameter[] = null,
   defs: FHIRDefinitions
 ): void {
   // Similar code for loading custom resources exists in IGExporter.ts addPredefinedResources()

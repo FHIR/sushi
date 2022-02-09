@@ -435,7 +435,7 @@ describe('#loadCustomResources', () => {
       code: 'path-resource',
       value: 'path-resource-test'
     };
-    loadCustomResources(pathToInput, [configParamater], pathToInput, defs);
+    loadCustomResources(pathToInput, pathToInput, [configParamater], defs);
   });
 
   it('should load custom JSON and XML resources', () => {

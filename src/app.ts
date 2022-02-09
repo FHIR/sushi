@@ -152,7 +152,7 @@ async function app() {
   await loadExternalDependencies(defs, config);
 
   // Load custom resources. In current tank configuration (input/fsh), resources will be in input/
-  loadCustomResources(path.join(input, '..'), config.parameters, originalInput, defs);
+  loadCustomResources(path.join(input, '..'), originalInput, config.parameters, defs);
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
