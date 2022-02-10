@@ -400,7 +400,7 @@ describe('IGExporter', () => {
       ]);
     });
 
-    it('should issue an error when a dependency url cannot be inferred', () => {
+    it('should use a default url format when a dependency url cannot be inferred', () => {
       config.dependencies = [
         // NOTE: Will not find mCODE IG URL because we didn't load the mcode IG
         { packageId: 'hl7.fhir.us.mcode', version: '1.0.0' },
@@ -416,11 +416,15 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Failed to add hl7\.fhir\.us\.mcode:1\.0\.0 to ImplementationGuide instance .* IG URL/
-      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       // Ensure US Core is exported but mCODE is not
       expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_mcode',
+          uri: 'http://fhir.org/packages/hl7.fhir.us.mcode/ImplementationGuide/hl7.fhir.us.mcode',
+          packageId: 'hl7.fhir.us.mcode',
+          version: '1.0.0'
+        },
         {
           id: 'hl7_fhir_us_core',
           uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
