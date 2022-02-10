@@ -5,6 +5,7 @@ import { minimalConfig } from '../utils/minimalConfig';
 
 describe('Package', () => {
   const pkg: Package = new Package(minimalConfig);
+  pkg.config.url = 'http://not-an-auto-generated-url.org';
   beforeAll(() => {
     // Profile[0]: Funny / fun-ny / Condition
     const profile0 = new StructureDefinition();
@@ -816,13 +817,21 @@ describe('Package', () => {
 
       expect(packageMetadata.id).toEqual(minimalConfig.id);
       expect(packageMetadata.name).toEqual(minimalConfig.name);
-      expect(packageMetadata.url).toEqual(
-        `${minimalConfig.canonical}/ImplementationGuide/${minimalConfig.id}`
-      );
+      expect(packageMetadata.url).toEqual('http://not-an-auto-generated-url.org');
       expect(packageMetadata.resourceType).toEqual('ImplementationGuide');
     });
 
     it('should return package metadata when fishing with the package name', () => {
+      const packageMetadata = pkg.fishForMetadata('MinimalIG');
+
+      expect(packageMetadata.id).toEqual(minimalConfig.id);
+      expect(packageMetadata.name).toEqual(minimalConfig.name);
+      expect(packageMetadata.url).toEqual('http://not-an-auto-generated-url.org');
+      expect(packageMetadata.resourceType).toEqual('ImplementationGuide');
+    });
+
+    it('should return package metadata with an auto-generated url when url is missing', () => {
+      delete pkg.config.url;
       const packageMetadata = pkg.fishForMetadata('MinimalIG');
 
       expect(packageMetadata.id).toEqual(minimalConfig.id);
