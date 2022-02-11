@@ -6,7 +6,7 @@ import YAML from 'yaml';
 import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { loadDependency } from 'fhir-package-load';
 import { EOL } from 'os';
-import { logger } from './FSHLogger';
+import { logger, logMessage } from './FSHLogger';
 import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
   FSHTank,
@@ -221,7 +221,7 @@ export async function loadExternalDependencies(
       );
       return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+      return loadDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
         let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message +=
