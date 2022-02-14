@@ -248,17 +248,9 @@ export class IGExporter {
       }
 
       if (dependsOn.uri == null) {
-        logger.error(
-          `Failed to add ${dependsOn.packageId}:${dependsOn.version} to ` +
-            'ImplementationGuide instance because SUSHI could not find the IG URL in the ' +
-            `dependency IG. To specify the IG URL in your ${this.configName}, use the dependency ` +
-            'details format:\n\n' +
-            'dependencies:\n' +
-            `  ${dependsOn.packageId}:\n` +
-            '    uri: http://my-fhir-ig.org/ImplementationGuide/123\n' +
-            `    version: ${dependsOn.version}`
-        );
-        return;
+        // setting uri to required format as indicated in zulip discussion:
+        // https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/fhir.2Edicom.20has.20no.20ImplementationGuide.20resource/near/265772431
+        dependsOn.uri = `http://fhir.org/packages/${dependsOn.packageId}/ImplementationGuide/${dependsOn.packageId}`;
       }
     }
 
