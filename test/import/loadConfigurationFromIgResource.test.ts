@@ -13,7 +13,12 @@ describe('loadConfigurationFromIgResource', () => {
     // is ignored in favor of the one pointed to by ig.ini
     const inputPath = path.join(__dirname, 'fixtures', 'ig-JSON-with-ini');
     const config = loadConfigurationFromIgResource(inputPath);
-    expect(config).toEqual({ canonical: 'http://example.org', FSHOnly: true, fhirVersion: [] });
+    expect(config).toEqual({
+      canonical: 'http://example.org',
+      FSHOnly: true,
+      fhirVersion: [],
+      parameters: []
+    });
     expect(loggerSpy.getFirstMessage('info')).toMatch(
       new RegExp(
         `from ${escapeRegExp(path.join(inputPath, 'sneaky-input', 'ImplementationGuide.json'))}`
@@ -24,7 +29,12 @@ describe('loadConfigurationFromIgResource', () => {
   it('should extract a configuration with only a url', () => {
     const inputPath = path.join(__dirname, 'fixtures', 'ig-JSON-only-url');
     const config = loadConfigurationFromIgResource(inputPath);
-    expect(config).toEqual({ canonical: 'http://example.org', FSHOnly: true, fhirVersion: [] });
+    expect(config).toEqual({
+      canonical: 'http://example.org',
+      FSHOnly: true,
+      fhirVersion: [],
+      parameters: []
+    });
     expect(loggerSpy.getFirstMessage('info')).toMatch(
       new RegExp(`from ${escapeRegExp(path.join(inputPath, 'input', 'ImplementationGuide.json'))}`)
     );
@@ -41,7 +51,17 @@ describe('loadConfigurationFromIgResource', () => {
         { packageId: 'bar.foo', version: 'current' }
       ],
       fhirVersion: ['4.0.1'],
-      version: '1.0.0'
+      version: '1.0.0',
+      parameters: [
+        {
+          code: 'path-resource',
+          value: 'input/resources'
+        },
+        {
+          code: 'path-resource',
+          value: 'input/second-resource'
+        }
+      ]
     });
     expect(loggerSpy.getFirstMessage('info')).toMatch(
       new RegExp(`from ${escapeRegExp(path.join(inputPath, 'input', 'ImplementationGuide.json'))}`)
@@ -56,7 +76,13 @@ describe('loadConfigurationFromIgResource', () => {
     expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual(
       '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
     );
-    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  FSHOnly: true');
+    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual(
+      '  parameters[0]: {"code":"path-resource","value":"input/resources"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual(
+      '  parameters[1]: {"code":"path-resource","value":"input/second-resource"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual('  FSHOnly: true');
   });
 
   it('should convert uppercase package Ids to lowercase', () => {
@@ -71,7 +97,8 @@ describe('loadConfigurationFromIgResource', () => {
         { packageId: 'boo.far', version: '0.0.1' }
       ],
       fhirVersion: ['4.0.1'],
-      version: '1.0.0'
+      version: '1.0.0',
+      parameters: []
     });
     expect(loggerSpy.getFirstMessage('info')).toMatch(
       new RegExp(`from ${escapeRegExp(path.join(inputPath, 'input', 'ImplementationGuide.json'))}`)
@@ -102,7 +129,8 @@ describe('loadConfigurationFromIgResource', () => {
         { packageId: 'foo.bar', version: '1.2.3' },
         { packageId: 'bar.foo', version: 'current' }
       ],
-      fhirVersion: ['4.0.1']
+      fhirVersion: ['4.0.1'],
+      parameters: []
     });
     expect(loggerSpy.getFirstMessage('info')).toMatch(
       new RegExp(`from ${escapeRegExp(path.join(inputPath, 'input', 'ImplementationGuide.xml'))}`)
@@ -131,7 +159,8 @@ describe('loadConfigurationFromIgResource', () => {
         { packageId: 'bar.foo', version: 'current' },
         { packageId: 'boo.far', version: '0.0.1' }
       ],
-      fhirVersion: ['4.0.1']
+      fhirVersion: ['4.0.1'],
+      parameters: []
     });
     expect(loggerSpy.getFirstMessage('info')).toMatch(
       new RegExp(`from ${escapeRegExp(path.join(inputPath, 'input', 'ImplementationGuide.xml'))}`)
@@ -155,7 +184,12 @@ describe('loadConfigurationFromIgResource', () => {
   it('should find the ImplementationGuide JSON file even when other files are present', () => {
     const inputPath = path.join(__dirname, 'fixtures', 'ig-JSON-other-files');
     const config = loadConfigurationFromIgResource(inputPath);
-    expect(config).toEqual({ canonical: 'http://example.org', FSHOnly: true, fhirVersion: [] });
+    expect(config).toEqual({
+      canonical: 'http://example.org',
+      FSHOnly: true,
+      fhirVersion: [],
+      parameters: []
+    });
     expect(loggerSpy.getFirstMessage('info')).toMatch(
       new RegExp(`from ${escapeRegExp(path.join(inputPath, 'input', 'ImplementationGuide.json'))}`)
     );

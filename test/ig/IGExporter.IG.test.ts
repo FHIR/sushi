@@ -1220,7 +1220,7 @@ describe('IGExporter', () => {
       defs = new FHIRDefinitions();
       loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(path.join(fixtures, 'input'), defs);
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
     });
 
     beforeEach(() => {
@@ -1605,7 +1605,7 @@ describe('IGExporter', () => {
       defs = new FHIRDefinitions();
       loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
-      loadCustomResources(path.join(fixtures, 'input'), defs);
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
     });
 
     beforeEach(() => {
@@ -1671,7 +1671,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       defs = new FHIRDefinitions();
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-logical-model-example');
-      loadCustomResources(path.join(fixtures, 'input'), defs);
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
     });
 
     beforeEach(() => {
