@@ -1,6 +1,6 @@
 import { logger } from '../../src/utils/FSHLogger';
 import { LogEntry } from 'winston';
-import { logger as packageLoadLogger } from 'fhir-package-load';
+import { logger as packageLoadLogger } from 'fhir-package-loader';
 
 // MUTE_LOGS controls whether or not logs get printed during testing.
 // Usually, we don't want logs actually printed, as they cause clutter.

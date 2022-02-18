@@ -1,4 +1,4 @@
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { InstanceExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';

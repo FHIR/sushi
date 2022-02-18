@@ -1,5 +1,5 @@
 import path from 'path';
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { exportFHIR, Package, FHIRExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';

@@ -22,7 +22,7 @@ import {
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
-import { PackageLoadError } from 'fhir-package-load';
+import { PackageLoadError } from 'fhir-package-loader';
 import { cloneDeep } from 'lodash';
 import { FSHTank, FSHDocument } from '../../src/import';
 import {
@@ -39,8 +39,8 @@ import {
 } from '../../src/fshtypes';
 import { EOL } from 'os';
 
-jest.mock('fhir-package-load', () => {
-  const original = jest.requireActual('fhir-package-load');
+jest.mock('fhir-package-loader', () => {
+  const original = jest.requireActual('fhir-package-loader');
   return {
     ...original,
     loadDependency: jest.fn(

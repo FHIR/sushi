@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { IGExporter } from '../../src/ig';
 import {
   StructureDefinition,

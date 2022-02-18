@@ -1,5 +1,5 @@
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { Type, Metadata } from '../../src/utils/Fishable';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { MasterFisher } from '../../src/utils';

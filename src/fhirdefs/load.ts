@@ -1,5 +1,5 @@
 import { FHIRDefinitions } from './FHIRDefinitions';
-import { loadDependency } from 'fhir-package-load';
+import { loadDependency } from 'fhir-package-loader';
 import fs from 'fs-extra';
 import path from 'path';
 import junk from 'junk';

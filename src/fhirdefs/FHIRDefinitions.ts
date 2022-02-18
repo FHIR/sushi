@@ -3,7 +3,7 @@ import {
   cloneJsonMapValues,
   addDefinitionToMap,
   FHIRDefinitions as BaseFHIRDefinitions
-} from 'fhir-package-load';
+} from 'fhir-package-loader';
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';

@@ -1,12 +1,12 @@
-import { PackageLoadError } from 'fhir-package-load';
+import { PackageLoadError } from 'fhir-package-loader';
 import { loadCustomResources, loadSupplementalFHIRPackage } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ImplementationGuideDefinitionParameter } from '../../src/fhirtypes';
 import { loggerSpy } from '../testhelpers';
 import path from 'path';
 
-jest.mock('fhir-package-load', () => {
-  const original = jest.requireActual('fhir-package-load');
+jest.mock('fhir-package-loader', () => {
+  const original = jest.requireActual('fhir-package-loader');
   return {
     ...original,
     loadDependency: jest.fn(

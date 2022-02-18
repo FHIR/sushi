@@ -1,4 +1,4 @@
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { ValueSetExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import {

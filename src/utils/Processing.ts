@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
-import { loadDependency } from 'fhir-package-load';
+import { loadDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
 import { logger, logMessage } from './FSHLogger';
 import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';

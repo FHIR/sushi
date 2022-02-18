@@ -1,6 +1,6 @@
 import path from 'path';
 import cloneDeep from 'lodash/cloneDeep';
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { TestFisher } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';

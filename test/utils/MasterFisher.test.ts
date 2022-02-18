@@ -1,4 +1,4 @@
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { Profile } from '../../src/fshtypes';
 import { FHIRDefinitions } from '../../src/fhirdefs';

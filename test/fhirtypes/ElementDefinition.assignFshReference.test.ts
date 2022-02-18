@@ -1,5 +1,5 @@
 import path from 'path';
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshReference } from '../../src/fshtypes';

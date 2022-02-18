@@ -1,6 +1,6 @@
 import path from 'path';
 import { cloneDeep } from 'lodash';
-import { loadFromPath } from 'fhir-package-load';
+import { loadFromPath } from 'fhir-package-loader';
 import { MappingExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { TestFisher } from '../testhelpers';
