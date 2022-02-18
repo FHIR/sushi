@@ -58,6 +58,91 @@ export function setPropertyOnDefinitionInstance(
   setPropertyOnInstance(instance, pathParts, assignedValue, fisher);
 }
 
+export function createUsefulSlices(
+  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
+  instanceOfStructureDefinition: StructureDefinition,
+  ruleMap: Map<string, { pathParts: PathPart[] }>,
+  fisher: Fishable
+) {
+  ruleMap.forEach(({ pathParts }, path) => {
+    const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
+    const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
+    if (element) {
+      // go through the parts, and make sure that we have a useful index, and maybe a named slice
+      let current: any = instanceDef;
+      let currentPath = '';
+      for (const [i, pathPart] of pathParts.entries()) {
+        currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
+        const currentElement = instanceOfStructureDefinition.findElementByPath(currentPath, fisher);
+        const key =
+          pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
+
+        let index = getArrayIndex(pathPart);
+        let sliceName: string;
+        if (index == null) {
+          // if we are on an array element, treat no index as a 0 index
+          const baseIsArray =
+            currentElement?.base?.max != null &&
+            currentElement.base.max !== '0' &&
+            currentElement.base.max !== '1';
+          if (baseIsArray) {
+            index = 0;
+          }
+        }
+        if (index != null) {
+          // If the array doesn't exist, create it
+          if (current[key] == null) {
+            current[key] = [];
+          }
+          sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
+          if (sliceName) {
+            const sliceIndices: number[] = [];
+            // Find the indices where slices are placed
+            const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
+            current[pathPart.base]?.forEach((el: any, i: number) => {
+              if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
+                sliceIndices.push(i);
+              }
+            });
+            // Convert the index in terms of the slice to the corresponding index in the overall array
+            if (index >= sliceIndices.length) {
+              index = index - sliceIndices.length + current[key].length;
+            } else {
+              index = sliceIndices[index];
+            }
+          }
+          // If the index doesn't exist in the array, add it and lesser indices
+          // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
+          for (let j = 0; j <= index; j++) {
+            if (j < current[key].length && j === index && current[key][index] == null) {
+              current[key][index] = {};
+            } else if (j >= current[key].length) {
+              if (sliceName) {
+                // _sliceName is used to later differentiate which slice an element represents
+                current[key].push({ _sliceName: sliceName });
+              } else if (j === index) {
+                current[key].push({});
+              } else {
+                current[key].push(null);
+              }
+            }
+          }
+          // If it isn't the last element, move on
+          if (i < pathParts.length - 1) {
+            current = current[key][index];
+          }
+        } else if (i < pathParts.length - 1) {
+          // if we're not dealing with an array element, just traverse the element tree.
+          if (current[key] == null) {
+            current[key] = {};
+          }
+          current = current[key];
+        }
+      }
+    }
+  });
+}
+
 export function setImpliedPropertiesOnInstance(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
   instanceOfStructureDefinition: StructureDefinition,

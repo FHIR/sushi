@@ -1,4 +1,4 @@
-import { CaretValueRule, Rule } from '../../src/fshtypes/rules';
+import { CaretValueRule, Rule, AssignmentRule } from '../../src/fshtypes/rules';
 import { resolveSoftIndexing, parseFSHPath } from '../../src/utils';
 import '../testhelpers/loggerSpy'; // side-effect: suppresses logs
 
@@ -157,6 +157,152 @@ describe('PathUtils', () => {
         'name[2]',
         'name[3]',
         'name[3]'
+      ]);
+    });
+
+    it('should resolve soft indexing beginning with a named slice', () => {
+      const rules = ['component[Bread]', 'component[+]', 'component[=]', 'component[+]'].map(
+        r => new Rule(r)
+      );
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'component[Bread]',
+        'component[1]',
+        'component[1]',
+        'component[2]'
+      ]);
+    });
+
+    it('should resolve soft indexing that contains multiple named slices', () => {
+      const rules = [
+        'component[Bread]',
+        'component[+]',
+        'component[=]',
+        'component[Toast]',
+        'component[+]'
+      ].map(r => new Rule(r));
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'component[Bread]',
+        'component[1]',
+        'component[1]',
+        'component[Toast]',
+        'component[3]'
+      ]);
+    });
+
+    it('should resolve soft indexing that applies to both an element and its slices', () => {
+      const rules = [
+        'component[+]',
+        'component[=]',
+        'component[Bread][+]',
+        'component[Bread][=]',
+        'component[Bread][+]',
+        'component[+]'
+      ].map(r => new Rule(r));
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'component[0]',
+        'component[0]',
+        'component[Bread][0]',
+        'component[Bread][0]',
+        'component[Bread][1]',
+        'component[3]'
+      ]);
+    });
+
+    it('should resolve soft indexing that applies to an element, its slices, and its reslices', () => {
+      const rules = [
+        'component[Bread][Rye][+]',
+        'component[Bread][+]',
+        'component[+]',
+        'component[Bread][+]',
+        'component[Bread][=]',
+        'component[+]'
+      ].map(r => new Rule(r));
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'component[Bread][Rye][0]',
+        'component[Bread][0]',
+        'component[2]',
+        'component[Bread][1]',
+        'component[Bread][1]',
+        'component[4]'
+      ]);
+    });
+
+    it('should resolve soft indexing with named slices and numbered indices', () => {
+      const rules = [
+        'component[+]',
+        'component[=]',
+        'component[Bread][1]',
+        'component[Bread][=]',
+        'component[Bread][+]',
+        'component[+]'
+      ].map(r => new Rule(r));
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'component[0]',
+        'component[0]',
+        'component[Bread][1]',
+        'component[Bread][1]',
+        'component[Bread][2]',
+        'component[4]'
+      ]);
+    });
+
+    it('should resolve soft indexing with named slices and out-of-order numbered indices', () => {
+      const rules = [
+        'component[+]',
+        'component[=]',
+        'component[Bread][1]',
+        'component[Bread][0]',
+        'component[+]'
+      ].map(r => new Rule(r));
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'component[0]',
+        'component[0]',
+        'component[Bread][1]',
+        'component[Bread][0]',
+        'component[3]'
+      ]);
+    });
+
+    it('should resolve soft indexing with named slices and numbered indices that also have caret paths', () => {
+      const rules: Rule[] = [];
+      const caretRule1 = new CaretValueRule('item[+]');
+      caretRule1.caretPath = 'contact[+].name';
+      rules.push(caretRule1);
+      const caretRule2 = new CaretValueRule('item[Bread][+]');
+      caretRule2.caretPath = 'contact[+].name';
+      rules.push(caretRule2);
+      const assignmentRule3 = new AssignmentRule('item[Bread][=]');
+      rules.push(assignmentRule3);
+      const caretRule4 = new CaretValueRule('item[Bread][=]');
+      caretRule4.caretPath = 'contact[+].name';
+      rules.push(caretRule4);
+      const assignmentRule5 = new AssignmentRule('item[+]');
+      rules.push(assignmentRule5);
+      const caretRule6 = new CaretValueRule('item[Bread][+]');
+      caretRule6.caretPath = 'contact[+].email';
+      rules.push(caretRule6);
+      resolveSoftIndexing(rules);
+      expect(rules.map(r => r.path)).toEqual([
+        'item[0]',
+        'item[Bread][0]',
+        'item[Bread][0]',
+        'item[Bread][0]',
+        'item[2]',
+        'item[Bread][1]'
+      ]);
+      expect(rules.map(r => (r instanceof CaretValueRule ? r.caretPath : undefined))).toEqual([
+        'contact[0].name',
+        'contact[0].name',
+        undefined,
+        'contact[1].name',
+        undefined,
+        'contact[0].email'
       ]);
     });
   });

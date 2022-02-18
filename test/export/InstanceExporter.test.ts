@@ -1816,6 +1816,125 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign elements with soft indexing and named slices used in combination', () => {
+      // * contact ^slicing.discriminator.type = #pattern
+      // * contact ^slicing.discriminator.path = "relationship"
+      // * contact ^slicing.rules = #open
+      // * contact contains Partners 0..* and Friends 1..*
+      // * contact[Partners].relationship = #partner
+      // * contact[Friends].relationship = #friend
+      const slicingType = new CaretValueRule('contact');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('pattern');
+      const slicingPath = new CaretValueRule('contact');
+      slicingPath.caretPath = 'slicing.discriminator.path';
+      slicingPath.value = 'relationship';
+      const slicingRules = new CaretValueRule('contact');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const contactContains = new ContainsRule('contact');
+      contactContains.items = [{ name: 'Partners' }, { name: 'Friends' }];
+      const partnersCard = new CardRule('contact[Partners]');
+      partnersCard.min = 0;
+      partnersCard.max = '*';
+      const friendsCard = new CardRule('contact[Friends]');
+      friendsCard.min = 1;
+      friendsCard.max = '*';
+      const partnerRelationship = new AssignmentRule('contact[Partners].relationship');
+      partnerRelationship.value = new FshCode('partner');
+      const friendRelationship = new AssignmentRule('contact[Friends].relationship');
+      friendRelationship.value = new FshCode('friend');
+      patient.rules.push(
+        slicingType,
+        slicingPath,
+        slicingRules,
+        contactContains,
+        partnersCard,
+        friendsCard,
+        partnerRelationship,
+        friendRelationship
+      );
+      // * contact.name.given = "Barret"
+      // * contact[Partners].name.given = "Cloud"
+      // * contact[Partners][+].name.given = "Aerith"
+      // * contact[Friends][+].name.given = "Biggs"
+      // * contact[Friends][+].name.given = "Wedge"
+      // * contact[+].name.given = "Marle"
+      const barretName = new AssignmentRule('contact.name.given');
+      barretName.value = 'Barret';
+      const cloudName = new AssignmentRule('contact[Partners][+].name.given');
+      cloudName.value = 'Cloud';
+      const aerithName = new AssignmentRule('contact[Partners][+].name.given');
+      aerithName.value = 'Aerith';
+      const biggsName = new AssignmentRule('contact[Friends][+].name.given');
+      biggsName.value = 'Biggs';
+      const wedgeName = new AssignmentRule('contact[Friends][+].name.given');
+      wedgeName.value = 'Wedge';
+      const marleName = new AssignmentRule('contact[+].name.given');
+      marleName.value = 'Marle';
+      patientInstance.rules.push(
+        barretName,
+        cloudName,
+        aerithName,
+        biggsName,
+        wedgeName,
+        marleName
+      );
+      const exported = exportInstance(patientInstance);
+      expect(exported.contact).toEqual([
+        {
+          name: {
+            given: ['Barret']
+          }
+        },
+        {
+          name: {
+            given: ['Cloud']
+          },
+          relationship: [
+            {
+              coding: [{ code: 'partner' }]
+            }
+          ]
+        },
+        {
+          name: {
+            given: ['Aerith']
+          },
+          relationship: [
+            {
+              coding: [{ code: 'partner' }]
+            }
+          ]
+        },
+        {
+          name: {
+            given: ['Biggs']
+          },
+          relationship: [
+            {
+              coding: [{ code: 'friend' }]
+            }
+          ]
+        },
+        {
+          name: {
+            given: ['Wedge']
+          },
+          relationship: [
+            {
+              coding: [{ code: 'friend' }]
+            }
+          ]
+        },
+        {
+          name: {
+            given: ['Marle']
+          }
+        }
+      ]);
+    });
+
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus');
       assignedValRule.value = new FshCode('foo', 'http://foo.com');
