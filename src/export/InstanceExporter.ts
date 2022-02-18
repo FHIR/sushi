@@ -11,7 +11,8 @@ import {
   applyInsertRules,
   isExtension,
   getSliceName,
-  isModifierExtension
+  isModifierExtension,
+  createUsefulSlices
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
@@ -144,10 +145,12 @@ export class InstanceExporter implements Fishable {
 
     const paths = ['', ...rules.map(rule => rule.path)];
     // To correctly assign properties, we need to:
-    // 1 - Assign implied properties on the original instance
-    // 2 - Assign rule properties on a copy of the result of 1, so that rule assignment can build on implied assignment
-    // 3 - Merge the result of 2 with the result of 1, so that any implied properties which may have been overwrtiten
-    //     in step 2 are maintained...don't worry I'm confused too
+    // 1 - Create useful slices for rules so that properties are assigned in the correct places in arrays
+    // 2 - Assign implied properties on the original instance
+    // 3 - Assign rule properties on a copy of the result of 2, so that rule assignment can build on implied assignment
+    // 4 - Merge the result of 3 with the result of 2, so that any implied properties which may have been overwritten
+    //     in step 3 are maintained...don't worry I'm confused too
+    createUsefulSlices(instanceDef, instanceOfStructureDefinition, ruleMap, this.fisher);
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {

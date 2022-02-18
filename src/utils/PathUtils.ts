@@ -67,18 +67,29 @@ export function assembleFSHPath(pathParts: PathPart[]): string {
 /**
  *
  * @param {PathPart} element - A single element in a rules path
- * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's updated index as the value
+ * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's most recently used index as the value
+ * @param {Map<string, number} maxPathMap - A map containing an element's name as the key and that element's maximum index as the value
  */
-function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
+function convertSoftIndexes(
+  element: PathPart,
+  pathMap: Map<string, number>,
+  maxPathMap: Map<string, number>
+) {
   // Must account for a pathPart's base name, prior portions of the path, as well as any slices it's contained in.
   const mapName = `${element.prefix ?? ''}.${element.base}|${(element.slices ?? []).join('|')}`;
   const indexRegex = /^[0-9]+$/;
+  let addToBaseElement: number; // track the amount of indices we need to add to the base element of a slice
   if (!pathMap.has(mapName)) {
     const existingNumericBracket = element.brackets?.find(bracket => indexRegex.test(bracket));
     if (existingNumericBracket) {
-      pathMap.set(mapName, parseInt(existingNumericBracket));
+      const indexUsed = parseInt(existingNumericBracket);
+      pathMap.set(mapName, indexUsed);
+      maxPathMap.set(mapName, indexUsed);
+      addToBaseElement = parseInt(existingNumericBracket) + 1;
     } else {
       pathMap.set(mapName, 0);
+      maxPathMap.set(mapName, 0);
+      addToBaseElement = 1;
       if (element.brackets?.includes('+')) {
         element.brackets[element.brackets.indexOf('+')] = '0';
       } else if (element.brackets?.includes('=')) {
@@ -95,14 +106,40 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
         const newIndex = pathMap.get(mapName) + 1;
         element.brackets[index] = newIndex.toString();
         pathMap.set(mapName, newIndex);
+        if (newIndex > maxPathMap.get(mapName)) {
+          addToBaseElement = newIndex - maxPathMap.get(mapName);
+          maxPathMap.set(mapName, newIndex);
+        }
       } else if (bracket === '=') {
         const currentIndex = pathMap.get(mapName);
         element.brackets[index] = currentIndex.toString();
       } else if (indexRegex.test(bracket)) {
         // If a numeric index is found, we update our pathMap so subsequent soft indexes are converted in that context
-        pathMap.set(mapName, parseInt(bracket));
+        const newIndex = parseInt(bracket);
+        pathMap.set(mapName, newIndex);
+        if (newIndex > maxPathMap.get(mapName)) {
+          addToBaseElement = newIndex - maxPathMap.get(mapName);
+          maxPathMap.set(mapName, newIndex);
+        }
       }
     });
+  }
+  // if the element has slices, increment the unsliced element
+  if (element.slices?.length > 0 && addToBaseElement != null) {
+    const unslicedMapName = `${element.prefix ?? ''}.${element.base}|`;
+    if (!pathMap.has(unslicedMapName)) {
+      // if we are adding a new map entry for the unsliced element,
+      // subtract 1 from the amount to add, since the values we track start at 0.
+      pathMap.set(unslicedMapName, addToBaseElement - 1);
+      maxPathMap.set(unslicedMapName, addToBaseElement - 1);
+    } else {
+      const oldMax = maxPathMap.get(unslicedMapName);
+      const newIndex = pathMap.get(unslicedMapName) + addToBaseElement;
+      pathMap.set(unslicedMapName, newIndex);
+      if (newIndex > oldMax) {
+        maxPathMap.set(unslicedMapName, newIndex);
+      }
+    }
   }
 }
 
@@ -111,8 +148,10 @@ function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
  * @param {Rule[]} rules - An array of Rules
  */
 export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
-  const pathMap: Map<string, number> = new Map();
+  const pathMap: Map<string, number> = new Map(); // tracks the current index at a path
+  const maxPathMap: Map<string, number> = new Map(); // tracks the maximum index seen at a path
   const caretPathMap: Map<string, Map<string, number>> = new Map();
+  const maxCaretPathMap: Map<string, Map<string, number>> = new Map();
 
   // Parsing and separating rules by base name and bracket indexes
   const parsedRules = rules.map(rule => {
@@ -133,7 +172,7 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
       // Add a prefix to the current element containing previously parsed rule elements
       element.prefix = assembleFSHPath(parsedRule.path.slice(0, elementIndex));
       try {
-        convertSoftIndexes(element, pathMap);
+        convertSoftIndexes(element, pathMap, maxPathMap);
       } catch (e) {
         logger.error(e.message, originalRule.sourceInfo);
       }
@@ -142,16 +181,20 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
 
     parsedRule.caretPath?.forEach((element: PathPart, elementIndex) => {
       // Caret path indexes should only be resolved in the context of a specific path
-      // Each normal path has a separate map to keep track of the caret path indexes
+      // Each normal path has a separate map and max-index-map to keep track of the caret path indices
       if (!caretPathMap.has(originalRule.path)) {
         caretPathMap.set(originalRule.path, new Map());
       }
+      if (!maxCaretPathMap.has(originalRule.path)) {
+        maxCaretPathMap.set(originalRule.path, new Map());
+      }
 
       const elementCaretPathMap = caretPathMap.get(originalRule.path);
+      const elementMaxCaretPathMap = maxCaretPathMap.get(originalRule.path);
       // Add a prefix to the current element containing previously parsed rule elements
       element.prefix = assembleFSHPath(parsedRule.caretPath.slice(0, elementIndex));
       try {
-        convertSoftIndexes(element, elementCaretPathMap);
+        convertSoftIndexes(element, elementCaretPathMap, elementMaxCaretPathMap);
       } catch (e) {
         logger.error(e.message, originalRule.sourceInfo);
       }
