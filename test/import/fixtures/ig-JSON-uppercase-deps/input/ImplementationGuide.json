@@ -1,10 +1,21 @@
 {
   "resourceType": "ImplementationGuide",
   "url": "http://example.org/ImplementationGuide",
+  "name": "TestIG",
+  "packageId": "fhir.test.ig",
   "dependsOn": [
-    { "packageId": "FOO.BAR", "version": "1.2.3" },
-    { "packageId": "bAr.fOo", "version": "current" },
-    { "packageId": "boo.far", "version": "0.0.1" }
+    {
+      "packageId": "FOO.BAR",
+      "version": "1.2.3"
+    },
+    {
+      "packageId": "bAr.fOo",
+      "version": "current"
+    },
+    {
+      "packageId": "boo.far",
+      "version": "0.0.1"
+    }
   ],
   "fhirVersion": [
     "4.0.1"

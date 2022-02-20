@@ -61,6 +61,8 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
     logger.info(`Extracting FSHOnly configuration from ${igPath}...`);
     const config = {
       canonical: igResource.url.replace(/\/ImplementationGuide.*/, ''),
+      name: igResource.name,
+      packageId: igResource.packageId,
       version: igResource.version,
       fhirVersion: igResource.fhirVersion ?? [],
       dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),

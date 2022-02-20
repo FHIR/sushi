@@ -1,6 +1,8 @@
 {
   "resourceType": "ImplementationGuide",
   "url": "http://example.org/ImplementationGuide",
+  "name": "TestIG",
+  "packageId": "fhir.test.ig",
   "dependsOn": [
     {
       "packageId": "foo.bar",
