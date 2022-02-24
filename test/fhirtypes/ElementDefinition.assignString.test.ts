@@ -381,6 +381,15 @@ describe('ElementDefinition', () => {
       expect(dataElement.patternBase64Binary).toBeUndefined();
     });
 
+    it('should assign a very long string to a base64Binary', () => {
+      const dataElement = binary.elements.find(e => e.id === 'Binary.data');
+      const longValue = fs.readFileSync(path.join(__dirname, 'fixtures', 'imgdata.txt'), {
+        encoding: 'base64'
+      });
+      dataElement.assignValue(longValue);
+      expect(dataElement.patternBase64Binary).toBe(longValue);
+    });
+
     it('should throw ValueAlreadyAssignedError when assigning an already assigned base64Binary by pattern[x]', () => {
       const udiCarrierCarrierAIDC = device.elements.find(
         e => e.id === 'Device.udiCarrier.carrierAIDC'
