@@ -60,6 +60,7 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
   if (igResource && igResource.url && !multipleIgs) {
     logger.info(`Extracting FSHOnly configuration from ${igPath}...`);
     const config: Configuration = {
+      id: igResource.id,
       canonical: igResource.url.replace(/\/ImplementationGuide.*/, ''),
       url: igResource.url,
       name: igResource.name,
@@ -70,7 +71,9 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
       parameters: igResource.definition?.parameter ?? [],
       FSHOnly: true
     };
-    if (igResource.id) config.id = igResource.id;
+    if (!igResource.id) {
+      delete config.id;
+    }
     config.dependencies?.forEach((dep: ImplementationGuideDependsOn) => {
       if (/[A-Z]/.test(dep.packageId)) {
         const lowercasePackageId = dep.packageId.toLowerCase();
