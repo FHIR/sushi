@@ -270,8 +270,13 @@ describe('Processing', () => {
       expect(config).toEqual({
         FSHOnly: true,
         canonical: 'http://example.org',
+        dependencies: undefined,
         fhirVersion: ['4.0.1'],
-        parameters: []
+        name: undefined,
+        packageId: undefined,
+        parameters: [],
+        url: 'http://example.org',
+        version: undefined
       });
     });
 
@@ -891,7 +896,7 @@ describe('Processing', () => {
 
         // Make sure we didn't create the devious path
         const deviousPath = path.join(tempDeviousIGPubRoot, 'fsh-generated', 'devious');
-        expect(fs.existsSync(deviousPath)).toBeFalse();
+        expect(fs.existsSync(deviousPath)).toBe(false);
 
         // Make sure we do have all the good file names
         const angelicPath = path.join(tempDeviousIGPubRoot, 'fsh-generated', 'resources');
