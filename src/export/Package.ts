@@ -140,6 +140,21 @@ export class Package implements Fishable {
         metadata.parent = result.baseDefinition;
       }
       return metadata;
+    } else if (
+      // If nothing is returned, perhaps the Package itself is being referenced
+      item === this.config.packageId ||
+      item === this.config.name ||
+      item === this.config.id
+    ) {
+      const metadata: Metadata = {
+        id: this.config.packageId || this.config.id,
+        name: this.config.name,
+        url:
+          this.config.url ||
+          `${this.config.canonical}/ImplementationGuide/${this.config.packageId || this.config.id}`,
+        resourceType: 'ImplementationGuide'
+      };
+      return metadata;
     }
   }
 }
