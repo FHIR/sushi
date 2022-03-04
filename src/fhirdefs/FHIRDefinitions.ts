@@ -1,9 +1,5 @@
-import { flatten } from 'lodash';
-import {
-  cloneJsonMapValues,
-  addDefinitionToMap,
-  FHIRDefinitions as BaseFHIRDefinitions
-} from 'fhir-package-loader';
+import { cloneDeep, flatten } from 'lodash';
+import { FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
@@ -32,23 +28,21 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   }
 
   allPredefinedResources(): any[] {
-    return cloneJsonMapValues(this.predefinedResources);
+    return Array.from(this.predefinedResources.values()).map(v => cloneDeep(v));
   }
 
   add(definition: any): void {
     // For supplemental FHIR versions, we only care about resources and types,
     // but for normal packages, we care about everything.
     if (this.isSupplementalFHIRDefinitions) {
-      if (definition.resourceType === 'StructureDefinition') {
-        if (
-          definition.kind === 'primitive-type' ||
+      if (
+        definition.resourceType === 'StructureDefinition' &&
+        (definition.kind === 'primitive-type' ||
           definition.kind === 'complex-type' ||
-          definition.kind === 'datatype'
-        ) {
-          addDefinitionToMap(definition, this.types);
-        } else if (definition.kind === 'resource' && definition.derivation !== 'constraint') {
-          addDefinitionToMap(definition, this.resources);
-        }
+          definition.kind === 'datatype' ||
+          (definition.kind === 'resource' && definition.derivation !== 'constraint'))
+      ) {
+        super.add(definition);
       }
     } else {
       super.add(definition);
